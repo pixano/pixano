@@ -1,0 +1,29 @@
+site_name: Pixano Documentation
+theme:
+  name: material
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths: ["../pixano"]
+        import:
+          - https://docs.python.org/3/objects.inv
+        options:
+          docstring_style: google
+          docstring_options:
+            ignore_init_summary: yes
+          show_submodules: no
+          docstring_section_style: list
+          members_order: alphabetical
+          show_category_heading: no
+          merge_init_into_class: yes
+          show_root_heading: true
+          heading_level: 3
+nav:
+- "Home": index.md
+- "pixano.core": core.md
+- "pixano.data": data.md
+- "pixano.inference": inference.md
+- "pixano.tools": tools.md
+- "pixano.transforms": transforms.md
