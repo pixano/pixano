@@ -21,5 +21,5 @@
 ## Installation
 
 ```shell
-pip install pixano
+pip install pixano==0.1.0
 ```
