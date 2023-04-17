@@ -9,12 +9,13 @@ description = 'Data-centric AI building blocks for computer vision applications'
 readme = "README.md"
 requires-python = ">=3.10"
 license = "CeCILL-C"
-authors = [
-  { name = "Pixano Developpers", email = "pixano@cea.fr" },
+authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
+keywords = [
+  "machine learning",
+  "computer vision",
+  "data",
+  "visualization"
 ]
-
-keywords = ["machine learning", "computer vision", "data", "visualization"]
-
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
@@ -23,22 +24,31 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-
 dependencies = [
-  "duckdb",
-  "etils",
-  "fastapi",
-  "fastapi-pagination",
-  "imageio",
-  "importlib-resources",
-  "jinja2",
-  "numpy",
-  "opencv-python",
-  "pandas",
-  "Pillow",
-  "pyarrow",
-  "pycocotools",
-  "tqdm"
+  "duckdb ~= 0.7.0",
+  "etils ~= 1.1.0",
+  "fastapi-pagination ~= 0.11.0",
+  "imageio ~= 2.25.0",
+  "importlib-resources ~= 5.12.0",
+  "numpy ~= 1.23.0",
+  "opencv-python ~= 4.7.0",
+  "pandas ~= 1.5.0",
+  "Pillow ~= 9.4.0",
+  "pyarrow ~= 11.0.0",
+  "pycocotools ~= 2.0.0",
+  "setuptools ~= 65.6.0",
+  "shortuuid ~= 1.0.0",
+  "tqdm ~= 4.64.0",
+  "uvicorn ~= 0.20.0"
+]
+
+[project.optional-dependencies]
+documentation = [
+  "mkdocs-material ~= 9.1.0",
+  "mkdocstrings-python ~= 0.9.0"
+]
+notebooks = [
+  "ipywidgets ~= 8.0.0"
 ]
 
 [project.urls]
@@ -50,17 +60,9 @@ Source = "https://github.com/pixano/pixano"
 pixano-explorer = "pixano.apps.explorer.serve:main"
 
 [tool.hatch.build]
-include = [
-  "/pixano"
-]
-
-exclude = [
-  "__pycache__"
-]
-
-artifacts = [
-  "/pixano/apps/explorer/dist"
-]
+include = ["/pixano"]
+exclude = ["__pycache__"]
+artifacts = ["/pixano/apps/explorer/dist"]
 
 [tool.hatch.version]
 path = "pixano/__version__.py"
