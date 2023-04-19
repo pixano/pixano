@@ -28,7 +28,14 @@ __all__ = [
 
 
 def ObjectAnnotationType():
-    # Have to be consistent with class ObjectAnnotation (pixano>core>models.py)
+    """PyArrow StructType for the ObjectAnnotation class
+
+    Should remain consistent with pixano.core.models.ObjectAnnotation
+
+    Returns:
+        pa.StructType: ObjectAnnotation StructType
+    """
+
     pose_schema = pa.struct(
         [
             pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
@@ -61,39 +68,60 @@ def ObjectAnnotationType():
     )
 
 
-def convert_field(name, typ, col):
-    """pyarrow is unable to convert ExtensionTypes properly in pa.Table.from_pandas"""
-    if isinstance(typ, pa.ExtensionType):
-        storage = pa.array(col, type=typ.storage_type)
-        return pa.ExtensionArray.from_storage(typ, storage)
-    elif pa.types.is_list(typ):
-        native_arr = pa.array(col)
+def convert_field(
+    field_name: str, field_type: pa.DataType, field_data: list
+) -> pa.Array:
+    """Convert PyArrow ExtensionTypes properly
+
+    Args:
+        field_name (str): Field name
+        field_type (pa.DataType): Field target PyArrow format
+        field_data (list): Field data in Python format
+
+    Returns:
+        pa.Array: Field data in requested PyArrow format
+    """
+
+    # If target format is an ExtensionType
+    if isinstance(field_type, pa.ExtensionType):
+        storage = pa.array(field_data, type=field_type.storage_type)
+        return pa.ExtensionArray.from_storage(field_type, storage)
+
+    # If target format is a ListType
+    elif pa.types.is_list(field_type):
+        native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
-            return pa.nulls(len(native_arr), typ)
+            return pa.nulls(len(native_arr), field_type)
         offsets = native_arr.offsets
         values = native_arr.values.to_numpy(zero_copy_only=False)
         return pa.ListArray.from_arrays(
-            offsets, convert_field(f"{name}.elements", typ.value_type, values)
+            offsets,
+            convert_field(f"{field_name}.elements", field_type.value_type, values),
         )
-    elif pa.types.is_struct(typ):
-        native_arr = pa.array(col)
+
+    # If target format is a StructType
+    elif pa.types.is_struct(field_type):
+        native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
-            return pa.nulls(len(native_arr), typ)
+            return pa.nulls(len(native_arr), field_type)
         arrays = []
-        for subfield in typ:
+        for subfield in field_type:
             sub_arr = native_arr.field(subfield.name)
             converted = convert_field(
-                f"{name}.{subfield.name}",
+                f"{field_name}.{subfield.name}",
                 subfield.type,
                 sub_arr.to_numpy(zero_copy_only=False),
             )
             arrays.append(converted)
-        return pa.StructArray.from_arrays(arrays, fields=typ)
+        return pa.StructArray.from_arrays(arrays, fields=field_type)
+
+    # For other target formats
     else:
-        return pa.array(col, type=typ)
+        return pa.array(field_data, type=field_type)
 
 
 def register_extension_types():
+    """Register PyArrow ExtensionTypes"""
     types = [
         BBoxType(),
         CompressedRLEType(),

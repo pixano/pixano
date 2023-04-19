@@ -19,6 +19,8 @@ from pydantic import BaseModel
 class ObjectAnnotation(BaseModel):
     """Object Annotation class to contain all annotation data
 
+    Should remain consistent with pixano.core.arrow_types.ObjectAnnotationType
+
     Args:
         id (str): Annotation unique ID
         view_id (str, optional): View ID (e.g. 'image', 'cam_2')
@@ -34,9 +36,9 @@ class ObjectAnnotation(BaseModel):
         identity (str, optional): Identity
         category_id (int, optional): Category ID
         category_name (str, optional): Category name
-        pose (Mapping, optional): Pose
+        pose (Mapping[str, List[float]], optional): Pose
     """
-    # Have to be consistent with function ObjectAnnotationType (pixano>core>arrow_types>__init__.py)
+
     id: str
     view_id: Optional[str] = None
     bbox: Optional[list[float]] = None
