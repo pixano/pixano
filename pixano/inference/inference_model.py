@@ -20,11 +20,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
+from pixano.core import arrow_types
 from pixano.core.models import ObjectAnnotation
 
 
 class InferenceModel:
-    """Inference Model class for preannotation
+    """Model class for inference generation
 
     Args:
         name (str): Model name
@@ -62,33 +63,36 @@ class InferenceModel:
         self.info = info
 
     def __call__(
-        self, batch: pa.RecordBatch, media_dir: Path, threshold: float = 0.0
+        self, batch: pa.RecordBatch, view: str, media_dir: Path, threshold: float = 0.0
     ) -> list[list[ObjectAnnotation]]:
-        """Returns model predictions for a given batch of images
+        """Returns model inferences for a given batch of images
 
         Args:
-            batch (pa.RecordBatch): Batch of input in parquet format
+            batch (pa.RecordBatch): Batch of input in PyArrow format
+            view (str): Dataset view to generate inferences on
             media_dir (Path): Media location
-            threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
+            threshold (float, optional): Confidence threshold for inferences. Defaults to 0.0.
 
         Returns:
-            list[list[ObjectAnnotation]]: Model predictions in Pixano format
+            list[list[ObjectAnnotation]]: Model inferences in Pixano format
         """
 
-        raise NotImplementedError("Model inference needs to be implemented")
+        raise NotImplementedError("Model inference generation needs to be implemented")
 
     def process_dataset(
         self,
         dataset_dir: Path,
+        views: list[str],
         splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
     ) -> Path:
-        """Write predictions to parquet dataset
+        """Generate inferences for a parquet dataset
 
         Args:
             dataset_dir (Path): Dataset parquet location
-            splits (list[str], optional): Dataset splits to infer on, will infer on all splits if None. Defaults to None.
+            views (list[str]): Dataset views to generate inferences on
+            splits (list[str], optional): Dataset splits to generate inferences on, will generate on all splits if None. Defaults to None.
             batch size (int, optional): Number of images per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 
@@ -106,44 +110,73 @@ class InferenceModel:
         if splits == None:
             splits = [s.name for s in os.scandir(dataset_dir / "db") if s.is_dir()]
 
+        # Create inference schema
+        inf_schema = pa.schema(
+            [
+                pa.field("id", pa.string()),
+                pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+            ]
+        )
+
         # Iterate on splits
         for split in splits:
             # List dataset files
             files = sorted((dataset_dir / "db" / split).glob("*.parquet"))
 
-            # List already processed files
-            processed = [p.name for p in (inference_dir / split).glob("*.parquet")]
+            # Create folder
+            split_dir = inference_dir / split
+            split_dir.mkdir(parents=True, exist_ok=True)
+
+            # Check for already processed files
+            processed = [p.name for p in split_dir.glob("*.parquet")]
 
             # Iterate on files
             for file in tqdm(files, desc=split, position=0):
                 # Process only remaining files
                 if file.name not in processed:
-                    # Create folder
-                    (inference_dir / split).mkdir(parents=True, exist_ok=True)
-
-                    # Load file
+                    # Load file into batches
                     table = pq.read_table(file)
-                    num_elements = 0
+                    batches = table.to_batches(max_chunksize=batch_size)
 
                     # Iterate on batches
                     data = {"id": [], "objects": []}
-                    batches = table.to_batches(max_chunksize=batch_size)
                     for batch in tqdm(batches, position=1, desc=file.name):
-                        batch_inference = self(batch, dataset_dir / "media", threshold)
-                        for img_index, img_inference in enumerate(batch_inference):
-                            data["id"].append(str(batch["id"][img_index]))
-                            data["objects"].append([o.dict() for o in img_inference])
+                        batch_inf = []
+                        for view in views:
+                            batch_inf.append(
+                                self(batch, view, dataset_dir / "media", threshold)
+                            )
+                        for i, row in enumerate(batch["id"]):
+                            data["id"].append(str(row))
+                            data["objects"].append(
+                                [
+                                    o.dict()
+                                    for view_inf in batch_inf
+                                    for o in view_inf[i]
+                                ]
+                            )
 
-                    # Save inference
-                    inference_table = pa.Table.from_pydict(data)
-                    pq.write_table(inference_table, inference_dir / split / file.name)
-                    num_elements += inference_table.num_rows
+                    # Save to file
+                    arrays = []
+                    for key, item in data.items():
+                        arrays.append(
+                            arrow_types.convert_field(
+                                field_name=key,
+                                field_type=inf_schema.field(key).type,
+                                field_data=item,
+                            )
+                        )
+                    pq.write_table(
+                        pa.Table.from_arrays(arrays, schema=inf_schema),
+                        split_dir / file.name,
+                    )
+                    processed_file = pq.read_metadata(split_dir / file.name)
 
                     # Load existing infer.json
                     if (inference_dir / "infer.json").is_file():
                         with open(inference_dir / "infer.json", "r") as f:
                             infer_json = json.load(f)
-                        infer_json["num_elements"] += num_elements
+                        infer_json["num_elements"] += processed_file.num_rows
 
                     # Or create infer.json from scratch
                     else:
@@ -151,7 +184,7 @@ class InferenceModel:
                             "id": spec_json["id"],
                             "name": spec_json["name"],
                             "description": spec_json["description"],
-                            "num_elements": num_elements,
+                            "num_elements": processed_file.num_rows,
                             "model_id": self.id,
                             "model_name": self.name,
                             "model_source": self.source,
