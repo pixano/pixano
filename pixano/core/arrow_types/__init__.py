@@ -18,12 +18,12 @@ from .features import BBoxType
 from .image import CompressedRLEType, Image, ImageType, is_image_type
 
 __all__ = [
-    "ImageType",
-    "Image",
-    "CompressedRLEType",
     "BBoxType",
-    "ObjectAnnotationType",
+    "CompressedRLEType",
+    "Image",
+    "ImageType",
     "is_image_type",
+    "ObjectAnnotationType",
 ]
 
 
@@ -45,20 +45,21 @@ def ObjectAnnotationType():
 
     return pa.struct(
         [
+            # Object ID and View ID
             pa.field("id", pa.string()),
             pa.field("view_id", pa.string(), nullable=True),
-            # bounding box
+            # Bounding Box
             pa.field("bbox", BBoxType(), nullable=True),
             pa.field("bbox_source", pa.string(), nullable=True),
             pa.field("bbox_confidence", pa.float32(), nullable=True),
             pa.field("is_group_of", pa.bool_(), nullable=True),
             pa.field("is_difficult", pa.bool_(), nullable=True),
             pa.field("is_truncated", pa.bool_(), nullable=True),
-            # mask
+            # Mask
             pa.field("mask", CompressedRLEType(), nullable=True),
             pa.field("mask_source", pa.string(), nullable=True),
             pa.field("area", pa.float32(), nullable=True),
-            # 6d poses
+            # 6D Poses
             pa.field("pose", pose_schema, nullable=True),
             # Category
             pa.field("category_id", pa.int32(), nullable=True),

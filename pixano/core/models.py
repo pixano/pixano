@@ -30,30 +30,35 @@ class ObjectAnnotation(BaseModel):
         is_group_of (bool, optional): is_group_of
         is_difficult (bool, optional): is_difficult
         is_truncated (bool, optional): is_truncated
-        area (float, optional): area
         mask (Mapping[str, Any], optional): Mask
         mask_source (str, optional): Mask source
+        area (float, optional): area
         identity (str, optional): Identity
         category_id (int, optional): Category ID
         category_name (str, optional): Category name
         pose (Mapping[str, List[float]], optional): Pose
     """
 
+    # Object ID and View ID
     id: str
     view_id: Optional[str] = None
+    # Bounding Box
     bbox: Optional[list[float]] = None
     bbox_source: Optional[str] = None
     bbox_confidence: Optional[float] = None
     is_group_of: Optional[bool] = None
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
-    area: Optional[float] = None
+    # Mask
     mask: Optional[Mapping[str, Any]] = None
     mask_source: Optional[str] = None
-    identity: Optional[str] = None
-    category_id: Optional[int] = None
-    category_name: Optional[str] = None
+    area: Optional[float] = None
+    # 6D Poses
     pose: Optional[Mapping[str, List[float]]] = {
         "cam_R_m2c": [0] * 9,
         "cam_t_m2c": [0] * 3,
     }
+    # Category
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+    identity: Optional[str] = None
