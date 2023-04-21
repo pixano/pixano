@@ -142,19 +142,22 @@ class InferenceModel:
                     data = {"id": [], "objects": []}
                     for batch in tqdm(batches, position=1, desc=file.name):
                         batch_inf = []
+                        # Add row IDs
+                        data["id"].extend([str(row) for row in batch["id"]])
+                        # Batch inference generation on each view
                         for view in views:
                             batch_inf.append(
                                 self(batch, view, dataset_dir / "media", threshold)
                             )
-                        for i, row in enumerate(batch["id"]):
-                            data["id"].append(str(row))
-                            data["objects"].append(
-                                [
-                                    o.dict()
-                                    for view_inf in batch_inf
-                                    for o in view_inf[i]
-                                ]
-                            )
+                        # Save the view inferences of each row together
+                        data["objects"].append(
+                            [
+                                inf.dict()
+                                for row in range(len(batch["id"]))
+                                for view_inf in batch_inf
+                                for inf in view_inf[row]
+                            ]
+                        )
 
                     # Save to file
                     arrays = []
