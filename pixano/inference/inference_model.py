@@ -111,7 +111,7 @@ class InferenceModel:
             splits = [s.name for s in os.scandir(dataset_dir / "db") if s.is_dir()]
 
         # Create inference schema
-        inf_schema = pa.schema(
+        schema = pa.schema(
             [
                 pa.field("id", pa.string()),
                 pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
@@ -139,17 +139,17 @@ class InferenceModel:
                     batches = table.to_batches(max_chunksize=batch_size)
 
                     # Iterate on batches
-                    data = {"id": [], "objects": []}
+                    data = {field.name: [] for field in schema}
                     for batch in tqdm(batches, position=1, desc=file.name):
-                        batch_inf = []
                         # Add row IDs
                         data["id"].extend([str(row) for row in batch["id"]])
                         # Batch inference generation on each view
+                        batch_inf = []
                         for view in views:
                             batch_inf.append(
                                 self(batch, view, dataset_dir / "media", threshold)
                             )
-                        # Save the view inferences of each row together
+                        # Regroup view inferences by row
                         data["objects"].append(
                             [
                                 inf.dict()
@@ -159,18 +159,20 @@ class InferenceModel:
                             ]
                         )
 
-                    # Save to file
+                    # Convert ExtensionTypes
                     arrays = []
-                    for key, item in data.items():
+                    for field_name, field_data in data.items():
                         arrays.append(
                             arrow_types.convert_field(
-                                field_name=key,
-                                field_type=inf_schema.field(key).type,
-                                field_data=item,
+                                field_name=field_name,
+                                field_type=schema.field(field_name).type,
+                                field_data=field_data,
                             )
                         )
+
+                    # Save to file
                     pq.write_table(
-                        pa.Table.from_arrays(arrays, schema=inf_schema),
+                        pa.Table.from_arrays(arrays, schema=schema),
                         split_dir / file.name,
                     )
                     processed_file = pq.read_metadata(split_dir / file.name)
