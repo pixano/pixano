@@ -92,3 +92,29 @@ class InferenceDataset(Dataset):
             ignore_prefixes=["info"],
             exclude_invalid_files=True,
         )
+
+
+class EmbeddingDataset(Dataset):
+    """Embedding Dataset
+
+    Args:
+        _path (Path): Dataset path
+        _info (DatasetInfo): Dataset info
+        _table (pa.Table): Dataset table
+    """
+
+    def __init__(self, path: Path):
+        self._path = path
+        self._info = DatasetInfo.parse_file(self._path / "embed.json")
+        self._table = None
+
+    def load(self):
+        partitioning = arrow_ds.partitioning(
+            pa.schema([("split", pa.string())]), flavor="hive"
+        )
+        return arrow_ds.dataset(
+            self._path,
+            partitioning=partitioning,
+            ignore_prefixes=["info"],
+            exclude_invalid_files=True,
+        )

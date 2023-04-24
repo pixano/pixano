@@ -12,7 +12,9 @@
 # http://www.cecill.info
 
 from .inference_model import InferenceModel
+from .embedding_model import EmbeddingModel
 
 __all__ = [
     "InferenceModel",
+    "EmbeddingModel",
 ]
