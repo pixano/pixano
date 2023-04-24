@@ -12,7 +12,6 @@
 # http://www.cecill.info
 
 import pyarrow as pa
-from pyarrow import ArrowKeyError
 
 from .features import BBoxType
 from .image import CompressedRLEType, Image, ImageType, is_image_type
@@ -75,12 +74,12 @@ def convert_field(
     """Convert PyArrow ExtensionTypes properly
 
     Args:
-        field_name (str): Field name
-        field_type (pa.DataType): Field target PyArrow format
-        field_data (list): Field data in Python format
+        field_name (str): Name
+        field_type (pa.DataType): Target PyArrow format
+        field_data (list): Data in Python format
 
     Returns:
-        pa.Array: Field data in requested PyArrow format
+        pa.Array: Data in target PyArrow format
     """
 
     # If target format is an ExtensionType
@@ -88,7 +87,7 @@ def convert_field(
         storage = pa.array(field_data, type=field_type.storage_type)
         return pa.ExtensionArray.from_storage(field_type, storage)
 
-    # If target format is a ListType
+    # If target format is an extension of ListType
     elif pa.types.is_list(field_type):
         native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
@@ -100,7 +99,7 @@ def convert_field(
             convert_field(f"{field_name}.elements", field_type.value_type, values),
         )
 
-    # If target format is a StructType
+    # If target format is an extension of StructType
     elif pa.types.is_struct(field_type):
         native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
@@ -123,20 +122,32 @@ def convert_field(
 
 def register_extension_types():
     """Register PyArrow ExtensionTypes"""
+
     types = [
         BBoxType(),
         CompressedRLEType(),
         ImageType(),
     ]
+
     for t in types:
+        # Register ExtensionType
         try:
             pa.register_extension_type(t)
-        except ArrowKeyError:
-            # already registered
+        # If ExtensionType is already registered
+        except pa.ArrowKeyError:
             pass
 
 
 def is_number(t: pa.DataType) -> bool:
+    """Check if DataType is a a number (integer or float)
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is an integer or a float
+    """
+
     return pa.types.is_integer(t) or pa.types.is_floating(t)
 
 
