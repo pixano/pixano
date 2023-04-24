@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from typing import Any, List, Mapping, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -107,7 +107,7 @@ class ObjectAnnotation(BaseModel):
     identity: Optional[str] = None
     category_id: Optional[int] = None
     category_name: Optional[str] = None
-    pose: Optional[Mapping[str, List[float]]] = None
+    pose: Optional[dict[str, list[float]]] = None
 
 
 class Feature(BaseModel):
@@ -125,5 +125,5 @@ class DatasetSpec(BaseModel):
     description: str
     num_elements: int
     preview: str
-    splits: Optional[Mapping[str, int]] = None
-    category_index: Optional[Mapping[str, int]] = None
+    splits: Optional[dict[str, int]] = None
+    category_index: Optional[dict[str, int]] = None

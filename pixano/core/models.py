@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from typing import Any, List, Mapping, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -50,11 +50,11 @@ class ObjectAnnotation(BaseModel):
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
     # Mask
-    mask: Optional[Mapping[str, Any]] = None
+    mask: Optional[dict[str, Any]] = None
     mask_source: Optional[str] = None
     area: Optional[float] = None
     # 6D Poses
-    pose: Optional[Mapping[str, List[float]]] = {
+    pose: Optional[dict[str, list[float]]] = {
         "cam_R_m2c": [0] * 9,
         "cam_t_m2c": [0] * 3,
     }

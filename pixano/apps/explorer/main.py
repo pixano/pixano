@@ -14,7 +14,6 @@
 
 import json
 from pathlib import Path
-from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -41,7 +40,7 @@ def find_dataset(dataset_id: str, settings: Settings):
     return None
 
 
-def load_library(settings: Settings) -> List[DatasetInfo]:
+def load_library(settings: Settings) -> list[DatasetInfo]:
     infos = []
     for info_file in sorted(list(settings.data_dir.glob("*/spec.json"))):
         print(info_file)
@@ -89,7 +88,7 @@ def create_app(settings: Settings):
         allow_headers=["*"],
     )
 
-    @app.get("/datasets", response_model=List[DatasetInfo])
+    @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_datasets_list():
         library = load_library(settings)
         print(library)
