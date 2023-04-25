@@ -21,14 +21,14 @@ import pyarrow as pa
 
 
 class PixanoModel(ABC):
-    """Pixano abstract model class
+    """Abstract parent class for InferenceModel and EmbeddingModel
     
     Attributes:
         name (str): Model name
-        id (str, optional): Model ID. Defaults to "".
-        device (str, optional): Model GPU or CPU device. Defaults to "".
-        source (str, optional): Model source. Defaults to "Not provided".
-        info (str, optional): Additional model info. Defaults to "Not provided".
+        id (str, optional): Model ID
+        device (str, optional): Model GPU or CPU device
+        source (str, optional): Model source
+        info (str, optional): Additional model info
     """
 
     def __init__(
@@ -36,8 +36,8 @@ class PixanoModel(ABC):
         name: str,
         id: str = "",
         device: str = "",
-        source: str = "Not provided",
-        info: str = "Not provided",
+        source: str = "",
+        info: str = "",
     ) -> None:
         """Initialize model name and ID
 
@@ -45,8 +45,8 @@ class PixanoModel(ABC):
             name (str): Model name
             id (str, optional): Model ID. Defaults to "".
             device (str, optional): Model GPU or CPU device. Defaults to "".
-            source (str, optional): Model source. Defaults to "Not provided".
-            info (str, optional): Additional model info. Defaults to "Not provided".
+            source (str, optional): Model source. Defaults to "".
+            info (str, optional): Additional model info. Defaults to "".
         """
 
         self.name = name

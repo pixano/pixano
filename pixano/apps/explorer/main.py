@@ -28,6 +28,12 @@ from . import db_utils
 
 
 class Settings(BaseSettings):
+    """Dataset library settings
+
+    Attributes:
+        data_dir (Path): Dataset library path
+    """
+
     data_dir: Path = Path.cwd() / "library"
 
 

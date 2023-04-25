@@ -13,6 +13,7 @@
 
 import time
 from pathlib import Path
+from typing import Optional
 
 import pyarrow as pa
 import pyarrow.dataset as arrow_ds
@@ -21,11 +22,21 @@ import pydantic
 
 
 class DatasetInfo(pydantic.BaseModel):
+    """DatasetInfo
+
+    Attributes:
+        id (str): Dataset ID
+        name (str): Dataset name
+        description (str): Dataset description
+        num_elements (int): Number of elements in dataset
+        preview (str, optional): Dataset preview
+    """
+
     id: str
     name: str
     description: str
     num_elements: int
-    preview: str | None
+    preview: Optional[str]
 
 
 class Dataset:

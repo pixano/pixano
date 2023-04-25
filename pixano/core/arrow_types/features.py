@@ -45,13 +45,13 @@ class ObjectAnnotation(BaseModel):
         is_group_of (bool, optional): is_group_of
         is_difficult (bool, optional): is_difficult
         is_truncated (bool, optional): is_truncated
-        mask (Mapping[str, Any], optional): Mask
+        mask (dict[str, Any], optional): Mask
         mask_source (str, optional): Mask source
         area (float, optional): area
-        identity (str, optional): Identity
+        pose (dict[str, list[float]], optional): Pose
         category_id (int, optional): Category ID
         category_name (str, optional): Category name
-        pose (Mapping[str, List[float]], optional): Pose
+        identity (str, optional): Identity
     """
 
     # Object ID and View ID
