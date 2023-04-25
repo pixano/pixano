@@ -67,7 +67,7 @@ def generate_spec(split_info, dest: Path, name, description=None, stop=None):
         split_info (dict): dict which contain genrator for each split and views
         dest (Path): path to dataset
         name (str): dataset name
-        description(str, optionnal): description of dataset
+        description (str, optionnal): description of dataset
         stop (list[int], optional): array of limit to number of image, per split
     """
     spec = {}

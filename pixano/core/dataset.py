@@ -38,6 +38,12 @@ class Dataset:
     """
 
     def __init__(self, path: Path):
+        """Initialize dataset
+
+        Args:
+            path (Path): Dataset path
+        """
+
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "spec.json")
         self._table = None

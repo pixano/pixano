@@ -81,7 +81,7 @@ class PixanoModel(ABC):
     @abstractmethod
     def process_dataset(
         self,
-        dataset_dir: Path,
+        input_dir: Path,
         views: list[str],
         splits: list[str] = None,
         batch_size: int = 1,
