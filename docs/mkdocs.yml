@@ -1,6 +1,9 @@
 site_name: Pixano Documentation
 theme:
   name: material
+  features:
+    - navigation.instant
+    - navigation.sections
 plugins:
 - search
 - mkdocstrings:
@@ -16,16 +19,48 @@ plugins:
           show_submodules: no
           docstring_section_style: list
           members_order: alphabetical
-          show_category_heading: no
           merge_init_into_class: yes
           show_root_heading: true
-          heading_level: 3
+          show_source: true
+          heading_level: 2
+
+
 nav:
-- "Home": index.md
-- "pixano.analytics": analytics.md
-- "pixano.apps": apps.md
-- "pixano.core": core.md
-- "pixano.data": data.md
-- "pixano.inference": inference.md
-- "pixano.tools": tools.md
-- "pixano.transforms": transforms.md
+- "Getting started":
+
+  - "Installing Pixano": start/install.md
+  - "Launching Pixano": start/launch.md
+  - "Using Pixano": start/use.md
+
+- "Code documentation":
+
+  - "analytics":
+    - "feature_statistics": code/analytics/feature_statistics.md
+
+  - "apps":
+    - "explorer":
+      - "main": code/apps/explorer/main.md
+      - "db_utils": code/apps/explorer/db_utils.md
+
+  - "core":
+    - "arrow_types": code/core/arrow_types.md
+    - "dataset": code/core/dataset.md
+
+  - "data":
+    - "DataLoader": code/data/data_loader.md
+    - "CocoLoader": code/data/coco_loader.md
+    - "PixanoLoader": code/data/pixano_loader.md
+    - "models": code/data/models.md
+
+  - "inference":
+    - "PixanoModel": code/inference/pixano_model.md
+    - "InferenceModel": code/inference/inference_model.md
+    - "EmbeddingModel": code/inference/embedding_model.md
+
+  - "tools":
+    - "converter": code/tools/converter.md
+
+  - "transforms":
+    - "boxes": code/transforms/boxes.md
+    - "image": code/transforms/image.md
+    - "labels": code/transforms/labels.md
