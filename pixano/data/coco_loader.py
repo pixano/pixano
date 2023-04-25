@@ -22,9 +22,26 @@ from pixano.core import arrow_types
 from .data_loader import DataLoader
 
 
-# COCO Loader
 class CocoLoader(DataLoader):
-    def __init__(self, workspace, ann_file, img_path):
+    """COCO Data Loader
+
+    Args:
+        coco (COCO): COCO dataset
+        info (dict): Dataset info
+        img_ids (list[int]): Image IDs
+        iter_img_ids (iter): Image IDs iterable
+        idx (int): Index
+    """
+
+    def __init__(self, workspace: str, ann_file: str, img_path: str):
+        """Initialize COCO Data Loader
+
+        Args:
+            workspace (str): Data path
+            ann_file (str): Annotations path
+            img_path (str): Images path
+        """
+
         annf = os.path.join(workspace, ann_file)
 
         # initialize COCO api for instance annotations
@@ -41,17 +58,18 @@ class CocoLoader(DataLoader):
         self.iter_img_ids = iter(self.img_ids)
         self.idx = 0
 
-    def load_ann(self, id, width, height):
+    def load_ann(self, id: int, width: int, height: int) -> dict:
         """Load COCO annotations
 
         Args:
-            id: image id
-            width: image width, for normalization
-            height: image height, for normalization
+            id (int): image id
+            width (int): image width, for normalization
+            height (int): image height, for normalization
 
         Returns:
-            dict containing this annotation data
+            dict: Annotation data
         """
+
         ann_ids = self.coco.getAnnIds(id)
         anns = self.coco.loadAnns(ids=ann_ids)
         objects = []

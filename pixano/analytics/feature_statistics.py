@@ -18,7 +18,6 @@ import pandas as pd
 import pyarrow as pa
 
 
-# Compute additional data from existing values
 def compute_additional_data(data_table: pa.Table):
     """Convert Table to DataFrame and add resolution and aspect ratio
 

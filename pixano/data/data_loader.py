@@ -11,11 +11,12 @@
 #
 # http://www.cecill.info
 
-# Generic Loader
 from abc import ABC, abstractmethod
 
 
 class DataLoader(ABC):
+    """Generic Data Loader"""
+
     @property
     def data_info(self):
         return self.info

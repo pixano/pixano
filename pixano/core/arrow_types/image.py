@@ -128,7 +128,7 @@ class ImageScalar(pa.ExtensionScalar):
 
 
 class CompressedRLEType(pa.ExtensionType):
-    """Segmentation mask type as compressed RLE"""
+    """Segmentation mask type as PyArrow StructType"""
 
     def __init__(self):
         super(CompressedRLEType, self).__init__(

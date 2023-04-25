@@ -34,7 +34,7 @@ class BBoxType(pa.ExtensionType):
 
 
 class ObjectAnnotation(BaseModel):
-    """Object Annotation class to contain all annotation data
+    """ObjectAnnotation class to contain all annotation data
 
     Args:
         id (str): Annotation unique ID
@@ -80,7 +80,7 @@ class ObjectAnnotation(BaseModel):
 
 
 def ObjectAnnotationType():
-    """PyArrow StructType for the ObjectAnnotation class
+    """ObjectAnnotation type as PyArrow StructType
 
     Returns:
         pa.StructType: ObjectAnnotation StructType

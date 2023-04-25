@@ -21,15 +21,7 @@ import pyarrow as pa
 
 
 class PixanoModel(ABC):
-    """Pixano abstract model class
-
-    Args:
-        name (str): Model name
-        id (str): Model ID
-        device (str): Model GPU or CPU device
-        source (str): Model source
-        info (str): Additional model info
-    """
+    """Pixano abstract model class"""
 
     def __init__(
         self,
@@ -43,10 +35,10 @@ class PixanoModel(ABC):
 
         Args:
             name (str): Model name
-            id (str, optional): Use previously defined model by providing its ID. Defaults to "".
-            device (str, optional): Device to run model on (e.g. "cuda" for PyTorch, "/GPU:0" for TensorFlow). Defaults to "".
-            source (str, optional): Model source (e.g. "PyTorch Hub", "GitHub", "Local Model"). Defaults to "Not provided".
-            info (str, optional): Any additional model info. Defaults to "Not provided".
+            id (str, optional): Model ID. Defaults to "".
+            device (str, optional): Model GPU or CPU device. Defaults to "".
+            source (str, optional): Model source. Defaults to "Not provided".
+            info (str, optional): Additional model info. Defaults to "Not provided".
         """
 
         self.name = name
@@ -92,7 +84,7 @@ class PixanoModel(ABC):
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
-            batch size (int, optional): Rows per batch. Defaults to 1.
+            batch_size (int, optional): Rows per batch. Defaults to 1.
 
         Returns:
             Path: Output parquet location

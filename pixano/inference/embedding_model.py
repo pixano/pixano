@@ -69,7 +69,7 @@ class EmbeddingModel(PixanoModel):
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
-            batch size (int, optional): Rows per batch. Defaults to 1.
+            batch_size (int, optional): Rows per batch. Defaults to 1.
             compression (str, optional): Output parquet compression format. Defaults to "none".
 
         Returns:

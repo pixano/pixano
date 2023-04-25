@@ -22,6 +22,8 @@ plugins:
           heading_level: 3
 nav:
 - "Home": index.md
+- "pixano.analytics": analytics.md
+- "pixano.apps": apps.md
 - "pixano.core": core.md
 - "pixano.data": data.md
 - "pixano.inference": inference.md

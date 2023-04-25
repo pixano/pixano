@@ -72,7 +72,7 @@ class InferenceModel(PixanoModel):
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
-            batch size (int, optional): Rows per batch. Defaults to 1.
+            batch_size (int, optional): Rows per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 
         Returns:
