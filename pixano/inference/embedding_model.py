@@ -21,10 +21,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from .pixano_model import PixanoModel
+from .offline_model import OfflineModel
 
 
-class EmbeddingModel(PixanoModel):
+class EmbeddingModel(OfflineModel):
     """Model class for embedding precomputing
 
     Attributes:

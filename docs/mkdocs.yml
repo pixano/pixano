@@ -53,7 +53,7 @@ nav:
     - "models": code/data/models.md
 
   - "inference":
-    - "PixanoModel": code/inference/pixano_model.md
+    - "OfflineModel": code/inference/offline_model.md
     - "InferenceModel": code/inference/inference_model.md
     - "EmbeddingModel": code/inference/embedding_model.md
 
