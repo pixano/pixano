@@ -18,7 +18,7 @@ import pandas as pd
 import pyarrow as pa
 
 
-def compute_additional_data(data_table: pa.Table):
+def compute_additional_data(data_table: pa.Table) -> pd.DataFrame:
     """Convert Table to DataFrame and add resolution and aspect ratio
 
     Args:
@@ -44,7 +44,7 @@ def compute_additional_data(data_table: pa.Table):
     return data
 
 
-def objects_tableToDF(data_table: pa.Table, field: str):
+def objects_tableToDF(data_table: pa.Table, field: str) -> pd.DataFrame:
     """Convert a field from the objects column to a DataFrame
 
     Args:
@@ -64,7 +64,7 @@ def objects_tableToDF(data_table: pa.Table, field: str):
         return None
 
 
-def numeric_features_stats(df: pd.DataFrame, field: str):
+def numeric_features_stats(df: pd.DataFrame, field: str) -> dict:
     """Compute numerical statistics (histogram)
 
     Args:
@@ -84,7 +84,7 @@ def numeric_features_stats(df: pd.DataFrame, field: str):
     return res
 
 
-def categorical_feature_stats(df: pd.DataFrame, field: str, title: str):
+def categorical_feature_stats(df: pd.DataFrame, field: str, title: str) -> dict:
     """Compute categorical statistics
 
     Args:
