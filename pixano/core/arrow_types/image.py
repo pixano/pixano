@@ -30,7 +30,7 @@ class Image:
     ):
         """Creates image from UIR, bytes and preview
 
-        Args:
+        Attributes:
             uri (str): _description_
             bytes (bytes): _description_
             preview_bytes (bytes): _description_

@@ -27,7 +27,7 @@ from .pixano_model import PixanoModel
 class EmbeddingModel(PixanoModel):
     """Model class for embedding precomputing
 
-    Args:
+    Attributes:
         name (str): Model name
         id (str): Model ID
         device (str): Model GPU or CPU device

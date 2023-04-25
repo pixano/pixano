@@ -19,7 +19,7 @@ from pydantic import BaseModel
 class Point2d(BaseModel):
     """Point2d
 
-    Args:
+    Attributes:
         x (float): x coordinate
         y (float): y coordinate
     """
@@ -31,7 +31,7 @@ class Point2d(BaseModel):
 class Rectangle(BaseModel):
     """Rectangle
 
-    Args:
+    Attributes:
         bottom_left (Point2d): bottom-left corner of the rectangle
         width (float): width of the rectangle
         height (float): height of the rectangle
@@ -45,7 +45,7 @@ class Rectangle(BaseModel):
 class Polygon(BaseModel):
     """Polygon
 
-    Args:
+    Attributes:
         points (list[Point2d]): polygon points list
     """
 
@@ -58,7 +58,7 @@ MultiPolygon = list[Polygon]
 class Point3d(BaseModel):
     """Point3d structure
 
-    Args:
+    Attributes:
         x (float): x coordinate
         y (float): y coordinate
         z (float): z coordinate
@@ -72,7 +72,7 @@ class Mask(BaseModel):
 class RLE(BaseModel):
     """RLE mask - Run Length Encoding
 
-    Args:
+    Attributes:
         counts (list[int] | str): "Run length Encoding" mask
         size (list[int]): size of the image (width, height)
     """
@@ -84,7 +84,7 @@ class RLE(BaseModel):
 class Category(BaseModel):
     """Category
 
-    Args:
+    Attributes:
         id (int | None): category id
         name (str): category name
     """

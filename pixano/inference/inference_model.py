@@ -28,7 +28,7 @@ from .pixano_model import PixanoModel
 class InferenceModel(PixanoModel):
     """Model class for inference generation
 
-    Args:
+    Attributes:
         name (str): Model name
         id (str): Model ID
         device (str): Model GPU or CPU device

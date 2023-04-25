@@ -25,7 +25,7 @@ from .data_loader import DataLoader
 class CocoLoader(DataLoader):
     """COCO Data Loader
 
-    Args:
+    Attributes:
         coco (COCO): COCO dataset
         info (dict): Dataset info
         img_ids (list[int]): Image IDs

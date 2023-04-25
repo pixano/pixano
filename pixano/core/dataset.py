@@ -31,7 +31,7 @@ class DatasetInfo(pydantic.BaseModel):
 class Dataset:
     """Dataset class
 
-    Args:
+    Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
         _table (pa.Table): Dataset table
@@ -71,7 +71,7 @@ class Dataset:
 class InferenceDataset(Dataset):
     """Inference Dataset
 
-    Args:
+    Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
         _table (pa.Table): Dataset table
@@ -97,7 +97,7 @@ class InferenceDataset(Dataset):
 class EmbeddingDataset(Dataset):
     """Embedding Dataset
 
-    Args:
+    Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
         _table (pa.Table): Dataset table

@@ -29,7 +29,7 @@ from .data_loader import DataLoader
 class PixanoLoader(DataLoader):
     """Pixano Data Loader
 
-    Args:
+    Attributes:
         dataset (dict): Dataset
         info (dict): Dataset info
         iter_data (iter): Data iterable

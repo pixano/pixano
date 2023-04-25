@@ -21,7 +21,15 @@ import pyarrow as pa
 
 
 class PixanoModel(ABC):
-    """Pixano abstract model class"""
+    """Pixano abstract model class
+    
+    Attributes:
+        name (str): Model name
+        id (str, optional): Model ID. Defaults to "".
+        device (str, optional): Model GPU or CPU device. Defaults to "".
+        source (str, optional): Model source. Defaults to "Not provided".
+        info (str, optional): Additional model info. Defaults to "Not provided".
+    """
 
     def __init__(
         self,

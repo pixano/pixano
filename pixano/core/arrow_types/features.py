@@ -36,7 +36,7 @@ class BBoxType(pa.ExtensionType):
 class ObjectAnnotation(BaseModel):
     """ObjectAnnotation class to contain all annotation data
 
-    Args:
+    Attributes:
         id (str): Annotation unique ID
         view_id (str, optional): View ID (e.g. 'image', 'cam_2')
         bbox (list[float], optional): Bounding box coordinates in xywh format (using top left point as reference)
