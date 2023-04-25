@@ -16,8 +16,8 @@ import os
 from PIL import Image
 from pycocotools.coco import COCO
 
-import pixano.core.models as ann_models
 from pixano import transforms
+from pixano.core import arrow_types
 
 from .data_loader import DataLoader
 
@@ -68,7 +68,7 @@ class CocoLoader(DataLoader):
                 print("WARNING - MULTI RLE SPOTTED !!", len(rle), rle)
 
             objects.append(
-                ann_models.ObjectAnnotation(
+                arrow_types.ObjectAnnotation(
                     id=ann["id"],
                     view_id="image",
                     is_group_of=ann["iscrowd"],

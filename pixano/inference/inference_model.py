@@ -21,7 +21,6 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano.core import arrow_types
-from pixano.core.models import ObjectAnnotation
 
 from .pixano_model import PixanoModel
 
@@ -44,7 +43,7 @@ class InferenceModel(PixanoModel):
         view: str,
         media_dir: Path,
         threshold: float = 0.0,
-    ) -> list[list[ObjectAnnotation]]:
+    ) -> list[list[arrow_types.ObjectAnnotation]]:
         """Process batch
 
         Args:
@@ -54,7 +53,7 @@ class InferenceModel(PixanoModel):
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            list[list[ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
+            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
         """
 
         pass

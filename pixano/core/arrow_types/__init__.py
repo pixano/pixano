@@ -13,59 +13,18 @@
 
 import pyarrow as pa
 
-from .features import BBoxType
+from .features import BBoxType, ObjectAnnotation, ObjectAnnotationType
 from .image import CompressedRLEType, Image, ImageType, is_image_type
 
 __all__ = [
     "BBoxType",
+    "ObjectAnnotation",
+    "ObjectAnnotationType",
     "CompressedRLEType",
     "Image",
     "ImageType",
     "is_image_type",
-    "ObjectAnnotationType",
 ]
-
-
-def ObjectAnnotationType():
-    """PyArrow StructType for the ObjectAnnotation class
-
-    Should remain consistent with pixano.core.models.ObjectAnnotation
-
-    Returns:
-        pa.StructType: ObjectAnnotation StructType
-    """
-
-    pose_schema = pa.struct(
-        [
-            pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
-            pa.field("cam_t_m2c", pa.list_(pa.float64(), list_size=3)),
-        ]
-    )
-
-    return pa.struct(
-        [
-            # Object ID and View ID
-            pa.field("id", pa.string()),
-            pa.field("view_id", pa.string(), nullable=True),
-            # Bounding Box
-            pa.field("bbox", BBoxType(), nullable=True),
-            pa.field("bbox_source", pa.string(), nullable=True),
-            pa.field("bbox_confidence", pa.float32(), nullable=True),
-            pa.field("is_group_of", pa.bool_(), nullable=True),
-            pa.field("is_difficult", pa.bool_(), nullable=True),
-            pa.field("is_truncated", pa.bool_(), nullable=True),
-            # Mask
-            pa.field("mask", CompressedRLEType(), nullable=True),
-            pa.field("mask_source", pa.string(), nullable=True),
-            pa.field("area", pa.float32(), nullable=True),
-            # 6D Poses
-            pa.field("pose", pose_schema, nullable=True),
-            # Category
-            pa.field("category_id", pa.int32(), nullable=True),
-            pa.field("category_name", pa.string(), nullable=True),
-            pa.field("identity", pa.string(), nullable=True),
-        ]
-    )
 
 
 def convert_field(
