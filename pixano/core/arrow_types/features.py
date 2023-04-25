@@ -79,7 +79,7 @@ class ObjectAnnotation(BaseModel):
     identity: Optional[str] = None
 
 
-def ObjectAnnotationType():
+def ObjectAnnotationType() -> pa.StructType:
     """ObjectAnnotation type as PyArrow StructType
 
     Returns:

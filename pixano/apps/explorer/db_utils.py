@@ -30,7 +30,7 @@ def get_item_details(
     item_id,
     media_dir,
     infer_datasets: list[arrow_ds.Dataset] = None,
-):
+) -> dict:
     """Get item details
 
     Args:
