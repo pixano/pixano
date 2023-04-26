@@ -16,10 +16,14 @@ import os
 from abc import abstractmethod
 from pathlib import Path
 
+import cv2
+import duckdb
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pyarrow.dataset as ds
 from tqdm.auto import tqdm
+from onnxruntime import InferenceSession
 
 from .inference_model import InferenceModel
 
@@ -33,7 +37,32 @@ class OnlineModel(InferenceModel):
         device (str): Model GPU or CPU device
         source (str): Model source
         info (str): Additional model info
+        working (dict): Dictionary of current working data
     """
+
+    def __init__(
+        self,
+        name: str,
+        id: str = "",
+        device: str = "",
+        source: str = "",
+        info: str = "",
+    ) -> None:
+        super().__init__(name, id, device, source, info)
+        working = {}
+
+    @abstractmethod
+    def __call__(self, input: dict[np.ndarray]) -> np.ndarray:
+        """Return model annotation based on user input
+
+        Args:
+            input (dict[np.ndarray]): User input
+
+        Returns:
+            np.ndarray: Model annotation masks
+        """
+
+        pass
 
     @abstractmethod
     def process_batch(
@@ -148,3 +177,65 @@ class OnlineModel(InferenceModel):
                     )
 
         return output_dir
+
+    def set_input_dataset(self, input_dir: Path):
+        """Set current working input dataset
+
+        Args:
+            input_dir (Path): Input dataset path
+        """
+
+        self.working["input_dir"] = Path(input_dir)
+
+    def set_embedding_dataset(self, embed_dir: Path):
+        """Set current working embedding dataset
+
+        Args:
+            embed_dir (Path): Embedding dataset path
+        """
+
+        self.working["embed_dir"] = Path(embed_dir)
+
+    def set_image(self, id: str, view: str) -> np.ndarray:
+        """Set current working image and return embedding
+
+        Args:
+            id (str): Row ID
+            view (str): View ID
+
+        Returns:
+            np.ndarray: Image embedding
+        """
+
+        # Load datasets
+        split = ds.partitioning(pa.schema([("split", pa.string())]), flavor="hive")
+        input_ds = ds.dataset(self.working["input_dir"] / "db", partitioning=split)
+        embed_ds = ds.dataset(self.working["embed_dir"], partitioning=split)
+
+        # Set working image
+        input_row = duckdb.query(f"SELECT * FROM input_ds WHERE id={id}").arrow()
+        image = cv2.imread(
+            str(self.working["input_dir"] / "media" / input_row[view][0].as_py()._uri)
+        )
+        self.working["image"] = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Get embedding
+        embed_row = duckdb.query(f"SELECT * FROM embed_ds WHERE id={id}").arrow()
+        embedding = embed_row["image_embedding"].to_numpy()[0]
+
+        # Get embedding shape
+        with open(self.working["embed_dir"] / "embed.json", "r") as f:
+            embedding_shape = json.load(f)["image_embedding_shape"]
+
+        # Reshape and return embedding
+        return embedding.reshape(embedding_shape)
+
+    def open_onnx_session(self):
+        """Open an ONNX session for interactive annotation"""
+
+        self.onnx_session = InferenceSession(self.onnx_model_path)
+
+    def close_onnx_session(self):
+        """Close the ONNX session for interactive annotation"""
+
+        del self.onnx_session
