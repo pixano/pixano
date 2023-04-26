@@ -16,16 +16,17 @@ import os
 from abc import abstractmethod
 from pathlib import Path
 
-import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from .pixano_model import PixanoModel
+from pixano.core import arrow_types
+
+from .inference_model import InferenceModel
 
 
-class EmbeddingModel(PixanoModel):
-    """Model class for embedding precomputing
+class OfflineModel(InferenceModel):
+    """InferenceModel class for offline preannotation
 
     Attributes:
         name (str): Model name
@@ -41,16 +42,18 @@ class EmbeddingModel(PixanoModel):
         batch: pa.RecordBatch,
         view: str,
         media_dir: Path,
-    ) -> list[np.ndarray]:
+        threshold: float = 0.0,
+    ) -> list[list[arrow_types.ObjectAnnotation]]:
         """Process batch
 
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
             media_dir (Path): Media location
+            threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            list[np.ndarray]: Model embeddings as NumPy arrays
+            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
         """
 
         pass
@@ -61,22 +64,22 @@ class EmbeddingModel(PixanoModel):
         views: list[str],
         splits: list[str] = None,
         batch_size: int = 1,
-        compression: str = "none",
+        threshold: float = 0.0,
     ) -> Path:
-        """Precompute embeddings for a parquet dataset
+        """Generate inferences for a parquet dataset
 
         Args:
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per batch. Defaults to 1.
-            compression (str, optional): Output parquet compression format. Defaults to "none".
+            threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 
         Returns:
             Path: Output parquet location
         """
 
-        output_dir = input_dir / f"db_embed_{self.id}"
+        output_dir = input_dir / f"db_infer_{self.id}"
 
         # Load spec.json
         with open(input_dir / "spec.json", "r") as f:
@@ -87,14 +90,12 @@ class EmbeddingModel(PixanoModel):
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
         # Create schema
-        fields = [pa.field("id", pa.string())]
-        fields.extend(
-            [pa.field(f"{view}_embedding", pa.list_(pa.float32())) for view in views]
+        schema = pa.schema(
+            [
+                pa.field("id", pa.string()),
+                pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+            ]
         )
-        schema = pa.schema(fields)
-
-        # Create embedding shapes dict
-        shapes = {}
 
         # Iterate on splits
         for split in splits:
@@ -122,27 +123,44 @@ class EmbeddingModel(PixanoModel):
                         # Add row IDs
                         data["id"].extend([str(row) for row in batch["id"]])
                         # Iterate on views
+                        batch_inf = []
                         for view in views:
-                            view_emb = self(batch, view, input_dir / "media")
-                            data[f"{view}_embedding"].extend(
-                                [e.flatten() for e in view_emb]
+                            batch_inf.append(
+                                self(batch, view, input_dir / "media", threshold)
                             )
-                            shapes[f"{view}_embedding_shape"] = list(view_emb[0].shape)
+                        # Regroup view inferences by row
+                        data["objects"].append(
+                            [
+                                inf.dict()
+                                for row in range(len(batch["id"]))
+                                for view_inf in batch_inf
+                                for inf in view_inf[row]
+                            ]
+                        )
+
+                    # Convert ExtensionTypes
+                    arrays = []
+                    for field_name, field_data in data.items():
+                        arrays.append(
+                            arrow_types.convert_field(
+                                field_name=field_name,
+                                field_type=schema.field(field_name).type,
+                                field_data=field_data,
+                            )
+                        )
 
                     # Save to file
                     pq.write_table(
-                        pa.Table.from_pydict(data, schema=schema),
+                        pa.Table.from_arrays(arrays, schema=schema),
                         split_dir / file.name,
-                        compression=compression,
                     )
 
                     # Save.json
                     super().save_json(
                         output_dir=output_dir,
-                        filename="embed",
+                        filename="infer",
                         spec_json=spec_json,
                         num_elements=pq.read_metadata(split_dir / file.name).num_rows,
-                        additional_info=shapes,
                     )
 
         return output_dir

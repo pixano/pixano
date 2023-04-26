@@ -12,155 +12,118 @@
 # http://www.cecill.info
 
 import json
-import os
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pyarrow as pa
-import pyarrow.parquet as pq
-from tqdm.auto import tqdm
-
-from pixano.core import arrow_types
-
-from .pixano_model import PixanoModel
 
 
-class InferenceModel(PixanoModel):
-    """Model class for inference generation
+class InferenceModel(ABC):
+    """Abstract parent class for OfflineModel and OnlineModel
 
     Attributes:
         name (str): Model name
-        id (str): Model ID
-        device (str): Model GPU or CPU device
-        source (str): Model source
-        info (str): Additional model info
+        id (str, optional): Model ID
+        device (str, optional): Model GPU or CPU device
+        source (str, optional): Model source
+        info (str, optional): Additional model info
     """
 
-    @abstractmethod
-    def __call__(
+    def __init__(
         self,
-        batch: pa.RecordBatch,
-        view: str,
-        media_dir: Path,
-        threshold: float = 0.0,
-    ) -> list[list[arrow_types.ObjectAnnotation]]:
-        """Process batch
+        name: str,
+        id: str = "",
+        device: str = "",
+        source: str = "",
+        info: str = "",
+    ) -> None:
+        """Initialize model name and ID
 
         Args:
-            batch (pa.RecordBatch): Input batch
-            view (str): Dataset view
-            media_dir (Path): Media location
-            threshold (float, optional): Confidence threshold. Defaults to 0.0.
-
-        Returns:
-            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
+            name (str): Model name
+            id (str, optional): Model ID. Defaults to "".
+            device (str, optional): Model GPU or CPU device. Defaults to "".
+            source (str, optional): Model source. Defaults to "".
+            info (str, optional): Additional model info. Defaults to "".
         """
+
+        self.name = name
+        if id == "":
+            self.id = f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{name}"
+        else:
+            self.id = id
+        self.device = device
+        self.source = source
+        self.info = info
+
+    @abstractmethod
+    def __call__():
+        """Call model"""
 
         pass
 
+    @abstractmethod
     def process_dataset(
         self,
         input_dir: Path,
         views: list[str],
         splits: list[str] = None,
         batch_size: int = 1,
-        threshold: float = 0.0,
     ) -> Path:
-        """Generate inferences for a parquet dataset
+        """Process parquet dataset
 
         Args:
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per batch. Defaults to 1.
-            threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 
         Returns:
             Path: Output parquet location
         """
 
-        output_dir = input_dir / f"db_infer_{self.id}"
+        pass
 
-        # Load spec.json
-        with open(input_dir / "spec.json", "r") as f:
-            spec_json = json.load(f)
+    def save_json(
+        self,
+        output_dir: Path,
+        filename: str,
+        spec_json: dict,
+        num_elements: int,
+        additional_info: dict = {},
+    ):
+        """Save output .json
 
-        # If no splits given, select all splits
-        if splits == None:
-            splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
+        Args:
+            output_dir (Path): Output parquet location
+            filename (str): Output .json filename
+            spec_json (dict): Input parquet .json
+            num_elements (int): Number of processed rows
+            additional_info (dict, optional): Additional info for output .json
+        """
 
-        # Create schema
-        schema = pa.schema(
-            [
-                pa.field("id", pa.string()),
-                pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
-            ]
-        )
+        # Load existing .json
+        if (output_dir / f"{filename}.json").is_file():
+            with open(output_dir / f"{filename}.json", "r") as f:
+                output_json = json.load(f)
+            output_json["num_elements"] += num_elements
 
-        # Iterate on splits
-        for split in splits:
-            # List dataset files
-            files = sorted((input_dir / "db" / split).glob("*.parquet"))
+        # Or create .json from scratch
+        else:
+            output_json = {
+                "id": spec_json["id"],
+                "name": spec_json["name"],
+                "description": spec_json["description"],
+                "num_elements": num_elements,
+                "model_id": self.id,
+                "model_name": self.name,
+                "model_source": self.source,
+                "model_info": self.info,
+            }
+            output_json.update(additional_info)
 
-            # Create folder
-            split_dir = output_dir / split
-            split_dir.mkdir(parents=True, exist_ok=True)
-
-            # Check for already processed files
-            processed = [p.name for p in split_dir.glob("*.parquet")]
-
-            # Iterate on files
-            for file in tqdm(files, desc=split, position=0):
-                # Process only remaining files
-                if file.name not in processed:
-                    # Load file into batches
-                    table = pq.read_table(file)
-                    batches = table.to_batches(max_chunksize=batch_size)
-
-                    # Iterate on batches
-                    data = {field.name: [] for field in schema}
-                    for batch in tqdm(batches, position=1, desc=file.name):
-                        # Add row IDs
-                        data["id"].extend([str(row) for row in batch["id"]])
-                        # Iterate on views
-                        batch_inf = []
-                        for view in views:
-                            batch_inf.append(
-                                self(batch, view, input_dir / "media", threshold)
-                            )
-                        # Regroup view inferences by row
-                        data["objects"].append(
-                            [
-                                inf.dict()
-                                for row in range(len(batch["id"]))
-                                for view_inf in batch_inf
-                                for inf in view_inf[row]
-                            ]
-                        )
-
-                    # Convert ExtensionTypes
-                    arrays = []
-                    for field_name, field_data in data.items():
-                        arrays.append(
-                            arrow_types.convert_field(
-                                field_name=field_name,
-                                field_type=schema.field(field_name).type,
-                                field_data=field_data,
-                            )
-                        )
-
-                    # Save to file
-                    pq.write_table(
-                        pa.Table.from_arrays(arrays, schema=schema),
-                        split_dir / file.name,
-                    )
-
-                    # Save.json
-                    super().save_json(
-                        output_dir=output_dir,
-                        filename="infer",
-                        spec_json=spec_json,
-                        num_elements=pq.read_metadata(split_dir / file.name).num_rows,
-                    )
-
-        return output_dir
+        # Save .json
+        with open(output_dir / f"{filename}.json", "w") as f:
+            json.dump(output_json, f)

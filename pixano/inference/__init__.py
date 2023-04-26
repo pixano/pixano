@@ -11,12 +11,12 @@
 #
 # http://www.cecill.info
 
-from .embedding_model import EmbeddingModel
+from .offline_model import OfflineModel
+from .online_model import OnlineModel
 from .inference_model import InferenceModel
-from .pixano_model import PixanoModel
 
 __all__ = [
-    "EmbeddingModel",
+    "OfflineModel",
+    "OnlineModel",
     "InferenceModel",
-    "PixanoModel",
 ]
