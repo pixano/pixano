@@ -13,10 +13,10 @@
 
 from .embedding_model import EmbeddingModel
 from .inference_model import InferenceModel
-from .offline_model import OfflineModel
+from .pixano_model import PixanoModel
 
 __all__ = [
     "EmbeddingModel",
     "InferenceModel",
-    "OfflineModel",
+    "PixanoModel",
 ]

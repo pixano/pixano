@@ -22,10 +22,10 @@ from tqdm.auto import tqdm
 
 from pixano.core import arrow_types
 
-from .offline_model import OfflineModel
+from .pixano_model import PixanoModel
 
 
-class InferenceModel(OfflineModel):
+class InferenceModel(PixanoModel):
     """Model class for inference generation
 
     Attributes:

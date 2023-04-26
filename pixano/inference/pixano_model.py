@@ -20,7 +20,7 @@ from typing import Any
 import pyarrow as pa
 
 
-class OfflineModel(ABC):
+class PixanoModel(ABC):
     """Abstract parent class for InferenceModel and EmbeddingModel
     
     Attributes:
