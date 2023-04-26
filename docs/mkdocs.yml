@@ -26,6 +26,8 @@ plugins:
 
 
 nav:
+- "Home": index.md
+
 - "Getting started":
 
   - "Installing Pixano": start/install.md
