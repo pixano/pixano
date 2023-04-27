@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 import pyarrow as pa
-import pyarrow.dataset as arrow_ds
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import pydantic
 
@@ -79,10 +79,10 @@ class Dataset:
         return self._table
 
     def load(self):
-        partitioning = arrow_ds.partitioning(
+        partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
-        return arrow_ds.dataset(self._path / "db", partitioning=partitioning)
+        return ds.dataset(self._path / "db", partitioning=partitioning)
 
 
 class InferenceDataset(Dataset):
@@ -100,10 +100,10 @@ class InferenceDataset(Dataset):
         self._table = None
 
     def load(self):
-        partitioning = arrow_ds.partitioning(
+        partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
-        return arrow_ds.dataset(
+        return ds.dataset(
             self._path,
             partitioning=partitioning,
             ignore_prefixes=["info"],
@@ -126,10 +126,10 @@ class EmbeddingDataset(Dataset):
         self._table = None
 
     def load(self):
-        partitioning = arrow_ds.partitioning(
+        partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
-        return arrow_ds.dataset(
+        return ds.dataset(
             self._path,
             partitioning=partitioning,
             ignore_prefixes=["info"],
