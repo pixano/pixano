@@ -15,9 +15,6 @@ import json
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any
-
-import pyarrow as pa
 
 
 class InferenceModel(ABC):
