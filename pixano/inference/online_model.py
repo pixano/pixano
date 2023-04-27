@@ -37,6 +37,8 @@ class OnlineModel(InferenceModel):
         device (str): Model GPU or CPU device
         source (str): Model source
         info (str): Additional model info
+        onnx_path (Path): ONNX Model Path
+        onnx_session (onnxruntime.InferenceSession): ONNX session
         working (dict): Dictionary of current working data
     """
 
@@ -177,6 +179,21 @@ class OnlineModel(InferenceModel):
                     )
 
         return output_dir
+
+    @abstractmethod
+    def export_onnx_model(self):
+        """Export Torch model to ONNX"""
+
+        pass
+
+    def set_onnx_model(self, onnx_path: Path):
+        """Set current working input dataset
+
+        Args:
+            onnx_path (Path): ONNX Model path
+        """
+
+        self.onnx_path = onnx_path
 
     def set_input_dataset(self, input_dir: Path):
         """Set current working input dataset
