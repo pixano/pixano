@@ -19,10 +19,10 @@ plugins:
           show_submodules: no
           docstring_section_style: list
           members_order: alphabetical
-          merge_init_into_class: yes
+          merge_init_into_class: no
           show_root_heading: true
           show_source: true
-          heading_level: 2
+          heading_level: 1
 
 
 nav:
@@ -58,6 +58,9 @@ nav:
     - "InferenceModel": code/inference/inference_model.md
     - "OfflineModel": code/inference/offline_model.md
     - "OnlineModel": code/inference/online_model.md
+
+  - "notebook":
+    - "display": code/notebook/display.md
 
   - "tools":
     - "converter": code/tools/converter.md
