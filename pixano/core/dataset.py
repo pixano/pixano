@@ -106,8 +106,7 @@ class InferenceDataset(Dataset):
         return ds.dataset(
             self._path,
             partitioning=partitioning,
-            ignore_prefixes=["info"],
-            exclude_invalid_files=True,
+            ignore_prefixes=["info", "infer.json"],
         )
 
 
@@ -132,6 +131,5 @@ class EmbeddingDataset(Dataset):
         return ds.dataset(
             self._path,
             partitioning=partitioning,
-            ignore_prefixes=["info"],
-            exclude_invalid_files=True,
+            ignore_prefixes=["info", "embed.json"],
         )

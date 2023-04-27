@@ -51,7 +51,7 @@ class OnlineModel(InferenceModel):
         info: str = "",
     ) -> None:
         super().__init__(name, id, device, source, info)
-        working = {}
+        self.working = {}
 
     @abstractmethod
     def __call__(self, input: dict[np.ndarray]) -> np.ndarray:
@@ -226,8 +226,15 @@ class OnlineModel(InferenceModel):
 
         # Load datasets
         split = ds.partitioning(pa.schema([("split", pa.string())]), flavor="hive")
-        input_ds = ds.dataset(self.working["input_dir"] / "db", partitioning=split)
-        embed_ds = ds.dataset(self.working["embed_dir"], partitioning=split)
+        input_ds = ds.dataset(
+            self.working["input_dir"] / "db",
+            partitioning=split,
+        )
+        embed_ds = ds.dataset(
+            self.working["embed_dir"],
+            partitioning=split,
+            ignore_prefixes=["info", "embed.json"],
+        )
 
         # Set working image
         input_row = duckdb.query(f"SELECT * FROM input_ds WHERE id={id}").arrow()
