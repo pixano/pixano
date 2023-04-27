@@ -25,63 +25,75 @@ from tqdm import tqdm
 from pixano.core import arrow_types
 
 
-def media_copy(images_path, fname, dest, view, multiview):
-    """Copy file from given source to "media" directory
+def media_copy(
+    images_path: Path, filename: str, path: Path, view: str, multiview: bool
+):
+    """Copy file from source to media directory
 
     Args:
-        images_path (str | Path): images source path
-        fname (str): image file name
-        dest (Path): path to dataset
-        view (str): view name
-        multiview (boolean): true if multiview
+        images_path (Path): Image path
+        fname (str): Image filename
+        path (Path): Dataset path
+        view (str): View name
+        multiview (bool): True if multiview
     """
-    # copy file "view_feat['<view>_path']" in dest/media/<view>
-    if fname is None or len(fname) == 0:
-        print("No uri !")
-        return
-    fsrc = Path(images_path) / Path(fname)
-    # checks needed because of inconsistent old Pixano format...
-    if not fsrc.is_file():
-        fsrc = Path(images_path) / Path(fname).name
-        if not fsrc.is_file():
-            raise f"Unable to find image.\nimage path: {images_path}\nfile: {fsrc}"
 
+    # Check provided filename
+    if filename is None or len(filename) == 0:
+        raise "No uri given"
+
+    # Get file
+    file = Path(images_path) / Path(filename)
+
+    # Check if file exists
+    if not file.is_file():
+        # Because of inconsistent old Pixano format, try this first
+        file = Path(images_path) / Path(filename).name
+        if not file.is_file():
+            raise f"File not found (path: {images_path}, filename: {file})"
+
+    # Media path
+    media_path = path / "media"
     if multiview:
-        fdest_path = dest / "media" / view
-    else:
-        fdest_path = dest / "media"
-    if not fdest_path.exists():
-        fdest_path.mkdir(parents=True)
+        media_path = media_path / view
+    media_path.mkdir(parents=True, exist_ok=True)
+
+    # Copy
     try:
-        shutil.copy(fsrc, fdest_path / fsrc.name)
+        shutil.copy(file, media_path / file.name)
     except Exception as e:
-        print("Image copy error", e)
-        print("    src", fsrc)
-        print("    dst", str(fdest_path / fsrc.name))
+        raise f"Image copy error: {e} (src: {file}, dst: {str(media_path / file.name)})"
 
 
-def generate_spec(split_info, dest: Path, name, description=None, stop=None):
-    """genarate spec.json specification file
+def generate_spec(
+    split_info: dict,
+    path: Path,
+    name: str,
+    description: str = None,
+    limits: list[int] = None,
+):
+    """Generate spec.json
 
     Args:
-        split_info (dict): dict which contain genrator for each split and views
-        dest (Path): path to dataset
-        name (str): dataset name
-        description (str, optionnal): description of dataset
-        stop (list[int], optional): array of limit to number of image, per split
+        split_info (dict): Generator for each split and views
+        path (Path): Dataset path
+        name (str): Dataset name
+        description (str, optional): Dataset description. Defaults to None.
+        limits (list[int], optional): Image limits per split. Defaults to None.
     """
+
     spec = {}
     spec["id"] = uuid.uuid4().hex
     spec["name"] = str(name)
     spec["description"] = description if description else str(name)
 
-    if stop:
-        spec["num_elements"] = sum(stop)
+    if limits:
+        spec["num_elements"] = sum(limits)
     else:
-        nb_images = 0
+        num_elements = 0
         for split in split_info:
             if hasattr(split_info[split], "info"):
-                nb_images += split_info[split].info["nb_images"]
+                num_elements += split_info[split].info["nb_images"]
             else:
                 counts = [d.info["nb_images"] for d in split_info[split].values()]
                 if counts.count(counts[0]) != len(counts):
@@ -89,33 +101,34 @@ def generate_spec(split_info, dest: Path, name, description=None, stop=None):
                         "Images counts are not consistent across views:"
                         + ", ".join(str(k) for k in split_info[split])
                     )
-                nb_images += counts[0]
-        spec["num_elements"] = nb_images
+                num_elements += counts[0]
+        spec["num_elements"] = num_elements
 
     try:
-        with open(dest / "spec.json", "w") as f:
+        with open(path / "spec.json", "w") as f:
             json.dump(spec, f)
-            print("File " + str(dest) + "/spec.json written")
+            print("File " + str(path) + "/spec.json written")
     except IOError as err:
-        print("Error creating spec.json file:" + err)
+        raise f"Error creating spec.json file: {err}"
 
 
-def generate_parquet(split_info, dest, schema=None, stop=None):
+def generate_parquet(
+    split_info: dict, path: Path, schema: pa.schema = None, limits: list[int] = None
+):
     """Generate parquet file
 
     Args:
-        split_info (dict): dict which contain genrator for each split and views
-        dest (Path): path to dataset
-        schema (pyarrow.schema, optionnal): pyarrow schema if custom schema needed
-        stop (list[int], optional): array of limit to number of image, per split
+        split_info (dict): Generators for each split and view
+        path (Path): Dataset path
+        schema (pa.schema, optional): Dataset PyArrow schema. Defaults to None.
+        limits (list[int], optional): Image limits per split. Defaults to None.
     """
 
-    parquet_path = dest / "db"
-    if not parquet_path.exists():
-        parquet_path.mkdir(parents=True)
+    db_path = path / "db"
+    db_path.mkdir(parents=True, exist_ok=True)
 
     for i, split in enumerate(split_info):
-        split_stop = stop[i] if stop else None
+        split_limit = limits[i] if limits else None
         lfeat = []
         if hasattr(split_info[split], "info"):
             # SingleView
@@ -140,16 +153,16 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
 
         try:
             if nb_images:
-                if split_stop is None or split_stop > nb_images:
-                    split_stop = nb_images
+                if split_limit is None or split_limit > nb_images:
+                    split_limit = nb_images
                     print(
-                        f"Reading data for whole dataset (split:{split}) of {split_stop} items."
+                        f"Reading data for whole dataset (split:{split}) of {split_limit} items."
                     )
                 else:
                     print(
-                        f"Reading data for subset dataset (split:{split}) of first {split_stop}/{nb_images} items."
+                        f"Reading data for subset dataset (split:{split}) of first {split_limit}/{nb_images} items."
                     )
-                for i in tqdm(range(split_stop)):
+                for i in tqdm(range(split_limit)):
                     feat = {}
                     for i, data in enumerate(datas):
                         view_feat = next(data)
@@ -157,7 +170,7 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
                             media_copy(
                                 data.info["images_path"],
                                 view_feat[views[i]]["uri"],
-                                dest,
+                                path,
                                 views[i],
                                 multiview,
                             )
@@ -175,7 +188,7 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
                 )
                 i = 0
                 # TODO multiview
-                while (feat := next(data)) and (split_stop < 0 or i < split_stop):
+                while (feat := next(data)) and (split_limit < 0 or i < split_limit):
                     feat["split"] = split
                     lfeat.append(feat)
                     i = 1 + i
@@ -184,23 +197,23 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
                     else:
                         if i % 10 == 0:
                             print(".", end="", flush=True)
-                    if i == split_stop:
+                    if i == split_limit:
                         raise StopIteration
         except StopIteration:
             print("Done!")
 
-        if not schema:
-            sch = [
+        if schema is None:
+            fields = [
                 pa.field("id", pa.string()),
                 pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
                 pa.field("split", pa.string()),
             ]
             for view in views:
-                sch.append(pa.field(view + ".width", pa.int32(), nullable=True))
-                sch.append(pa.field(view + ".height", pa.int32(), nullable=True))
-                sch.append(pa.field(view, arrow_types.ImageType()))
+                fields.append(pa.field(view + ".width", pa.int32(), nullable=True))
+                fields.append(pa.field(view + ".height", pa.int32(), nullable=True))
+                fields.append(pa.field(view, arrow_types.ImageType()))
 
-            schema = pa.schema(sch)
+            schema = pa.schema(fields)
 
         # Transpose lfeats (list of rows to cols (list of col))
         cols = {k: [dic[k] for dic in lfeat] for k in lfeat[0]}
@@ -218,7 +231,7 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
 
         ds.write_dataset(
             data=table,
-            base_dir=parquet_path / split,
+            base_dir=db_path / split,
             basename_template=f"part-{{i}}.parquet",
             format="parquet",
             max_rows_per_file=2048,
@@ -226,7 +239,7 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
             existing_data_behavior="overwrite_or_ignore",
         )
 
-        print("Parquet written in " + str(parquet_path / split))
+        print("Parquet written in " + str(db_path / split))
 
     # PREVIEW - create file "preview.png"
     # get 6 first (todo? random) images
@@ -244,21 +257,28 @@ def generate_parquet(split_info, dest, schema=None, stop=None):
             im = f[image_fields[i % len(image_fields)]]
             image = Image.open(io.BytesIO(im["preview_bytes"]))
             preview.paste(image, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
-        preview.save(dest / "preview.png")
+        preview.save(path / "preview.png")
 
 
-def convert(split_info, outpath, name, schema=None, stop=None, description=None):
+def convert(
+    split_info: dict,
+    library_path: str,
+    name: str,
+    schema: pa.schema = None,
+    limits: list[int] = None,
+    description: str = None,
+):
     """Create Pixano parquet dataset from generator(s)
 
     Args:
-        split_info (dict): dict which contain genrator for each split and views
-        outpath (str): destination path, should be path to library
-        name (str): dataset name
-        schema (pyarrow.schema, optionnal): _description_
-        stop (list[int], optional): array of limit to number of image, per split
-        description (str, optional): Description of dataset. Defaults to None.
+        split_info (dict): Generators for each split and view
+        library_path (str): Dataset library path
+        name (str): Dataset name
+        schema (pa.schema, optional): Dataset PyArrow schema. Defaults to None.
+        limits (list[int], optional): Image limits per split. Defaults to None.
+        description (str, optional): Dataset description. Defaults to None.
     """
-    dataset_path = Path(outpath) / name
 
-    generate_parquet(split_info, dataset_path, schema, stop)
-    generate_spec(split_info, dataset_path, name, description, stop)
+    path = Path(library_path) / name
+    generate_parquet(split_info, path, schema, limits)
+    generate_spec(split_info, path, name, description, limits)
