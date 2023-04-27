@@ -11,12 +11,12 @@
 #
 # http://www.cecill.info
 
-from typing import Any, Optional
+from pathlib import Path
 
 import duckdb
 import numpy as np
 import pyarrow as pa
-import pyarrow.dataset as arrow_ds
+import pyarrow.dataset as ds
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 
@@ -26,21 +26,21 @@ from pixano import transforms
 
 
 def get_item_details(
-    dataset: arrow_ds.Dataset,
-    item_id,
-    media_dir,
-    infer_datasets: list[arrow_ds.Dataset] = None,
+    dataset: ds.Dataset,
+    item_id: int,
+    media_dir: Path,
+    infer_datasets: list[ds.Dataset] = None,
 ) -> dict:
     """Get item details
 
     Args:
-        dataset (arrow_ds.Dataset): dataset
-        item_id (int): id of selected item
-        media_dir (Path): path to media directory
-        infer_datasets (list[arrow_ds.Dataset], optionnal): list of inference datasets
+        dataset (ds.Dataset): Dataset
+        item_id (int): Selected item ID
+        media_dir (Path): Dataset media path
+        infer_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to None.
 
     Returns:
-        dict: features for ui (ImageDetails)
+        dict: ImageDetails features for UI
     """
     schema = dataset.schema
     item = duckdb.query(f"SELECT * FROM dataset WHERE id={item_id}").fetchone()
@@ -141,17 +141,15 @@ def get_item_details(
     return features
 
 
-def get_items(
-    dataset: arrow_ds.Dataset, params: Optional[AbstractParams] = None
-) -> AbstractPage[Any]:
+def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPage:
     """Get items
 
     Args:
-        dataset (pa.Dataset): dataset
-        params (Optional[AbstractParams], optional): FastAPI params for pagination. Defaults to None.
+        dataset (pa.Dataset): Dataset
+        params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
 
     Returns:
-        AbstractPage[models.Features]: list of features for ui (DatasetExplorer)
+        AbstractPage: List of models.Feature for UI (DatasetExplorer)
     """
 
     params = resolve_params(params)
@@ -166,7 +164,7 @@ def get_items(
         f"SELECT * from dataset OFFSET {raw_params.offset} LIMIT {raw_params.limit}"
     ).arrow()
 
-    def _create_features(row):
+    def _create_features(row: list) -> list[models.Feature]:
         features = []
         for field in schema:
             if arrow_types.is_number(field.type):
