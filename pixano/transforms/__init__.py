@@ -11,20 +11,19 @@
 #
 # http://www.cecill.info
 
-from .boxes import normalize, denormalize, mask_to_bbox, xywh_to_xyxy, xyxy_to_xywh
+from .boxes import denormalize, mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
 from .image import (
-    image_to_binary,
     binary_to_base64,
-    depth_file_to_binary,
     depth_array_to_gray,
+    depth_file_to_binary,
+    image_to_binary,
+    mask_to_polygons,
     mask_to_rle,
     rle_to_mask,
     rle_to_polygons,
-    mask_to_polygons,
     rle_to_urle,
 )
 from .labels import coco_names_80, coco_names_91, voc_names
-
 
 __all__ = [
     "normalize",

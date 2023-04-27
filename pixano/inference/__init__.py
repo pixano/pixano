@@ -11,9 +11,9 @@
 #
 # http://www.cecill.info
 
+from .inference_model import InferenceModel
 from .offline_model import OfflineModel
 from .online_model import OnlineModel
-from .inference_model import InferenceModel
 
 __all__ = [
     "OfflineModel",

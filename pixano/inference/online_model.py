@@ -20,10 +20,10 @@ import cv2
 import duckdb
 import numpy as np
 import pyarrow as pa
-import pyarrow.parquet as pq
 import pyarrow.dataset as ds
-from tqdm.auto import tqdm
+import pyarrow.parquet as pq
 from onnxruntime import InferenceSession
+from tqdm.auto import tqdm
 
 from .inference_model import InferenceModel
 

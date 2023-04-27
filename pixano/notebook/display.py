@@ -13,8 +13,9 @@
 
 import html
 import json
-import shortuuid
+
 import IPython.display
+import shortuuid
 
 
 def get_env():
