@@ -30,8 +30,10 @@ dependencies = [
   "fastapi-pagination ~= 0.11.0",
   "imageio ~= 2.25.0",
   "importlib-resources ~= 5.12.0",
+  "ipywidgets ~= 8.0.0",
   "numpy ~= 1.23.0",
   "opencv-python ~= 4.7.0",
+  "onnxruntime ~=1.14.0",
   "pandas ~= 1.5.0",
   "Pillow ~= 9.4.0",
   "pyarrow ~= 11.0.0",
@@ -39,16 +41,14 @@ dependencies = [
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
   "tqdm ~= 4.64.0",
-  "uvicorn ~= 0.20.0"
+  "uvicorn ~= 0.20.0",
+  "shortuuid ~= 1.0.11"
 ]
 
 [project.optional-dependencies]
 documentation = [
   "mkdocs-material ~= 9.1.0",
   "mkdocstrings-python ~= 0.9.0"
-]
-notebooks = [
-  "ipywidgets ~= 8.0.0"
 ]
 
 [project.urls]
