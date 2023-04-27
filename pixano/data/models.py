@@ -85,11 +85,11 @@ class Category(BaseModel):
     """Category
 
     Attributes:
-        id (int | None): category id
+        id (Optional[int]): category id
         name (str): category name
     """
 
-    id: int | None
+    id: Optional[int]
     name: str
 
 
