@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from typing import Any, Optional
+from typing import Optional
 
 import pyarrow as pa
 from pydantic import BaseModel
@@ -45,7 +45,7 @@ class ObjectAnnotation(BaseModel):
         is_group_of (bool, optional): is_group_of
         is_difficult (bool, optional): is_difficult
         is_truncated (bool, optional): is_truncated
-        mask (dict[str, Any], optional): Mask
+        mask (dict[str, bytes], optional): Mask
         mask_source (str, optional): Mask source
         area (float, optional): area
         pose (dict[str, list[float]], optional): Pose
@@ -65,7 +65,7 @@ class ObjectAnnotation(BaseModel):
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
     # Mask
-    mask: Optional[dict[str, Any]] = None
+    mask: Optional[dict[str, bytes]] = None
     mask_source: Optional[str] = None
     area: Optional[float] = None
     # 6D Poses
