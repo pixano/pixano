@@ -239,7 +239,7 @@ class OnlineModel(InferenceModel):
         # Set working image
         input_row = duckdb.query(f"SELECT * FROM input_ds WHERE id={id}").arrow()
         image = cv2.imread(
-            str(self.working["input_dir"] / "media" / input_row[view][0].as_py()._uri)
+            str(self.working["input_dir"] / "media" / input_row[view][0].as_py()["uri"])
         )
         self.working["image"] = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
