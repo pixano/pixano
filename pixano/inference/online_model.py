@@ -181,37 +181,36 @@ class OnlineModel(InferenceModel):
         return output_dir
 
     @abstractmethod
-    def export_onnx_model(self):
-        """Export Torch model to ONNX"""
+    def export_onnx_model(self) -> Path:
+        """Export Torch model to ONNX
+
+        Returns:
+            Path: ONNX model path
+        """
 
         pass
 
-    def set_onnx_model(self, onnx_path: Path):
-        """Set current working input dataset
+    def set_onnx_model(self, onnx_path: Path = None):
+        """Set existing ONNX model path or export model to ONNX
 
         Args:
-            onnx_path (Path): ONNX Model path
+            onnx_path (Path, optional): ONNX Model path. Defaults to None.
         """
 
-        self.onnx_path = onnx_path
+        if onnx_path == None:
+            onnx_path = self.export_onnx_model()
 
-    def set_input_dataset(self, input_dir: Path):
-        """Set current working input dataset
+        self.onnx_path = Path(onnx_path)
+
+    def set_dataset(self, input_dir: Path):
+        """Set current working dataset
 
         Args:
-            input_dir (Path): Input dataset path
+            input_dir (Path): Dataset path
         """
 
         self.working["input_dir"] = Path(input_dir)
-
-    def set_embedding_dataset(self, embed_dir: Path):
-        """Set current working embedding dataset
-
-        Args:
-            embed_dir (Path): Embedding dataset path
-        """
-
-        self.working["embed_dir"] = Path(embed_dir)
+        self.working["embed_dir"] = Path(input_dir) / f"db_embed_{self.id}"
 
     def set_image(self, id: str, view: str) -> np.ndarray:
         """Set current working image and return embedding
@@ -257,7 +256,7 @@ class OnlineModel(InferenceModel):
     def open_onnx_session(self):
         """Open an ONNX session for interactive annotation"""
 
-        self.onnx_session = InferenceSession(self.onnx_path)
+        self.onnx_session = InferenceSession(self.onnx_path.as_posix())
 
     def close_onnx_session(self):
         """Close the ONNX session for interactive annotation"""
