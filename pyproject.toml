@@ -32,9 +32,9 @@ dependencies = [
   "importlib-resources ~= 5.12.0",
   "ipywidgets ~= 8.0.0",
   "numpy ~= 1.23.0",
-  "opencv-python ~= 4.7.0",
   "onnx ~= 1.13.0",
   "onnxruntime ~= 1.14.0",
+  "opencv-python ~= 4.7.0",
   "pandas ~= 1.5.0",
   "Pillow ~= 9.4.0",
   "pyarrow ~= 11.0.0",
@@ -43,7 +43,6 @@ dependencies = [
   "shortuuid ~= 1.0.0",
   "tqdm ~= 4.64.0",
   "uvicorn ~= 0.20.0",
-  "shortuuid ~= 1.0.0"
 ]
 
 [project.optional-dependencies]
