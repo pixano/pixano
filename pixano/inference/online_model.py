@@ -54,11 +54,11 @@ class OnlineModel(InferenceModel):
         self.working = {}
 
     @abstractmethod
-    def __call__(self, input: dict[np.ndarray]) -> np.ndarray:
+    def __call__(self, input: dict[str, np.ndarray]) -> np.ndarray:
         """Return model annotation based on user input
 
         Args:
-            input (dict[np.ndarray]): User input
+            input (dict[str, np.ndarray]): User input
 
         Returns:
             np.ndarray: Model annotation masks
@@ -90,7 +90,7 @@ class OnlineModel(InferenceModel):
         self,
         input_dir: Path,
         views: list[str],
-        splits: list[str] = None,
+        splits: list[str] = [],
         batch_size: int = 1,
         compression: str = "none",
     ) -> Path:
@@ -114,7 +114,7 @@ class OnlineModel(InferenceModel):
             spec_json = json.load(f)
 
         # If no splits given, select all splits
-        if splits == None:
+        if splits == []:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
         # Create schema
@@ -257,7 +257,7 @@ class OnlineModel(InferenceModel):
     def open_onnx_session(self):
         """Open an ONNX session for interactive annotation"""
 
-        self.onnx_session = InferenceSession(self.onnx_model_path)
+        self.onnx_session = InferenceSession(self.onnx_path)
 
     def close_onnx_session(self):
         """Close the ONNX session for interactive annotation"""

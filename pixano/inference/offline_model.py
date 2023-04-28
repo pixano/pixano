@@ -62,7 +62,7 @@ class OfflineModel(InferenceModel):
         self,
         input_dir: Path,
         views: list[str],
-        splits: list[str] = None,
+        splits: list[str] = [],
         batch_size: int = 1,
         threshold: float = 0.0,
     ) -> Path:
@@ -71,7 +71,7 @@ class OfflineModel(InferenceModel):
         Args:
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
-            splits (list[str], optional): Dataset splits, all if None. Defaults to None.
+            splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 

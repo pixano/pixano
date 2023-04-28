@@ -36,11 +36,16 @@ def media_copy(
         path (Path): Dataset path
         view (str): View name
         multiview (bool): True if multiview
+
+    Raises:
+        Exception: Empty filename
+        Exception: File not found
+        Exception: File copy error
     """
 
     # Check provided filename
     if filename is None or len(filename) == 0:
-        raise "No uri given"
+        raise Exception("No uri given")
 
     # Get file
     file = Path(images_path) / Path(filename)
@@ -50,7 +55,7 @@ def media_copy(
         # Because of inconsistent old Pixano format, try this first
         file = Path(images_path) / Path(filename).name
         if not file.is_file():
-            raise f"File not found (path: {images_path}, filename: {file})"
+            raise Exception(f"File not found (path: {images_path}, filename: {file})")
 
     # Media path
     media_path = path / "media"
@@ -62,15 +67,17 @@ def media_copy(
     try:
         shutil.copy(file, media_path / file.name)
     except Exception as e:
-        raise f"Image copy error: {e} (src: {file}, dst: {str(media_path / file.name)})"
+        raise Exception(
+            f"Image copy error: {e} (src: {file}, dst: {str(media_path / file.name)})"
+        )
 
 
 def generate_spec(
     split_info: dict,
     path: Path,
     name: str,
-    description: str = None,
-    limits: list[int] = None,
+    description: str = "",
+    limits: list[int] = [],
 ):
     """Generate spec.json
 
@@ -78,8 +85,11 @@ def generate_spec(
         split_info (dict): Generator for each split and views
         path (Path): Dataset path
         name (str): Dataset name
-        description (str, optional): Dataset description. Defaults to None.
-        limits (list[int], optional): Image limits per split. Defaults to None.
+        description (str, optional): Dataset description. Defaults to "".
+        limits (list[int], optional): Image limits per split. Defaults to [].
+
+    Raises:
+        Exception: File creation error
     """
 
     spec = {}
@@ -109,11 +119,11 @@ def generate_spec(
             json.dump(spec, f)
             print("File " + str(path) + "/spec.json written")
     except IOError as err:
-        raise f"Error creating spec.json file: {err}"
+        raise Exception(f"Error creating spec.json file: {err}")
 
 
 def generate_parquet(
-    split_info: dict, path: Path, schema: pa.schema = None, limits: list[int] = None
+    split_info: dict, path: Path, schema: pa.schema = None, limits: list[int] = []
 ):
     """Generate parquet file
 
@@ -128,7 +138,7 @@ def generate_parquet(
     db_path.mkdir(parents=True, exist_ok=True)
 
     for i, split in enumerate(split_info):
-        split_limit = limits[i] if limits else None
+        split_limit = limits[i] if limits else 0
         lfeat = []
         if hasattr(split_info[split], "info"):
             # SingleView
@@ -153,7 +163,7 @@ def generate_parquet(
 
         try:
             if nb_images:
-                if split_limit is None or split_limit > nb_images:
+                if split_limit is 0 or split_limit > nb_images:
                     split_limit = nb_images
                     print(
                         f"Reading data for whole dataset (split:{split}) of {split_limit} items."
@@ -265,8 +275,8 @@ def convert(
     library_path: str,
     name: str,
     schema: pa.schema = None,
-    limits: list[int] = None,
-    description: str = None,
+    limits: list[int] = [],
+    description: str = "",
 ):
     """Create Pixano parquet dataset from generator(s)
 
@@ -275,8 +285,8 @@ def convert(
         library_path (str): Dataset library path
         name (str): Dataset name
         schema (pa.schema, optional): Dataset PyArrow schema. Defaults to None.
-        limits (list[int], optional): Image limits per split. Defaults to None.
-        description (str, optional): Dataset description. Defaults to None.
+        limits (list[int], optional): Image limits per split. Defaults to [].
+        description (str, optional): Dataset description. Defaults to "".
     """
 
     path = Path(library_path) / name

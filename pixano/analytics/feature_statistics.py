@@ -64,7 +64,7 @@ def objects_tableToDF(data_table: pa.Table, field: str) -> pd.DataFrame:
         return None
 
 
-def numeric_features_stats(df: pd.DataFrame, field: str) -> dict:
+def numeric_features_stats(df: pd.DataFrame, field: str) -> list[dict]:
     """Compute numerical statistics (histogram)
 
     Args:

@@ -66,7 +66,7 @@ class InferenceModel(ABC):
         self,
         input_dir: Path,
         views: list[str],
-        splits: list[str] = None,
+        splits: list[str] = [],
         batch_size: int = 1,
     ) -> Path:
         """Process parquet dataset
@@ -74,7 +74,7 @@ class InferenceModel(ABC):
         Args:
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
-            splits (list[str], optional): Dataset splits, all if None. Defaults to None.
+            splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
 
         Returns:

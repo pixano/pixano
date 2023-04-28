@@ -29,7 +29,7 @@ def get_item_details(
     dataset: ds.Dataset,
     item_id: int,
     media_dir: Path,
-    infer_datasets: list[ds.Dataset] = None,
+    infer_datasets: list[ds.Dataset] = [],
 ) -> dict:
     """Get item details
 
@@ -37,7 +37,7 @@ def get_item_details(
         dataset (ds.Dataset): Dataset
         item_id (int): Selected item ID
         media_dir (Path): Dataset media path
-        infer_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to None.
+        infer_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
 
     Returns:
         dict: ImageDetails features for UI

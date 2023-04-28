@@ -58,7 +58,7 @@ class CocoLoader(DataLoader):
         self.iter_img_ids = iter(self.img_ids)
         self.idx = 0
 
-    def load_ann(self, id: int, width: int, height: int) -> dict:
+    def load_ann(self, id: int, width: int, height: int) -> list[dict]:
         """Load COCO annotations
 
         Args:
@@ -67,7 +67,7 @@ class CocoLoader(DataLoader):
             height (int): image height, for normalization
 
         Returns:
-            dict: Annotation data
+            list[dict]: Annotation data
         """
 
         ann_ids = self.coco.getAnnIds(id)
@@ -87,9 +87,9 @@ class CocoLoader(DataLoader):
 
             objects.append(
                 arrow_types.ObjectAnnotation(
-                    id=ann["id"],
+                    id=str(ann["id"]),
                     view_id="image",
-                    is_group_of=ann["iscrowd"],
+                    is_group_of=bool(ann["iscrowd"]),
                     category_id=ann["category_id"],
                     category_name=self.coco.loadCats(ann["category_id"])[0]["name"],
                     bbox=bbox,
