@@ -32,7 +32,7 @@ def media_copy(
 
     Args:
         images_path (Path): Image path
-        fname (str): Image filename
+        filename (str): Image filename
         path (Path): Dataset path
         view (str): View name
         multiview (bool): True if multiview

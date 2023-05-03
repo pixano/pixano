@@ -155,7 +155,7 @@ Features = list[Feature]
 class DatasetSpec(BaseModel):
     """DatasetSpec
 
-    Args:
+    Attributes:
         id (str): Dataset ID
         name (str): Dataset name
         description (str): Dataset description
