@@ -18,7 +18,7 @@ import IPython.display
 import shortuuid
 
 
-def get_env():
+def get_env() -> str:
     """Get current running environment
 
     Returns:
