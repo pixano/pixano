@@ -14,6 +14,7 @@
 import json
 import os
 from abc import abstractmethod
+from io import BytesIO
 from pathlib import Path
 
 import cv2
@@ -24,6 +25,8 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from onnxruntime import InferenceSession
 from tqdm.auto import tqdm
+
+from pixano.transforms import binary_to_base64
 
 from .inference_model import InferenceModel
 
@@ -92,16 +95,14 @@ class OnlineModel(InferenceModel):
         views: list[str],
         splits: list[str] = [],
         batch_size: int = 1,
-        compression: str = "none",
     ) -> Path:
         """Precompute embeddings for a parquet dataset
 
         Args:
             input_dir (Path): Input parquet location
             views (list[str]): Dataset views
-            splits (list[str], optional): Dataset splits, all if None. Defaults to None.
+            splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
-            compression (str, optional): Output parquet compression format. Defaults to "none".
 
         Returns:
             Path: Output parquet location
@@ -119,13 +120,8 @@ class OnlineModel(InferenceModel):
 
         # Create schema
         fields = [pa.field("id", pa.string())]
-        fields.extend(
-            [pa.field(f"{view}_embedding", pa.list_(pa.float32())) for view in views]
-        )
+        fields.extend([pa.field(f"{view}_embedding", pa.binary()) for view in views])
         schema = pa.schema(fields)
-
-        # Create embedding shapes dict
-        shapes = {}
 
         # Iterate on splits
         for split in splits:
@@ -157,16 +153,15 @@ class OnlineModel(InferenceModel):
                             view_emb = self.process_batch(
                                 batch, view, input_dir / "media"
                             )
-                            data[f"{view}_embedding"].extend(
-                                [e.flatten() for e in view_emb]
-                            )
-                            shapes[f"{view}_embedding_shape"] = list(view_emb[0].shape)
+                            for emb in view_emb:
+                                emb_bytes = BytesIO()
+                                np.save(emb_bytes, emb)
+                                data[f"{view}_embedding"].append(emb_bytes.getvalue())
 
                     # Save to file
                     pq.write_table(
                         pa.Table.from_pydict(data, schema=schema),
                         split_dir / file.name,
-                        compression=compression,
                     )
 
                     # Save.json
@@ -175,7 +170,6 @@ class OnlineModel(InferenceModel):
                         filename="embed",
                         spec_json=spec_json,
                         num_elements=pq.read_metadata(split_dir / file.name).num_rows,
-                        additional_info=shapes,
                     )
 
         return output_dir
@@ -212,7 +206,7 @@ class OnlineModel(InferenceModel):
         self.working["input_dir"] = Path(input_dir)
         self.working["embed_dir"] = Path(input_dir) / f"db_embed_{self.id}"
 
-    def set_image(self, id: str, view: str) -> np.ndarray:
+    def set_image(self, id: str, view: str) -> str:
         """Set current working image and return embedding
 
         Args:
@@ -220,7 +214,7 @@ class OnlineModel(InferenceModel):
             view (str): View ID
 
         Returns:
-            np.ndarray: Image embedding
+            str: Image embedding in base 64
         """
 
         # Load datasets
@@ -244,14 +238,10 @@ class OnlineModel(InferenceModel):
 
         # Get embedding
         embed_row = duckdb.query(f"SELECT * FROM embed_ds WHERE id={id}").arrow()
-        embedding = embed_row["image_embedding"].to_numpy()[0]
-
-        # Get embedding shape
-        with open(self.working["embed_dir"] / "embed.json", "r") as f:
-            embedding_shape = json.load(f)["image_embedding_shape"]
+        embedding = binary_to_base64(embed_row["image_embedding"][0].as_py())
 
         # Reshape and return embedding
-        return embedding.reshape(embedding_shape)
+        return embedding
 
     def open_onnx_session(self):
         """Open an ONNX session for interactive annotation"""

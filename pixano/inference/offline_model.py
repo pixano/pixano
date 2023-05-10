@@ -86,7 +86,7 @@ class OfflineModel(InferenceModel):
             spec_json = json.load(f)
 
         # If no splits given, select all splits
-        if splits == None:
+        if splits == []:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
         # Create schema

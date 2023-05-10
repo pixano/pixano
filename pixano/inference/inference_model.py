@@ -89,7 +89,6 @@ class InferenceModel(ABC):
         filename: str,
         spec_json: dict,
         num_elements: int,
-        additional_info: dict = {},
     ):
         """Save output .json
 
@@ -98,7 +97,6 @@ class InferenceModel(ABC):
             filename (str): Output .json filename
             spec_json (dict): Input parquet .json
             num_elements (int): Number of processed rows
-            additional_info (dict, optional): Additional info for output .json
         """
 
         # Load existing .json
@@ -119,7 +117,6 @@ class InferenceModel(ABC):
                 "model_source": self.source,
                 "model_info": self.info,
             }
-            output_json.update(additional_info)
 
         # Save .json
         with open(output_dir / f"{filename}.json", "w") as f:
