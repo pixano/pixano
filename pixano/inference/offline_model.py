@@ -26,7 +26,7 @@ from .inference_model import InferenceModel
 
 
 class OfflineModel(InferenceModel):
-    """InferenceModel class for offline preannotation
+    """InferenceModel class for offline pre-annotation
 
     Attributes:
         name (str): Model name
