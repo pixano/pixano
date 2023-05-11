@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = 'Data-centric AI building blocks for computer vision applications' 
 readme = "README.md"
 requires-python = ">=3.10"
-license = "CeCILL-C"
+license = { file = "LICENSE" }
 authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
 keywords = [
   "machine learning",
@@ -23,6 +23,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "License :: CeCILL-C Free Software License Agreement (CECILL-C)",
 ]
 dependencies = [
   "duckdb ~= 0.7.0",
