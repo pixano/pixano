@@ -26,15 +26,9 @@ plugins:
 
 
 nav:
-- "Home": index.md
+- "Getting started": index.md
 
-- "Getting started":
-
-  - "Installing Pixano": start/install.md
-  - "Launching Pixano": start/launch.md
-  - "Using Pixano": start/use.md
-
-- "Code documentation":
+- "API reference":
 
   - "analytics":
     - "feature_statistics": code/analytics/feature_statistics.md
