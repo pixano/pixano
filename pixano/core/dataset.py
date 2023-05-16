@@ -13,31 +13,48 @@
 
 import time
 from pathlib import Path
+from typing import Optional
 
 import pyarrow as pa
-import pyarrow.dataset as arrow_ds
+import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 import pydantic
 
 
 class DatasetInfo(pydantic.BaseModel):
+    """DatasetInfo
+
+    Attributes:
+        id (str): Dataset ID
+        name (str): Dataset name
+        description (str): Dataset description
+        num_elements (int): Number of elements in dataset
+        preview (str, optional): Dataset preview
+    """
+
     id: str
     name: str
     description: str
     num_elements: int
-    preview: str | None
+    preview: Optional[str]
 
 
 class Dataset:
     """Dataset class
 
-    Args:
+    Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
         _table (pa.Table): Dataset table
     """
 
     def __init__(self, path: Path):
+        """Initialize dataset
+
+        Args:
+            path (Path): Dataset path
+        """
+
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "spec.json")
         self._table = None
@@ -62,16 +79,16 @@ class Dataset:
         return self._table
 
     def load(self):
-        partitioning = arrow_ds.partitioning(
+        partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
-        return arrow_ds.dataset(self._path / "db", partitioning=partitioning)
+        return ds.dataset(self._path / "db", partitioning=partitioning)
 
 
 class InferenceDataset(Dataset):
     """Inference Dataset
 
-    Args:
+    Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
         _table (pa.Table): Dataset table
@@ -83,12 +100,36 @@ class InferenceDataset(Dataset):
         self._table = None
 
     def load(self):
-        partitioning = arrow_ds.partitioning(
+        partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
-        return arrow_ds.dataset(
+        return ds.dataset(
             self._path,
             partitioning=partitioning,
-            ignore_prefixes=["info"],
-            exclude_invalid_files=True,
+            ignore_prefixes=["info", "infer.json"],
+        )
+
+
+class EmbeddingDataset(Dataset):
+    """Embedding Dataset
+
+    Attributes:
+        _path (Path): Dataset path
+        _info (DatasetInfo): Dataset info
+        _table (pa.Table): Dataset table
+    """
+
+    def __init__(self, path: Path):
+        self._path = path
+        self._info = DatasetInfo.parse_file(self._path / "embed.json")
+        self._table = None
+
+    def load(self):
+        partitioning = ds.partitioning(
+            pa.schema([("split", pa.string())]), flavor="hive"
+        )
+        return ds.dataset(
+            self._path,
+            partitioning=partitioning,
+            ignore_prefixes=["info", "embed.json"],
         )

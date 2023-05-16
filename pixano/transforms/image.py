@@ -124,7 +124,7 @@ def rle_to_mask(rle: dict) -> np.ndarray:
     """Decode mask from RLE to NumPy array
 
     Args:
-        rle_mask (dict): Mask as RLE
+        rle (dict): Mask as RLE
 
     Returns:
         np.ndarray: Mask as NumPy array

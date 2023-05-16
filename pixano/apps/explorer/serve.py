@@ -11,6 +11,8 @@
 #
 # http://www.cecill.info
 
+from pathlib import Path
+
 import click
 import fastapi
 import pkg_resources
@@ -18,7 +20,6 @@ import uvicorn
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from .main import app, settings
 

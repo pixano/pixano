@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 import base64
-from typing import IO, Optional
+from typing import IO
 
 import pyarrow as pa
 from etils import epath
@@ -26,15 +26,15 @@ class Image:
         uri: str,
         bytes: bytes,
         preview_bytes: bytes,
-        uri_prefix: Optional[epath.PathLike] = None,
+        uri_prefix: epath.PathLike = None,
     ):
         """Creates image from UIR, bytes and preview
 
-        Args:
-            uri (str): _description_
-            bytes (bytes): _description_
-            preview_bytes (bytes): _description_
-            uri_prefix (Optional[epath.PathLike], optional): _description_. Defaults to None.
+        Attributes:
+            uri (str): Image URI
+            bytes (bytes): Image bytes
+            preview_bytes (bytes): Image preview bytes
+            uri_prefix (epath.PathLike, optional): Image URI prefix. Defaults to None.
         """
         self._uri = uri
         self._bytes = bytes
@@ -43,7 +43,7 @@ class Image:
         self.uri_prefix = uri_prefix
 
     @property
-    def bytes(self) -> Optional[bytes]:
+    def bytes(self) -> bytes:
         if self._bytes is not None:
             return self._bytes
         elif self._uri is not None:
@@ -128,7 +128,7 @@ class ImageScalar(pa.ExtensionScalar):
 
 
 class CompressedRLEType(pa.ExtensionType):
-    """Segmentation mask type as compressed RLE"""
+    """Segmentation mask type as PyArrow StructType"""
 
     def __init__(self):
         super(CompressedRLEType, self).__init__(

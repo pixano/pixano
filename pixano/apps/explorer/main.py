@@ -14,7 +14,6 @@
 
 import json
 from pathlib import Path
-from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,14 +24,31 @@ from pydantic import BaseSettings
 from pixano.core import arrow_types
 from pixano.core.dataset import Dataset, DatasetInfo, InferenceDataset
 from pixano.data import models
+
 from . import db_utils
 
 
 class Settings(BaseSettings):
+    """Dataset library settings
+
+    Attributes:
+        data_dir (Path): Dataset library path
+    """
+
     data_dir: Path = Path.cwd() / "library"
 
 
-def find_dataset(dataset_id: str, settings: Settings):
+def find_dataset(dataset_id: str, settings: Settings) -> dict:
+    """Return dataset path and info based on its ID
+
+    Args:
+        dataset_id (str): Dataset ID
+        settings (Settings): Dataset library
+
+    Returns:
+        dict: Dataset path and info
+    """
+
     for info_file in settings.data_dir.glob("*/spec.json"):
         print(info_file)
         info = DatasetInfo.parse_file(info_file)
@@ -41,7 +57,16 @@ def find_dataset(dataset_id: str, settings: Settings):
     return None
 
 
-def load_library(settings: Settings) -> List[DatasetInfo]:
+def load_library(settings: Settings) -> list[DatasetInfo]:
+    """Load all dataset info files in library
+
+    Args:
+        settings (Settings): Dataset library
+
+    Returns:
+        list[DatasetInfo]: Dataset info files
+    """
+
     infos = []
     for info_file in sorted(list(settings.data_dir.glob("*/spec.json"))):
         print(info_file)
@@ -59,16 +84,34 @@ def load_library(settings: Settings) -> List[DatasetInfo]:
     return infos
 
 
-def load_dataset(dataset_id: str, settings: Settings):
-    ds = find_dataset(dataset_id, settings)
+def load_dataset(dataset_id: str, settings: Settings) -> Dataset:
+    """Load dataset based on its ID
 
+    Args:
+        dataset_id (str): Dataset ID
+        settings (Settings): Dataset library
+
+    Returns:
+        Dataset: Dataset
+    """
+
+    ds = find_dataset(dataset_id, settings)
     if ds is not None:
         ds = Dataset(ds["path"])
-
     return ds
 
 
-def load_dataset_stats(dataset_id: str, settings: Settings):
+def load_dataset_stats(dataset_id: str, settings: Settings) -> dict:
+    """Load dataset stats based on its ID
+
+    Args:
+        dataset_id (str): Dataset ID
+        settings (Settings): Dataset Library
+
+    Returns:
+        dict: Dataset stats
+    """
+
     stats = []
     ds = find_dataset(dataset_id, settings)
     if ds:
@@ -79,7 +122,20 @@ def load_dataset_stats(dataset_id: str, settings: Settings):
     return stats
 
 
-def create_app(settings: Settings):
+def create_app(settings: Settings) -> FastAPI:
+    """Run explorer app in library
+
+    Args:
+        settings (Settings): Dataset Library
+
+    Raises:
+        HTTPException: 404 error if dataset items are not found
+        HTTPException: 404 error if dataset stats are not found
+        HTTPException: 404 error if dataset item details are not found
+
+    Returns:
+        FastAPI: Explorer app
+    """
     app = FastAPI()
 
     app.add_middleware(
@@ -89,7 +145,7 @@ def create_app(settings: Settings):
         allow_headers=["*"],
     )
 
-    @app.get("/datasets", response_model=List[DatasetInfo])
+    @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_datasets_list():
         library = load_library(settings)
         print(library)

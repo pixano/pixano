@@ -11,9 +11,9 @@
 #
 # http://www.cecill.info
 
+from .coco_loader import CocoLoader
 from .data_loader import DataLoader
 from .pixano_loader import PixanoLoader
-from .coco_loader import CocoLoader
 
 __all__ = [
     "DataLoader",

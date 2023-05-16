@@ -20,15 +20,33 @@ from PIL import Image
 from pycocotools import mask as mask_api
 from tqdm import tqdm
 
-import pixano.core.models as ann_models
 from pixano import transforms
+from pixano.core import arrow_types
 
 from .data_loader import DataLoader
 
 
-# Pixano Loader
 class PixanoLoader(DataLoader):
-    def __init__(self, workspace, ann_file, img_path=None, view="image"):
+    """Pixano Data Loader
+
+    Attributes:
+        dataset (dict): Dataset
+        info (dict): Dataset info
+        iter_data (iter): Data iterable
+    """
+
+    def __init__(
+        self, workspace: str, ann_file: str, img_path: Path = None, view: str = "image"
+    ):
+        """Initalize COCO Data Loader
+
+        Args:
+            workspace (str): Data path
+            ann_file (str): Annotation file name
+            img_path (Path, optional): Image path. Defaults to None.
+            view (str, optional): Image view name. Defaults to "image".
+        """
+
         if ann_file is None:
             print(
                 "PixanoLoader: Please provide an annotation file, or use another Loader if no annotations"
@@ -94,21 +112,24 @@ class PixanoLoader(DataLoader):
     }
     """
 
-    def getFeaturesFromJSON(self, data, workspace: Path, img_path: Path, view):
-        """get all features from Pixano annotation file
+    def getFeaturesFromJSON(
+        self, data, workspace: Path, img_path: Path, view: str
+    ) -> list[dict]:
+        """Get features from Pixano annotation file
 
         Args:
             data (str): raw json
-            workspace (Path): _description_
-            img_path (Path): _description_
-            view (_type_): _description_
+            workspace (Path): Data path
+            img_path (Path): Image path
+            view (str): Image view name
 
         Raises:
-            Exception: _description_
+            Exception: Image not found
 
         Returns:
-            _type_: _description_
+            list[dict]: List of features
         """
+
         img_list = None
         if img_path is not None:
             self.info["images_path"] = str(workspace / img_path)
@@ -222,7 +243,7 @@ class PixanoLoader(DataLoader):
                 print("WARNING - MULTI RLE SPOTTED !!", len(rle), rle)
 
             feats["objects"].append(
-                ann_models.ObjectAnnotation(
+                arrow_types.ObjectAnnotation(
                     id=str(ann["id"]),
                     view_id=view,
                     is_group_of=False,
