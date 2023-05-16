@@ -38,3 +38,15 @@ Please refer to [this page](pixano/apps/explorer/README.md) for information on h
 # Using the Pixano Annotator
 
 *Coming soon...*
+
+# Contributing
+
+If you find a bug or you think of some missing features that could be useful while using Pixano, please [open an issue](https://github.com/pixano/pixano/issues)!
+
+To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
+
+And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
+
+# License
+
+Pixano is licensed under the [CeCILL-C license](LICENSE).
