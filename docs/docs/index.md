@@ -21,6 +21,8 @@ pip install pixano
 
 ## Using the Pixano Explorer
 
+*We will soon provide a guide on how to convert your datasets to parquet format to access them with Pixano.*
+
 ### Launching the Explorer from a terminal
 
 You can start the Explorer with the following command:
