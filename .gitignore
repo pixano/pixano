@@ -40,3 +40,4 @@ __pycache__
 # Inference
 *.pt
 *.pth
+*.onnx

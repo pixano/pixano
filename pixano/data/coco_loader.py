@@ -16,15 +16,32 @@ import os
 from PIL import Image
 from pycocotools.coco import COCO
 
-import pixano.core.models as ann_models
 from pixano import transforms
+from pixano.core import arrow_types
 
 from .data_loader import DataLoader
 
 
-# COCO Loader
 class CocoLoader(DataLoader):
-    def __init__(self, workspace, ann_file, img_path):
+    """COCO Data Loader
+
+    Attributes:
+        coco (COCO): COCO dataset
+        info (dict): Dataset info
+        img_ids (list[int]): Image IDs
+        iter_img_ids (iter): Image IDs iterable
+        idx (int): Index
+    """
+
+    def __init__(self, workspace: str, ann_file: str, img_path: str):
+        """Initialize COCO Data Loader
+
+        Args:
+            workspace (str): Data path
+            ann_file (str): Annotations path
+            img_path (str): Images path
+        """
+
         annf = os.path.join(workspace, ann_file)
 
         # initialize COCO api for instance annotations
@@ -41,17 +58,18 @@ class CocoLoader(DataLoader):
         self.iter_img_ids = iter(self.img_ids)
         self.idx = 0
 
-    def load_ann(self, id, width, height):
+    def load_ann(self, id: int, width: int, height: int) -> list[dict]:
         """Load COCO annotations
 
         Args:
-            id: image id
-            width: image width, for normalization
-            height: image height, for normalization
+            id (int): image id
+            width (int): image width, for normalization
+            height (int): image height, for normalization
 
         Returns:
-            dict containing this annotation data
+            list[dict]: Annotation data
         """
+
         ann_ids = self.coco.getAnnIds(id)
         anns = self.coco.loadAnns(ids=ann_ids)
         objects = []
@@ -68,10 +86,10 @@ class CocoLoader(DataLoader):
                 print("WARNING - MULTI RLE SPOTTED !!", len(rle), rle)
 
             objects.append(
-                ann_models.ObjectAnnotation(
-                    id=ann["id"],
+                arrow_types.ObjectAnnotation(
+                    id=str(ann["id"]),
                     view_id="image",
-                    is_group_of=ann["iscrowd"],
+                    is_group_of=bool(ann["iscrowd"]),
                     category_id=ann["category_id"],
                     category_name=self.coco.loadCats(ann["category_id"])[0]["name"],
                     bbox=bbox,
