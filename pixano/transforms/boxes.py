@@ -15,13 +15,13 @@ import numpy as np
 from PIL import Image
 
 
-def denormalize(coord: list[float], w: int, h: int) -> list[float]:
+def denormalize(coord: list[float], height: int, width: int) -> list[float]:
     """Denormalize coordinates
 
     Args:
         coord (list[float]): Normalized coordinates
-        w (int): Width
-        h (int): Height
+        height (int): Height
+        width (int): Width
 
     Returns:
         list[float]: Unnormalized coordinates
@@ -31,20 +31,20 @@ def denormalize(coord: list[float], w: int, h: int) -> list[float]:
 
     for i, c in enumerate(coord):
         if i % 2 == 0:
-            denorm.append(c * w)
+            denorm.append(c * width)
         else:
-            denorm.append(c * h)
+            denorm.append(c * height)
 
     return denorm
 
 
-def normalize(coord: list[float], w: int, h: int) -> list[float]:
+def normalize(coord: list[float], height: int, width: int) -> list[float]:
     """Normalize coordinates
 
     Args:
         coord (list[float]): Unnormalized coordinates
-        w (int): Width
-        h (int): Height
+        height (int): Height
+        width (int): Width
 
     Returns:
         list[float]: Normalized coordinates
@@ -54,9 +54,9 @@ def normalize(coord: list[float], w: int, h: int) -> list[float]:
 
     for i, c in enumerate(coord):
         if i % 2 == 0:
-            norm.append(c / w)
+            norm.append(c / width)
         else:
-            norm.append(c / h)
+            norm.append(c / height)
 
     return norm
 
@@ -71,7 +71,7 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
         list[float]: Normalized xywh bounding box
     """
 
-    w_img, h_img = mask.size
+    width, height = mask.size
     bool_mask = np.array(mask).astype(bool)
 
     # Find all columns and rows that contain ones
@@ -83,10 +83,10 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
     # Calculate height and width
-    h = (rmax - rmin + 1) / h_img
-    w = (cmax - cmin + 1) / w_img
+    h = (rmax - rmin + 1) / width
+    w = (cmax - cmin + 1) / width
 
-    return [cmin / w_img, rmin / h_img, w, h]
+    return [cmin / width, rmin / width, w, h]
 
 
 def xywh_to_xyxy(xywh: list[float]) -> list[float]:
