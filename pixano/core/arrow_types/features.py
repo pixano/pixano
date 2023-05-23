@@ -65,7 +65,7 @@ class ObjectAnnotation(BaseModel):
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
     # Mask
-    mask: Optional[dict[str, bytes]] = None
+    mask: Optional[dict] = None
     mask_source: Optional[str] = None
     area: Optional[float] = None
     # 6D Poses
