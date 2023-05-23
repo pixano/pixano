@@ -140,12 +140,12 @@ class OfflineModel(InferenceModel):
 
                     # Convert ExtensionTypes
                     arrays = []
-                    for field_name, field_data in data.items():
+                    for field in schema:
                         arrays.append(
                             arrow_types.convert_field(
-                                field_name=field_name,
-                                field_type=schema.field(field_name).type,
-                                field_data=field_data,
+                                field_name=field.name,
+                                field_type=field.type,
+                                field_data=data[field.name],
                             )
                         )
 
