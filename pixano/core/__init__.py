@@ -10,3 +10,10 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from .dataset import Dataset, DatasetInfo
+
+__all__ = [
+    "Dataset",
+    "DatasetInfo",
+]
