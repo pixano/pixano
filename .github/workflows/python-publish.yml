@@ -10,7 +10,7 @@ name: Upload Python Package
 
 on:
   release:
-    types: [published, edited]
+    types: [published]
 
 permissions:
   contents: read
@@ -44,7 +44,10 @@ jobs:
         pip install hatch
 
     - name: Build Pixano apps
-      run: pnpm build
+      run: |
+        cd ui/apps/explorer
+        pnpm build
+        cd ../../..
 
     - name: Build Pixano package
       run: hatch build
