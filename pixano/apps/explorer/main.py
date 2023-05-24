@@ -181,14 +181,14 @@ def create_app(settings: Settings) -> FastAPI:
         tmp_ds = find_dataset(
             dataset_id, settings
         )  # ?? more clever way to get tmp_ds["path"].name ??
-        infer_datasets = []
+        inf_datasets = []
         if tmp_ds:
             for info_file in settings.data_dir.glob(
                 tmp_ds["path"].name + "/db_*/infer.json"
             ):
-                infer_datasets.append(InferenceDataset(info_file.parent).load())
+                inf_datasets.append(InferenceDataset(info_file.parent).load())
 
-        return db_utils.get_item_details(ds, id, dataset.media_path, infer_datasets)
+        return db_utils.get_item_details(ds, id, dataset.media_path, inf_datasets)
 
     add_pagination(app)
 
