@@ -11,120 +11,105 @@
 #
 # http://www.cecill.info
 
-import os
+import json
+from collections import defaultdict
+from collections.abc import Generator
+from pathlib import Path
 
-from PIL import Image
-from pycocotools.coco import COCO
+import pyarrow as pa
 
-from pixano import transforms
 from pixano.core import arrow_types
+from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
 
 from .data_loader import DataLoader
 
 
 class CocoLoader(DataLoader):
-    """COCO Data Loader
+    """Data Loader class for COCO instances dataset
 
     Attributes:
-        coco (COCO): COCO dataset
-        info (dict): Dataset info
-        img_ids (list[int]): Image IDs
-        iter_img_ids (iter): Image IDs iterable
-        idx (int): Index
+        name (str): Dataset name
+        description (str): Dataset description
+        source_dirs (dict[str, Path]): Dataset source directories
+        target_dir (Path): Dataset target directory
+        schema (pa.schema): Dataset schema
     """
 
-    def __init__(self, workspace: str, ann_file: str, img_path: str):
-        """Initialize COCO Data Loader
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        source_dirs: dict[str, Path],
+        target_dir: Path,
+    ):
+        """Initialize COCO Loader
 
         Args:
-            workspace (str): Data path
-            ann_file (str): Annotations path
-            img_path (str): Images path
+            name (str): Dataset name
+            description (str): Dataset description
+            source_dirs (dict[str, Path]): Dataset source directories
+            target_dir (Path): Dataset target directory
         """
 
-        annf = os.path.join(workspace, ann_file)
+        # Dataset columns for COCO format
+        fields = [
+            pa.field("image", arrow_types.ImageType()),
+            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+        ]
 
-        # initialize COCO api for instance annotations
-        self.coco = COCO(annf)
+        # Initialize Data Loader
+        super().__init__(name, description, source_dirs, target_dir, fields)
 
-        self.img_ids = self.coco.getImgIds()
-        self.img_ids.sort()
-        self.info = self.coco.dataset["info"]
-        self.info["annotation_file"] = annf
-        self.info["images_path"] = os.path.join(workspace, img_path)
-        self.info["nb_images"] = len(self.img_ids)
-
-        # make img_ids iterable
-        self.iter_img_ids = iter(self.img_ids)
-        self.idx = 0
-
-    def load_ann(self, id: int, width: int, height: int) -> list[dict]:
-        """Load COCO annotations
+    def process_rows(self, split: str) -> Generator[dict]:
+        """Process dataset row for a given split
 
         Args:
-            id (int): image id
-            width (int): image width, for normalization
-            height (int): image height, for normalization
+            split (str): Dataset split
 
-        Returns:
-            list[dict]: Annotation data
+        Yields:
+            Generator[dict]: Rows processed to be stored in a parquet
         """
 
-        ann_ids = self.coco.getAnnIds(id)
-        anns = self.coco.loadAnns(ids=ann_ids)
-        objects = []
-        for ann in anns:
-            bbox = None
-            if ann["bbox"]:
-                bbox = transforms.normalize(ann["bbox"], width, height)
-            rle = None
-            if ann["segmentation"]:
-                rle = self.coco.annToRLE(ann)
+        # Open annotation files
+        with open(self.source_dirs["objects"] / f"instances_{split}.json", "r") as f:
+            coco_instances = json.load(f)
 
-            # TMP to check
-            if isinstance(rle, list) and len(rle) > 1:
-                print("WARNING - MULTI RLE SPOTTED !!", len(rle), rle)
+        # Group annotations by image ID
+        annotations = defaultdict(list)
+        for ann in coco_instances["annotations"]:
+            annotations[ann["image_id"]].append(ann)
 
-            objects.append(
-                arrow_types.ObjectAnnotation(
-                    id=str(ann["id"]),
-                    view_id="image",
-                    is_group_of=bool(ann["iscrowd"]),
-                    category_id=ann["category_id"],
-                    category_name=self.coco.loadCats(ann["category_id"])[0]["name"],
-                    bbox=bbox,
-                    mask=rle,
-                ).dict()
-            )
+        # Process rows
+        for im in sorted(coco_instances["images"], key=lambda x: x["id"]):
+            # Load image annotations
+            im_anns = annotations[im["id"]]
+            # Load image path
+            im_path = self.source_dirs["image"] / split / im["file_name"]
+            # Create image thumbnail
+            im_thumb = image_to_thumbnail(im_path.read_bytes())
 
-        # print("OBJTYPE:", type_spec(objects))
-        return objects
+            # Fill row with ID, image, and list of image annotations
+            row = {
+                "id": str(im["id"]),
+                "image": {
+                    "uri": f"image/{split}/{im['file_name']}",
+                    "preview_bytes": im_thumb,
+                },
+                "objects": [
+                    arrow_types.ObjectAnnotation(
+                        id=str(ann["id"]),
+                        view_id="image",
+                        area=float(ann["area"]),
+                        bbox=normalize(ann["bbox"], im["height"], im["width"]),
+                        mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
+                        is_group_of=bool(ann["iscrowd"]),
+                        category_id=int(ann["category_id"]),
+                        category_name=coco_names_91(ann["category_id"]),
+                    ).dict()
+                    for ann in im_anns
+                ],
+                "split": split,
+            }
 
-    def __iter__(self):
-        self.idx = 0
-        return self
-
-    def __next__(self):
-        id = next(self.iter_img_ids)
-        ex = self.coco.loadImgs(ids=id)[0]
-        image = Image.open(os.path.join(self.info["images_path"], ex["file_name"]))
-        anns = self.load_ann(id, image.width, image.height)
-
-        # thumbnail -- after load_ann else image.width/.height are thumbnail height/width
-        image.thumbnail((128, 128))
-        image_thumb = transforms.image_to_binary(image, "JPEG")
-
-        # tmp, previous col names for now
-        row = {
-            "id": str(id),
-            "image": {
-                "uri": ex["file_name"],
-                "bytes": None,
-                "preview_bytes": image_thumb,
-            },
-            "image.width": image.width,
-            "image.height": image.height,
-            "objects": anns,
-        }
-
-        return row
+            # Return row
+            yield row
