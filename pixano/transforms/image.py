@@ -43,7 +43,7 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     """Generate image thumbnail
 
     Args:
-        im_bytes (bytes): Image as binary or as Pillow
+        image (bytes): Image as binary or as Pillow
 
     Returns:
         bytes: Image thumbnail as binary
@@ -261,7 +261,7 @@ def urle_to_rle(urle: dict, height: int, width: int) -> dict:
     """Encode mask from uncompressed RLE to RLE
 
     Args:
-        rle (dict): Mask as uncompressed RLE
+        urle (dict): Mask as uncompressed RLE
         height (int): Image height
         width (int): Image width
 
