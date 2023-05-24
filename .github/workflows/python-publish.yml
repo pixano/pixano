@@ -45,7 +45,9 @@ jobs:
 
     - name: Build Pixano apps
       run: |
-        cd ui/apps/explorer
+        cd ui
+        pnpm i
+        cd apps/explorer
         pnpm build
         cd ../../..
 
