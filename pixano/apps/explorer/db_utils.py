@@ -27,23 +27,23 @@ from pixano.data import models
 
 def get_item_details(
     dataset: ds.Dataset,
-    item_id: int,
+    item_id: str,
     media_dir: Path,
-    infer_datasets: list[ds.Dataset] = [],
+    inf_datasets: list[ds.Dataset] = [],
 ) -> dict:
     """Get item details
 
     Args:
         dataset (ds.Dataset): Dataset
-        item_id (int): Selected item ID
+        item_id (str): Selected item ID
         media_dir (Path): Dataset media path
-        infer_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
+        inf_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
 
     Returns:
         dict: ImageDetails features for UI
     """
     schema = dataset.schema
-    item = duckdb.query(f"SELECT * FROM dataset WHERE id={item_id}").fetchone()
+    item = duckdb.query(f"SELECT * FROM dataset WHERE id='{item_id}'").fetchone()
 
     field_names = [f.name for f in schema]
     item_dict = dict(zip(field_names, item))
@@ -56,9 +56,9 @@ def get_item_details(
             print("---", item["category_name"], item["category_id"])
 
     # Inference Merge
-    for infer_ds in infer_datasets:
-        inf_schema = infer_ds.schema
-        inf_item = duckdb.query(f"SELECT * FROM infer_ds WHERE id={item_id}").fetchone()
+    for inf_ds in inf_datasets:
+        inf_schema = inf_ds.schema
+        inf_item = duckdb.query(f"SELECT * FROM inf_ds WHERE id='{item_id}'").fetchone()
         if inf_item is not None:
             inf_field_names = [f.name for f in inf_schema]
             inf_item_dict = dict(zip(inf_field_names, inf_item))
