@@ -182,7 +182,9 @@ class DataLoader(ABC):
                     basename_template=f"part-{{i}}-{i}.parquet",
                     format="parquet",
                     existing_data_behavior="overwrite_or_ignore",
-                    partitioning=["split"],
+                    partitioning=ds.partitioning(
+                        pa.schema([("split", pa.string())]), flavor="hive"
+                    ),
                 )
 
         # Create spec.json and preview.png
