@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-from .coco_loader import CocoLoader
+from .coco_loader import COCOLoader
 from .data_loader import DataLoader
 
 __all__ = [
     "DataLoader",
-    "CocoLoader",
+    "COCOLoader",
 ]

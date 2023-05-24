@@ -24,7 +24,7 @@ from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, nor
 from .data_loader import DataLoader
 
 
-class CocoLoader(DataLoader):
+class COCOLoader(DataLoader):
     """Data Loader class for COCO instances dataset
 
     Attributes:
