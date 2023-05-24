@@ -83,7 +83,7 @@ class InferenceModel(ABC):
 
         pass
 
-    def save_json(
+    def create_json(
         self,
         output_dir: Path,
         filename: str,

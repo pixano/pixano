@@ -165,7 +165,7 @@ class OnlineModel(InferenceModel):
                     )
 
                     # Save.json
-                    super().save_json(
+                    super().create_json(
                         output_dir=output_dir,
                         filename="embed",
                         spec_json=spec_json,
