@@ -13,10 +13,8 @@
 
 from .coco_loader import CocoLoader
 from .data_loader import DataLoader
-from .pixano_loader import PixanoLoader
 
 __all__ = [
     "DataLoader",
-    "PixanoLoader",
     "CocoLoader",
 ]
