@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="images/pixano_logo.png" alt="Pixano" height="100"/>
+<img src="https://raw.githubusercontent.com/pixano/pixano/main/images/pixano_logo.png" alt="Pixano" height="100"/>
 
 **Data Centric AI Building Blocks for Computer Vision Application**
 
