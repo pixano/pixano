@@ -137,7 +137,7 @@ class DataLoader(ABC):
             preview.save(self.target_dir / "preview.png")
 
     @abstractmethod
-    def process_rows(self, split: str) -> Generator[dict]:
+    def get_row(self, split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
@@ -149,7 +149,7 @@ class DataLoader(ABC):
 
         pass
 
-    def process_dataset(
+    def convert_dataset(
         self,
         splits: list[str],
         batch_size: int = 2048,
@@ -163,7 +163,7 @@ class DataLoader(ABC):
 
         # Iterate on splits
         for split in splits:
-            batches = batch_dict(self.process_rows(split), batch_size)
+            batches = batch_dict(self.get_row(split), batch_size)
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=split, position=0):
                 # Convert batch fields to PyArrow format

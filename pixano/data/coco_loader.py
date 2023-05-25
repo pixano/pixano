@@ -57,7 +57,7 @@ class COCOLoader(DataLoader):
         # Initialize Data Loader
         super().__init__(name, description, source_dirs, target_dir, add_fields)
 
-    def process_rows(self, split: str) -> Generator[dict]:
+    def get_row(self, split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
