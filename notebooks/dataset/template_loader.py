@@ -19,9 +19,8 @@ import pyarrow as pa
 import shortuuid
 
 from pixano.core import arrow_types
+from pixano.data.data_loader import DataLoader
 from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
-
-from .data_loader import DataLoader
 
 
 class TemplateLoader(DataLoader):

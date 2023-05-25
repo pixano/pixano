@@ -14,11 +14,9 @@
 from .coco_loader import COCOLoader
 from .data_loader import DataLoader
 from .image_loader import ImageLoader
-from .template_loader import TemplateLoader
 
 __all__ = [
     "DataLoader",
     "COCOLoader",
     "ImageLoader",
-    "TemplateLoader",
 ]

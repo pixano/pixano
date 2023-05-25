@@ -46,7 +46,6 @@ nav:
     - "DataLoader": code/data/data_loader.md
     - "CocoLoader": code/data/coco_loader.md
     - "ImageLoader": code/data/image_loader.md
-    - "TemplateLoader": code/data/template_loader.md
     - "models": code/data/models.md
 
   - "inference":
