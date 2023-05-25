@@ -20,6 +20,8 @@ from io import BytesIO
 from itertools import islice
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
 import shortuuid
@@ -27,6 +29,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.core import DatasetInfo, arrow_types
+from pixano.analytics import compute_stats
 
 
 def batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
@@ -116,6 +119,83 @@ class DataLoader(ABC):
         with open(self.target_dir / "spec.json", "w") as f:
             json.dump(vars(self.info), f)
 
+    def objects_stats(self, splits: list[str]):
+        """Create dataset statistics
+
+        Args:
+            splits (list[str]): Dataset split
+        """
+
+        # Read dataset
+        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+
+        # Create stats if objects field exist
+        objects = pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
+        if objects in self.schema:
+            # Create dataframe
+            df = dataset.to_table(columns=["split", "objects"]).to_pandas()
+            # Split objects in one object per row
+            df = df.explode("objects")
+            # Remove empty objects
+            df = df[df["objects"].notnull()]
+
+            # Get features
+            features = []
+            for split, object in zip(df["split"], df["objects"]):
+                try:
+                    area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
+                except TypeError:
+                    area = None
+                features.append(
+                    {
+                        "id": object["id"],
+                        "view_id": object["view_id"],
+                        "is group of": object["is_group_of"],
+                        "area (%)": area,
+                        "category": object["category_name"],
+                        "split": split,
+                    }
+                )
+            features_df = pd.DataFrame.from_records(features).astype(
+                {
+                    "id": "string",
+                    "view_id": "string",
+                    "is group of": bool,
+                    "area (%)": float,
+                    "category": "string",
+                    "split": "string",
+                }
+            )
+
+            # Create stats
+            stats = [
+                {
+                    "name": "category",
+                    "type": "categorical",
+                    "histogram": [],
+                },
+                {
+                    "name": "is group of",
+                    "type": "categorical",
+                    "histogram": [],
+                },
+                {
+                    "name": "area (%)",
+                    "type": "numerical",
+                    "range": [0.0, 100.0],
+                    "histogram": [],
+                },
+            ]
+
+            for split in splits:
+                for stat in stats:
+                    split_df = features_df[features_df["split"] == split]
+                    stat["histogram"].extend(compute_stats(split_df, split, stat))
+
+            # Create db_feature_statistics.json
+            with open(self.target_dir / "db_feature_statistics.json", "w") as f:
+                json.dump(stats, f)
+
     def create_preview(self):
         """Create dataset preview image"""
 
@@ -161,7 +241,7 @@ class DataLoader(ABC):
         """Process dataset to parquet format
 
         Args:
-            splits (list[str]): Dataset split
+            splits (list[str]): Dataset splits
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
 
@@ -190,9 +270,14 @@ class DataLoader(ABC):
                     partitioning=self.partitioning,
                 )
 
-        # Create spec.json and preview.png
+        # Create spec.json
         self.create_json()
+
+        # Create preview.png
         self.create_preview()
+
+        # Compute objects statistics
+        self.objects_stats(splits)
 
         # Move image folders
         for field in self.schema:
