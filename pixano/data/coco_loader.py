@@ -33,6 +33,7 @@ class COCOLoader(DataLoader):
         source_dirs (dict[str, Path]): Dataset source directories
         target_dir (Path): Dataset target directory
         schema (pa.schema): Dataset schema
+        partitioning (ds.partitioning): Dataset partitioning
     """
 
     def __init__(

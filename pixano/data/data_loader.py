@@ -58,6 +58,7 @@ class DataLoader(ABC):
         source_dirs (dict[str, Path]): Dataset source directories
         target_dir (Path): Dataset target directory
         schema (pa.schema): Dataset schema
+        partitioning (ds.partitioning): Dataset partitioning
     """
 
     def __init__(
@@ -98,12 +99,15 @@ class DataLoader(ABC):
         ]
         fields.extend(add_fields)
         self.schema = pa.schema(fields)
+        self.partitioning = ds.partitioning(
+            pa.schema([("split", pa.string())]), flavor="hive"
+        )
 
     def create_json(self):
         """Create dataset spec.json"""
 
         # Read dataset
-        dataset = ds.dataset(self.target_dir / "db")
+        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
 
         # Check number of rows in the created dataset
         self.info.num_elements = dataset.count_rows()
@@ -116,7 +120,7 @@ class DataLoader(ABC):
         """Create dataset preview image"""
 
         # Read dataset
-        dataset = ds.dataset(self.target_dir / "db")
+        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
 
         # Get list of image fields
         image_fields = []
@@ -183,9 +187,7 @@ class DataLoader(ABC):
                     basename_template=f"part-{{i}}-{i}.parquet",
                     format="parquet",
                     existing_data_behavior="overwrite_or_ignore",
-                    partitioning=ds.partitioning(
-                        pa.schema([("split", pa.string())]), flavor="hive"
-                    ),
+                    partitioning=self.partitioning,
                 )
 
         # Create spec.json and preview.png
