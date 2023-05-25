@@ -51,14 +51,11 @@ class COCOLoader(DataLoader):
             target_dir (Path): Dataset target directory
         """
 
-        # Dataset columns for COCO format
-        fields = [
-            pa.field("image", arrow_types.ImageType()),
-            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
-        ]
+        # Dataset additional fields (in addition to split, id, and objects)
+        add_fields = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, fields)
+        super().__init__(name, description, source_dirs, target_dir, add_fields)
 
     def process_rows(self, split: str) -> Generator[dict]:
         """Process dataset row for a given split

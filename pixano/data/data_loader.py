@@ -66,7 +66,7 @@ class DataLoader(ABC):
         description: str,
         source_dirs: dict[str, Path],
         target_dir: Path,
-        fields: list[pa.field],
+        add_fields: list[pa.field],
     ):
         """Initialize Data Loader
 
@@ -75,7 +75,7 @@ class DataLoader(ABC):
             description (str): Dataset description
             source_dirs (dict[str, Path]): Dataset source directories
             target_dir (Path): Dataset target directory
-            fields (list[pa.field]): Dataset fields
+            add_fields (list[pa.field]): Dataset additional fields
         """
 
         # Dataset info
@@ -91,12 +91,13 @@ class DataLoader(ABC):
         self.target_dir = target_dir
 
         # Dataset schema
-        schema_fields = [
+        fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
+            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
         ]
-        schema_fields.extend(fields)
-        self.schema = pa.schema(schema_fields)
+        fields.extend(add_fields)
+        self.schema = pa.schema(fields)
 
     def create_json(self):
         """Create dataset spec.json"""
