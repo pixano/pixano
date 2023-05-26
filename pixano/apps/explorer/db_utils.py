@@ -36,7 +36,7 @@ def get_item_details(
     Args:
         dataset (ds.Dataset): Dataset
         item_id (str): Selected item ID
-        media_dir (Path): Dataset media path
+        media_dir (Path): Dataset media directory
         inf_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
 
     Returns:

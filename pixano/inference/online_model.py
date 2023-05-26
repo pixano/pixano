@@ -81,7 +81,7 @@ class OnlineModel(InferenceModel):
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media location
+            media_dir (Path): Media directory
 
         Returns:
             list[np.ndarray]: Model embeddings as NumPy arrays
@@ -96,16 +96,16 @@ class OnlineModel(InferenceModel):
         splits: list[str] = [],
         batch_size: int = 1,
     ) -> Path:
-        """Precompute embeddings for a parquet dataset
+        """Precompute embeddings on a dataset
 
         Args:
-            input_dir (Path): Input parquet location
+            input_dir (Path): Input dataset directory
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
 
         Returns:
-            Path: Output parquet location
+            Path: Output dataset directory
         """
 
         output_dir = input_dir / f"db_embed_{self.id}"
@@ -200,7 +200,7 @@ class OnlineModel(InferenceModel):
         """Set current working dataset
 
         Args:
-            input_dir (Path): Dataset path
+            input_dir (Path): Dataset directory
         """
 
         self.working["input_dir"] = Path(input_dir)

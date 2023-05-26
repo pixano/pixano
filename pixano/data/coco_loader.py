@@ -81,7 +81,7 @@ class COCOLoader(DataLoader):
         for im in sorted(coco_instances["images"], key=lambda x: x["id"]):
             # Load image annotations
             im_anns = annotations[im["id"]]
-            # Load image path
+            # Load image directory
             im_path = self.source_dirs["image"] / split / im["file_name"]
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())

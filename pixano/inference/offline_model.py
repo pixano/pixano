@@ -49,7 +49,7 @@ class OfflineModel(InferenceModel):
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media location
+            media_dir (Path): Media directory
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
@@ -66,17 +66,17 @@ class OfflineModel(InferenceModel):
         batch_size: int = 1,
         threshold: float = 0.0,
     ) -> Path:
-        """Generate inferences for a parquet dataset
+        """Generate inferences on a dataset
 
         Args:
-            input_dir (Path): Input parquet location
+            input_dir (Path): Input dataset directory
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for model predictions. Defaults to 0.0.
 
         Returns:
-            Path: Output parquet location
+            Path: Output dataset directory
         """
 
         output_dir = input_dir / f"db_infer_{self.id}"

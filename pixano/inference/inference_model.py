@@ -69,16 +69,16 @@ class InferenceModel(ABC):
         splits: list[str] = [],
         batch_size: int = 1,
     ) -> Path:
-        """Process parquet dataset
+        """Process dataset
 
         Args:
-            input_dir (Path): Input parquet location
+            input_dir (Path): Input dataset directory
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
 
         Returns:
-            Path: Output parquet location
+            Path: Output dataset directory
         """
 
         pass
@@ -93,7 +93,7 @@ class InferenceModel(ABC):
         """Save output .json
 
         Args:
-            output_dir (Path): Output parquet location
+            output_dir (Path): Output dataset directory
             filename (str): Output .json filename
             spec_json (dict): Input parquet .json
             num_elements (int): Number of processed rows
