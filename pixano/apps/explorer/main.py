@@ -32,94 +32,75 @@ class Settings(BaseSettings):
     """Dataset library settings
 
     Attributes:
-        data_dir (Path): Dataset library path
+        dir (Path): Dataset library directory
     """
 
-    data_dir: Path = Path.cwd() / "library"
-
-
-def find_dataset(dataset_id: str, settings: Settings) -> dict:
-    """Return dataset path and info based on its ID
-
-    Args:
-        dataset_id (str): Dataset ID
-        settings (Settings): Dataset library
-
-    Returns:
-        dict: Dataset path and info
-    """
-
-    for info_file in settings.data_dir.glob("*/spec.json"):
-        print(info_file)
-        info = DatasetInfo.parse_file(info_file)
-        if info.id == dataset_id:
-            return {"path": info_file.parent, "info": info}
-    return None
+    dir: Path = Path.cwd() / "library"
 
 
 def load_library(settings: Settings) -> list[DatasetInfo]:
     """Load all dataset info files in library
 
     Args:
-        settings (Settings): Dataset library
+        settings (Settings): Dataset library settings
 
     Returns:
         list[DatasetInfo]: Dataset info files
     """
 
     infos = []
-    for info_file in sorted(list(settings.data_dir.glob("*/spec.json"))):
-        print(info_file)
-        info = DatasetInfo.parse_file(info_file)
-        preview = info_file.parent / "preview.png"
+    for spec in sorted(settings.dir.glob("*/spec.json")):
+        # Load dataset info
+        info = DatasetInfo.parse_file(spec)
+        # Load preview.png
+        preview = spec.parent / "preview.png"
         if preview.is_file():
             im = arrow_types.Image(
                 uri="preview.png",
                 bytes=None,
                 preview_bytes=None,
-                uri_prefix=info_file.parent,
+                uri_prefix=spec.parent,
             )
             info.preview = im.url
+        # Save dataset info
         infos.append(info)
     return infos
 
 
-def load_dataset(dataset_id: str, settings: Settings) -> Dataset:
+def load_dataset(ds_id: str, settings: Settings) -> Dataset:
     """Load dataset based on its ID
 
     Args:
-        dataset_id (str): Dataset ID
+        ds_id (str): Dataset ID
         settings (Settings): Dataset library
 
     Returns:
         Dataset: Dataset
     """
 
-    ds = find_dataset(dataset_id, settings)
-    if ds is not None:
-        ds = Dataset(ds["path"])
-    return ds
+    for spec in settings.dir.glob("*/spec.json"):
+        info = DatasetInfo.parse_file(spec)
+        if ds_id == info.id:
+            return Dataset(spec.parent)
 
 
-def load_dataset_stats(dataset_id: str, settings: Settings) -> dict:
+def load_dataset_stats(ds_id: str, settings: Settings) -> dict:
     """Load dataset stats based on its ID
 
     Args:
-        dataset_id (str): Dataset ID
+        ds_id (str): Dataset ID
         settings (Settings): Dataset Library
 
     Returns:
-        dict: Dataset stats
+        list[dict]: Dataset stats
     """
 
-    stats = []
-    ds = find_dataset(dataset_id, settings)
-    if ds:
-        stat_file = settings.data_dir / ds["path"].name / "db_feature_statistics.json"
-        if stat_file.is_file():
-            with open(stat_file, "r") as f:
-                stats = json.load(f)
-    return stats
+    ds = load_dataset(ds_id, settings)
+    if ds is not None:
+        stats_file = ds.path / "db_feature_statistics.json"
+        if stats_file.is_file():
+            with open(stats_file, "r") as f:
+                return json.load(f)
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -129,9 +110,9 @@ def create_app(settings: Settings) -> FastAPI:
         settings (Settings): Dataset Library
 
     Raises:
-        HTTPException: 404 error if dataset items are not found
-        HTTPException: 404 error if dataset stats are not found
-        HTTPException: 404 error if dataset item details are not found
+        HTTPException: 404, Dataset is not found
+        HTTPException: 404, Dataset stats are not found
+        HTTPException: 404, Dataset is not found
 
     Returns:
         FastAPI: Explorer app
@@ -147,48 +128,40 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_datasets_list():
-        library = load_library(settings)
-        print(library)
-        return library
+        return load_library(settings)
 
-    @app.get("/datasets/{dataset_id}/items", response_model=Page[models.Features])
-    async def get_dataset_items(dataset_id, params: Params = Depends()):
-        dataset = load_dataset(dataset_id, settings)
-        if dataset is None:
-            raise HTTPException(status_code=404, detail="Item not found")
-        ds = dataset.load()
+    @app.get("/datasets/{ds_id}/items", response_model=Page[models.Features])
+    async def get_dataset_items(ds_id, params: Params = Depends()):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        # Return dataset items
+        return db_utils.get_items(ds.load(), params)
 
-        return db_utils.get_items(ds, params)
-
-    @app.get("/datasets/{dataset_id}/stats")
-    async def get_dataset_stats(
-        dataset_id,
-    ):
-        stats = load_dataset_stats(dataset_id, settings)
+    @app.get("/datasets/{ds_id}/stats")
+    async def get_dataset_stats(ds_id):
+        # Load dataset stats
+        stats = load_dataset_stats(ds_id, settings)
         if stats is None:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="Stats not found")
+        # Return dataset stats
         return stats
 
-    @app.get("/datasets/{dataset_id}/items/{id}")
-    async def get_dataset_item_details(dataset_id: str, id: str):
-        dataset = load_dataset(dataset_id, settings)
-        if dataset is None:
-            raise HTTPException(status_code=404, detail="Item not found")
+    @app.get("/datasets/{ds_id}/items/{item_id}")
+    async def get_dataset_item_details(ds_id: str, item_id: str):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
 
-        ds = dataset.load()
+        # Load inference datasets
+        inf_ds = []
+        for infer in sorted(list(ds.path.glob("db_infer_*/infer.json"))):
+            inf_ds.append(InferenceDataset(infer.parent).load())
 
-        # load Inferences datasets
-        tmp_ds = find_dataset(
-            dataset_id, settings
-        )  # ?? more clever way to get tmp_ds["path"].name ??
-        inf_datasets = []
-        if tmp_ds:
-            for info_file in settings.data_dir.glob(
-                tmp_ds["path"].name + "/db_*/infer.json"
-            ):
-                inf_datasets.append(InferenceDataset(info_file.parent).load())
-
-        return db_utils.get_item_details(ds, id, dataset.media_path, inf_datasets)
+        # Return item details
+        return db_utils.get_item_details(ds.load(), item_id, ds.media_path, inf_ds)
 
     add_pagination(app)
 
