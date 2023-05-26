@@ -64,6 +64,10 @@ class Dataset:
         return self._info
 
     @property
+    def path(self):
+        return self._path
+
+    @property
     def media_path(self):
         return self._path / "media"
 
