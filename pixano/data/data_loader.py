@@ -118,22 +118,56 @@ class DataLoader(ABC):
     def create_json(self):
         """Create dataset spec.json"""
 
+        with tqdm(desc="Creating dataset info file", total=1) as progress:
+            # Read dataset
+            dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+
+            # Check number of rows in the created dataset
+            self.info.num_elements = dataset.count_rows()
+
+            # Create spec.json
+            with open(self.target_dir / "spec.json", "w") as f:
+                json.dump(vars(self.info), f)
+            progress.update(1)
+
+    def create_preview(self):
+        """Create dataset preview image"""
+
         # Read dataset
         dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
 
-        # Check number of rows in the created dataset
-        self.info.num_elements = dataset.count_rows()
+        # Get list of image fields
+        image_fields = []
+        for field in self.schema:
+            if arrow_types.is_image_type(field.type):
+                image_fields.append(field.name)
 
-        # Create spec.json
-        with open(self.target_dir / "spec.json", "w") as f:
-            json.dump(vars(self.info), f)
+        if image_fields:
+            with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
+                tile_w = 64
+                tile_h = 64
+                preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
+                for i in range(6):
+                    field = image_fields[i % len(image_fields)]
+                    row_number = random.randrange(dataset.count_rows())
+                    row = dataset.take([row_number]).to_pylist()[0]
+                    with Image.open(BytesIO(row[field]._preview_bytes)) as im:
+                        preview.paste(im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
+                preview.save(self.target_dir / "preview.png")
+                progress.update(1)
 
-    def objects_stats(self, splits: list[str]):
-        """Create dataset statistics
+    def create_stats(self):
+        """Create dataset statistics"""
 
-        Args:
-            splits (list[str]): Dataset split
-        """
+        # Reset json file
+        open(self.target_dir / "db_feature_statistics.json", "w").close()
+        # Create objects stats
+        self.objects_stats()
+        # Create image stats
+        self.image_stats()
+
+    def objects_stats(self):
+        """Create dataset objects statistics"""
 
         # Read dataset
         dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
@@ -150,7 +184,11 @@ class DataLoader(ABC):
 
             # Get features
             features = []
-            for split, object in zip(df["split"], df["objects"]):
+            for split, object in tqdm(
+                zip(df["split"], df["objects"]),
+                desc="Computing objects stats",
+                total=len(df.index),
+            ):
                 try:
                     area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
                 except TypeError:
@@ -158,76 +196,129 @@ class DataLoader(ABC):
                 features.append(
                     {
                         "id": object["id"],
-                        "view_id": object["view_id"],
-                        "is group of": object["is_group_of"],
-                        "area (%)": area,
-                        "category": object["category_name"],
+                        "view id": object["view_id"],
+                        "objects - is group of": object["is_group_of"],
+                        "objects - area (%)": area,
+                        "objects - category": object["category_name"],
                         "split": split,
                     }
                 )
             features_df = pd.DataFrame.from_records(features).astype(
                 {
                     "id": "string",
-                    "view_id": "string",
-                    "is group of": bool,
-                    "area (%)": float,
-                    "category": "string",
+                    "view id": "string",
+                    "objects - is group of": bool,
+                    "objects - area (%)": float,
+                    "objects - category": "string",
                     "split": "string",
                 }
             )
 
-            # Create stats
+            # Initialize stats
             stats = [
                 {
-                    "name": "category",
+                    "name": "objects - category",
                     "type": "categorical",
                     "histogram": [],
                 },
                 {
-                    "name": "is group of",
+                    "name": "objects - is group of",
                     "type": "categorical",
                     "histogram": [],
                 },
                 {
-                    "name": "area (%)",
+                    "name": "objects - area (%)",
                     "type": "numerical",
                     "range": [0.0, 100.0],
                     "histogram": [],
                 },
             ]
 
-            for split in splits:
-                for stat in stats:
-                    split_df = features_df[features_df["split"] == split]
-                    stat["histogram"].extend(compute_stats(split_df, split, stat))
+            # Save stats
+            self.save_stats(stats, features_df)
 
-            # Create db_feature_statistics.json
-            with open(self.target_dir / "db_feature_statistics.json", "w") as f:
-                json.dump(stats, f)
-
-    def create_preview(self):
-        """Create dataset preview image"""
+    def image_stats(self):
+        """Create dataset image statistics"""
 
         # Read dataset
         dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
 
-        # Get list of image fields
-        image_fields = []
-        for field in self.schema:
-            if arrow_types.is_image_type(field.type):
-                image_fields.append(field.name)
+        # Create stats if objects field exist
+        schema = dataset.schema
 
-        if image_fields:
-            tile_w = 64
-            tile_h = 64
-            preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
-            for i in range(6):
-                field = image_fields[i % len(image_fields)]
-                row_number = random.randrange(dataset.count_rows())
-                row = dataset.take([row_number]).to_pylist()[0]
-                image = Image.open(BytesIO(row[field]._preview_bytes))
-                preview.paste(image, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
-            preview.save(self.target_dir / "preview.png")
+        # Iterate over dataset columns
+        for field in schema:
+            # If column has images
+            if arrow_types.is_image_type(field.type):
+                # Get features
+                features = []
+                for batch_row in tqdm(
+                    dataset.to_batches(columns=[field.name, "split"], batch_size=1),
+                    desc=f"Computing {field.name} stats",
+                    total=dataset.count_rows(),
+                ):
+                    row = batch_row.to_pydict()
+                    # Open image
+                    with Image.open(
+                        self.target_dir / "media" / row["image"][0]._uri
+                    ).convert("RGB") as im:
+                        im_w, im_h = im.size
+                        # Compute image features
+                        aspect_ratio = round(im_w / im_h, 1)
+                    features.append(
+                        {
+                            f"{field.name} - aspect ratio": aspect_ratio,
+                            "split": row["split"][0],
+                        }
+                    )
+                features_df = pd.DataFrame.from_records(features).astype(
+                    {
+                        f"{field.name} - aspect ratio": "float",
+                        "split": "string",
+                    }
+                )
+
+                # Initialize stats
+                stats = [
+                    {
+                        "name": f"{field.name} - aspect ratio",
+                        "type": "numerical",
+                        "histogram": [],
+                        "range": [
+                            features_df[f"{field.name} - aspect ratio"].min(),
+                            features_df[f"{field.name} - aspect ratio"].max(),
+                        ],
+                    },
+                ]
+
+                # Save stats
+                self.save_stats(stats, features_df)
+
+    def save_stats(self, stats: list[dict], df: pd.DataFrame):
+        """Compute and save stats to json
+
+        Args:
+            stats (list[dict]): List of stats to save
+            df (pd.DataFrame): DataFrame to create stats from
+        """
+
+        # Compute stats
+        for split in self.splits:
+            for stat in stats:
+                split_df = df[df["split"] == split]
+                stat["histogram"].extend(compute_stats(split_df, split, stat))
+
+        # Check for existing db_feature_statistics.json
+        with open(self.target_dir / "db_feature_statistics.json", "r") as f:
+            try:
+                stat_json = json.load(f)
+                stat_json.extend(stats)
+            except ValueError:
+                stat_json = stats
+
+        # Add to db_feature_statistics.json
+        with open(self.target_dir / "db_feature_statistics.json", "w") as f:
+            json.dump(stat_json, f)
 
     @abstractmethod
     def get_row(self, split: str) -> Generator[dict]:
@@ -256,7 +347,7 @@ class DataLoader(ABC):
         for split in self.splits:
             batches = batch_dict(self.get_row(split), batch_size)
             # Iterate on batches
-            for i, batch in tqdm(enumerate(batches), desc=split, position=0):
+            for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
@@ -283,12 +374,12 @@ class DataLoader(ABC):
         # Create preview.png
         self.create_preview()
 
-        # Compute objects statistics
-        self.objects_stats(self.splits)
-
-        # Move image folders
+        # Move media folders
         for field in self.schema:
             if arrow_types.is_image_type(field.type):
                 field_dir = self.target_dir / "media" / field.name
                 field_dir.mkdir(parents=True, exist_ok=True)
                 self.source_dirs[field.name].rename(field_dir)
+
+        # Create stats
+        self.create_stats()
