@@ -161,7 +161,7 @@ def create_app(settings: Settings) -> FastAPI:
             inf_ds.append(InferenceDataset(infer.parent).load())
 
         # Return item details
-        return db_utils.get_item_details(ds.load(), item_id, ds.media_path, inf_ds)
+        return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_ds)
 
     add_pagination(app)
 
