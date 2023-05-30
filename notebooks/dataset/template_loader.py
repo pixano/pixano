@@ -31,6 +31,7 @@ class TemplateLoader(DataLoader):
         description (str): Dataset description
         source_dirs (dict[str, Path]): Dataset source directories
         target_dir (Path): Dataset target directory
+        splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
     """
@@ -41,6 +42,7 @@ class TemplateLoader(DataLoader):
         description: str,
         source_dirs: dict[str, Path],
         target_dir: Path,
+        splits: list[str],
     ):
         """Initialize Template Loader
 
@@ -49,13 +51,14 @@ class TemplateLoader(DataLoader):
             description (str): Dataset description
             source_dirs (dict[str, Path]): Dataset source directories
             target_dir (Path): Dataset target directory
+            splits (list[str]): Dataset splits
         """
 
         ##### Add your dataset additional fields (in addition to split, id, and objects) here #####
         add_fields = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, add_fields)
+        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
 
     @abstractmethod
     def get_row(self, split: str) -> Generator[dict]:
@@ -76,7 +79,7 @@ class TemplateLoader(DataLoader):
 
         # Process rows
         for im_id, im_path in enumerate(image_paths):
-            ##### Retrieve image data here ####
+            ##### Retrieve image data here #####
             im_height = 0
             im_width = 0
             im_anns = annotations[im_id]

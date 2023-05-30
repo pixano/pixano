@@ -32,6 +32,7 @@ class COCOLoader(DataLoader):
         description (str): Dataset description
         source_dirs (dict[str, Path]): Dataset source directories
         target_dir (Path): Dataset target directory
+        splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
     """
@@ -42,6 +43,7 @@ class COCOLoader(DataLoader):
         description: str,
         source_dirs: dict[str, Path],
         target_dir: Path,
+        splits: list[str],
     ):
         """Initialize COCO Loader
 
@@ -50,13 +52,14 @@ class COCOLoader(DataLoader):
             description (str): Dataset description
             source_dirs (dict[str, Path]): Dataset source directories
             target_dir (Path): Dataset target directory
+            splits (list[str]): Dataset splits
         """
 
         # Dataset additional fields (in addition to split, id, and objects)
         add_fields = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, add_fields)
+        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
 
     def get_row(self, split: str) -> Generator[dict]:
         """Process dataset row for a given split

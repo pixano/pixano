@@ -28,8 +28,8 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.core import DatasetInfo, arrow_types
 from pixano.analytics import compute_stats
+from pixano.core import DatasetInfo, arrow_types
 
 
 def batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
@@ -60,6 +60,7 @@ class DataLoader(ABC):
         description (str): Dataset description
         source_dirs (dict[str, Path]): Dataset source directories
         target_dir (Path): Dataset target directory
+        splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
     """
@@ -70,6 +71,7 @@ class DataLoader(ABC):
         description: str,
         source_dirs: dict[str, Path],
         target_dir: Path,
+        splits: list[str],
         add_fields: list[pa.field],
     ):
         """Initialize Data Loader
@@ -79,6 +81,7 @@ class DataLoader(ABC):
             description (str): Dataset description
             source_dirs (dict[str, Path]): Dataset source directories
             target_dir (Path): Dataset target directory
+            splits (list[str]): Dataset splits
             add_fields (list[pa.field]): Dataset additional fields
         """
 
@@ -89,6 +92,7 @@ class DataLoader(ABC):
             description=description,
             num_elements=0,
         )
+        self.splits = splits
 
         # Dataset directories
         for s_name, s_path in source_dirs.items():
@@ -240,18 +244,16 @@ class DataLoader(ABC):
 
     def convert_dataset(
         self,
-        splits: list[str],
         batch_size: int = 2048,
     ):
         """Process dataset to parquet format
 
         Args:
-            splits (list[str]): Dataset splits
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
 
         # Iterate on splits
-        for split in splits:
+        for split in self.splits:
             batches = batch_dict(self.get_row(split), batch_size)
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=split, position=0):
@@ -282,7 +284,7 @@ class DataLoader(ABC):
         self.create_preview()
 
         # Compute objects statistics
-        self.objects_stats(splits)
+        self.objects_stats(self.splits)
 
         # Move image folders
         for field in self.schema:
