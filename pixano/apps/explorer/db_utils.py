@@ -13,7 +13,6 @@
 
 from pathlib import Path
 
-import duckdb
 import numpy as np
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -154,12 +153,23 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     total = dataset.count_rows()
     schema = dataset.schema
 
-    items_table = duckdb.query(
-        f"SELECT * from dataset OFFSET {raw_params.offset} LIMIT {raw_params.limit}"
-    ).arrow()
+    start = raw_params.offset
+    stop = min(raw_params.offset + raw_params.limit, total)
+    items_table = dataset.take(range(start, stop))
 
     def _create_features(row: list) -> list[models.Feature]:
+        """Create features based on field types
+
+        Args:
+            row (list): Input row
+
+        Returns:
+            list[models.Feature]: Row as list of features
+        """
+
         features = []
+
+        # Iterate on fields
         for field in schema:
             if arrow_types.is_number(field.type):
                 features.append(
@@ -168,19 +178,10 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
                     )
                 )
             elif arrow_types.is_image_type(field.type):
-                im = arrow_types.Image(**row[field.name])
-
+                thumbnail = row[field.name].preview_url
                 features.append(
-                    models.Feature(name=field.name, dtype="image", value=im.preview_url)
+                    models.Feature(name=field.name, dtype="image", value=thumbnail)
                 )
-            # elif types.is_depth_map_type(field.type):
-            #     features.append(
-            #         models.Feature(
-            #             name=field.name,
-            #             dtype="image",
-            #             value=row[field.name].display(size=128),
-            #         )
-            #     )
             elif pa.types.is_string(field.type):
                 features.append(
                     models.Feature(name=field.name, dtype="text", value=row[field.name])
@@ -188,6 +189,6 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
 
         return features
 
-    items = [_create_features(el) for el in items_table.to_pylist()]
+    items = [_create_features(e) for e in items_table.to_pylist()]
 
     return create_page(items=items, total=total, params=params)
