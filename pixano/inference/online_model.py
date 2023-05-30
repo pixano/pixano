@@ -18,7 +18,6 @@ from io import BytesIO
 from pathlib import Path
 
 import cv2
-import duckdb
 import numpy as np
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -230,14 +229,14 @@ class OnlineModel(InferenceModel):
         )
 
         # Set working image
-        input_row = duckdb.query(f"SELECT * FROM input_ds WHERE id={id}").arrow()
+        input_row = input_ds.scanner(filter=ds.field("id").isin([id])).to_table()
         image = cv2.imread(
-            str(self.working["input_dir"] / "media" / input_row[view][0].as_py()["uri"])
+            str(self.working["input_dir"] / "media" / input_row[view][0].as_py()._uri)
         )
         self.working["image"] = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Get embedding
-        embed_row = duckdb.query(f"SELECT * FROM embed_ds WHERE id={id}").arrow()
+        embed_row = embed_ds.scanner(filter=ds.field("id").isin([id])).to_table()
         embedding = binary_to_base64(embed_row["image_embedding"][0].as_py())
 
         # Reshape and return embedding

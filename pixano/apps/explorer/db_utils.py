@@ -42,41 +42,36 @@ def get_item_details(
     Returns:
         dict: ImageDetails features for UI
     """
-    schema = dataset.schema
-    item = duckdb.query(f"SELECT * FROM dataset WHERE id='{item_id}'").fetchone()
-
-    field_names = [f.name for f in schema]
-    item_dict = dict(zip(field_names, item))
+    scanner = dataset.scanner(filter=ds.field("id").isin([item_id]))
+    item = scanner.to_table().to_pylist()[0]
 
     # TMP info for cat_ids issue
     debug_0 = False
     if debug_0:
-        print("GT", item_dict["id"], len(item_dict["objects"]))
-        for item in item_dict["objects"]:
+        print("GT", item["id"], len(item["objects"]))
+        for item in item["objects"]:
             print("---", item["category_name"], item["category_id"])
 
     # Inference Merge
     for inf_ds in inf_datasets:
-        inf_schema = inf_ds.schema
-        inf_item = duckdb.query(f"SELECT * FROM inf_ds WHERE id='{item_id}'").fetchone()
+        inf_scanner = inf_ds.scanner(filter=ds.field("id").isin([item_id]))
+        inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
-            inf_field_names = [f.name for f in inf_schema]
-            inf_item_dict = dict(zip(inf_field_names, inf_item))
-            item_dict["objects"].extend(inf_item_dict["objects"])
+            item["objects"].extend(inf_item["objects"])
             # TMP info for cat_ids issue
             if debug_0:
                 print(
                     "INFER",
-                    inf_item_dict["id"],
-                    inf_item_dict["objects"][0]["bbox_source"],
-                    len(inf_item_dict["objects"]),
+                    inf_item["id"],
+                    inf_item["objects"][0]["bbox_source"],
+                    len(inf_item["objects"]),
                 )
-                for item in inf_item_dict["objects"]:
+                for item in inf_item["objects"]:
                     print("---", item["category_name"], item["category_id"])
 
     # TODO compute statically
-    category_ids = [obj["category_id"] for obj in item_dict["objects"]]
-    category_names = [obj["category_name"] for obj in item_dict["objects"]]
+    category_ids = [obj["category_id"] for obj in item["objects"]]
+    category_names = [obj["category_name"] for obj in item["objects"]]
     cat, index, count = np.unique(category_ids, return_index=True, return_counts=True)
     category_stats = [
         {
@@ -88,7 +83,7 @@ def get_item_details(
     ]
 
     features = {
-        "id": item_dict["id"],
+        "id": item["id"],
         "filename": None,
         "width": None,
         "height": None,
@@ -106,6 +101,7 @@ def get_item_details(
             "confidence": confidence,
         }
 
+    schema = dataset.schema
     for f in schema:
         if arrow_types.is_image_type(f.type):
             bboxes = [
@@ -114,16 +110,16 @@ def get_item_details(
                     obj["bbox_confidence"] is not None,
                     obj["bbox_confidence"],
                 )
-                for obj in item_dict["objects"]
+                for obj in item["objects"]
                 if obj["view_id"] == f.name and obj["bbox"] is not None
             ]
             masks = [
                 transforms.rle_to_polygons(obj["mask"])
-                for obj in item_dict["objects"]
+                for obj in item["objects"]
                 if obj["view_id"] == f.name
             ]
 
-            im = arrow_types.Image(**item_dict[f.name])
+            im = item[f.name]
             im.uri_prefix = media_dir
 
             features["views"][f.name] = {
@@ -159,8 +155,6 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     schema = dataset.schema
 
     items_table = duckdb.query(
-        # HACK TO SELECT ONLY VAL FOR COCO
-        # f"SELECT * from dataset WHERE split='val2017' OFFSET {raw_params.offset} LIMIT {raw_params.limit}"
         f"SELECT * from dataset OFFSET {raw_params.offset} LIMIT {raw_params.limit}"
     ).arrow()
 
