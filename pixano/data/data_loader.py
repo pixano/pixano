@@ -32,7 +32,7 @@ from pixano.analytics import compute_stats
 from pixano.core import DatasetInfo, arrow_types
 
 
-def batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
+def _batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
     """Batch dicts
 
     Args:
@@ -345,7 +345,7 @@ class DataLoader(ABC):
 
         # Iterate on splits
         for split in self.splits:
-            batches = batch_dict(self.get_row(split), batch_size)
+            batches = _batch_dict(self.get_row(split), batch_size)
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
                 # Convert batch fields to PyArrow format
