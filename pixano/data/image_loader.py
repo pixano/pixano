@@ -84,7 +84,7 @@ class ImageLoader(DataLoader):
 
             # Fill row with ID, image, and list of image annotations
             row = {
-                "id": im_path.stem,
+                "id": im_path.name,
                 "image": {
                     "uri": f"image/{split}/{im_path.name}",
                     "preview_bytes": im_thumb,
