@@ -32,10 +32,10 @@ class Settings(BaseSettings):
     """Dataset library settings
 
     Attributes:
-        dir (Path): Dataset library directory
+        data_dir (Path): Dataset library directory
     """
 
-    dir: Path = Path.cwd() / "library"
+    data_dir: Path = Path.cwd() / "library"
 
 
 def load_library(settings: Settings) -> list[DatasetInfo]:
@@ -49,7 +49,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
     """
 
     infos = []
-    for spec in sorted(settings.dir.glob("*/spec.json")):
+    for spec in sorted(settings.data_dir.glob("*/spec.json")):
         # Load dataset info
         info = DatasetInfo.parse_file(spec)
         # Load preview.png
@@ -78,7 +78,7 @@ def load_dataset(ds_id: str, settings: Settings) -> Dataset:
         Dataset: Dataset
     """
 
-    for spec in settings.dir.glob("*/spec.json"):
+    for spec in settings.data_dir.glob("*/spec.json"):
         info = DatasetInfo.parse_file(spec)
         if ds_id == info.id:
             return Dataset(spec.parent)
