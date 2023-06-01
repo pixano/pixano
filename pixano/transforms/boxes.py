@@ -89,6 +89,28 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
     return [cmin / width, rmin / width, w, h]
 
 
+def format_bbox(bbox, is_predicted=False, confidence=None):
+    """Convert bounding box to frontend format
+
+    Args:
+        bbox (list[float]): Bounding box
+        is_predicted (bool, optional): True for prediction, False for ground truth. Defaults to False.
+        confidence (float, optional): Bounding box confidence. Defaults to None.
+
+    Returns:
+        dict: Bounding box in frontend format
+    """
+
+    return {
+        "x": float(bbox[0]),
+        "y": float(bbox[1]),
+        "width": float(bbox[2]),
+        "height": float(bbox[3]),
+        "is_predict": is_predicted,
+        "confidence": confidence,
+    }
+
+
 def xywh_to_xyxy(xywh: list[float]) -> list[float]:
     """Convert bounding box coordinates from xywh (using top left point as reference) to xyxy
 

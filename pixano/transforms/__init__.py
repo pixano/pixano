@@ -11,7 +11,14 @@
 #
 # http://www.cecill.info
 
-from .boxes import denormalize, mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
+from .boxes import (
+    denormalize,
+    format_bbox,
+    mask_to_bbox,
+    normalize,
+    xywh_to_xyxy,
+    xyxy_to_xywh,
+)
 from .image import (
     binary_to_base64,
     depth_array_to_gray,
@@ -33,6 +40,7 @@ __all__ = [
     "normalize",
     "denormalize",
     "mask_to_bbox",
+    "format_bbox",
     "xywh_to_xyxy",
     "xyxy_to_xywh",
     "image_to_binary",

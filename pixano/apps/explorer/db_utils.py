@@ -73,21 +73,11 @@ def get_item_details(
         "views": {},
     }
 
-    def _format_bbox(bbox, is_predicted=False, confidence=None):
-        return {
-            "x": bbox[0],
-            "y": bbox[1],
-            "width": bbox[2],
-            "height": bbox[3],
-            "is_predict": is_predicted,
-            "confidence": confidence,
-        }
-
     schema = dataset.schema
     for f in schema:
         if arrow_types.is_image_type(f.type):
             bboxes = [
-                _format_bbox(
+                transforms.format_bbox(
                     obj["bbox"],
                     obj["bbox_confidence"] is not None,
                     obj["bbox_confidence"],
