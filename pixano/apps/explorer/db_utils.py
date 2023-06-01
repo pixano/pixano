@@ -41,67 +41,76 @@ def get_item_details(
     Returns:
         dict: ImageDetails features for UI
     """
+
+    # Get item
     scanner = dataset.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
 
-    # Inference Merge
+    # Get item inference objects
     for inf_ds in inf_datasets:
         inf_scanner = inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
             item["objects"].extend(inf_item["objects"])
 
-    # TODO compute statically
-    category_ids = [obj["category_id"] for obj in item["objects"]]
-    category_names = [obj["category_name"] for obj in item["objects"]]
-    cat, index, count = np.unique(category_ids, return_index=True, return_counts=True)
-    category_stats = [
-        {
-            "id": int(cat[i]),
-            "name": str(category_names[index[i]]),
-            "count": int(count[i]),
-        }
-        for i in range(len(cat))
-    ]
-
+    # Create features
     features = {
         "id": item["id"],
         "filename": None,
         "width": None,
         "height": None,
-        "categoryStats": category_stats,
+        "categoryStats": [],
         "views": {},
     }
 
-    schema = dataset.schema
-    for f in schema:
-        if arrow_types.is_image_type(f.type):
-            bboxes = [
+    # Category statistics
+    cat_ids = [obj["category_id"] for obj in item["objects"]]
+    cat_names = [obj["category_name"] for obj in item["objects"]]
+    cat, index, count = np.unique(cat_ids, return_index=True, return_counts=True)
+    # Add to features
+    features["categoryStats"] = [
+        {
+            "id": int(cat[i]),
+            "name": str(cat_names[index[i]]),
+            "count": int(count[i]),
+        }
+        for i in range(len(cat))
+    ]
+
+    # Views
+    for field in dataset.schema:
+        if arrow_types.is_image_type(field.type):
+            # Image
+            im = item[field.name]
+            im.uri_prefix = media_dir
+            # Categories
+            cats = [
+                {"id": obj["category_id"], "name": obj["category_name"]}
+                for obj in item["objects"]
+                if obj["view_id"] == field.name
+            ]
+            # Bounding boxes
+            boxes = [
                 transforms.format_bbox(
                     obj["bbox"],
                     obj["bbox_confidence"] is not None,
                     obj["bbox_confidence"],
                 )
                 for obj in item["objects"]
-                if obj["view_id"] == f.name and obj["bbox"] is not None
+                if obj["view_id"] == field.name and obj["bbox"] is not None
             ]
+            # Masks
             masks = [
                 transforms.rle_to_polygons(obj["mask"])
                 for obj in item["objects"]
-                if obj["view_id"] == f.name
+                if obj["view_id"] == field.name
             ]
-
-            im = item[f.name]
-            im.uri_prefix = media_dir
-
-            features["views"][f.name] = {
+            # Add to features
+            features["views"][field.name] = {
                 "image": im.url,
                 "objects": {
-                    "category": [
-                        {"id": id, "name": name}
-                        for (id, name) in zip(category_ids, category_names)
-                    ],
-                    "boundingBox": bboxes,
+                    "category": cats,
+                    "boundingBox": boxes,
                     "segmentation": masks,
                 },
             }
@@ -120,12 +129,12 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
         AbstractPage: List of models.Feature for UI (DatasetExplorer)
     """
 
+    # Get page parameters
     params = resolve_params(params)
     raw_params = params.to_raw_params()
-
     total = dataset.count_rows()
-    schema = dataset.schema
 
+    # Get page items
     start = raw_params.offset
     stop = min(raw_params.offset + raw_params.limit, total)
     items_table = dataset.take(range(start, stop))
@@ -143,18 +152,21 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
         features = []
 
         # Iterate on fields
-        for field in schema:
+        for field in dataset.schema:
+            # Number fields
             if arrow_types.is_number(field.type):
                 features.append(
                     models.Feature(
                         name=field.name, dtype="number", value=row[field.name]
                     )
                 )
+            # Image fields
             elif arrow_types.is_image_type(field.type):
                 thumbnail = row[field.name].preview_url
                 features.append(
                     models.Feature(name=field.name, dtype="image", value=thumbnail)
                 )
+            # String fields
             elif pa.types.is_string(field.type):
                 features.append(
                     models.Feature(name=field.name, dtype="text", value=row[field.name])
@@ -162,6 +174,7 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
 
         return features
 
+    # Create items features
     items = [_create_features(e) for e in items_table.to_pylist()]
 
     return create_page(items=items, total=total, params=params)
