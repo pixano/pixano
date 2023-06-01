@@ -92,10 +92,6 @@ class ImageLoader(DataLoader):
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),
-                        view_id="image",
-                        bbox=[0.0, 0.0, 0.0, 0.0],
-                        category_id=-1,
-                        category_name="No ground truths",
                     ).dict()
                 ],
                 "split": split,

@@ -82,7 +82,7 @@ class ObjectAnnotation(BaseModel):
     id: str
     view_id: Optional[str] = None
     # Bounding Box
-    bbox: Optional[list[float]] = None
+    bbox: Optional[list[float]] = [0] * 4
     bbox_source: Optional[str] = None
     bbox_confidence: Optional[float] = None
     is_group_of: Optional[bool] = None
