@@ -75,6 +75,7 @@ def get_item_details(
             "count": int(count[i]),
         }
         for i in range(len(cat))
+        if cat[i] is not None
     ]
 
     # Views
