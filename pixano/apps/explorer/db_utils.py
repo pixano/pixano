@@ -44,29 +44,12 @@ def get_item_details(
     scanner = dataset.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
 
-    # TMP info for cat_ids issue
-    debug_0 = False
-    if debug_0:
-        print("GT", item["id"], len(item["objects"]))
-        for item in item["objects"]:
-            print("---", item["category_name"], item["category_id"])
-
     # Inference Merge
     for inf_ds in inf_datasets:
         inf_scanner = inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
             item["objects"].extend(inf_item["objects"])
-            # TMP info for cat_ids issue
-            if debug_0:
-                print(
-                    "INFER",
-                    inf_item["id"],
-                    inf_item["objects"][0]["bbox_source"],
-                    len(inf_item["objects"]),
-                )
-                for item in inf_item["objects"]:
-                    print("---", item["category_name"], item["category_id"])
 
     # TODO compute statically
     category_ids = [obj["category_id"] for obj in item["objects"]]
