@@ -25,6 +25,7 @@ import pyarrow.parquet as pq
 from onnxruntime import InferenceSession
 from tqdm.auto import tqdm
 
+from pixano.core import arrow_types
 from pixano.transforms import binary_to_base64
 
 from .inference_model import InferenceModel
@@ -119,7 +120,12 @@ class OnlineModel(InferenceModel):
 
         # Create schema
         fields = [pa.field("id", pa.string())]
-        fields.extend([pa.field(f"{view}_embedding", pa.binary()) for view in views])
+        fields.extend(
+            [
+                pa.field(f"{view}_embedding", arrow_types.EmbeddingType())
+                for view in views
+            ]
+        )
         schema = pa.schema(fields)
 
         # Iterate on splits
@@ -157,9 +163,20 @@ class OnlineModel(InferenceModel):
                                 np.save(emb_bytes, emb)
                                 data[f"{view}_embedding"].append(emb_bytes.getvalue())
 
+                    # Convert ExtensionTypes
+                    arrays = []
+                    for field in schema:
+                        arrays.append(
+                            arrow_types.convert_field(
+                                field_name=field.name,
+                                field_type=field.type,
+                                field_data=data[field.name],
+                            )
+                        )
+
                     # Save to file
                     pq.write_table(
-                        pa.Table.from_pydict(data, schema=schema),
+                        pa.Table.from_arrays(arrays, schema=schema),
                         split_dir / file.name,
                     )
 

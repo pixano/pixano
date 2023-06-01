@@ -33,6 +33,30 @@ class BBoxType(pa.ExtensionType):
         return b""
 
 
+class EmbeddingType(pa.ExtensionType):
+    """Embedding type as PyArrow binary"""
+
+    def __init__(self):
+        super(EmbeddingType, self).__init__(pa.binary(), "embedding")
+
+    @classmethod
+    def __arrow_ext_deserialize__(cls, storage_type, serialized):
+        return EmbeddingType()
+
+    def __arrow_ext_serialize__(self):
+        return b""
+
+
+class Embedding(BaseModel):
+    """Embedding class
+
+    Attributes:
+        embedding (bytes): Embedding as binary
+    """
+
+    embedding: bytes
+
+
 class ObjectAnnotation(BaseModel):
     """ObjectAnnotation class to contain all annotation data
 
@@ -117,3 +141,15 @@ def ObjectAnnotationType() -> pa.StructType:
             pa.field("identity", pa.string(), nullable=True),
         ]
     )
+
+
+def is_embedding_type(t: pa.DataType) -> bool:
+    """Returns True if value is an instance of EmbeddingType
+
+    Args:
+        t (pa.DataType): Value to check
+
+    Returns:
+        bool: Type checking response
+    """
+    return isinstance(t, EmbeddingType)
