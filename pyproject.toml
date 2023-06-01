@@ -22,7 +22,7 @@ classifiers = [
   "License :: CeCILL-C Free Software License Agreement (CECILL-C)",
 ]
 dependencies = [
-  "duckdb ~= 0.7.0",
+  "duckdb ~= 0.8.0",
   "etils ~= 1.1.0",
   "fastapi-pagination ~= 0.11.4",
   "imageio ~= 2.25.0",
