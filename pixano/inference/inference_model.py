@@ -133,7 +133,16 @@ class InferenceModel(ABC):
         with open(input_dir / "spec.json", "r") as f:
             spec_json = json.load(f)
 
-        # If no splits given, select all splits
+        # If splits provided, check if they exist
+        splits = [f"split={s}" for s in splits if not s.startswith("split=")]
+        for split in splits:
+            split_dir = input_dir / "db" / split
+            if not Path.exists(split_dir):
+                raise Exception(f"{split_dir} does not exist.")
+            if not any(split_dir.iterdir()):
+                raise Exception(f"{split_dir} is empty.")
+
+        # If no splits provided, select all splits
         if splits == []:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
@@ -160,11 +169,12 @@ class InferenceModel(ABC):
             files = sorted((input_dir / "db" / split).glob("*.parquet"))
 
             # Check for already processed files
+            split_name = split.replace("split=", "")
             split_dir = output_dir / split
             processed = [p.name for p in split_dir.glob("*.parquet")]
 
             # Iterate on files
-            for file in tqdm(files, desc=split, position=0):
+            for file in tqdm(files, desc=f"Processing {split_name} split", position=0):
                 # Process only remaining files
                 if file.name not in processed:
                     # Load file into batches
@@ -173,7 +183,9 @@ class InferenceModel(ABC):
 
                     # Iterate on batches
                     data = {field.name: [] for field in schema}
-                    for batch in tqdm(batches, position=1, desc=file.name):
+                    for batch in tqdm(
+                        batches, desc=f"Processsing {file.name}", position=1
+                    ):
                         # Add row IDs
                         data["id"].extend([str(row) for row in batch["id"]])
                         # For inferences
