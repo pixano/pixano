@@ -15,7 +15,9 @@
 
 # Pixano Explorer
 
-*We will soon provide a guide on how to convert your datasets to parquet format to access them with Pixano.*
+## Converting your dataset to Pixano format
+
+Please look at our [dataset notebooks](../../../notebooks/dataset/) for info on how to convert your dataset to Pixano format.
 
 ## Launching the Explorer from a terminal
 
