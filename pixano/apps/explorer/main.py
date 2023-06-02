@@ -21,8 +21,7 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.api import add_pagination
 from pydantic import BaseSettings
 
-from pixano.core import arrow_types
-from pixano.core.dataset import Dataset, DatasetInfo, InferenceDataset
+from pixano.core import Dataset, DatasetInfo, InferenceDataset, arrow_types
 from pixano.data import models
 
 from . import db_utils
