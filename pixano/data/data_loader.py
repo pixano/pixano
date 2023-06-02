@@ -97,9 +97,9 @@ class DataLoader(ABC):
         # Dataset directories
         for s_name, s_path in source_dirs.items():
             if not Path.exists(s_path):
-                raise Exception(f"{s_name} directory does not exist.")
+                raise Exception(f"{s_name} does not exist.")
             if not any(s_path.iterdir()):
-                raise Exception(f"{s_name} directory is empty.")
+                raise Exception(f"{s_name} is empty.")
         self.source_dirs = source_dirs
         self.target_dir = target_dir
 
