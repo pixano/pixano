@@ -11,9 +11,11 @@
 #
 # http://www.cecill.info
 
-from .dataset import Dataset, DatasetInfo
+from .dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
 
 __all__ = [
-    "Dataset",
     "DatasetInfo",
+    "Dataset",
+    "InferenceDataset",
+    "EmbeddingDataset",
 ]
