@@ -12,9 +12,18 @@
 # http://www.cecill.info
 
 import json
-from abc import ABC, abstractmethod
+import os
+from abc import ABC
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+from tqdm.auto import tqdm
+
+from pixano.core import arrow_types
 
 
 class InferenceModel(ABC):
@@ -55,33 +64,178 @@ class InferenceModel(ABC):
         self.source = source
         self.info = info
 
-    @abstractmethod
-    def __call__():
-        """Call model"""
+    def inference_batch(
+        self,
+        batch: pa.RecordBatch,
+        view: str,
+        media_dir: Path,
+        threshold: float = 0.0,
+    ) -> list[list[arrow_types.ObjectAnnotation]]:
+        """Inference preannotation for a batch
+
+        Args:
+            batch (pa.RecordBatch): Input batch
+            view (str): Dataset view
+            media_dir (Path): Media directory
+            threshold (float, optional): Confidence threshold. Defaults to 0.0.
+
+        Returns:
+            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
+        """
 
         pass
 
-    @abstractmethod
+    def embedding_batch(
+        self,
+        batch: pa.RecordBatch,
+        view: str,
+        media_dir: Path,
+    ) -> list[np.ndarray]:
+        """Embedding precomputing for a batch
+
+        Args:
+            batch (pa.RecordBatch): Input batch
+            view (str): Dataset view
+            media_dir (Path): Media directory
+
+        Returns:
+            list[np.ndarray]: Model embeddings as NumPy arrays
+        """
+
+        pass
+
     def process_dataset(
         self,
         input_dir: Path,
+        process_type: str,
         views: list[str],
         splits: list[str] = [],
         batch_size: int = 1,
+        threshold: float = 0.0,
     ) -> Path:
-        """Process dataset
+        """Process dataset for inference preannotation or embedding precomputing
 
         Args:
             input_dir (Path): Input dataset directory
+            process_type (str): Process type ('infer' for inference preannotation or 'embed' for embedding precomputing)
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if []. Defaults to [].
             batch_size (int, optional): Rows per batch. Defaults to 1.
+            threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
 
         Returns:
             Path: Output dataset directory
         """
 
-        pass
+        output_dir = input_dir / f"db_{process_type}_{self.id}"
+
+        # Load spec.json
+        with open(input_dir / "spec.json", "r") as f:
+            spec_json = json.load(f)
+
+        # If no splits given, select all splits
+        if splits == []:
+            splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
+
+        # Create schema
+        fields = [pa.field("id", pa.string())]
+        if process_type == "infer":
+            fields.extend(
+                [
+                    pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+                ]
+            )
+        elif process_type == "embed":
+            fields.extend(
+                [
+                    pa.field(f"{view}_embedding", arrow_types.EmbeddingType())
+                    for view in views
+                ]
+            )
+        schema = pa.schema(fields)
+
+        # Iterate on splits
+        for split in splits:
+            # List dataset files
+            files = sorted((input_dir / "db" / split).glob("*.parquet"))
+
+            # Check for already processed files
+            split_dir = output_dir / split
+            processed = [p.name for p in split_dir.glob("*.parquet")]
+
+            # Iterate on files
+            for file in tqdm(files, desc=split, position=0):
+                # Process only remaining files
+                if file.name not in processed:
+                    # Load file into batches
+                    table = pq.read_table(file)
+                    batches = table.to_batches(max_chunksize=batch_size)
+
+                    # Iterate on batches
+                    data = {field.name: [] for field in schema}
+                    for batch in tqdm(batches, position=1, desc=file.name):
+                        # Add row IDs
+                        data["id"].extend([str(row) for row in batch["id"]])
+                        # For inferences
+                        if process_type == "infer":
+                            # Iterate on views
+                            batch_inf = []
+                            for view in views:
+                                batch_inf.append(
+                                    self.inference_batch(
+                                        batch, view, input_dir / "media", threshold
+                                    )
+                                )
+                            # Regroup view inferences by row
+                            data["objects"].append(
+                                [
+                                    inf.dict()
+                                    for row in range(len(batch["id"]))
+                                    for view_inf in batch_inf
+                                    for inf in view_inf[row]
+                                ]
+                            )
+                        # For embeddings
+                        elif process_type == "embed":
+                            # Iterate on views
+                            for view in views:
+                                view_emb = self.embedding_batch(
+                                    batch, view, input_dir / "media"
+                                )
+                                for emb in view_emb:
+                                    emb_bytes = BytesIO()
+                                    np.save(emb_bytes, emb)
+                                    data[f"{view}_embedding"].append(
+                                        emb_bytes.getvalue()
+                                    )
+
+                    # Convert ExtensionTypes
+                    arrays = []
+                    for field in schema:
+                        arrays.append(
+                            arrow_types.convert_field(
+                                field_name=field.name,
+                                field_type=field.type,
+                                field_data=data[field.name],
+                            )
+                        )
+
+                    # Save to file
+                    split_dir.mkdir(parents=True, exist_ok=True)
+                    pq.write_table(
+                        pa.Table.from_arrays(arrays, schema=schema),
+                        split_dir / file.name,
+                    )
+
+                    # Save.json
+                    self.create_json(
+                        output_dir=output_dir,
+                        filename=process_type,
+                        spec_json=spec_json,
+                        num_elements=pq.read_metadata(split_dir / file.name).num_rows,
+                    )
+
+        return output_dir
 
     def create_json(
         self,
@@ -121,3 +275,12 @@ class InferenceModel(ABC):
         # Save .json
         with open(output_dir / f"{filename}.json", "w") as f:
             json.dump(output_json, f)
+
+    def export_to_onnx(self) -> Path:
+        """Export model to ONNX
+
+        Returns:
+            Path: ONNX model path
+        """
+
+        pass
