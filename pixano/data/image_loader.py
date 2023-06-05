@@ -71,7 +71,7 @@ class ImageLoader(DataLoader):
             Generator[dict]: Rows processed to be stored in a parquet
         """
 
-        # Open annotation files
+        # Get images paths
         image_paths = []
         for type in ["*.png", "*.jpg", "*.jpeg"]:
             image_paths.extend(glob.glob(str(self.source_dirs["image"] / split / type)))
