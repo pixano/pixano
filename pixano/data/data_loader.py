@@ -261,7 +261,7 @@ class DataLoader(ABC):
                     # Open image
                     with Image.open(
                         self.target_dir / "media" / row["image"][0]._uri
-                    ).convert("RGB") as im:
+                    ) as im:
                         im_w, im_h = im.size
                         # Compute image features
                         aspect_ratio = round(im_w / im_h, 1)
