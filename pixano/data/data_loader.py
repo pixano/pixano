@@ -95,11 +95,11 @@ class DataLoader(ABC):
         self.splits = splits
 
         # Dataset directories
-        for s_name, s_path in source_dirs.items():
-            if not Path.exists(s_path):
-                raise Exception(f"{s_name} does not exist.")
-            if not any(s_path.iterdir()):
-                raise Exception(f"{s_name} is empty.")
+        for source_path in source_dirs.values():
+            if not Path.exists(source_path):
+                raise Exception(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise Exception(f"{source_path} is empty.")
         self.source_dirs = source_dirs
         self.target_dir = target_dir
 
