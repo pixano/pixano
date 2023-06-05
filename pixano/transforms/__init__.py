@@ -34,7 +34,7 @@ from .image import (
     rle_to_urle,
     urle_to_rle,
 )
-from .labels import coco_80to91, coco_names_80, coco_names_91, voc_names
+from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
 
 __all__ = [
     "normalize",
@@ -56,8 +56,9 @@ __all__ = [
     "mask_to_polygons",
     "urle_to_rle",
     "rle_to_urle",
-    "coco_80to91",
+    "coco_ids_80to91",
     "coco_names_80",
     "coco_names_91",
+    "dota_ids",
     "voc_names",
 ]

@@ -12,8 +12,8 @@
 # http://www.cecill.info
 
 
-def coco_80to91(label: int) -> int:
-    """Return COCO category name (80 to 91 classes)
+def coco_ids_80to91(id: int) -> int:
+    """Return COCO category ID (80 to 91 classes)
 
     Args:
         label (int): Category ID (80 classes)
@@ -105,14 +105,14 @@ def coco_80to91(label: int) -> int:
         80: 90,
     }
 
-    return coco_dict[int(label)]
+    return coco_dict[int(id)]
 
 
-def coco_names_80(label: int) -> str:
+def coco_names_80(id: int) -> str:
     """Return COCO category name (80 classes)
 
     Args:
-        label (int): Category ID
+        id (int): Category ID
 
     Returns:
         str: Category name
@@ -201,14 +201,14 @@ def coco_names_80(label: int) -> str:
         80: "toothbrush",
     }
 
-    return coco_dict[int(label)]
+    return coco_dict[int(id)]
 
 
-def coco_names_91(label: int) -> str:
+def coco_names_91(id: int) -> str:
     """Return COCO category name (91 classes)
 
     Args:
-        label (int): Category ID
+        id (int): Category ID
 
     Returns:
         str: Category name
@@ -308,14 +308,48 @@ def coco_names_91(label: int) -> str:
         91: "hair brush",
     }
 
-    return coco_dict[int(label)]
+    return coco_dict[int(id)]
 
 
-def voc_names(label: int) -> str:
+def dota_ids(name: str) -> int:
+    """Return DOTAv2 category ID (18 classes)
+
+    Args:
+        label (int): Category name
+
+    Returns:
+        str: Category ID
+    """
+
+    dota_dict = {
+        "plane": 1,
+        "ship": 2,
+        "storage tank": 3,
+        "baseball diamond": 4,
+        "tennis court": 5,
+        "basketball court": 6,
+        "ground track field": 7,
+        "harbor": 8,
+        "bridge": 9,
+        "large vehicle": 10,
+        "small vehicle": 11,
+        "helicopter": 12,
+        "roundabout": 13,
+        "soccer ball field": 14,
+        "swimming pool": 15,
+        "container crane": 16,
+        "airport": 17,
+        "helipad": 18,
+    }
+
+    return dota_dict[str(name).replace("-", " ")]
+
+
+def voc_names(id: int) -> str:
     """Return VOC category name (20 classes)
 
     Args:
-        label (int): Category ID
+        id (int): Category ID
 
     Returns:
         str: Category name
@@ -344,4 +378,4 @@ def voc_names(label: int) -> str:
         20: "tv / monitor",
     }
 
-    return voc_dict[int(label)]
+    return voc_dict[int(id)]
