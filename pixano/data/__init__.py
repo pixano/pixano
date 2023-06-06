@@ -13,10 +13,12 @@
 
 from .coco_loader import COCOLoader
 from .data_loader import DataLoader
+from .dota_loader import DOTALoader
 from .image_loader import ImageLoader
 
 __all__ = [
     "DataLoader",
     "COCOLoader",
+    "DOTALoader",
     "ImageLoader",
 ]
