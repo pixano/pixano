@@ -155,12 +155,12 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # Load inference datasets
-        inf_ds = []
-        for infer in sorted(list(ds.path.glob("db_infer_*/infer.json"))):
-            inf_ds.append(InferenceDataset(infer.parent).load())
+        inf_datasets = []
+        for inf_json in sorted(list(ds.path.glob("db_infer_*/infer.json"))):
+            inf_datasets.append(InferenceDataset(inf_json.parent).load())
 
         # Return item details
-        return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_ds)
+        return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
 
     add_pagination(app)
 
