@@ -84,6 +84,8 @@ def get_item_details(
             # Image
             im = item[field.name]
             im.uri_prefix = media_dir
+            # Objects IDs
+            ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]
             # Categories
             cats = [
                 {"id": obj["category_id"], "name": obj["category_name"]}
@@ -110,6 +112,7 @@ def get_item_details(
             features["views"][field.name] = {
                 "image": im.url,
                 "objects": {
+                    "id": ids,
                     "category": cats,
                     "boundingBox": boxes,
                     "segmentation": masks,
