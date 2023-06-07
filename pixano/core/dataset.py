@@ -28,6 +28,7 @@ class DatasetInfo(pydantic.BaseModel):
         description (str): Dataset description
         num_elements (int): Number of elements in dataset
         preview (str, optional): Dataset preview
+        categories (list[dict], optional): Dataset categories
     """
 
     id: str
@@ -35,6 +36,7 @@ class DatasetInfo(pydantic.BaseModel):
     description: str
     num_elements: int
     preview: Optional[str]
+    categories: Optional[list[dict]]
 
 
 class Dataset:
