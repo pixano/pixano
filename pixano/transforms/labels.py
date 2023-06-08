@@ -16,7 +16,7 @@ def coco_ids_80to91(id: int) -> int:
     """Return COCO category ID (80 to 91 classes)
 
     Args:
-        label (int): Category ID (80 classes)
+        id (int): Category ID (80 classes)
 
     Returns:
         int: Category ID (91 classes)
@@ -315,7 +315,7 @@ def dota_ids(name: str) -> int:
     """Return DOTAv2 category ID (18 classes)
 
     Args:
-        label (int): Category name
+        name (int): Category name
 
     Returns:
         str: Category ID

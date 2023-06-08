@@ -89,7 +89,7 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
     return [cmin / width, rmin / width, w, h]
 
 
-def format_bbox(bbox, is_predicted=False, confidence=None):
+def format_bbox(bbox, is_predicted=False, confidence=None) -> dict:
     """Convert bounding box to frontend format
 
     Args:

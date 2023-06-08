@@ -50,8 +50,6 @@ nav:
 
   - "inference":
     - "InferenceModel": code/inference/inference_model.md
-    - "OfflineModel": code/inference/offline_model.md
-    - "OnlineModel": code/inference/online_model.md
 
   - "notebook":
     - "display": code/notebook/display.md
