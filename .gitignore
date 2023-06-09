@@ -41,3 +41,4 @@ __pycache__
 *.pt
 *.pth
 *.onnx
+*.wasm
