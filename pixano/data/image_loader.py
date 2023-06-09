@@ -68,7 +68,7 @@ class ImageLoader(DataLoader):
             split (str): Dataset split
 
         Yields:
-            Generator[dict]: Rows processed to be stored in a parquet
+            Generator[dict]: Processed rows
         """
 
         # Get images paths

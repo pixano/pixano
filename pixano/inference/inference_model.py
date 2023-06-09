@@ -261,7 +261,7 @@ class InferenceModel(ABC):
         Args:
             output_dir (Path): Output dataset directory
             filename (str): Output .json filename
-            spec_json (dict): Input parquet .json
+            spec_json (dict): Input dataset .json
             num_elements (int): Number of processed rows
         """
 

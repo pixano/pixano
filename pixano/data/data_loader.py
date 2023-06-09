@@ -328,16 +328,16 @@ class DataLoader(ABC):
             split (str): Dataset split
 
         Yields:
-            Generator[dict]: Rows processed to be stored in a parquet
+            Generator[dict]: Processed rows
         """
 
         pass
 
-    def convert_dataset(
+    def import_dataset(
         self,
         batch_size: int = 2048,
     ):
-        """Process dataset to parquet format
+        """Import dataset to Pixano format
 
         Args:
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
@@ -358,7 +358,7 @@ class DataLoader(ABC):
                             field_data=batch[field.name],
                         )
                     )
-                # Save batch to parquet file
+                # Save to file
                 ds.write_dataset(
                     data=pa.Table.from_arrays(arrays, schema=self.schema),
                     base_dir=self.target_dir / "db",
