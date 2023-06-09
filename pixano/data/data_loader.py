@@ -333,10 +333,7 @@ class DataLoader(ABC):
 
         pass
 
-    def import_dataset(
-        self,
-        batch_size: int = 2048,
-    ):
+    def import_dataset(self, batch_size: int = 2048):
         """Import dataset to Pixano format
 
         Args:
@@ -383,3 +380,12 @@ class DataLoader(ABC):
 
         # Create stats
         self.create_stats()
+
+    def export_dataset(self, export_dir: Path):
+        """Export dataset back to original format
+
+        Args:
+            export_dir (Path): Export directory
+        """
+
+        pass
