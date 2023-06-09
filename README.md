@@ -35,10 +35,13 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
+# Converting your existing datasets to Pixano format
+
+Please refer to the [dataset notebooks](../../../notebooks/dataset/) for information on how to convert your datasets.
 
 # Using the Pixano Explorer
 
-Please refer to [this page](pixano/apps/explorer/README.md) for information on how to use the Pixano Explorer.
+Please refer to [Pixano Explorer README](pixano/apps/explorer/README.md) for information on how to use the it.
 
 
 # Using the Pixano Annotator

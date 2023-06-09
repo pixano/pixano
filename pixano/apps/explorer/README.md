@@ -15,10 +15,6 @@
 
 # Pixano Explorer
 
-## Converting your dataset to Pixano format
-
-Please refer to the [dataset notebooks](../../../notebooks/dataset/) for information on how to convert your dataset to Pixano format.
-
 ## Launching the Explorer from a terminal
 
 You can start the Explorer with the following command:
