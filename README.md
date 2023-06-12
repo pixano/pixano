@@ -6,7 +6,7 @@
 
 <br/>
 
-**Data Centric AI Building Blocks for Computer Vision Application**
+**Data-centric AI building blocks for computer vision applications**
 
 ***Under active development, subject to API change***
 
