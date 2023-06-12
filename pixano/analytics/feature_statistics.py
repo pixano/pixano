@@ -64,38 +64,67 @@ def objects_tableToDF(data_table: pa.Table, field: str) -> pd.DataFrame:
         return None
 
 
-def numeric_features_stats(df: pd.DataFrame, field: str) -> list[dict]:
-    """Compute numerical statistics (histogram)
+def categorical_stats(df: pd.DataFrame, split: str, field_name: str) -> list[dict]:
+    """Compute feature categorical statistics
 
     Args:
         df (pd.DataFrame): Input DataFrame
-        field (str): Selected field
+        split (str): DataFrame split
+        field_name (str): Selected field
 
     Returns:
-        dict: Statistics dictionary
+        list[dict]: Feature statistics
     """
 
-    counts, bins = np.histogram(df[field])
-    res = []
-    for i in range(len(counts)):
-        res.append(
-            {"bin_start": bins[i], "bin_end": bins[i + 1], "sample_count": counts[i]}
-        )
-    return res
+    counts = df.value_counts(subset=field_name)
+    return [{field_name: k, "counts": v, "split": split} for k, v in counts.items()]
 
 
-def categorical_feature_stats(df: pd.DataFrame, field: str, title: str) -> dict:
-    """Compute categorical statistics
+def numerical_stats(
+    df: pd.DataFrame, split: str, field_name: str, field_range: list[float] = None
+) -> list[dict]:
+    """Compute feature numerical statistics
 
     Args:
         df (pd.DataFrame): Input DataFrame
-        field (str): Selected field
-        title (str): Field title
+        split (str): DataFrame split
+        field_name (str): Selected field
+        field_range (list[float], optional): Selected field range. Defaults to None.
 
     Returns:
-        dict: Statistics dictionary
+        list[dict]: Feature statistics
     """
 
-    counts = df[field].value_counts()
-    data = [{"key": k, "value": v} for k, v in counts.items()]
-    return {"title": title, "x_title": "count", "y_title": field, "data": data}
+    counts, bins = np.histogram(df[field_name], range=field_range)
+    return [
+        {
+            "bin_start": float(bins[i]),
+            "bin_end": float(bins[i + 1]),
+            "counts": int(counts[i]),
+            "split": split,
+        }
+        for i in range(len(counts))
+    ]
+
+
+def compute_stats(df: pd.DataFrame, split: str, feature: dict) -> list[dict]:
+    """Compute feature statistics
+
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        split (str): DataFrame split
+        feature (dict): Selected feature
+
+    Returns:
+        list[dict]: Feature statistics
+    """
+
+    # Categorical
+    if feature["type"] == "categorical":
+        return categorical_stats(df, split, feature["name"])
+    # Numerical
+    elif feature["type"] == "numerical":
+        return numerical_stats(df, split, feature["name"], feature.get("range", None))
+    # Else
+    else:
+        return []

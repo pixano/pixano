@@ -11,21 +11,20 @@
 #
 # http://www.cecill.info
 
-import json
-from collections import defaultdict
+from abc import abstractmethod
 from collections.abc import Generator
 from pathlib import Path
 
 import pyarrow as pa
+import shortuuid
 
 from pixano.core import arrow_types
+from pixano.data.data_loader import DataLoader
 from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
 
-from .data_loader import DataLoader
 
-
-class COCOLoader(DataLoader):
-    """Data Loader class for COCO instances dataset
+class TemplateLoader(DataLoader):
+    """Data Loader class template
 
     Attributes:
         name (str): Dataset name
@@ -45,7 +44,7 @@ class COCOLoader(DataLoader):
         target_dir: Path,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize Template Loader
 
         Args:
             name (str): Dataset name
@@ -55,12 +54,13 @@ class COCOLoader(DataLoader):
             splits (list[str]): Dataset splits
         """
 
-        # Dataset additional fields (in addition to split, id, and objects)
+        ##### Add your dataset additional fields (in addition to split, id, and objects) here #####
         add_fields = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
         super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
 
+    @abstractmethod
     def get_row(self, split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
@@ -71,39 +71,37 @@ class COCOLoader(DataLoader):
             Generator[dict]: Processed rows
         """
 
-        # Open annotation files
-        with open(self.source_dirs["objects"] / f"instances_{split}.json", "r") as f:
-            coco_instances = json.load(f)
+        ##### Retrieve your images here #####
+        image_paths = []
 
-        # Group annotations by image ID
-        annotations = defaultdict(list)
-        for ann in coco_instances["annotations"]:
-            annotations[ann["image_id"]].append(ann)
+        ##### Retrieve your annotations here #####
+        annotations = []
 
         # Process rows
-        for im in sorted(coco_instances["images"], key=lambda x: x["id"]):
-            # Load image annotations
-            im_anns = annotations[im["id"]]
-            # Load image directory
-            im_path = self.source_dirs["image"] / split / im["file_name"]
+        for im_id, im_path in enumerate(image_paths):
+            ##### Retrieve image data here #####
+            im_height = 0
+            im_width = 0
+            im_anns = annotations[im_id]
+
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())
 
-            # Fill row with ID, image, and list of image annotations
+            ##### Fill row with ID, image, and list of annotations #####
             row = {
-                "id": str(im["id"]),
+                "id": im_path.stem,
                 "image": {
-                    "uri": f"image/{split}/{im['file_name']}",
+                    "uri": f"image/{split}/{im_path.name}",
                     "preview_bytes": im_thumb,
                 },
                 "objects": [
                     arrow_types.ObjectAnnotation(
-                        id=str(ann["id"]),
+                        id=shortuuid.uuid(),
                         view_id="image",
                         area=float(ann["area"]),
-                        bbox=normalize(ann["bbox"], im["height"], im["width"]),
-                        mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
-                        is_group_of=bool(ann["iscrowd"]),
+                        bbox=normalize(ann["bbox"], im_height, im_width),
+                        mask=encode_rle(ann["segmentation"], im_height, im_width),
+                        is_group_of=False,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
                     ).dict()

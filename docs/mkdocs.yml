@@ -45,13 +45,11 @@ nav:
   - "data":
     - "DataLoader": code/data/data_loader.md
     - "CocoLoader": code/data/coco_loader.md
-    - "PixanoLoader": code/data/pixano_loader.md
+    - "ImageLoader": code/data/image_loader.md
     - "models": code/data/models.md
 
   - "inference":
     - "InferenceModel": code/inference/inference_model.md
-    - "OfflineModel": code/inference/offline_model.md
-    - "OnlineModel": code/inference/online_model.md
 
   - "notebook":
     - "display": code/notebook/display.md

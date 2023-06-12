@@ -12,11 +12,7 @@
 # http://www.cecill.info
 
 from .inference_model import InferenceModel
-from .offline_model import OfflineModel
-from .online_model import OnlineModel
 
 __all__ = [
-    "OfflineModel",
-    "OnlineModel",
     "InferenceModel",
 ]

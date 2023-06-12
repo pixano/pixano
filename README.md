@@ -1,15 +1,19 @@
 <div align="center">
 
-<img src="images/pixano_logo.png" alt="Pixano" height="100"/>
+<picture>
+    <img src="https://raw.githubusercontent.com/pixano/pixano/main/images/pixano_logo.png" alt="Pixano" height="100"/>
+</picture>
 
-**Data Centric AI Building Blocks for Computer Vision Application**
+<br/>
 
-[![License](https://img.shields.io/badge/license-CeCILL--C-blue.svg)](LICENSE)
-[![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?include_prereleases)](https://github.com/pixano/pixano/releases)
-[![PyPI version](https://img.shields.io/pypi/v/pixano)](https://pypi.org/project/pixano/)
-[![Python version](https://img.shields.io/badge/python-3.10-important)](https://www.python.org/downloads/)
+**Data-centric AI building blocks for computer vision applications**
 
 ***Under active development, subject to API change***
+
+[![License](https://img.shields.io/badge/license-CeCILL--C-green.svg)](LICENSE)
+[![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
+[![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
+[![Python version](https://img.shields.io/pypi/pyversions/pixano?color=important&logo=python&logoColor=white)](https://www.python.org/downloads/)
 
 </div>
 
@@ -31,13 +35,19 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
+# Importing your datasets
+
+Please refer to the [dataset notebooks](../../../notebooks/dataset/) for information on how to import your datasets.
+
 # Using the Pixano Explorer
 
-Please refer to [this page](pixano/apps/explorer/README.md) for information on how to use the Pixano Explorer.
+Please refer to the [Pixano Explorer README](pixano/apps/explorer/README.md) for information on how to browse your datasets.
+
 
 # Using the Pixano Annotator
 
 *Coming soon...*
+
 
 # Contributing
 
@@ -46,6 +56,7 @@ If you find a bug or you think of some missing features that could be useful whi
 To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
 
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
+
 
 # License
 

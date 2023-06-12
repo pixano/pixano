@@ -47,7 +47,6 @@ class Image:
         if self._bytes is not None:
             return self._bytes
         elif self._uri is not None:
-            print(f"loading {self._uri}")
             with self.open() as f:
                 return f.read()
         else:

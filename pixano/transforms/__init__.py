@@ -11,36 +11,54 @@
 #
 # http://www.cecill.info
 
-from .boxes import denormalize, mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
+from .boxes import (
+    denormalize,
+    format_bbox,
+    mask_to_bbox,
+    normalize,
+    xywh_to_xyxy,
+    xyxy_to_xywh,
+)
 from .image import (
     binary_to_base64,
     depth_array_to_gray,
     depth_file_to_binary,
+    encode_rle,
     image_to_binary,
+    image_to_thumbnail,
     mask_to_polygons,
     mask_to_rle,
+    polygons_to_rle,
     rle_to_mask,
     rle_to_polygons,
     rle_to_urle,
+    urle_to_rle,
 )
-from .labels import coco_names_80, coco_names_91, voc_names
+from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
 
 __all__ = [
     "normalize",
     "denormalize",
     "mask_to_bbox",
+    "format_bbox",
     "xywh_to_xyxy",
     "xyxy_to_xywh",
     "image_to_binary",
+    "image_to_thumbnail",
     "binary_to_base64",
     "depth_file_to_binary",
     "depth_array_to_gray",
+    "encode_rle",
     "mask_to_rle",
     "rle_to_mask",
+    "polygons_to_rle",
     "rle_to_polygons",
     "mask_to_polygons",
+    "urle_to_rle",
     "rle_to_urle",
+    "coco_ids_80to91",
     "coco_names_80",
     "coco_names_91",
+    "dota_ids",
     "voc_names",
 ]

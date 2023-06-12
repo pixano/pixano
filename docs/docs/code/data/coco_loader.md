@@ -1,1 +1,1 @@
-::: data.CocoLoader
+::: data.COCOLoader

@@ -56,11 +56,18 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
     help="Bind socket to this port.",
     show_default=True,
 )
-@click.argument("library_dir")
+@click.argument(
+    "library_dir",
+    type=str,
+)
 def main(host: str, port: int, library_dir: str):
-    templates = Jinja2Templates(directory=TEMPLATE_PATH)
+    """Launch Pixano Explorer
 
-    settings.data_dir = Path(library_dir)
+    LIBRARY_DIR: Dataset library directory
+    """
+
+    templates = Jinja2Templates(directory=TEMPLATE_PATH)
+    settings.dir = Path(library_dir)
 
     @app.get("/", response_class=HTMLResponse)
     def main(request: fastapi.Request):

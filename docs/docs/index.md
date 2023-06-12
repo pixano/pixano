@@ -19,9 +19,12 @@ pip install pixano
 ```
 
 
-## Using the Pixano Explorer
+# Importing your datasets
 
-*We will soon provide a guide on how to convert your datasets to parquet format to access them with Pixano.*
+Please refer to the [dataset notebooks](https://github.com/pixano/pixano/tree/main/notebooks/datasets) for information on how to import your datasets.
+
+
+## Using the Pixano Explorer
 
 ### Launching the Explorer from a terminal
 
@@ -51,7 +54,7 @@ notebook.display()
 
 ### Browsing a dataset with the Explorer
 
-From the Explorer homepage, you will be greeted with a list of all the parquet datasets found in the directory you provided.
+From the Explorer homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
 Simply click on one of them to open it and you will be able to see the dataset statistics if they have been computed, and browse the images from the list to check their annotations.
 
