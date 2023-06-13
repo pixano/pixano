@@ -62,3 +62,8 @@ Simply click on one of them to open it and you will be able to see the dataset s
 ## Using the Pixano Annotator
 
 *Coming soon...*
+
+
+## Exporting your datasets
+
+*Coming soon...*
