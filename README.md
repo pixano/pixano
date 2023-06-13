@@ -5,6 +5,7 @@
 </picture>
 
 <br/>
+<br/>
 
 **Data-centric AI building blocks for computer vision applications**
 
@@ -35,19 +36,12 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
-# Importing your datasets
+# Using Pixano
 
-Please refer to the [dataset notebooks](../../../notebooks/dataset/) for information on how to import your datasets.
-
-# Using the Pixano Explorer
-
-Please refer to the [Pixano Explorer README](pixano/apps/explorer/README.md) for information on how to browse your datasets.
-
-
-# Using the Pixano Annotator
-
-*Coming soon...*
-
+- [Importing your datasets](notebooks/dataset/import_dataset.ipynb)
+- [Using the Pixano Explorer](pixano/apps/explorer/README.md)
+- *Using the Pixano Annotator (coming soon...)*
+- *Exporting your datasets (coming soon...)*
 
 # Contributing
 
