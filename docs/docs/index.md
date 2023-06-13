@@ -19,9 +19,9 @@ pip install pixano
 ```
 
 
-# Importing your datasets
+## Importing your datasets
 
-Please refer to the [dataset notebooks](https://github.com/pixano/pixano/tree/main/notebooks/datasets) for information on how to import your datasets.
+Please refer to [this notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/import_dataset.ipynb) for information on how to import your datasets.
 
 
 ## Using the Pixano Explorer
