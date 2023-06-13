@@ -5,6 +5,7 @@
 </picture>
 
 <br/>
+<br/>
 
 **Data-centric AI building blocks for computer vision applications**
 
