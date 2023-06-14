@@ -100,19 +100,21 @@
         img.src = imageURL;
         img.onload = () => {
             image = img;
+            
+            const layerView = stage.findOne(`#${viewId}`) as Konva.Layer;
 
             // Fit stage
             let scaleByHeight = stage.height() / image.height;
             let scaleByWidth = stage.width() / image.width;
             let scale = Math.min(scaleByWidth, scaleByHeight);
 
-            stage.scale({x: scale, y: scale});
+            layerView.scale({x: scale, y: scale});
 
             // Center stage
             let offsetX = (stage.width() - (image.width) * scale) / 2;
             let offsetY = (stage.height() - (image.height) * scale) / 2;
-            stage.x(offsetX);
-            stage.y(offsetY);
+            layerView.x(offsetX);
+            layerView.y(offsetY);
         };
 
         // Fire stage events observers

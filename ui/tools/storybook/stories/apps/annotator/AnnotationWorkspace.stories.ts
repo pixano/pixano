@@ -15,6 +15,8 @@ http://www.cecill.info
 
 import type { Meta, StoryObj } from "@storybook/svelte";
 import AnnotationWorkspace from "../../../../../apps/annotator/src/lib/AnnotationWorkspace.svelte";
+import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
+import { interactiveSegmenterModel } from "../../../../../apps/annotator/src/stores";
 
 const meta = {
   title: "Applications/Annotator/AnnotationWorkspace",
@@ -28,14 +30,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+let mock = new MockInteractiveImageSegmenter();
+interactiveSegmenterModel.set(mock);
+
+
 export const Base: Story = {
   args: {
     itemData: {
       dbName: "photos db",
-      imageURL: "img-02.jpg", //"image-0001.jpg",
+      imageURL: "image-0001.jpg",
       imageId: "id2684",
       viewId: "view"
     },
+    /*
+    //sample for bear image "img-02.jpg"
     //bear left eye...
     masksGT: [{
       id:"245",
@@ -43,6 +51,20 @@ export const Base: Story = {
       visible: true
     }],
     annotations: [{class: "eye", items:[{id:"245", label:"eye-0", visible:true}], visible:true}],
+    */
+    masksGT: [
+      {
+        id: "1",
+        mask: ["M1663 473 L1663 828 2165 828 2165 473 1663 473"],
+        visible: true
+      },
+      {
+        id: "2",
+        mask: ["M2235 205 L2235 831 2682 831 2682 205 2235 205"],
+        visible: true
+      }
+    ],
+    annotations: [{class: "Painting", items:[{id:"1", label:"painting-0", visible:true}, {id:"2", label:"painting-1", visible:true}], visible:true}],
     dbImages: [
       "img-01.jpg",
       "img-02.jpg",
@@ -69,6 +91,6 @@ export const Base: Story = {
       "img-07.jpg",
       "img-08.jpg",
     ],
-    classes: [{id: 0, name: "Dog"}, {id:1, name:"Cat"}, {id:2, name:"Person"}],
+    classes: [{id: 0, name: "Dog"}, {id:1, name:"Cat"}, {id:2, name:"Person"}, {id:3, name:"Painting"}],
   },
 };

@@ -13,7 +13,7 @@ export interface MaskRLE {
 export interface MaskGT {
     id: string
     mask: any  //maskSVG
-    rle: MaskRLE   //maskRLE
+    rle?: MaskRLE   //maskRLE
     visible: boolean
 }
 

@@ -47,10 +47,10 @@ export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter 
 
         if (input.box) {
             if (this.currentMask) {
-                const xstart = Math.min(input.box.x, input.box.x + input.box.width);
-                const width = Math.abs(input.box.width);
-                const ystart = Math.min(input.box.y, input.box.y + input.box.height);
-                const height = Math.abs(input.box.height);
+                const xstart = Math.round(Math.min(input.box.x, input.box.x + input.box.width));
+                const width = Math.round(Math.abs(input.box.width));
+                const ystart = Math.round(Math.min(input.box.y, input.box.y + input.box.height));
+                const height = Math.round(Math.abs(input.box.height));
                 for(let i = xstart; i < xstart + width; i++) {
                     for(let j = ystart; j < ystart + height; j++) {
                         this.currentMask[i + j * w] = 1;
