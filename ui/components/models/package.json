@@ -1,0 +1,19 @@
+{
+  "name": "@pixano/models",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "onnxruntime-node": "^1.14.0",
+    "onnxruntime-web": "^1.14.0",
+    "tslib": "^2.5.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.9",
+    "vitest": "^0.30.1"
+  }
+}

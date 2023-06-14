@@ -65,6 +65,11 @@ export async function getDatasetStats(datasetId: String) {
 
   try {
     const response = await fetch(`/datasets/${datasetId}/stats`);
+    if (!response.ok) {
+      //TODO: error cases other than 404 ?
+      console.log("No stats")
+      return [];
+    }
     datasetStats = await response.json();
   } catch (e) {
     console.log(e);

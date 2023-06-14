@@ -104,7 +104,7 @@ def get_item_details(
             ]
             # Masks
             masks = [
-                transforms.rle_to_polygons(obj["mask"])
+                transforms.rle_to_urle(obj["mask"])
                 for obj in item["objects"]
                 if obj["view_id"] == field.name
             ]
@@ -182,3 +182,21 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     items = [_create_features(e) for e in items_table.to_pylist()]
 
     return create_page(items=items, total=total, params=params)
+
+
+def get_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
+    """Get item embedding for a view
+
+    Args:
+        emb_ds (ds.Dataset): Embedding dataset
+        item_id (str): Item ID
+        view (str): Item embedding view
+
+    Returns:
+        bytes: Embedding in base 64
+    """
+
+    # Get item
+    emb_scanner = emb_ds.scanner(filter=ds.field("id").isin([item_id]))
+    emb_item = emb_scanner.to_table().to_pylist()[0]
+    return emb_item[f"{view}_embedding"]

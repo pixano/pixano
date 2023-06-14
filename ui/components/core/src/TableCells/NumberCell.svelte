@@ -17,4 +17,4 @@
   export let value: number;
 </script>
 
-<div class="pl-2 text-zinc-900 dark:text-zinc-50">{value}</div>
+<div class="pl-2 text-zinc-900">{value}</div>

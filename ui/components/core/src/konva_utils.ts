@@ -296,18 +296,23 @@ export function updateMasksOpacity(group, opacity: number) {
  * @param layer layer to zoom in/out
  * @param direction zoom in or zoom out
  */
-export function zoom(stage: Konva.Stage, direction) {
+export function zoom(stage: Konva.Stage, direction, viewId, 
+  default_pointer_radius, 
+  default_pointer_strokewidth,
+  default_rect_strokewidth): number {
   // Defines zoom speed
   const zoomScale = 1.05;
 
+  const layerView= stage.findOne(`#${viewId}`) as Konva.Layer;
+
   // Get old scaling
-  const oldScale = stage.scaleX();
+  const oldScale = layerView.scaleX();
 
   // Get mouse position
-  const pointer = stage.getPointerPosition();
+  const pointer = stage.getRelativePointerPosition();
   const mousePointTo = {
-    x: (pointer.x - stage.x()) / oldScale,
-    y: (pointer.y - stage.y()) / oldScale,
+    x: (pointer.x - layerView.x()) / oldScale,
+    y: (pointer.y - layerView.y()) / oldScale,
   };
 
   // Calculate new scaling
@@ -319,7 +324,22 @@ export function zoom(stage: Konva.Stage, direction) {
     y: pointer.y - mousePointTo.y * newScale,
   };
 
+
   // Change scaling and position
-  stage.scale({ x: newScale, y: newScale });
-  stage.position(newPos);
+  layerView.scale({ x: newScale, y: newScale });
+  layerView.position(newPos);
+
+  //keep points/box at constant scale
+  const input_group = layerView.findOne("#input") as Konva.Group;
+  for(let pt of input_group.children) {
+    if(pt instanceof Konva.Circle) {
+      pt.radius(default_pointer_radius / newScale);
+      pt.strokeWidth(default_pointer_strokewidth / newScale);
+    }
+    if(pt instanceof Konva.Rect) {
+      pt.strokeWidth(default_rect_strokewidth / newScale);
+    }
+  }
+
+  return newScale;
 }

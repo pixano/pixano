@@ -1,26 +1,24 @@
 {
   "name": "@pixano/core",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^2.0.0",
-    "@tsconfig/svelte": "^3.0.0",
-    "svelte": "^3.54.0",
-    "svelte-check": "^2.10.0",
-    "tslib": "^2.4.1",
-    "typescript": "^4.9.3",
-    "vite": "^4.0.0"
+    "@sveltejs/vite-plugin-svelte": "^2.0.3",
+    "@tsconfig/svelte": "^4.0.1",
+    "svelte": "^3.57.0",
+    "svelte-check": "^2.10.3",
+    "tslib": "^2.5.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.0"
   },
   "dependencies": {
-    "@storybook/builder-vite": "^0.3.0",
     "d3": "^7.8.2",
     "d3-color": "^3.1.0",
     "d3-scale-chromatic": "^3.0.0",

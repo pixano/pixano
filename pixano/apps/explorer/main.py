@@ -12,16 +12,24 @@
 #
 # http://www.cecill.info
 
+import glob
 import json
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import add_pagination
 from pydantic import BaseSettings
 
-from pixano.core import Dataset, DatasetInfo, InferenceDataset, arrow_types
+from pixano.core import (
+    Dataset,
+    DatasetInfo,
+    EmbeddingDataset,
+    InferenceDataset,
+    arrow_types,
+)
 from pixano.data import models
 
 from . import db_utils
@@ -51,7 +59,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
     for spec in sorted(settings.data_dir.glob("*/spec.json")):
         # Load dataset info
         info = DatasetInfo.parse_file(spec)
-        # Load preview.png
+        # Load thumbnail
         preview = spec.parent / "preview.png"
         if preview.is_file():
             im = arrow_types.Image(
@@ -61,6 +69,27 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
                 uri_prefix=spec.parent,
             )
             info.preview = im.url
+        # Load preview list (8 random images)
+        media_dir = spec.parent / "media"
+        info.previews = []
+        media_iter = glob.iglob(f"{media_dir}/**/**/*.*")
+        for _ in range(8):
+            try:
+                file_path = Path(next(media_iter))
+                if file_path.suffix in [".jpg", ".jpeg", ".png"]:
+                    im = arrow_types.Image(
+                        uri=file_path.name,
+                        bytes=None,
+                        preview_bytes=None,
+                        uri_prefix=file_path.parent,
+                    )
+                info.previews.append(im.url)
+            except StopIteration:
+                break
+        # Load categories
+        info.categories = getattr(info, "categories", [])
+        if info.categories is None:
+            info.categories = []
         # Save dataset info
         infos.append(info)
     return infos
@@ -112,6 +141,8 @@ def create_app(settings: Settings) -> FastAPI:
         HTTPException: 404, Dataset is not found
         HTTPException: 404, Dataset stats are not found
         HTTPException: 404, Dataset is not found
+        HTTPException: 404, Dataset is not found
+        HTTPException: 404, Embedding dataset is not found
 
     Returns:
         FastAPI: Explorer app
@@ -123,6 +154,10 @@ def create_app(settings: Settings) -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+    )
+
+    app.mount(
+        "/models", StaticFiles(directory=f"{settings.data_dir}/models"), name="models"
     )
 
     @app.get("/datasets", response_model=list[DatasetInfo])
@@ -161,6 +196,24 @@ def create_app(settings: Settings) -> FastAPI:
 
         # Return item details
         return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
+
+    @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
+    async def get_dataset_item_embedding(ds_id: str, item_id: str, view: str):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # Load embedding datasets (currently selecting only one)
+        emb_ds = None
+        for emb_json in sorted(list(ds.path.glob("db_embed_*/embed.json"))):
+            emb_ds = EmbeddingDataset(emb_json.parent).load()
+
+        if emb_ds is None:
+            raise HTTPException(status_code=404, detail="Embedding dataset not found")
+
+        # Return item embedding
+        return Response(content=db_utils.get_item_embedding(emb_ds, item_id, view))
 
     add_pagination(app)
 

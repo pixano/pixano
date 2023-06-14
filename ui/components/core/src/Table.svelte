@@ -31,15 +31,10 @@
   }
 </script>
 
-<div
-  class="h-full bg-white overflow-y-auto overflow-x-auto border rounded-lg
-  dark:bg-zinc-800 dark:border-zinc-700"
->
+<div class="h-full bg-white overflow-y-auto overflow-x-auto border rounded-lg">
   <table class="table-auto w-full text-sm text-left">
-    <thead class="text-xs text-zinc-700 uppercase dark:text-zinc-400">
-      <tr
-        class="sticky p-2 top-0 bg-zinc-100 border-b-2 dark:bg-zinc-900 dark:border-zinc-700 "
-      >
+    <thead class="text-xs text-zinc-700 uppercase">
+      <tr class="sticky p-2 top-0 bg-zinc-100 border-b-2">
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
             <th class="pl-2 py-1">{name}</th>
@@ -50,14 +45,14 @@
     <tbody>
       {#each features as columns}
         <tr
-          class="cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="cursor-pointer hover:bg-zinc-100"
           on:click={() => {
             handleItemClick(columns);
           }}
         >
           {#each columns as col}
             {#if col.dtype != "hidden"}
-              <td class="border-b dark:border-zinc-700 py-2">
+              <td class="border-b py-2">
                 <TableCell data={col} />
               </td>
             {/if}

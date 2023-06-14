@@ -12,7 +12,6 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 
 http://www.cecill.info
 */
-
 import type { StorybookConfig } from "@storybook/svelte-vite";
 const config: StorybookConfig = {
   stories: [
@@ -26,11 +25,11 @@ const config: StorybookConfig = {
   ],
   framework: {
     name: "@storybook/svelte-vite",
-    options: {},
+    options: {}
   },
   docs: {
-    autodocs: "tag",
+    autodocs: "tag"
   },
-  staticDirs: ["../assets"],
+  staticDirs: ["../assets"]
 };
 export default config;
