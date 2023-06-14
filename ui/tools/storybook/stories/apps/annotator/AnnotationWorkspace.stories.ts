@@ -38,11 +38,10 @@ export const Base: Story = {
   args: {
     itemData: {
       dbName: "photos db",
-      imageURL: "image-0001.jpg",
+      imageURL: "img-02.jpg",
       imageId: "id2684",
       viewId: "view"
     },
-    /*
     //sample for bear image "img-02.jpg"
     //bear left eye...
     masksGT: [{
@@ -51,20 +50,6 @@ export const Base: Story = {
       visible: true
     }],
     annotations: [{class: "eye", items:[{id:"245", label:"eye-0", visible:true}], visible:true}],
-    */
-    masksGT: [
-      {
-        id: "1",
-        mask: ["M1663 473 L1663 828 2165 828 2165 473 1663 473"],
-        visible: true
-      },
-      {
-        id: "2",
-        mask: ["M2235 205 L2235 831 2682 831 2682 205 2235 205"],
-        visible: true
-      }
-    ],
-    annotations: [{class: "Painting", items:[{id:"1", label:"painting-0", visible:true}, {id:"2", label:"painting-1", visible:true}], visible:true}],
     dbImages: [
       "img-01.jpg",
       "img-02.jpg",
