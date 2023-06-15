@@ -21,6 +21,9 @@ from .features import (
     ObjectAnnotationType,
     is_embedding_type,
 )
+
+from .bbox import Bbox, BBoxType, is_bbox_type
+
 from .image import CompressedRLEType, Image, ImageType, is_image_type
 
 __all__ = [

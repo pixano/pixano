@@ -11,26 +11,16 @@
 #
 # http://www.cecill.info
 
+import imp
 from typing import Optional
 
 import pyarrow as pa
 from pydantic import BaseModel
 
 from .image import CompressedRLEType
+from .bbox import BBoxType
 
 
-class BBoxType(pa.ExtensionType):
-    """Bounding box type as PyArrow list of PyArrow float32"""
-
-    def __init__(self):
-        super(BBoxType, self).__init__(pa.list_(pa.float32(), list_size=4), "bbox")
-
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return BBoxType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
 
 
 class EmbeddingType(pa.ExtensionType):
