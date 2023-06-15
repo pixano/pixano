@@ -1,4 +1,4 @@
-from pixano.transforms.boxes import xywh_to_xyxy, xyxy_to_xywh, normalize, denormalize
+from pixano.transforms.boxes import xywh_to_xyxy, xyxy_to_xywh, normalize, denormalize, format_bbox
 import pyarrow as pa
 
 
@@ -29,14 +29,36 @@ class Bbox:
             self.coords = xywh_to_xyxy(self.coords)
             self.format = 'xyxy'
 
-
-
     def set_format_xywh(self):
         """ transform bbox to xywh format """
         
         if self.format == 'xyxy':
             self.coords = xyxy_to_xywh(self.coords)
             self.format = 'xywh'
+
+    def normalize(self, height:int, width:int):
+        self.coords =  normalize(self.coords, height, width)
+    
+    def denormalize(self, height:int, width:int):
+        self.coords = denormalize(self.coords, height, width)
+    
+    def get_convertion_for_front_end(self, is_predicted = False, confidence=None) -> dict:
+        """get bbox convertion for front end
+
+        Args:
+            bbox (list[float]): Bounding box
+            is_predicted (bool, optional): True for prediction, False for ground truth. Defaults to False.
+            confidence (float, optional): Bounding box confidence. Defaults to None.
+
+        Returns:
+            dict: Bounding box in frontend format
+        """
+        return format_bbox(self.coords, is_predicted=is_predicted, confidence=confidence)
+
+
+
+
+
 
 
 class BBoxType(pa.ExtensionType):
