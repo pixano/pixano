@@ -224,10 +224,7 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # TODO save annotation in parquet
-        # TMP log to ensure we get data
-        print("EXPORT (dataset item view):", ds_id, item_id, view)
-        for ann in annotations:
-            print("ANN (category id mask_counts_length):", ann.category_name, ann.id, len(ann.mask['counts']))
+        db_utils.write_newAnnotations(ds_id, item_id, view, annotations, settings.data_dir)
 
         return Response()
 
