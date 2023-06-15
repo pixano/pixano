@@ -16,11 +16,13 @@
 
   // Imports
   import { onMount } from "svelte";
+  import Header from "./lib/Header.svelte";
   import Library from "./lib/Library.svelte";
   import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "./lib/interfaces";
+  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
   import { SAM } from "../../../components/models/src/Sam";
   import * as ort from "onnxruntime-web";
   import * as npyjs from "../../../components/models/src/npy";
@@ -31,8 +33,6 @@
   //import type { InteractiveImageSegmenter } from "../../../components/models/src/interactive_image_segmentation";
   //import { MockInteractiveImageSegmenter } from "../../../tools/storybook/stories/components/canvas2d/mocks";
 
-  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
-  import Header from "./lib/Header.svelte";
 
   // Dataset navigation
   let datasets = null;
@@ -55,9 +55,6 @@
   }
 
   async function selectItem(event: CustomEvent) {
-    // const item = await api.getItemDetails("DKY9qXERsxQZ3qQ8RmEmcp", "285");
-    // const item = await api.getItemDetails("gevmzZxvmt6rjd9zdmHctT", "aeroport-avions.jpg")
-    // console.log(item);
 
     showDetailsPage = true;
     const itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
@@ -124,7 +121,7 @@
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getImageEmbedding(selectedDataset.id, itemDetails.id);
+    const embeddingArrByte = await api.getImageEmbedding(selectedDataset.id, itemDetails.id, itemDetails.viewId);
     const embeddingArr = npyjs.parse(embeddingArrByte);
     selectedItemEmbedding = new ort.Tensor("float32", embeddingArr.data, embeddingArr.shape);
     console.log("Embedding:", selectedItemEmbedding);
@@ -139,14 +136,40 @@
     classes = [];
   }
 
+  function findCategoryForId(anns: Array<AnnotationsLabels>, id: string) : string {
+    for (let ann of anns) {
+      if (ann.items.some(it=> it.id === id)) {
+        return ann.class;
+      }
+    }
+    console.log("ERROR - unable to find category for id:", id);
+    return "undefined"; 
+  }
+
+  function saveAnns(data) {
+    console.log("App - save annotations");
+    console.log("data", data.detail);
+    //format annotation data for export
+    let anns = [];
+    for(let mask of data.detail.masks) {
+      const category = findCategoryForId(data.detail.anns, mask.id);
+      let ann = {
+        id: mask.id,
+        category_name: category,
+        mask: mask.rle,
+      };
+      anns.push(ann)
+    }
+    api.postAnnotations(anns, selectedDataset.id, selectedItem.imageId, selectedItem.viewId);
+  }
+
   onMount(async () => {
     datasets = await api.getDatasetsList();
 
-    //await sam.init("/models/sam_onnx_quantized_vit_h.onnx");
+    //TODO: const model = await getModel();
     await sam.init("/models/sam_vit_h_4b8939.onnx");
 
     interactiveSegmenterModel.set(sam);
-
     //console.log("SAM input names:", sam.inputNames());
   });
 </script>
@@ -170,6 +193,7 @@
       {masksGT}
       {classes}
       handleCloseClick={unselectItem}
+      on:saveAnns={saveAnns}
     />
   {/if}
 {:else}

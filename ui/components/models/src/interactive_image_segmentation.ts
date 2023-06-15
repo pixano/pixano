@@ -26,8 +26,16 @@ export interface InteractiveImageSegmenterInput {
     mask?: Tensor
 }
 
+export interface MaskRLE {
+    counts: Array<number>
+    size: Array<number>
+}
+
+export type MaskSVG = Array<string>
+
 export interface SegmentationResult {
-    masksImage: HTMLImageElement,
+    masksImageSVG: MaskSVG
+    rle: MaskRLE
     masks?: Tensor
 }
 
@@ -39,7 +47,7 @@ export interface InteractiveImageSegmenter {
 export interface InteractiveImageSegmenterOutput {
     id: string
     view: string
-    shape: SegmentationResult  //??? or already transformed polygon ????
+    output: SegmentationResult  //??? or already transformed polygon ????
     input_points: Array<LabeledClick>
     input_box: Box
     validated: boolean

@@ -66,7 +66,7 @@ export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter 
         const masksSVG = convertSegmentsToSVG(maskPolygons);
         //console.log(masksSVG);
         //console.log(masksSVG.length);
-        return { masksImage: masksSVG }
+        return { masksImageSVG: masksSVG }
     }
 
     reset() {

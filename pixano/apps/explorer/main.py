@@ -215,6 +215,22 @@ def create_app(settings: Settings) -> FastAPI:
         # Return item embedding
         return Response(content=db_utils.get_item_embedding(emb_ds, item_id, view))
 
+    @app.post("/datasets/{ds_id}/items/{item_id}/{view}/annotations", response_model=list[arrow_types.ObjectAnnotation])
+    async def post_dataset_item_annotation(ds_id: str, item_id: str, view: str,
+                                           annotations: list[arrow_types.ObjectAnnotation]):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # TODO save annotation in parquet
+        # TMP log to ensure we get data
+        print("EXPORT (dataset item view):", ds_id, item_id, view)
+        for ann in annotations:
+            print("ANN (category id mask_counts_length):", ann.category_name, ann.id, len(ann.mask['counts']))
+
+        return Response()
+
     add_pagination(app)
 
     return app

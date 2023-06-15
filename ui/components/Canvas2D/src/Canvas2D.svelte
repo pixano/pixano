@@ -256,7 +256,6 @@
             }
             return res;
         }
-
         const mask = new Konva.Shape({
             id: id,
             x: x,
@@ -328,12 +327,12 @@
                 prediction = {
                     id: new_id,
                     view: viewId,
-                    shape: results.masksImage,
+                    output: results,
                     input_points: points,
                     input_box: box,
                     validated: false,
                 };
-                addMask(results.masksImage, new_id, image.x(), image.y(), image.scale(), "green", true, group);
+                addMask(results.masksImageSVG, new_id, image.x(), image.y(), image.scale(), "green", true, group);
             }
         }
     }
@@ -387,8 +386,8 @@
                 predictedMasks.moveTo(masksGT_group);
                 masksGT.push({
                     id: prediction.id,
-                    mask: prediction.shape,
-                    rle: null,  //prediction.rle,
+                    mask: prediction.output.masksImageSVG,
+                    rle: prediction.output.rle,
                     visible: true
                 })
 

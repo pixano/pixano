@@ -14,7 +14,8 @@
   http://www.cecill.info
   */
 
-  import { onMount, afterUpdate } from "svelte";
+  import { onMount, afterUpdate, createEventDispatcher } from "svelte";
+
   import DataPanel from "./DataPanel.svelte";
   import NavigationToolbar from "./NavigationToolbar.svelte";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
@@ -31,6 +32,7 @@
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
   import { interactiveSegmenterModel } from "../stores";
+    import { postAnnotations } from "./api";
 
   export let itemData: ItemData;
   export let embedding: any;
@@ -66,6 +68,8 @@
     }
   });
 
+  const dispatch = createEventDispatcher();
+
   // events handlers
   function handleAnnotationToolChange() {
     //console.log("New tool selected");
@@ -92,11 +96,13 @@
       const annotation: ItemLabel = {
         id: id,
         label: `${className}-${existingClass.items.length}`,
-        visible : existingClass.visible
+        visible : true
       };
 
       // If the class exists, add the item to its 'items' array
       existingClass.items.push(annotation);
+      //in case class was invisible, make it visible
+      existingClass.visible = true;
     } else {
       // Set item name
       const annotation: ItemLabel = {
@@ -134,8 +140,7 @@
   }
 
   function handleSaveClick() {
-    console.log("Just Save it !");
-    console.log(masksGT)
+    dispatch("saveAnns", {anns: annotations , masks: masksGT});
   }
 
   function handleImageSelectedChange(img) {

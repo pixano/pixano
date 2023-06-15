@@ -1,3 +1,5 @@
+import { type MaskRLE, type MaskSVG } from "../../../../components/models/src/interactive_image_segmentation"
+
 export interface ItemData {
     dbName: string
     imageURL: string
@@ -5,15 +7,10 @@ export interface ItemData {
     viewId: string
 }
 
-export interface MaskRLE {
-    counts: Array<number>
-    size: Array<number>
-}
-
 export interface MaskGT {
     id: string
-    mask: any  //maskSVG
-    rle?: MaskRLE   //maskRLE
+    mask: MaskSVG
+    rle?: MaskRLE
     visible: boolean
 }
 
