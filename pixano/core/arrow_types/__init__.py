@@ -14,7 +14,6 @@
 import pyarrow as pa
 
 from .features import (
-    BBoxType,
     Embedding,
     EmbeddingType,
     ObjectAnnotation,
@@ -22,12 +21,32 @@ from .features import (
     is_embedding_type,
 )
 
-from .bbox import BBox, BBoxType, is_bbox_type
+from .bbox import (
+    BBox,
+    BBoxType,
+    is_bbox_type
+)
 
-from .image import CompressedRLEType, Image, ImageType, is_image_type
+from .image import (
+    CompressedRLEType,
+    Image,
+    ImageType,
+    is_image_type
+)
+
+from .pose import (
+    Pose,
+    PoseType,
+    is_pose_type
+)
 
 __all__ = [
     "BBoxType",
+    "BBox",
+    "is_bbox_type"
+    "PoseType"
+    "Pose"
+    "is_pose_type"
     "Embedding",
     "EmbeddingType",
     "ObjectAnnotation",
@@ -97,6 +116,7 @@ def register_extension_types():
 
     types = [
         BBoxType(),
+        PoseType(),
         CompressedRLEType(),
         EmbeddingType(),
         ImageType(),
