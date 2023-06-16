@@ -22,7 +22,7 @@ from .features import (
     is_embedding_type,
 )
 
-from .bbox import Bbox, BBoxType, is_bbox_type
+from .bbox import BBox, BBoxType, is_bbox_type
 
 from .image import CompressedRLEType, Image, ImageType, is_image_type
 

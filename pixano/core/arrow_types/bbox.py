@@ -1,10 +1,10 @@
 
-from pixano.transforms.boxes import xywh_to_xyxy, xyxy_to_xywh, normalize, denormalize, format_bbox
+from pixano.transforms.boxes import xywh_to_xyxy, xyxy_to_xywh, normalize
 import pyarrow as pa
 
 
 
-class Bbox:
+class BBox:
     """Bbox using xyxy or xywh format"""
 
     def __init__(self, xyxy:list[float], format:str, is_normalized:bool=True):
@@ -24,8 +24,8 @@ class Bbox:
         self._is_normalized = is_normalized
     
     @classmethod
-    def from_xyxy(cls, xyxy: list[float]) -> 'Bbox':
-        """create Bbox using xyxy format (coords are supposed normalized)
+    def from_xyxy(cls, xyxy: list[float]) -> 'BBox':
+        """create Bbox using xyxy format (The coordinates are supposed to be normalized.)
 
         Args:
             xyxy (list[float]): coords
@@ -33,11 +33,11 @@ class Bbox:
         Returns:
             Bbox: 
         """
-        return Bbox(xyxy,'xyxy')
+        return BBox(xyxy,'xyxy')
     
     @classmethod
-    def from_xywh(cls, xywh: list[float]) -> 'Bbox':
-        """create Bbox using xywh format (coords are supposed normalized)
+    def from_xywh(cls, xywh: list[float]) -> 'BBox':
+        """create Bbox using xywh format (The coordinates are supposed to be normalized.)
 
         Args:
             xywh (list[float]): coords
@@ -45,7 +45,7 @@ class Bbox:
         Returns:
             Bbox: 
         """
-        return Bbox(xywh,'xywh')
+        return BBox(xywh,'xywh')
     
     @property
     def is_normalized(self) -> bool:
@@ -88,10 +88,6 @@ class Bbox:
 
 
 
-
-
-
-
 class BBoxType(pa.ExtensionType):
     """Bounding box type as PyArrow list of PyArrow float32"""
 
@@ -104,7 +100,7 @@ class BBoxType(pa.ExtensionType):
                     pa.field("format", pa.string())
                 ]
             ),
-            "Bbox",
+            "BBox",
             )
 
     @classmethod
@@ -115,7 +111,16 @@ class BBoxType(pa.ExtensionType):
         return b""
     
     def __arrow_ext_scalar_class__(self):
-        return Bbox
+        return BBoxScalar
+    
+class BBoxScalar(pa.ExtensionScalar):
+    def as_py(self) -> BBox:
+        return BBox(
+            self.value["coords"].as_py(),
+            self.value["format"].as_py(),
+            self.value["is_normalized"].as_py()
+        )
+    
     
 
 def is_bbox_type(obj: pa.DataType) -> bool:
