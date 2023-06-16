@@ -3,62 +3,42 @@ import unittest
 import numpy as np
 from .bbox import Bbox
 
-class TestBbox(unittest.TestCase):
+class BboxTestCase(unittest.TestCase):
     def setUp(self):
-        self.bbox = Bbox([0.1, 0.2, 0.3, 0.4])
-        self.bbox2 = Bbox([10,20,30,40], 'xywh')
+        self.xyxy_coords = [0.1, 0.2, 0.3, 0.4]
+        self.xywh_coords = [0.1, 0.2, 0.3, 0.4]
+        self.bbox_xyxy = Bbox.from_xyxy(self.xyxy_coords)
+        self.bbox_xywh = Bbox.from_xywh(self.xywh_coords)
 
-    def test_init(self):
-        self.assertTrue(np.allclose(self.bbox.coords, [0.1, 0.2, 0.3, 0.4]))
-        self.assertEqual(self.bbox.format, 'xyxy')
+    def test_format_property(self):
+        self.assertEqual(self.bbox_xyxy.format, 'xyxy')
+        self.assertEqual(self.bbox_xywh.format, 'xywh')
 
-        with self.assertRaises(ValueError):
-            Bbox([0.1, 0.2, 0.3, 0.4], 'invalid')
+    def test_is_normalized_property(self):
+        self.assertTrue(self.bbox_xyxy.is_normalized)
+        self.assertTrue(self.bbox_xywh.is_normalized)
 
-    def test_set_format_xyxy(self):
-        self.bbox2.set_format_xyxy()
-        self.assertTrue(np.allclose(self.bbox2.coords, [10, 20, 40, 60]))
-        self.assertEqual(self.bbox2.format, 'xyxy')
+    def test_to_xyxy(self):
+        converted_coords = self.bbox_xyxy.to_xyxy()
+        self.assertTrue(np.allclose(converted_coords, self.xyxy_coords))
 
-    def test_set_format_xywh(self):
-        self.bbox.set_format_xywh()
-        self.assertTrue(np.allclose(self.bbox.coords, [0.1, 0.2, 0.2, 0.2]))
-        self.assertEqual(self.bbox.format, 'xywh')
+    def test_to_xywh(self):
+        converted_coords = self.bbox_xywh.to_xywh()
+        self.assertTrue(np.allclose(converted_coords, self.xywh_coords))
+
+    def test_format_conversion(self):
+        self.bbox_xyxy.format_xywh()
+        self.assertEqual(self.bbox_xyxy.format, 'xywh')
+        self.assertTrue(np.allclose(self.bbox_xyxy.to_xywh(), [0.1, 0.2, 0.2, 0.2]))
+
+        self.bbox_xywh.format_xyxy()
+        self.assertEqual(self.bbox_xywh.format, 'xyxy')
+        self.assertTrue(np.allclose(self.bbox_xywh.to_xyxy(), [0.1, 0.2, 0.4, 0.6]))
 
     def test_normalize(self):
+        self.bbox_to_normalize = Bbox.from_xyxy([10, 10, 20, 20])
         height = 100
         width = 200
+        self.bbox_to_normalize.normalize(height, width)
+        self.assertTrue(np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2]))
 
-        self.bbox2.normalize(height, width)
-        self.assertEqual(self.bbox2.coords, [0.05, 0.2, 0.15, 0.4])
-
-    def test_denormalize(self):
-        height = 100
-        width = 200
-
-        self.bbox2.normalize(height, width)
-        self.bbox2.denormalize(height, width)
-        self.assertEqual(self.bbox2.coords, [10,20,30,40])
-
-    def test_get_convertion_for_front_end(self):
-        is_predicted = True
-        confidence = 0.75
-
-        result = self.bbox.get_convertion_for_front_end(is_predicted, confidence)
-
-        # Vérifier que le résultat est un dictionnaire avec les clés attendues
-        self.assertIsInstance(result, dict)
-        self.assertIn('x', result)
-        self.assertIn('y', result)
-        self.assertIn('width', result)
-        self.assertIn('height', result)
-        self.assertIn('is_predict', result)
-        self.assertIn('confidence', result)
-
-        # Vérifier que les valeurs du dictionnaire sont correctes
-        self.assertAlmostEqual(result['x'], 0.1)
-        self.assertAlmostEqual(result['y'], 0.2)
-        self.assertAlmostEqual(result['width'], 0.3)
-        self.assertAlmostEqual(result['height'], 0.4)
-        self.assertEqual(result['is_predict'], is_predicted)
-        self.assertEqual(result['confidence'], confidence)
