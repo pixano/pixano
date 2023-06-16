@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from .image import CompressedRLEType
 from .bbox import BBoxType
+from .pose import PoseType
 
 
 
@@ -99,14 +100,6 @@ def ObjectAnnotationType() -> pa.StructType:
     Returns:
         pa.StructType: ObjectAnnotation StructType
     """
-
-    pose_schema = pa.struct(
-        [
-            pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
-            pa.field("cam_t_m2c", pa.list_(pa.float64(), list_size=3)),
-        ]
-    )
-
     return pa.struct(
         [
             # Object ID and View ID
@@ -124,7 +117,7 @@ def ObjectAnnotationType() -> pa.StructType:
             pa.field("mask_source", pa.string(), nullable=True),
             pa.field("area", pa.float32(), nullable=True),
             # 6D Poses
-            pa.field("pose", pose_schema, nullable=True),
+            pa.field("pose", PoseType(), nullable=True),
             # Category
             pa.field("category_id", pa.int32(), nullable=True),
             pa.field("category_name", pa.string(), nullable=True),
