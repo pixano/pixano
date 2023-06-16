@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+import json
 
 import numpy as np
 import pyarrow as pa
@@ -202,6 +203,30 @@ def get_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
     return emb_item[f"{view}_embedding"]
 
 
+def write_newAnnsJson(
+        ds_id: str,
+        item_id: str,
+        view: str,
+        annotations: list[arrow_types.ObjectAnnotation],
+        target_dir: Path
+):
+    # Build output json object
+    # ObjectAnnotation is not (right now) serializable, and we need some more info into output
+    output = {
+        'dataset_id': ds_id,
+        'view': view,
+        'item_id': item_id,
+        'objects': []
+    }
+    for ann in annotations:
+        obj = ann.dict()
+        output['objects'].append(obj)
+
+    json_output = json.dumps(output)
+    with open(target_dir / f"newAnnotations-{view}-{item_id}.json", "w") as jsonfile:
+        jsonfile.write(json_output)
+
+
 def write_newAnnotations(
         ds_id: str,
         item_id: str,
@@ -214,6 +239,10 @@ def write_newAnnotations(
     for ann in annotations:
         print("ANN (category id mask_counts_length):", ann.category_name, ann.id, len(ann.mask['counts']))
 
+    # TMP Save as JSON
+    write_newAnnsJson(ds_id, item_id, view, annotations, target_dir)
+
+    """  Erreur format Pydantic non reconnu...
     schema = pa.schema([
         pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
     ])
@@ -233,3 +262,4 @@ def write_newAnnotations(
         format="parquet",
         existing_data_behavior="overwrite_or_ignore"
     )
+    """

@@ -155,8 +155,10 @@
       const category = findCategoryForId(data.detail.anns, mask.id);
       let ann = {
         id: mask.id,
+        view_id: selectedItem.viewId,
         category_name: category,
         mask: mask.rle,
+        mask_source: "Pixano Annotator"
       };
       anns.push(ann)
     }
