@@ -13,6 +13,7 @@
 
 import pyarrow as pa
 
+from .bbox import BBox, BBoxType, is_bbox_type
 from .features import (
     Embedding,
     EmbeddingType,
@@ -20,42 +21,25 @@ from .features import (
     ObjectAnnotationType,
     is_embedding_type,
 )
-
-from .bbox import (
-    BBox,
-    BBoxType,
-    is_bbox_type
-)
-
-from .image import (
-    CompressedRLEType,
-    Image,
-    ImageType,
-    is_image_type
-)
-
-from .pose import (
-    Pose,
-    PoseType,
-    is_pose_type
-)
+from .image import CompressedRLEType, Image, ImageType, is_image_type
+from .pose import Pose, PoseType, is_pose_type
 
 __all__ = [
-    "BBoxType",
     "BBox",
-    "is_bbox_type"
-    "PoseType"
-    "Pose"
-    "is_pose_type"
+    "BBoxType",
+    "is_bbox_type",
     "Embedding",
     "EmbeddingType",
     "ObjectAnnotation",
     "ObjectAnnotationType",
+    "is_embedding_type",
     "CompressedRLEType",
     "Image",
     "ImageType",
-    "is_embedding_type",
     "is_image_type",
+    "Pose",
+    "PoseType",
+    "is_pose_type",
 ]
 
 

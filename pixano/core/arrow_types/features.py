@@ -16,11 +16,9 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from .image import CompressedRLEType
 from .bbox import BBoxType
+from .image import CompressedRLEType
 from .pose import PoseType
-
-
 
 
 class EmbeddingType(pa.ExtensionType):
@@ -38,17 +36,17 @@ class EmbeddingType(pa.ExtensionType):
 
 
 class Embedding(BaseModel):
-    """Embedding class
+    """Embedding type using bytes
 
     Attributes:
-        embedding (bytes): Embedding as binary
+        embedding (bytes): Embedding in binary format
     """
 
     embedding: bytes
 
 
 class ObjectAnnotation(BaseModel):
-    """ObjectAnnotation class to contain all annotation data
+    """ObjectAnnotation type using all annotation data
 
     Attributes:
         id (str): Annotation unique ID
@@ -134,4 +132,5 @@ def is_embedding_type(t: pa.DataType) -> bool:
     Returns:
         bool: Type checking response
     """
+
     return isinstance(t, EmbeddingType)

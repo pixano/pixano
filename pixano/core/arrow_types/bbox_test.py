@@ -1,3 +1,16 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
 import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -14,8 +27,8 @@ class BBoxTestCase(unittest.TestCase):
         self.bbox_xywh = BBox.from_xywh(self.xywh_coords)
 
     def test_format_property(self):
-        self.assertEqual(self.bbox_xyxy.format, 'xyxy')
-        self.assertEqual(self.bbox_xywh.format, 'xywh')
+        self.assertEqual(self.bbox_xyxy.format, "xyxy")
+        self.assertEqual(self.bbox_xywh.format, "xywh")
 
     def test_is_normalized_property(self):
         self.assertTrue(self.bbox_xyxy.is_normalized)
@@ -31,11 +44,11 @@ class BBoxTestCase(unittest.TestCase):
 
     def test_format_conversion(self):
         self.bbox_xyxy.format_xywh()
-        self.assertEqual(self.bbox_xyxy.format, 'xywh')
+        self.assertEqual(self.bbox_xyxy.format, "xywh")
         self.assertTrue(np.allclose(self.bbox_xyxy.to_xywh(), [0.1, 0.2, 0.2, 0.2]))
 
         self.bbox_xywh.format_xyxy()
-        self.assertEqual(self.bbox_xywh.format, 'xyxy')
+        self.assertEqual(self.bbox_xywh.format, "xyxy")
         self.assertTrue(np.allclose(self.bbox_xywh.to_xyxy(), [0.1, 0.2, 0.4, 0.6]))
 
     def test_normalize(self):
@@ -43,7 +56,9 @@ class BBoxTestCase(unittest.TestCase):
         height = 100
         width = 200
         self.bbox_to_normalize.normalize(height, width)
-        self.assertTrue(np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2]))
+        self.assertTrue(
+            np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2])
+        )
 
 
 class BBoxTableTestCase(unittest.TestCase):
@@ -73,7 +88,6 @@ class BBoxTableTestCase(unittest.TestCase):
 
         re_table = pq.read_pandas("test_bbox.parquet")
         self.assertEqual(re_table.column_names,['bbox'])
-
 
 
 
