@@ -170,6 +170,7 @@
       {masksGT}
       {classes}
       handleCloseClick={unselectItem}
+      dataset={selectedDataset}
     />
   {/if}
 {:else}

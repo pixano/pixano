@@ -34,15 +34,17 @@ export const Base: Story = {
       { class: "Dog", items: [{ name: "dog-0" }, { name: "dog-1" }] },
       { class: "Cat", items: [{ name: "cat-0" }] },
     ],
-    dbImages: [
-      "img-01.jpg",
-      "img-02.jpg",
-      "img-03.jpg",
-      "img-04.jpg",
-      "img-05.jpg",
-      "img-06.jpg",
-      "img-07.jpg",
-      "img-08.jpg",
-    ],
+    dataset: {
+      items: [
+        [{ value: "image 1" }, { value: "img-01.jpg" }],
+        [{ value: "image 2" }, { value: "img-02.jpg" }],
+        [{ value: "image 3" }, { value: "img-03.jpg" }],
+        [{ value: "image 4" }, { value: "img-04.jpg" }],
+        [{ value: "image 5" }, { value: "img-05.jpg" }],
+        [{ value: "image 6" }, { value: "img-06.jpg" }],
+        [{ value: "image 7" }, { value: "img-07.jpg" }],
+        [{ value: "image 8" }, { value: "img-08.jpg" }],
+      ],
+    },
   },
 };
