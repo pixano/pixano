@@ -59,6 +59,8 @@ class BBoxTableTestCase(unittest.TestCase):
 
         re_table = pq.read_table("test_bbox.parquet")
         self.assertEqual(re_table.column_names,['bbox'])
+        Bbox0 = re_table.take([0])['bbox'][0].as_py()
+        self.assertTrue(isinstance(Bbox0, BBox))
 
 
     def test_bbox_with_panda(self):

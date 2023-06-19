@@ -128,9 +128,18 @@ class BBoxScalar(pa.ExtensionScalar):
         )
 
 class BBoxArray(pa.ExtensionArray):
+    """Class to use pa.array for BBox instance"""
     
     @classmethod
-    def from_BBox_list(cls, bbox_list):
+    def from_BBox_list(cls, bbox_list:list[Bbox]) -> pa.Array:
+        """Create Bbox pa.array from bbox list 
+
+        Args:
+            bbox_list (list[Bbox]): list of bbox
+
+        Returns:
+            pa.Array: pa.array of Bbox
+        """
         bbox_dicts = []
         for bbox in bbox_list:
             bbox_dicts.append(bbox.to_dict())
