@@ -16,7 +16,7 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import type { AnnotationsLabels } from "./interfaces";
+  import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
 
   export let annotations: Array<AnnotationsLabels>;
   export let dbImages;
@@ -97,7 +97,7 @@
           <div class="flex grow items-center space-x-1 cursor-pointer" on:click={() => (group['opened'] = !group['opened'])}>
             <img src="icons/expand.svg" alt="expand" class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}" />
             <span class="grow ml-3 font-bold text-gray-900">
-              {group.class}
+              {group.category}
             </span>
             <!-- TODO : add different colors -->
             <span

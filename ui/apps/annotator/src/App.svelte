@@ -21,7 +21,7 @@
   import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "./lib/interfaces";
+  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "../../../components/Canvas2D/src/interfaces";
   import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
   import { SAM } from "../../../components/models/src/Sam";
   import * as ort from "onnxruntime-web";
@@ -75,6 +75,7 @@
     classes = selectedDataset.categories
 
     let struct_annotations = {}
+    let struct_cat_ids = {}
     for (let i = 0; i < itemDetails.views.image.objects.id.length; ++i) {
       const mask_rle = itemDetails.views.image.objects.segmentation[i];
       const rle = mask_rle["counts"];
@@ -86,29 +87,34 @@
         id: itemDetails.views.image.objects.id[i],
         mask: masksSVG,
         rle: mask_rle,
-        visible: true
+        visible: true,
+        opacity: 0.5,
       });
       if(itemDetails.views.image.objects.category[i].name in struct_annotations) {
         const num = struct_annotations[itemDetails.views.image.objects.category[i].name].length;
         const item : ItemLabel = {
           id: itemDetails.views.image.objects.id[i],
           label: itemDetails.views.image.objects.category[i].name+"-"+num,
-          visible: true
+          visible: true,
+          opacity: 0.5,
         }         
         struct_annotations[itemDetails.views.image.objects.category[i].name].push(item);
       } else {
         const item : ItemLabel = {
           id: itemDetails.views.image.objects.id[i],
           label: itemDetails.views.image.objects.category[i].name+"-0",
-          visible: true
+          visible: true,
+          opacity: 0.5,
         }         
-        struct_annotations[itemDetails.views.image.objects.category[i].name] = [item] 
+        struct_annotations[itemDetails.views.image.objects.category[i].name] = [item]
+        struct_cat_ids[itemDetails.views.image.objects.category[i].name] = itemDetails.views.image.objects.category[i].id
       }
     }
     //convert struct to AnnotationsLabels
     for (let cls in struct_annotations) {
       annotations.push({
-        class: cls, 
+        category: cls,
+        category_id: struct_cat_ids[cls],
         items: struct_annotations[cls],
         visible: true
       });
@@ -139,7 +145,7 @@
   function findCategoryForId(anns: Array<AnnotationsLabels>, id: string) : string {
     for (let ann of anns) {
       if (ann.items.some(it=> it.id === id)) {
-        return ann.class;
+        return ann.category;
       }
     }
     console.log("ERROR - unable to find category for id:", id);

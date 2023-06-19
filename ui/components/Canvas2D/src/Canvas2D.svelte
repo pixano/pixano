@@ -27,7 +27,7 @@
         Box,
         InteractiveImageSegmenterOutput,
     } from "../../models/src/interactive_image_segmentation";
-    import type { MaskGT } from "../../../apps/annotator/src/lib/interfaces";
+    import type { MaskGT, BBox } from "./interfaces";
 
     const POINTER_RADIUS: number = 6;
     const POINTER_STROKEWIDTH: number = 3;
@@ -41,14 +41,15 @@
     export let imageId: string;
     export let viewId: string;
 
-    export let masksGT: Array<MaskGT>;
+    export let masksGT: Array<MaskGT> | null;
+    export let bboxes: Array<BBox> | null;
 
-    let prevImg: string = "";
+    //let prevImg: string = "";
     //export let imageEmbedding = null;
     export let selectedTool: Tool | null;
 
     // Output
-    export let prediction: InteractiveImageSegmenterOutput;
+    export let prediction: InteractiveImageSegmenterOutput | null;
 
     // References to HTML Elements
     let stageContainer: HTMLElement;
@@ -142,6 +143,9 @@
         if (masksGT) {
             addMaskGT(viewId, imageId);
         }
+        if (bboxes) {
+            addAllBBox(viewId, imageId)
+        }
 
         // if (imageURL !== prevImg) {
         //     let img = new Image();
@@ -210,6 +214,108 @@
         if (predictedMasks) predictedMasks.destroy();
     }
 
+    function addAllBBox(viewId, imageId) {
+        const view: Konva.Layer = stage.findOne(`#${viewId}`);
+
+        if (view) {
+            const group: Konva.Group = view.findOne("#bboxes");
+            const image = stage.findOne(`#${imageId}`);
+
+            const listBboxIds = []
+            for (let i = 0; i < bboxes.length; ++i) {
+                listBboxIds.push(bboxes[i].id);
+
+                //don't add a mask that already exist
+                let bbox = group.findOne(`#${bboxes[i].id}`);
+                if (!bbox) {
+                    addBBox(bboxes[i].bbox, bboxes[i].label, bboxes[i].id, image.x(), image.y(), image.scale(), "yellow", bboxes[i].visible, group);
+                } else {
+                    //apply visibility
+                    bbox.visible(bboxes[i].visible);
+                }
+            }
+
+            //remove masks that's no longer exist in masksGT
+            for (let bbox of group.children) {
+                if (!(listBboxIds.includes(bbox.id()))) {
+                    bbox.destroy();
+                }
+            }
+        }
+    }
+
+    function addBBox(
+        bbox: Array<number>,
+        tooltip: string,
+        id: string,
+        x: number,
+        y: number,
+        scale: Konva.Vector2d,
+        color: any,
+        visible: boolean,
+        group: Konva.Group
+    ) {
+        //TMP: height et width sont inversés car parquet généré avec normalisation inversés
+        //(because on a remplacé un normalize(w,h) par un normalize(h,w)...)
+        //dès qu'un nouveau package permettant de générer correctement les bbox est ready je rebascule
+        const rect_x = x + bbox[0] * image.naturalHeight;   
+        const rect_y = y + bbox[1] * image.naturalWidth;
+        const rect_width = bbox[2] * image.naturalHeight;
+        const rect_height = bbox[3] * image.naturalWidth;
+
+        const bbox_group = new Konva.Group({
+            id: id,
+            visible: visible,
+            listening: false,
+        })
+
+        const kbbox = new Konva.Rect({
+            //TMP: height et width sont inversés car parquet généré avec normalisation inversés
+            //(because on a remplacé un normalize(w,h) par un normalize(h,w)...)
+            //dès qu'un nouveau package permettant de générer correctement les bbox est ready je rebascule
+            x: rect_x,
+            y: rect_y,
+            width: rect_width,
+            height: rect_height,
+            stroke: color,
+            strokeWidth: 1.0,
+            scale: scale, 
+        });
+        bbox_group.add(kbbox);
+
+        // Create a label object
+        const label = new Konva.Label({
+            x: rect_x,
+            y: rect_y,
+        });
+
+        // Add a tag to the label
+        label.add(
+            new Konva.Tag({
+            fill: color,
+            stroke: color,
+            })
+        );
+
+        // Add some text to the label
+        label.add(
+            new Konva.Text({
+            text: tooltip,
+            fontSize: 10,
+            fontStyle: "bold",
+            padding: 2,
+            x: rect_x,
+            y: rect_y,
+            })
+        );
+
+        // Add the label to the group
+        bbox_group.add(label);
+
+        group.add(bbox_group);
+
+    }
+
     /**
      * Add set of mask to its specific group
         if (results) {
@@ -222,6 +328,7 @@
         scale: Konva.Vector2d,
         stroke: string,
         visibility: boolean,
+        opacity: number,
         group: Konva.Group
     ) {
         let fill: string;
@@ -266,6 +373,7 @@
             stroke: stroke,
             scale: scale,
             visible: visibility,
+            opacity: opacity,
             listening: false,
             sceneFunc: (ctx, shape) => {
                 ctx.beginPath();
@@ -332,7 +440,7 @@
                     input_box: box,
                     validated: false,
                 };
-                addMask(results.masksImageSVG, new_id, image.x(), image.y(), image.scale(), "green", true, group);
+                addMask(results.masksImageSVG, new_id, image.x(), image.y(), image.scale(), "green", true, 1.0, group);
             }
         }
     }
@@ -351,10 +459,12 @@
                 //don't add a mask that already exist
                 let mask = group.findOne(`#${masksGT[i].id}`);
                 if (!mask) {
-                    addMask(masksGT[i].mask, masksGT[i].id, image.x(), image.y(), image.scale(), "blue", masksGT[i].visible, group);
+                    addMask(masksGT[i].mask, masksGT[i].id, image.x(), image.y(), image.scale(), "blue", masksGT[i].visible, 0.5, group);
                 } else {
-                    //apply visibility
+                    //update visibility & opacity
                     mask.visible(masksGT[i].visible);
+                    console.log('YOP', masksGT[i], mask)
+                    mask.opacity(masksGT[i].opacity);
                 }
             }
 
@@ -382,13 +492,15 @@
                     let shape = s as Konva.Shape;
                     shape.fill("rgba(0, 0, 255, 0.25)")
                     shape.stroke("blue")
+                    shape.opacity(0.5);  //default opacity ??
                 }
                 predictedMasks.moveTo(masksGT_group);
                 masksGT.push({
                     id: prediction.id,
                     mask: prediction.output.masksImageSVG,
                     rle: prediction.output.rle,
-                    visible: true
+                    visible: true,
+                    opacity: 0.5
                 })
 
                 clearInputs(prediction.view);
@@ -821,6 +933,7 @@
             />
             <Group config={{ id: "masks" }} />
             <Group config={{ id: "masksGT" }} />
+            <Group config={{ id: "bboxes" }} />
             <Group config={{ id: "input" }} />
         </Layer>
         <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />

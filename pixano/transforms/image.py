@@ -170,7 +170,7 @@ def rle_to_mask(rle: dict) -> np.ndarray:
     Returns:
         np.ndarray: Mask as NumPy array
     """
-
+    print("AA", rle)
     return mask_api.decode(rle)
 
 

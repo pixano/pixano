@@ -14,15 +14,31 @@
   http://www.cecill.info
   */
 
-  import { onMount } from "svelte";
+  import { afterUpdate, onMount } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import { ImageDetails } from "@pixano/core";
-  import { getItemDetails } from "./api";
+  //import { ImageDetails } from "@pixano/core";
+  //import { getItemDetails } from "./api";
+  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
+  import AnnotationInspector from "../../../../components/core/src/AnnotationInspector.svelte";
+  import type { ItemData, MaskGT, BBox, AnnotationsLabels, ItemLabel } from "../../../../components/Canvas2D/src/interfaces";
 
-  export let datasetId;
-  export let rowIndex;
+  import {
+    type Tool,
+    createPanTool,
+    ToolType,
+  } from "../../../../components/Canvas2D/src/tools";
 
-  let features = null;
+  //export let datasetId;
+  //export let rowIndex;
+  export let itemData: ItemData;
+  export let masksGT: Array<MaskGT>;
+  export let bboxes: Array<BBox>;
+  export let annotations: Array<AnnotationsLabels>;
+
+  export let features = null;
+  let panTool = createPanTool();
+
+  let allBBoxVisible = true;
 
   const dispatch = createEventDispatcher();
 
@@ -30,18 +46,87 @@
     dispatch("closeclick");
   }
 
+  /**
+   * get item by id from annotations
+   */
+   function getItemById(id: string) {
+    for(let cat of annotations) {
+      for(let item of cat.items) {
+        if(item.id  === id) {
+          return item;
+        }
+      }
+    }
+  }
+
+  function handleCatVisChanged(event) {
+    if(allBBoxVisible) {
+      for(let bbox of bboxes) {
+        bbox.visible = getItemById(bbox.id).visible;
+      }
+      bboxes = bboxes;
+    }
+    for(let mask of masksGT) {
+      mask.visible = getItemById(mask.id).visible;
+    }
+    masksGT = masksGT
+  }
+
+  function handleAllBBoxVisChanged(event) {
+    allBBoxVisible = event.detail;
+    for(let bbox of bboxes) {
+      bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
+    }
+    bboxes = bboxes
+  }
+
+  function handleMaskOpacity(event) {
+    for(let mask of masksGT) {
+      mask.opacity = getItemById(mask.id).opacity;
+      console.log("AA", mask.opacity);
+    }
+    masksGT = masksGT
+  }
+
   async function handleKeyDown(e) {
     if (e.keyCode == 27) handleCloseClick(); // Escape key pressed
   }
 
   onMount(async () => {
-    features = await getItemDetails(datasetId, rowIndex);
+    //features = await getItemDetails(datasetId, rowIndex);
+    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations)
   });
+
+  afterUpdate(() => {
+    // needed for annotations update
+    if (annotations) {
+      annotations = annotations;
+    }
+  });
+
 </script>
 
 <div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
-  {#if features}
-    <ImageDetails {features} />
+  {#if itemData}
+    <!-- <ImageDetails {features} /> -->
+    <Canvas2D
+      imageURL={itemData.imageURL}
+      imageId={itemData.imageId}
+      viewId={itemData.viewId}
+      selectedTool={panTool}
+      prediction={null}
+      {masksGT}
+      {bboxes}
+    />
+    
+    <AnnotationInspector
+      {features}
+      bind:annotations
+      on:toggleCatVis={handleCatVisChanged}
+      on:toggleAllBBoxVis={handleAllBBoxVisChanged}
+      on:changeMaskOpacity={handleMaskOpacity}
+    />
+    
   {/if}
 
   <!-- Close button -->

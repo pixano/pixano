@@ -28,11 +28,10 @@
     ToolType,
     createMultiModalTool,
   } from "../../../../components/Canvas2D/src/tools";
-  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "./interfaces";
+  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
   import { interactiveSegmenterModel } from "../stores";
-    import { postAnnotations } from "./api";
 
   export let itemData: ItemData;
   export let embedding: any;
@@ -81,7 +80,7 @@
 
   function addAnnotation(className: string, id: string) {
     // Check if the class already exists in the annotation array
-    const existingClass = annotations.find((obj) => obj.class === className);
+    const existingClass = annotations.find((obj) => obj.category === className);
 
     // Add the class to the default class list if it doesn't already exist.
     if (!classes.some((cls) => cls.name === className)) {
@@ -96,7 +95,8 @@
       const annotation: ItemLabel = {
         id: id,
         label: `${className}-${existingClass.items.length}`,
-        visible : true
+        visible : true,
+        opacity: 0.5,
       };
 
       // If the class exists, add the item to its 'items' array
@@ -108,12 +108,14 @@
       const annotation: ItemLabel = {
         id: id,
         label: `${className}-0`,
-        visible: true
+        visible: true,
+        opacity: 0.5,
       };
 
       // If the class doesn't exist, create a new object and add it to the annotation array
       const newClass: AnnotationsLabels = {
-        class: className,
+        category: className,
+        //category_id: "",  //TODO add a category_id ??
         items: [annotation],
         visible: true,
       };
@@ -281,6 +283,7 @@
         {embedding}
         bind:prediction
         bind:masksGT
+        bboxes={null}
       />
       {#if annotations}
         <DataPanel

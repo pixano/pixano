@@ -23,20 +23,99 @@
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
   import * as api from "./lib/api";
+  import type { ItemData, MaskGT, BBox, AnnotationsLabels, ItemLabel } from "../../../components/Canvas2D/src/interfaces";
+  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
 
   // Dataset navigation
   let datasets = null;
   let selectedDataset = null;
-  let selectedItem = null;
+  let selectedItem : ItemData = null;
   let showDetailsPage: boolean = false;
+  let masksGT : Array<MaskGT> = [];
+  let bboxes : Array<BBox> = [];
+  let annotations: Array<AnnotationsLabels> = [];
+  let itemDetails = null;
 
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
   }
 
-  function selectItem(event: CustomEvent) {
+  async function selectItem(event: CustomEvent) {
     showDetailsPage = true;
-    selectedItem = event.detail.id;
+    //selectedItem = event.detail.id;
+
+    itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
+
+    //selected item
+    console.log("=== LOADING SELECTED ITEM ===");
+    selectedItem = {
+      dbName: selectedDataset.name,
+      imageURL: itemDetails.views.image.image,
+      imageId: event.detail.id,
+      viewId: "image",
+    };
+    console.log("item loaded:", selectedItem);
+
+    //build annotations, masksGT, bboxes and classes
+    let struct_annotations = {}
+    let struct_cat_ids = {}
+    for (let i = 0; i < itemDetails.views.image.objects.id.length; ++i) {
+      const mask_rle = itemDetails.views.image.objects.segmentation[i];
+      if(mask_rle) {
+        const rle = mask_rle["counts"];
+        const size = mask_rle["size"];
+        const maskPolygons = generatePolygonSegments(rle, size[0]);
+        const masksSVG = convertSegmentsToSVG(maskPolygons);
+
+        masksGT.push({
+          id: itemDetails.views.image.objects.id[i],
+          mask: masksSVG,
+          rle: mask_rle,
+          visible: true,
+          opacity: 0.5
+        });
+      }
+
+      const bbox = itemDetails.views.image.objects.boundingBox[i];
+      if(bbox) {
+        bboxes.push({
+          id: itemDetails.views.image.objects.id[i],
+          bbox: [bbox.x, bbox.y, bbox.width, bbox.height],  //still normalized
+          label: itemDetails.views.image.objects.category[i].name + (bbox.is_predicted ? " "+bbox.confidence : ""),
+          visible: true
+        });
+      }
+
+      if(itemDetails.views.image.objects.category[i].name in struct_annotations) {
+        const num = struct_annotations[itemDetails.views.image.objects.category[i].name].length;
+        const item : ItemLabel = {
+          id: itemDetails.views.image.objects.id[i],
+          label: itemDetails.views.image.objects.category[i].name+"-"+num,
+          visible: true,
+          opacity: 0.5,
+        }         
+        struct_annotations[itemDetails.views.image.objects.category[i].name].push(item);
+      } else {
+        const item : ItemLabel = {
+          id: itemDetails.views.image.objects.id[i],
+          label: itemDetails.views.image.objects.category[i].name+"-0",
+          visible: true,
+          opacity: 0.5,
+        }         
+        struct_annotations[itemDetails.views.image.objects.category[i].name] = [item]
+        struct_cat_ids[itemDetails.views.image.objects.category[i].name] = itemDetails.views.image.objects.category[i].id;
+      }
+    }
+    //convert struct to AnnotationsLabels
+    for (let cls in struct_annotations) {
+      annotations.push({
+        category: cls,
+        category_id: struct_cat_ids[cls],
+        items: struct_annotations[cls],
+        visible: true,
+      });
+    }
+    console.log("selectItem Done", masksGT, annotations)
   }
 
   function goToLibrary() {
@@ -47,6 +126,10 @@
 
   function unselectItem() {
     showDetailsPage = false;
+    selectedItem = null;
+    masksGT = [];
+    bboxes = [];
+    annotations = [];
   }
 
   onMount(async () => {
@@ -99,10 +182,13 @@
 {:else if selectedDataset}
   {#if !showDetailsPage}
     <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
-  {:else}
+  {:else if selectedItem}
     <DatasetItemDetails
-      datasetId={selectedDataset.id}
-      rowIndex={selectedItem}
+      itemData={selectedItem}
+      features={itemDetails}
+      {annotations}
+      {masksGT}
+      {bboxes}
       on:closeclick={unselectItem}
     />
   {/if}

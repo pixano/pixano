@@ -18,8 +18,8 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import arrow_types
-from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
+from ..core import arrow_types
+from ..transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
 
 from .data_loader import DataLoader
 
@@ -101,7 +101,7 @@ class COCOLoader(DataLoader):
                         id=str(ann["id"]),
                         view_id="image",
                         area=float(ann["area"]),
-                        bbox=normalize(ann["bbox"], im["height"], im["width"]),
+                        bbox=normalize(ann["bbox"], h=im["height"], w=im["width"]),
                         mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
                         is_group_of=bool(ann["iscrowd"]),
                         category_id=int(ann["category_id"]),
