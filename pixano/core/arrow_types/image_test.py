@@ -20,7 +20,7 @@ import requests
 from PIL import Image
 
 from pixano.core import arrow_types
-from pixano.transforms import encode_png
+from pixano.transforms import image_to_binary
 
 
 class TestImageUriType(unittest.TestCase):
@@ -30,15 +30,15 @@ class TestImageUriType(unittest.TestCase):
         im = Image.open(BytesIO(im_data.content))
         im.thumbnail((128, 128))
         im.save("thumb.png")
-        preview = encode_png(im)
+        preview = image_to_binary(im)
 
-        im_uri_type = arrow_types.ImageUriType()
-        im_storage = pa.array([{"preview": preview, "uri": uri}])
+        im_uri_type = arrow_types.ImageType()
+        im_storage = pa.array([{ "uri": uri, "bytes": None, "preview_bytes": preview}], im_uri_type)
         arr = pa.ExtensionArray.from_storage(im_uri_type, im_storage)
 
         schema = pa.schema(
             [
-                pa.field("image", arrow_types.ImageUriType()),
+                pa.field("image", arrow_types.ImageType()),
             ]
         )
         table = pa.Table.from_arrays([arr], schema=schema)

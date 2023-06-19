@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import imp
 from typing import Optional
 
 import pyarrow as pa
@@ -121,7 +120,7 @@ def ObjectAnnotationType() -> pa.StructType:
             # Category
             pa.field("category_id", pa.int32(), nullable=True),
             pa.field("category_name", pa.string(), nullable=True),
-            pa.field("identity", pa.string(), nullable=True),
+            pa.field("identity", pa.string(), nullable=True)
         ]
     )
 

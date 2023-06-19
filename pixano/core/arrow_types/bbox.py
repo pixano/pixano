@@ -86,6 +86,9 @@ class BBox:
     def normalize(self, height:int, width:int):
         self._coords = normalize(self._coords, height, width)
 
+    def to_dict(self) -> dict[list[float], bool, str]:
+        return {"coords": self._coords, "is_normalized": self._is_normalized, "format": self._format}
+
 
 
 class BBoxType(pa.ExtensionType):
@@ -113,6 +116,9 @@ class BBoxType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return BBoxScalar
     
+    def __arrow_ext_class__(self):
+        return BBoxArray
+    
 class BBoxScalar(pa.ExtensionScalar):
     def as_py(self) -> BBox:
         return BBox(
@@ -120,7 +126,17 @@ class BBoxScalar(pa.ExtensionScalar):
             self.value["format"].as_py(),
             self.value["is_normalized"].as_py()
         )
+
+class BBoxArray(pa.ExtensionArray):
     
+    @classmethod
+    def from_BBox_list(cls, bbox_list):
+        bbox_dicts = []
+        for bbox in bbox_list:
+            bbox_dicts.append(bbox.to_dict())
+        return pa.array(bbox_dicts, BBoxType())
+
+
     
 
 def is_bbox_type(obj: pa.DataType) -> bool:
