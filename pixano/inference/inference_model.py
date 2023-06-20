@@ -168,9 +168,12 @@ class InferenceModel(ABC):
             # List dataset files
             files = sorted((input_dir / "db" / split).glob("*.parquet"))
 
-            # Check for already processed files
-            split_name = split.replace("split=", "")
+            # Create output split directory
             split_dir = output_dir / split
+            split_dir.mkdir(parents=True, exist_ok=True)
+            split_name = split.replace("split=", "")
+
+            # Check for already processed files
             processed = [p.name for p in split_dir.glob("*.parquet")]
 
             # Iterate on files
@@ -233,7 +236,6 @@ class InferenceModel(ABC):
                         )
 
                     # Save to file
-                    split_dir.mkdir(parents=True, exist_ok=True)
                     pq.write_table(
                         pa.Table.from_arrays(arrays, schema=schema),
                         split_dir / file.name,
