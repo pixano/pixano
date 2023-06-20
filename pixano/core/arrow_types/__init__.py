@@ -14,14 +14,11 @@
 import pyarrow as pa
 
 from .bbox import BBox, BBoxType, is_bbox_type
-from .features import (
-    Embedding,
-    EmbeddingType,
-    ObjectAnnotation,
-    ObjectAnnotationType,
-    is_embedding_type,
-)
-from .image import CompressedRLEType, Image, ImageType, is_image_type
+from .compressedRLE import (CompressedRLE, CompressedRLEType,
+                            is_compressedRLE_type)
+from .features import (Embedding, EmbeddingType, ObjectAnnotation,
+                       ObjectAnnotationType, is_embedding_type)
+from .image import Image, ImageType, is_image_type
 from .pose import Pose, PoseType, is_pose_type
 
 __all__ = [

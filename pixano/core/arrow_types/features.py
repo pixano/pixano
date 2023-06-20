@@ -17,22 +17,9 @@ import pyarrow as pa
 from pydantic import BaseModel
 
 from .bbox import BBoxType
-from .image import CompressedRLEType
+from .compressedRLE import CompressedRLEType
+from .embedding import EmbeddingType
 from .pose import PoseType
-
-
-class EmbeddingType(pa.ExtensionType):
-    """Embedding type as PyArrow binary"""
-
-    def __init__(self):
-        super(EmbeddingType, self).__init__(pa.binary(), "embedding")
-
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return EmbeddingType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
 
 
 class Embedding(BaseModel):
@@ -118,19 +105,6 @@ def ObjectAnnotationType() -> pa.StructType:
             # Category
             pa.field("category_id", pa.int32(), nullable=True),
             pa.field("category_name", pa.string(), nullable=True),
-            pa.field("identity", pa.string(), nullable=True)
+            pa.field("identity", pa.string(), nullable=True),
         ]
     )
-
-
-def is_embedding_type(t: pa.DataType) -> bool:
-    """Returns True if value is an instance of EmbeddingType
-
-    Args:
-        t (pa.DataType): Value to check
-
-    Returns:
-        bool: Type checking response
-    """
-
-    return isinstance(t, EmbeddingType)
