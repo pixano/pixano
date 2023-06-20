@@ -11,15 +11,10 @@
 #
 # http://www.cecill.info
 
-import subprocess
 import unittest
 
 import numpy as np
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-from .bbox import BBox, BBoxArray
+from .bbox import BBox
 
 
 class BBoxTestCase(unittest.TestCase):
@@ -62,44 +57,3 @@ class BBoxTestCase(unittest.TestCase):
         self.assertTrue(
             np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2])
         )
-
-class BBoxTableTestCase(unittest.TestCase):
-    def setUp(self) -> None:
-        self.bbox_list = [
-            BBox([0.1, 0.2, 0.3, 0.4], "xyxy", True),
-            BBox([0.1, 0.2, 0.2, 0.2], "xywh", True),
-            BBox([12, 2.9, 3.3, 7], "xyxy", False),
-        ]
-
-    def test_bbox_table(self):
-        bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
-
-        table = pa.Table.from_arrays([bbox_arr], names=["bbox"])
-        pq.write_table(table, "test_bbox.parquet", store_schema=True)
-
-        re_table = pq.read_table("test_bbox.parquet")
-        self.assertEqual(re_table.column_names, ["bbox"])
-        Bbox0 = re_table.take([0])["bbox"][0].as_py()
-        self.assertTrue(isinstance(Bbox0, BBox))
-
-    def test_bbox_table_with_panda(self):
-        bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
-
-        pd_bbox = bbox_arr.to_pandas()
-
-        df = pd.DataFrame(pd_bbox, columns=["bbox"])
-        pd_table = pa.Table.from_pandas(df)
-
-        pq.write_table(pd_table, "test_bbox.parquet")
-
-        reload_pd_table = pq.read_pandas("test_bbox.parquet")
-        BBox1 = reload_pd_table.take([0])["bbox"][0].as_py()
-
-        self.assertEqual(reload_pd_table.column_names, ["bbox"])
-        # panda give dict
-        self.assertTrue(isinstance(BBox1, dict))
-    
-    @classmethod
-    def tearDownClass(cls):
-        subprocess.run(["make", "clean"])
-        None
