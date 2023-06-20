@@ -30,8 +30,6 @@ class COCOLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -41,8 +39,6 @@ class COCOLoader(DataLoader):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
     ):
         """Initialize COCO Loader
@@ -50,21 +46,20 @@ class COCOLoader(DataLoader):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
         """
 
-        # Dataset additional fields (in addition to split, id, and objects)
-        add_fields = [pa.field("image", arrow_types.ImageType())]
+        # Dataset views
+        views = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
+        super().__init__(name, description, splits, views)
 
-    def get_row(self, split: str) -> Generator[dict]:
+    def get_row(self, input_dirs: dict[str, Path], split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
+            input_dirs (dict[str, Path]): Dataset input directories
             split (str): Dataset split
 
         Yields:
@@ -72,7 +67,7 @@ class COCOLoader(DataLoader):
         """
 
         # Open annotation files
-        with open(self.source_dirs["objects"] / f"instances_{split}.json", "r") as f:
+        with open(input_dirs["objects"] / f"instances_{split}.json", "r") as f:
             coco_instances = json.load(f)
 
         # Group annotations by image ID
@@ -85,7 +80,7 @@ class COCOLoader(DataLoader):
             # Load image annotations
             im_anns = annotations[im["id"]]
             # Load image directory
-            im_path = self.source_dirs["image"] / split / im["file_name"]
+            im_path = input_dirs["image"] / split / im["file_name"]
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())
 

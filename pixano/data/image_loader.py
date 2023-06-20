@@ -30,8 +30,6 @@ class ImageLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -41,8 +39,6 @@ class ImageLoader(DataLoader):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
     ):
         """Initialize COCO Loader
@@ -50,21 +46,20 @@ class ImageLoader(DataLoader):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
         """
 
-        # Dataset additional fields (in addition to split, id, and objects)
-        add_fields = [pa.field("image", arrow_types.ImageType())]
+        # Dataset views
+        views = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
+        super().__init__(name, description, splits, views)
 
-    def get_row(self, split: str) -> Generator[dict]:
+    def get_row(self, input_dirs: dict[str, Path], split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
+            input_dirs (dict[str, Path]): Dataset input directories
             split (str): Dataset split
 
         Yields:
@@ -74,7 +69,7 @@ class ImageLoader(DataLoader):
         # Get images paths
         image_paths = []
         for type in ["*.png", "*.jpg", "*.jpeg"]:
-            image_paths.extend(glob.glob(str(self.source_dirs["image"] / split / type)))
+            image_paths.extend(glob.glob(str(input_dirs["image"] / split / type)))
         image_paths = [Path(p) for p in sorted(image_paths)]
 
         # Process rows

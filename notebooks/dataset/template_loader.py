@@ -29,8 +29,6 @@ class TemplateLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -40,8 +38,6 @@ class TemplateLoader(DataLoader):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
     ):
         """Initialize Template Loader
@@ -49,22 +45,22 @@ class TemplateLoader(DataLoader):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
         """
 
-        ##### Add your dataset additional fields (in addition to split, id, and objects) here #####
-        add_fields = [pa.field("image", arrow_types.ImageType())]
+        ##### Add your dataset views here #####
+        # One image field or multiple fields for multi-view datasets
+        views = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
+        super().__init__(name, description, splits, views)
 
     @abstractmethod
-    def get_row(self, split: str) -> Generator[dict]:
+    def get_row(self, input_dirs: dict[str, Path], split: str) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
+            input_dirs (dict[str, Path]): Dataset input directories
             split (str): Dataset split
 
         Yields:
