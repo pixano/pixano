@@ -58,8 +58,6 @@ class DataLoader(ABC):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -250,23 +248,24 @@ class DataLoader(ABC):
         # Read dataset
         dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
-        # Create stats if objects field exist
-        schema = dataset.schema
-
         # Iterate over dataset columns
-        for field in schema:
+        for field in dataset.schema:
             # If column has images
             if arrow_types.is_image_type(field.type):
-                # Get features
                 features = []
-                for batch_row in tqdm(
-                    dataset.to_batches(columns=[field.name, "split"], batch_size=1),
+                rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
+
+                # Get features
+                for row in tqdm(
+                    rows,
                     desc=f"Computing {field.name} stats",
                     total=dataset.count_rows(),
                 ):
-                    row = batch_row.to_pydict()
+                    row = row.to_pydict()
                     # Open image
-                    with Image.open(import_dir / "media" / row["image"][0]._uri) as im:
+                    with Image.open(
+                        import_dir / "media" / row[field.name][0]._uri
+                    ) as im:
                         im_w, im_h = im.size
                         # Compute image features
                         aspect_ratio = round(im_w / im_h, 1)
