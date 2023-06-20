@@ -83,7 +83,6 @@ def get_item_details(
         if arrow_types.is_image_type(field.type):
             # Image
             im = item[field.name]
-            im.uri_prefix = media_dir
             # Objects IDs
             ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]
             # Categories

@@ -60,14 +60,9 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         # Load dataset info
         info = DatasetInfo.parse_file(spec)
         # Load thumbnail
-        preview = spec.parent / "preview.png"
-        if preview.is_file():
-            im = arrow_types.Image(
-                uri="preview.png",
-                bytes=None,
-                preview_bytes=None,
-                uri_prefix=spec.parent,
-            )
+        preview_path = spec.parent / "preview.png"
+        if preview_path.is_file():
+            im = arrow_types.Image(uri=str(preview_path.absolute()))
             info.preview = im.url
         # Load preview list (8 random images)
         media_dir = spec.parent / "media"
@@ -77,12 +72,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
             try:
                 file_path = Path(next(media_iter))
                 if file_path.suffix in [".jpg", ".jpeg", ".png"]:
-                    im = arrow_types.Image(
-                        uri=file_path.name,
-                        bytes=None,
-                        preview_bytes=None,
-                        uri_prefix=file_path.parent,
-                    )
+                    im = arrow_types.Image(uri=str(file_path.absolute()))
                 info.previews.append(im.url)
             except StopIteration:
                 break
