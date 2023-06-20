@@ -31,7 +31,7 @@
   }
 
   // Change selected tool
-  function selectImage(img: string) {
+  function selectImage(img) {
     dispatch("imageSelected", img);
   }
 
@@ -54,13 +54,11 @@
       dispatch("toggleVisibility", item);
     }
   }
-  $: console.log("dataset", dataset.items);
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="w-80 shrink-0 bg-white font-[Montserrat]">
   <div class="h-12 flex items-center justify-evenly">
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
       'labels'
@@ -72,7 +70,6 @@
     >
       Labels
     </span>
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
       'database'
@@ -143,7 +140,7 @@
         {#each dataset.items as img, i}
           <div
             class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
-            on:click={() => selectImage(img[1].value)}
+            on:click={() => selectImage(img)}
           >
             <img src={img[1].value} alt="image #{i}" class="w-24 h-24 object-cover rounded" />
             <span class="w-24 mt-2 text-xs font-semibold">{img[0].value}</span>

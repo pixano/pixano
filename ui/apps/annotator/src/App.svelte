@@ -171,6 +171,7 @@
       {classes}
       handleCloseClick={unselectItem}
       dataset={selectedDataset}
+      on:imageSelected={selectItem}
     />
   {/if}
 {:else}

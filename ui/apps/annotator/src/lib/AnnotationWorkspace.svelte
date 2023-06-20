@@ -31,6 +31,7 @@
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import { getDatasetItems } from "./api";
   import { currentPage } from "../stores";
+  import { createEventDispatcher } from "svelte";
 
   import { interactiveSegmenterModel } from "../stores";
 
@@ -41,6 +42,8 @@
   export let masksGT: Array<MaskGT>;
   export let dataset;
   export let handleCloseClick;
+
+  const dispatch = createEventDispatcher();
 
   let curPage: number;
 
@@ -150,7 +153,8 @@
   }
 
   function handleImageSelectedChange(img) {
-    itemData.imageURL = img.detail;
+    dispatch("imageSelected", { id: img.detail[0].value });
+    itemData.imageURL = img.detail[1].value;
     masksGT = [];
     annotations = [];
     classes = [];
