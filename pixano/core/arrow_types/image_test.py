@@ -17,34 +17,37 @@ from io import BytesIO
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-from PIL import Image
+from PIL import Image as pilImage
 
-from pixano.core import arrow_types
 from pixano.transforms import image_to_binary
 
+from .image import Image, ImageArray, ImageType
 
-class TestImageUriType(unittest.TestCase):
-    def test_image_uri_type(self):
+
+class TestImage(unittest.TestCase):
+    def test_image_table(self):
         uri = "http://farm3.staticflickr.com/2595/3984712091_e82c5ec1ca_z.jpg"
         im_data = requests.get(uri)
-        im = Image.open(BytesIO(im_data.content))
+        im = pilImage.open(BytesIO(im_data.content))
         im.thumbnail((128, 128))
         im.save("thumb.png")
         preview = image_to_binary(im)
-
-        im_uri_type = arrow_types.ImageType()
-        im_storage = pa.array([{ "uri": uri, "bytes": None, "preview_bytes": preview}], im_uri_type)
-        arr = pa.ExtensionArray.from_storage(im_uri_type, im_storage)
+        image = Image(uri, None, preview)
+        image_array = ImageArray.from_Image_list([image])
 
         schema = pa.schema(
             [
-                pa.field("image", arrow_types.ImageType()),
+                pa.field("image", ImageType()),
             ]
         )
-        table = pa.Table.from_arrays([arr], schema=schema)
-        pq.write_table(table, "test.parquet", store_schema=True)
+        table = pa.Table.from_arrays([image_array], schema=schema)
+        pq.write_table(table, "test_image.parquet", store_schema=True)
+        re_table = pq.read_table("test_image.parquet")
 
-        print(table.schema)
+        self.assertEqual(re_table.column_names, ["image"])
+        image0 = re_table.take([0])["image"][0].as_py()
+        self.assertTrue(isinstance(image0, Image))
+
         # self.assertTrue(isinstance(im_py, arrow_types.ImageUri))
         # self.assertEqual(im_py.uri, uri)
         # with open("test.jpg", "wb") as f:

@@ -130,6 +130,18 @@ class Image:
         url = f"data:image;base64,{encoded}"
         return IPyImage(url=url, format=inferred_format)
 
+    def to_dict(self) -> dict[str, "bytes", "bytes"]:
+        """convert image attribute to dict
+
+        Returns:
+            dict: dict with image attribute
+        """
+        return {
+            "uri": self._uri,
+            "bytes": self._bytes,
+            "preview_bytes": self._preview_bytes,
+        }
+
 
 class ImageType(pa.ExtensionType):
     """Image type as PyArrow StructType"""
@@ -156,6 +168,9 @@ class ImageType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return ImageScalar
 
+    def __arrow_ext_class__(self):
+        return ImageArray
+
 
 class ImageScalar(pa.ExtensionScalar):
     def as_py(self) -> Image:
@@ -164,6 +179,24 @@ class ImageScalar(pa.ExtensionScalar):
             self.value["bytes"].as_py(),
             self.value["preview_bytes"].as_py(),
         )
+
+
+class ImageArray(pa.ExtensionArray):
+    """Class to use pa.array for Image instance"""
+
+    @classmethod
+    def from_Image_list(cls, image_list: list[Image]) -> pa.Array:
+        """Create Image pa.array from image list
+
+        Args:
+            image_list (list[Bbox]): list of image
+
+        Returns:
+            pa.Array: pa.array of Image
+        """
+        image_dicts = [image.to_dict() for image in image_list]
+
+        return pa.array(image_dicts, ImageType())
 
 
 class CompressedRLEType(pa.ExtensionType):
