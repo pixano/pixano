@@ -264,7 +264,7 @@ class DataLoader(ABC):
                     row = row.to_pydict()
                     # Open image
                     with Image.open(
-                        import_dir / "media" / row[field.name][0]._uri
+                        import_dir / "media" / row[field.name][0].uri()
                     ) as im:
                         im_w, im_h = im.size
                         # Compute image features
