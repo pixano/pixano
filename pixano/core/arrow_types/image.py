@@ -79,9 +79,9 @@ class Image:
         """
 
         if uri_prefix is not None:
-            if urlparse(self.uri).scheme == "":
+            if urlparse(self._uri).scheme == "":
                 parsed_prefix = urlparse(uri_prefix)
-                combined_path = Path(parsed_uri.path) / self.uri
+                combined_path = Path(parsed_uri.path) / self._uri
                 parsed_uri = parsed_prefix._replace(path=str(combined_path))
                 return parsed_uri.geturl()
             else:
