@@ -11,7 +11,9 @@
 #
 # http://www.cecill.info
 
+import datetime
 import json
+import os
 import random
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -24,6 +26,7 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
@@ -248,6 +251,10 @@ class DataLoader(ABC):
         # Read dataset
         dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
+        # Create URI prefix
+        media_dir = import_dir / "media"
+        uri_prefix = f"file://{media_dir.absolute()}"
+
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has images
@@ -263,12 +270,12 @@ class DataLoader(ABC):
                 ):
                     row = row.to_pydict()
                     # Open image
-                    with Image.open(
-                        import_dir / "media" / row[field.name][0].uri()
-                    ) as im:
-                        im_w, im_h = im.size
-                        # Compute image features
-                        aspect_ratio = round(im_w / im_h, 1)
+                    image = row[field.name][0]
+                    image.uri_prefix = uri_prefix
+                    im = image.as_pillow()
+                    im_w, im_h = im.size
+                    # Compute image features
+                    aspect_ratio = round(im_w / im_h, 1)
                     features.append(
                         {
                             f"{field.name} - aspect ratio": aspect_ratio,
@@ -326,12 +333,18 @@ class DataLoader(ABC):
             json.dump(stat_json, f)
 
     @abstractmethod
-    def get_row(self, input_dirs: dict[str, Path], split: str) -> Generator[dict]:
+    def get_row(
+        self,
+        input_dirs: dict[str, Path],
+        split: str,
+        portable: bool = False,
+    ) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
             input_dirs (dict[str, Path]): Dataset input directories
             split (str): Dataset split
+            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Generator[dict]: Processed rows
@@ -343,6 +356,7 @@ class DataLoader(ABC):
         self,
         input_dirs: dict[str, Path],
         import_dir: Path,
+        portable: bool = False,
         batch_size: int = 2048,
     ):
         """Import dataset to Pixano format
@@ -350,6 +364,7 @@ class DataLoader(ABC):
         Args:
             input_dirs (dict[str, Path]): Dataset input directories
             import_dir (Path): Dataset import directory
+            portable (int, optional): True to move or download files inside import directory. Defaults to False.
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
 
@@ -362,7 +377,7 @@ class DataLoader(ABC):
 
         # Iterate on splits
         for split in self.splits:
-            batches = _batch_dict(self.get_row(input_dirs, split), batch_size)
+            batches = _batch_dict(self.get_row(input_dirs, split, portable), batch_size)
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
                 # Convert batch fields to PyArrow format
@@ -391,21 +406,142 @@ class DataLoader(ABC):
         # Create preview.png
         self.create_preview(import_dir)
 
-        # Move media folders
-        for field in self.schema:
-            if arrow_types.is_image_type(field.type):
-                field_dir = import_dir / "media" / field.name
-                field_dir.mkdir(parents=True, exist_ok=True)
-                input_dirs[field.name].rename(field_dir)
-
         # Create stats
         self.create_stats(import_dir)
 
-    def export_dataset(self, export_dir: Path):
+    def export_dataset(self, input_dir: Path, export_dir: Path):
         """Export dataset back to original format
 
         Args:
+            input_dir (Path): Input directory
             export_dir (Path): Export directory
         """
 
-        pass
+        # Load spec.json
+        input_info = DatasetInfo.parse_file(input_dir / "spec.json")
+
+        # Create URI prefix
+        media_dir = input_dir / "media"
+        uri_prefix = f"file://{media_dir.absolute()}"
+
+        # If splits provided, check if they exist
+        splits = [f"split={s}" for s in splits if not s.startswith("split=")]
+        for split in splits:
+            split_dir = input_dir / "db" / split
+            if not Path.exists(split_dir):
+                raise Exception(f"{split_dir} does not exist.")
+            if not any(split_dir.iterdir()):
+                raise Exception(f"{split_dir} is empty.")
+
+        # If no splits provided, select all splits
+        if splits == []:
+            splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
+
+        # Create annotations directory
+        ann_dir = export_dir / ann_dir
+        ann_dir.mkdir(parents=True, exist_ok=True)
+
+        # Iterate on splits
+        for split in splits:
+            # List dataset files
+            files = sorted((self.input_dir / "db" / split).glob("*.parquet"))
+
+            # Create split directory
+            split_dir = export_dir / split
+            split_dir.mkdir(parents=True, exist_ok=True)
+            split_name = split.replace("split=", "")
+
+            # Iterate on files
+            for file in tqdm(files, desc=f"Processing {split_name} split", position=0):
+                # Load file into rows
+                table = pq.read_table(file)
+                rows = table.to_batches(max_chunksize=1)
+                images = []
+                annotations = []
+                categories = []
+                seen_category_ids = []
+
+                # Iterate on rows
+                for row in tqdm(
+                    rows,
+                    desc=f"Processsing {file.name}",
+                    total=table.num_rows,
+                    position=1,
+                ):
+                    row = row.to_pydict()
+                    for field in self.schema:
+                        # If column has images
+                        if arrow_types.is_image_type(field.type):
+                            # Open image
+                            image = row[field.name][0]
+                            image.uri_prefix = uri_prefix
+                            im = image.as_pillow()
+                            im_w, im_h = im.size
+                            # Append image info
+                            images.append(
+                                {
+                                    "license": 1,
+                                    "file_name": image.uri,
+                                    "height": im_h,
+                                    "width": im_w,
+                                    "id": str(row["id"][0]),
+                                }
+                            )
+                        # If column has annotations
+                        # TODO: Change to checking type when ObjectAnnotationType is rebuilt
+                        elif field.name == "objects":
+                            row_anns = row["objects"][0]
+                            for row_ann in row_anns:
+                                # Append annotation
+                                annotations.append(
+                                    {
+                                        "segmentation": row_ann["mask"],
+                                        "area": row_ann["area"],
+                                        "iscrowd": 0,
+                                        "image_id": str(row["id"][0]),
+                                        "bbox": row_ann["bbox"],
+                                        "category_id": row_ann["category_id"],
+                                        "category_name": row_ann["category_name"],
+                                        "id": row_ann["id"],
+                                    }
+                                )
+                                # Append category if not seen yet
+                                if row_ann["category_id"] not in seen_category_ids:
+                                    categories.append(
+                                        {
+                                            "supercategory": "N/A",
+                                            "id": row_ann["category_id"],
+                                            "name": row_ann["category_name"],
+                                        },
+                                    )
+                                    seen_category_ids.append(row_ann["category_id"])
+
+            # Create COCO info fields
+            coco_info = {
+                "description": input_info.name,
+                "url": "N/A",
+                "version": f"v{datetime.now().strftime('%y%m%d.%H%M%S')}",
+                "year": datetime.date.today().year,
+                "contributor": "Exported from Pixano",
+                "date_created": datetime.date.today().isoformat,
+            }
+            coco_licences = [
+                {
+                    "url": "N/A",
+                    "id": 1,
+                    "name": "Unknown",
+                },
+            ]
+
+            # Create COCO json
+            coco_json = {
+                "info": coco_info,
+                "licences": coco_licences,
+                "images": images,
+                "annotations": annotations,
+                "categories": categories,
+            }
+
+            # Save COCO json
+            with open(ann_dir / f"instances_{split_name}.json", "w") as f:
+                json.dump(coco_json, f)

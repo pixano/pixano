@@ -56,12 +56,18 @@ class DOTALoader(DataLoader):
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
 
-    def get_row(self, input_dirs: dict[str, Path], split: str) -> Generator[dict]:
+    def get_row(
+        self,
+        input_dirs: dict[str, Path],
+        split: str,
+        portable: bool = False,
+    ) -> Generator[dict]:
         """Process dataset row for a given split
 
         Args:
             input_dirs (dict[str, Path]): Dataset input directories
             split (str): Dataset split
+            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Generator[dict]: Processed rows
@@ -89,12 +95,19 @@ class DOTALoader(DataLoader):
                 im_w, im_h = im.size
                 im_thumb = image_to_thumbnail(im)
 
+            # Set image URI
+            im_uri = (
+                f"image/{split}/{im_path.name}"
+                if portable
+                else f"file://{im_path.absolute()}"
+            )
+
             # Fill row with ID, image, and list of image annotations
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
                     "image": {
-                        "uri": f"image/{split}/{im_path.name}",
+                        "uri": im_uri,
                         "preview_bytes": im_thumb,
                     },
                     "objects": [

@@ -68,7 +68,7 @@ class InferenceModel(ABC):
         self,
         batch: pa.RecordBatch,
         view: str,
-        media_dir: Path,
+        uri_prefix: str,
         threshold: float = 0.0,
     ) -> list[list[arrow_types.ObjectAnnotation]]:
         """Inference preannotation for a batch
@@ -76,7 +76,7 @@ class InferenceModel(ABC):
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media directory
+            uri_prefix (str): URI prefix for media files
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
@@ -89,14 +89,14 @@ class InferenceModel(ABC):
         self,
         batch: pa.RecordBatch,
         view: str,
-        media_dir: Path,
+        uri_prefix: str,
     ) -> list[np.ndarray]:
         """Embedding precomputing for a batch
 
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media directory
+            uri_prefix (str): URI prefix for media files
 
         Returns:
             list[np.ndarray]: Model embeddings as NumPy arrays
@@ -132,6 +132,10 @@ class InferenceModel(ABC):
         # Load spec.json
         with open(input_dir / "spec.json", "r") as f:
             spec_json = json.load(f)
+
+        # Create URI prefix
+        media_dir = input_dir / "media"
+        uri_prefix = f"file://{media_dir.absolute()}"
 
         # If splits provided, check if they exist
         splits = [f"split={s}" for s in splits if not s.startswith("split=")]
@@ -198,7 +202,7 @@ class InferenceModel(ABC):
                             for view in views:
                                 batch_inf.append(
                                     self.inference_batch(
-                                        batch, view, input_dir / "media", threshold
+                                        batch, view, uri_prefix, threshold
                                     )
                                 )
                             # Regroup view inferences by row
@@ -214,9 +218,7 @@ class InferenceModel(ABC):
                         elif process_type == "embed":
                             # Iterate on views
                             for view in views:
-                                view_emb = self.embedding_batch(
-                                    batch, view, input_dir / "media"
-                                )
+                                view_emb = self.embedding_batch(batch, view, uri_prefix)
                                 for emb in view_emb:
                                     emb_bytes = BytesIO()
                                     np.save(emb_bytes, emb)
