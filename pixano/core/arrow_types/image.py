@@ -199,28 +199,6 @@ class ImageArray(pa.ExtensionArray):
         return pa.array(image_dicts, ImageType())
 
 
-class CompressedRLEType(pa.ExtensionType):
-    """Segmentation mask type as PyArrow StructType"""
-
-    def __init__(self):
-        super(CompressedRLEType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("size", pa.list_(pa.int32())),
-                    pa.field("counts", pa.binary()),
-                ]
-            ),
-            "mask[rle]",
-        )
-
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return CompressedRLEType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
-
 def is_image_type(t: pa.DataType) -> bool:
     """Returns True if value is an instance of ImageType
 

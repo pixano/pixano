@@ -53,6 +53,14 @@ class Pose:
 
         return self._cam_t_m2c
 
+    def to_dict(self) -> dict[list[float], list[float]]:
+        """convert pose to dict
+
+        Returns:
+            dict[list[float], list[float]]: dict containing "cam_R_m2c" and "cam_t_m2c"
+        """
+        return {"cam_R_m2c": self.cam_R_m2c, "cam_t_m2c": self.cam_t_m2c}
+
 
 class PoseType(pa.ExtensionType):
     """Pose type as PyArrow StructType"""
@@ -78,10 +86,31 @@ class PoseType(pa.ExtensionType):
     def __arrow_ext_scalar_class__(self):
         return PoseScalar
 
+    def __arrow_ext_class__(self):
+        return PoseArray
+
 
 class PoseScalar(pa.ExtensionScalar):
     def as_py(self) -> Pose:
         return Pose(self.value["cam_R_m2c"].as_py(), self.value["cam_t_m2c"].as_py())
+
+
+class PoseArray(pa.ExtensionArray):
+    """Class to use pa.array for Pose instance"""
+
+    @classmethod
+    def from_Pose_list(cls, pose_list: list[Pose]) -> pa.Array:
+        """Create Pose pa.array from pose list
+
+        Args:
+            pose_list (list[Bbox]): list of pose
+
+        Returns:
+            pa.Array: pa.array of Pose
+        """
+        pose_dicts = [pose.to_dict() for pose in pose_list]
+
+        return pa.array(pose_dicts, PoseType())
 
 
 def is_pose_type(t: pa.DataType) -> bool:
