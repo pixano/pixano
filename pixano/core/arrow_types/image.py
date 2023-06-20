@@ -13,6 +13,8 @@
 
 import base64
 from typing import IO
+from urllib.parse import urlparse
+from pathlib import Path
 
 import pyarrow as pa
 from etils import epath
@@ -26,7 +28,6 @@ class Image:
         uri: str,
         bytes: bytes,
         preview_bytes: bytes,
-        uri_prefix: epath.PathLike = None,
     ):
         """Creates image from UIR, bytes and preview
 
@@ -39,8 +40,6 @@ class Image:
         self._uri = uri
         self._bytes = bytes
         self._preview_bytes = preview_bytes
-
-        self.uri_prefix = uri_prefix
 
     @property
     def bytes(self) -> bytes:
@@ -69,13 +68,38 @@ class Image:
         else:
             return ""
 
-    # TODO add prefix/auth/http/s3 ...
-    def open(self) -> IO:
-        if self.uri_prefix is not None:
-            uri = self.uri_prefix / self._uri  # type: ignore
+    def uri(self, uri_prefix: epath.PathLike = None) -> str:
+        """Return image URI
+
+        Args:
+            uri_prefix (epath.PathLike, optional): Optional URI prefix for relative URIs. Defaults to None.
+
+        Returns:
+            uri: Image URI
+        """
+
+        if uri_prefix is not None:
+            if urlparse(self.uri).scheme == "":
+                parsed_prefix = urlparse(uri_prefix)
+                combined_path = Path(parsed_uri.path) / self.uri
+                parsed_uri = parsed_prefix._replace(path=str(combined_path))
+                return parsed_uri.geturl()
+            else:
+                return Exception("URI already complete, cannot add URI prefix.")
         else:
-            uri = self._uri
-        return open(uri, "rb")
+            return self._uri
+
+    def open(self, uri_prefix: epath.PathLike = None) -> IO:
+        """Open image
+
+        Args:
+            uri_prefix (epath.PathLike, optional): Optional URI prefix for relative URI. Defaults to None.
+
+        Returns:
+            IO: Opened image
+        """
+
+        return open(self.uri(uri_prefix), "rb")
 
     def display(self, preview=False):
         from IPython.core.display import Image as IPyImage
