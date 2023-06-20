@@ -189,9 +189,8 @@ class BBoxArray(pa.ExtensionArray):
         Returns:
             pa.Array: pa.array of Bbox
         """
-        bbox_dicts = []
-        for bbox in bbox_list:
-            bbox_dicts.append(bbox.to_dict())
+        bbox_dicts = [bbox.to_dict() for bbox in bbox_list]
+
         return pa.array(bbox_dicts, BBoxType())
 
 
