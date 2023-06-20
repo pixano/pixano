@@ -11,13 +11,16 @@
 #
 # http://www.cecill.info
 
+import re
 import unittest
-import pyarrow as pa
-import pyarrow.parquet as pq
-import pandas as pd
 
 import numpy as np
-from .bbox import BBox, BBoxType, BBoxScalar, BBoxArray, is_bbox_type
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from .bbox import BBox, BBoxArray, BBoxScalar, BBoxType, is_bbox_type
+
 
 class BBoxTestCase(unittest.TestCase):
     def setUp(self):
@@ -63,31 +66,34 @@ class BBoxTestCase(unittest.TestCase):
 
 class BBoxTableTestCase(unittest.TestCase):
     def setUp(self) -> None:
-        self.bbox_list = [BBox([0.1, 0.2, 0.3, 0.4], 'xyxy', True), BBox([0.1, 0.2, 0.2, 0.2], 'xywh', True), BBox([12, 2.9, 3.3, 7], "xyxy", False)]
-
+        self.bbox_list = [
+            BBox([0.1, 0.2, 0.3, 0.4], "xyxy", True),
+            BBox([0.1, 0.2, 0.2, 0.2], "xywh", True),
+            BBox([12, 2.9, 3.3, 7], "xyxy", False),
+        ]
 
     def test_bbox_table(self):
-
         bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
-        table = pa.Table.from_arrays([bbox_arr], names=['bbox'])
-        pq.write_table(table, 'test_bbox.parquet')
+        table = pa.Table.from_arrays([bbox_arr], names=["bbox"])
+        pq.write_table(table, "test_bbox.parquet")
 
         re_table = pq.read_table("test_bbox.parquet")
-        self.assertEqual(re_table.column_names,['bbox'])
-        Bbox0 = re_table.take([0])['bbox'][0].as_py()
+        self.assertEqual(re_table.column_names, ["bbox"])
+        Bbox0 = re_table.take([0])["bbox"][0].as_py()
         self.assertTrue(isinstance(Bbox0, BBox))
-
 
     def test_bbox_with_panda(self):
         bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
+
         pd_bbox = bbox_arr.to_pandas()
-        df = pd.DataFrame(pd_bbox, columns=['bbox'])
+
+        df = pd.DataFrame(pd_bbox, columns=["bbox"])
         pd_table = pa.Table.from_pandas(df)
 
-        pq.write_table(pd_table, 'test_bbox.parquet')
+        pq.write_table(pd_table, "test_bbox.parquet")
 
-        re_table = pq.read_pandas("test_bbox.parquet")
-        self.assertEqual(re_table.column_names,['bbox'])
+        reload_pd_table = pq.read_pandas("test_bbox.parquet")
+        BBox1 = reload_pd_table.take([0])['bbox'][0].as_py()
 
-
-
+        self.assertEqual(reload_pd_table.column_names, ["bbox"])
+        self.assertTrue(is_bbox_type(BBox1))
