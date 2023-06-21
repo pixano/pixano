@@ -13,29 +13,47 @@
 
 import pyarrow as pa
 
-from .bbox import BBox, BBoxType, is_bbox_type
-from .compressedRLE import (CompressedRLE, CompressedRLEType,
-                            is_compressedRLE_type)
-from .features import (Embedding, EmbeddingType, ObjectAnnotation,
-                       ObjectAnnotationType, is_embedding_type)
-from .image import Image, ImageType, is_image_type
-from .pose import Pose, PoseType, is_pose_type
+from .bbox import BBox, BBoxType, BBoxArray, is_bbox_type
+from .compressedRLE import (
+    CompressedRLE,
+    CompressedRLEType,
+    CompressedRLEArray,
+    is_compressedRLE_type,
+)
+from .embedding import Embedding, EmbeddingType, EmbeddingArray, is_embedding_type
+from .image import Image, ImageType, ImageArray, is_image_type
+from .objectAnnotation import (
+    ObjectAnnotation,
+    ObjectAnnotationType,
+    ObjectAnnotationArray,
+    is_objectAnnotation_type,
+)
+from .pose import Pose, PoseType, PoseArray, is_pose_type
 
 __all__ = [
     "BBox",
     "BBoxType",
+    "BBoxArray",
     "is_bbox_type",
     "Embedding",
     "EmbeddingType",
+    "EmbeddingArray",
+    "is_embedding_type",
     "ObjectAnnotation",
     "ObjectAnnotationType",
-    "is_embedding_type",
+    "ObjectAnnotationArray",
+    "is_objectAnnotation_type",
+    "CompressedRLE",
     "CompressedRLEType",
+    "CompressedRLEArray",
+    "is_compressedRLE_type",
     "Image",
     "ImageType",
+    "ImageArray",
     "is_image_type",
     "Pose",
     "PoseType",
+    "PoseArray",
     "is_pose_type",
 ]
 
@@ -95,18 +113,19 @@ def convert_field(
 def register_extension_types():
     """Register PyArrow ExtensionTypes"""
 
-    types = [
-        BBoxType(),
-        PoseType(),
-        CompressedRLEType(),
-        EmbeddingType(),
-        ImageType(),
+    pa_types = [
+        BBoxType,
+        PoseType,
+        CompressedRLEType,
+        EmbeddingType,
+        ImageType,
+        ObjectAnnotationType,
     ]
 
-    for t in types:
+    for t in pa_types:
         # Register ExtensionType
         try:
-            pa.register_extension_type(t)
+            pa.register_extension_type(t())
         # If ExtensionType is already registered
         except pa.ArrowKeyError:
             pass

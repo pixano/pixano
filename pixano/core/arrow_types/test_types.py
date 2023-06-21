@@ -12,9 +12,11 @@
 # http://www.cecill.info
 
 import unittest
+from matplotlib.pyplot import cla
 
 import numpy as np
-from .bbox import BBox
+
+from pixano.core.arrow_types import BBox, Image, CompressedRLE, Embedding, Pose, ObjectAnnotation
 
 
 class BBoxTestCase(unittest.TestCase):
@@ -57,3 +59,23 @@ class BBoxTestCase(unittest.TestCase):
         self.assertTrue(
             np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2])
         )
+
+
+class PoseTestCase(unittest.TestCase):
+    pass
+
+
+class ImageTestCase(unittest.TestCase):
+    pass
+
+
+class CompressedRLETestCase(unittest.TestCase):
+    pass
+
+
+class EmbeddingTestCase(unittest.TestCase):
+    pass
+
+
+class ObjectAnnotationTestCase(unittest.TestCase):
+    pass

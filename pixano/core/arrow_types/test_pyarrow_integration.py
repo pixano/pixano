@@ -21,17 +21,12 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+from pixano.core.arrow_types import *
 from PIL import Image as pilImage
 
 from pixano.transforms import image_to_binary
 
-from .bbox import BBox, BBoxArray, BBoxType
-from .compressedRLE import CompressedRLE, CompressedRLEArray, CompressedRLEType
-from .image import Image, ImageArray, ImageType
-from .pose import Pose, PoseArray, PoseType
-
-
-class BBoxTableTestCase(unittest.TestCase):
+class TestParquetBBox(unittest.TestCase):
     def setUp(self) -> None:
         self.bbox_list = [
             BBox([0.1, 0.2, 0.3, 0.4], "xyxy", True),
@@ -67,8 +62,15 @@ class BBoxTableTestCase(unittest.TestCase):
         # panda give dict
         self.assertTrue(isinstance(BBox1, dict))
 
+    @classmethod
+    def tearDownClass(cls):
+        subprocess.run(
+            ["make", "clean"]
+        )  # comment here for not cleaning parquet file after test
+        None
 
-class TestTableImage(unittest.TestCase):
+
+class TestParquetImage(unittest.TestCase):
     def test_image_table(self):
         uri = "http://farm3.staticflickr.com/2595/3984712091_e82c5ec1ca_z.jpg"
         im_data = requests.get(uri)
@@ -92,8 +94,15 @@ class TestTableImage(unittest.TestCase):
         image0 = re_table.take([0])["image"][0].as_py()
         self.assertTrue(isinstance(image0, Image))
 
+    @classmethod
+    def tearDownClass(cls):
+        subprocess.run(
+            ["make", "clean"]
+        )  # comment here for not cleaning parquet file after test
+        None
 
-class TestTablePose(unittest.TestCase):
+
+class TestParquetPose(unittest.TestCase):
     def setUp(self) -> None:
         cam_R_m2c0, cam_R_m2c1 = [i % 2.4 for i in range(9)], [
             i % 1.7 for i in range(9)
@@ -118,8 +127,15 @@ class TestTablePose(unittest.TestCase):
         pose1 = re_table.take([1])["pose"][0].as_py()
         self.assertTrue(isinstance(pose1, Pose))
 
+    @classmethod
+    def tearDownClass(cls):
+        subprocess.run(
+            ["make", "clean"]
+        )  # comment here for not cleaning parquet file after test
+        None
 
-class TestTableCompressedRLE(unittest.TestCase):
+
+class TestParquetCompressedRLE(unittest.TestCase):
     def setUp(self) -> None:
         self.compressedRLE_list = [
             CompressedRLE([1, 2], None),
@@ -146,5 +162,7 @@ class TestTableCompressedRLE(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(["make", "clean"])
+        subprocess.run(
+            ["make", "clean"]
+        )  # comment here for not cleaning parquet file after test
         None
