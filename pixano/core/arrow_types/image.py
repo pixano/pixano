@@ -54,16 +54,16 @@ class Image:
     def __init__(
         self,
         uri: str,
-        bytes: bytes,
-        preview_bytes: bytes,
+        bytes: bytes = None,
+        preview_bytes: bytes = None,
         uri_prefix: str = None,
     ):
         """Creates image from UIR, bytes and preview
 
         Attributes:
             uri (str): Image URI
-            bytes (bytes): Image bytes
-            preview_bytes (bytes): Image preview bytes
+            bytes (bytes, optional): Image bytes. Defaults to None.
+            preview_bytes (bytes, optional): Image preview bytes. Defaults to None.
             uri_prefix (str, optional): URI prefix for relative URIs. Defaults to None.
         """
 
