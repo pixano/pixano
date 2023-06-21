@@ -108,7 +108,7 @@ class DataLoader(ABC):
         """Create dataset spec.json
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
         """
 
         with tqdm(desc="Creating dataset info file", total=1) as progress:
@@ -127,7 +127,7 @@ class DataLoader(ABC):
         """Create dataset preview image
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
         """
 
         # Read dataset
@@ -157,7 +157,7 @@ class DataLoader(ABC):
         """Create dataset statistics
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
         """
 
         # Reset json file
@@ -171,7 +171,7 @@ class DataLoader(ABC):
         """Create dataset objects statistics
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
         """
 
         # Read dataset
@@ -246,7 +246,7 @@ class DataLoader(ABC):
         """Create dataset image statistics
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
         """
 
         # Read dataset
@@ -307,7 +307,7 @@ class DataLoader(ABC):
         """Compute and save stats to json
 
         Args:
-            import_dir (Path): Dataset import directory
+            import_dir (Path): Import directory
             stats (list[dict]): List of stats to save
             df (pd.DataFrame): DataFrame to create stats from
         """
@@ -331,16 +331,16 @@ class DataLoader(ABC):
             json.dump(stat_json, f)
 
     @abstractmethod
-    def get_row(
+    def import_row(
         self,
         input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
     ) -> Generator[dict]:
-        """Process dataset row for a given split
+        """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Dataset input directories
+            input_dirs (dict[str, Path]): Input directories
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
@@ -360,8 +360,8 @@ class DataLoader(ABC):
         """Import dataset to Pixano format
 
         Args:
-            input_dirs (dict[str, Path]): Dataset input directories
-            import_dir (Path): Dataset import directory
+            input_dirs (dict[str, Path]): Input directories
+            import_dir (Path): Import directory
             portable (int, optional): True to move or download files inside import directory. Defaults to False.
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
@@ -375,7 +375,9 @@ class DataLoader(ABC):
 
         # Iterate on splits
         for split in self.splits:
-            batches = _batch_dict(self.get_row(input_dirs, split, portable), batch_size)
+            batches = _batch_dict(
+                self.import_row(input_dirs, split, portable), batch_size
+            )
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
                 # Convert batch fields to PyArrow format

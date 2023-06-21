@@ -55,16 +55,16 @@ class ImageLoader(DataLoader):
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
 
-    def get_row(
+    def import_row(
         self,
         input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
     ) -> Generator[dict]:
-        """Process dataset row for a given split
+        """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Dataset input directories
+            input_dirs (dict[str, Path]): Input directories
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
