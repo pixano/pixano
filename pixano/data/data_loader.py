@@ -406,6 +406,14 @@ class DataLoader(ABC):
         # Create preview.png
         self.create_preview(import_dir)
 
+        # Move media directories if portable
+        if portable:
+            for field in tqdm(self.schema, desc=f"Moving media directories"):
+                if arrow_types.is_image_type(field.type):
+                    field_dir = import_dir / "media" / field.name
+                    field_dir.mkdir(parents=True, exist_ok=True)
+                    input_dirs[field.name].rename(field_dir)
+
         # Create stats
         self.create_stats(import_dir)
 
