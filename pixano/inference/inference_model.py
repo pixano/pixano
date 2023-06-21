@@ -135,7 +135,7 @@ class InferenceModel(ABC):
 
         # Create URI prefix
         media_dir = input_dir / "media"
-        uri_prefix = f"file://{media_dir.absolute()}"
+        uri_prefix = media_dir.absolute().as_uri()
 
         # If splits provided, check if they exist
         splits = [f"split={s}" for s in splits if not s.startswith("split=")]

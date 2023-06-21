@@ -83,7 +83,7 @@ def get_item_details(
         if arrow_types.is_image_type(field.type):
             # Image
             image = item[field.name]
-            image.uri_prefix = f"file://{media_dir.absolute()}"
+            image.uri_prefix = media_dir.absolute().as_uri()
 
             # Objects IDs
             ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]

@@ -99,7 +99,7 @@ class DOTALoader(DataLoader):
             im_uri = (
                 f"image/{split}/{im_path.name}"
                 if portable
-                else f"file://{im_path.absolute()}"
+                else im_path.absolute().as_uri()
             )
 
             # Fill row with ID, image, and list of image annotations
