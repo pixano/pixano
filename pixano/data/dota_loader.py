@@ -106,7 +106,7 @@ class DOTALoader(DataLoader):
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
-                    "image": arrow_types.Image(im_uri, None, im_thumb).dict(),
+                    "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
                     "objects": [
                         arrow_types.ObjectAnnotation(
                             id=shortuuid.uuid(),

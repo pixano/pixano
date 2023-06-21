@@ -93,7 +93,7 @@ class ImageLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": im_path.name,
-                "image": arrow_types.Image(im_uri, None, im_thumb).dict(),
+                "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),

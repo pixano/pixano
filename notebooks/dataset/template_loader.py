@@ -96,7 +96,7 @@ class TemplateLoader(DataLoader):
             ##### Fill row with ID, image, and list of annotations #####
             row = {
                 "id": im_path.stem,
-                "image": arrow_types.Image(im_uri, None, im_thumb).dict(),
+                "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),

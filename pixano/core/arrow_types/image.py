@@ -188,7 +188,7 @@ class Image:
         im_bytes = self._preview_bytes if preview else self.bytes
         return IPyImage(url=_bytes_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
-    def dict(self) -> dict:
+    def to_dict(self) -> dict:
         """Return image attributes as dict
 
         Returns:
