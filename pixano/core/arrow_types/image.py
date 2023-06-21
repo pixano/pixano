@@ -58,7 +58,7 @@ class Image:
         preview_bytes: bytes = None,
         uri_prefix: str = None,
     ):
-        """Creates image from UIR, bytes and preview
+        """Initialize image from URI or bytes
 
         Attributes:
             uri (str): Image URI
