@@ -270,7 +270,7 @@ class DataLoader(ABC):
                     total=dataset.count_rows(),
                 ):
                     # Open image
-                    im = row[field.name][0].as_py(uri_prefix).as_pillow()
+                    im = row[field.name][0].as_py(uri_prefix)
                     im_w, im_h = im.size
                     # Compute image features
                     aspect_ratio = round(im_w / im_h, 1)
@@ -470,13 +470,13 @@ class DataLoader(ABC):
                         # If column has images
                         if arrow_types.is_image_type(field.type):
                             # Open image
-                            image = row[field.name][0].as_py(uri_prefix)
-                            im_w, im_h = image.as_pillow().size
+                            im = row[field.name][0].as_py(uri_prefix)
+                            im_w, im_h = im.size
                             # Append image info
                             images.append(
                                 {
                                     "license": 1,
-                                    "file_name": image.uri,
+                                    "file_name": im.uri,
                                     "height": im_h,
                                     "width": im_w,
                                     "id": row["id"][0].as_py(),

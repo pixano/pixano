@@ -141,11 +141,20 @@ class Image:
             # No URI prefix
             else:
                 raise Exception(
-                    "Cannot open image with relative URI without a URI prefix."
+                    "Cannot create URI from a relative path without a URI prefix."
                 )
         # Complete URI
         else:
             return self._uri
+
+    @property
+    def size(self) -> list[int]:
+        """Return image size
+
+        Returns:
+            list[int]: Image size
+        """
+        return self.as_pillow().size
 
     def open(self) -> IO:
         """Open image
