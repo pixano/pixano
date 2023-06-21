@@ -185,15 +185,8 @@ class Image:
             IPython.core.display.Image: Image as IPython Display
         """
 
-        if preview:
-            data = self._preview_bytes
-        else:
-            data = self._bytes
-
-        inferred_format = IPyImage(data).format
-        encoded = base64.b64encode(data).decode("utf-8")
-        url = f"data:image;base64,{encoded}"
-        return IPyImage(url=url, format=inferred_format)
+        im_bytes = self._preview_bytes if preview else self.bytes
+        return IPyImage(url=_bytes_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
 
 class ImageType(pa.ExtensionType):
