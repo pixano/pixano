@@ -12,12 +12,13 @@
 # http://www.cecill.info
 
 from typing import Optional
+from attr import field, fields
 
 import pyarrow as pa
 
-from .bbox import BBoxType
-from .compressedRLE import CompressedRLEType
-from .pose import PoseType
+from .bbox import BBox, BBoxType
+from .pose import Pose, PoseType
+from .compressedRLE import CompressedRLE, CompressedRLEType
 
 # ------------------------------------------------
 #             Python type
@@ -49,16 +50,16 @@ class ObjectAnnotation:
         self,
         id: str,
         view_id: Optional[str] = None,
-        bbox: Optional[list[float]] = [0] * 4,
+        bbox: Optional[BBox] = [0] * 4,
         bbox_source: Optional[str] = None,
         bbox_confidence: Optional[float] = None,
         is_group_of: Optional[bool] = None,
         is_difficult: Optional[bool] = None,
         is_truncated: Optional[bool] = None,
-        mask: Optional[dict] = None,
+        mask: Optional[CompressedRLE] = None,
         mask_source: Optional[str] = None,
         area: Optional[float] = None,
-        pose: Optional[dict[str, list[float]]] = {
+        pose: Optional[Pose] = {
             "cam_R_m2c": [0] * 9,
             "cam_t_m2c": [0] * 3,
         },
@@ -87,16 +88,16 @@ class ObjectAnnotation:
         annotation_dict = {
             "id": self.id,
             "view_id": self.view_id,
-            "bbox": self.bbox,
+            "bbox": self.bbox.to_dict(),
             "bbox_source": self.bbox_source,
             "bbox_confidence": self.bbox_confidence,
             "is_group_of": self.is_group_of,
             "is_difficult": self.is_difficult,
             "is_truncated": self.is_truncated,
-            "mask": self.mask,
+            "mask": self.mask.to_dict(),
             "mask_source": self.mask_source,
             "area": self.area,
-            "pose": self.pose,
+            "pose": self.pose.to_dict(),
             "category_id": self.category_id,
             "category_name": self.category_name,
             "identity": self.identity,
@@ -182,7 +183,10 @@ class ObjectAnnotationArray(pa.ExtensionArray):
             objectAnnotation.to_dict() for objectAnnotation in objectAnnotation_list
         ]
 
-        return pa.array(objectAnnotation_dicts, ObjectAnnotationType())
+        array = pa.struct()
+
+        arr = pa.StructArray.from_arrays(objectAnnotation_dicts, ["ObjectAnnotation"])
+        return arr
 
 
 def is_objectAnnotation_type(t: pa.DataType) -> bool:

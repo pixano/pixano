@@ -12,11 +12,17 @@
 # http://www.cecill.info
 
 import unittest
-from matplotlib.pyplot import cla
 
 import numpy as np
 
-from pixano.core.arrow_types import BBox, Image, CompressedRLE, Embedding, Pose, ObjectAnnotation
+from pixano.core.arrow_types import (
+    BBox,
+    CompressedRLE,
+    Embedding,
+    Image,
+    ObjectAnnotation,
+    Pose,
+)
 
 
 class BBoxTestCase(unittest.TestCase):

@@ -13,22 +13,22 @@
 
 import pyarrow as pa
 
-from .bbox import BBox, BBoxType, BBoxArray, is_bbox_type
+from .bbox import BBox, BBoxArray, BBoxType, is_bbox_type
 from .compressedRLE import (
     CompressedRLE,
-    CompressedRLEType,
     CompressedRLEArray,
+    CompressedRLEType,
     is_compressedRLE_type,
 )
-from .embedding import Embedding, EmbeddingType, EmbeddingArray, is_embedding_type
-from .image import Image, ImageType, ImageArray, is_image_type
+from .embedding import Embedding, EmbeddingArray, EmbeddingType, is_embedding_type
+from .image import Image, ImageArray, ImageType, is_image_type
 from .objectAnnotation import (
     ObjectAnnotation,
-    ObjectAnnotationType,
     ObjectAnnotationArray,
+    ObjectAnnotationType,
     is_objectAnnotation_type,
 )
-from .pose import Pose, PoseType, PoseArray, is_pose_type
+from .pose import Pose, PoseArray, PoseType, is_pose_type
 
 __all__ = [
     "BBox",

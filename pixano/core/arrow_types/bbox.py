@@ -15,7 +15,6 @@ import pyarrow as pa
 
 from pixano.transforms.boxes import normalize, xywh_to_xyxy, xyxy_to_xywh
 
-
 # ------------------------------------------------
 #             Python type
 # ------------------------------------------------
@@ -26,7 +25,7 @@ class BBox:
 
     Attributes:
         _coords (list[float]): List of coordinates in given format
-        _format (str): Coordinates format, 'xyxy' or 'xywh'. Defaults to 'xyxy'.
+        _format (str): Coordinates format, 'xyxy' or 'xywh'.
         _is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
     """
 
@@ -35,7 +34,7 @@ class BBox:
 
         Args:
             coords (list[float]): List of coordinates in given format
-            format (str): Coordinates format, 'xyxy' or 'xywh'. Defaults to 'xyxy'.
+            format (str): Coordinates format, 'xyxy' or 'xywh'.
             is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
         """
 
@@ -135,7 +134,7 @@ class BBox:
 
         self._coords = normalize(self._coords, height, width)
 
-    def to_dict(self) -> dict[list[float], bool, str]:
+    def to_dict(self) -> dict:
         return {
             "coords": self._coords,
             "is_normalized": self._is_normalized,

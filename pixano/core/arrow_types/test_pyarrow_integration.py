@@ -21,10 +21,12 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-from pixano.core.arrow_types import *
 from PIL import Image as pilImage
 
 from pixano.transforms import image_to_binary
+
+from . import *
+
 
 class TestParquetBBox(unittest.TestCase):
     def setUp(self) -> None:
@@ -64,9 +66,7 @@ class TestParquetBBox(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(
-            ["make", "clean"]
-        )  # comment here for not cleaning parquet file after test
+        # subprocess.run(["make", "clean"])  # comment here for not cleaning parquet file after test
         None
 
 
@@ -96,9 +96,7 @@ class TestParquetImage(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(
-            ["make", "clean"]
-        )  # comment here for not cleaning parquet file after test
+        # subprocess.run(["make", "clean"])  # comment here for not cleaning parquet file after test
         None
 
 
@@ -129,9 +127,7 @@ class TestParquetPose(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(
-            ["make", "clean"]
-        )  # comment here for not cleaning parquet file after test
+        # subprocess.run(["make", "clean"])  # comment here for not cleaning parquet file after test
         None
 
 
@@ -162,7 +158,73 @@ class TestParquetCompressedRLE(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        subprocess.run(
-            ["make", "clean"]
-        )  # comment here for not cleaning parquet file after test
+        # subprocess.run(["make", "clean"])  # comment here for not cleaning parquet file after test
+        None
+
+
+class TestParquetObjectAnnotation(unittest.TestCase):
+    def setUp(self) -> None:
+        self.object_annotations_list = [
+            ObjectAnnotation(
+                id="annotation_001",
+                view_id="image",
+                bbox=BBox.from_xyxy([10, 20, 50, 40]),
+                bbox_source="manual",
+                bbox_confidence=0.9,
+                is_group_of=False,
+                is_difficult=False,
+                is_truncated=False,
+                mask=CompressedRLE([2, 4], None),
+                mask_source="manual",
+                area=200.0,
+                pose=Pose(
+                    [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [1.0, 2.0, 3.0]
+                ),
+                category_id=1,
+                category_name="person",
+                identity="John Doe",
+            ),
+            ObjectAnnotation(
+                id="annotation_002",
+                view_id="image",
+                bbox=BBox.from_xyxy([20, 30, 60, 50]),
+                bbox_source="manual",
+                bbox_confidence=0.8,
+                is_group_of=False,
+                is_difficult=False,
+                is_truncated=False,
+                mask=CompressedRLE([1, 1], None),
+                mask_source="manual",
+                area=300.0,
+                pose=Pose(
+                    [0.1, 0.1, 0.1, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [1.0, 1.0, 1.0]
+                ),
+                category_id=2,
+                category_name="car",
+                identity=None,
+            ),
+        ]
+
+    def test_object_annotation_table(self):
+        object_annotation_array = ObjectAnnotationArray.from_ObjectAnnotation_list(
+            self.object_annotations_list
+        )
+
+        schema = pa.schema(
+            [
+                pa.field("objectAnnotation", ObjectAnnotationType()),
+            ]
+        )
+
+        table = pa.Table.from_arrays([object_annotation_array], schema=schema)
+        pq.write_table(table, "test_object_annotation.parquet", store_schema=True)
+        re_table = pq.read_table("test_object_annotation.parquet")
+
+        self.assertEqual(re_table.column_names, ["objectAnnotation"])
+        objectAnnotation1 = re_table.take([0])["compressedRLE"][0].as_py()
+        self.assertTrue(isinstance(objectAnnotation1, ObjectAnnotation))
+
+    @classmethod
+    def tearDownClass(cls):
+        # subprocess.run(["make", "clean"])  # comment here for not cleaning parquet file after test
         None
