@@ -188,6 +188,19 @@ class Image:
         im_bytes = self._preview_bytes if preview else self.bytes
         return IPyImage(url=_bytes_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
+    def dict(self) -> dict:
+        """Return image attributes as dict
+
+        Returns:
+            dict: Image attributes
+        """
+
+        return {
+            "uri": self._uri,
+            "bytes": self._bytes,
+            "preview_bytes": self._preview_bytes,
+        }
+
 
 class ImageType(pa.ExtensionType):
     """Externalized image type containing the URI string in UTF-8"""

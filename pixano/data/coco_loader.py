@@ -100,10 +100,7 @@ class COCOLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": str(im["id"]),
-                "image": {
-                    "uri": im_uri,
-                    "preview_bytes": im_thumb,
-                },
+                "image": arrow_types.Image(im_uri, None, im_thumb),
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=str(ann["id"]),
