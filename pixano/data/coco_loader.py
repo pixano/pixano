@@ -171,14 +171,33 @@ class COCOLoader(DataLoader):
             files = sorted((input_dir / "db" / split).glob("*.parquet"))
             split_name = split.replace("split=", "")
 
+            # Create COCO json
+            coco_json = {
+                "info": {
+                    "description": input_info.name,
+                    "url": "N/A",
+                    "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
+                    "year": datetime.date.today().year,
+                    "contributor": "Exported from Pixano",
+                    "date_created": datetime.date.today().isoformat(),
+                },
+                "licences": [
+                    {
+                        "url": "N/A",
+                        "id": 1,
+                        "name": "Unknown",
+                    },
+                ],
+                "images": [],
+                "annotations": [],
+                "categories": [],
+            }
+
             # Iterate on files
             for file in tqdm(files, desc=f"Processing {split_name} split", position=0):
                 # Load file into rows
                 table = pq.read_table(file)
                 rows = table.to_batches(max_chunksize=1)
-                images = []
-                annotations = []
-                categories = []
                 seen_category_ids = []
 
                 # Iterate on rows
@@ -195,7 +214,7 @@ class COCOLoader(DataLoader):
                             im = row[field.name][0].as_py(uri_prefix)
                             im_w, im_h = im.size
                             # Append image info
-                            images.append(
+                            coco_json["images"].append(
                                 {
                                     "license": 1,
                                     "file_name": im.uri,
@@ -210,7 +229,7 @@ class COCOLoader(DataLoader):
                             row_anns = row["objects"][0].as_py()
                             for row_ann in row_anns:
                                 # Append annotation
-                                annotations.append(
+                                coco_json["annotations"].append(
                                     {
                                         "segmentation": rle_to_urle(row_ann["mask"]),
                                         "area": row_ann["area"],
@@ -226,7 +245,7 @@ class COCOLoader(DataLoader):
                                 )
                                 # Append category if not seen yet
                                 if row_ann["category_id"] not in seen_category_ids:
-                                    categories.append(
+                                    coco_json["categories"].append(
                                         {
                                             "supercategory": "N/A",
                                             "id": row_ann["category_id"],
@@ -234,32 +253,6 @@ class COCOLoader(DataLoader):
                                         },
                                     )
                                     seen_category_ids.append(row_ann["category_id"])
-
-            # Create COCO info fields
-            coco_info = {
-                "description": input_info.name,
-                "url": "N/A",
-                "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
-                "year": datetime.date.today().year,
-                "contributor": "Exported from Pixano",
-                "date_created": datetime.date.today().isoformat(),
-            }
-            coco_licences = [
-                {
-                    "url": "N/A",
-                    "id": 1,
-                    "name": "Unknown",
-                },
-            ]
-
-            # Create COCO json
-            coco_json = {
-                "info": coco_info,
-                "licences": coco_licences,
-                "images": images,
-                "annotations": annotations,
-                "categories": categories,
-            }
 
             # Save COCO json
             with open(export_dir / f"instances_{split_name}.json", "w") as f:
