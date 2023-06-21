@@ -104,11 +104,12 @@ class DataLoader(ABC):
             pa.schema([("split", pa.string())]), flavor="hive"
         )
 
-    def create_json(self, import_dir: Path):
+    def create_json(self, import_dir: Path, categories: list[dict] = []):
         """Create dataset spec.json
 
         Args:
             import_dir (Path): Import directory
+            categories (list[dict], optional): Dataset categories. Defaults to [].
         """
 
         with tqdm(desc="Creating dataset info file", total=1) as progress:
@@ -117,6 +118,10 @@ class DataLoader(ABC):
 
             # Check number of rows in the created dataset
             self.info.num_elements = dataset.count_rows()
+
+            # Add categories
+            if categories:
+                self.info.categories = categories
 
             # Create spec.json
             with open(import_dir / "spec.json", "w") as f:
@@ -373,6 +378,10 @@ class DataLoader(ABC):
             if not any(source_path.iterdir()):
                 raise Exception(f"{source_path} is empty.")
 
+        # Dataset categories
+        categories = []
+        seen_category_ids = []
+
         # Iterate on splits
         for split in self.splits:
             batches = _batch_dict(
@@ -380,6 +389,23 @@ class DataLoader(ABC):
             )
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
+                # Append category if not seen yet
+                for row in batch:
+                    for field in self.schema:
+                        # If column has annotations
+                        # TODO: Change to checking type when ObjectAnnotationType is rebuilt
+                        if field.name == "objects":
+                            for row_ann in row[field.name]:
+                                if row_ann["category_id"] not in seen_category_ids:
+                                    categories.append(
+                                        {
+                                            "supercategory": "N/A",
+                                            "id": row_ann["category_id"],
+                                            "name": row_ann["category_name"],
+                                        },
+                                    )
+                                    seen_category_ids.append(row_ann["category_id"])
+
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
@@ -401,7 +427,7 @@ class DataLoader(ABC):
                 )
 
         # Create spec.json
-        self.create_json(import_dir)
+        self.create_json(import_dir, categories)
 
         # Create preview.png
         self.create_preview(import_dir)
