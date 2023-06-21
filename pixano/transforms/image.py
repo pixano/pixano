@@ -139,7 +139,7 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
         rle = polygons_to_rle(mask, height, width)
     elif isinstance(mask, dict):
         if isinstance(mask["counts"], list):
-            rle = urle_to_rle(mask, height, width)
+            rle = urle_to_rle(mask)
         else:
             rle = mask
     else:
@@ -257,18 +257,17 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
     return res, has_holes
 
 
-def urle_to_rle(urle: dict, height: int, width: int) -> dict:
+def urle_to_rle(urle: dict) -> dict:
     """Encode mask from uncompressed RLE to RLE
 
     Args:
         urle (dict): Mask as uncompressed RLE
-        height (int): Image height
-        width (int): Image width
 
     Returns:
         dict: Mask as RLE
     """
 
+    height, width = urle["size"]
     return mask_api.frPyObjects(urle, height, width)
 
 
