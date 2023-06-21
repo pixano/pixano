@@ -33,6 +33,7 @@ from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
 from pixano.core import DatasetInfo, arrow_types
+from pixano.transforms import denormalize, rle_to_urle
 
 
 def _batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
@@ -430,7 +431,7 @@ class DataLoader(ABC):
         uri_prefix = media_dir.absolute().as_uri()
 
         # If splits provided, check if they exist
-        splits = [f"split={s}" for s in splits if not s.startswith("split=")]
+        splits = [f"split={s}" for s in self.splits if not s.startswith("split=")]
         for split in splits:
             split_dir = input_dir / "db" / split
             if not Path.exists(split_dir):
@@ -442,18 +443,10 @@ class DataLoader(ABC):
         if splits == []:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
-        # Create annotations directory
-        ann_dir = export_dir / ann_dir
-        ann_dir.mkdir(parents=True, exist_ok=True)
-
         # Iterate on splits
         for split in splits:
             # List dataset files
-            files = sorted((self.input_dir / "db" / split).glob("*.parquet"))
-
-            # Create split directory
-            split_dir = export_dir / split
-            split_dir.mkdir(parents=True, exist_ok=True)
+            files = sorted((input_dir / "db" / split).glob("*.parquet"))
             split_name = split.replace("split=", "")
 
             # Iterate on files
@@ -477,13 +470,13 @@ class DataLoader(ABC):
                         # If column has images
                         if arrow_types.is_image_type(field.type):
                             # Open image
-                            im = row[field.name][0].as_py(uri_prefix).as_pillow()
-                            im_w, im_h = im.size
+                            image = row[field.name][0].as_py(uri_prefix)
+                            im_w, im_h = image.as_pillow().size
                             # Append image info
                             images.append(
                                 {
                                     "license": 1,
-                                    "file_name": im.uri,
+                                    "file_name": image.uri,
                                     "height": im_h,
                                     "width": im_w,
                                     "id": row["id"][0].as_py(),
@@ -497,11 +490,13 @@ class DataLoader(ABC):
                                 # Append annotation
                                 annotations.append(
                                     {
-                                        "segmentation": row_ann["mask"],
+                                        "segmentation": rle_to_urle(row_ann["mask"]),
                                         "area": row_ann["area"],
                                         "iscrowd": 0,
                                         "image_id": row["id"][0].as_py(),
-                                        "bbox": row_ann["bbox"],
+                                        "bbox": denormalize(
+                                            row_ann["bbox"], *row_ann["mask"]["size"]
+                                        ),
                                         "category_id": row_ann["category_id"],
                                         "category_name": row_ann["category_name"],
                                         "id": row_ann["id"],
@@ -522,10 +517,10 @@ class DataLoader(ABC):
             coco_info = {
                 "description": input_info.name,
                 "url": "N/A",
-                "version": f"v{datetime.now().strftime('%y%m%d.%H%M%S')}",
+                "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
                 "year": datetime.date.today().year,
                 "contributor": "Exported from Pixano",
-                "date_created": datetime.date.today().isoformat,
+                "date_created": datetime.date.today().isoformat(),
             }
             coco_licences = [
                 {
@@ -545,5 +540,5 @@ class DataLoader(ABC):
             }
 
             # Save COCO json
-            with open(ann_dir / f"instances_{split_name}.json", "w") as f:
+            with open(export_dir / f"instances_{split_name}.json", "w") as f:
                 json.dump(coco_json, f)
