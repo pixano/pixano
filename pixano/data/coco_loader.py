@@ -15,6 +15,7 @@ import json
 from collections import defaultdict
 from collections.abc import Generator
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pyarrow as pa
 
@@ -85,11 +86,16 @@ class COCOLoader(DataLoader):
         for im in sorted(coco_instances["images"], key=lambda x: x["id"]):
             # Load image annotations
             im_anns = annotations[im["id"]]
-            # Load image directory
-            im_path = input_dirs["image"] / split / im["file_name"]
+            # Load image
+            file_name_uri = urlparse(im["file_name"])
+            if file_name_uri.scheme == "":
+                im_path = input_dirs["image"] / split / im["file_name"]
+            else:
+                im_path = Path(file_name_uri.path)
 
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())
+
             # Set image URI
             im_uri = (
                 f"image/{split}/{im_path.name}"
