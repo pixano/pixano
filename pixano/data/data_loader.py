@@ -268,18 +268,15 @@ class DataLoader(ABC):
                     desc=f"Computing {field.name} stats",
                     total=dataset.count_rows(),
                 ):
-                    row = row.to_pydict()
                     # Open image
-                    image = row[field.name][0]
-                    image.uri_prefix = uri_prefix
-                    im = image.as_pillow()
+                    im = row[field.name][0].as_py(uri_prefix).as_pillow()
                     im_w, im_h = im.size
                     # Compute image features
                     aspect_ratio = round(im_w / im_h, 1)
                     features.append(
                         {
                             f"{field.name} - aspect ratio": aspect_ratio,
-                            "split": row["split"][0],
+                            "split": row["split"][0].as_py(),
                         }
                     )
                 features_df = pd.DataFrame.from_records(features).astype(
@@ -476,29 +473,26 @@ class DataLoader(ABC):
                     total=table.num_rows,
                     position=1,
                 ):
-                    row = row.to_pydict()
                     for field in self.schema:
                         # If column has images
                         if arrow_types.is_image_type(field.type):
                             # Open image
-                            image = row[field.name][0]
-                            image.uri_prefix = uri_prefix
-                            im = image.as_pillow()
+                            im = row[field.name][0].as_py(uri_prefix).as_pillow()
                             im_w, im_h = im.size
                             # Append image info
                             images.append(
                                 {
                                     "license": 1,
-                                    "file_name": image.uri,
+                                    "file_name": im.uri,
                                     "height": im_h,
                                     "width": im_w,
-                                    "id": str(row["id"][0]),
+                                    "id": row["id"][0].as_py(),
                                 }
                             )
                         # If column has annotations
                         # TODO: Change to checking type when ObjectAnnotationType is rebuilt
                         elif field.name == "objects":
-                            row_anns = row["objects"][0]
+                            row_anns = row["objects"][0].as_py()
                             for row_ann in row_anns:
                                 # Append annotation
                                 annotations.append(
@@ -506,7 +500,7 @@ class DataLoader(ABC):
                                         "segmentation": row_ann["mask"],
                                         "area": row_ann["area"],
                                         "iscrowd": 0,
-                                        "image_id": str(row["id"][0]),
+                                        "image_id": row["id"][0].as_py(),
                                         "bbox": row_ann["bbox"],
                                         "category_id": row_ann["category_id"],
                                         "category_name": row_ann["category_name"],

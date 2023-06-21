@@ -229,11 +229,12 @@ class ImageType(pa.ExtensionType):
 
 
 class ImageScalar(pa.ExtensionScalar):
-    def as_py(self) -> Image:
+    def as_py(self, uri_prefix: str = None) -> Image:
         return Image(
             self.value["uri"].as_py(),
             self.value["bytes"].as_py(),
             self.value["preview_bytes"].as_py(),
+            uri_prefix,
         )
 
 
