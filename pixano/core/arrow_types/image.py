@@ -116,7 +116,7 @@ class Image:
             str: Image preview URL
         """
 
-        return _bytes_to_url(self.preview_url)
+        return _bytes_to_url(self._preview_bytes)
 
     @property
     def uri(self) -> str:
