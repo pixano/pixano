@@ -105,10 +105,10 @@ class COCOLoader(DataLoader):
                     arrow_types.ObjectAnnotation(
                         id=str(ann["id"]),
                         view_id="image",
-                        area=float(ann["area"]),
+                        area=float(ann["area"]) if ann["area"] else None,
                         bbox=normalize(ann["bbox"], im["height"], im["width"]),
                         mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
-                        is_group_of=bool(ann["iscrowd"]),
+                        is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
                     ).dict()
