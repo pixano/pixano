@@ -13,6 +13,10 @@
 
 import pyarrow as pa
 
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
 
 class CompressedRLE:
     def __init__(self, size: list[float], counts: bytes):
@@ -34,6 +38,11 @@ class CompressedRLE:
             dict[list[float], list[float]]: dict containing "size" and "counts"
         """
         return {"size": self.size, "counts": self.counts}
+
+
+# ------------------------------------------------
+#             Py arrow integration
+# ------------------------------------------------
 
 
 class CompressedRLEType(pa.ExtensionType):

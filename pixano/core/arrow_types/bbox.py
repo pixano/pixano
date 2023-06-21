@@ -16,6 +16,11 @@ import pyarrow as pa
 from pixano.transforms.boxes import normalize, xywh_to_xyxy, xyxy_to_xywh
 
 
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
+
 class BBox:
     """Bounding box type using coordinates in xyxy or xywh format
 
@@ -136,6 +141,11 @@ class BBox:
             "is_normalized": self._is_normalized,
             "format": self._format,
         }
+
+
+# ------------------------------------------------
+#             Py arrow integration
+# ------------------------------------------------
 
 
 class BBoxType(pa.ExtensionType):

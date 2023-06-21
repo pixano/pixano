@@ -1,5 +1,9 @@
 import pyarrow as pa
 
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
 
 class Embedding:
     def __init__(self, embedding) -> None:
@@ -7,6 +11,11 @@ class Embedding:
 
     def to_dict(self) -> dict[bytes]:
         return {"embedding": self._embedding}
+
+
+# ------------------------------------------------
+#             Py arrow integration
+# ------------------------------------------------
 
 
 class EmbeddingType(pa.ExtensionType):

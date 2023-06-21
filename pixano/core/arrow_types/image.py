@@ -17,6 +17,10 @@ from typing import IO
 import pyarrow as pa
 from etils import epath
 
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
 
 class Image:
     """Image type using URI or bytes
@@ -141,6 +145,11 @@ class Image:
             "bytes": self._bytes,
             "preview_bytes": self._preview_bytes,
         }
+
+
+# ------------------------------------------------
+#             Py arrow integration
+# ------------------------------------------------
 
 
 class ImageType(pa.ExtensionType):

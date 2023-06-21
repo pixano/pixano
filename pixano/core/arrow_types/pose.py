@@ -13,6 +13,10 @@
 
 import pyarrow as pa
 
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
 
 class Pose:
     """Pose type using orientation and translation matrices
@@ -60,6 +64,11 @@ class Pose:
             dict[list[float], list[float]]: dict containing "cam_R_m2c" and "cam_t_m2c"
         """
         return {"cam_R_m2c": self.cam_R_m2c, "cam_t_m2c": self.cam_t_m2c}
+
+
+# ------------------------------------------------
+#             Py arrow integration
+# ------------------------------------------------
 
 
 class PoseType(pa.ExtensionType):
