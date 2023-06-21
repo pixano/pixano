@@ -169,7 +169,7 @@ class InferenceModel(ABC):
 
         # Iterate on splits
         for split in splits:
-            # List dataset files
+            # List split files
             files = sorted((input_dir / "db" / split).glob("*.parquet"))
 
             # Create output split directory
