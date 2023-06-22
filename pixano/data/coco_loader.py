@@ -254,6 +254,11 @@ class COCOLoader(DataLoader):
                                     )
                                     seen_category_ids.append(row_ann["category_id"])
 
+            # Sort categories
+            coco_json["categories"] = sorted(
+                coco_json["categories"], key=lambda c: c["id"]
+            )
+
             # Save COCO json
             with open(export_dir / f"instances_{split_name}.json", "w") as f:
                 json.dump(coco_json, f)

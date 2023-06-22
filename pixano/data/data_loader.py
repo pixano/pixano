@@ -426,6 +426,9 @@ class DataLoader(ABC):
                     partitioning=self.partitioning,
                 )
 
+        # Sort categories
+        categories = sorted(categories, key=lambda c: c["id"])
+
         # Create spec.json
         self.create_json(import_dir, categories)
 
