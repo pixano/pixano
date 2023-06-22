@@ -138,18 +138,18 @@ class InferenceModel(ABC):
         media_dir = input_dir / "media"
         uri_prefix = media_dir.absolute().as_uri()
 
-        # If splits provided, check if they exist
-        splits = [f"split={s}" for s in splits if not s.startswith("split=")]
-        for split in splits:
-            split_dir = input_dir / "db" / split
-            if not Path.exists(split_dir):
-                raise Exception(f"{split_dir} does not exist.")
-            if not any(split_dir.iterdir()):
-                raise Exception(f"{split_dir} is empty.")
-
         # If no splits provided, select all splits
         if not splits:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
+        # Else, if splits provided, check if they exist
+        else:
+            splits = [f"split={s}" for s in splits if not s.startswith("split=")]
+            for split in splits:
+                split_dir = input_dir / "db" / split
+                if not Path.exists(split_dir):
+                    raise Exception(f"{split_dir} does not exist.")
+                if not any(split_dir.iterdir()):
+                    raise Exception(f"{split_dir} is empty.")
 
         # Create schema
         fields = [pa.field("id", pa.string())]
