@@ -234,6 +234,7 @@ class COCOLoader(DataLoader):
                             row_anns = row["objects"][0].as_py()
                             for row_ann in row_anns:
                                 # Append annotation
+                                # TODO: Find solution for bbox denormalization when no masks
                                 coco_json["annotations"].append(
                                     {
                                         "segmentation": rle_to_urle(row_ann["mask"]),
