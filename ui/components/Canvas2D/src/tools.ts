@@ -22,6 +22,7 @@ export enum ToolType {
 interface Tool {
   type: ToolType;
   icon: string;
+  cursor: string;
   onSelect: () => void;
   postProcessor: any;
 }
@@ -70,15 +71,16 @@ export function createLabeledPointTool(label: number): LabeledPointTool {
     type: ToolType.LabeledPoint,
     label: label,
     icon: getIcon(ToolType.LabeledPoint, label),
+    cursor: "crosshair",
   } as LabeledPointTool;
 }
 
 export function createRectangleTool(): RectangleTool {
-  return { type: ToolType.Rectangle, icon: getIcon(ToolType.Rectangle) } as RectangleTool;
+  return { type: ToolType.Rectangle, icon: getIcon(ToolType.Rectangle), cursor: "crosshair" } as RectangleTool;
 }
 
 export function createPanTool(): PanTool {
-  return { type: ToolType.Pan, icon: getIcon(ToolType.Pan) } as PanTool;
+  return { type: ToolType.Pan, icon: getIcon(ToolType.Pan), cursor: "move" } as PanTool;
 }
 
 export type { Tool, LabeledPointTool, RectangleTool, PanTool };

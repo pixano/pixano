@@ -28,7 +28,7 @@
     ToolType,
     createMultiModalTool,
   } from "../../../../components/Canvas2D/src/tools";
-  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "../../../../components/Canvas2D/src/interfaces";
+  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
   import { interactiveSegmenterModel } from "../stores";
@@ -78,9 +78,9 @@
     if (event.key === "Enter" || event.keyCode === 13) handleValidate();
   }
 
-  function addAnnotation(className: string, id: string) {
+  function addAnnotation(className: string, id: string, viewId: string) {
     // Check if the class already exists in the annotation array
-    const existingClass = annotations.find((obj) => obj.category === className);
+    const existingClass = annotations.find((obj) => (obj.category_name === className) && (obj.viewId === viewId));
 
     // Add the class to the default class list if it doesn't already exist.
     if (!classes.some((cls) => cls.name === className)) {
@@ -92,11 +92,12 @@
 
     if (existingClass) {
       // Set item name
-      const annotation: ItemLabel = {
+      const annotation: AnnLabel = {
         id: id,
+        type: "??",  //TODO put annotation type (bbox/mask)
         label: `${className}-${existingClass.items.length}`,
         visible : true,
-        opacity: 0.5,
+        opacity: 1.0,
       };
 
       // If the class exists, add the item to its 'items' array
@@ -105,16 +106,18 @@
       existingClass.visible = true;
     } else {
       // Set item name
-      const annotation: ItemLabel = {
+      const annotation: AnnLabel = {
         id: id,
+        type: "??",  //TODO put annotation type (bbox/mask)
         label: `${className}-0`,
         visible: true,
-        opacity: 0.5,
+        opacity: 1.0,
       };
 
       // If the class doesn't exist, create a new object and add it to the annotation array
       const newClass: AnnotationsLabels = {
-        category: className,
+        viewId: viewId,
+        category_name: className,
         //category_id: "",  //TODO add a category_id ??
         items: [annotation],
         visible: true,
@@ -134,7 +137,7 @@
         return;
       }
 
-      addAnnotation(className, prediction.id);
+      addAnnotation(className, prediction.id, prediction.viewId);
 
       //validate
       prediction.validated = true;
@@ -145,8 +148,8 @@
     dispatch("saveAnns", {anns: annotations , masks: masksGT});
   }
 
-  function handleImageSelectedChange(img) {
-    itemData.imageURL = img.detail;
+  function handleImageSelectedChange(event) {
+    itemData.imageId = event.detail;
     masksGT = [];
     annotations = [];
     classes = [];
@@ -180,7 +183,7 @@
   }
 
   function handleVisibilityChange(item) {
-    const mask_to_toggle = masksGT.find(mask => mask.id === item.detail.id);
+    const mask_to_toggle = masksGT.find(mask => (mask.id === item.detail.id) && (mask.viewId === item.detail.viewId));
     mask_to_toggle.visible = item.detail.visible;
     //hack svelte to reflect changes
     masksGT = masksGT;
@@ -276,9 +279,8 @@
     <NavigationToolbar database={itemData.dbName} imageName={itemData.imageId} {handleCloseClick} {handleSaveClick} />
     <div class="flex grow">
       <Canvas2D
-        imageURL={itemData.imageURL}
         imageId={itemData.imageId}
-        viewId={itemData.viewId}
+        views={itemData.views}
         selectedTool={selectedAnnotationTool}
         {embedding}
         bind:prediction

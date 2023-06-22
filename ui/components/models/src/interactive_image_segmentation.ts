@@ -46,7 +46,7 @@ export interface InteractiveImageSegmenter {
 
 export interface InteractiveImageSegmenterOutput {
     id: string
-    view: string
+    viewId: string
     output: SegmentationResult  //??? or already transformed polygon ????
     input_points: Array<LabeledClick>
     input_box: Box

@@ -16,9 +16,8 @@
  
   import { onMount, beforeUpdate, afterUpdate } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "../../Canvas2D/src/interfaces";
+  import type { AnnotationsLabels } from "../../Canvas2D/src/interfaces";
   import * as Utils from "./utils";
-  //import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
 
   export let features = null;
   export let annotations: Array<AnnotationsLabels>;
@@ -37,12 +36,26 @@
   };
 
   // Filters
-  let maskOpacity: number = 0.5;
+  let maskOpacity: number = 1.0;
   let minConfidence: number = 0.5;
 
-
-  let categoriesFilter: Array<number> = [];
   let viewsFilter: Array<string> = [];
+
+
+  function updateConfidenceFilterEvent(event) {
+    updateConfidenceFilter(parseFloat(event.target.value));
+  }
+
+  function updateConfidenceFilter(confidence) {
+    for(let cat of annotations) {
+      for(let item of cat.items) {
+        if(item.confidence) {
+          item.visible = item.confidence >= confidence;
+        }
+      }
+    }
+    dispatch("toggleCatVis");
+  }
 
   // Change every mask opacity to match the desired value.
   function updateMasksOpacity() {
@@ -65,7 +78,7 @@
   function toggleCategoryVisibility(category: string) {
     let allVisible = true;
     for(let cat of annotations) {
-      if(cat.category === category) {
+      if(cat.category_name === category) {
         cat.visible = !cat.visible;
         let categoryButton = document.getElementById(`cat-${cat.category_id}`);
         if(cat.visible) {
@@ -83,7 +96,7 @@
     let allVis_elem = document.getElementById("toggle-items") as HTMLInputElement;
     allVis_elem.checked = allVisible;
 
-    dispatch("toggleCatVis", category);
+    dispatch("toggleCatVis");
     updateButtons();
   }
 
@@ -133,7 +146,7 @@
 
   // Update every konva element visibility
   function updateElementsVisibility() {
-    console.log("TODO: update visibility", categoriesFilter)
+    console.log("TODO: update visibility")
     /*
     stage.children.forEach((layer) => {
       // Set layers visibility
@@ -196,6 +209,7 @@
   onMount(() => {
     console.log("AnnInspector - onMount (anns):", annotations)
     console.log("AnnInspector - onMount (feats):", features)
+    updateConfidenceFilter(minConfidence);
   });
 
   beforeUpdate(() => {
@@ -310,7 +324,7 @@
         max="1"
         step="0.01"
         bind:value={minConfidence}
-        on:input={updateElementsVisibility}
+        on:input={updateConfidenceFilterEvent}
     />
     </div>
 

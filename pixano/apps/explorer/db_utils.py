@@ -91,7 +91,7 @@ def get_item_details(
             cats = [
                 {"id": obj["category_id"], "name": obj["category_name"]}
                 for obj in item["objects"]
-                if obj["view_id"] == field.name
+                if obj["view_id"] == field.name and obj["category_id"] is not None and obj["category_name"] is not None
             ]
             # Bounding boxes
             boxes = [
@@ -107,7 +107,7 @@ def get_item_details(
             masks = [
                 transforms.rle_to_urle(obj["mask"])
                 for obj in item["objects"]
-                if obj["view_id"] == field.name
+                if obj["view_id"] == field.name and obj["mask"] is not None
             ]
             # Add to features
             features["views"][field.name] = {

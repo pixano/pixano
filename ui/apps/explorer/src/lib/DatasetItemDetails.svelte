@@ -20,16 +20,10 @@
   //import { getItemDetails } from "./api";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import AnnotationInspector from "../../../../components/core/src/AnnotationInspector.svelte";
-  import type { ItemData, MaskGT, BBox, AnnotationsLabels, ItemLabel } from "../../../../components/Canvas2D/src/interfaces";
+  import type { ItemData, MaskGT, BBox, AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
 
-  import {
-    type Tool,
-    createPanTool,
-    ToolType,
-  } from "../../../../components/Canvas2D/src/tools";
+  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
 
-  //export let datasetId;
-  //export let rowIndex;
   export let itemData: ItemData;
   export let masksGT: Array<MaskGT>;
   export let bboxes: Array<BBox>;
@@ -83,7 +77,6 @@
   function handleMaskOpacity(event) {
     for(let mask of masksGT) {
       mask.opacity = getItemById(mask.id).opacity;
-      console.log("AA", mask.opacity);
     }
     masksGT = masksGT
   }
@@ -108,17 +101,14 @@
 
 <div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
   {#if itemData}
-    <!-- <ImageDetails {features} /> -->
     <Canvas2D
-      imageURL={itemData.imageURL}
       imageId={itemData.imageId}
-      viewId={itemData.viewId}
+      views={itemData.views}
       selectedTool={panTool}
       prediction={null}
       {masksGT}
       {bboxes}
     />
-    
     <AnnotationInspector
       {features}
       bind:annotations

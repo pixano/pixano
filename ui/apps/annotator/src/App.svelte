@@ -21,7 +21,7 @@
   import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "../../../components/Canvas2D/src/interfaces";
+  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel, ViewData } from "../../../components/Canvas2D/src/interfaces";
   import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
   import { SAM } from "../../../components/models/src/Sam";
   import * as ort from "onnxruntime-web";
@@ -57,15 +57,24 @@
   async function selectItem(event: CustomEvent) {
 
     showDetailsPage = true;
-    const itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
 
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
+    const start = Date.now();
+    const itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
+    console.log("so long ?? (ms)", Date.now() - start)
+    let views : Array<ViewData> = [];
+    for (let viewId of Object.keys(itemDetails.views)) {
+      let view : ViewData = {
+        viewId: viewId,
+        imageURL: itemDetails.views[viewId].image
+      };
+      views.push(view);
+    }
     selectedItem = {
       dbName: selectedDataset.name,
-      imageURL: itemDetails.views.image.image,
       imageId: event.detail.id,
-      viewId: "image",
+      views: views,
     };
     console.log("item loaded:", selectedItem);
 
@@ -74,62 +83,81 @@
     //predefined classes from spec.json "categories"
     classes = selectedDataset.categories
 
-    let struct_annotations = {}
-    let struct_cat_ids = {}
-    for (let i = 0; i < itemDetails.views.image.objects.id.length; ++i) {
-      const mask_rle = itemDetails.views.image.objects.segmentation[i];
-      const rle = mask_rle["counts"];
-      const size = mask_rle["size"];
-      const maskPolygons = generatePolygonSegments(rle, size[0]);
-      const masksSVG = convertSegmentsToSVG(maskPolygons);
+    let struct_views_categories = {}
+    for (let viewId of Object.keys(itemDetails.views)) {
+      let struct_categories = {}
 
-      masksGT.push({
-        id: itemDetails.views.image.objects.id[i],
-        mask: masksSVG,
-        rle: mask_rle,
-        visible: true,
-        opacity: 0.5,
-      });
-      if(itemDetails.views.image.objects.category[i].name in struct_annotations) {
-        const num = struct_annotations[itemDetails.views.image.objects.category[i].name].length;
-        const item : ItemLabel = {
-          id: itemDetails.views.image.objects.id[i],
-          label: itemDetails.views.image.objects.category[i].name+"-"+num,
-          visible: true,
-          opacity: 0.5,
-        }         
-        struct_annotations[itemDetails.views.image.objects.category[i].name].push(item);
-      } else {
-        const item : ItemLabel = {
-          id: itemDetails.views.image.objects.id[i],
-          label: itemDetails.views.image.objects.category[i].name+"-0",
-          visible: true,
-          opacity: 0.5,
-        }         
-        struct_annotations[itemDetails.views.image.objects.category[i].name] = [item]
-        struct_cat_ids[itemDetails.views.image.objects.category[i].name] = itemDetails.views.image.objects.category[i].id
+      for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
+
+        const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
+        const cat_name = itemDetails.views[viewId].objects.category[i].name;
+
+        // ensure all items goes in unique category (by name)
+        if(!struct_categories[cat_name]) {
+          let annotation : AnnotationsLabels = {
+            viewId: viewId,
+            category_name: cat_name,
+            category_id: itemDetails.views[viewId].objects.category[i].id,
+            items: [],
+            visible: true,
+          };
+          struct_categories[cat_name] = annotation;
+        }
+
+        if(mask_rle) {
+          const rle = mask_rle["counts"];
+          const size = mask_rle["size"];
+          const maskPolygons = generatePolygonSegments(rle, size[0]);
+          const masksSVG = convertSegmentsToSVG(maskPolygons);
+
+          masksGT.push({
+            viewId: viewId,
+            id: itemDetails.views[viewId].objects.id[i],
+            mask: masksSVG,
+            rle: mask_rle,
+            visible: true,
+            opacity: 1.0,
+          });
+          let item : AnnLabel = {
+            id: itemDetails.views[viewId].objects.id[i],
+            type: "mask",
+            label: itemDetails.views[viewId].objects.category[i].name+"-"+struct_categories[cat_name].items.length,
+            visible: true,
+            opacity: 1.0,
+          };
+          struct_categories[cat_name].items.push(item);
+        }
+      }
+      struct_views_categories[viewId] = struct_categories;
+    }
+    for(let view in struct_views_categories) {
+      for(let cat_name in struct_views_categories[view]) {
+        annotations.push(struct_views_categories[view][cat_name]);
       }
     }
-    //convert struct to AnnotationsLabels
-    for (let cls in struct_annotations) {
-      annotations.push({
-        category: cls,
-        category_id: struct_cat_ids[cls],
-        items: struct_annotations[cls],
-        visible: true
-      });
-      //classes from existing annotations
+
+    console.log("dsqdsq", annotations)
+
+    //unique classes from existing annotations
+    const cat_set = new Set();
+    for(let ann of annotations) cat_set.add(ann.category_name);
+    for(let cat of cat_set) {
       classes.push({
         id: classes.length,
-        name: cls
+        name: cat,
       })
     }
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
     const embeddingArrByte = await api.getImageEmbedding(selectedDataset.id, itemDetails.id, itemDetails.viewId);
-    const embeddingArr = npyjs.parse(embeddingArrByte);
-    selectedItemEmbedding = new ort.Tensor("float32", embeddingArr.data, embeddingArr.shape);
+    try {
+      const embeddingArr = npyjs.parse(embeddingArrByte);
+      selectedItemEmbedding = new ort.Tensor("float32", embeddingArr.data, embeddingArr.shape);
+    } catch(err) {
+      console.log("Embedding not loaded", err);
+      selectedItemEmbedding = null;
+    }
     console.log("Embedding:", selectedItemEmbedding);
     console.log("DONE");
   }
@@ -137,6 +165,7 @@
   function unselectItem() {
     showDetailsPage = false;
     selectedItem = null;
+    selectedItemEmbedding = null;
     masksGT = [];
     annotations = [];
     classes = [];
@@ -145,7 +174,7 @@
   function findCategoryForId(anns: Array<AnnotationsLabels>, id: string) : string {
     for (let ann of anns) {
       if (ann.items.some(it=> it.id === id)) {
-        return ann.category;
+        return ann.category_name;
       }
     }
     console.log("ERROR - unable to find category for id:", id);
@@ -153,6 +182,7 @@
   }
 
   function saveAnns(data) {
+    /* TODO: adapter pour multivue
     console.log("App - save annotations");
     console.log("data", data.detail);
     //format annotation data for export
@@ -169,6 +199,7 @@
       anns.push(ann)
     }
     api.postAnnotations(anns, selectedDataset.id, selectedItem.imageId, selectedItem.viewId);
+    */
   }
 
   onMount(async () => {

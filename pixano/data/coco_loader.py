@@ -101,7 +101,7 @@ class COCOLoader(DataLoader):
                         id=str(ann["id"]),
                         view_id="image",
                         area=float(ann["area"]),
-                        bbox=normalize(ann["bbox"], h=im["height"], w=im["width"]),
+                        bbox=normalize(ann["bbox"], height=im["height"], width=im["width"]),
                         mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
                         is_group_of=bool(ann["iscrowd"]),
                         category_id=int(ann["category_id"]),

@@ -183,7 +183,14 @@ export function drawBoundingBox(
 }
 
 
-
+/**
+ * Adds a mask to a group
+ * @param id id of the mask
+ * @param group group to draw in
+ * @param maskSVG mask to draw in SVG format
+ * @param visibility mask visibility status
+ * @param opacity mask opacity
+ */
 export function drawMask(
   id: string = "",
   x: number,
@@ -193,7 +200,7 @@ export function drawMask(
   masksSVG: Array<string>,
   fill: string = "black",
   visibility: boolean = true,
-  opacity: number = 0.5
+  opacity: number = 1.0
 ){
         //utility functions to extract coords from SVG
         //works only with SVG format "Mx0 y0 Lx1 y1 ... xn yn"
@@ -242,45 +249,6 @@ export function drawMask(
       });
       group.add(mask);
 
-}
-
-/**
- * Adds a mask to a group
- * @param id id of the mask
- * @param group group to draw in
- * @param mask mask to draw
- * @param color color of the mask
- * @param visibility mask visibility status
- * @param opacity mask opacity
- */
-export function drawMaskOLD(
-  id: string = "",
-  group: Konva.Group,
-  mask: Mask,
-  color: string = "black",
-  visibility: boolean = true,
-  opacity: number = 0.5
-) {
-  // Create a group
-  let k_mask = new Konva.Group({
-    id: id,
-    opacity: opacity,
-    visible: visibility,
-  });
-
-  // For each polygon
-  mask.forEach((polygon: Array<number>) => {
-    // Create the mask and add it to its group
-    const part = new Konva.Line({
-      points: polygon,
-      fill: color,
-      closed: true,
-    });
-
-    k_mask.add(part);
-  });
-
-  group.add(k_mask);
 }
 
 /**
@@ -355,13 +323,10 @@ export function updateMasksOpacity(group, opacity: number) {
 /**
  * Zooms in or out of a stage
  * @param stage stage to zoom in/out
- * @param layer layer to zoom in/out
+ * @param viewId viewId to zoom in/out
  * @param direction zoom in or zoom out
  */
-export function zoom(stage: Konva.Stage, direction, viewId, 
-  default_pointer_radius, 
-  default_pointer_strokewidth,
-  default_rect_strokewidth): number {
+export function zoom(stage: Konva.Stage, direction, viewId): number {
   // Defines zoom speed
   const zoomScale = 1.05;
 
@@ -390,18 +355,6 @@ export function zoom(stage: Konva.Stage, direction, viewId,
   // Change scaling and position
   layerView.scale({ x: newScale, y: newScale });
   layerView.position(newPos);
-
-  //keep points/box at constant scale
-  const input_group = layerView.findOne("#input") as Konva.Group;
-  for(let pt of input_group.children) {
-    if(pt instanceof Konva.Circle) {
-      pt.radius(default_pointer_radius / newScale);
-      pt.strokeWidth(default_pointer_strokewidth / newScale);
-    }
-    if(pt instanceof Konva.Rect) {
-      pt.strokeWidth(default_rect_strokewidth / newScale);
-    }
-  }
 
   return newScale;
 }
