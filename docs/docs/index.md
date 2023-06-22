@@ -66,4 +66,4 @@ Simply click on one of them to open it and you will be able to see the dataset s
 
 ## Exporting your datasets
 
-*Coming soon...*
+Please refer to [this notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/export_dataset.ipynb) for information on how to import your datasets.

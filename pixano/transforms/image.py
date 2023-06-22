@@ -56,18 +56,21 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     return image_to_binary(image)
 
 
-def binary_to_base64(binary: bytes) -> str:
-    """Encode image from binary to base 64
+def binary_to_url(im_bytes: bytes) -> str:
+    """Encode image from binary to base 64 URL
 
     Args:
-        binary (bytes): Image as binary
+        im_bytes (bytes): Image as binary
 
     Returns:
         str: Image as base 64
     """
 
-    b64 = base64.b64encode(binary).decode("utf-8")
-    return f"data:image/png;base64,{b64}"
+    if im_bytes is not None:
+        encoded = base64.b64encode(im_bytes).decode("utf-8")
+        return f"data:image;base64,{encoded}"
+    else:
+        return ""
 
 
 def depth_file_to_binary(depth_path: str) -> bytes:
@@ -139,7 +142,7 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
         rle = polygons_to_rle(mask, height, width)
     elif isinstance(mask, dict):
         if isinstance(mask["counts"], list):
-            rle = urle_to_rle(mask, height, width)
+            rle = urle_to_rle(mask)
         else:
             rle = mask
     else:
@@ -257,18 +260,17 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
     return res, has_holes
 
 
-def urle_to_rle(urle: dict, height: int, width: int) -> dict:
+def urle_to_rle(urle: dict) -> dict:
     """Encode mask from uncompressed RLE to RLE
 
     Args:
         urle (dict): Mask as uncompressed RLE
-        height (int): Image height
-        width (int): Image width
 
     Returns:
         dict: Mask as RLE
     """
 
+    height, width = urle["size"]
     return mask_api.frPyObjects(urle, height, width)
 
 

@@ -82,8 +82,9 @@ def get_item_details(
     for field in dataset.schema:
         if arrow_types.is_image_type(field.type):
             # Image
-            im = item[field.name]
-            im.uri_prefix = media_dir
+            image = item[field.name]
+            image.uri_prefix = media_dir.absolute().as_uri()
+
             # Objects IDs
             ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]
             # Categories
@@ -110,7 +111,7 @@ def get_item_details(
             ]
             # Add to features
             features["views"][field.name] = {
-                "image": im.url,
+                "image": image.url,
                 "objects": {
                     "id": ids,
                     "category": cats,

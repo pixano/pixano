@@ -19,7 +19,7 @@ import pyarrow as pa
 import shortuuid
 
 from pixano.core import arrow_types
-from pixano.transforms import image_to_thumbnail
+from pixano.transforms import image_to_thumbnail, natural_key
 
 from .data_loader import DataLoader
 
@@ -30,8 +30,6 @@ class ImageLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -41,8 +39,6 @@ class ImageLoader(DataLoader):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
     ):
         """Initialize COCO Loader
@@ -50,22 +46,27 @@ class ImageLoader(DataLoader):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
         """
 
-        # Dataset additional fields (in addition to split, id, and objects)
-        add_fields = [pa.field("image", arrow_types.ImageType())]
+        # Dataset views
+        views = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
+        super().__init__(name, description, splits, views)
 
-    def get_row(self, split: str) -> Generator[dict]:
-        """Process dataset row for a given split
+    def import_row(
+        self,
+        input_dirs: dict[str, Path],
+        split: str,
+        portable: bool = False,
+    ) -> Generator[dict]:
+        """Process dataset row for import
 
         Args:
+            input_dirs (dict[str, Path]): Input directories
             split (str): Dataset split
+            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Generator[dict]: Processed rows
@@ -74,21 +75,25 @@ class ImageLoader(DataLoader):
         # Get images paths
         image_paths = []
         for type in ["*.png", "*.jpg", "*.jpeg"]:
-            image_paths.extend(glob.glob(str(self.source_dirs["image"] / split / type)))
-        image_paths = [Path(p) for p in sorted(image_paths)]
+            image_paths.extend(glob.glob(str(input_dirs["image"] / split / type)))
+        image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
         # Process rows
-        for im_path in sorted(image_paths):
+        for im_path in image_paths:
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())
+
+            # Set image URI
+            im_uri = (
+                f"image/{split}/{im_path.name}"
+                if portable
+                else im_path.absolute().as_uri()
+            )
 
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": im_path.name,
-                "image": {
-                    "uri": f"image/{split}/{im_path.name}",
-                    "preview_bytes": im_thumb,
-                },
+                "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),

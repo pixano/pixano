@@ -24,6 +24,7 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano.core import arrow_types
+from pixano.transforms import natural_key
 
 
 class InferenceModel(ABC):
@@ -68,7 +69,7 @@ class InferenceModel(ABC):
         self,
         batch: pa.RecordBatch,
         view: str,
-        media_dir: Path,
+        uri_prefix: str,
         threshold: float = 0.0,
     ) -> list[list[arrow_types.ObjectAnnotation]]:
         """Inference preannotation for a batch
@@ -76,7 +77,7 @@ class InferenceModel(ABC):
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media directory
+            uri_prefix (str): URI prefix for media files
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
@@ -89,14 +90,14 @@ class InferenceModel(ABC):
         self,
         batch: pa.RecordBatch,
         view: str,
-        media_dir: Path,
+        uri_prefix: str,
     ) -> list[np.ndarray]:
         """Embedding precomputing for a batch
 
         Args:
             batch (pa.RecordBatch): Input batch
             view (str): Dataset view
-            media_dir (Path): Media directory
+            uri_prefix (str): URI prefix for media files
 
         Returns:
             list[np.ndarray]: Model embeddings as NumPy arrays
@@ -133,18 +134,22 @@ class InferenceModel(ABC):
         with open(input_dir / "spec.json", "r") as f:
             spec_json = json.load(f)
 
-        # If splits provided, check if they exist
-        splits = [f"split={s}" for s in splits if not s.startswith("split=")]
-        for split in splits:
-            split_dir = input_dir / "db" / split
-            if not Path.exists(split_dir):
-                raise Exception(f"{split_dir} does not exist.")
-            if not any(split_dir.iterdir()):
-                raise Exception(f"{split_dir} is empty.")
+        # Create URI prefix
+        media_dir = input_dir / "media"
+        uri_prefix = media_dir.absolute().as_uri()
 
         # If no splits provided, select all splits
-        if splits == []:
+        if not splits:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
+        # Else, if splits provided, check if they exist
+        else:
+            splits = [f"split={s}" for s in splits if not s.startswith("split=")]
+            for split in splits:
+                split_dir = input_dir / "db" / split
+                if not Path.exists(split_dir):
+                    raise Exception(f"{split_dir} does not exist.")
+                if not any(split_dir.iterdir()):
+                    raise Exception(f"{split_dir} is empty.")
 
         # Create schema
         fields = [pa.field("id", pa.string())]
@@ -165,12 +170,16 @@ class InferenceModel(ABC):
 
         # Iterate on splits
         for split in splits:
-            # List dataset files
-            files = sorted((input_dir / "db" / split).glob("*.parquet"))
+            # List split files
+            files = (input_dir / "db" / split).glob("*.parquet")
+            files = sorted(files, key=lambda x: natural_key(x.name))
+
+            # Create output split directory
+            split_dir = output_dir / split
+            split_dir.mkdir(parents=True, exist_ok=True)
+            split_name = split.replace("split=", "")
 
             # Check for already processed files
-            split_name = split.replace("split=", "")
-            split_dir = output_dir / split
             processed = [p.name for p in split_dir.glob("*.parquet")]
 
             # Iterate on files
@@ -195,7 +204,7 @@ class InferenceModel(ABC):
                             for view in views:
                                 batch_inf.append(
                                     self.inference_batch(
-                                        batch, view, input_dir / "media", threshold
+                                        batch, view, uri_prefix, threshold
                                     )
                                 )
                             # Regroup view inferences by row
@@ -211,9 +220,7 @@ class InferenceModel(ABC):
                         elif process_type == "embed":
                             # Iterate on views
                             for view in views:
-                                view_emb = self.embedding_batch(
-                                    batch, view, input_dir / "media"
-                                )
+                                view_emb = self.embedding_batch(batch, view, uri_prefix)
                                 for emb in view_emb:
                                     emb_bytes = BytesIO()
                                     np.save(emb_bytes, emb)
@@ -233,7 +240,6 @@ class InferenceModel(ABC):
                         )
 
                     # Save to file
-                    split_dir.mkdir(parents=True, exist_ok=True)
                     pq.write_table(
                         pa.Table.from_arrays(arrays, schema=schema),
                         split_dir / file.name,

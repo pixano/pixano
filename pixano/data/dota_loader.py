@@ -20,7 +20,13 @@ import shortuuid
 from PIL import Image
 
 from pixano.core import arrow_types
-from pixano.transforms import dota_ids, image_to_thumbnail, normalize, xyxy_to_xywh
+from pixano.transforms import (
+    dota_ids,
+    image_to_thumbnail,
+    natural_key,
+    normalize,
+    xyxy_to_xywh,
+)
 
 from .data_loader import DataLoader
 
@@ -31,8 +37,6 @@ class DOTALoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -42,8 +46,6 @@ class DOTALoader(DataLoader):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
     ):
         """Initialize COCO Loader
@@ -51,36 +53,41 @@ class DOTALoader(DataLoader):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
         """
 
-        # Dataset additional fields (in addition to split, id, and objects)
-        add_fields = [pa.field("image", arrow_types.ImageType())]
+        # Dataset views
+        views = [pa.field("image", arrow_types.ImageType())]
 
         # Initialize Data Loader
-        super().__init__(name, description, source_dirs, target_dir, splits, add_fields)
+        super().__init__(name, description, splits, views)
 
-    def get_row(self, split: str) -> Generator[dict]:
-        """Process dataset row for a given split
+    def import_row(
+        self,
+        input_dirs: dict[str, Path],
+        split: str,
+        portable: bool = False,
+    ) -> Generator[dict]:
+        """Process dataset row for import
 
         Args:
+            input_dirs (dict[str, Path]): Input directories
             split (str): Dataset split
+            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Generator[dict]: Processed rows
         """
 
         # Get images paths
-        image_paths = glob.glob(str(self.source_dirs["image"] / split / "*.png"))
-        image_paths = [Path(p) for p in sorted(image_paths)]
+        image_paths = glob.glob(str(input_dirs["image"] / split / "*.png"))
+        image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
         # Process rows
         for im_path in image_paths:
             # Load image annotations
             im_anns_file = (
-                self.source_dirs["objects"]
+                input_dirs["objects"]
                 / split
                 / "hbb"
                 / im_path.name.replace("png", "txt")
@@ -94,14 +101,18 @@ class DOTALoader(DataLoader):
                 im_w, im_h = im.size
                 im_thumb = image_to_thumbnail(im)
 
+            # Set image URI
+            im_uri = (
+                f"image/{split}/{im_path.name}"
+                if portable
+                else im_path.absolute().as_uri()
+            )
+
             # Fill row with ID, image, and list of image annotations
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
-                    "image": {
-                        "uri": f"image/{split}/{im_path.name}",
-                        "preview_bytes": im_thumb,
-                    },
+                    "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
                     "objects": [
                         arrow_types.ObjectAnnotation(
                             id=shortuuid.uuid(),

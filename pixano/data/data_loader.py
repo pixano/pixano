@@ -11,7 +11,9 @@
 #
 # http://www.cecill.info
 
+import datetime
 import json
+import os
 import random
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -24,12 +26,14 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
 from pixano.core import DatasetInfo, arrow_types
+from pixano.transforms import denormalize, rle_to_urle
 
 
 def _batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
@@ -58,8 +62,6 @@ class DataLoader(ABC):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        source_dirs (dict[str, Path]): Dataset source directories
-        target_dir (Path): Dataset target directory
         splits (list[str]): Dataset splits
         schema (pa.schema): Dataset schema
         partitioning (ds.partitioning): Dataset partitioning
@@ -69,20 +71,16 @@ class DataLoader(ABC):
         self,
         name: str,
         description: str,
-        source_dirs: dict[str, Path],
-        target_dir: Path,
         splits: list[str],
-        add_fields: list[pa.field],
+        views: list[pa.field],
     ):
         """Initialize Data Loader
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            source_dirs (dict[str, Path]): Dataset source directories
-            target_dir (Path): Dataset target directory
             splits (list[str]): Dataset splits
-            add_fields (list[pa.field]): Dataset additional fields
+            views (list[pa.field]): Dataset views
         """
 
         # Dataset info
@@ -94,47 +92,51 @@ class DataLoader(ABC):
         )
         self.splits = splits
 
-        # Dataset directories
-        for source_path in source_dirs.values():
-            if not Path.exists(source_path):
-                raise Exception(f"{source_path} does not exist.")
-            if not any(source_path.iterdir()):
-                raise Exception(f"{source_path} is empty.")
-        self.source_dirs = source_dirs
-        self.target_dir = target_dir
-
         # Dataset schema
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
             pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
         ]
-        fields.extend(add_fields)
+        fields.extend(views)
         self.schema = pa.schema(fields)
         self.partitioning = ds.partitioning(
             pa.schema([("split", pa.string())]), flavor="hive"
         )
 
-    def create_json(self):
-        """Create dataset spec.json"""
+    def create_json(self, import_dir: Path, categories: list[dict] = []):
+        """Create dataset spec.json
+
+        Args:
+            import_dir (Path): Import directory
+            categories (list[dict], optional): Dataset categories. Defaults to [].
+        """
 
         with tqdm(desc="Creating dataset info file", total=1) as progress:
             # Read dataset
-            dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+            dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
             # Check number of rows in the created dataset
             self.info.num_elements = dataset.count_rows()
 
+            # Add categories
+            if categories:
+                self.info.categories = categories
+
             # Create spec.json
-            with open(self.target_dir / "spec.json", "w") as f:
+            with open(import_dir / "spec.json", "w") as f:
                 json.dump(vars(self.info), f)
             progress.update(1)
 
-    def create_preview(self):
-        """Create dataset preview image"""
+    def create_preview(self, import_dir: Path):
+        """Create dataset preview image
+
+        Args:
+            import_dir (Path): Import directory
+        """
 
         # Read dataset
-        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+        dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
         # Get list of image fields
         image_fields = []
@@ -153,24 +155,32 @@ class DataLoader(ABC):
                     row = dataset.take([row_number]).to_pylist()[0]
                     with Image.open(BytesIO(row[field]._preview_bytes)) as im:
                         preview.paste(im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
-                preview.save(self.target_dir / "preview.png")
+                preview.save(import_dir / "preview.png")
                 progress.update(1)
 
-    def create_stats(self):
-        """Create dataset statistics"""
+    def create_stats(self, import_dir: Path):
+        """Create dataset statistics
+
+        Args:
+            import_dir (Path): Import directory
+        """
 
         # Reset json file
-        open(self.target_dir / "db_feature_statistics.json", "w").close()
+        open(import_dir / "db_feature_statistics.json", "w").close()
         # Create objects stats
-        self.objects_stats()
+        self.objects_stats(import_dir)
         # Create image stats
-        self.image_stats()
+        self.image_stats(import_dir)
 
-    def objects_stats(self):
-        """Create dataset objects statistics"""
+    def objects_stats(self, import_dir: Path):
+        """Create dataset objects statistics
+
+        Args:
+            import_dir (Path): Import directory
+        """
 
         # Read dataset
-        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+        dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
         # Create stats if objects field exist
         objects = pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
@@ -235,40 +245,44 @@ class DataLoader(ABC):
             ]
 
             # Save stats
-            self.save_stats(stats, features_df)
+            self.save_stats(import_dir, stats, features_df)
 
-    def image_stats(self):
-        """Create dataset image statistics"""
+    def image_stats(self, import_dir: Path):
+        """Create dataset image statistics
+
+        Args:
+            import_dir (Path): Import directory
+        """
 
         # Read dataset
-        dataset = ds.dataset(self.target_dir / "db", partitioning=self.partitioning)
+        dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
-        # Create stats if objects field exist
-        schema = dataset.schema
+        # Create URI prefix
+        media_dir = import_dir / "media"
+        uri_prefix = media_dir.absolute().as_uri()
 
         # Iterate over dataset columns
-        for field in schema:
+        for field in dataset.schema:
             # If column has images
             if arrow_types.is_image_type(field.type):
-                # Get features
                 features = []
-                for batch_row in tqdm(
-                    dataset.to_batches(columns=[field.name, "split"], batch_size=1),
+                rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
+
+                # Get features
+                for row in tqdm(
+                    rows,
                     desc=f"Computing {field.name} stats",
                     total=dataset.count_rows(),
                 ):
-                    row = batch_row.to_pydict()
                     # Open image
-                    with Image.open(
-                        self.target_dir / "media" / row["image"][0]._uri
-                    ) as im:
-                        im_w, im_h = im.size
-                        # Compute image features
-                        aspect_ratio = round(im_w / im_h, 1)
+                    im = row[field.name][0].as_py(uri_prefix)
+                    im_w, im_h = im.size
+                    # Compute image features
+                    aspect_ratio = round(im_w / im_h, 1)
                     features.append(
                         {
                             f"{field.name} - aspect ratio": aspect_ratio,
-                            "split": row["split"][0],
+                            "split": row["split"][0].as_py(),
                         }
                     )
                 features_df = pd.DataFrame.from_records(features).astype(
@@ -292,12 +306,13 @@ class DataLoader(ABC):
                 ]
 
                 # Save stats
-                self.save_stats(stats, features_df)
+                self.save_stats(import_dir, stats, features_df)
 
-    def save_stats(self, stats: list[dict], df: pd.DataFrame):
+    def save_stats(self, import_dir: Path, stats: list[dict], df: pd.DataFrame):
         """Compute and save stats to json
 
         Args:
+            import_dir (Path): Import directory
             stats (list[dict]): List of stats to save
             df (pd.DataFrame): DataFrame to create stats from
         """
@@ -309,7 +324,7 @@ class DataLoader(ABC):
                 stat["histogram"].extend(compute_stats(split_df, split, stat))
 
         # Check for existing db_feature_statistics.json
-        with open(self.target_dir / "db_feature_statistics.json", "r") as f:
+        with open(import_dir / "db_feature_statistics.json", "r") as f:
             try:
                 stat_json = json.load(f)
                 stat_json.extend(stats)
@@ -317,15 +332,22 @@ class DataLoader(ABC):
                 stat_json = stats
 
         # Add to db_feature_statistics.json
-        with open(self.target_dir / "db_feature_statistics.json", "w") as f:
+        with open(import_dir / "db_feature_statistics.json", "w") as f:
             json.dump(stat_json, f)
 
     @abstractmethod
-    def get_row(self, split: str) -> Generator[dict]:
-        """Process dataset row for a given split
+    def import_row(
+        self,
+        input_dirs: dict[str, Path],
+        split: str,
+        portable: bool = False,
+    ) -> Generator[dict]:
+        """Process dataset row for import
 
         Args:
+            input_dirs (dict[str, Path]): Input directories
             split (str): Dataset split
+            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Generator[dict]: Processed rows
@@ -333,18 +355,57 @@ class DataLoader(ABC):
 
         pass
 
-    def import_dataset(self, batch_size: int = 2048):
+    def import_dataset(
+        self,
+        input_dirs: dict[str, Path],
+        import_dir: Path,
+        portable: bool = False,
+        batch_size: int = 2048,
+    ):
         """Import dataset to Pixano format
 
         Args:
+            input_dirs (dict[str, Path]): Input directories
+            import_dir (Path): Import directory
+            portable (int, optional): True to move or download files inside import directory. Defaults to False.
             batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
 
+        # Check input directories
+        for source_path in input_dirs.values():
+            if not Path.exists(source_path):
+                raise Exception(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise Exception(f"{source_path} is empty.")
+
+        # Dataset categories
+        categories = []
+        seen_category_ids = []
+
         # Iterate on splits
         for split in self.splits:
-            batches = _batch_dict(self.get_row(split), batch_size)
+            batches = _batch_dict(
+                self.import_row(input_dirs, split, portable), batch_size
+            )
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
+                # Append batch categories
+                for field in self.schema:
+                    # If column has annotations
+                    # TODO: Change to checking type when ObjectAnnotationType is rebuilt
+                    if field.name == "objects":
+                        for row in batch[field.name]:
+                            for ann in row:
+                                if ann["category_id"] not in seen_category_ids:
+                                    categories.append(
+                                        {
+                                            "supercategory": "N/A",
+                                            "id": ann["category_id"],
+                                            "name": ann["category_name"],
+                                        },
+                                    )
+                                    seen_category_ids.append(ann["category_id"])
+
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
@@ -358,33 +419,38 @@ class DataLoader(ABC):
                 # Save to file
                 ds.write_dataset(
                     data=pa.Table.from_arrays(arrays, schema=self.schema),
-                    base_dir=self.target_dir / "db",
+                    base_dir=import_dir / "db",
                     basename_template=f"part-{{i}}-{i}.parquet",
                     format="parquet",
                     existing_data_behavior="overwrite_or_ignore",
                     partitioning=self.partitioning,
                 )
 
+        # Sort categories
+        categories = sorted(categories, key=lambda c: c["id"])
+
         # Create spec.json
-        self.create_json()
+        self.create_json(import_dir, categories)
 
         # Create preview.png
-        self.create_preview()
+        self.create_preview(import_dir)
 
-        # Move media folders
-        for field in self.schema:
-            if arrow_types.is_image_type(field.type):
-                field_dir = self.target_dir / "media" / field.name
-                field_dir.mkdir(parents=True, exist_ok=True)
-                self.source_dirs[field.name].rename(field_dir)
+        # Move media directories if portable
+        if portable:
+            for field in tqdm(self.schema, desc=f"Moving media directories"):
+                if arrow_types.is_image_type(field.type):
+                    field_dir = import_dir / "media" / field.name
+                    field_dir.mkdir(parents=True, exist_ok=True)
+                    input_dirs[field.name].rename(field_dir)
 
         # Create stats
-        self.create_stats()
+        self.create_stats(import_dir)
 
-    def export_dataset(self, export_dir: Path):
+    def export_dataset(self, input_dir: Path, export_dir: Path):
         """Export dataset back to original format
 
         Args:
+            input_dir (Path): Input directory
             export_dir (Path): Export directory
         """
 
