@@ -11,6 +11,8 @@
 #
 # http://www.cecill.info
 
+import re
+
 from .boxes import (
     denormalize,
     format_bbox,
@@ -61,4 +63,17 @@ __all__ = [
     "coco_names_91",
     "dota_ids",
     "voc_names",
+    "natural_key",
 ]
+
+
+def natural_key(string: str) -> list:
+    """Return key for string natural sort
+
+    Args:
+        string (str): Input string
+
+    Returns:
+        list: Sort key
+    """
+    return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]

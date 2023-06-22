@@ -19,7 +19,7 @@ import pyarrow as pa
 import shortuuid
 
 from pixano.core import arrow_types
-from pixano.transforms import image_to_thumbnail
+from pixano.transforms import image_to_thumbnail, natural_key
 
 from .data_loader import DataLoader
 
@@ -76,7 +76,7 @@ class ImageLoader(DataLoader):
         image_paths = []
         for type in ["*.png", "*.jpg", "*.jpeg"]:
             image_paths.extend(glob.glob(str(input_dirs["image"] / split / type)))
-        image_paths = [Path(p) for p in sorted(image_paths)]
+        image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
         # Process rows
         for im_path in image_paths:

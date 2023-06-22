@@ -20,7 +20,13 @@ import shortuuid
 from PIL import Image
 
 from pixano.core import arrow_types
-from pixano.transforms import dota_ids, image_to_thumbnail, normalize, xyxy_to_xywh
+from pixano.transforms import (
+    dota_ids,
+    image_to_thumbnail,
+    natural_key,
+    normalize,
+    xyxy_to_xywh,
+)
 
 from .data_loader import DataLoader
 
@@ -75,7 +81,7 @@ class DOTALoader(DataLoader):
 
         # Get images paths
         image_paths = glob.glob(str(input_dirs["image"] / split / "*.png"))
-        image_paths = [Path(p) for p in sorted(image_paths)]
+        image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
         # Process rows
         for im_path in image_paths:

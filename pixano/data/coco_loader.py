@@ -29,6 +29,7 @@ from pixano.transforms import (
     denormalize,
     encode_rle,
     image_to_thumbnail,
+    natural_key,
     normalize,
     rle_to_urle,
 )
@@ -94,7 +95,7 @@ class COCOLoader(DataLoader):
             annotations[ann["image_id"]].append(ann)
 
         # Process rows
-        for im in sorted(coco_instances["images"], key=lambda x: x["id"]):
+        for im in sorted(coco_instances["images"], key=lambda x: natural_key(x["id"])):
             # Load image annotations
             im_anns = annotations[im["id"]]
             # Load image
@@ -170,8 +171,9 @@ class COCOLoader(DataLoader):
 
         # Iterate on splits
         for split in splits:
-            # List dataset files
-            files = sorted((input_dir / "db" / split).glob("*.parquet"))
+            # List split files
+            files = (input_dir / "db" / split).glob("*.parquet")
+            files = sorted(files, key=lambda x: natural_key(x.name))
             split_name = split.replace("split=", "")
 
             # Create COCO json

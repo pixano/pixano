@@ -24,6 +24,7 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano.core import arrow_types
+from pixano.transforms import natural_key
 
 
 class InferenceModel(ABC):
@@ -170,7 +171,8 @@ class InferenceModel(ABC):
         # Iterate on splits
         for split in splits:
             # List split files
-            files = sorted((input_dir / "db" / split).glob("*.parquet"))
+            files = (input_dir / "db" / split).glob("*.parquet")
+            files = sorted(files, key=lambda x: natural_key(x.name))
 
             # Create output split directory
             split_dir = output_dir / split
