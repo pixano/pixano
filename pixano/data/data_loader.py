@@ -389,22 +389,22 @@ class DataLoader(ABC):
             )
             # Iterate on batches
             for i, batch in tqdm(enumerate(batches), desc=f"Converting {split} split"):
-                # Append category if not seen yet
-                for row in batch:
-                    for field in self.schema:
-                        # If column has annotations
-                        # TODO: Change to checking type when ObjectAnnotationType is rebuilt
-                        if field.name == "objects":
-                            for row_ann in row[field.name]:
-                                if row_ann["category_id"] not in seen_category_ids:
+                # Append batch categories
+                for field in self.schema:
+                    # If column has annotations
+                    # TODO: Change to checking type when ObjectAnnotationType is rebuilt
+                    if field.name == "objects":
+                        for row in batch[field.name]:
+                            for ann in row:
+                                if ann["category_id"] not in seen_category_ids:
                                     categories.append(
                                         {
                                             "supercategory": "N/A",
-                                            "id": row_ann["category_id"],
-                                            "name": row_ann["category_name"],
+                                            "id": ann["category_id"],
+                                            "name": ann["category_name"],
                                         },
                                     )
-                                    seen_category_ids.append(row_ann["category_id"])
+                                    seen_category_ids.append(ann["category_id"])
 
                 # Convert batch fields to PyArrow format
                 arrays = []
