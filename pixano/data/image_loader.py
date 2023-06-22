@@ -79,7 +79,7 @@ class ImageLoader(DataLoader):
         image_paths = [Path(p) for p in sorted(image_paths)]
 
         # Process rows
-        for im_path in sorted(image_paths):
+        for im_path in image_paths:
             # Create image thumbnail
             im_thumb = image_to_thumbnail(im_path.read_bytes())
 
