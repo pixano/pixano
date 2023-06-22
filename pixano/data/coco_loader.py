@@ -148,6 +148,9 @@ class COCOLoader(DataLoader):
         # Load spec.json
         input_info = DatasetInfo.parse_file(input_dir / "spec.json")
 
+        # Create export directory
+        export_dir.mkdir(parents=True, exist_ok=True)
+
         # Create URI prefix
         media_dir = input_dir / "media"
         uri_prefix = media_dir.absolute().as_uri()
