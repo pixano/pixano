@@ -67,6 +67,12 @@
         name: "konva",
     };
 
+    // Multiview image grid
+    let gridSize = {
+        rows: 0,
+        cols: 0,
+    };
+
     // Dynamically set the canvas stage size
     const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
@@ -98,19 +104,35 @@
     function scaleView(view: ViewData) {
         const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
         if(view_layer) {
-            //TODO: Multivue: comment on fit ? Comment on dispose les vues ??
+          
+            // Calculate max dims for every image in the grid
+            let maxWidth = stage.width() / gridSize.cols;
+            let maxHeight = stage.height() / gridSize.rows;
+
+            //calculate view pos in grid
+            let i = 0;
+            //get view index
+            for (let v of views) {
+                if (v.viewId === view.viewId) break;
+                i++;
+            }
+            let grid_pos = {
+                x: i % gridSize.cols, 
+                y: Math.floor(i / gridSize.cols)
+            }
+
             // Fit stage
-            let scaleByHeight = stage.height() / images[view.viewId].height;
-            let scaleByWidth = stage.width() / images[view.viewId].width;
+            let scaleByHeight = maxHeight / images[view.viewId].height;
+            let scaleByWidth = maxWidth / images[view.viewId].width;
             let scale = Math.min(scaleByWidth, scaleByHeight);
             //set zoomFactor for view
             zoomFactor[view.viewId] = scale;
 
             view_layer.scale({x: scale, y: scale});
 
-            // Center stage
-            let offsetX = (stage.width() - (images[view.viewId].width) * scale) / 2;
-            let offsetY = (stage.height() - (images[view.viewId].height) * scale) / 2;
+            // Center view
+            let offsetX = (maxWidth - (images[view.viewId].width) * scale) / 2 + grid_pos.x * maxWidth;
+            let offsetY = (maxHeight - (images[view.viewId].height) * scale) / 2  + grid_pos.y * maxHeight;
             view_layer.x(offsetX);
             view_layer.y(offsetY);
         } else {
@@ -131,9 +153,15 @@
                 onLoadViewImage(event, view.viewId)
                 .then(()=>{
                     scaleView(view);
+                    //hack to refresh view (display masks/bboxes)
+                    masksGT = masksGT;
                 })
             };
         }
+
+        // Calculate new grid size
+        gridSize.cols = Math.ceil(Math.sqrt(views.length));
+        gridSize.rows = Math.ceil(views.length / gridSize.cols);
 
         // Fire stage events observers
         resizeObserver.observe(stageContainer);

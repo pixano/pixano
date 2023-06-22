@@ -98,13 +98,12 @@
     }
   });
 
-  /*
   afterUpdate(() => {
     if(view_list) {
       view_list = view_list;
     }
   });
-  */
+  
 
 </script>
 

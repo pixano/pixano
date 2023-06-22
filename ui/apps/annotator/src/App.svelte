@@ -136,8 +136,6 @@
       }
     }
 
-    console.log("dsqdsq", annotations)
-
     //unique classes from existing annotations
     const cat_set = new Set();
     for(let ann of annotations) cat_set.add(ann.category_name);
