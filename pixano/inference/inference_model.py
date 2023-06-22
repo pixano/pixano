@@ -148,7 +148,7 @@ class InferenceModel(ABC):
                 raise Exception(f"{split_dir} is empty.")
 
         # If no splits provided, select all splits
-        if splits == []:
+        if not splits:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
 
         # Create schema
