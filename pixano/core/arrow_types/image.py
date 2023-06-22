@@ -23,22 +23,7 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 
-
-def _bytes_to_url(im_bytes: bytes) -> str:
-    """Convert image bytes to base 64 URL
-
-    Args:
-        im_bytes (bytes): Image bytes
-
-    Returns:
-        str: Image URL
-    """
-
-    if im_bytes is not None:
-        encoded = base64.b64encode(im_bytes).decode("utf-8")
-        return f"data:image;base64,{encoded}"
-    else:
-        return ""
+from pixano.transforms import binary_to_url
 
 
 class Image:
@@ -106,7 +91,7 @@ class Image:
             str: Image URL
         """
 
-        return _bytes_to_url(self.bytes)
+        return binary_to_url(self.bytes)
 
     @property
     def preview_url(self) -> str:
@@ -116,7 +101,7 @@ class Image:
             str: Image preview URL
         """
 
-        return _bytes_to_url(self._preview_bytes)
+        return binary_to_url(self._preview_bytes)
 
     @property
     def uri(self) -> str:
@@ -195,7 +180,7 @@ class Image:
         """
 
         im_bytes = self._preview_bytes if preview else self.bytes
-        return IPyImage(url=_bytes_to_url(im_bytes), format=IPyImage(im_bytes).format)
+        return IPyImage(url=binary_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
     def to_dict(self) -> dict:
         """Return image attributes as dict

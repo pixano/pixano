@@ -20,7 +20,7 @@ from .boxes import (
     xyxy_to_xywh,
 )
 from .image import (
-    binary_to_base64,
+    binary_to_url,
     depth_array_to_gray,
     depth_file_to_binary,
     encode_rle,
@@ -45,7 +45,7 @@ __all__ = [
     "xyxy_to_xywh",
     "image_to_binary",
     "image_to_thumbnail",
-    "binary_to_base64",
+    "binary_to_url",
     "depth_file_to_binary",
     "depth_array_to_gray",
     "encode_rle",
