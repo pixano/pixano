@@ -34,7 +34,7 @@ export const Base: Story = {
       {
         name: "Some dataset",
         num_elements: 20,
-        preview: [
+        previews: [
           "img-01.jpg",
           "img-02.jpg",
           "img-03.jpg",
@@ -48,7 +48,7 @@ export const Base: Story = {
       {
         name: "Another dataset",
         num_elements: 50000,
-        preview: [
+        previews: [
           "img-01.jpg",
           "img-02.jpg",
           "img-03.jpg",
@@ -62,7 +62,7 @@ export const Base: Story = {
       {
         name: "Yet another dataset",
         num_elements: 1000,
-        preview: [
+        previews: [
           "img-01.jpg",
           "img-02.jpg",
           "img-03.jpg",
@@ -76,7 +76,7 @@ export const Base: Story = {
       {
         name: "One final dataset",
         num_elements: 20000,
-        preview: [
+        previews: [
           "img-01.jpg",
           "img-02.jpg",
           "img-03.jpg",

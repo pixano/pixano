@@ -191,7 +191,6 @@
         if (bboxes) {
             for(let view of views) addAllBBox(view.viewId, imageId)
         }
-        
 
         // if (imageURL !== prevImg) {
         //     let img = new Image();
