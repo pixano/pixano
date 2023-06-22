@@ -19,7 +19,7 @@
   import type { AnnotationsLabels } from "./interfaces";
 
   export let annotations: Array<AnnotationsLabels>;
-  export let dbImages;
+  export let dataset;
 
   let activeTab = "labels";
 
@@ -27,11 +27,11 @@
 
   //set classes groups opened/closed by default
   for (let group of annotations) {
-    group['opened'] = false;
+    group["opened"] = false;
   }
 
   // Change selected tool
-  function selectImage(img: string) {
+  function selectImage(img) {
     dispatch("imageSelected", img);
   }
 
@@ -41,7 +41,7 @@
 
   function handleVisibility(group: any, item: any) {
     item.visible = !item.visible;
-    if(item.visible && !group.visible) {
+    if (item.visible && !group.visible) {
       group.visible = true;
     }
     dispatch("toggleVisibility", item);
@@ -59,7 +59,6 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="w-80 shrink-0 bg-white font-[Montserrat]">
   <div class="h-12 flex items-center justify-evenly">
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
       'labels'
@@ -71,7 +70,6 @@
     >
       Labels
     </span>
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
       'database'
@@ -87,14 +85,19 @@
   <div class="mt-2 pb-4 flex flex-col max-h-[85vh] overflow-y-scroll">
     {#if activeTab == "labels"}
       {#each annotations as group}
-        <div class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group['opened'] ? 'bg-zinc-100' : ''}">
+        <div
+          class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group['opened'] ? 'bg-zinc-100' : ''}"
+        >
           <img
             src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
             alt="visible"
             class="h-6 w-6 opacity-50 cursor-pointer"
             on:click={() => handleGroupVisibility(group)}
           />
-          <div class="flex grow items-center space-x-1 cursor-pointer" on:click={() => (group['opened'] = !group['opened'])}>
+          <div
+            class="flex grow items-center space-x-1 cursor-pointer"
+            on:click={() => (group["opened"] = !group["opened"])}
+          >
             <img src="icons/expand.svg" alt="expand" class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}" />
             <span class="grow ml-3 font-bold text-gray-900">
               {group.class}
@@ -134,13 +137,13 @@
       {/each}
     {:else if activeTab === "database"}
       <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center">
-        {#each dbImages as img, i}
+        {#each dataset.items as img, i}
           <div
             class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
             on:click={() => selectImage(img)}
           >
-            <img src={img} alt="image #{i}" class="w-24 h-24 object-cover rounded" />
-            <span class="mt-2 text-xs font-semibold">{img}</span>
+            <img src={img[1].value} alt="image #{i}" class="w-24 h-24 object-cover rounded" />
+            <span class="w-24 mt-2 text-xs font-semibold">{img[0].value}</span>
           </div>
         {/each}
       </div>

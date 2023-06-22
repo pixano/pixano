@@ -29,6 +29,9 @@
   } from "../../../../components/Canvas2D/src/tools";
   import type { ItemData, MaskGT, AnnotationsLabels, ItemLabel } from "./interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
+  import { getDatasetItems } from "./api";
+  import { currentPage } from "../stores";
+  import { createEventDispatcher } from "svelte";
 
   import { interactiveSegmenterModel } from "../stores";
 
@@ -37,8 +40,19 @@
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
   export let masksGT: Array<MaskGT>;
-  export let dbImages = [];
+  export let dataset;
   export let handleCloseClick;
+
+  const dispatch = createEventDispatcher();
+
+  let curPage: number;
+
+  currentPage.subscribe((value) => {
+    curPage = value;
+  });
+
+  let dbImages = [];
+
   let className = "";
 
   let prediction: InteractiveImageSegmenterOutput = null;
@@ -92,7 +106,7 @@
       const annotation: ItemLabel = {
         id: id,
         label: `${className}-${existingClass.items.length}`,
-        visible : existingClass.visible
+        visible: existingClass.visible,
       };
 
       // If the class exists, add the item to its 'items' array
@@ -102,7 +116,7 @@
       const annotation: ItemLabel = {
         id: id,
         label: `${className}-0`,
-        visible: true
+        visible: true,
       };
 
       // If the class doesn't exist, create a new object and add it to the annotation array
@@ -135,11 +149,12 @@
 
   function handleSaveClick() {
     console.log("Just Save it !");
-    console.log(masksGT)
+    console.log(masksGT);
   }
 
   function handleImageSelectedChange(img) {
-    itemData.imageURL = img.detail;
+    dispatch("imageSelected", { id: img.detail[0].value });
+    itemData.imageURL = img.detail[1].value;
     masksGT = [];
     annotations = [];
     classes = [];
@@ -157,29 +172,31 @@
       // Filter out the item from the items array
       newAnnots.items = newAnnots.items.filter((annotatedItem) => annotatedItem.id !== detailId);
       if (newAnnots.items.length === 0) {
-        annotations = annotations.filter((ann)=> ann !== newAnnots);
+        annotations = annotations.filter((ann) => ann !== newAnnots);
       }
     }
 
     // Find the mask to delete from masksGT
-    const mask_to_del = masksGT.find(mask => mask.id === detailId);
+    const mask_to_del = masksGT.find((mask) => mask.id === detailId);
     if (mask_to_del) {
       //remove from list
-      masksGT = masksGT.filter(mask => mask.id !== detailId)
+      masksGT = masksGT.filter((mask) => mask.id !== detailId);
     }
 
     //hack svelte to reflect changes
-    annotations = annotations
+    annotations = annotations;
   }
 
   function handleVisibilityChange(item) {
-    const mask_to_toggle = masksGT.find(mask => mask.id === item.detail.id);
+    const mask_to_toggle = masksGT.find((mask) => mask.id === item.detail.id);
     mask_to_toggle.visible = item.detail.visible;
     //hack svelte to reflect changes
     masksGT = masksGT;
   }
 
-  //onMount(() => {});
+  onMount(async () => {
+    dbImages = await getDatasetItems(dataset.id, curPage);
+  });
 
   afterUpdate(() => {
     //console.log("afterUpdate - itemData", itemData);
@@ -191,11 +208,10 @@
     if (annotations) {
       annotations = annotations;
     }
-    if(classes) {
+    if (classes) {
       classes = classes;
     }
   });
-
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -212,7 +228,6 @@
           class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-[url('icons/expand.svg')] bg-no-repeat bg-right"
           bind:value={className}
         />
-        
 
         <div
           class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
@@ -280,7 +295,7 @@
       {#if annotations}
         <DataPanel
           bind:annotations
-          {dbImages}
+          dataset={dbImages}
           on:imageSelected={handleImageSelectedChange}
           on:itemDeleted={handleItemDeleted}
           on:toggleVisibility={handleVisibilityChange}

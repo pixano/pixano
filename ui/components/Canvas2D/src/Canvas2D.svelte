@@ -101,23 +101,27 @@
         img.onload = () => {
             image = img;
 
-            // Fit stage
-            let scaleByHeight = stage.height() / image.height;
-            let scaleByWidth = stage.width() / image.width;
-            let scale = Math.min(scaleByWidth, scaleByHeight);
-
-            stage.scale({x: scale, y: scale});
-
-            // Center stage
-            let offsetX = (stage.width() - (image.width) * scale) / 2;
-            let offsetY = (stage.height() - (image.height) * scale) / 2;
-            stage.x(offsetX);
-            stage.y(offsetY);
+            fitAndCenterImage();
         };
 
         // Fire stage events observers
         resizeObserver.observe(stageContainer);
     });
+
+    function fitAndCenterImage() {
+        // Fit stage
+        let scaleByHeight = stage.height() / image.height;
+        let scaleByWidth = stage.width() / image.width;
+        let scale = Math.min(scaleByWidth, scaleByHeight);
+
+        stage.scale({x: scale, y: scale});
+
+        // Center stage
+        let offsetX = (stage.width() - (image.width) * scale) / 2;
+        let offsetY = (stage.height() - (image.height) * scale) / 2;
+        stage.x(offsetX);
+        stage.y(offsetY);
+    }
 
     function resetStage() {
         let input = stage.findOne("#input") as Konva.Group;
@@ -141,16 +145,23 @@
             addMaskGT(viewId, imageId);
         }
 
-        // if (imageURL !== prevImg) {
-        //     let img = new Image();
-        //     img.onload = function () {
-        //         resetStage();
-        //         const konvaImg = stage.findOne("#image") as Konva.Image;
-        //         konvaImg.image(img);
-        //         imageURL = prevImg;
-        //     };
-        //     img.src = imageURL;
-        // }
+        if (imageURL !== prevImg) {
+            let img = new Image();
+            img.onload = function () {
+                // Reset stage
+                resetStage();
+
+                // Change image
+                image = img;
+                const konvaImg = stage.findOne(`#${imageId}`) as Konva.Image;
+                konvaImg.image(img);
+                prevImg = imageURL;
+
+                // Recalculate stage scale & position
+                fitAndCenterImage();
+            };
+            img.src = imageURL;
+        }
 
     });
 
