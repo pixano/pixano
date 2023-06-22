@@ -12,7 +12,6 @@
 # http://www.cecill.info
 
 from typing import Optional
-from attr import field, fields
 
 import pyarrow as pa
 
@@ -175,18 +174,41 @@ class ObjectAnnotationTypeScalar(pa.ExtensionScalar):
 class ObjectAnnotationArray(pa.ExtensionArray):
     """Class to use pa.array for ObjectAnnotationType instance"""
 
+    @staticmethod
+    def objAnn_list_to_paArray_dict(annotation_list:list[ObjectAnnotation]) -> dict:
+        
+        type_mapping = {
+            BBox: BBoxType(),
+            Pose: PoseType(),
+            CompressedRLE: CompressedRLEType(),
+            ObjectAnnotation: ObjectAnnotationType()
+        }
+
+        result_dict = {}
+
+        if len(annotation_list) == 0:
+            return result_dict
+
+        attributes = annotation_list[0].__dict__.keys()
+
+        for attr in attributes:
+            attr_values = [getattr(annotation, attr) for annotation in annotation_list]
+
+            if isinstance(attr_values[0], tuple(type_mapping.keys())):
+                attr_type = type_mapping[type(attr_values[0])]
+                attr_values = pa.array([value.to_dict() for value in attr_values], type=attr_type)
+
+
+            result_dict[attr] = pa.array(attr_values)
+
+        return result_dict
+    
     @classmethod
-    def from_ObjectAnnotation_list(
-        cls, objectAnnotation_list: list[ObjectAnnotation]
-    ) -> pa.Array:
-        objectAnnotation_dicts = [
-            objectAnnotation.to_dict() for objectAnnotation in objectAnnotation_list
-        ]
+    def from_ObjAnnot_list(cls, annotation_list: list[ObjectAnnotation]):
+        attributes_dict = ObjectAnnotationArray.objAnn_list_to_paArray_dict(annotation_list)
+        return pa.StructArray.from_arrays(list(attributes_dict.values()),names= list(attributes_dict.keys()))
 
-        array = pa.struct()
 
-        arr = pa.StructArray.from_arrays(objectAnnotation_dicts, ["ObjectAnnotation"])
-        return arr
 
 
 def is_objectAnnotation_type(t: pa.DataType) -> bool:
