@@ -41,7 +41,7 @@ pip install pixano
 - [Importing your datasets](notebooks/dataset/import_dataset.ipynb)
 - [Using the Pixano Explorer](pixano/apps/explorer/README.md)
 - *Using the Pixano Annotator (coming soon...)*
-- *Exporting your datasets (coming soon...)*
+- [Exporting your datasets](notebooks/dataset/export_dataset.ipynb)
 
 # Contributing
 
