@@ -19,9 +19,11 @@
   import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
 
   export let annotations: Array<AnnotationsLabels>;
-  export let dataset;
+  export let dataset = null;
 
-  let view_list = [];
+  let d_data = [];
+
+  let view_list = [];  //view that contains annotations for anns display (not real views list)
   let activeTab = "labels";
 
   const dispatch = createEventDispatcher();
@@ -74,6 +76,7 @@
   }
   
   onMount(() => {
+
     if(annotations) {
       //build views list
       let viewIds = new Set();
@@ -102,6 +105,23 @@
     if(view_list) {
       view_list = view_list;
     }
+
+    if(dataset && dataset.items) {
+      //build weel-formed dataset from dataset input
+      d_data = []
+      for(let feats of dataset.items) {
+        let data = {views: []}
+        for(let feat of feats) {
+          if (feat.dtype === "image") {
+            data.views.push({viewId: feat.name, img: feat.value});
+          } else {
+            data[feat.name] = feat.value;
+          }
+        }
+        d_data.push(data);
+      }
+    }
+
   });
   
 
@@ -211,13 +231,17 @@
       {/each}
     {:else if activeTab === "database"}
       <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center">
-        {#each dataset.items as img, i}
+        {#each d_data as data, i}
           <div
             class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
-            on:click={() => selectImage(img)}
+            on:click={() => selectImage(data)}
           >
-            <img src={img[1].value} alt="image #{i}" class="w-24 h-24 object-cover rounded" />
-            <span class="w-24 mt-2 text-xs font-semibold">{img[0].value}</span>
+            <div class="flex flex-row">
+            {#each data.views as view}
+              <img src={view.img} alt="#{view}-#{i}" class="w-24 h-24 object-cover rounded" />
+            {/each}
+            </div>
+            <span class="w-24 mt-2 text-xs font-semibold">{data.id}</span>
           </div>
         {/each}
       </div>

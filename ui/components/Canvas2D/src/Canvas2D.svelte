@@ -163,6 +163,10 @@
         gridSize.cols = Math.ceil(Math.sqrt(views.length));
         gridSize.rows = Math.ceil(views.length / gridSize.cols);
 
+        // Fire stage events observers
+        resizeObserver.observe(stageContainer);
+    });
+
     function resetStage() {
         let inputs = stage.find("#input") as Array<Konva.Group>;
         let maskss = stage.find("#masks") as Array<Konva.Group>;
@@ -188,6 +192,7 @@
             for(let view of views) addAllBBox(view.viewId, imageId)
         }
 
+        /*
         if (imageURL !== prevImg) {
             let img = new Image();
             img.onload = function () {
@@ -205,6 +210,7 @@
             };
             img.src = imageURL;
         }
+        */
 
     });
 

@@ -79,9 +79,11 @@
     console.log("item loaded:", selectedItem);
 
     //build annotations, masksGT and classes
-
+    masksGT = [];
+    annotations = [];
+    
     //predefined classes from spec.json "categories"
-    classes = selectedDataset.categories
+    classes = selectedDataset.categories;
 
     let struct_views_categories = {}
     for (let viewId of Object.keys(itemDetails.views)) {

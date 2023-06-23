@@ -100,12 +100,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
                 break
             file_path = file_or_dir
             if file_path.suffix in [".jpg", ".jpeg", ".png"]:
-                im = arrow_types.Image(
-                    uri=file_path.name,
-                    bytes=None,
-                    preview_bytes=None,
-                    uri_prefix=file_path.parent,
-                )
+                im = arrow_types.Image(uri=file_path.absolute().as_uri())
                 info.previews.append(im.url)
                 num_preview += 1
             protect -= 1

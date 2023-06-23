@@ -32,7 +32,6 @@
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import { getDatasetItems } from "./api";
   import { currentPage } from "../stores";
-  import { createEventDispatcher } from "svelte";
 
   import { interactiveSegmenterModel } from "../stores";
 
@@ -52,7 +51,7 @@
     curPage = value;
   });
 
-  let dbImages = [];
+  let dbImages = {};
 
   let className = "";
 
@@ -80,8 +79,6 @@
       rectTool.postProcessor = segmenter;
     }
   });
-
-  const dispatch = createEventDispatcher();
 
   // events handlers
   function handleAnnotationToolChange() {
@@ -162,12 +159,13 @@
     dispatch("saveAnns", {anns: annotations , masks: masksGT});
   }
 
-  function handleImageSelectedChange(img) {
-    dispatch("imageSelected", { id: img.detail[0].value });
-    itemData.imageURL = img.detail[1].value;
-    masksGT = [];
-    annotations = [];
-    classes = [];
+  function handleImageSelectedChange(event) {
+    //dispatch("handleCloseClick");
+    console.log("TODO test00", event)
+    itemData.views = event.detail.views;
+    itemData = itemData;
+
+    dispatch("imageSelected", { id: event.detail.id });
   }
 
   function handleItemDeleted(item) {
