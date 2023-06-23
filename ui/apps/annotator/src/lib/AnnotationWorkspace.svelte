@@ -236,7 +236,7 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="flex h-screen w-screen font-[Montserrat]">
+<div class="flex h-screen w-screen">
   {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
     <div
       id="point-modal"

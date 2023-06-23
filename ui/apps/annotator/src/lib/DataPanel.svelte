@@ -124,7 +124,7 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="w-80 shrink-0 bg-white font-[Montserrat]">
+<div class="w-80 shrink-0 bg-white">
   <div class="h-12 flex items-center justify-evenly">
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
