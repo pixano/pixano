@@ -34,7 +34,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="w-20 shrink-0">
-  <img src="pixano.png" alt="pixano logo" class="h-8 w-8 m-6" />
+  <img src="pixano.png" alt="pixano logo" class="h-10 w-10 m-5" />
   <div class="mt-4 flex flex-col items-center">
     {#each tools as tool}
       {#if tool.modes}
