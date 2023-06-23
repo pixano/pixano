@@ -16,7 +16,8 @@
 
   // Imports
   import { currentPage } from "../stores";
-  import type { ItemData } from "./interfaces";
+  import type { ItemData } from "../../../../components/Canvas2D/src/interfaces";
+  import pixanoLogo from "../assets/pixano.png";
 
   export let selectedDataset = null;
 
@@ -30,20 +31,38 @@
 </script>
 
 <!-- Header -->
-<header class="fixed w-full px-96 bg-gradient-to-t from-[#EC5F66] to-[#751D5F] z-10">
-  <div class="h-20 py-4 px-4 flex justify-start items-center">
+<header class="w-full fixed">
+  <div
+    class="h-20 py-4 px-4 flex justify-start items-center bg-white border-b-2 dark:bg-zinc-800 dark:border-zinc-700"
+  >
     <!-- Logo & app name -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="flex space-x-4 cursor-pointer hover:text-rose-800" on:click={goToLibrary}>
-      <img src="pixano_white.svg" alt="Logo Pixano" class="h-10" />
+    <div
+      class="flex space-x-4 cursor-pointer hover:text-rose-800 dark:hover:text-rose-300"
+      on:click={goToLibrary}
+    >
+      <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
+      <span class="text-3xl font-bold transition-colors">
+        Pixano Annotator
+      </span>
     </div>
+    {#if selectedDataset}
+      <span
+        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300 
+        dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600"
+      >
+        {selectedDataset.name}
+      </span>
+    {/if}
 
     <!-- Navigation -->
     <div class="mr-4 flex-grow text-right">
       {#if selectedDataset}
-        <button class="p-2 text-white transition-colors hover:text-rose-100" on:click={goToLibrary}
-          >Back to Library</button
-        >
+        <button
+          class="p-2 transition-colors hover:text-rose-800 dark:hover:text-rose-300"
+          on:click={goToLibrary}>
+          Back to Library
+        </button>
       {/if}
     </div>
   </div>

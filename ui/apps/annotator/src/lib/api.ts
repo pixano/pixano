@@ -28,10 +28,6 @@ export async function getDatasetsList() {
     console.log(e);
   }
 
-  // Temporary hack so the app doesn't crashes
-  for (let i = 0; i < datasets.length; ++i)
-    datasets[i].preview = ["", "", "", "", "", "", "", ""];
-  
   return datasets;
 }
 

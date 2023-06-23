@@ -25,38 +25,42 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="w-80 flex flex-col shadow rounded-sm">
+<div
+  class="w-64 h-80 m-4 flex flex-col bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-md cursor-pointer transition-all 
+    hover:scale-[102.5%]
+    dark:bg-zinc-800 dark:text-zinc-50 dark:border-zinc-700"
+  on:click={handleClick}
+>
   <!-- Dataset Infos -->
-  <div class="px-8 pt-6 pb-4 flex flex-col justify-center font-semibold">
-    <h3 class="text-lg mb-2">
+  <div class="h-1/5 px-4 flex flex-col justify-center">
+    <h3 class="text-lg font-medium text-zinc-900 dark:text-zinc-300">
       {dataset.name}
     </h3>
-    <p class="text-xs text-slate-400">
-      {dataset.num_elements} items
+    <p class="text-sm text-zinc-500">
+      {dataset.num_elements} elements
     </p>
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="grid grid-cols-4 gap-[1px]">
-    {#each dataset.previews as img}
-      <img
-        src={img}
-        alt="img preview"
-        class="h-20 w-20 object-cover object-center"
-      />
-    {/each}
+  <div
+    class="h-3/5 border-t border-b border-zinc-200 
+    dark:border-zinc-700"
+  >
+    <img
+      src={dataset.preview}
+      alt={dataset.name}
+      class="h-full w-full object-cover object-center"
+    />
   </div>
 
   <!-- Actions -->
-  <div class="px-4 py-6 flex justify-end items-center space-x-3">
-    <button
-      class="py-2 px-4 bg-rose-900 text-zinc-50 font-medium rounded-md transition-all hover:bg-rose-800"
-    >
-      Explore
-    </button>
+  <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
       on:click={handleClick}
-      class="py-2 px-4 bg-rose-900 text-zinc-50 font-medium rounded-md transition-all hover:bg-rose-800"
+      class="py-2 px-3 bg-rose-500 text-zinc-50 font-medium rounded-md border-2 border-rose-500 transition-all 
+        hover:text-rose-600 hover:bg-zinc-50 
+        dark:bg-rose-800 dark:border-rose-800
+        dark:hover:text-rose-700 dark:hover:bg-zinc-800"
     >
       Annotate
     </button>

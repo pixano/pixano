@@ -66,59 +66,6 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         if preview_path.is_file():
             im = arrow_types.Image(uri=preview_path.absolute().as_uri())
             info.preview = im.url
-        # Load preview list (8 random images)
-        media_dir = spec.parent / "media"
-        info.previews = []
-        start = time.time()
-
-        # """ test for better perf on previewing
-        # ---> glob.iglob take longer than os.scandir
-        # but the real issue is with displaying of preview images,
-        # not seeking in directories...
-        # --> this solution is more "obfuscated" but (a bit) quicker and more permissive on directory structure...
-        subdirs = [x for x in media_dir.iterdir() if x.is_dir()]
-        num_preview = 0
-        prev_dir_idx = num_preview % len(subdirs)
-        scan_iter = os.scandir(subdirs[prev_dir_idx])
-        protect = 10
-        while num_preview < 8:
-            current_dir_idx = num_preview % len(subdirs)
-            if current_dir_idx != prev_dir_idx:
-                scan_iter = os.scandir(subdirs[current_dir_idx])
-                prev_dir_idx = current_dir_idx
-            try:
-                file_or_dir = Path(next(scan_iter))
-                tree_deep = 0
-                while file_or_dir.is_dir():
-                    scan_iter = os.scandir(file_or_dir)
-                    file_or_dir = Path(next(scan_iter))
-                    tree_deep += 1
-                    if tree_deep > 10:
-                        print("WARNING : too much sub-directory for images")  # shouldn't happens...
-                        break
-            except StopIteration:
-                break
-            file_path = file_or_dir
-            if file_path.suffix in [".jpg", ".jpeg", ".png"]:
-                im = arrow_types.Image(uri=file_path.absolute().as_uri())
-                info.previews.append(im.url)
-                num_preview += 1
-            protect -= 1
-            if protect == 0:
-                break
-
-        """
-        media_iter = glob.iglob(f"{media_dir}/**/**/*.*")
-        for _ in range(8):
-            try:
-                file_path = Path(next(media_iter))
-                if file_path.suffix in [".jpg", ".jpeg", ".png"]:
-                    im = arrow_types.Image(uri=file_path.absolute().as_uri())
-                info.previews.append(im.url)
-            except StopIteration:
-                break
-        """
-        print("time:", time.time() - start)
 
         # Load categories
         info.categories = getattr(info, "categories", [])
@@ -229,7 +176,9 @@ def create_app(settings: Settings) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent).load())
 
         # Return item details
-        db_feats = db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
+        db_feats = db_utils.get_item_details(
+            ds.load(), item_id, ds.media_dir, inf_datasets
+        )
 
         # TMP append annotations from newAnnotations JSON files
         """
@@ -259,9 +208,16 @@ def create_app(settings: Settings) -> FastAPI:
         # Return item embedding
         return Response(content=db_utils.get_item_embedding(emb_ds, item_id, view))
 
-    @app.post("/datasets/{ds_id}/items/{item_id}/{view}/annotations", response_model=list[arrow_types.ObjectAnnotation])
-    async def post_dataset_item_annotation(ds_id: str, item_id: str, view: str,
-                                           annotations: list[arrow_types.ObjectAnnotation]):
+    @app.post(
+        "/datasets/{ds_id}/items/{item_id}/{view}/annotations",
+        response_model=list[arrow_types.ObjectAnnotation],
+    )
+    async def post_dataset_item_annotation(
+        ds_id: str,
+        item_id: str,
+        view: str,
+        annotations: list[arrow_types.ObjectAnnotation],
+    ):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
