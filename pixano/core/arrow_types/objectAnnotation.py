@@ -204,7 +204,7 @@ class ObjectAnnotationArray(pa.ExtensionArray):
         return result_dict
     
     @classmethod
-    def from_ObjAnnot_list(cls, annotation_list: list[ObjectAnnotation]):
+    def from_list(cls, annotation_list: list[ObjectAnnotation]):
         attributes_dict = ObjectAnnotationArray.objAnn_list_to_paArray_dict(annotation_list)
         return pa.StructArray.from_arrays(list(attributes_dict.values()),names= list(attributes_dict.keys()))
 

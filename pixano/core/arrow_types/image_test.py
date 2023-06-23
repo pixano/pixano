@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+import tempfile
 import unittest
 from io import BytesIO
 
@@ -19,10 +20,11 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
-from .image import Image, ImageArray, ImageType
 from PIL import Image as pilImage
 
 from pixano.transforms import image_to_binary
+
+from .image import Image, ImageArray, ImageType
 
 
 class ImageTestCase(unittest.TestCase):
@@ -46,8 +48,11 @@ class TestParquetImage(unittest.TestCase):
             ]
         )
         table = pa.Table.from_arrays([image_array], schema=schema)
-        pq.write_table(table, "test_image.parquet", store_schema=True)
-        re_table = pq.read_table("test_image.parquet")
+
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
+            temp_file_path = temp_file.name
+            pq.write_table(table, temp_file_path, store_schema=True)
+            re_table = pq.read_table(temp_file_path)
 
         self.assertEqual(re_table.column_names, ["image"])
         image0 = re_table.take([0])["image"][0].as_py()

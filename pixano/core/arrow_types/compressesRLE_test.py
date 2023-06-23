@@ -11,11 +11,13 @@
 #
 # http://www.cecill.info
 
+import tempfile
 import unittest
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 from .compressedRLE import CompressedRLE, CompressedRLEArray, CompressedRLEType
 
 
@@ -40,9 +42,13 @@ class TestParquetCompressedRLE(unittest.TestCase):
                 pa.field("compressedRLE", CompressedRLEType()),
             ]
         )
+
         table = pa.Table.from_arrays([compressedRLE_array], schema=schema)
-        pq.write_table(table, "test_compressedRLE.parquet", store_schema=True)
-        re_table = pq.read_table("test_compressedRLE.parquet")
+
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
+            temp_file_path = temp_file.name
+            pq.write_table(table, temp_file_path, store_schema=True)
+            re_table = pq.read_table(temp_file_path)
 
         self.assertEqual(re_table.column_names, ["compressedRLE"])
         compressedRLE1 = re_table.take([0])["compressedRLE"][0].as_py()

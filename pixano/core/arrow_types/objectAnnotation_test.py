@@ -11,11 +11,13 @@
 #
 # http://www.cecill.info
 
+import tempfile
 import unittest
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 from .bbox import BBox
 from .compressedRLE import CompressedRLE
 from .objectAnnotation import ObjectAnnotation, ObjectAnnotationArray
@@ -75,8 +77,11 @@ class TestParquetObjectAnnotation(unittest.TestCase):
         )
 
         table = pa.Table.from_arrays([objAnn_arr], names=["objAnn"])
-        pq.write_table(table, "test_object_annotation.parquet")
-        re_table = pq.read_table("test_object_annotation.parquet")
+
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
+            temp_file_path = temp_file.name
+            pq.write_table(table, temp_file_path)
+            re_table = pq.read_table(temp_file_path)
 
         self.assertEqual(re_table.column_names, ["objAnn"])
 

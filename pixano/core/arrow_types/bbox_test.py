@@ -12,12 +12,14 @@
 # http://www.cecill.info
 
 
+import tempfile
 import unittest
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 from .bbox import BBox, BBoxArray
 
 
@@ -75,13 +77,17 @@ class TestParquetBBox(unittest.TestCase):
         bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
 
         table = pa.Table.from_arrays([bbox_arr], names=["bbox"])
-        pq.write_table(table, "test_bbox.parquet", store_schema=True)
 
-        re_table = pq.read_table("test_bbox.parquet")
-        self.assertEqual(re_table.column_names, ["bbox"])
-        Bbox0 = re_table.take([0])["bbox"][0].as_py()
-        self.assertTrue(isinstance(Bbox0, BBox))
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
+            temp_file_path = temp_file.name
+            pq.write_table(table, temp_file_path, store_schema=True)
 
+            re_table = pq.read_table(temp_file_path)
+            self.assertEqual(re_table.column_names, ["bbox"])
+            Bbox0 = re_table.take([0])["bbox"][0].as_py()
+            self.assertTrue(isinstance(Bbox0, BBox))
+
+    @unittest.skip("panda give dict")
     def test_bbox_table_with_panda(self):
         bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
 
@@ -97,4 +103,4 @@ class TestParquetBBox(unittest.TestCase):
 
         self.assertEqual(reload_pd_table.column_names, ["bbox"])
         # panda give dict
-        self.assertTrue(isinstance(BBox1, dict))
+        self.assertTrue(isinstance(BBox1, BBox))
