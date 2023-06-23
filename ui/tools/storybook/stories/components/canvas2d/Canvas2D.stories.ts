@@ -14,8 +14,11 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Canvas2D from "../../../../../components/Canvas2D/src/Canvas2D.svelte"
-import { createLabeledPointTool, createRectangleTool } from "../../../../../components/Canvas2D/src/tools";
+import Canvas2D from "../../../../../components/Canvas2D/src/Canvas2D.svelte";
+import {
+  createLabeledPointTool,
+  createRectangleTool,
+} from "../../../../../components/Canvas2D/src/tools";
 import { drawLabel } from "../../../../../components/core/src/konva_utils";
 import * as mocks from "./mocks";
 
@@ -37,17 +40,17 @@ type Story = StoryObj<typeof meta>;
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const CanvasWithoutSelectedTool: Story = {
   args: {
-    views : [
+    views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
-      }
-    ],    
+      },
+    ],
     imageId: "image_moyenne",
     masksGT: null,
     bboxes: null,
     selectedTool: null,
-    prediction: null
+    prediction: null,
   },
 };
 
@@ -57,17 +60,17 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    views : [
+    views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
-      }
-    ],    
+      },
+    ],
     imageId: "image_moyenne",
     masksGT: null,
     bboxes: null,
     prediction: null,
-    selectedTool: labeledPointCreator
+    selectedTool: labeledPointCreator,
   },
 };
 
@@ -76,16 +79,16 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    views : [
+    views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
-      }
-    ],    
+      },
+    ],
     imageId: "image_moyenne",
     masksGT: null,
     bboxes: null,
     prediction: null,
-    selectedTool: rectangleCreator
+    selectedTool: rectangleCreator,
   },
 };

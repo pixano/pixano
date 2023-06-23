@@ -55,14 +55,17 @@ function getIcon(type: ToolType, label?: number): string {
         default:
           return "icons/point.svg";
       }
-      case ToolType.Rectangle:
-        return "icons/box.svg";
-      case ToolType.Pan:
-        return "icons/pan.svg";
-    }
+    case ToolType.Rectangle:
+      return "icons/box.svg";
+    case ToolType.Pan:
+      return "icons/pan.svg";
+  }
 }
 
-export function createMultiModalTool(type: ToolType, tools: Array<Tool>): MultiModalTool {
+export function createMultiModalTool(
+  type: ToolType,
+  tools: Array<Tool>
+): MultiModalTool {
   return { type: type, icon: getIcon(type), modes: tools } as MultiModalTool;
 }
 
@@ -76,11 +79,19 @@ export function createLabeledPointTool(label: number): LabeledPointTool {
 }
 
 export function createRectangleTool(): RectangleTool {
-  return { type: ToolType.Rectangle, icon: getIcon(ToolType.Rectangle), cursor: "crosshair" } as RectangleTool;
+  return {
+    type: ToolType.Rectangle,
+    icon: getIcon(ToolType.Rectangle),
+    cursor: "crosshair",
+  } as RectangleTool;
 }
 
 export function createPanTool(): PanTool {
-  return { type: ToolType.Pan, icon: getIcon(ToolType.Pan), cursor: "move" } as PanTool;
+  return {
+    type: ToolType.Pan,
+    icon: getIcon(ToolType.Pan),
+    cursor: "move",
+  } as PanTool;
 }
 
 export type { Tool, LabeledPointTool, RectangleTool, PanTool };
