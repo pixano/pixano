@@ -73,6 +73,9 @@
         cols: 0,
     };
 
+    let prev_views: Array<ViewData>;
+
+
     // Dynamically set the canvas stage size
     const resizeObserver = new ResizeObserver((entries) => {
         for (const entry of entries) {
@@ -158,6 +161,7 @@
                 })
             };
         }
+        prev_views = views;
 
         // Calculate new grid size
         gridSize.cols = Math.ceil(Math.sqrt(views.length));
@@ -168,11 +172,15 @@
     });
 
     function resetStage() {
+        //find groups for all views
         let inputs = stage.find("#input") as Array<Konva.Group>;
         let maskss = stage.find("#masks") as Array<Konva.Group>;
+        let bboxess = stage.find("#bboxes") as Array<Konva.Group>;
 
+        //destroy all
         for(let input of inputs) input.destroyChildren();
         for(let masks of maskss) masks.destroyChildren();
+        for(let bboxes of bboxess) bboxes.destroyChildren();
     }
 
     afterUpdate(() => {
@@ -192,26 +200,29 @@
             for(let view of views) addAllBBox(view.viewId, imageId)
         }
 
-        /*
-        if (imageURL !== prevImg) {
-            let img = new Image();
-            img.onload = function () {
-                // Reset stage
-                resetStage();
+        if (views !== prev_views) {
+            // Reset stage
+            resetStage();
 
-                // Change image
-                image = img;
-                const konvaImg = stage.findOne(`#${imageId}`) as Konva.Image;
-                konvaImg.image(img);
-                prevImg = imageURL;
-
-                // Recalculate stage scale & position
-                fitAndCenterImage();
-            };
-            img.src = imageURL;
+            // Load Image(s)
+            for (let view of views) {
+                const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+                zoomFactor[view.viewId] = 1;
+                const img = new Image();
+                img.src = view.imageURL;
+                img.onload = (event) => {
+                    onLoadViewImage(event, view.viewId)
+                    .then(()=>{
+                        const konvaImg = view_layer.findOne(`#${imageId}`) as Konva.Image;
+                        konvaImg.image(img);
+                        scaleView(view);
+                        //hack to refresh view (display masks/bboxes)
+                        masksGT = masksGT;
+                    })
+                };
+            }
+            prev_views = views;
         }
-        */
-
     });
 
     function getBox(viewId): Box {
@@ -507,8 +518,8 @@
 
             const listMaskGTIds = []
             for (let i = 0; i < masksGT.length; ++i) {
+                listMaskGTIds.push(masksGT[i].id);
                 if(masksGT[i].viewId === viewId) {
-                    listMaskGTIds.push(masksGT[i].id);
 
                     //don't add a mask that already exist
                     let mask = group.findOne(`#${masksGT[i].id}`);
