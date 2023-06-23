@@ -101,7 +101,7 @@
         <!-- Page navigation -->
         <div class="flex justify-end items-center w-full space-x-2">
           <span class="mr-2">
-            {1 + itemsPerPage * (curPage - 1)} - {itemsPerPage * curPage} of {datasetItems.total}
+            {1 + itemsPerPage * (curPage - 1)} - {Math.min(itemsPerPage * curPage, datasetItems.total)} of {datasetItems.total}
           </span>
           <button
             class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
