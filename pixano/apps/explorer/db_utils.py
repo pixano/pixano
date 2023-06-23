@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+import json
 
 import numpy as np
 import pyarrow as pa
@@ -91,7 +92,7 @@ def get_item_details(
             cats = [
                 {"id": obj["category_id"], "name": obj["category_name"]}
                 for obj in item["objects"]
-                if obj["view_id"] == field.name
+                if obj["view_id"] == field.name and obj["category_id"] is not None and obj["category_name"] is not None
             ]
             # Bounding boxes
             boxes = [
@@ -107,7 +108,7 @@ def get_item_details(
             masks = [
                 transforms.rle_to_urle(obj["mask"])
                 for obj in item["objects"]
-                if obj["view_id"] == field.name
+                if obj["view_id"] == field.name and obj["mask"] is not None
             ]
             # Add to features
             features["views"][field.name] = {
@@ -201,3 +202,65 @@ def get_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
     emb_scanner = emb_ds.scanner(filter=ds.field("id").isin([item_id]))
     emb_item = emb_scanner.to_table().to_pylist()[0]
     return emb_item[f"{view}_embedding"]
+
+
+def write_newAnnsJson(
+        ds_id: str,
+        item_id: str,
+        view: str,
+        annotations: list[arrow_types.ObjectAnnotation],
+        target_dir: Path
+):
+    # Build output json object
+    # ObjectAnnotation is not (right now) serializable, and we need some more info into output
+    output = {
+        'dataset_id': ds_id,
+        'view': view,
+        'item_id': item_id,
+        'objects': []
+    }
+    for ann in annotations:
+        obj = ann.dict()
+        output['objects'].append(obj)
+
+    json_output = json.dumps(output)
+    with open(target_dir / f"newAnnotations-{view}-{item_id}.json", "w") as jsonfile:
+        jsonfile.write(json_output)
+
+
+def write_newAnnotations(
+        ds_id: str,
+        item_id: str,
+        view: str,
+        annotations: list[arrow_types.ObjectAnnotation],
+        target_dir: Path
+        ):
+    # TMP log to ensure we get data
+    print("EXPORT (dataset item view):", ds_id, item_id, view)
+    for ann in annotations:
+        print("ANN (category id mask_counts_length):", ann.category_name, ann.id, len(ann.mask['counts']))
+
+    # TMP Save as JSON
+    write_newAnnsJson(ds_id, item_id, view, annotations, target_dir)
+
+    """  Erreur format Pydantic non reconnu...
+    schema = pa.schema([
+        pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
+    ])
+    # Convert annotations field to PyArrow format (objects)
+    arrays = [
+        arrow_types.convert_field(
+            field_name="objects",
+            field_type=pa.list_(arrow_types.ObjectAnnotationType()),
+            field_data=annotations
+        )
+    ]
+    # Save to file
+    ds.write_dataset(
+        data=pa.Table.from_arrays(arrays, schema=schema),
+        base_dir=target_dir / "db_newAnnotations",
+        basename_template=f"newAnns-part-{{i}}.parquet",
+        format="parquet",
+        existing_data_behavior="overwrite_or_ignore"
+    )
+    """

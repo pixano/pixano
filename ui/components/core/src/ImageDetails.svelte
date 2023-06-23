@@ -19,6 +19,7 @@
   import Konva from "konva";
   import * as KonvaUtils from "./konva_utils";
   import * as Utils from "./utils";
+  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
 
   // Represents an image's features
   export let features: any;
@@ -244,20 +245,33 @@
 
           // Mask
           if (view.objects.segmentation[i]) {
-            let mask = view.objects.segmentation[i];
+            let mask_rle = view.objects.segmentation[i];
+            //const mask_rle = itemDetails.views.image.objects.segmentation[i];
+            const rle = mask_rle["counts"];
+            const size = mask_rle["size"];
+            const maskPolygons = generatePolygonSegments(rle, size[0]);
+            const masksSVG = convertSegmentsToSVG(maskPolygons);
+
+            /*
             let maskCoords = KonvaUtils.calculateMaskCoordinates(
-              mask,
+              masksSVG,
               imgSize,
               offset
             );
-
+            */
+            console.log("SQ", offset, imgSize, scale)
             // Draw mask
+            /*
             KonvaUtils.drawMask(
               id + 1,
+              offset.x,
+              offset.y,
+              {x: scale, y: scale},
               masksGroup,
-              maskCoords,
+              masksSVG,
               categoryColor(category.id)
             );
+            */
           }
         }
 

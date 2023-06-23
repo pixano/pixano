@@ -111,7 +111,7 @@ export async function getImageEmbedding(datasetId: String, itemId: string, viewI
         "WARNING",
         response.status,
         response.statusText,
-        response.text()
+        await response.text()
       );
     }
   } catch (e) {
@@ -120,6 +120,31 @@ export async function getImageEmbedding(datasetId: String, itemId: string, viewI
   return embedding;
 }
 
+export async function postAnnotations(anns : any, datasetId: String, itemId: string, viewId: string = "image") {
+  try {
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(anns),
+      method: "POST",
+    });
+    if (response.ok) { 
+      console.log("Annotations sent OK");
+    } else {
+      console.log(
+        "WARNING",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
+    }
+  } catch (e) {
+    console.log("ERROR posting annotations", e);
+  }
+
+}
 
 export async function getModel() {
 

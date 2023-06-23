@@ -34,30 +34,20 @@ type Story = StoryObj<typeof meta>;
 // const embed = await fetch("image_moyenne.npy").then(response => response.arrayBuffer());
 // initModel("sam_vit_b_01ec64.onnx");
 
-// //TMP: help log
-// const log_help = false;
-// if(log_help) {
-//   console.log("Usage:");
-//   console.log("  click to add points (+/-) in point mode, drag to draw a bow in box mode");
-//   console.log("  prediction is done on each new/modified input");
-//   console.log("  drag a point to move it (continuously predict while dragging)");
-//   console.log("Keys:");
-//   console.log("  Shift: toggle to point mode, switch between point + / point -");
-//   console.log("  Ctrl: toggle to box mode");
-//   console.log("  c: clear output (input and mask)");
-//   console.log("  Suppr: remove highlighted point");
-//   console.log("  (dev) i: get info");
-//   console.log("  (dev) Alt: toggle Hover mode");
-//   }
-
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const CanvasWithoutSelectedTool: Story = {
   args: {
-    imageURL: "image_moyenne.jpg",
+    views : [
+      {
+        viewId: "view",
+        imageURL: "image_moyenne.jpg",
+      }
+    ],    
     imageId: "image_moyenne",
-    viewId: "view",
-    masksGT: [],
-    selectedTool: null
+    masksGT: null,
+    bboxes: null,
+    selectedTool: null,
+    prediction: null
   },
 };
 
@@ -67,10 +57,16 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    imageURL: "image_moyenne.jpg",
+    views : [
+      {
+        viewId: "view",
+        imageURL: "image_moyenne.jpg",
+      }
+    ],    
     imageId: "image_moyenne",
-    viewId: "view",
-    masksGT: [],
+    masksGT: null,
+    bboxes: null,
+    prediction: null,
     selectedTool: labeledPointCreator
   },
 };
@@ -80,10 +76,16 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    imageURL: "image_moyenne.jpg",
+    views : [
+      {
+        viewId: "view",
+        imageURL: "image_moyenne.jpg",
+      }
+    ],    
     imageId: "image_moyenne",
-    viewId: "view",
-    masksGT: [],
+    masksGT: null,
+    bboxes: null,
+    prediction: null,
     selectedTool: rectangleCreator
   },
 };

@@ -108,18 +108,6 @@ export class SAM implements InteractiveImageSegmenter {
             has_mask_input: previousMask[1]
         }
 
-        /*
-        const maskRLE = maskDataToFortranArrayToRle(this.currentMask, h, w)
-        //console.log(maskRLE)
-        const maskPolygons = generatePolygonSegments(maskRLE, h);
-        //console.log(maskPolygons);
-        const masksSVG = convertSegmentsToSVG(maskPolygons);
-        //console.log(masksSVG);
-        //console.log(masksSVG.length);
-        return { masksImage: masksSVG }
-
-        */
-
         console.log("RUN SAM PREDICTION")
         console.log("SAM inputs: ", samInputs)
         const results = await this.onnxModel.run(samInputs)
@@ -127,7 +115,11 @@ export class SAM implements InteractiveImageSegmenter {
         const maskPolygons = generatePolygonSegments(rleMask, imageHeight);
        
         const masksSVG = convertSegmentsToSVG(maskPolygons);
-        return {masksImage: masksSVG, masks: results.mask}
+        return {
+            masksImageSVG: masksSVG, 
+            rle: { counts: rleMask, size: [imageHeight, imageWidth] },
+            masks: results.mask, //note: actually we don't need this one
+        }
     }
 
     inputNames(): Array<string> {

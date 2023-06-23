@@ -15,12 +15,13 @@
   */
 
   // Imports
-  import { createEventDispatcher } from "svelte";
-  import type { AnnotationsLabels } from "./interfaces";
+  import { onMount, createEventDispatcher, afterUpdate } from "svelte";
+  import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
 
   export let annotations: Array<AnnotationsLabels>;
   export let dataset;
 
+  let view_list = [];
   let activeTab = "labels";
 
   const dispatch = createEventDispatcher();
@@ -44,16 +45,66 @@
     if (item.visible && !group.visible) {
       group.visible = true;
     }
-    dispatch("toggleVisibility", item);
+    //add viewId info
+    let detail = item;
+    detail.viewId = group.viewId;
+    dispatch("toggleVisibility", detail);
   }
 
   function handleGroupVisibility(group: any) {
     group.visible = !group.visible;
     for (let item of group.items) {
       item.visible = group.visible;
-      dispatch("toggleVisibility", item);
+      //add viewId info
+      let detail = item;
+      detail.viewId = group.viewId;
+      dispatch("toggleVisibility", detail);
     }
   }
+
+  function handleViewVisibility(view: any) {
+    view.visible = !view.visible;
+    for (let ann of annotations) {
+      if(ann.viewId === view.view_name) {
+        handleGroupVisibility(ann);
+      }
+    }
+    //hack to refresh icon
+    view_list = view_list;
+  }
+  
+  onMount(() => {
+    if(annotations) {
+      //build views list
+      let viewIds = new Set();
+      for (let ann of annotations) {
+        viewIds.add(ann.viewId);
+      }
+      for(let viewId of viewIds){
+        let num_objs = 0;
+        for (let ann of annotations) {
+          if(ann.viewId === viewId) {
+            num_objs += ann.items.length
+          }
+        }
+        view_list.push({
+          view_name: viewId,
+          opened: true,
+          visible: true,
+          num_objs: num_objs
+        });
+      }
+      console.log("DataPanel init", view_list, annotations);
+    }
+  });
+
+  afterUpdate(() => {
+    if(view_list) {
+      view_list = view_list;
+    }
+  });
+  
+
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -84,56 +135,79 @@
   </div>
   <div class="mt-2 pb-4 flex flex-col max-h-[85vh] overflow-y-scroll">
     {#if activeTab == "labels"}
-      {#each annotations as group}
-        <div
-          class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group['opened'] ? 'bg-zinc-100' : ''}"
-        >
-          <img
-            src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
-            alt="visible"
-            class="h-6 w-6 opacity-50 cursor-pointer"
-            on:click={() => handleGroupVisibility(group)}
-          />
-          <div
-            class="flex grow items-center space-x-1 cursor-pointer"
-            on:click={() => (group["opened"] = !group["opened"])}
-          >
-            <img src="icons/expand.svg" alt="expand" class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}" />
-            <span class="grow ml-3 font-bold text-gray-900">
-              {group.class}
-            </span>
-            <!-- TODO : add different colors -->
-            <span
-              class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
-            >
-              {group.items.length}
-            </span>
-          </div>
-        </div>
-        <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
-          {#each group.items as item, index}
-            <div class="py-3 pl-12 pr-8 flex items-center space-x-1 {index === 0 ? '' : 'border-t-2'}">
-              <img
-                src="icons/{(group.visible && item.visible) || item.visible ? 'visible' : 'invisible'}.svg"
-                alt="visible"
-                class="h-5 w-5 opacity-50 cursor-pointer"
-                on:click={() => handleVisibility(group, item)}
-              />
-              <span class="relative pl-3 grow text-sm group cursor-default">
-                {item.id}
-                <span class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block">
-                  label: {item.label}
-                </span>
+      {#each view_list as view}
+        {#if view_list.length > 1}
+          <div class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {view['opened'] ? 'bg-violet-200' : 'bg-violet-100'}">
+            <img
+              src="icons/{view['visible'] ? 'visible' : 'invisible'}.svg"
+              alt="visible"
+              class="h-6 w-6 opacity-50 cursor-pointer"
+              on:click={() => handleViewVisibility(view)}
+            />
+            <div class="flex grow items-center space-x-1 cursor-pointer" on:click={() => (view['opened'] = !view['opened'])}>
+              <img src="icons/expand.svg" alt="expand" class="h-6 w-6 {!view['opened'] ? '-rotate-90' : ''}" />
+              <span class="grow ml-3 font-bold text-gray-900">
+                {view.view_name}
               </span>
-              <img
-                src="icons/delete.svg"
-                alt="delete"
-                class="h-4 w-4 opacity-50 cursor-pointer"
-                on:click={() => deleteItem(item)}
-              />
+              <!-- TODO : add different colors -->
+              <span
+                class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+              >
+                {view.num_objs}
+              </span>
             </div>
-          {/each}
-        </div>
+          </div>
+        {/if}
+        {#each annotations as group}
+          {#if group.viewId === view.view_name}
+            <div class="{view['opened'] ? 'flex' : 'hidden'} flex-col">
+            <div class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group['opened'] ? 'bg-zinc-100' : ''}">
+              <img
+                src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
+                alt="visible"
+                class="h-6 w-6 opacity-50 cursor-pointer"
+                on:click={() => handleGroupVisibility(group)}
+              />
+              <div class="flex grow items-center space-x-1 cursor-pointer" on:click={() => (group['opened'] = !group['opened'])}>
+                <img src="icons/expand.svg" alt="expand" class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}" />
+                <span class="grow ml-3 font-bold text-gray-900">
+                  {group.category_name}
+                </span>
+                <!-- TODO : add different colors -->
+                <span
+                  class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+                >
+                  {group.items.length}
+                </span>
+              </div>
+            </div>
+            <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
+              {#each group.items as item, index}
+                <div class="py-3 pl-12 pr-8 flex items-center space-x-1 {index === 0 ? '' : 'border-t-2'}">
+                  <img
+                    src="icons/{(group.visible && item.visible) || item.visible ? 'visible' : 'invisible'}.svg"
+                    alt="visible"
+                    class="h-5 w-5 opacity-50 cursor-pointer"
+                    on:click={() => handleVisibility(group, item)}
+                  />
+                  <span class="relative pl-3 grow text-sm group cursor-default">
+                    {item.id}
+                    <span class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block">
+                      label: {item.label}
+                    </span>
+                  </span>
+                  <img
+                    src="icons/delete.svg"
+                    alt="delete"
+                    class="h-4 w-4 opacity-50 cursor-pointer"
+                    on:click={() => deleteItem(item)}
+                  />
+                </div>
+              {/each}
+            </div>
+            </div>
+          {/if}
+        {/each}
       {/each}
     {:else if activeTab === "database"}
       <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center">

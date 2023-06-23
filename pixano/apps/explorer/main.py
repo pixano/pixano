@@ -12,9 +12,11 @@
 #
 # http://www.cecill.info
 
+import time
 import glob
 import json
 from pathlib import Path
+import os
 
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,6 +69,50 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         # Load preview list (8 random images)
         media_dir = spec.parent / "media"
         info.previews = []
+        start = time.time()
+
+        # """ test for better perf on previewing
+        # ---> glob.iglob take longer than os.scandir
+        # but the real issue is with displaying of preview images,
+        # not seeking in directories...
+        # --> this solution is more "obfuscated" but (a bit) quicker and more permissive on directory structure...
+        subdirs = [x for x in media_dir.iterdir() if x.is_dir()]
+        num_preview = 0
+        prev_dir_idx = num_preview % len(subdirs)
+        scan_iter = os.scandir(subdirs[prev_dir_idx])
+        protect = 10
+        while num_preview < 8:
+            current_dir_idx = num_preview % len(subdirs)
+            if current_dir_idx != prev_dir_idx:
+                scan_iter = os.scandir(subdirs[current_dir_idx])
+                prev_dir_idx = current_dir_idx
+            try:
+                file_or_dir = Path(next(scan_iter))
+                tree_deep = 0
+                while file_or_dir.is_dir():
+                    scan_iter = os.scandir(file_or_dir)
+                    file_or_dir = Path(next(scan_iter))
+                    tree_deep += 1
+                    if tree_deep > 10:
+                        print("WARNING : too much sub-directory for images")  # shouldn't happens...
+                        break
+            except StopIteration:
+                break
+            file_path = file_or_dir
+            if file_path.suffix in [".jpg", ".jpeg", ".png"]:
+                im = arrow_types.Image(
+                    uri=file_path.name,
+                    bytes=None,
+                    preview_bytes=None,
+                    uri_prefix=file_path.parent,
+                )
+                info.previews.append(im.url)
+                num_preview += 1
+            protect -= 1
+            if protect == 0:
+                break
+
+        """
         media_iter = glob.iglob(f"{media_dir}/**/**/*.*")
         for _ in range(8):
             try:
@@ -76,6 +122,9 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
                 info.previews.append(im.url)
             except StopIteration:
                 break
+        """
+        print("time:", time.time() - start)
+
         # Load categories
         info.categories = getattr(info, "categories", [])
         if info.categories is None:
@@ -185,7 +234,17 @@ def create_app(settings: Settings) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent).load())
 
         # Return item details
-        return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
+        db_feats = db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
+
+        # TMP append annotations from newAnnotations JSON files
+        """
+        new_anns_iter = glob.iglob(f"{ds.path}/newAnnotations-*.json")
+        for json_file in new_anns_iter:
+            with open(json_file, "r") as json_f:
+                anns = json_f.read()
+                print("AA", anns)
+        """
+        return db_feats
 
     @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
     async def get_dataset_item_embedding(ds_id: str, item_id: str, view: str):
@@ -204,6 +263,19 @@ def create_app(settings: Settings) -> FastAPI:
 
         # Return item embedding
         return Response(content=db_utils.get_item_embedding(emb_ds, item_id, view))
+
+    @app.post("/datasets/{ds_id}/items/{item_id}/{view}/annotations", response_model=list[arrow_types.ObjectAnnotation])
+    async def post_dataset_item_annotation(ds_id: str, item_id: str, view: str,
+                                           annotations: list[arrow_types.ObjectAnnotation]):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # TODO save annotation in parquet
+        db_utils.write_newAnnotations(ds_id, item_id, view, annotations, ds.path)
+
+        return Response()
 
     add_pagination(app)
 
