@@ -116,7 +116,7 @@ export async function getImageEmbedding(datasetId: String, itemId: string, viewI
   return embedding;
 }
 
-export async function postAnnotations(anns : any, datasetId: String, itemId: string, viewId: string = "image") {
+export async function postAnnotations(anns: any, datasetId: String, itemId: string, viewId: string = "image") {
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`, {
       headers: {
@@ -126,7 +126,7 @@ export async function postAnnotations(anns : any, datasetId: String, itemId: str
       body: JSON.stringify(anns),
       method: "POST",
     });
-    if (response.ok) { 
+    if (response.ok) {
       console.log("Annotations sent OK");
     } else {
       console.log(

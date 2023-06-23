@@ -28,7 +28,12 @@
     ToolType,
     createMultiModalTool,
   } from "../../../../components/Canvas2D/src/tools";
-  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel } from "../../../../components/Canvas2D/src/interfaces";
+  import type {
+    ItemData,
+    MaskGT,
+    AnnotationsLabels,
+    AnnLabel,
+  } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import { getDatasetItems } from "./api";
   import { currentPage } from "../stores";
@@ -65,7 +70,9 @@
   //let interactiveSegmenter;
 
   annotationTools.push(panTool);
-  annotationTools.push(createMultiModalTool(ToolType.LabeledPoint, [pointPlusTool, pointMinusTool]));
+  annotationTools.push(
+    createMultiModalTool(ToolType.LabeledPoint, [pointPlusTool, pointMinusTool])
+  );
   annotationTools.push(rectTool);
 
   let selectedAnnotationTool: Tool = panTool;
@@ -91,7 +98,9 @@
 
   function addAnnotation(className: string, id: string, viewId: string) {
     // Check if the class already exists in the annotation array
-    const existingClass = annotations.find((obj) => (obj.category_name === className) && (obj.viewId === viewId));
+    const existingClass = annotations.find(
+      (obj) => obj.category_name === className && obj.viewId === viewId
+    );
 
     // Add the class to the default class list if it doesn't already exist.
     if (!classes.some((cls) => cls.name === className)) {
@@ -105,9 +114,9 @@
       // Set item name
       const annotation: AnnLabel = {
         id: id,
-        type: "??",  //TODO put annotation type (bbox/mask)
+        type: "??", //TODO put annotation type (bbox/mask)
         label: `${className}-${existingClass.items.length}`,
-        visible : true,
+        visible: true,
         opacity: 1.0,
       };
 
@@ -119,7 +128,7 @@
       // Set item name
       const annotation: AnnLabel = {
         id: id,
-        type: "??",  //TODO put annotation type (bbox/mask)
+        type: "??", //TODO put annotation type (bbox/mask)
         label: `${className}-0`,
         visible: true,
         opacity: 1.0,
@@ -156,12 +165,12 @@
   }
 
   function handleSaveClick() {
-    dispatch("saveAnns", {anns: annotations , masks: masksGT});
+    dispatch("saveAnns", { anns: annotations, masks: masksGT });
   }
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
-    console.log("TODO test00", event)
+    console.log("TODO test00", event);
     itemData.views = event.detail.views;
     itemData = itemData;
 
@@ -178,7 +187,9 @@
 
     if (newAnnots) {
       // Filter out the item from the items array
-      newAnnots.items = newAnnots.items.filter((annotatedItem) => annotatedItem.id !== detailId);
+      newAnnots.items = newAnnots.items.filter(
+        (annotatedItem) => annotatedItem.id !== detailId
+      );
       if (newAnnots.items.length === 0) {
         annotations = annotations.filter((ann) => ann !== newAnnots);
       }
@@ -196,7 +207,9 @@
   }
 
   function handleVisibilityChange(item) {
-    const mask_to_toggle = masksGT.find(mask => (mask.id === item.detail.id) && (mask.viewId === item.detail.viewId));
+    const mask_to_toggle = masksGT.find(
+      (mask) => mask.id === item.detail.id && mask.viewId === item.detail.viewId
+    );
     mask_to_toggle.visible = item.detail.visible;
     //hack svelte to reflect changes
     masksGT = masksGT;
@@ -289,7 +302,12 @@
     on:toolSelected={handleAnnotationToolChange}
   />
   <div class="flex flex-col grow">
-    <NavigationToolbar database={itemData.dbName} imageName={itemData.imageId} {handleCloseClick} {handleSaveClick} />
+    <NavigationToolbar
+      database={itemData.dbName}
+      imageName={itemData.imageId}
+      {handleCloseClick}
+      {handleSaveClick}
+    />
     <div class="flex grow">
       <Canvas2D
         imageId={itemData.imageId}

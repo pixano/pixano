@@ -36,7 +36,12 @@
     <img src="icons/zoom_in.svg" alt="icon" class="h-8 w-8 cursor-pointer" />
   </div>
   <div class="pr-4 flex space-x-4">
-    <img src="icons/save.svg" alt="icon" class="h-8 w-8 cursor-pointer" on:click={handleSaveClick} />
+    <img
+      src="icons/save.svg"
+      alt="icon"
+      class="h-8 w-8 cursor-pointer"
+      on:click={handleSaveClick}
+    />
   </div>
   <div class="w-80 pr-4 flex justify-end" on:click={handleCloseClick}>
     <img src="icons/close.svg" alt="icon" class="h-8 w-8 cursor-pointer" />

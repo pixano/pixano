@@ -48,7 +48,7 @@
     </div>
     {#if selectedDataset}
       <span
-        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300 
+        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300
         dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600"
       >
         {selectedDataset.name}
@@ -60,7 +60,8 @@
       {#if selectedDataset}
         <button
           class="p-2 transition-colors hover:text-rose-800 dark:hover:text-rose-300"
-          on:click={goToLibrary}>
+          on:click={goToLibrary}
+        >
           Back to Library
         </button>
       {/if}

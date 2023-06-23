@@ -20,7 +20,12 @@
   //import { getItemDetails } from "./api";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import AnnotationInspector from "../../../../components/core/src/AnnotationInspector.svelte";
-  import type { ItemData, MaskGT, BBox, AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
+  import type {
+    ItemData,
+    MaskGT,
+    BBox,
+    AnnotationsLabels,
+  } from "../../../../components/Canvas2D/src/interfaces";
 
   import { createPanTool } from "../../../../components/Canvas2D/src/tools";
 
@@ -43,10 +48,10 @@
   /**
    * get item by id from annotations
    */
-   function getItemById(id: string) {
-    for(let cat of annotations) {
-      for(let item of cat.items) {
-        if(item.id  === id) {
+  function getItemById(id: string) {
+    for (let cat of annotations) {
+      for (let item of cat.items) {
+        if (item.id === id) {
           return item;
         }
       }
@@ -54,31 +59,31 @@
   }
 
   function handleCatVisChanged(event) {
-    if(allBBoxVisible) {
-      for(let bbox of bboxes) {
+    if (allBBoxVisible) {
+      for (let bbox of bboxes) {
         bbox.visible = getItemById(bbox.id).visible;
       }
       bboxes = bboxes;
     }
-    for(let mask of masksGT) {
+    for (let mask of masksGT) {
       mask.visible = getItemById(mask.id).visible;
     }
-    masksGT = masksGT
+    masksGT = masksGT;
   }
 
   function handleAllBBoxVisChanged(event) {
     allBBoxVisible = event.detail;
-    for(let bbox of bboxes) {
+    for (let bbox of bboxes) {
       bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
     }
-    bboxes = bboxes
+    bboxes = bboxes;
   }
 
   function handleMaskOpacity(event) {
-    for(let mask of masksGT) {
+    for (let mask of masksGT) {
       mask.opacity = getItemById(mask.id).opacity;
     }
-    masksGT = masksGT
+    masksGT = masksGT;
   }
 
   async function handleKeyDown(e) {
@@ -87,7 +92,7 @@
 
   onMount(async () => {
     //features = await getItemDetails(datasetId, rowIndex);
-    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations)
+    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations);
   });
 
   afterUpdate(() => {
@@ -96,7 +101,6 @@
       annotations = annotations;
     }
   });
-
 </script>
 
 <div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
@@ -116,7 +120,6 @@
       on:toggleAllBBoxVis={handleAllBBoxVisChanged}
       on:changeMaskOpacity={handleMaskOpacity}
     />
-    
   {/if}
 
   <!-- Close button -->

@@ -21,8 +21,17 @@
   import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel, ViewData } from "../../../components/Canvas2D/src/interfaces";
-  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
+  import type {
+    ItemData,
+    MaskGT,
+    AnnotationsLabels,
+    AnnLabel,
+    ViewData,
+  } from "../../../components/Canvas2D/src/interfaces";
+  import {
+    generatePolygonSegments,
+    convertSegmentsToSVG,
+  } from "../../../components/models/src/tracer";
   import { SAM } from "../../../components/models/src/Sam";
   import * as ort from "onnxruntime-web";
   import * as npyjs from "../../../components/models/src/npy";
@@ -32,7 +41,6 @@
   import * as api from "./lib/api";
   //import type { InteractiveImageSegmenter } from "../../../components/models/src/interactive_image_segmentation";
   //import { MockInteractiveImageSegmenter } from "../../../tools/storybook/stories/components/canvas2d/mocks";
-
 
   // Dataset navigation
   let datasets = null;
@@ -55,19 +63,21 @@
   }
 
   async function selectItem(event: CustomEvent) {
-
     showDetailsPage = true;
 
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     const start = Date.now();
-    const itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
-    console.log("so long ?? (ms)", Date.now() - start)
-    let views : Array<ViewData> = [];
+    const itemDetails = await api.getItemDetails(
+      selectedDataset.id,
+      event.detail.id
+    );
+    console.log("so long ?? (ms)", Date.now() - start);
+    let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
-      let view : ViewData = {
+      let view: ViewData = {
         viewId: viewId,
-        imageURL: itemDetails.views[viewId].image
+        imageURL: itemDetails.views[viewId].image,
       };
       views.push(view);
     }
@@ -81,22 +91,21 @@
     //build annotations, masksGT and classes
     masksGT = [];
     annotations = [];
-    
+
     //predefined classes from spec.json "categories"
     classes = selectedDataset.categories;
 
-    let struct_views_categories = {}
+    let struct_views_categories = {};
     for (let viewId of Object.keys(itemDetails.views)) {
-      let struct_categories = {}
+      let struct_categories = {};
 
       for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
-
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
         const cat_name = itemDetails.views[viewId].objects.category[i].name;
 
         // ensure all items goes in unique category (by name)
-        if(!struct_categories[cat_name]) {
-          let annotation : AnnotationsLabels = {
+        if (!struct_categories[cat_name]) {
+          let annotation: AnnotationsLabels = {
             viewId: viewId,
             category_name: cat_name,
             category_id: itemDetails.views[viewId].objects.category[i].id,
@@ -106,7 +115,7 @@
           struct_categories[cat_name] = annotation;
         }
 
-        if(mask_rle) {
+        if (mask_rle) {
           const rle = mask_rle["counts"];
           const size = mask_rle["size"];
           const maskPolygons = generatePolygonSegments(rle, size[0]);
@@ -120,10 +129,13 @@
             visible: true,
             opacity: 1.0,
           });
-          let item : AnnLabel = {
+          let item: AnnLabel = {
             id: itemDetails.views[viewId].objects.id[i],
             type: "mask",
-            label: itemDetails.views[viewId].objects.category[i].name+"-"+struct_categories[cat_name].items.length,
+            label:
+              itemDetails.views[viewId].objects.category[i].name +
+              "-" +
+              struct_categories[cat_name].items.length,
             visible: true,
             opacity: 1.0,
           };
@@ -132,29 +144,37 @@
       }
       struct_views_categories[viewId] = struct_categories;
     }
-    for(let view in struct_views_categories) {
-      for(let cat_name in struct_views_categories[view]) {
+    for (let view in struct_views_categories) {
+      for (let cat_name in struct_views_categories[view]) {
         annotations.push(struct_views_categories[view][cat_name]);
       }
     }
 
     //unique classes from existing annotations
     const cat_set = new Set();
-    for(let ann of annotations) cat_set.add(ann.category_name);
-    for(let cat of cat_set) {
+    for (let ann of annotations) cat_set.add(ann.category_name);
+    for (let cat of cat_set) {
       classes.push({
         id: classes.length,
         name: cat,
-      })
+      });
     }
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getImageEmbedding(selectedDataset.id, itemDetails.id, itemDetails.viewId);
+    const embeddingArrByte = await api.getImageEmbedding(
+      selectedDataset.id,
+      itemDetails.id,
+      itemDetails.viewId
+    );
     try {
       const embeddingArr = npyjs.parse(embeddingArrByte);
-      selectedItemEmbedding = new ort.Tensor("float32", embeddingArr.data, embeddingArr.shape);
-    } catch(err) {
+      selectedItemEmbedding = new ort.Tensor(
+        "float32",
+        embeddingArr.data,
+        embeddingArr.shape
+      );
+    } catch (err) {
       console.log("Embedding not loaded", err);
       selectedItemEmbedding = null;
     }
@@ -171,14 +191,17 @@
     classes = [];
   }
 
-  function findCategoryForId(anns: Array<AnnotationsLabels>, id: string) : string {
+  function findCategoryForId(
+    anns: Array<AnnotationsLabels>,
+    id: string
+  ): string {
     for (let ann of anns) {
-      if (ann.items.some(it=> it.id === id)) {
+      if (ann.items.some((it) => it.id === id)) {
         return ann.category_name;
       }
     }
     console.log("ERROR - unable to find category for id:", id);
-    return "undefined"; 
+    return "undefined";
   }
 
   function saveAnns(data) {

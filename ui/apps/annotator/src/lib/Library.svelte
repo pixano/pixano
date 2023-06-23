@@ -27,7 +27,6 @@
 </script>
 
 <div class="mx-auto px-8">
-
   <div class="grid grid-cols-6 gap-4">
     {#each datasets as dataset}
       <DatasetPreviewCard

@@ -23,16 +23,26 @@
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
   import * as api from "./lib/api";
-  import type { ItemData, MaskGT, BBox, AnnotationsLabels, AnnLabel, ViewData } from "../../../components/Canvas2D/src/interfaces";
-  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
+  import type {
+    ItemData,
+    MaskGT,
+    BBox,
+    AnnotationsLabels,
+    AnnLabel,
+    ViewData,
+  } from "../../../components/Canvas2D/src/interfaces";
+  import {
+    generatePolygonSegments,
+    convertSegmentsToSVG,
+  } from "../../../components/models/src/tracer";
 
   // Dataset navigation
   let datasets = null;
   let selectedDataset = null;
-  let selectedItem : ItemData = null;
+  let selectedItem: ItemData = null;
   let showDetailsPage: boolean = false;
-  let masksGT : Array<MaskGT> = [];
-  let bboxes : Array<BBox> = [];
+  let masksGT: Array<MaskGT> = [];
+  let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let itemDetails = null;
 
@@ -44,15 +54,14 @@
     showDetailsPage = true;
     //selectedItem = event.detail.id;
 
-
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
-    let views : Array<ViewData> = [];
+    let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
-      let view : ViewData = {
+      let view: ViewData = {
         viewId: viewId,
-        imageURL: itemDetails.views[viewId].image
+        imageURL: itemDetails.views[viewId].image,
       };
       views.push(view);
     }
@@ -64,17 +73,16 @@
     console.log("item loaded:", selectedItem);
 
     //build annotations, masksGT, bboxes and classes
-    let struct_categories = {}
+    let struct_categories = {};
     for (let viewId of Object.keys(itemDetails.views)) {
-
       for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
         const bbox = itemDetails.views[viewId].objects.boundingBox[i];
         const cat_name = itemDetails.views[viewId].objects.category[i].name;
 
         // ensure all items goes in unique category (by name)
-        if(!struct_categories[cat_name]) {
-          let annotation : AnnotationsLabels = {
+        if (!struct_categories[cat_name]) {
+          let annotation: AnnotationsLabels = {
             viewId: viewId,
             category_name: cat_name,
             category_id: itemDetails.views[viewId].objects.category[i].id,
@@ -84,12 +92,12 @@
           struct_categories[cat_name] = annotation;
         }
 
-        if(!(bbox || mask_rle)) {
+        if (!(bbox || mask_rle)) {
           console.log("WARNING!, no mask nor bounding box!!");
           continue;
         }
 
-        if(mask_rle) {
+        if (mask_rle) {
           const rle = mask_rle["counts"];
           const size = mask_rle["size"];
           const maskPolygons = generatePolygonSegments(rle, size[0]);
@@ -103,40 +111,51 @@
             visible: true,
             opacity: 1.0,
           });
-          let item : AnnLabel = {
+          let item: AnnLabel = {
             id: itemDetails.views[viewId].objects.id[i],
             type: "mask",
-            label: itemDetails.views[viewId].objects.category[i].name+"-"+struct_categories[cat_name].items.length,
+            label:
+              itemDetails.views[viewId].objects.category[i].name +
+              "-" +
+              struct_categories[cat_name].items.length,
             visible: true,
             opacity: 1.0,
           };
           struct_categories[cat_name].items.push(item);
         }
-        if(bbox) {
+        if (bbox) {
           bboxes.push({
             viewId: viewId,
             id: itemDetails.views[viewId].objects.id[i],
-            bbox: [bbox.x, bbox.y, bbox.width, bbox.height],  //still normalized
-            label: itemDetails.views[viewId].objects.category[i].name + (bbox.is_predict ? " "+parseFloat(bbox.confidence).toFixed(2): ""),
-            visible: true
+            bbox: [bbox.x, bbox.y, bbox.width, bbox.height], //still normalized
+            label:
+              itemDetails.views[viewId].objects.category[i].name +
+              (bbox.is_predict
+                ? " " + parseFloat(bbox.confidence).toFixed(2)
+                : ""),
+            visible: true,
           });
-          let item : AnnLabel = {
+          let item: AnnLabel = {
             id: itemDetails.views[viewId].objects.id[i],
             type: "bbox",
-            label: itemDetails.views[viewId].objects.category[i].name+"-"+struct_categories[cat_name].items.length,
+            label:
+              itemDetails.views[viewId].objects.category[i].name +
+              "-" +
+              struct_categories[cat_name].items.length,
             visible: true,
             opacity: 1.0,
-          }
-          if(bbox.is_predict) {
+          };
+          if (bbox.is_predict) {
             item.confidence = bbox.confidence;
-          } 
+          }
           struct_categories[cat_name].items.push(item);
         }
       }
     }
-    for(let cat_name in struct_categories) annotations.push(struct_categories[cat_name]);
+    for (let cat_name in struct_categories)
+      annotations.push(struct_categories[cat_name]);
 
-    console.log("selectItem Done", masksGT, bboxes, annotations)
+    console.log("selectItem Done", masksGT, bboxes, annotations);
   }
 
   function goToLibrary() {
@@ -176,7 +195,7 @@
     </div>
     {#if selectedDataset}
       <span
-        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300 
+        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300
         dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600"
       >
         {selectedDataset.name}
