@@ -161,8 +161,9 @@
       Database
     </span>
   </div>
-  <div class="mt-2 pb-4 flex flex-col max-h-[85vh] overflow-y-scroll">
+  <div class="flex flex-col max-h-[88vh]">
     {#if activeTab == "labels"}
+      <div class="overflow-auto">
       {#each view_list as view}
         {#if view_list.length > 1}
           <div
@@ -275,8 +276,9 @@
           {/if}
         {/each}
       {/each}
+      </div>
     {:else if activeTab === "database"}
-      <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center overflow-auto"
+      <div class="w-full flex flex-wrap justify-center overflow-auto"
         on:scroll={handleDatabaseScroll}
       >
         {#each d_data as data, i}
