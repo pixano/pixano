@@ -175,10 +175,12 @@ class COCOLoader(DataLoader):
                 if not any(split_dir.iterdir()):
                     raise Exception(f"{split_dir} is empty.")
 
+        # Input datasets
+        input_datasets = ["db"]
         # If no inference datasets provided, select all inference datasets
         if not inf_datasets:
             for inf_json in sorted(list(input_dir.glob("db_infer_*/infer.json"))):
-                inf_datasets.append(inf_json.parent.name)
+                input_datasets.append(inf_json.parent.name)
         # Else, if inference datasets provided, check if they exist
         else:
             inf_datasets = [
