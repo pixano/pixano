@@ -96,6 +96,7 @@
     if (annotations) {
       //build views list
       let viewIds = new Set();
+      view_list = [];
       for (let ann of annotations) {
         viewIds.add(ann.viewId);
       }
