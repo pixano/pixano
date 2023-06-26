@@ -216,7 +216,7 @@
   beforeUpdate(() => {
     // If the image has changed
     if (features.id != oldID) {
-      categoryColor = Utils.getColor(features.categoryStats.map((it) => it.id)); // Define a color map for each category id
+      categoryColor = Utils.getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
 
       // Calculate new grid size
       let viewsCount = Object.keys(features.views).length;

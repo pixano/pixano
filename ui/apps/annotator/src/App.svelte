@@ -249,7 +249,6 @@
   {:else if selectedItem}
     <AnnotationWorkspace
       itemData={selectedItem}
-      features={itemDetails}
       embedding={selectedItemEmbedding}
       {annotations}
       {masksGT}

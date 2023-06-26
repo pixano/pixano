@@ -28,7 +28,7 @@
     Box,
     InteractiveImageSegmenterOutput,
   } from "../../models/src/interactive_image_segmentation";
-  import type { MaskGT, BBox, ViewData } from "./interfaces";
+  import type { AnnotationsLabels, MaskGT, BBox, ViewData } from "./interfaces";
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;
@@ -43,7 +43,7 @@
 
   export let masksGT: Array<MaskGT> | null;
   export let bboxes: Array<BBox> | null;
-  export let features: any = null;
+  export let annotations: Array<AnnotationsLabels>;
 
   //let prevImg: string = "";
   //export let imageEmbedding = null;
@@ -62,7 +62,7 @@
   // let imageKonva: Konva.Image;
   let highlighted_point: Konva.Circle = null;
 
-  let oldID: number;
+  let oldId: string;
   // Function that maps an id to a color
   let categoryColor = null;
 
@@ -200,11 +200,10 @@
       for (let view of views) addAllBBox(view.viewId, imageId);
     }
     // If the image has changed
-    if (!!features) {
-      console.log("FEATURES");
-      if (features.id != oldID) {
-        oldID = features.id; // Update image id
-        categoryColor = getColor(features.categoryStats.map((it) => it.id)); // Define a color map for each category id
+    if (!!annotations) {
+      if (oldId != imageId) {
+        oldId = imageId; // Update image id
+        categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       }
     }
     /*

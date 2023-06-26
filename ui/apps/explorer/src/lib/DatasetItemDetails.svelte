@@ -112,7 +112,7 @@
       prediction={null}
       {masksGT}
       {bboxes}
-      {features}
+      {annotations}
     />
     <AnnotationInspector
       {features}

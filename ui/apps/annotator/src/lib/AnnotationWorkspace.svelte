@@ -41,7 +41,6 @@
   import { interactiveSegmenterModel } from "../stores";
 
   export let itemData: ItemData;
-  export let features: any;
   export let embedding: any;
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
@@ -139,7 +138,7 @@
       const newClass: AnnotationsLabels = {
         viewId: viewId,
         category_name: className,
-        //category_id: "",  //TODO add a category_id ??
+        category_id: annotations.length,
         items: [annotation],
         visible: true,
       };
@@ -318,7 +317,7 @@
         bind:prediction
         bind:masksGT
         bboxes={null}
-        {features}
+        {annotations}
       />
       {#if annotations}
         <DataPanel
