@@ -504,6 +504,8 @@
         prediction = {
           id: new_id,
           viewId: viewId,
+          label: "",
+          catID: -1,
           output: results,
           input_points: points,
           input_box: box,
@@ -578,10 +580,14 @@
         predictedMasks.id(prediction.id);
         // change color  //TODO: use table of color by class or whatever
         for (let s of predictedMasks.children) {
+          console.log(categoryColor?.(prediction.catID));
           let shape = s as Konva.Shape;
-          shape.fill("rgba(0, 0, 255, 0.25)");
-          shape.stroke("blue");
-          shape.opacity(1.0); //default opacity ??
+          var pred = new Option().style;
+          pred.color = categoryColor?.(prediction.catID);
+          shape.fill(
+            `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
+          );
+          shape.stroke(pred.color);
         }
         predictedMasks.moveTo(masksGT_group);
         masksGT.push({
@@ -589,7 +595,7 @@
           id: prediction.id,
           mask: prediction.output.masksImageSVG,
           rle: prediction.output.rle,
-          catID: -1,
+          catID: prediction.catID,
           visible: true,
           opacity: 1.0,
         });

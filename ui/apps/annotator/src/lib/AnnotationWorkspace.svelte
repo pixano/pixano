@@ -159,7 +159,15 @@
 
       addAnnotation(className, prediction.id, prediction.viewId);
 
+      // prediction class
+      const predictionClass = annotations.find(
+        (obj) =>
+          obj.category_name === className && obj.viewId === prediction.viewId
+      );
+
       //validate
+      prediction.label = predictionClass.category_name;
+      prediction.catID = predictionClass.category_id;
       prediction.validated = true;
     }
   }

@@ -44,7 +44,7 @@ export interface AnnLabel {
 export interface AnnotationsLabels {
   viewId: string;
   category_name: string;
-  category_id?: string;
+  category_id: number;
   items: Array<AnnLabel>;
   visible: boolean;
 }
