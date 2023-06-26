@@ -192,14 +192,17 @@
 
   function saveAnns(data) {
     console.log("App - save annotations");
-    console.log("data", data.detail);
     //format annotation data for export
     let anns = [];
     for (let mask of data.detail.masks) {
+      const mask_class = data.detail.anns.find(
+        (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
+      );
       let ann = {
         id: mask.id,
         view_id: mask.viewId,
-        category_name: mask.catId,
+        category_id: mask_class.category_id,
+        category_name: mask_class.category_name,
         mask: mask.rle,
         mask_source: "Pixano Annotator",
       };
