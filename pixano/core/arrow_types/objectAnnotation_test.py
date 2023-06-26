@@ -72,7 +72,7 @@ class TestParquetObjectAnnotation(unittest.TestCase):
         ]
 
     def test_object_annotation_table(self):
-        objAnn_arr = ObjectAnnotationArray.from_ObjAnnot_list(
+        objAnn_arr = ObjectAnnotationArray.from_list(
             self.object_annotations_list
         )
 

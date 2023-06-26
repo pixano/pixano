@@ -175,7 +175,15 @@ class ObjectAnnotationArray(pa.ExtensionArray):
     """Class to use pa.array for ObjectAnnotationType instance"""
 
     @staticmethod
-    def objAnn_list_to_paArray_dict(annotation_list:list[ObjectAnnotation]) -> dict:
+    def from_list_to_dict(annotation_list:list[ObjectAnnotation]) -> dict:
+        """Tool function to trasnform list of ObjAnn to theirs correspondings dicts
+
+        Args:
+            annotation_list (list[ObjectAnnotation]): _description_
+
+        Returns:
+            dict: _description_
+        """
         
         type_mapping = {
             BBox: BBoxType(),
@@ -205,7 +213,7 @@ class ObjectAnnotationArray(pa.ExtensionArray):
     
     @classmethod
     def from_list(cls, annotation_list: list[ObjectAnnotation]):
-        attributes_dict = ObjectAnnotationArray.objAnn_list_to_paArray_dict(annotation_list)
+        attributes_dict = ObjectAnnotationArray.from_list_to_dict(annotation_list)
         return pa.StructArray.from_arrays(list(attributes_dict.values()),names= list(attributes_dict.keys()))
 
 
