@@ -210,7 +210,7 @@
 
     if (views !== prev_views) {
       // Reset stage
-      resetStage();
+      //resetStage();
 
       // Load Image(s)
       for (let view of views) {
@@ -310,12 +310,12 @@
         }
       }
 
-      //remove masks that's no longer exist in masksGT
-      for (let bbox of group.children) {
-        if (!listBboxIds.includes(bbox.id())) {
-          bbox.destroy();
-        }
+      //remove bbox that's no longer exist in bboxes
+      const list_to_destroy = []; //need to build a list to not destroy while looping children
+      for (let mask of group.children) {
+        if (!listBboxIds.includes(mask.id())) list_to_destroy.push(mask);
       }
+      for (let mask of list_to_destroy) mask.destroy();
     }
   }
 
@@ -539,7 +539,7 @@
       const group: Konva.Group = view_layer.findOne("#masksGT");
       const image = view_layer.findOne(`#${imageId}`);
 
-      const listMaskGTIds = [];
+      let listMaskGTIds = [];
       for (let i = 0; i < masksGT.length; ++i) {
         listMaskGTIds.push(masksGT[i].id);
         if (masksGT[i].viewId === viewId) {
@@ -566,11 +566,11 @@
       }
 
       //remove masks that's no longer exist in masksGT
+      const list_to_destroy = []; //need to build a list to not destroy while looping children
       for (let mask of group.children) {
-        if (!listMaskGTIds.includes(mask.id())) {
-          mask.destroy();
-        }
+        if (!listMaskGTIds.includes(mask.id())) list_to_destroy.push(mask);
       }
+      for (let mask of list_to_destroy) mask.destroy();
     }
   }
 

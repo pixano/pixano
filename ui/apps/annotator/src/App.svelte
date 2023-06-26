@@ -70,7 +70,7 @@
     console.log("=== LOADING SELECTED ITEM ===");
     const start = Date.now();
     itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
-    console.log("so long ?? (ms)", Date.now() - start);
+    console.log("getItemDetails time (ms):", Date.now() - start);
     let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
       let view: ViewData = {
@@ -149,6 +149,7 @@
       }
     }
 
+    console.log("init masksGT", masksGT);
     //unique classes from existing annotations
     const cat_set = new Set();
     for (let ann of annotations) cat_set.add(ann.category_name);
@@ -182,6 +183,7 @@
   }
 
   function unselectItem() {
+    console.log("unselect");
     showDetailsPage = false;
     selectedItem = null;
     selectedItemEmbedding = null;
@@ -246,7 +248,7 @@
     <div class="pt-20">
       <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
     </div>
-  {:else if selectedItem && annotations}
+  {:else if selectedItem}
     <AnnotationWorkspace
       itemData={selectedItem}
       embedding={selectedItemEmbedding}
