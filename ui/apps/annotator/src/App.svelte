@@ -190,30 +190,16 @@
     classes = [];
   }
 
-  function findCategoryForId(
-    anns: Array<AnnotationsLabels>,
-    id: string
-  ): string {
-    for (let ann of anns) {
-      if (ann.items.some((it) => it.id === id)) {
-        return ann.category_name;
-      }
-    }
-    console.log("ERROR - unable to find category for id:", id);
-    return "undefined";
-  }
-
   function saveAnns(data) {
     console.log("App - save annotations");
     console.log("data", data.detail);
     //format annotation data for export
     let anns = [];
     for (let mask of data.detail.masks) {
-      const category = findCategoryForId(data.detail.anns, mask.id);
       let ann = {
         id: mask.id,
         view_id: mask.viewId,
-        category_name: category,
+        category_name: mask.catId,
         mask: mask.rle,
         mask_source: "Pixano Annotator",
       };
