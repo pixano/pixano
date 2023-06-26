@@ -330,4 +330,13 @@
     </div>
   </div>
 </div>
+
+<!-- Pixano Annotator footer -->
+<div
+  class="absolute bottom-0 right-0 px-2 py-1 bg-zinc-50 text-zinc-500 text-sm border-t border-l rounded-tl-lg
+  dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-500"
+>
+  Pixano Annotator
+</div>
+
 <svelte:window on:keydown={handleKeyPress} />
