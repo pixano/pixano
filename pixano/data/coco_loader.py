@@ -256,7 +256,9 @@ class COCOLoader(DataLoader):
                             row_anns = row["objects"][0].as_py()
                             for row_ann in row_anns:
                                 # Append annotation
-                                # TODO: Find solution for bbox denormalization when no masks
+                                im_w, im_h = (
+                                    row[row_ann["view_id"]][0].as_py(uri_prefix).size
+                                )
                                 coco_json["annotations"].append(
                                     {
                                         "segmentation": rle_to_urle(row_ann["mask"]),
@@ -264,7 +266,7 @@ class COCOLoader(DataLoader):
                                         "iscrowd": 0,
                                         "image_id": row["id"][0].as_py(),
                                         "bbox": denormalize(
-                                            row_ann["bbox"], *row_ann["mask"]["size"]
+                                            row_ann["bbox"], im_h, im_w
                                         ),
                                         "category_id": row_ann["category_id"],
                                         "category_name": row_ann["category_name"],
