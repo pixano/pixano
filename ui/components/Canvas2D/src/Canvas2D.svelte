@@ -584,7 +584,6 @@
         predictedMasks.id(prediction.id);
         // change color  //TODO: use table of color by class or whatever
         for (let s of predictedMasks.children) {
-          console.log(categoryColor?.(prediction.catId));
           let shape = s as Konva.Shape;
           var pred = new Option().style;
           pred.color = categoryColor?.(prediction.catId);
