@@ -18,6 +18,7 @@ from .boxes import (
     format_bbox,
     mask_to_bbox,
     normalize,
+    urle_to_bbox,
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "normalize",
     "denormalize",
     "mask_to_bbox",
+    "urle_to_bbox",
     "format_bbox",
     "xywh_to_xyxy",
     "xyxy_to_xywh",
