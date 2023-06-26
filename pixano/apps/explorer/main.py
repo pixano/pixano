@@ -219,8 +219,8 @@ def create_app(settings: Settings) -> FastAPI:
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
-        # TODO save annotation in parquet
-        # db_utils.write_newAnnotations(ds_id, item_id, annotations, ds.path)
+        # Update dataset annotations
+        db_utils.update_annotations(ds.path, item_id, annotations)
 
         return Response()
 

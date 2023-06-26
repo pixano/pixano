@@ -12,17 +12,19 @@
 # http://www.cecill.info
 
 from pathlib import Path
-import json
 
 import numpy as np
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 
 from pixano import transforms
 from pixano.core import arrow_types
 from pixano.data import models
+from pixano.transforms import natural_key, urle_to_rle, urle_to_bbox
 
 
 def get_item_details(
@@ -206,61 +208,79 @@ def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> byte
     return emb_item[f"{view}_embedding"]
 
 
-def write_newAnnsJson(
-    ds_id: str,
+def update_annotations(
+    dataset_dir: Path,
     item_id: str,
     annotations: list[arrow_types.ObjectAnnotation],
-    target_dir: Path,
 ):
-    # Build output json object
-    # ObjectAnnotation is not (right now) serializable, and we need some more info into output
-    output = {"dataset_id": ds_id, "item_id": item_id, "objects": []}
-    for ann in annotations:
-        obj = ann.dict()
-        output["objects"].append(obj)
+    """Update dataset annotations
 
-    json_output = json.dumps(output)
-    with open(target_dir / f"newAnnotations-{item_id}.json", "w") as jsonfile:
-        jsonfile.write(json_output)
-
-
-def write_newAnnotations(
-    ds_id: str,
-    item_id: str,
-    annotations: list[arrow_types.ObjectAnnotation],
-    target_dir: Path,
-):
-    # TMP log to ensure we get data
-    print("EXPORT (dataset item view):", ds_id, item_id, view)
-    for ann in annotations:
-        print(
-            "ANN (category id mask_counts_length):",
-            ann.category_name,
-            ann.id,
-            len(ann.mask["counts"]),
-        )
-
-    # TMP Save as JSON
-    write_newAnnsJson(ds_id, item_id, annotations, target_dir)
-
-    """  Erreur format Pydantic non reconnu...
-    schema = pa.schema([
-        pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
-    ])
-    # Convert annotations field to PyArrow format (objects)
-    arrays = [
-        arrow_types.convert_field(
-            field_name="objects",
-            field_type=pa.list_(arrow_types.ObjectAnnotationType()),
-            field_data=annotations
-        )
-    ]
-    # Save to file
-    ds.write_dataset(
-        data=pa.Table.from_arrays(arrays, schema=schema),
-        base_dir=target_dir / "db_newAnnotations",
-        basename_template=f"newAnns-part-{{i}}.parquet",
-        format="parquet",
-        existing_data_behavior="overwrite_or_ignore"
-    )
+    Args:
+        dataset_dir (Path): Dataset directory
+        item_id (str): Item ID
+        annotations (list[arrow_types.ObjectAnnotation]): Item annotations
     """
+
+    # Convert URLE to RLE and add bounding box
+    item_anns = [o.dict() for o in annotations]
+    for ann in item_anns:
+        ann["bbox"] = urle_to_bbox(ann["mask"])
+        ann["bbox_source"] = ann["mask_source"]
+        ann["mask"] = urle_to_rle(ann["mask"])
+
+    # Dataset files
+    files = (dataset_dir / "db").glob("**/*.parquet")
+    files = sorted(files, key=lambda x: natural_key(x.name))
+
+    # Iterate on dataset files
+    for file in files:
+        # Look for updated item
+        table = pq.read_table(file)
+        filter = table.filter(pc.field("id").isin([item_id]))
+        item = filter.to_pylist()
+
+        # If item found
+        if item != []:
+            # Read table without item
+            updated_table = table.filter(~pc.field("id").isin([item_id])).to_pydict()
+
+            # Add item with updated annotations
+            item[0]["objects"] = item_anns
+            for field in table.schema:
+                updated_table[field.name].append(item[0][field.name])
+
+            # Sort table fields according to IDs
+            for field in table.schema:
+                if field.name != "id":
+                    updated_table[field.name] = [
+                        x
+                        for _, x in sorted(
+                            zip(updated_table["id"], updated_table[field.name]),
+                            key=lambda pair: natural_key(pair[0]),
+                        )
+                    ]
+            # Sort table IDs
+            updated_table["id"] = sorted(updated_table["id"], key=natural_key)
+
+            # Convert ExtensionTypes
+            arrays = []
+            for field in table.schema:
+                # Convert image types to dict before PyArrow conversion
+                if arrow_types.is_image_type(field.type):
+                    updated_table[field.name] = [
+                        i.to_dict() for i in updated_table[field.name]
+                    ]
+                arrays.append(
+                    arrow_types.convert_field(
+                        field_name=field.name,
+                        field_type=field.type,
+                        field_data=updated_table[field.name],
+                    )
+                )
+
+            # Save updated table
+            pq.write_table(
+                pa.Table.from_arrays(arrays, schema=table.schema),
+                file,
+            )
+            return
