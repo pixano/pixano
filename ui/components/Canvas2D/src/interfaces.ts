@@ -18,6 +18,7 @@ export interface MaskGT {
   id: string;
   mask: MaskSVG;
   rle?: MaskRLE;
+  catID: number;
   visible: boolean;
   opacity: number;
 }
@@ -27,6 +28,7 @@ export interface BBox {
   id: string;
   bbox: Array<number>; //format xywh, normalized
   label: string;
+  catID: number;
   visible: boolean;
 }
 

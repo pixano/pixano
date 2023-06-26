@@ -527,7 +527,7 @@
               image.x(),
               image.y(),
               image.scale(),
-              "blue",
+              categoryColor?.(masksGT[i].catID),
               masksGT[i].visible,
               1.0,
               group
@@ -571,6 +571,7 @@
           id: prediction.id,
           mask: prediction.output.masksImageSVG,
           rle: prediction.output.rle,
+          catID: -1,
           visible: true,
           opacity: 1.0,
         });
