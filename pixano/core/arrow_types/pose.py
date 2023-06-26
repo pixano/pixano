@@ -57,7 +57,7 @@ class Pose:
 
         return self._cam_t_m2c
 
-    def to_dict(self) -> dict[list[float], list[float]]:
+    def to_dict(self) -> dict:
         """convert pose to dict
 
         Returns:

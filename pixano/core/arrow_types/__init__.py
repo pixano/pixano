@@ -55,6 +55,7 @@ __all__ = [
     "PoseType",
     "PoseArray",
     "is_pose_type",
+    "convert_field",
 ]
 
 
