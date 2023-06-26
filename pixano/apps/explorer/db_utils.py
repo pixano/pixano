@@ -209,26 +209,24 @@ def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> byte
 def write_newAnnsJson(
     ds_id: str,
     item_id: str,
-    view: str,
     annotations: list[arrow_types.ObjectAnnotation],
     target_dir: Path,
 ):
     # Build output json object
     # ObjectAnnotation is not (right now) serializable, and we need some more info into output
-    output = {"dataset_id": ds_id, "view": view, "item_id": item_id, "objects": []}
+    output = {"dataset_id": ds_id, "item_id": item_id, "objects": []}
     for ann in annotations:
         obj = ann.dict()
         output["objects"].append(obj)
 
     json_output = json.dumps(output)
-    with open(target_dir / f"newAnnotations-{view}-{item_id}.json", "w") as jsonfile:
+    with open(target_dir / f"newAnnotations-{item_id}.json", "w") as jsonfile:
         jsonfile.write(json_output)
 
 
 def write_newAnnotations(
     ds_id: str,
     item_id: str,
-    view: str,
     annotations: list[arrow_types.ObjectAnnotation],
     target_dir: Path,
 ):
@@ -243,7 +241,7 @@ def write_newAnnotations(
         )
 
     # TMP Save as JSON
-    write_newAnnsJson(ds_id, item_id, view, annotations, target_dir)
+    write_newAnnsJson(ds_id, item_id, annotations, target_dir)
 
     """  Erreur format Pydantic non reconnu...
     schema = pa.schema([

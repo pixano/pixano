@@ -212,7 +212,6 @@ def create_app(settings: Settings) -> FastAPI:
     async def post_dataset_item_annotations(
         ds_id: str,
         item_id: str,
-        view: str,
         annotations: list[arrow_types.ObjectAnnotation],
     ):
         # Load dataset
@@ -221,7 +220,7 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # TODO save annotation in parquet
-        db_utils.write_newAnnotations(ds_id, item_id, view, annotations, ds.path)
+        # db_utils.write_newAnnotations(ds_id, item_id, annotations, ds.path)
 
         return Response()
 
