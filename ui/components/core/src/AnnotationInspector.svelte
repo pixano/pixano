@@ -13,7 +13,7 @@
 
   http://www.cecill.info
   */
- 
+
   import { onMount, beforeUpdate, afterUpdate } from "svelte";
   import { createEventDispatcher } from "svelte";
   import type { AnnotationsLabels } from "../../Canvas2D/src/interfaces";
@@ -41,15 +41,14 @@
 
   let viewsFilter: Array<string> = [];
 
-
   function updateConfidenceFilterEvent(event) {
     updateConfidenceFilter(parseFloat(event.target.value));
   }
 
   function updateConfidenceFilter(confidence) {
-    for(let cat of annotations) {
-      for(let item of cat.items) {
-        if(item.confidence) {
+    for (let cat of annotations) {
+      for (let item of cat.items) {
+        if (item.confidence) {
           item.visible = item.confidence >= confidence;
         }
       }
@@ -59,8 +58,8 @@
 
   // Change every mask opacity to match the desired value.
   function updateMasksOpacity() {
-    for(let cat of annotations) {
-      for(let item of cat.items) {
+    for (let cat of annotations) {
+      for (let item of cat.items) {
         item.opacity = maskOpacity;
       }
     }
@@ -77,23 +76,25 @@
    */
   function toggleCategoryVisibility(category: string) {
     let allVisible = true;
-    for(let cat of annotations) {
-      if(cat.category_name === category) {
+    for (let cat of annotations) {
+      if (cat.category_name === category) {
         cat.visible = !cat.visible;
         let categoryButton = document.getElementById(`cat-${cat.category_id}`);
-        if(cat.visible) {
+        if (cat.visible) {
           categoryButton.classList.remove("grayscale");
         } else {
           categoryButton.classList.add("grayscale");
         }
-        for(let item of cat.items) {
+        for (let item of cat.items) {
           item.visible = cat.visible;
         }
       }
       allVisible = allVisible && cat.visible;
     }
     // Update showAllCategories button
-    let allVis_elem = document.getElementById("toggle-items") as HTMLInputElement;
+    let allVis_elem = document.getElementById(
+      "toggle-items"
+    ) as HTMLInputElement;
     allVis_elem.checked = allVisible;
 
     dispatch("toggleCatVis");
@@ -102,16 +103,16 @@
 
   // Show or hide every category.
   function toggleAllCategoriesVisibility(event) {
-    for(let cat of annotations) {
+    for (let cat of annotations) {
       cat.visible = event.target.checked;
-      for(let item of cat.items) {
+      for (let item of cat.items) {
         let categoryButton = document.getElementById(`cat-${cat.category_id}`);
-        if(cat.visible) {
+        if (cat.visible) {
           categoryButton.classList.remove("grayscale");
         } else {
           categoryButton.classList.add("grayscale");
         }
-        if(item.visible !== cat.visible) {
+        if (item.visible !== cat.visible) {
           item.visible = cat.visible;
         }
       }
@@ -146,7 +147,7 @@
 
   // Update every konva element visibility
   function updateElementsVisibility() {
-    console.log("TODO: update visibility")
+    console.log("TODO: update visibility");
     /*
     stage.children.forEach((layer) => {
       // Set layers visibility
@@ -207,15 +208,15 @@
   }
 
   onMount(() => {
-    console.log("AnnInspector - onMount (anns):", annotations)
-    console.log("AnnInspector - onMount (feats):", features)
+    console.log("AnnInspector - onMount (anns):", annotations);
+    console.log("AnnInspector - onMount (feats):", features);
     updateConfidenceFilter(minConfidence);
   });
 
   beforeUpdate(() => {
     // If the image has changed
     if (features.id != oldID) {
-      categoryColor = Utils.getColor(features.categoryStats.map((it) => it.id)); // Define a color map for each category id
+      categoryColor = Utils.getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
 
       // Calculate new grid size
       let viewsCount = Object.keys(features.views).length;
@@ -223,182 +224,181 @@
       gridSize.rows = Math.ceil(viewsCount / gridSize.cols);
     }
   });
-
-
 </script>
+
 <!-- Toolbox -->
 <div
-    class="absolute w-64 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow
+  class="absolute w-64 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow
     dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
 >
-    <!-- Data -->
-    <div class="flex flex-col">
+  <!-- Data -->
+  <div class="flex flex-col">
     <span
-        class="mb-2 self-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
     >
-        Data
+      Data
     </span>
     <div class="flex flex-col">
-        {#if features.id}
+      {#if features.id}
         <div>
-            <span class="font-bold"> Id : </span>
-            <span> {features.id} </span>
+          <span class="font-bold"> Id : </span>
+          <span> {features.id} </span>
         </div>
-        {/if}
-        {#if features.filename}
+      {/if}
+      {#if features.filename}
         <div>
-            <span class="font-bold"> Filename : </span>
-            <span> {features.filename} </span>
+          <span class="font-bold"> Filename : </span>
+          <span> {features.filename} </span>
         </div>
-        {/if}
-        {#if features.width && features.height}
+      {/if}
+      {#if features.width && features.height}
         <div>
-            <span class="font-bold"> Size : </span>
-            <span> {features.width}x{features.height}px</span>
+          <span class="font-bold"> Size : </span>
+          <span> {features.width}x{features.height}px</span>
         </div>
-        {/if}
+      {/if}
     </div>
-    </div>
+  </div>
 
-    <!-- Tools -->
-    <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
+  <!-- Tools -->
+  <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
     <span
-        class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
     >
-        Tools
+      Tools
     </span>
     <!-- Items -->
     <!-- Controls -->
     <div class="mb-2 flex items-center space-x-2">
-        <!-- Show all items checkbox -->
-        <input
+      <!-- Show all items checkbox -->
+      <input
         class="cursor-pointer checked:accent-rose-500"
         type="checkbox"
         id="toggle-items"
         checked
         on:change={toggleAllCategoriesVisibility}
-        />
-        <label class="font-bold cursor-pointer" for="toggle-items">
+      />
+      <label class="font-bold cursor-pointer" for="toggle-items">
         Show all items
-        </label>
+      </label>
     </div>
 
     <div class="mb-2 flex items-center space-x-2">
-        <!-- Show boxes checkbox -->
-        <input
+      <!-- Show boxes checkbox -->
+      <input
         class="cursor-pointer checked:accent-rose-500"
         type="checkbox"
         id="toggle-boxes"
         checked
         on:change={toggleAllBBoxVisbility}
-        />
-        <label class="font-bold cursor-pointer" for="toggle-boxes">
+      />
+      <label class="font-bold cursor-pointer" for="toggle-boxes">
         Show boxes
-        </label>
+      </label>
     </div>
 
     <!-- Opacity slider -->
     <label class="font-bold mt-2 mb-1" for="slider">
-        Mask opacity : {maskOpacity * 100}%
+      Mask opacity : {maskOpacity * 100}%
     </label>
     <input
-        class="cursor-pointer"
-        type="range"
-        id="slider"
-        min="0"
-        max="1"
-        step="0.1"
-        bind:value={maskOpacity}
-        on:input={updateMasksOpacity}
+      class="cursor-pointer"
+      type="range"
+      id="slider"
+      min="0"
+      max="1"
+      step="0.1"
+      bind:value={maskOpacity}
+      on:input={updateMasksOpacity}
     />
 
     <!-- Confidence filter -->
     <label class="font-bold mt-2 mb-1" for="slider">
-        Minimum confidence : {minConfidence}
+      Minimum confidence : {minConfidence}
     </label>
     <input
-        class="cursor-pointer"
-        type="range"
-        id="slider"
-        min="0"
-        max="1"
-        step="0.01"
-        bind:value={minConfidence}
-        on:input={updateConfidenceFilterEvent}
+      class="cursor-pointer"
+      type="range"
+      id="slider"
+      min="0"
+      max="1"
+      step="0.01"
+      bind:value={minConfidence}
+      on:input={updateConfidenceFilterEvent}
     />
-    </div>
+  </div>
 
-    <!-- Item Categories -->
-    <span class="font-bold mb-2 mt-2"> Categories : </span>
-    <div class="flex flex-wrap">
+  <!-- Item Categories -->
+  <span class="font-bold mb-2 mt-2"> Categories : </span>
+  <div class="flex flex-wrap">
     {#if categoryColor != null}
-        {#each features.categoryStats as category}
+      {#each features.categoryStats as category}
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- Toggle Category Button -->
         <button
-            class="relative px-1 mb-2 mr-4 rounded-lg text-sm text-zinc-900 font-bold border-2 border-transparent
+          class="relative px-1 mb-2 mr-4 rounded-lg text-sm text-zinc-900 font-bold border-2 border-transparent
             hover:border-rose-500"
-            style="background-color: {categoryColor(category.id)};"
-            id="cat-{category.id}"
-            on:click={() => toggleCategoryVisibility(category.name)}
+          style="background-color: {categoryColor(category.id)};"
+          id="cat-{category.id}"
+          on:click={() => toggleCategoryVisibility(category.name)}
         >
-            {category.name}
-            <!-- Category count index -->
-            {#if category.count != 1}
+          {category.name}
+          <!-- Category count index -->
+          {#if category.count != 1}
             <span
-                class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 text-white font-bold"
+              class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 text-white font-bold"
             >
-                {category.count}
+              {category.count}
             </span>
-            {/if}
+          {/if}
         </button>
-        {/each}
+      {/each}
     {/if}
-    </div>
+  </div>
 
-    <!-- Views -->
-    {#if Object.keys(features.views).length != 1}
+  <!-- Views -->
+  {#if Object.keys(features.views).length != 1}
     <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
-        <span
+      <span
         class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
-        >
+      >
         Views
-        </span>
-        <!-- Controls -->
-        <div class="mb-2 flex items-center space-x-2">
+      </span>
+      <!-- Controls -->
+      <div class="mb-2 flex items-center space-x-2">
         <!-- Show all views checkbox -->
         <input
-            class="cursor-pointer checked:accent-rose-500"
-            type="checkbox"
-            id="toggle-views"
-            checked
-            on:change={toggleAllViewsVisibility}
+          class="cursor-pointer checked:accent-rose-500"
+          type="checkbox"
+          id="toggle-views"
+          checked
+          on:change={toggleAllViewsVisibility}
         />
         <label class="font-bold cursor-pointer" for="toggle-views">
-            Show all views
+          Show all views
         </label>
-        </div>
+      </div>
     </div>
 
     <span class="font-bold"> Views : </span>
     <div class="flex flex-col">
-        {#if categoryColor != null}
+      {#if categoryColor != null}
         {#each Object.keys(features.views) as view}
-            <div class="ml-1 flex items-center space-x-2">
+          <div class="ml-1 flex items-center space-x-2">
             <!-- Show all views checkbox -->
             <input
-                class="cursor-pointer checked:accent-rose-500"
-                type="checkbox"
-                id="view-{view}"
-                checked
-                on:change={() => toggleViewVisibility(view)}
+              class="cursor-pointer checked:accent-rose-500"
+              type="checkbox"
+              id="view-{view}"
+              checked
+              on:change={() => toggleViewVisibility(view)}
             />
             <label class="font-medium cursor-pointer" for="view-{view}">
-                {view}
+              {view}
             </label>
-            </div>
+          </div>
         {/each}
-        {/if}
+      {/if}
     </div>
-    {/if}
+  {/if}
 </div>

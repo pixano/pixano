@@ -19,7 +19,10 @@
   import Konva from "konva";
   import * as KonvaUtils from "./konva_utils";
   import * as Utils from "./utils";
-  import { generatePolygonSegments, convertSegmentsToSVG } from "../../../components/models/src/tracer";
+  import {
+    generatePolygonSegments,
+    convertSegmentsToSVG,
+  } from "../../../components/models/src/tracer";
 
   // Represents an image's features
   export let features: any;
@@ -259,7 +262,7 @@
               offset
             );
             */
-            console.log("SQ", offset, imgSize, scale)
+            console.log("SQ", offset, imgSize, scale);
             // Draw mask
             /*
             KonvaUtils.drawMask(

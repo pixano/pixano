@@ -28,10 +28,6 @@ export async function getDatasetsList() {
     console.log(e);
   }
 
-  // Temporary hack so the app doesn't crashes
-  for (let i = 0; i < datasets.length; ++i)
-    datasets[i].preview = ["", "", "", "", "", "", "", ""];
-  
   return datasets;
 }
 
@@ -71,7 +67,7 @@ export async function getDatasetStats(datasetId: String) {
     const response = await fetch(`/datasets/${datasetId}/stats`);
     if (!response.ok) {
       //TODO: error cases other than 404 ?
-      console.log("No stats")
+      console.log("No stats");
       return [];
     }
     datasetStats = await response.json();
@@ -94,16 +90,23 @@ export async function getItemDetails(datasetId: String, itemId: Number) {
   return features;
 }
 
-export async function getImageEmbedding(datasetId: String, itemId: string, viewId: string = "image") {
+export async function getImageEmbedding(
+  datasetId: String,
+  itemId: string,
+  viewId: string = "image"
+) {
   let embedding = null;
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/${viewId}/embedding`, {
-      headers: {
-        Accept: "application/octet-stream",
-        "Content-Type": "application/octet-stream",
-      },
-      method: "POST",
-    });
+    const response = await fetch(
+      `/datasets/${datasetId}/items/${itemId}/${viewId}/embedding`,
+      {
+        headers: {
+          Accept: "application/octet-stream",
+          "Content-Type": "application/octet-stream",
+        },
+        method: "POST",
+      }
+    );
     if (response.ok) {
       embedding = await response.arrayBuffer();
     } else {
@@ -120,17 +123,25 @@ export async function getImageEmbedding(datasetId: String, itemId: string, viewI
   return embedding;
 }
 
-export async function postAnnotations(anns : any, datasetId: String, itemId: string, viewId: string = "image") {
+export async function postAnnotations(
+  anns: any,
+  datasetId: String,
+  itemId: string,
+  viewId: string = "image"
+) {
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(anns),
-      method: "POST",
-    });
-    if (response.ok) { 
+    const response = await fetch(
+      `/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(anns),
+        method: "POST",
+      }
+    );
+    if (response.ok) {
       console.log("Annotations sent OK");
     } else {
       console.log(
@@ -143,9 +154,6 @@ export async function postAnnotations(anns : any, datasetId: String, itemId: str
   } catch (e) {
     console.log("ERROR posting annotations", e);
   }
-
 }
 
-export async function getModel() {
-
-}
+export async function getModel() {}

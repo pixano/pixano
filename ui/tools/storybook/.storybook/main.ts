@@ -25,11 +25,11 @@ const config: StorybookConfig = {
   ],
   framework: {
     name: "@storybook/svelte-vite",
-    options: {}
+    options: {},
   },
   docs: {
-    autodocs: "tag"
+    autodocs: "tag",
   },
-  staticDirs: ["../assets"]
+  staticDirs: ["../assets"],
 };
 export default config;

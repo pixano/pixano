@@ -35,7 +35,6 @@
   }
 </script>
 
-
 <div
   class="w-28 max-h-[90vh] overflow-y-auto absolute top-1/2 -translate-y-1/2 left-4 px-2 py-2 flex flex-col space-y-2
   bg-zinc-50 border rounded-lg shadow-lg dark:bg-zinc-800 dark:text-zinc-100 dark:border-zinc-700"

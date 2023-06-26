@@ -31,28 +31,52 @@ type Story = StoryObj<typeof meta>;
 export const Base: Story = {
   args: {
     annotations: [
-      { 
-        category_name: "Dog", 
+      {
+        category_name: "Dog",
         viewId: "view1",
         items: [
-          { id: "0x123", type: "mask", label: "dog-0", visible: true, opacity: 1.0 },
-          { id: "0x354", type: "mask", label: "dog-1", visible: true, opacity: 1.0 },
+          {
+            id: "0x123",
+            type: "mask",
+            label: "dog-0",
+            visible: true,
+            opacity: 1.0,
+          },
+          {
+            id: "0x354",
+            type: "mask",
+            label: "dog-1",
+            visible: true,
+            opacity: 1.0,
+          },
         ],
         visible: true,
       },
-      { 
-        category_name: "Cat", 
+      {
+        category_name: "Cat",
         viewId: "view1",
         items: [
-          { id: "0x237", type: "mask", label: "cat-0", visible: true, opacity: 1.0 },
+          {
+            id: "0x237",
+            type: "mask",
+            label: "cat-0",
+            visible: true,
+            opacity: 1.0,
+          },
         ],
         visible: true,
       },
-      { 
-        category_name: "Cat", 
+      {
+        category_name: "Cat",
         viewId: "view2",
         items: [
-          { id: "0x487", type: "mask", label: "cat-0", visible: true, opacity: 1.0 },
+          {
+            id: "0x487",
+            type: "mask",
+            label: "cat-0",
+            visible: true,
+            opacity: 1.0,
+          },
         ],
         visible: true,
       },

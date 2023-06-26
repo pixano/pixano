@@ -1,5 +1,5 @@
 <script lang="ts">
-    /**
+  /**
       @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
       @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
       @license CECILL-C
@@ -13,9 +13,6 @@
     
       http://www.cecill.info
       */
-  </script>
-  
-  <div class="h-20 bg-zinc-200">
-    ThumbnailNavigation
-  </div>
-  
+</script>
+
+<div class="h-20 bg-zinc-200">ThumbnailNavigation</div>

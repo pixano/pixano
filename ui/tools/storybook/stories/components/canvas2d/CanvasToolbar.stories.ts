@@ -20,7 +20,7 @@ import {
   createLabeledPointTool,
   createMultiModalTool,
   createRectangleTool,
-  createPanTool
+  createPanTool,
 } from "../../../../../components/Canvas2D/src/tools";
 
 const meta = {

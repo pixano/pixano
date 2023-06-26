@@ -68,7 +68,7 @@
   <div class="flex">
     <!-- Stats -->
     <div
-      class="w-1/2 h-[85vh] pr-4 flex flex-col  items-center border rounded-lg overflow-y-scroll"
+      class="w-1/2 h-[85vh] pr-4 flex flex-col items-center border rounded-lg overflow-y-scroll"
     >
       <span class="font-bold text-xl mt-3"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
@@ -100,10 +100,10 @@
         <!-- Page navigation -->
         <div class="flex justify-end items-center w-full space-x-2">
           <span class="mr-2">
-            {1 + itemsPerPage * (curPage - 1)} - {itemsPerPage * curPage} of {datasetItems.total}
+            {1 + itemsPerPage * (curPage - 1)} - {Math.min(itemsPerPage * curPage, datasetItems.total)} of {datasetItems.total}
           </span>
           <button
-            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium 
+            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
             hover:bg-zinc-100"
             on:click={handleGoToPreviousPage}>PREV</button
           >

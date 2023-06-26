@@ -1,3 +1,2 @@
-export type { InteractiveImageSegmenter } from "./interactive_image_segmentation"
-export { SAM } from "./Sam"
-
+export type { InteractiveImageSegmenter } from "./interactive_image_segmentation";
+export { SAM } from "./Sam";
