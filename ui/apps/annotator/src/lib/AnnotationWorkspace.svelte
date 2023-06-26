@@ -51,7 +51,7 @@
     curPage = value;
   });
 
-  let dbImages = {};
+  let dbImages;
 
   let className = "";
 
@@ -224,6 +224,17 @@
     masksGT = masksGT;
   }
 
+  async function handleLoadNextPage(event) {
+    curPage = curPage + 1;
+    let new_dbImages = await getDatasetItems(dataset.id, curPage);
+    if(new_dbImages) {
+      dbImages.items = dbImages.items.concat(new_dbImages.items);
+    } else {
+      //end of dataset : reset last page
+      curPage = curPage - 1;
+    }
+  }
+
   onMount(async () => {
     dbImages = await getDatasetItems(dataset.id, curPage);
   });
@@ -332,9 +343,11 @@
         <DataPanel
           bind:annotations
           dataset={dbImages}
+          lastLoadedPage={curPage}
           on:imageSelected={handleImageSelectedChange}
           on:itemDeleted={handleItemDeleted}
           on:toggleVisibility={handleVisibilityChange}
+          on:loadNextPage={handleLoadNextPage}
         />
       {/if}
     </div>
