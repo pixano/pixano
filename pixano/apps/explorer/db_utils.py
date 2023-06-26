@@ -92,7 +92,9 @@ def get_item_details(
             cats = [
                 {"id": obj["category_id"], "name": obj["category_name"]}
                 for obj in item["objects"]
-                if obj["view_id"] == field.name and obj["category_id"] is not None and obj["category_name"] is not None
+                if obj["view_id"] == field.name
+                and obj["category_id"] is not None
+                and obj["category_name"] is not None
             ]
             # Bounding boxes
             boxes = [
@@ -205,23 +207,18 @@ def get_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
 
 
 def write_newAnnsJson(
-        ds_id: str,
-        item_id: str,
-        view: str,
-        annotations: list[arrow_types.ObjectAnnotation],
-        target_dir: Path
+    ds_id: str,
+    item_id: str,
+    view: str,
+    annotations: list[arrow_types.ObjectAnnotation],
+    target_dir: Path,
 ):
     # Build output json object
     # ObjectAnnotation is not (right now) serializable, and we need some more info into output
-    output = {
-        'dataset_id': ds_id,
-        'view': view,
-        'item_id': item_id,
-        'objects': []
-    }
+    output = {"dataset_id": ds_id, "view": view, "item_id": item_id, "objects": []}
     for ann in annotations:
         obj = ann.dict()
-        output['objects'].append(obj)
+        output["objects"].append(obj)
 
     json_output = json.dumps(output)
     with open(target_dir / f"newAnnotations-{view}-{item_id}.json", "w") as jsonfile:
@@ -229,16 +226,21 @@ def write_newAnnsJson(
 
 
 def write_newAnnotations(
-        ds_id: str,
-        item_id: str,
-        view: str,
-        annotations: list[arrow_types.ObjectAnnotation],
-        target_dir: Path
-        ):
+    ds_id: str,
+    item_id: str,
+    view: str,
+    annotations: list[arrow_types.ObjectAnnotation],
+    target_dir: Path,
+):
     # TMP log to ensure we get data
     print("EXPORT (dataset item view):", ds_id, item_id, view)
     for ann in annotations:
-        print("ANN (category id mask_counts_length):", ann.category_name, ann.id, len(ann.mask['counts']))
+        print(
+            "ANN (category id mask_counts_length):",
+            ann.category_name,
+            ann.id,
+            len(ann.mask["counts"]),
+        )
 
     # TMP Save as JSON
     write_newAnnsJson(ds_id, item_id, view, annotations, target_dir)
