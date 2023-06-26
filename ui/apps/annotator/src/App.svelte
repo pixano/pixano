@@ -204,24 +204,22 @@
   }
 
   function saveAnns(data) {
-    /* TODO: adapter pour multivue
     console.log("App - save annotations");
     console.log("data", data.detail);
     //format annotation data for export
     let anns = [];
-    for(let mask of data.detail.masks) {
+    for (let mask of data.detail.masks) {
       const category = findCategoryForId(data.detail.anns, mask.id);
       let ann = {
         id: mask.id,
-        view_id: selectedItem.viewId,
+        view_id: mask.viewId,
         category_name: category,
         mask: mask.rle,
-        mask_source: "Pixano Annotator"
+        mask_source: "Pixano Annotator",
       };
-      anns.push(ann)
+      anns.push(ann);
     }
-    api.postAnnotations(anns, selectedDataset.id, selectedItem.imageId, selectedItem.viewId);
-    */
+    api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
   }
 
   onMount(async () => {

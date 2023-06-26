@@ -126,12 +126,11 @@ export async function getViewEmbedding(
 export async function postAnnotations(
   anns: any,
   datasetId: String,
-  itemId: string,
-  viewId: string = "image"
+  itemId: string
 ) {
   try {
     const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`,
+      `/datasets/${datasetId}/items/${itemId}/annotations`,
       {
         headers: {
           Accept: "application/json",

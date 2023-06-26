@@ -206,10 +206,10 @@ def create_app(settings: Settings) -> FastAPI:
         return Response(content=db_utils.get_item_view_embedding(emb_ds, item_id, view))
 
     @app.post(
-        "/datasets/{ds_id}/items/{item_id}/{view}/annotations",
+        "/datasets/{ds_id}/items/{item_id}/annotations",
         response_model=list[arrow_types.ObjectAnnotation],
     )
-    async def post_dataset_item_annotation(
+    async def post_dataset_item_annotations(
         ds_id: str,
         item_id: str,
         view: str,
