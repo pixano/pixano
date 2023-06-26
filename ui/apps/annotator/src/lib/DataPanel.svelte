@@ -15,7 +15,7 @@
   */
 
   // Imports
-  import { onMount, createEventDispatcher, afterUpdate } from "svelte";
+  import { createEventDispatcher, afterUpdate } from "svelte";
   import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
 
   export let annotations: Array<AnnotationsLabels>;
@@ -88,7 +88,11 @@
     }
   }
 
-  onMount(() => {
+  afterUpdate(() => {
+    if (view_list) {
+      view_list = view_list;
+    }
+
     if (annotations) {
       //build views list
       let viewIds = new Set();
@@ -110,12 +114,6 @@
         });
       }
       console.log("DataPanel init", view_list, annotations);
-    }
-  });
-
-  afterUpdate(() => {
-    if (view_list) {
-      view_list = view_list;
     }
 
     if (dataset && dataset.items) {
