@@ -168,7 +168,7 @@
 
       //validate
       prediction.label = predictionClass.category_name;
-      prediction.catID = predictionClass.category_id;
+      prediction.catId = predictionClass.category_id;
       prediction.validated = true;
     }
   }

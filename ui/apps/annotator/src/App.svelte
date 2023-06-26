@@ -124,7 +124,7 @@
             id: itemDetails.views[viewId].objects.id[i],
             mask: masksSVG,
             rle: mask_rle,
-            catID: itemDetails.views[viewId].objects.category[i].id,
+            catId: itemDetails.views[viewId].objects.category[i].id,
             visible: true,
             opacity: 1.0,
           });

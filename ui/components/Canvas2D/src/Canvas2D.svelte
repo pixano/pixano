@@ -301,7 +301,7 @@
           //don't add a mask that already exist
           let bbox = group.findOne(`#${bboxes[i].id}`);
           if (!bbox) {
-            addBBox(bboxes[i], image, categoryColor?.(bboxes[i].catID), group);
+            addBBox(bboxes[i], image, categoryColor?.(bboxes[i].catId), group);
           } else {
             //apply visibility
             bbox.visible(bboxes[i].visible);
@@ -510,7 +510,7 @@
           id: new_id,
           viewId: viewId,
           label: "",
-          catID: -1,
+          catId: -1,
           output: results,
           input_points: points,
           input_box: box,
@@ -551,7 +551,7 @@
               image.x(),
               image.y(),
               image.scale(),
-              categoryColor?.(masksGT[i].catID),
+              categoryColor?.(masksGT[i].catId),
               masksGT[i].visible,
               1.0,
               group
@@ -584,10 +584,10 @@
         predictedMasks.id(prediction.id);
         // change color  //TODO: use table of color by class or whatever
         for (let s of predictedMasks.children) {
-          console.log(categoryColor?.(prediction.catID));
+          console.log(categoryColor?.(prediction.catId));
           let shape = s as Konva.Shape;
           var pred = new Option().style;
-          pred.color = categoryColor?.(prediction.catID);
+          pred.color = categoryColor?.(prediction.catId);
           shape.fill(
             `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
           );
@@ -599,7 +599,7 @@
           id: prediction.id,
           mask: prediction.output.masksImageSVG,
           rle: prediction.output.rle,
-          catID: prediction.catID,
+          catId: prediction.catId,
           visible: true,
           opacity: 1.0,
         });
