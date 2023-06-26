@@ -19,6 +19,7 @@
   import { Stage, Layer, Group, Image as KonvaImage } from "svelte-konva";
   import Konva from "konva";
   import { zoom } from "../../core/src/konva_utils";
+  import { getColor } from "../../core/src/utils";
 
   import { ToolType, type PanTool } from "./tools";
   import type { Tool, LabeledPointTool, RectangleTool } from "./tools";
@@ -42,6 +43,7 @@
 
   export let masksGT: Array<MaskGT> | null;
   export let bboxes: Array<BBox> | null;
+  export let features: any = null;
 
   //let prevImg: string = "";
   //export let imageEmbedding = null;
@@ -59,6 +61,10 @@
   let toolsLayer: Konva.Layer;
   // let imageKonva: Konva.Image;
   let highlighted_point: Konva.Circle = null;
+
+  let oldID: number;
+  // Function that maps an id to a color
+  let categoryColor = null;
 
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
@@ -193,7 +199,14 @@
     if (bboxes) {
       for (let view of views) addAllBBox(view.viewId, imageId);
     }
-
+    // If the image has changed
+    if (!!features) {
+      console.log("FEATURES");
+      if (features.id != oldID) {
+        oldID = features.id; // Update image id
+        categoryColor = getColor(features.categoryStats.map((it) => it.id)); // Define a color map for each category id
+      }
+    }
     /*
         if (imageURL !== prevImg) {
             let img = new Image();
@@ -284,7 +297,7 @@
           //don't add a mask that already exist
           let bbox = group.findOne(`#${bboxes[i].id}`);
           if (!bbox) {
-            addBBox(bboxes[i], image, "yellow", group);
+            addBBox(bboxes[i], image, categoryColor?.(bboxes[i].catID), group);
           } else {
             //apply visibility
             bbox.visible(bboxes[i].visible);
@@ -390,7 +403,13 @@
         fill = "rgba(0, 0, 255, 0.25)";
         break;
       default:
-        fill = "rgba(255, 255, 255, 0.25)";
+        var s = new Option().style;
+        s.color = stroke;
+        if (s.color !== "") {
+          fill = `rgba(${s.color.replace("rgb(", "").replace(")", "")}, 0.35)`;
+        } else {
+          fill = "rgba(255, 255, 255, 0.35)";
+        }
         break;
     }
     //utility functions to extract coords from SVG

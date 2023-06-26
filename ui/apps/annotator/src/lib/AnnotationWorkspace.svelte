@@ -317,6 +317,7 @@
         bind:prediction
         bind:masksGT
         bboxes={null}
+        features={null}
       />
       {#if annotations}
         <DataPanel
