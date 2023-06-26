@@ -188,7 +188,7 @@ def create_app(settings: Settings) -> FastAPI:
         return db_feats
 
     @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
-    async def get_dataset_item_embedding(ds_id: str, item_id: str, view: str):
+    async def get_dataset_item_view_embedding(ds_id: str, item_id: str, view: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
@@ -203,7 +203,7 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Embedding dataset not found")
 
         # Return item embedding
-        return Response(content=db_utils.get_item_embedding(emb_ds, item_id, view))
+        return Response(content=db_utils.get_item_view_embedding(emb_ds, item_id, view))
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/{view}/annotations",

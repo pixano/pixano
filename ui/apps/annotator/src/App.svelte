@@ -161,7 +161,7 @@
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getImageEmbedding(
+    const embeddingArrByte = await api.getViewEmbedding(
       selectedDataset.id,
       itemDetails.id,
       itemDetails.viewId

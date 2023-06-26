@@ -90,7 +90,7 @@ export async function getItemDetails(datasetId: String, itemId: Number) {
   return features;
 }
 
-export async function getImageEmbedding(
+export async function getViewEmbedding(
   datasetId: String,
   itemId: string,
   viewId: string = "image"

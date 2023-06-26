@@ -188,7 +188,7 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     return create_page(items=items, total=total, params=params)
 
 
-def get_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
+def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
     """Get item embedding for a view
 
     Args:
