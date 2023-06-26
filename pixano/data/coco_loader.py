@@ -138,12 +138,18 @@ class COCOLoader(DataLoader):
             # Return row
             yield row
 
-    def export_dataset(self, input_dir: Path, export_dir: Path):
+    def export_dataset(
+        self,
+        input_dir: Path,
+        export_dir: Path,
+        inf_datasets: list = [],
+    ):
         """Export dataset back to original format
 
         Args:
             input_dir (Path): Input directory
             export_dir (Path): Export directory
+            inf_datasets (list[str]): Inference datasets to export, all if []. Defaults to [].
         """
 
         # Load spec.json
@@ -168,6 +174,22 @@ class COCOLoader(DataLoader):
                     raise Exception(f"{split_dir} does not exist.")
                 if not any(split_dir.iterdir()):
                     raise Exception(f"{split_dir} is empty.")
+
+        # If no inference datasets provided, select all inference datasets
+        if not inf_datasets:
+            for inf_json in sorted(list(input_dir.glob("db_infer_*/infer.json"))):
+                inf_datasets.append(inf_json.parent.name)
+        # Else, if inference datasets provided, check if they exist
+        else:
+            inf_datasets = [
+                f"db_infer_{s}" for s in inf_datasets if not s.startswith("db_infer_")
+            ]
+            for inf_ds in inf_datasets:
+                inf_dir = input_dir / inf_ds
+                if not Path.exists(inf_dir):
+                    raise Exception(f"{inf_dir} does not exist.")
+                if not any(inf_dir.iterdir()):
+                    raise Exception(f"{inf_dir} is empty.")
 
         # Iterate on splits
         for split in splits:
