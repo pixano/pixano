@@ -81,7 +81,7 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      imageId: event.detail.id,
+      id: event.detail.id,
       views: views,
     };
     console.log("item loaded:", selectedItem);

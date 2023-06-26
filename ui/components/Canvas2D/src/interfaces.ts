@@ -9,7 +9,7 @@ export interface ViewData {
 }
 export interface ItemData {
   dbName: string;
-  imageId: string;
+  id: string;
   views: Array<ViewData>;
 }
 
