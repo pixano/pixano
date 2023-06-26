@@ -147,6 +147,8 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     # Get page items
     start = raw_params.offset
     stop = min(raw_params.offset + raw_params.limit, total)
+    if start >= stop:
+        return None
     items_table = dataset.take(range(start, stop))
 
     def _create_features(row: list) -> list[models.Feature]:

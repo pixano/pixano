@@ -149,7 +149,11 @@ def create_app(settings: Settings) -> FastAPI:
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
         # Return dataset items
-        return db_utils.get_items(ds.load(), params)
+        res = db_utils.get_items(ds.load(), params)
+        if res is None:
+            raise HTTPException(status_code=404, detail="Data not found")
+        else:
+            return res
 
     @app.get("/datasets/{ds_id}/stats")
     async def get_dataset_stats(ds_id):

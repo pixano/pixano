@@ -47,6 +47,11 @@ export async function getDatasetItems(
     const response = await fetch(
       `/datasets/${datasetId}/items?page=${page}&size=${size}`
     );
+    if (!response.ok) {
+      //TODO: error cases other than 404 ?
+      console.log("No dataset content at page", page);
+      return null;
+    }
     datasetItems = await response.json();
   } catch (e) {
     console.log(e);

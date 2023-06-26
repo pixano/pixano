@@ -20,11 +20,13 @@
 
   export let annotations: Array<AnnotationsLabels>;
   export let dataset = null;
+  export let lastLoadedPage : number;
 
   let d_data = [];
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
-  let activeTab = "labels";
+  let activeTab = "database"; //"labels";
+  
 
   const dispatch = createEventDispatcher();
 
@@ -73,6 +75,17 @@
     }
     //hack to refresh icon
     view_list = view_list;
+  }
+
+  async function handleDatabaseScroll(event) {
+    if(lastLoadedPage * 100 < dataset.total) {
+      const totalContentHeight = event.target.scrollHeight - event.target.clientHeight;
+      const offset10percent = Math.ceil(totalContentHeight * 0.1);
+      if (event.target.scrollTop > totalContentHeight- offset10percent) {
+        console.log("load next page", lastLoadedPage+1);
+        dispatch("loadNextPage");
+      }
+    }
   }
 
   onMount(() => {
@@ -264,7 +277,9 @@
         {/each}
       {/each}
     {:else if activeTab === "database"}
-      <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center">
+      <div class="w-full mt-4 px-10 flex flex-wrap gap-4 justify-center overflow-auto"
+        on:scroll={handleDatabaseScroll}
+      >
         {#each d_data as data, i}
           <div
             class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"

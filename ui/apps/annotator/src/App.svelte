@@ -19,7 +19,6 @@
   import Header from "./lib/Header.svelte";
   import Library from "./lib/Library.svelte";
   import EmptyLibrary from "./lib/EmptyLibrary.svelte";
-  import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import type {
     ItemData,
@@ -54,22 +53,28 @@
   let classes = [];
   let itemDetails = null;
 
-  let showDetailsPage: boolean = false;
-
   let sam = new SAM();
   //let mock = new MockInteractiveImageSegmenter();
 
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
+
+    //select first item
+    let firstItem = await api.getDatasetItems(selectedDataset.id, 1, 1);
+    firstItem = firstItem.items[0];
+    for (let feat of firstItem) {
+      if (feat.name === "id") {
+        selectItem({ id: feat.value });
+        break;
+      }
+    }
   }
 
-  async function selectItem(event: CustomEvent) {
-    showDetailsPage = true;
-
+  async function selectItem(data) {
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     const start = Date.now();
-    itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
+    itemDetails = await api.getItemDetails(selectedDataset.id, data.id);
     console.log("getItemDetails time (ms):", Date.now() - start);
     let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
@@ -81,7 +86,7 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      id: event.detail.id,
+      id: data.id,
       views: views,
     };
     console.log("item loaded:", selectedItem);
@@ -183,8 +188,7 @@
   }
 
   function unselectItem() {
-    console.log("unselect");
-    showDetailsPage = false;
+    selectedDataset = null;
     selectedItem = null;
     selectedItemEmbedding = null;
     masksGT = [];
@@ -230,12 +234,7 @@
     <EmptyLibrary />
   </div>
 {:else if selectedDataset}
-  {#if !showDetailsPage}
-    <Header bind:selectedDataset bind:selectedItem />
-    <div class="pt-20">
-      <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
-    </div>
-  {:else if selectedItem}
+  {#if selectedItem}
     <AnnotationWorkspace
       itemData={selectedItem}
       embedding={selectedItemEmbedding}
@@ -244,7 +243,7 @@
       {classes}
       handleCloseClick={unselectItem}
       dataset={selectedDataset}
-      on:imageSelected={selectItem}
+      on:imageSelected={(event) => selectItem(event.detail)}
       on:saveAnns={saveAnns}
     />
   {/if}
