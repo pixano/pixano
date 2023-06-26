@@ -52,6 +52,7 @@
   let masksGT: Array<MaskGT> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let classes = [];
+  let itemDetails = null;
 
   let showDetailsPage: boolean = false;
 
@@ -68,10 +69,7 @@
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     const start = Date.now();
-    const itemDetails = await api.getItemDetails(
-      selectedDataset.id,
-      event.detail.id
-    );
+    itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
     console.log("so long ?? (ms)", Date.now() - start);
     let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
@@ -251,6 +249,7 @@
   {:else if selectedItem}
     <AnnotationWorkspace
       itemData={selectedItem}
+      features={itemDetails}
       embedding={selectedItemEmbedding}
       {annotations}
       {masksGT}

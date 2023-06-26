@@ -41,6 +41,7 @@
   import { interactiveSegmenterModel } from "../stores";
 
   export let itemData: ItemData;
+  export let features: any;
   export let embedding: any;
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
@@ -317,7 +318,7 @@
         bind:prediction
         bind:masksGT
         bboxes={null}
-        features={null}
+        {features}
       />
       {#if annotations}
         <DataPanel
