@@ -28,12 +28,7 @@
     ToolType,
     createMultiModalTool,
   } from "../../../../components/Canvas2D/src/tools";
-  import type {
-    ItemData,
-    MaskGT,
-    AnnotationsLabels,
-    AnnLabel,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel, ViewData } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import { getDatasetItems } from "./api";
   import { currentPage } from "../stores";
@@ -178,8 +173,14 @@
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
-    console.log("TODO test00", event);
-    itemData.views = event.detail.views;
+    let new_views : Array<ViewData> = []
+    for (let view of event.detail.views) {
+      new_views.push({
+        viewId: view.viewId,
+        imageURL: view.img
+      })
+    }
+    itemData.views = new_views;
     itemData = itemData;
 
     dispatch("imageSelected", { id: event.detail.id });
