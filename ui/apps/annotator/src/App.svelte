@@ -246,7 +246,7 @@
     <div class="pt-20">
       <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
     </div>
-  {:else if selectedItem}
+  {:else if selectedItem && annotations}
     <AnnotationWorkspace
       itemData={selectedItem}
       embedding={selectedItemEmbedding}

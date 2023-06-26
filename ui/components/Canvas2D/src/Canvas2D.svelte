@@ -79,32 +79,31 @@
     cols: 0,
   };
 
-    let prev_views: Array<ViewData>;
+  let prev_views: Array<ViewData>;
 
-
-    // Dynamically set the canvas stage size
-    const resizeObserver = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-            if (entry.target === stageContainer) {
-                let width: number;
-                let height: number;
-                if (entry.contentBoxSize) {
-                    // Firefox implements `contentBoxSize` as a single content rect, rather than an array
-                    const contentBoxSize = Array.isArray(entry.contentBoxSize)
-                        ? entry.contentBoxSize[0]
-                        : entry.contentBoxSize;
-                    width = contentBoxSize.inlineSize;
-                    height = contentBoxSize.blockSize;
-                } else {
-                    width = entry.contentRect.width;
-                    height = entry.contentRect.height;
-                }
-                stage.width(width);
-                stage.height(height);
-                stage.batchDraw();
-            }
+  // Dynamically set the canvas stage size
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target === stageContainer) {
+        let width: number;
+        let height: number;
+        if (entry.contentBoxSize) {
+          // Firefox implements `contentBoxSize` as a single content rect, rather than an array
+          const contentBoxSize = Array.isArray(entry.contentBoxSize)
+            ? entry.contentBoxSize[0]
+            : entry.contentBoxSize;
+          width = contentBoxSize.inlineSize;
+          height = contentBoxSize.blockSize;
+        } else {
+          width = entry.contentRect.width;
+          height = entry.contentRect.height;
         }
-    });
+        stage.width(width);
+        stage.height(height);
+        stage.batchDraw();
+      }
+    }
+  });
 
   async function onLoadViewImage(event, viewId: string) {
     images[viewId] = event.target;
@@ -156,21 +155,21 @@
   onMount(() => {
     //console.log(`selected tool ${selectedTool?.type}`);
 
-        // Load Image(s)
-        for (let view of views) {
-            zoomFactor[view.viewId] = 1;
-            const img = new Image();
-            img.src = view.imageURL;
-            img.onload = (event) => {
-                onLoadViewImage(event, view.viewId)
-                .then(()=>{
-                    scaleView(view);
-                    //hack to refresh view (display masks/bboxes)
-                    masksGT = masksGT;
-                })
-            };
-        }
-        prev_views = views;
+    // Load Image(s)
+    for (let view of views) {
+      zoomFactor[view.viewId] = 1;
+      const img = new Image();
+      img.src = view.imageURL;
+      img.onload = (event) => {
+        onLoadViewImage(event, view.viewId).then(() => {
+          scaleView(view);
+          //hack to refresh view (display masks/bboxes)
+          masksGT = masksGT;
+        });
+      };
+    }
+    categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+    prev_views = views;
 
     // Calculate new grid size
     gridSize.cols = Math.ceil(Math.sqrt(views.length));
@@ -180,60 +179,59 @@
     resizeObserver.observe(stageContainer);
   });
 
-    function resetStage() {
-        //find groups for all views
-        let inputs = stage.find("#input") as Array<Konva.Group>;
-        let maskss = stage.find("#masks") as Array<Konva.Group>;
-        let bboxess = stage.find("#bboxes") as Array<Konva.Group>;
+  function resetStage() {
+    //find groups for all views
+    let inputs = stage.find("#input") as Array<Konva.Group>;
+    let maskss = stage.find("#masks") as Array<Konva.Group>;
+    let bboxess = stage.find("#bboxes") as Array<Konva.Group>;
 
-        //destroy all
-        for(let input of inputs) input.destroyChildren();
-        for(let masks of maskss) masks.destroyChildren();
-        for(let bboxes of bboxess) bboxes.destroyChildren();
+    //destroy all
+    for (let input of inputs) input.destroyChildren();
+    for (let masks of maskss) masks.destroyChildren();
+    for (let bboxes of bboxess) bboxes.destroyChildren();
+  }
+
+  afterUpdate(() => {
+    if (selectedTool) {
+      handleToolChange();
+    } else {
+      // reset
+      stage.container().style.cursor = "default";
+    }
+    if (prediction && prediction.validated) {
+      handleMaskValidated(prediction.viewId);
+    }
+    if (masksGT) {
+      for (let view of views) addMaskGT(view.viewId, imageId);
+    }
+    if (bboxes) {
+      for (let view of views) addAllBBox(view.viewId, imageId);
     }
 
-    afterUpdate(() => {
-        if (selectedTool) {
-            handleToolChange();
-        } else {
-            // reset
-            stage.container().style.cursor = "default";
-        }
-        if (prediction && prediction.validated) {
-            handleMaskValidated(prediction.viewId);
-        }
-        if (masksGT) {
-            for(let view of views) addMaskGT(view.viewId, imageId);
-        }
-        if (bboxes) {
-            for(let view of views) addAllBBox(view.viewId, imageId)
-        }
+    if (views !== prev_views) {
+      // Reset stage
+      resetStage();
 
-        if (views !== prev_views) {
-            // Reset stage
-            resetStage();
-
-            // Load Image(s)
-            for (let view of views) {
-                const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
-                zoomFactor[view.viewId] = 1;
-                const img = new Image();
-                img.src = view.imageURL;
-                img.onload = (event) => {
-                    onLoadViewImage(event, view.viewId)
-                    .then(()=>{
-                        const konvaImg = view_layer.findOne(`#${imageId}`) as Konva.Image;
-                        konvaImg.image(img);
-                        scaleView(view);
-                        //hack to refresh view (display masks/bboxes)
-                        masksGT = masksGT;
-                    })
-                };
-            }
-            categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
-            prev_views = views;
-        }
-    });
+      // Load Image(s)
+      for (let view of views) {
+        const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+        zoomFactor[view.viewId] = 1;
+        const img = new Image();
+        img.src = view.imageURL;
+        img.onload = (event) => {
+          onLoadViewImage(event, view.viewId).then(() => {
+            const konvaImg = view_layer.findOne(`#${imageId}`) as Konva.Image;
+            konvaImg.image(img);
+            scaleView(view);
+            //hack to refresh view (display masks/bboxes)
+            masksGT = masksGT;
+          });
+        };
+      }
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      prev_views = views;
+    }
+  });
 
   function getBox(viewId): Box {
     //get box as Box
@@ -541,11 +539,10 @@
       const group: Konva.Group = view_layer.findOne("#masksGT");
       const image = view_layer.findOne(`#${imageId}`);
 
-            const listMaskGTIds = []
-            for (let i = 0; i < masksGT.length; ++i) {
-                listMaskGTIds.push(masksGT[i].id);
-                if(masksGT[i].viewId === viewId) {
-
+      const listMaskGTIds = [];
+      for (let i = 0; i < masksGT.length; ++i) {
+        listMaskGTIds.push(masksGT[i].id);
+        if (masksGT[i].viewId === viewId) {
           //don't add a mask that already exist
           let mask = group.findOne(`#${masksGT[i].id}`);
           if (!mask) {
