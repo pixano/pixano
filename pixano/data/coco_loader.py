@@ -163,7 +163,7 @@ class COCOLoader(DataLoader):
         uri_prefix = media_dir.absolute().as_uri()
 
         # If no splits provided, select all splits
-        if not splits:
+        if not self.splits:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
         # Else, if splits provided, check if they exist
         else:
