@@ -352,9 +352,9 @@
     label.add(
       new Konva.Text({
         text: bbox.label,
-        fontSize: 10,
+        fontSize: 6,
         fontStyle: "bold",
-        padding: 2,
+        padding: 0,
         x: rect_x,
         y: rect_y,
       })
