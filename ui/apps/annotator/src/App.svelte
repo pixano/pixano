@@ -81,7 +81,7 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      imageId: event.detail.id,
+      id: event.detail.id,
       views: views,
     };
     console.log("item loaded:", selectedItem);
@@ -124,7 +124,7 @@
             id: itemDetails.views[viewId].objects.id[i],
             mask: masksSVG,
             rle: mask_rle,
-            catID: itemDetails.views[viewId].objects.category[i].id,
+            catId: itemDetails.views[viewId].objects.category[i].id,
             visible: true,
             opacity: 1.0,
           });
@@ -162,7 +162,7 @@
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getImageEmbedding(
+    const embeddingArrByte = await api.getViewEmbedding(
       selectedDataset.id,
       itemDetails.id,
       itemDetails.viewId
@@ -192,38 +192,25 @@
     classes = [];
   }
 
-  function findCategoryForId(
-    anns: Array<AnnotationsLabels>,
-    id: string
-  ): string {
-    for (let ann of anns) {
-      if (ann.items.some((it) => it.id === id)) {
-        return ann.category_name;
-      }
-    }
-    console.log("ERROR - unable to find category for id:", id);
-    return "undefined";
-  }
-
   function saveAnns(data) {
-    /* TODO: adapter pour multivue
     console.log("App - save annotations");
-    console.log("data", data.detail);
     //format annotation data for export
     let anns = [];
-    for(let mask of data.detail.masks) {
-      const category = findCategoryForId(data.detail.anns, mask.id);
+    for (let mask of data.detail.masks) {
+      const mask_class = data.detail.anns.find(
+        (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
+      );
       let ann = {
         id: mask.id,
-        view_id: selectedItem.viewId,
-        category_name: category,
+        view_id: mask.viewId,
+        category_id: mask_class.category_id,
+        category_name: mask_class.category_name,
         mask: mask.rle,
-        mask_source: "Pixano Annotator"
+        mask_source: "Pixano Annotator",
       };
-      anns.push(ann)
+      anns.push(ann);
     }
-    api.postAnnotations(anns, selectedDataset.id, selectedItem.imageId, selectedItem.viewId);
-    */
+    api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
   }
 
   onMount(async () => {

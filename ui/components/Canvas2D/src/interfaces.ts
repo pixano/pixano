@@ -9,7 +9,7 @@ export interface ViewData {
 }
 export interface ItemData {
   dbName: string;
-  imageId: string;
+  id: string;
   views: Array<ViewData>;
 }
 
@@ -18,7 +18,7 @@ export interface MaskGT {
   id: string;
   mask: MaskSVG;
   rle?: MaskRLE;
-  catID: number;
+  catId: number;
   visible: boolean;
   opacity: number;
 }
@@ -28,7 +28,7 @@ export interface BBox {
   id: string;
   bbox: Array<number>; //format xywh, normalized
   label: string;
-  catID: number;
+  catId: number;
   visible: boolean;
 }
 

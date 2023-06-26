@@ -90,7 +90,7 @@ export async function getItemDetails(datasetId: String, itemId: Number) {
   return features;
 }
 
-export async function getImageEmbedding(
+export async function getViewEmbedding(
   datasetId: String,
   itemId: string,
   viewId: string = "image"
@@ -126,12 +126,11 @@ export async function getImageEmbedding(
 export async function postAnnotations(
   anns: any,
   datasetId: String,
-  itemId: string,
-  viewId: string = "image"
+  itemId: string
 ) {
   try {
     const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/${viewId}/annotations`,
+      `/datasets/${datasetId}/items/${itemId}/annotations`,
       {
         headers: {
           Accept: "application/json",

@@ -43,7 +43,7 @@ export const Base: Story = {
           imageURL: "img-02.jpg",
         },
       ],
-      imageId: "id2684",
+      id: "id2684",
     },
     //sample for bear image "img-02.jpg"
     //bear left eye...

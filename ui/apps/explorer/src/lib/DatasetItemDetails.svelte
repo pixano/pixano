@@ -106,7 +106,7 @@
 <div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
   {#if itemData}
     <Canvas2D
-      imageId={itemData.imageId}
+      itemId={itemData.id}
       views={itemData.views}
       selectedTool={panTool}
       prediction={null}

@@ -14,6 +14,8 @@
 import numpy as np
 from PIL import Image
 
+from .image import rle_to_mask, urle_to_rle
+
 
 def denormalize(coord: list[float], height: int, width: int) -> list[float]:
     """Denormalize coordinates
@@ -61,17 +63,17 @@ def normalize(coord: list[float], height: int, width: int) -> list[float]:
     return norm
 
 
-def mask_to_bbox(mask: Image.Image) -> list[float]:
+def mask_to_bbox(mask: np.ndarray) -> list[float]:
     """Returns the smallest bounding box containing all the mask pixels
 
     Args:
-        mask (Image.Image): Mask as Pillow (or NumPy Array)
+        mask (np.ndarray): Mask as NumPy Array
 
     Returns:
         list[float]: Normalized xywh bounding box
     """
 
-    width, height = mask.size
+    height, width = mask.shape
     bool_mask = np.array(mask).astype(bool)
 
     # Find all columns and rows that contain ones
@@ -82,11 +84,24 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
-    # Calculate height and width
-    h = (rmax - rmin + 1) / width
+    # Calculate bbox height and width
     w = (cmax - cmin + 1) / width
+    h = (rmax - rmin + 1) / height
 
-    return [cmin / width, rmin / width, w, h]
+    return [cmin / width, rmin / height, w, h]
+
+
+def urle_to_bbox(urle: dict) -> list[float]:
+    """Returns the smallest bounding box containing all the mask pixels
+
+    Args:
+        urle (dict): Mask as uncompressed RLE
+
+    Returns:
+        list[float]: Normalized xywh bounding box
+    """
+
+    return mask_to_bbox(rle_to_mask(urle_to_rle(urle)))
 
 
 def format_bbox(bbox, is_predicted=False, confidence=None) -> dict:

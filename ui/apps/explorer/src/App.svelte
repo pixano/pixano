@@ -67,7 +67,7 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      imageId: event.detail.id,
+      id: event.detail.id,
       views: views,
     };
     console.log("item loaded:", selectedItem);
@@ -108,7 +108,7 @@
             id: itemDetails.views[viewId].objects.id[i],
             mask: masksSVG,
             rle: mask_rle,
-            catID: itemDetails.views[viewId].objects.category[i].id,
+            catId: itemDetails.views[viewId].objects.category[i].id,
             visible: true,
             opacity: 1.0,
           });
@@ -134,7 +134,7 @@
               (bbox.is_predict
                 ? " " + parseFloat(bbox.confidence).toFixed(2)
                 : ""),
-            catID: itemDetails.views[viewId].objects.category[i].id,
+            catId: itemDetails.views[viewId].objects.category[i].id,
             visible: true,
           });
           let item: AnnLabel = {

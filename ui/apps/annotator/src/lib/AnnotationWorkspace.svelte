@@ -28,7 +28,13 @@
     ToolType,
     createMultiModalTool,
   } from "../../../../components/Canvas2D/src/tools";
-  import type { ItemData, MaskGT, AnnotationsLabels, AnnLabel, ViewData } from "../../../../components/Canvas2D/src/interfaces";
+  import type {
+    ItemData,
+    MaskGT,
+    AnnotationsLabels,
+    AnnLabel,
+    ViewData,
+  } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import { getDatasetItems } from "./api";
   import { currentPage } from "../stores";
@@ -162,7 +168,7 @@
 
       //validate
       prediction.label = predictionClass.category_name;
-      prediction.catID = predictionClass.category_id;
+      prediction.catId = predictionClass.category_id;
       prediction.validated = true;
     }
   }
@@ -173,12 +179,12 @@
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
-    let new_views : Array<ViewData> = []
+    let new_views: Array<ViewData> = [];
     for (let view of event.detail.views) {
       new_views.push({
         viewId: view.viewId,
-        imageURL: view.img
-      })
+        imageURL: view.img,
+      });
     }
     itemData.views = new_views;
     itemData = itemData;
@@ -313,13 +319,13 @@
   <div class="flex flex-col grow">
     <NavigationToolbar
       database={itemData.dbName}
-      imageName={itemData.imageId}
+      imageName={itemData.id}
       {handleCloseClick}
       {handleSaveClick}
     />
     <div class="flex grow">
       <Canvas2D
-        imageId={itemData.imageId}
+        itemId={itemData.id}
         views={itemData.views}
         selectedTool={selectedAnnotationTool}
         {embedding}
