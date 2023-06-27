@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from tkinter import Image
+from PIL import Image
 
 import pyarrow as pa
 from numpy import ndarray
@@ -65,7 +65,7 @@ class CompressedRLE:
         return rle_to_polygons(self.to_dict())
 
     @staticmethod
-    def from_mask(mask: Image.image | ndarray) -> "CompressedRLE":
+    def from_mask(mask: Image.Image | ndarray) -> "CompressedRLE":
         rle_dict = mask_to_rle(mask)
         return CompressedRLE.from_dict(rle_dict)
 

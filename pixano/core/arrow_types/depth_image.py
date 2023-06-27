@@ -52,7 +52,7 @@ class DepthImage:
 
     @staticmethod
     def load(path: str) -> "DepthImage":
-        """load depth image (16 bit) to instance DepthImage
+        """Load depth image (16 bit) to instance DepthImage.
 
         Args:
             path (str): path of the file to load
@@ -64,7 +64,7 @@ class DepthImage:
         return DepthImage(depth_map=map, shape=map.shape)
 
     def save(self, path):
-        """save depth image in png format
+        """Save depth image in png format.
 
         Args:
             path (str): name of file
@@ -78,7 +78,7 @@ class DepthImage:
     def to_gray_levels(
         self,
     ) -> "DepthImage":
-        """Transform image to gray levels in 8 bit
+        """Transform image to gray levels in 8 bit.
 
         Returns:
             DepthImage: new DepthImage in 8 bit

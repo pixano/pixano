@@ -18,11 +18,76 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from pixano.transforms.image import (
+    mask_to_rle,
+    polygons_to_rle,
+    rle_to_mask,
+    rle_to_polygons,
+    rle_to_urle,
+    urle_to_rle,
+)
+
 from .compressedRLE import CompressedRLE, CompressedRLEArray, CompressedRLEType
 
 
 class CompressedRLETestCase(unittest.TestCase):
-    pass
+    def setUp(self):
+        self.size = [10, 10]
+        self.counts = b"2 3 4 5"
+        self.rle = CompressedRLE(self.size, self.counts)
+
+    def test_from_dict(self):
+        rle_dict = {"size": self.size, "counts": self.counts}
+        rle = CompressedRLE.from_dict(rle_dict)
+        self.assertEqual(rle.size, self.size)
+        self.assertEqual(rle.counts, self.counts)
+
+    def test_to_dict(self):
+        rle_dict = self.rle.to_dict()
+        self.assertEqual(rle_dict["size"], self.size)
+        self.assertEqual(rle_dict["counts"], self.counts)
+
+    def test_to_mask(self):
+        mask = self.rle.to_mask()
+        expected_mask = rle_to_mask(self.rle.to_dict())
+        self.assertIsInstance(mask, np.ndarray)
+        self.assertEqual(mask.tolist(), expected_mask.tolist())
+
+    def test_to_urle(self):
+        urle = self.rle.to_urle()
+        expected_urle = rle_to_urle(self.rle.to_dict())
+        self.assertEqual(urle, expected_urle)
+
+    def test_to_polygons(self):
+        polygons = self.rle.to_polygons()
+        expected_polygons = rle_to_polygons(self.rle.to_dict())
+        self.assertEqual(polygons, expected_polygons)
+
+    def test_from_mask(self):
+        mask = np.ndarray((10, 10), dtype=bool)
+        rle = CompressedRLE.from_mask(mask)
+        expected_rle_dict = mask_to_rle(mask)
+        expected_rle = CompressedRLE.from_dict(expected_rle_dict)
+        self.assertEqual(rle.size, expected_rle.size)
+        self.assertEqual(rle.counts, expected_rle.counts)
+
+    def test_from_urle(self):
+        urle = {"size": self.size, "counts": self.counts}
+        height, width = 10, 10
+        rle = CompressedRLE.from_urle(urle, height, width)
+        expected_rle_dict = urle_to_rle(urle, height, width)
+        expected_rle = CompressedRLE.from_dict(expected_rle_dict)
+        self.assertEqual(rle.size, expected_rle.size)
+        self.assertEqual(rle.counts, expected_rle.counts)
+
+    def test_from_polygons(self):
+        polygons = [[1, 1, 2, 2, 2, 1], [3, 3, 4, 4, 4, 3]]
+        height, width = 10, 10
+        rle = CompressedRLE.from_polygons(polygons, height, width)
+        expected_rle_dict = polygons_to_rle(polygons, height, width)
+        expected_rle = CompressedRLE.from_dict(expected_rle_dict)
+        self.assertEqual(rle.size, expected_rle.size)
+        self.assertEqual(rle.counts, expected_rle.counts)
 
 
 class TestParquetCompressedRLE(unittest.TestCase):

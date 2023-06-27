@@ -19,3 +19,7 @@ from .embedding import Embedding
 
 class EmbeddingTestCase(unittest.TestCase):
     pass
+
+class TestParquetPose(unittest.TestCase):
+    #TODO test with parquet
+    pass
