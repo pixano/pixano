@@ -76,7 +76,7 @@
   );
   annotationTools.push(rectTool);
 
-  let selectedAnnotationTool: Tool = panTool;
+  let selectedAnnotationTool: Tool = pointPlusTool;
 
   interactiveSegmenterModel.subscribe((segmenter) => {
     console.log("Interactive Segmenter set in the workspace");
@@ -233,7 +233,7 @@
   async function handleLoadNextPage(event) {
     curPage = curPage + 1;
     let new_dbImages = await getDatasetItems(dataset.id, curPage);
-    if(new_dbImages) {
+    if (new_dbImages) {
       dbImages.items = dbImages.items.concat(new_dbImages.items);
     } else {
       //end of dataset : reset last page
