@@ -229,7 +229,7 @@
     } catch (e) {
       // If default not found, ask user for model name
       model_name = prompt(
-        "Please provide the name of your ONNX model file for interactive segmentation",
+        "Please provide the name of your ONNX model for interactive segmentation",
         model_name
       );
       // Try loading model name from user input
@@ -238,7 +238,9 @@
         interactiveSegmenterModel.set(sam);
       } catch (e) {
         console.error(e);
-        alert(`models/${model_name} not found in your dataset library!`);
+        alert(
+          `models/${model_name} not found in your dataset library!\n\nPlease refer the inference notebooks for information on how to export your model to ONNX`
+        );
       }
     }
   });

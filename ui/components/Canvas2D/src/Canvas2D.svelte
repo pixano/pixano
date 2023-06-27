@@ -494,9 +494,13 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      alert("No interactive model set up, cannot segment.");
+      alert(
+        "No interactive model set up, cannot segment. \n\nPlease look at the inference notebooks for information on how to export your model to ONNX."
+      );
     } else if (embedding == null) {
-      alert("No embedding directory found, cannot segment.");
+      alert(
+        "No embedding directory found, cannot segment.\n\nPlease look at the inference notebooks for information on how to precompute embeddings on your dataset."
+      );
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
