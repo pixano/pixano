@@ -12,8 +12,9 @@
 # http://www.cecill.info
 
 import pyarrow as pa
+from PIL import Image
 
-from pixano.transforms.boxes import normalize, xywh_to_xyxy, xyxy_to_xywh
+from pixano.transforms.boxes import normalize, xywh_to_xyxy, xyxy_to_xywh, mask_to_bbox
 
 # ------------------------------------------------
 #             Python type
@@ -67,6 +68,11 @@ class BBox:
         """
 
         return BBox(xywh, "xywh")
+    
+    @staticmethod
+    def from_mask(mask:Image.Image):
+        return BBox.from_xywh(mask_to_bbox(mask))
+
 
     @property
     def is_normalized(self) -> bool:
