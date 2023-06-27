@@ -86,6 +86,7 @@ class TestParquetBBox(unittest.TestCase):
             self.assertEqual(re_table.column_names, ["bbox"])
             Bbox0 = re_table.take([0])["bbox"][0].as_py()
             self.assertTrue(isinstance(Bbox0, BBox))
+            self.assertTrue(np.allclose(self.bbox_list[0].to_xyxy(), Bbox0.to_xyxy()))
 
     @unittest.skip("panda give dict")
     def test_bbox_table_with_panda(self):
