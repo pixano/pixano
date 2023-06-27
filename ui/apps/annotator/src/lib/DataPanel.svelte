@@ -20,6 +20,7 @@
     AnnotationsLabels,
     DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
+  import { getColor } from "../../../../components/core/src/utils";
 
   export let annotations: Array<AnnotationsLabels>;
   export let dataset: DatabaseFeats = null;
@@ -31,6 +32,9 @@
   let activeTab = "labels"; //"database";
 
   const dispatch = createEventDispatcher();
+
+  // Function that maps an id to a color
+  let categoryColor = null;
 
   //set classes groups opened/closed by default
   for (let group of annotations) {
@@ -117,6 +121,7 @@
           num_objs: num_objs,
         });
       }
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       console.log("DataPanel init", view_list, annotations);
     }
 
@@ -229,7 +234,14 @@
                       class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}"
                     />
                     <span class="grow ml-3 font-bold text-gray-900">
-                      {group.category_name}
+                      <button
+                        class="relative px-1 rounded-lg text-sm border-2 border-transparent"
+                        style="background-color: {categoryColor(
+                          group.category_id
+                        )};"
+                      >
+                        {group.category_name}
+                      </button>
                     </span>
                     <!-- TODO : add different colors -->
                     <span
