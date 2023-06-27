@@ -286,7 +286,7 @@ class COCOLoader(DataLoader):
                             # Append annotation
                             im_w, im_h = images[ann["view_id"]].size
                             urle = rle_to_urle(ann["mask"])
-                            bbox = denormalize(
+                            bbox = (
                                 ann["bbox"]
                                 if ann["bbox"] != [0.0, 0.0, 0.0, 0.0]
                                 else urle_to_bbox(urle)
@@ -297,7 +297,7 @@ class COCOLoader(DataLoader):
                                     "area": ann["area"],
                                     "iscrowd": 0,
                                     "image_id": media_row["id"][0].as_py(),
-                                    "bbox": bbox,
+                                    "bbox": denormalize(bbox, im_h, im_w),
                                     "category_id": ann["category_id"],
                                     "category_name": ann["category_name"],
                                     "id": ann["id"],
