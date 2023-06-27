@@ -220,11 +220,27 @@
   onMount(async () => {
     datasets = await api.getDatasetsList();
 
-    //TODO: const model = await getModel();
-    await sam.init("/models/sam_vit_h_4b8939.onnx");
+    let model_name = "sam_vit_h_4b8939.onnx";
 
-    interactiveSegmenterModel.set(sam);
-    //console.log("SAM input names:", sam.inputNames());
+    // Try loading default model name
+    try {
+      await sam.init("/models/" + model_name);
+      interactiveSegmenterModel.set(sam);
+    } catch (e) {
+      // If default not found, ask user for model name
+      model_name = prompt(
+        "Please provide the name of your ONNX model file for interactive segmentation",
+        model_name
+      );
+      // Try loading model name from user input
+      try {
+        await sam.init("/models/" + model_name);
+        interactiveSegmenterModel.set(sam);
+      } catch (e) {
+        console.error(e);
+        alert(`models/${model_name} not found in your dataset library!`);
+      }
+    }
   });
 </script>
 
