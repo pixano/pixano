@@ -233,7 +233,7 @@ class COCOLoader(DataLoader):
 
             # Iterate on files
             for file in tqdm(files, desc=f"Processing {split_name} split", position=0):
-                seen_category_ids = []
+                seen_category_ids = [None]
 
                 # Load media table
                 media_fields = [
@@ -304,7 +304,10 @@ class COCOLoader(DataLoader):
                                 }
                             )
                             # Append category if not seen yet
-                            if ann["category_id"] not in seen_category_ids:
+                            if (
+                                ann["category_id"] not in seen_category_ids
+                                and ann["category_name"] is not None
+                            ):
                                 coco_json["categories"].append(
                                     {
                                         "supercategory": "N/A",

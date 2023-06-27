@@ -396,7 +396,10 @@ class DataLoader(ABC):
                     if field.name == "objects":
                         for row in batch[field.name]:
                             for ann in row:
-                                if ann["category_id"] not in seen_category_ids:
+                                if (
+                                    ann["category_id"] not in seen_category_ids
+                                    and ann["category_name"] is not None
+                                ):
                                     categories.append(
                                         {
                                             "supercategory": "N/A",
