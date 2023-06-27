@@ -213,6 +213,8 @@
       // Load Image(s)
       for (let view of views) {
         const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+        clearInputs(view.viewId);
+        clearCurrentMask(view.viewId);
         zoomFactor[view.viewId] = 1;
         const img = new Image();
         img.src = view.imageURL;
