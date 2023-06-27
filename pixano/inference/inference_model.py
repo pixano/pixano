@@ -297,11 +297,11 @@ class InferenceModel(ABC):
         with open(output_dir / f"{filename}.json", "w") as f:
             json.dump(output_json, f)
 
-    def export_to_onnx(self) -> Path:
-        """Export model to ONNX
+    def export_to_onnx(self, library_dir: Path):
+        """Export Torch model to ONNX
 
-        Returns:
-            Path: ONNX model path
+        Args:
+            library_dir (Path): Dataset library directory
         """
 
         pass
