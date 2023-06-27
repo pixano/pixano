@@ -159,13 +159,11 @@
 
     console.log("init masksGT", masksGT);
     //unique classes from existing annotations
-    const cat_set = new Set();
-    for (let ann of annotations) cat_set.add(ann.category_name);
-    for (let cat of cat_set) {
-      if (!classes.some((cls) => cls.name === cat)) {
+    for (let ann of annotations) {
+      if (!classes.some((cls) => cls.id === ann.category_id)) {
         classes.push({
-          id: classes.length,
-          name: cat,
+          id: ann.category_id,
+          name: ann.category_name,
         });
       }
     }
