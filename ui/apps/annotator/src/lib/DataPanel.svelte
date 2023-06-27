@@ -29,7 +29,7 @@
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
   let activeTab = "labels"; //"database";
-
+  let currentDBScroll: number = 0;
   const dispatch = createEventDispatcher();
 
   //set classes groups opened/closed by default
@@ -80,6 +80,7 @@
   }
 
   async function handleDatabaseScroll(event) {
+    currentDBScroll = event.target.scrollTop;
     if (lastLoadedPage * 100 < dataset.total) {
       const totalContentHeight =
         event.target.scrollHeight - event.target.clientHeight;
@@ -133,6 +134,13 @@
           }
         }
         d_data.push(data);
+      }
+    }
+
+    if(activeTab === "database") {
+      let div = document.getElementById("scrollableDB");
+      if (div) {
+        div.scrollTop = currentDBScroll;
       }
     }
   });
@@ -282,6 +290,7 @@
       </div>
     {:else if activeTab === "database"}
       <div
+        id="scrollableDB"
         class="w-full flex flex-wrap justify-center overflow-auto"
         on:scroll={handleDatabaseScroll}
       >
