@@ -16,5 +16,6 @@ import unittest
 import numpy as np
 from .embedding import Embedding
 
+
 class EmbeddingTestCase(unittest.TestCase):
     pass

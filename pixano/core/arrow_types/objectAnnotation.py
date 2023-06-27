@@ -175,7 +175,7 @@ class ObjectAnnotationArray(pa.ExtensionArray):
     """Class to use pa.array for ObjectAnnotationType instance"""
 
     @staticmethod
-    def from_list_to_dict(annotation_list:list[ObjectAnnotation]) -> dict:
+    def from_list_to_dict(annotation_list: list[ObjectAnnotation]) -> dict:
         """Tool function to trasnform list of ObjAnn to theirs correspondings dicts
 
         Args:
@@ -184,12 +184,12 @@ class ObjectAnnotationArray(pa.ExtensionArray):
         Returns:
             dict: _description_
         """
-        
+
         type_mapping = {
             BBox: BBoxType(),
             Pose: PoseType(),
             CompressedRLE: CompressedRLEType(),
-            ObjectAnnotation: ObjectAnnotationType()
+            ObjectAnnotation: ObjectAnnotationType(),
         }
 
         result_dict = {}
@@ -204,19 +204,20 @@ class ObjectAnnotationArray(pa.ExtensionArray):
 
             if isinstance(attr_values[0], tuple(type_mapping.keys())):
                 attr_type = type_mapping[type(attr_values[0])]
-                attr_values = pa.array([value.to_dict() for value in attr_values], type=attr_type)
-
+                attr_values = pa.array(
+                    [value.to_dict() for value in attr_values], type=attr_type
+                )
 
             result_dict[attr] = pa.array(attr_values)
 
         return result_dict
-    
+
     @classmethod
     def from_list(cls, annotation_list: list[ObjectAnnotation]):
         attributes_dict = ObjectAnnotationArray.from_list_to_dict(annotation_list)
-        return pa.StructArray.from_arrays(list(attributes_dict.values()),names= list(attributes_dict.keys()))
-
-
+        return pa.StructArray.from_arrays(
+            list(attributes_dict.values()), names=list(attributes_dict.keys())
+        )
 
 
 def is_objectAnnotation_type(t: pa.DataType) -> bool:

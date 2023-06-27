@@ -57,7 +57,7 @@ __all__ = [
     "PoseArray",
     "is_pose_type",
     "DepthImage",
-    "DepthImageType"
+    "DepthImageType",
 ]
 
 

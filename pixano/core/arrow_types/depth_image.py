@@ -14,7 +14,6 @@
 import io
 from typing import IO, Optional
 
-
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
