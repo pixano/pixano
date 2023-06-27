@@ -94,9 +94,11 @@ class ImageLoader(DataLoader):
             row = {
                 "id": im_path.name,
                 "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
+                # TODO: find a way to return an empty list
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),
+                        category_id=0,
                     ).dict()
                 ],
                 "split": split,
