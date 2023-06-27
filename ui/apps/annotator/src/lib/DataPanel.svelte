@@ -29,7 +29,6 @@
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
   let activeTab = "labels"; //"database";
-  let currentDBScroll: number = 0;
   const dispatch = createEventDispatcher();
 
   //set classes groups opened/closed by default
@@ -80,7 +79,6 @@
   }
 
   async function handleDatabaseScroll(event) {
-    currentDBScroll = event.target.scrollTop;
     if (lastLoadedPage * 100 < dataset.total) {
       const totalContentHeight =
         event.target.scrollHeight - event.target.clientHeight;
@@ -137,12 +135,6 @@
       }
     }
 
-    if(activeTab === "database") {
-      let div = document.getElementById("scrollableDB");
-      if (div) {
-        div.scrollTop = currentDBScroll;
-      }
-    }
   });
 </script>
 
@@ -173,8 +165,7 @@
     </span>
   </div>
   <div class="flex flex-col max-h-[88vh]">
-    {#if activeTab == "labels"}
-      <div class="overflow-auto">
+      <div class="overflow-auto {activeTab == "labels"?"":"hidden"}">
         {#each view_list as view}
           {#if view_list.length > 1}
             <div
@@ -288,10 +279,7 @@
           {/each}
         {/each}
       </div>
-    {:else if activeTab === "database"}
-      <div
-        id="scrollableDB"
-        class="w-full flex flex-wrap justify-center overflow-auto"
+      <div class="w-full flex flex-wrap justify-center overflow-auto {activeTab == "database"?"":"hidden"}"
         on:scroll={handleDatabaseScroll}
       >
         {#each d_data as data, i}
@@ -312,6 +300,5 @@
           </div>
         {/each}
       </div>
-    {/if}
   </div>
 </div>
