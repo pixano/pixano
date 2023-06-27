@@ -224,6 +224,7 @@ def update_annotations(
     """
 
     # Convert URLE to RLE and add bounding box
+    # TODO: Find a fix for image datasets
     item_anns = [o.dict() for o in annotations]
     for ann in item_anns:
         ann["bbox"] = urle_to_bbox(ann["mask"])
@@ -268,6 +269,7 @@ def update_annotations(
             arrays = []
             for field in table.schema:
                 # Convert image types to dict before PyArrow conversion
+                # TODO: find a better way
                 if arrow_types.is_image_type(field.type):
                     updated_table[field.name] = [
                         i.to_dict() for i in updated_table[field.name]
