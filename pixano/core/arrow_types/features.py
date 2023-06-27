@@ -82,7 +82,7 @@ class ObjectAnnotation(BaseModel):
     id: str
     view_id: Optional[str] = None
     # Bounding Box
-    bbox: Optional[list[float]] = [0] * 4
+    bbox: Optional[list[float]] = [0.0] * 4
     bbox_source: Optional[str] = None
     bbox_confidence: Optional[float] = None
     is_group_of: Optional[bool] = None
@@ -94,8 +94,8 @@ class ObjectAnnotation(BaseModel):
     area: Optional[float] = None
     # 6D Poses
     pose: Optional[dict[str, list[float]]] = {
-        "cam_R_m2c": [0] * 9,
-        "cam_t_m2c": [0] * 3,
+        "cam_R_m2c": [0.0] * 9,
+        "cam_t_m2c": [0.0] * 3,
     }
     # Category
     category_id: Optional[int] = None
