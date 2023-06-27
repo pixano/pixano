@@ -27,7 +27,7 @@
     Box,
     InteractiveImageSegmenterOutput,
   } from "../../models/src/interactive_image_segmentation";
-  import type { AnnotationsLabels, MaskGT, BBox, ViewData } from "./interfaces";
+  import type { MaskGT, BBox, ViewData } from "./interfaces";
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;
@@ -42,11 +42,13 @@
 
   export let masksGT: Array<MaskGT> | null;
   export let bboxes: Array<BBox> | null;
-  export let annotations: Array<AnnotationsLabels>;
 
   //let prevImg: string = "";
   //export let imageEmbedding = null;
   export let selectedTool: Tool | null;
+
+  // Function that maps an id to a color
+  export let categoryColor = null;
 
   // Output
   export let prediction: InteractiveImageSegmenterOutput | null;
@@ -61,8 +63,6 @@
   // let imageKonva: Konva.Image;
   let highlighted_point: Konva.Circle = null;
 
-  // Function that maps an id to a color
-  let categoryColor = null;
 
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
@@ -166,7 +166,6 @@
         });
       };
     }
-    categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
     prev_views = views;
 
     // Calculate new grid size
@@ -228,7 +227,6 @@
           });
         };
       }
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       prev_views = views;
     }
   });

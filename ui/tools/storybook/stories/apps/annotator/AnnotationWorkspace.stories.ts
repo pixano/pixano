@@ -35,6 +35,7 @@ interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {
   args: {
+    curPage: 1,
     itemData: {
       dbName: "photos db",
       views: [

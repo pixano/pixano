@@ -16,8 +16,7 @@
 
   import { afterUpdate, onMount } from "svelte";
   import { createEventDispatcher } from "svelte";
-  //import { ImageDetails } from "@pixano/core";
-  //import { getItemDetails } from "./api";
+  import { getColor } from "../../../../components/core/src/utils";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import AnnotationInspector from "./AnnotationInspector.svelte";
   import type {
@@ -36,6 +35,7 @@
 
   export let features = null;
   let panTool = createPanTool();
+  let categoryColor;
 
   let allBBoxVisible = true;
 
@@ -98,6 +98,7 @@
   afterUpdate(() => {
     // needed for annotations update
     if (annotations) {
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       annotations = annotations;
     }
   });
@@ -112,7 +113,7 @@
       prediction={null}
       {masksGT}
       {bboxes}
-      {annotations}
+      {categoryColor}
     />
     <AnnotationInspector
       {features}

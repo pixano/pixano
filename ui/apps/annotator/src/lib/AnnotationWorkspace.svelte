@@ -20,6 +20,7 @@
   import NavigationToolbar from "./NavigationToolbar.svelte";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import CanvasToolbar from "../../../../components/Canvas2D/src/CanvasToolbar.svelte";
+  import { getColor } from "../../../../components/core/src/utils";
   import {
     type Tool,
     createLabeledPointTool,
@@ -78,6 +79,8 @@
       rectTool.postProcessor = segmenter;
     }
   });
+
+  let categoryColor;
 
   // events handlers
   function handleAnnotationToolChange() {
@@ -226,6 +229,13 @@
     dispatch("loadNextPage");
   }
 
+  onMount(()=> {
+    if (annotations) {
+      console.log("onMount - annotations", annotations);
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+    }
+  })
+
   afterUpdate(() => {
     //console.log("afterUpdate - itemData", itemData);
     //console.log("afterUpdate - masksGT", masksGT);
@@ -234,6 +244,8 @@
 
     // needed for annotations update
     if (annotations) {
+      console.log("afterUpdate - annotations", annotations);
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       annotations = annotations;
     }
     if (classes) {
@@ -321,17 +333,18 @@
         itemId={itemData.id}
         views={itemData.views}
         selectedTool={selectedAnnotationTool}
+        {categoryColor}
         {embedding}
         bind:prediction
         bind:masksGT
         bboxes={null}
-        {annotations}
       />
       {#if annotations}
         <DataPanel
           bind:annotations
           dataset={dbImages}
           lastLoadedPage={curPage}
+          {categoryColor}
           on:imageSelected={handleImageSelectedChange}
           on:itemDeleted={handleItemDeleted}
           on:toggleVisibility={handleVisibilityChange}

@@ -20,11 +20,12 @@
     AnnotationsLabels,
     DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
-  import { getColor } from "../../../../components/core/src/utils";
-
+  
   export let annotations: Array<AnnotationsLabels>;
   export let dataset: DatabaseFeats = null;
   export let lastLoadedPage: number;
+  // Function that maps an id to a color
+  export let categoryColor = null;
 
   let d_data = [];
 
@@ -32,15 +33,13 @@
   let activeTab = "labels"; //"database";
   const dispatch = createEventDispatcher();
 
-  // Function that maps an id to a color
-  let categoryColor = null;
 
   //set classes groups opened/closed by default
   for (let group of annotations) {
     group["opened"] = false;
   }
 
-  // Change selected tool
+  // Change selected image
   function selectImage(img) {
     dispatch("imageSelected", img);
   }
@@ -94,10 +93,11 @@
   }
 
   afterUpdate(() => {
+    /*
     if (view_list) {
       view_list = view_list;
     }
-
+    */
     if (annotations) {
       //build views list
       let viewIds = new Set();
@@ -119,7 +119,6 @@
           num_objs: num_objs,
         });
       }
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
     }
 
     if (dataset && dataset.items) {

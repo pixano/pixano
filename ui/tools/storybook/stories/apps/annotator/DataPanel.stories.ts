@@ -15,6 +15,7 @@ http://www.cecill.info
 
 import type { Meta, StoryObj } from "@storybook/svelte";
 import DataPanel from "../../../../../apps/annotator/src/lib/DataPanel.svelte";
+import { getColor } from "../../../../../components/core/src/utils";
 
 const meta = {
   title: "Applications/Annotator/DataPanel",
@@ -28,8 +29,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+
+let catCol = getColor([1, 2]); // Define a color map for each category id
+
 export const Base: Story = {
   args: {
+    categoryColor: catCol,
     annotations: [
       {
         category_name: "Dog",
