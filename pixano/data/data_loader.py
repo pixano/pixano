@@ -380,7 +380,7 @@ class DataLoader(ABC):
 
         # Dataset categories
         categories = []
-        seen_category_ids = []
+        seen_category_ids = [None]
 
         # Iterate on splits
         for split in self.splits:
