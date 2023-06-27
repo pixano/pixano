@@ -159,10 +159,12 @@
     const cat_set = new Set();
     for (let ann of annotations) cat_set.add(ann.category_name);
     for (let cat of cat_set) {
-      classes.push({
-        id: classes.length,
-        name: cat,
-      });
+      if (!classes.some((cls) => cls.name === cat)) {
+        classes.push({
+          id: classes.length,
+          name: cat,
+        });
+      }
     }
 
     // Embeddings
