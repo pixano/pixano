@@ -29,6 +29,7 @@ from .objectAnnotation import (
     is_objectAnnotation_type,
 )
 from .pose import Pose, PoseArray, PoseType, is_pose_type
+from .depth_image import DepthImage, DepthImageType
 
 __all__ = [
     "BBox",
@@ -55,7 +56,8 @@ __all__ = [
     "PoseType",
     "PoseArray",
     "is_pose_type",
-    "convert_field",
+    "DepthImage",
+    "DepthImageType"
 ]
 
 

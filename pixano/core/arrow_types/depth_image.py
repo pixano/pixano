@@ -11,97 +11,127 @@
 #
 # http://www.cecill.info
 
-import base64
-import imageio
 import io
-import numpy as np
-import pyarrow as pa
-import pandas as pd
-from PIL import Image as PILImage
-
-from abc import ABC
 from typing import IO, Optional
-from pixano.transforms.image import depth_array_to_gray
+
+
+import imageio
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pyarrow as pa
 
 # ------------------------------------------------
 #             Python type
 # ------------------------------------------------
 
 
-class DepthMap(ABC):
-    """DepthMap stored as uint16 images
+class DepthImage:
+    """DepthImage stored as uint16 images"""
 
-    Args:
-        abc (_type_): _description_
-    """
-
-    def __init__(self, bytes: bytes):
-        self._bytes = bytes
+    def __init__(
+        self,
+        depth_map: np.ndarray = None,
+        bytes_data: bytes = None,
+        shape: list[int] = None,
+    ):
+        self._bytes = bytes_data
+        self._depth_map = depth_map
+        self._shape = shape
 
     @property
-    def bytes(self):
-        return self._bytes
+    def bytes(self) -> bytes:
+        if self._bytes is not None:
+            return self._bytes
+        return self._depth_map.tobytes()
+
+    @property
+    def depth_map(self) -> np.ndarray:
+        if self._depth_map is not None:
+            return self._depth_map
+        return np.frombuffer(self._bytes, dtype=np.uint16).reshape(self._shape)
+
+    @staticmethod
+    def load(path: str) -> "DepthImage":
+        """load depth image (16 bit) to instance DepthImage
+
+        Args:
+            path (str): path of the file to load
+
+        Returns:
+            DepthImage: instance of DepthImage
+        """
+        map = imageio.imread(path).astype(np.uint16)
+        return DepthImage(depth_map=map, shape=map.shape)
+
+    def save(self, path):
+        """save depth image in png format
+
+        Args:
+            path (str): name of file
+        """
+        depth_image = self.depth_map.astype(np.uint16)
+        imageio.imwrite(path, depth_image)
 
     def open(self) -> IO:
         return io.BytesIO(self.bytes)
 
-    def display(self, size=None):
-        with self.open() as f:
-            values = imageio.imread(f)
-        scaled_values = depth_array_to_gray(values.astype(np.float32))
+    def to_gray_levels(
+        self,
+    ) -> "DepthImage":
+        """Transform image to gray levels in 8 bit
 
-        with io.BytesIO() as output_bytes:
-            depth_rgb = PILImage.fromarray(scaled_values)
-            if size:
-                depth_rgb.thumbnail((size, size))
-            depth_rgb.save(output_bytes, "PNG")
-            encoded = output_bytes.getvalue()
+        Returns:
+            DepthImage: new DepthImage in 8 bit
+        """
 
-        b64_png = base64.b64encode(encoded).decode("utf-8")
-        return f"data:image/png;base64,{b64_png}"
+        depth = self.depth_map
 
-    def __repr__(self):
-        return "DepthMap(<embedded>)"
+        min, max = depth.min(), depth.max()
 
-    def _repr_mimebundle_(self, include=None, exclude=None):
-        from IPython.display import Image as IPyImage
+        depth_n: np.ndarray = ((depth - min) / (max - min)) * 255
 
-        im = IPyImage(url=self.display(), format="png")
-        return im._repr_mimebundle_(include=include, exclude=exclude)
-    
+        return DepthImage(depth_map=depth_n.astype(np.uint8))
+
+    def display(self):
+        plt.imshow(self.depth_map, cmap="gray", vmin=0, vmax=255)
+        plt.axis("off")
+        if self._shape is not None:
+            plt.figure(figsize=self._shape)
+        plt.show()
+
 
 # ------------------------------------------------
 #             Py arrow integration
 # ------------------------------------------------
 
 
-
-class DepthMapType(pa.ExtensionType):
+class DepthImageType(pa.ExtensionType):
     """Depth map extension types"""
 
     def __init__(self):
-        super(DepthMapType, self).__init__(pa.binary(), "depthmap")
+        super(DepthImageType, self).__init__(pa.binary(), "depthmap")
 
     def __arrow_ext_serialize__(self):
         return b""
 
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return DepthMapType()
+        return DepthImageType()
 
     def __arrow_ext_scalar_class__(self):
-        return DepthMapScalar
+        return DepthImageScalar
 
 
-class DepthMapScalar(pa.ExtensionScalar):
+class DepthImageScalar(pa.ExtensionScalar):
     """Used by ExtensionArray.to_pylist()"""
 
-    def as_py(self) -> Optional[DepthMap]:
+    def as_py(self) -> Optional[DepthImage]:
         if pd.isna(self.value):
             return None
-        return DepthMap(self.value.as_py())
+        return DepthImage(self.value.as_py())
 
 
 def is_depthMap_type(t: pa.DataType) -> bool:
     """Returns True if the type is an image type"""
-    return isinstance(t, DepthMapType)
+    return isinstance(t, DepthImageType)
