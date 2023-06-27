@@ -285,15 +285,19 @@ class COCOLoader(DataLoader):
                         for ann in anns:
                             # Append annotation
                             im_w, im_h = images[ann["view_id"]].size
+                            urle = rle_to_urle(ann["mask"])
+                            bbox = denormalize(
+                                ann["bbox"]
+                                if ann["bbox"] != [0.0, 0.0, 0.0, 0.0]
+                                else urle_to_bbox(urle)
+                            )
                             coco_json["annotations"].append(
                                 {
-                                    "segmentation": rle_to_urle(ann["mask"]),
+                                    "segmentation": urle,
                                     "area": ann["area"],
                                     "iscrowd": 0,
                                     "image_id": media_row["id"][0].as_py(),
-                                    "bbox": denormalize(ann["bbox"], im_h, im_w)
-                                    if ann["bbox"] != [0.0, 0.0, 0.0, 0.0]
-                                    else urle_to_bbox(rle_to_urle(ann["mask"])),
+                                    "bbox": bbox,
                                     "category_id": ann["category_id"],
                                     "category_name": ann["category_name"],
                                     "id": ann["id"],
