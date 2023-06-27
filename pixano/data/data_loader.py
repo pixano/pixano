@@ -373,7 +373,7 @@ class DataLoader(ABC):
 
         # Check input directories
         for source_path in input_dirs.values():
-            if not Path.exists(source_path):
+            if not source_path.exists():
                 raise Exception(f"{source_path} does not exist.")
             if not any(source_path.iterdir()):
                 raise Exception(f"{source_path} is empty.")
