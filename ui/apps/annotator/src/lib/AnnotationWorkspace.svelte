@@ -278,6 +278,7 @@
 
         <div
           class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
+          style="overflow-y:scroll; max-height: 800px;"
         >
           {#each classes as cls}
             <span
