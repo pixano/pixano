@@ -608,6 +608,7 @@
           opacity: 1.0,
         });
 
+        if (highlighted_point) unhighlightPoint(highlighted_point);
         clearInputs(prediction.viewId);
         prediction = null;
       }
