@@ -134,9 +134,9 @@ def create_app(settings: Settings) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.mount(
-        "/models", StaticFiles(directory=f"{settings.data_dir}/models"), name="models"
-    )
+    model_dir = settings.data_dir / "models"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/models", StaticFiles(directory=model_dir), name="models")
 
     @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_datasets_list():
