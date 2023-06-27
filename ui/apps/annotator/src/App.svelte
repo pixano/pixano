@@ -26,7 +26,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
-    DatabaseFeats
+    DatabaseFeats,
   } from "../../../components/Canvas2D/src/interfaces";
   import {
     generatePolygonSegments,
@@ -64,7 +64,7 @@
 
     dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
     //select first item
-    let firstItem = dbImages.items[0]
+    let firstItem = dbImages.items[0];
     for (let feat of firstItem) {
       if (feat.name === "id") {
         selectItem({ id: feat.value });
@@ -109,16 +109,18 @@
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
         const cat_name = itemDetails.views[viewId].objects.category[i].name;
 
-        // ensure all items goes in unique category (by name)
-        if (!struct_categories[cat_name]) {
-          let annotation: AnnotationsLabels = {
-            viewId: viewId,
-            category_name: cat_name,
-            category_id: itemDetails.views[viewId].objects.category[i].id,
-            items: [],
-            visible: true,
-          };
-          struct_categories[cat_name] = annotation;
+        if (mask_rle) {   //separate in case we add bboxes or other annotation types later
+          // ensure all items goes in unique category (by name)
+          if (!struct_categories[cat_name]) {
+            let annotation: AnnotationsLabels = {
+              viewId: viewId,
+              category_name: cat_name,
+              category_id: itemDetails.views[viewId].objects.category[i].id,
+              items: [],
+              visible: true,
+            };
+            struct_categories[cat_name] = annotation;
+          }
         }
 
         if (mask_rle) {
