@@ -492,9 +492,9 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      console.log("No segmentation model connected, cannot segment");
+      alert("No interactive model set up, cannot segment.");
     } else if (embedding == null) {
-      console.log("No embeddings, cannot segment");
+      alert("No embedding directory found, cannot segment.");
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
