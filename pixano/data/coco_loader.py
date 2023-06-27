@@ -142,21 +142,20 @@ class COCOLoader(DataLoader):
         self,
         input_dir: Path,
         export_dir: Path,
-        inf_datasets: list = [],
+        input_dbs: list = [],
+        portable: bool = False,
     ):
         """Export dataset back to original format
 
         Args:
             input_dir (Path): Input directory
             export_dir (Path): Export directory
-            inf_datasets (list[str]): Inference datasets to export, all if []. Defaults to [].
+            input_dbs (list[str]): Input databases to export, all if []. Defaults to [].
+            portable (bool, optional): True to export dataset portable media files. Defaults to False.
         """
 
         # Load spec.json
         input_info = DatasetInfo.parse_file(input_dir / "spec.json")
-
-        # Create export directory
-        export_dir.mkdir(parents=True, exist_ok=True)
 
         # Create URI prefix
         media_dir = input_dir / "media"
@@ -165,33 +164,41 @@ class COCOLoader(DataLoader):
         # If no splits provided, select all splits
         if not self.splits:
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
-        # Else, if splits provided, check if they exist
+        # Else, format provided splits
         else:
-            splits = [f"split={s}" for s in self.splits if not s.startswith("split=")]
-            for split in splits:
-                split_dir = input_dir / "db" / split
-                if not Path.exists(split_dir):
-                    raise Exception(f"{split_dir} does not exist.")
-                if not any(split_dir.iterdir()):
-                    raise Exception(f"{split_dir} is empty.")
-
-        # Input datasets
-        input_datasets = ["db"]
-        # If no inference datasets provided, select all inference datasets
-        if not inf_datasets:
-            for inf_json in sorted(list(input_dir.glob("db_infer_*/infer.json"))):
-                input_datasets.append(inf_json.parent.name)
-        # Else, if inference datasets provided, check if they exist
-        else:
-            inf_datasets = [
-                f"db_infer_{s}" for s in inf_datasets if not s.startswith("db_infer_")
+            splits = [
+                f"split={s}" if not s.startswith("split=") else s for s in self.splits
             ]
-            for inf_ds in inf_datasets:
-                inf_dir = input_dir / inf_ds
-                if not Path.exists(inf_dir):
-                    raise Exception(f"{inf_dir} does not exist.")
-                if not any(inf_dir.iterdir()):
-                    raise Exception(f"{inf_dir} is empty.")
+        # Check if the splits exist
+        for split in splits:
+            split_dir = input_dir / "db" / split
+            if not split_dir.exists():
+                raise Exception(f"{split_dir} does not exist.")
+            if not any(split_dir.iterdir()):
+                raise Exception(f"{split_dir} is empty.")
+
+        # If no input databases provided, select all input databases
+        if not input_dbs:
+            input_dbs = ["db"]
+            for inf_json in sorted(list(input_dir.glob("db_infer_*/infer.json"))):
+                input_dbs.append(inf_json.parent.name)
+        # Else, format provided inference datasets
+        else:
+            input_dbs = [
+                f"db_infer_{i}" if not i.startswith("db") else i for i in input_dbs
+            ]
+
+        # Check if the datasets exist
+        for ds in input_dbs:
+            ds_dir = input_dir / ds
+            if not ds_dir.exists():
+                raise Exception(f"{ds_dir} does not exist.")
+            if not any(ds_dir.iterdir()):
+                raise Exception(f"{ds_dir} is empty.")
+
+        # Create export directory
+        ann_dir = export_dir / f"annotations_[{','.join(input_dbs)}]"
+        ann_dir.mkdir(parents=True, exist_ok=True)
 
         # Iterate on splits
         for split in splits:
@@ -224,67 +231,73 @@ class COCOLoader(DataLoader):
 
             # Iterate on files
             for file in tqdm(files, desc=f"Processing {split_name} split", position=0):
-                # Load file into rows
-                table = pq.read_table(file)
-                rows = table.to_batches(max_chunksize=1)
                 seen_category_ids = []
+
+                # Load media table
+                media_fields = [
+                    field.name
+                    for field in self.schema
+                    if arrow_types.is_image_type(field.type)
+                ]
+                media_table = pq.read_table(file).select(["id"] + media_fields)
+
+                # Load annotation tables
+                ann_files = [input_dir / ds / split / file.name for ds in input_dbs]
+                ann_tables = [pq.read_table(f).select(["objects"]) for f in ann_files]
 
                 # Iterate on rows
                 for row in tqdm(
-                    rows,
-                    desc=f"Processsing {file.name}",
-                    total=table.num_rows,
+                    range(media_table.num_rows),
+                    desc=f"Processing {file.name}",
                     position=1,
                 ):
-                    for field in self.schema:
-                        # If column has images
-                        if arrow_types.is_image_type(field.type):
-                            # Open image
-                            im = row[field.name][0].as_py(uri_prefix)
-                            im_w, im_h = im.size
-                            # Append image info
-                            coco_json["images"].append(
+                    media_row = media_table.take([row])
+                    ann_rows = [ann_table.take([row]) for ann_table in ann_tables]
+                    images = {}
+
+                    for field in media_fields:
+                        # Open image
+                        images[field] = media_row[field][0].as_py(uri_prefix)
+                        im_w, im_h = images[field].size
+                        # Append image info
+                        coco_json["images"].append(
+                            {
+                                "license": 1,
+                                "file_name": images[field]._uri,
+                                "height": im_h,
+                                "width": im_w,
+                                "id": media_row["id"][0].as_py(),
+                            }
+                        )
+
+                    for ann_row in ann_rows:
+                        anns = ann_row["objects"][0].as_py()
+
+                        for ann in anns:
+                            # Append annotation
+                            im_w, im_h = images[ann["view_id"]].size
+                            coco_json["annotations"].append(
                                 {
-                                    "license": 1,
-                                    "file_name": im.uri,
-                                    "height": im_h,
-                                    "width": im_w,
-                                    "id": row["id"][0].as_py(),
+                                    "segmentation": rle_to_urle(ann["mask"]),
+                                    "area": ann["area"],
+                                    "iscrowd": 0,
+                                    "image_id": media_row["id"][0].as_py(),
+                                    "bbox": denormalize(ann["bbox"], im_h, im_w),
+                                    "category_id": ann["category_id"],
+                                    "category_name": ann["category_name"],
+                                    "id": ann["id"],
                                 }
                             )
-                        # If column has annotations
-                        # TODO: Change to checking type when ObjectAnnotationType is rebuilt
-                        elif field.name == "objects":
-                            row_anns = row["objects"][0].as_py()
-                            for row_ann in row_anns:
-                                # Append annotation
-                                im_w, im_h = (
-                                    row[row_ann["view_id"]][0].as_py(uri_prefix).size
-                                )
-                                coco_json["annotations"].append(
+                            # Append category if not seen yet
+                            if ann["category_id"] not in seen_category_ids:
+                                coco_json["categories"].append(
                                     {
-                                        "segmentation": rle_to_urle(row_ann["mask"]),
-                                        "area": row_ann["area"],
-                                        "iscrowd": 0,
-                                        "image_id": row["id"][0].as_py(),
-                                        "bbox": denormalize(
-                                            row_ann["bbox"], im_h, im_w
-                                        ),
-                                        "category_id": row_ann["category_id"],
-                                        "category_name": row_ann["category_name"],
-                                        "id": row_ann["id"],
-                                    }
+                                        "supercategory": "N/A",
+                                        "id": ann["category_id"],
+                                        "name": ann["category_name"],
+                                    },
                                 )
-                                # Append category if not seen yet
-                                if row_ann["category_id"] not in seen_category_ids:
-                                    coco_json["categories"].append(
-                                        {
-                                            "supercategory": "N/A",
-                                            "id": row_ann["category_id"],
-                                            "name": row_ann["category_name"],
-                                        },
-                                    )
-                                    seen_category_ids.append(row_ann["category_id"])
+                                seen_category_ids.append(ann["category_id"])
 
             # Sort categories
             coco_json["categories"] = sorted(
@@ -292,5 +305,14 @@ class COCOLoader(DataLoader):
             )
 
             # Save COCO json
-            with open(export_dir / f"instances_{split_name}.json", "w") as f:
+            with open(ann_dir / f"instances_{split_name}.json", "w") as f:
                 json.dump(coco_json, f)
+
+            # Move media directory if portable and directory exists
+            if portable:
+                if media_dir.exists():
+                    media_dir.rename(export_dir / "media")
+                else:
+                    raise Exception(
+                        f"Activated portable option for export but {media_dir} does not exist."
+                    )
