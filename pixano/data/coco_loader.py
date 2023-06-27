@@ -32,6 +32,7 @@ from pixano.transforms import (
     natural_key,
     normalize,
     rle_to_urle,
+    urle_to_bbox,
 )
 
 from .data_loader import DataLoader
@@ -290,7 +291,9 @@ class COCOLoader(DataLoader):
                                     "area": ann["area"],
                                     "iscrowd": 0,
                                     "image_id": media_row["id"][0].as_py(),
-                                    "bbox": denormalize(ann["bbox"], im_h, im_w),
+                                    "bbox": denormalize(ann["bbox"], im_h, im_w)
+                                    if ann["bbox"] != [0.0, 0.0, 0.0, 0.0]
+                                    else urle_to_bbox(rle_to_urle(ann["mask"])),
                                     "category_id": ann["category_id"],
                                     "category_name": ann["category_name"],
                                     "id": ann["id"],
