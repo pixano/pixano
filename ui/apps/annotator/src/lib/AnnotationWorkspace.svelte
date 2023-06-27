@@ -98,7 +98,8 @@
     if (!classes.some((cls) => cls.name === className)) {
       // Hack to force update
       let newClasses = classes;
-      newClasses.push({ id: classes.length, name: className });
+      let newClassId = Math.max(...newClasses.map((o) => o.id));
+      newClasses.push({ id: newClassId, name: className });
       classes = newClasses;
     }
 
