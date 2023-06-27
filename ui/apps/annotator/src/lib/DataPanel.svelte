@@ -88,7 +88,6 @@
         event.target.scrollHeight - event.target.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
       if (event.target.scrollTop > totalContentHeight - offset10percent) {
-        console.log("load next page", lastLoadedPage + 1);
         dispatch("loadNextPage");
       }
     }
@@ -121,7 +120,6 @@
         });
       }
       categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
-      console.log("DataPanel init", view_list, annotations);
     }
 
     if (dataset && dataset.items) {
