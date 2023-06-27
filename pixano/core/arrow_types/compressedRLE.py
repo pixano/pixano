@@ -11,7 +11,10 @@
 #
 # http://www.cecill.info
 
+from tkinter import Image
+from numpy import ndarray
 import pyarrow as pa
+from pixano.transforms.image import rle_to_mask, rle_to_urle, rle_to_polygons, mask_to_rle, urle_to_rle, polygons_to_rle
 
 # ------------------------------------------------
 #             Python type
@@ -30,14 +33,46 @@ class CompressedRLE:
     @property
     def counts(self) -> bytes:
         return self._counts
-
-    def to_dict(self) -> dict[list[float], bytes]:
+    
+    @staticmethod
+    def from_dict(dict:dict) -> 'CompressedRLE':
+        return CompressedRLE(dict['size'], dict['counts'])
+    
+    def to_dict(self) -> dict:
         """convert compressedRLE to dict
 
         Returns:
-            dict[list[float], list[float]]: dict containing "size" and "counts"
+            dict: dict containing "size" and "counts"
         """
         return {"size": self.size, "counts": self.counts}
+    
+    
+    def to_mask(self) -> ndarray:
+         return rle_to_mask(self.to_dict())
+    
+    def to_urle(self) -> dict:
+        return rle_to_urle(self.to_dict())
+    
+    def to_polygons(self) -> list[list]:
+        return rle_to_polygons(self.to_dict())
+    
+    @staticmethod
+    def from_mask(mask : Image.image | ndarray) -> 'CompressedRLE':
+        rle_dict = mask_to_rle(mask)
+        return CompressedRLE.from_dict(rle_dict)
+
+    @staticmethod
+    def from_urle(urle:dict, height:int, width:int) -> 'CompressedRLE':
+        rle_dict = urle_to_rle(urle, height, width)
+        return CompressedRLE.from_dict(rle_dict)
+
+    @staticmethod
+    def from_polygons(polygons:list[float], height:int, width:int) -> 'CompressedRLE':
+        rle_dict = polygons_to_rle(polygons, height, width)
+        return CompressedRLE.from_dict(rle_dict)
+
+
+
 
 
 # ------------------------------------------------
