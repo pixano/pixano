@@ -160,6 +160,7 @@ class COCOLoader(DataLoader):
         # Create URI prefix
         media_dir = input_dir / "media"
         uri_prefix = media_dir.absolute().as_uri()
+        export_uri_prefix = (export_dir / "media").absolute().as_uri()
 
         # If no splits provided, select all splits
         if not self.splits:
@@ -258,12 +259,19 @@ class COCOLoader(DataLoader):
                     for field in media_fields:
                         # Open image
                         images[field] = media_row[field][0].as_py(uri_prefix)
+                        im_uri = (
+                            media_row[field][0].as_py(export_uri_prefix).uri
+                            if portable
+                            else images[field].uri
+                        )
+                        im_filename = Path(urlparse(im_uri).path).name
                         im_w, im_h = images[field].size
                         # Append image info
                         coco_json["images"].append(
                             {
                                 "license": 1,
-                                "file_name": images[field]._uri,
+                                "coco_url": im_uri,
+                                "file_name": im_filename,
                                 "height": im_h,
                                 "width": im_w,
                                 "id": media_row["id"][0].as_py(),
