@@ -14,22 +14,22 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import EmptyLibrary from "../../../../../apps/explorer/src/lib/EmptyLibrary.svelte";
+import DatasetExplorer from "../../../../../apps/explorer/src/lib/DatasetExplorer.svelte";
 
 const meta = {
-  title: "Applications/Explorer/EmptyLibrary",
-  component: EmptyLibrary,
-  // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/7.0/react/writing-docs/docs-page
+  title: "Applications/Explorer/DatasetExplorer",
+  component: DatasetExplorer,
   tags: ["autodocs"],
   parameters: {
-    // More on how to position stories at: https://storybook.js.org/docs/7.0/svelte/configure/story-layout
     layout: "fullscreen",
   },
-} satisfies Meta<EmptyLibrary>;
+} satisfies Meta<DatasetExplorer>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Base: Story = {
-  args: {},
+  args: {
+    dataset: {id: "euHS4xM5SSvQKAhmv3sFcp"}  // storybook has no access to REST API...
+  }
 };

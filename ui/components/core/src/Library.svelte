@@ -18,6 +18,7 @@
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
 
   export let datasets: any;
+  export let btn_label: string;
 
   const dispatch = createEventDispatcher();
 
@@ -33,6 +34,7 @@
     {#each datasets as dataset}
       <DatasetPreviewCard
         {dataset}
+        {btn_label}
         on:click={() => handleDatasetClick(dataset)}
       />
     {/each}

@@ -18,11 +18,11 @@
   import { onMount } from "svelte";
   import { currentPage } from "./stores";
   import pixanoLogo from "./assets/pixano.png";
-  import Library from "./lib/Library.svelte";
-  import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
   import * as api from "./lib/api";
+  import Library from "../../../components/core/src/Library.svelte";
+  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
   import type {
     ItemData,
     MaskGT,
@@ -235,5 +235,5 @@
     />
   {/if}
 {:else}
-  <Library {datasets} on:datasetclick={selectDataset} />
+  <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
 {/if}

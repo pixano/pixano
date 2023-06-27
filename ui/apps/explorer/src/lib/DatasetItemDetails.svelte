@@ -19,7 +19,7 @@
   //import { ImageDetails } from "@pixano/core";
   //import { getItemDetails } from "./api";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
-  import AnnotationInspector from "../../../../components/core/src/AnnotationInspector.svelte";
+  import AnnotationInspector from "./AnnotationInspector.svelte";
   import type {
     ItemData,
     MaskGT,

@@ -17,6 +17,7 @@
   import { createEventDispatcher } from "svelte";
 
   export let dataset: any;
+  export let btn_label: string;
   const dispatch = createEventDispatcher();
 
   function handleClick() {
@@ -62,7 +63,7 @@
         dark:bg-rose-800 dark:border-rose-800
         dark:hover:text-rose-700 dark:hover:bg-zinc-800"
     >
-      Annotate
+      {btn_label}
     </button>
   </div>
 </div>
