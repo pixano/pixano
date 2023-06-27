@@ -19,7 +19,6 @@ import {
   createLabeledPointTool,
   createRectangleTool,
 } from "../../../../../components/Canvas2D/src/tools";
-import { drawLabel } from "../../../../../components/core/src/konva_utils";
 import * as mocks from "./mocks";
 
 //import { initModel } from "../../../../../apps/annotator/src/lib/sam_api"
@@ -47,6 +46,7 @@ export const CanvasWithoutSelectedTool: Story = {
       },
     ],
     itemId: "image_moyenne",
+    annotations: [],
     masksGT: null,
     bboxes: null,
     selectedTool: null,
@@ -67,6 +67,8 @@ export const CanvasWithLabeledPointTool: Story = {
       },
     ],
     itemId: "image_moyenne",
+    annotations: [],
+    embedding: [],
     masksGT: null,
     bboxes: null,
     prediction: null,
@@ -86,6 +88,8 @@ export const CanvasWithRectangleTool: Story = {
       },
     ],
     itemId: "image_moyenne",
+    annotations: [],
+    embedding: [],
     masksGT: null,
     bboxes: null,
     prediction: null,

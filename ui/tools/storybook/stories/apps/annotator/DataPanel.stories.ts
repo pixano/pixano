@@ -33,6 +33,7 @@ export const Base: Story = {
     annotations: [
       {
         category_name: "Dog",
+        category_id: 1,
         viewId: "view1",
         items: [
           {
@@ -54,6 +55,7 @@ export const Base: Story = {
       },
       {
         category_name: "Cat",
+        category_id: 2,
         viewId: "view1",
         items: [
           {
@@ -68,6 +70,7 @@ export const Base: Story = {
       },
       {
         category_name: "Cat",
+        category_id: 2,
         viewId: "view2",
         items: [
           {
@@ -83,15 +86,29 @@ export const Base: Story = {
     ],
     dataset: {
       items: [
-        [{ value: "image 1" }, { value: "img-01.jpg" }],
-        [{ value: "image 2" }, { value: "img-02.jpg" }],
-        [{ value: "image 3" }, { value: "img-03.jpg" }],
-        [{ value: "image 4" }, { value: "img-04.jpg" }],
-        [{ value: "image 5" }, { value: "img-05.jpg" }],
-        [{ value: "image 6" }, { value: "img-06.jpg" }],
-        [{ value: "image 7" }, { value: "img-07.jpg" }],
-        [{ value: "image 8" }, { value: "img-08.jpg" }],
+        [
+          { name: "id", dtype: "text", value: "1" },
+          { name: "view1", dtype: "image", value: "img-01.jpg" },
+          { name: "view2", dtype: "image", value: "img-02.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "2" },
+          { name: "view1", dtype: "image", value: "img-03.jpg" },
+          { name: "view2", dtype: "image", value: "img-04.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "3" },
+          { name: "view1", dtype: "image", value: "img-05.jpg" },
+          { name: "view2", dtype: "image", value: "img-06.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "4" },
+          { name: "view1", dtype: "image", value: "img-07.jpg" },
+          { name: "view2", dtype: "image", value: "img-08.jpg" },
+        ],
       ],
+      total: 4,
     },
+    lastLoadedPage: 1,
   },
 };

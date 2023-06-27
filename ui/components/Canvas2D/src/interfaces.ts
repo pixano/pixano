@@ -48,3 +48,13 @@ export interface AnnotationsLabels {
   items: Array<AnnLabel>;
   visible: boolean;
 }
+
+export interface DBFeat {
+  name: string;
+  dtype: string;
+  value: string;
+}
+export interface DatabaseFeats {
+  items: Array<Array<DBFeat>>;
+  total: number;
+}
