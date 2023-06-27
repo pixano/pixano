@@ -26,6 +26,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
+    DatabaseFeats
   } from "../../../components/Canvas2D/src/interfaces";
   import {
     generatePolygonSegments,
@@ -44,6 +45,7 @@
   // Dataset navigation
   let datasets = null;
   let selectedDataset = null;
+  let curPage = 1;
 
   let selectedItem: ItemData;
   let selectedItemEmbedding: any;
@@ -52,6 +54,7 @@
   let annotations: Array<AnnotationsLabels> = [];
   let classes = [];
   let itemDetails = null;
+  let dbImages: DatabaseFeats = null;
 
   let sam = new SAM();
   //let mock = new MockInteractiveImageSegmenter();
@@ -59,9 +62,9 @@
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
 
+    dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
     //select first item
-    let firstItem = await api.getDatasetItems(selectedDataset.id, 1, 1);
-    firstItem = firstItem.items[0];
+    let firstItem = dbImages.items[0]
     for (let feat of firstItem) {
       if (feat.name === "id") {
         selectItem({ id: feat.value });
@@ -217,6 +220,17 @@
     api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
   }
 
+  async function handleLoadNextPage() {
+    curPage = curPage + 1;
+    let new_dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
+    if (new_dbImages) {
+      dbImages.items = dbImages.items.concat(new_dbImages.items);
+    } else {
+      //end of dataset : reset last page
+      curPage = curPage - 1;
+    }
+  }
+
   onMount(async () => {
     datasets = await api.getDatasetsList();
 
@@ -242,8 +256,10 @@
       {masksGT}
       {classes}
       handleCloseClick={unselectItem}
-      dataset={selectedDataset}
+      {dbImages}
+      {curPage}
       on:imageSelected={(event) => selectItem(event.detail)}
+      on:loadNextPage={handleLoadNextPage}
       on:saveAnns={saveAnns}
     />
   {/if}
