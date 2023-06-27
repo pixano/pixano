@@ -137,7 +137,6 @@
         d_data.push(data);
       }
     }
-
   });
 </script>
 
@@ -168,147 +167,151 @@
     </span>
   </div>
   <div class="flex flex-col max-h-[88vh]">
-      <div class="overflow-auto {activeTab == "labels"?"":"hidden"}">
-        {#each view_list as view}
-          {#if view_list.length > 1}
+    <div class="overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
+      {#each view_list as view}
+        {#if view_list.length > 1}
+          <div
+            class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {view[
+              'opened'
+            ]
+              ? 'bg-violet-200'
+              : 'bg-violet-100'}"
+          >
+            <img
+              src="icons/{view['visible'] ? 'visible' : 'invisible'}.svg"
+              alt="visible"
+              class="h-6 w-6 opacity-50 cursor-pointer"
+              on:click={() => handleViewVisibility(view)}
+            />
             <div
-              class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {view[
-                'opened'
-              ]
-                ? 'bg-violet-200'
-                : 'bg-violet-100'}"
+              class="flex grow items-center space-x-1 cursor-pointer"
+              on:click={() => (view["opened"] = !view["opened"])}
             >
               <img
-                src="icons/{view['visible'] ? 'visible' : 'invisible'}.svg"
-                alt="visible"
-                class="h-6 w-6 opacity-50 cursor-pointer"
-                on:click={() => handleViewVisibility(view)}
+                src="icons/expand.svg"
+                alt="expand"
+                class="h-6 w-6 {!view['opened'] ? '-rotate-90' : ''}"
               />
+              <span class="grow ml-3 font-bold text-gray-900">
+                {view.view_name}
+              </span>
+              <!-- TODO : add different colors -->
+              <span
+                class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+              >
+                {view.num_objs}
+              </span>
+            </div>
+          </div>
+        {/if}
+        {#each annotations as group}
+          {#if group.viewId === view.view_name}
+            <div class="{view['opened'] ? 'flex' : 'hidden'} flex-col">
               <div
-                class="flex grow items-center space-x-1 cursor-pointer"
-                on:click={() => (view["opened"] = !view["opened"])}
+                class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group[
+                  'opened'
+                ]
+                  ? 'bg-zinc-100'
+                  : ''}"
               >
                 <img
-                  src="icons/expand.svg"
-                  alt="expand"
-                  class="h-6 w-6 {!view['opened'] ? '-rotate-90' : ''}"
+                  src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
+                  alt="visible"
+                  class="h-6 w-6 opacity-50 cursor-pointer"
+                  on:click={() => handleGroupVisibility(group)}
                 />
-                <span class="grow ml-3 font-bold text-gray-900">
-                  {view.view_name}
-                </span>
-                <!-- TODO : add different colors -->
-                <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+                <div
+                  class="flex grow items-center space-x-1 cursor-pointer"
+                  on:click={() => (group["opened"] = !group["opened"])}
                 >
-                  {view.num_objs}
-                </span>
+                  <img
+                    src="icons/expand.svg"
+                    alt="expand"
+                    class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}"
+                  />
+                  <span class="grow ml-3 font-bold text-gray-900">
+                    <button
+                      class="relative px-1 rounded-lg text-sm border-2 border-transparent"
+                      style="background-color: {categoryColor(
+                        group.category_id
+                      )};"
+                    >
+                      {group.category_name}
+                    </button>
+                  </span>
+                  <!-- TODO : add different colors -->
+                  <span
+                    class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+                  >
+                    {group.items.length}
+                  </span>
+                </div>
+              </div>
+              <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
+                {#each group.items as item, index}
+                  <div
+                    class="py-3 pl-12 pr-8 flex items-center space-x-1 {index ===
+                    0
+                      ? ''
+                      : 'border-t-2'}"
+                  >
+                    <img
+                      src="icons/{(group.visible && item.visible) ||
+                      item.visible
+                        ? 'visible'
+                        : 'invisible'}.svg"
+                      alt="visible"
+                      class="h-5 w-5 opacity-50 cursor-pointer"
+                      on:click={() => handleVisibility(group, item)}
+                    />
+                    <span
+                      class="relative pl-3 grow text-sm group cursor-default"
+                    >
+                      {item.id}
+                      <span
+                        class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block"
+                      >
+                        label: {item.label}
+                      </span>
+                    </span>
+                    <img
+                      src="icons/delete.svg"
+                      alt="delete"
+                      class="h-4 w-4 opacity-50 cursor-pointer"
+                      on:click={() => deleteItem(item)}
+                    />
+                  </div>
+                {/each}
               </div>
             </div>
           {/if}
-          {#each annotations as group}
-            {#if group.viewId === view.view_name}
-              <div class="{view['opened'] ? 'flex' : 'hidden'} flex-col">
-                <div
-                  class="py-5 px-8 flex items-center space-x-1 select-none border-y-2 {group[
-                    'opened'
-                  ]
-                    ? 'bg-zinc-100'
-                    : ''}"
-                >
-                  <img
-                    src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
-                    alt="visible"
-                    class="h-6 w-6 opacity-50 cursor-pointer"
-                    on:click={() => handleGroupVisibility(group)}
-                  />
-                  <div
-                    class="flex grow items-center space-x-1 cursor-pointer"
-                    on:click={() => (group["opened"] = !group["opened"])}
-                  >
-                    <img
-                      src="icons/expand.svg"
-                      alt="expand"
-                      class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}"
-                    />
-                    <span class="grow ml-3 font-bold text-gray-900">
-                      <button
-                        class="relative px-1 rounded-lg text-sm border-2 border-transparent"
-                        style="background-color: {categoryColor(
-                          group.category_id
-                        )};"
-                      >
-                        {group.category_name}
-                      </button>
-                    </span>
-                    <!-- TODO : add different colors -->
-                    <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
-                    >
-                      {group.items.length}
-                    </span>
-                  </div>
-                </div>
-                <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
-                  {#each group.items as item, index}
-                    <div
-                      class="py-3 pl-12 pr-8 flex items-center space-x-1 {index ===
-                      0
-                        ? ''
-                        : 'border-t-2'}"
-                    >
-                      <img
-                        src="icons/{(group.visible && item.visible) ||
-                        item.visible
-                          ? 'visible'
-                          : 'invisible'}.svg"
-                        alt="visible"
-                        class="h-5 w-5 opacity-50 cursor-pointer"
-                        on:click={() => handleVisibility(group, item)}
-                      />
-                      <span
-                        class="relative pl-3 grow text-sm group cursor-default"
-                      >
-                        {item.id}
-                        <span
-                          class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block"
-                        >
-                          label: {item.label}
-                        </span>
-                      </span>
-                      <img
-                        src="icons/delete.svg"
-                        alt="delete"
-                        class="h-4 w-4 opacity-50 cursor-pointer"
-                        on:click={() => deleteItem(item)}
-                      />
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          {/each}
         {/each}
-      </div>
-      <div class="w-full flex flex-wrap justify-center overflow-auto {activeTab == "database"?"":"hidden"}"
-        on:scroll={handleDatabaseScroll}
-      >
-        {#each d_data as data, i}
-          <div
-            class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
-            on:click={() => selectImage(data)}
-          >
-            <div class="flex flex-row">
-              {#each data.views as view}
-                <img
-                  src={view.img}
-                  alt="#{view}-#{i}"
-                  class="w-24 h-24 object-cover rounded"
-                />
-              {/each}
-            </div>
-            <span class="w-24 mt-2 text-xs font-semibold">{data.id}</span>
+      {/each}
+    </div>
+    <div
+      class="w-full flex flex-wrap justify-center overflow-auto {activeTab ==
+      'database'
+        ? ''
+        : 'hidden'}"
+      on:scroll={handleDatabaseScroll}
+    >
+      {#each d_data as data, i}
+        <div
+          class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
+          on:click={() => selectImage(data)}
+        >
+          <div class="flex flex-row">
+            {#each data.views as view}
+              <img
+                src={view.img}
+                alt="#{view}-#{i}"
+                class="w-24 h-24 object-cover rounded"
+              />
+            {/each}
           </div>
-        {/each}
-      </div>
+          <span class="w-24 mt-2 text-xs font-semibold">{data.id}</span>
+        </div>
+      {/each}
+    </div>
   </div>
 </div>
