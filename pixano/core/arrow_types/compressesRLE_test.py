@@ -33,7 +33,7 @@ from .compressedRLE import CompressedRLE, CompressedRLEArray, CompressedRLEType
 class CompressedRLETestCase(unittest.TestCase):
     def setUp(self):
         self.size = [10, 10]
-        self.counts = b"2 3 4 5"
+        self.counts = bytes(b";37000k1")
         self.rle = CompressedRLE(self.size, self.counts)
 
     def test_from_dict(self):
@@ -72,7 +72,7 @@ class CompressedRLETestCase(unittest.TestCase):
         self.assertEqual(rle.counts, expected_rle.counts)
 
     def test_from_urle(self):
-        urle = {"size": self.size, "counts": self.counts}
+        urle = {"counts": [1, 2, 3, 2, 4, 1], "size": [10, 10]}
         height, width = 10, 10
         rle = CompressedRLE.from_urle(urle, height, width)
         expected_rle_dict = urle_to_rle(urle, height, width)
