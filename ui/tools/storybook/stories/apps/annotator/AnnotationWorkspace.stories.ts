@@ -77,8 +77,26 @@ export const Base: Story = {
       },
     ],
     embedding: [], //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
-    dataset: {
-      id: "f640525376da4bcb801205c61f72679d"  //actually storybook is not looking on correct port...
+    dbImages: {
+      items: [
+        [
+          { name: "id", dtype: "text", value: "id1111" },
+          { name: "view", dtype: "image", value: "img-01.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "id2684" },
+          { name: "view", dtype: "image", value: "img-02.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "id3333" },
+          { name: "view", dtype: "image", value: "img-03.jpg" },
+        ],
+        [
+          { name: "id", dtype: "text", value: "id4444" },
+          { name: "view", dtype: "image", value: "img-04.jpg" },
+        ],
+      ],
+      total: 4,
     },
     classes: [
       { id: 0, name: "Dog" },

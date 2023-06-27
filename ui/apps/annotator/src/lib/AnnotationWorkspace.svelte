@@ -36,8 +36,6 @@
     ViewData,
   } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
-  import { getDatasetItems } from "./api";
-  import { currentPage } from "../stores";
 
   import { interactiveSegmenterModel } from "../stores";
 
@@ -46,18 +44,11 @@
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
   export let masksGT: Array<MaskGT>;
-  export let dataset;
+  export let dbImages;
+  export let curPage : number;
   export let handleCloseClick;
 
   const dispatch = createEventDispatcher();
-
-  let curPage: number;
-
-  currentPage.subscribe((value) => {
-    curPage = value;
-  });
-
-  let dbImages;
 
   let className = "";
 
@@ -231,19 +222,8 @@
   }
 
   async function handleLoadNextPage(event) {
-    curPage = curPage + 1;
-    let new_dbImages = await getDatasetItems(dataset.id, curPage);
-    if (new_dbImages) {
-      dbImages.items = dbImages.items.concat(new_dbImages.items);
-    } else {
-      //end of dataset : reset last page
-      curPage = curPage - 1;
-    }
+    dispatch("loadNextPage");
   }
-
-  onMount(async () => {
-    dbImages = await getDatasetItems(dataset.id, curPage);
-  });
 
   afterUpdate(() => {
     //console.log("afterUpdate - itemData", itemData);

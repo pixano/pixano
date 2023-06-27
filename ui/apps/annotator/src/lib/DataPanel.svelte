@@ -30,7 +30,6 @@
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
   let activeTab = "labels"; //"database";
-
   const dispatch = createEventDispatcher();
 
   // Function that maps an id to a color
@@ -140,6 +139,7 @@
         d_data.push(data);
       }
     }
+
   });
 </script>
 
@@ -170,8 +170,7 @@
     </span>
   </div>
   <div class="flex flex-col max-h-[88vh]">
-    {#if activeTab == "labels"}
-      <div class="overflow-auto">
+      <div class="overflow-auto {activeTab == "labels"?"":"hidden"}">
         {#each view_list as view}
           {#if view_list.length > 1}
             <div
@@ -292,9 +291,7 @@
           {/each}
         {/each}
       </div>
-    {:else if activeTab === "database"}
-      <div
-        class="w-full flex flex-wrap justify-center overflow-auto"
+      <div class="w-full flex flex-wrap justify-center overflow-auto {activeTab == "database"?"":"hidden"}"
         on:scroll={handleDatabaseScroll}
       >
         {#each d_data as data, i}
@@ -315,6 +312,5 @@
           </div>
         {/each}
       </div>
-    {/if}
   </div>
 </div>
