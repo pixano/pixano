@@ -14,15 +14,14 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Library from "../../../../../apps/explorer/src/lib/Library.svelte";
+import Library from "../../../../components/core/src/Library.svelte";
+
 
 const meta = {
-  title: "Applications/Explorer/Library",
+  title: "Components/Library",
   component: Library,
-  // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/7.0/react/writing-docs/docs-page
   tags: ["autodocs"],
   parameters: {
-    // More on how to position stories at: https://storybook.js.org/docs/7.0/svelte/configure/story-layout
     layout: "fullscreen",
   },
 } satisfies Meta<Library>;
@@ -34,23 +33,26 @@ export const Base: Story = {
   args: {
     datasets: [
       {
-        name: "fake_dataset_1",
-        num_elements: 1000,
-        preview:
-          "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
+        name: "Some dataset",
+        num_elements: 20,
+        preview: "img-01.jpg",
       },
       {
-        name: "fake_dataset_2",
+        name: "Another dataset",
         num_elements: 50000,
-        preview:
-          "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
+        preview: "img-02.jpg",
       },
       {
-        name: "fake_dataset_3",
+        name: "Yet another dataset",
+        num_elements: 1000,
+        preview: "img-03.jpg",
+      },
+      {
+        name: "One final dataset",
         num_elements: 20000,
-        preview:
-          "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
+        preview: "img-04.jpg",
       },
     ],
+    btn_label: "Explore"
   },
 };

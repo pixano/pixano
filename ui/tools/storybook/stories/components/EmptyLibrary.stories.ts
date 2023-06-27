@@ -14,13 +14,15 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import EmptyLibrary from "../../../../../apps/annotator/src/lib/EmptyLibrary.svelte";
+import EmptyLibrary from "../../../../components/core/src/EmptyLibrary.svelte";
 
 const meta = {
-  title: "Applications/Annotator/EmptyLibrary",
+  title: "Components/EmptyLibrary",
   component: EmptyLibrary,
+  // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/7.0/react/writing-docs/docs-page
   tags: ["autodocs"],
   parameters: {
+    // More on how to position stories at: https://storybook.js.org/docs/7.0/svelte/configure/story-layout
     layout: "fullscreen",
   },
 } satisfies Meta<EmptyLibrary>;
@@ -28,4 +30,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Base: Story = {};
+export const Base: Story = {
+  args: {
+    
+  },
+};

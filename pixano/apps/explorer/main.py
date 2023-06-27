@@ -177,19 +177,9 @@ def create_app(settings: Settings) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent).load())
 
         # Return item details
-        db_feats = db_utils.get_item_details(
+        return db_utils.get_item_details(
             ds.load(), item_id, ds.media_dir, inf_datasets
         )
-
-        # TMP append annotations from newAnnotations JSON files
-        """
-        new_anns_iter = glob.iglob(f"{ds.path}/newAnnotations-*.json")
-        for json_file in new_anns_iter:
-            with open(json_file, "r") as json_f:
-                anns = json_f.read()
-                print("AA", anns)
-        """
-        return db_feats
 
     @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
     async def get_dataset_item_view_embedding(ds_id: str, item_id: str, view: str):

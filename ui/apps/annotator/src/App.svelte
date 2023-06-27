@@ -17,9 +17,9 @@
   // Imports
   import { onMount } from "svelte";
   import Header from "./lib/Header.svelte";
-  import Library from "./lib/Library.svelte";
-  import EmptyLibrary from "./lib/EmptyLibrary.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
+  import Library from "../../../components/core/src/Library.svelte";
+  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
   import type {
     ItemData,
     MaskGT,
@@ -266,6 +266,6 @@
 {:else}
   <Header bind:selectedDataset bind:selectedItem />
   <div class="pt-20">
-    <Library {datasets} on:datasetclick={selectDataset} />
+    <Library {datasets} btn_label="Annotate" on:datasetclick={selectDataset} />
   </div>
 {/if}

@@ -14,10 +14,10 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import DatasetPreviewCard from "../../../../../apps/explorer/src/lib/DatasetPreviewCard.svelte";
+import DatasetPreviewCard from "../../../../components/core/src/DatasetPreviewCard.svelte";
 
 const meta = {
-  title: "Applications/Explorer/DatasetPreviewCard",
+  title: "Components/DatasetPreviewCard",
   component: DatasetPreviewCard,
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/7.0/react/writing-docs/docs-page
   tags: ["autodocs"],
@@ -38,5 +38,6 @@ export const Base: Story = {
       preview:
         "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
     },
+    btn_label: "Explore"
   },
 };
