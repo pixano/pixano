@@ -18,7 +18,6 @@
   import { afterUpdate, onMount } from "svelte";
   import { Stage, Layer, Group, Image as KonvaImage } from "svelte-konva";
   import Konva from "konva";
-  import { zoom } from "../../core/src/konva_utils";
   import { getColor } from "../../core/src/utils";
 
   import { ToolType, type PanTool } from "./tools";
@@ -697,6 +696,45 @@
         pt.strokeWidth(RECT_STROKEWIDTH / zoomFactor[viewId]);
       }
     }
+  }
+
+  /**
+   * Zooms in or out of a stage
+   * @param stage stage to zoom in/out
+   * @param direction zoom in or zoom out
+   * @param viewId viewId to zoom in/out
+   */
+  function zoom(stage: Konva.Stage, direction, viewId): number {
+    // Defines zoom speed
+    const zoomScale = 1.05;
+
+    const layerView = stage.findOne(`#${viewId}`) as Konva.Layer;
+
+    // Get old scaling
+    const oldScale = layerView.scaleX();
+
+    // Get mouse position
+    const pointer = stage.getRelativePointerPosition();
+    const mousePointTo = {
+      x: (pointer.x - layerView.x()) / oldScale,
+      y: (pointer.y - layerView.y()) / oldScale,
+    };
+
+    // Calculate new scaling
+    const newScale =
+      direction > 0 ? oldScale * zoomScale : oldScale / zoomScale;
+
+    // Calculate new position
+    const newPos = {
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    };
+
+    // Change scaling and position
+    layerView.scale({ x: newScale, y: newScale });
+    layerView.position(newPos);
+
+    return newScale;
   }
 
   function handleWheelOnImage(event, viewId: string) {
