@@ -28,7 +28,7 @@
   let d_data = [];
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
-  let activeTab = "database"; //"labels";
+  let activeTab = "labels"; //"database";
 
   const dispatch = createEventDispatcher();
 
