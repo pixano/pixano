@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 import base64
-from typing import IO
+from typing import IO, Any, Optional
 
 import pyarrow as pa
 from etils import epath
@@ -37,7 +37,7 @@ class Image:
         uri: str,
         bytes: bytes,
         preview_bytes: bytes,
-        uri_prefix: epath.PathLike = None,
+        uri_prefix: Optional[epath.PathLike] = None,
     ):
         """Initialize image from URI or bytes
 
@@ -54,7 +54,7 @@ class Image:
         self.uri_prefix = uri_prefix
 
     @property
-    def bytes(self) -> bytes:
+    def bytes(self) -> Optional[bytes]:
         """Return image bytes
 
         Returns:
@@ -134,7 +134,7 @@ class Image:
         url = f"data:image;base64,{encoded}"
         return IPyImage(url=url, format=inferred_format)
 
-    def to_dict(self) -> dict[str, "bytes", "bytes"]:
+    def to_dict(self) -> dict[str, Any]:
         """convert image attribute to dict
 
         Returns:
