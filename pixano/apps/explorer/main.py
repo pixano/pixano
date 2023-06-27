@@ -177,9 +177,7 @@ def create_app(settings: Settings) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent).load())
 
         # Return item details
-        return db_utils.get_item_details(
-            ds.load(), item_id, ds.media_dir, inf_datasets
-        )
+        return db_utils.get_item_details(ds.load(), item_id, ds.media_dir, inf_datasets)
 
     @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
     async def get_dataset_item_view_embedding(ds_id: str, item_id: str, view: str):
@@ -188,11 +186,10 @@ def create_app(settings: Settings) -> FastAPI:
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
-        # Load embedding datasets (currently selecting only one)
+        # Load embedding dataset (currently selecting latest one)
         emb_ds = None
         for emb_json in sorted(list(ds.path.glob("db_embed_*/embed.json"))):
             emb_ds = EmbeddingDataset(emb_json.parent).load()
-
         if emb_ds is None:
             raise HTTPException(status_code=404, detail="Embedding dataset not found")
 
