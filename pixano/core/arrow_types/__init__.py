@@ -29,7 +29,7 @@ from .objectAnnotation import (
     is_objectAnnotation_type,
 )
 from .pose import Pose, PoseArray, PoseType, is_pose_type
-from .depth_image import DepthImage, DepthImageType
+from .depth_image import DepthImage, DepthImageType, DepthImageArray
 
 __all__ = [
     "BBox",
@@ -58,6 +58,7 @@ __all__ = [
     "is_pose_type",
     "DepthImage",
     "DepthImageType",
+    "DepthImageArray",
 ]
 
 
@@ -122,6 +123,7 @@ def register_extension_types():
         CompressedRLEType,
         EmbeddingType,
         ImageType,
+        DepthImageType,
         ObjectAnnotationType,
     ]
 
