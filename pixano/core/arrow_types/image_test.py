@@ -11,28 +11,22 @@
 #
 # http://www.cecill.info
 
-import io
+
 import tempfile
 import unittest
 from io import BytesIO
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-import cv2
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import requests
 from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
-from PIL import Image as pilImage
 
-from pixano.transforms.image import binary_to_url, image_to_binary
+from pixano.transforms.image import binary_to_url
 
 from .image import Image, ImageArray, ImageType
-
-# Import the Image class from your code
 
 
 class ImageTestCase(unittest.TestCase):
@@ -125,7 +119,6 @@ class TestParquetImage(unittest.TestCase):
         ]
 
     def test_image_table(self):
-
         image_array = ImageArray.from_Image_list(self.image_list)
 
         schema = pa.schema(

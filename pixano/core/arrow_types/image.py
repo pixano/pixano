@@ -11,20 +11,18 @@
 #
 # http://www.cecill.info
 
-import base64
 from pathlib import Path
-from typing import IO, Optional
+from typing import IO
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import cv2
 import numpy as np
 import pyarrow as pa
-from etils import epath
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 
-from pixano.transforms.image import binary_to_url, image_to_binary, image_to_thumbnail
+from pixano.transforms.image import binary_to_url
 
 # ------------------------------------------------
 #             Python type
