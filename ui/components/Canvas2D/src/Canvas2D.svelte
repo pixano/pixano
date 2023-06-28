@@ -18,6 +18,8 @@
   import { afterUpdate, onMount } from "svelte";
   import { Stage, Layer, Group, Image as KonvaImage } from "svelte-konva";
   import Konva from "konva";
+  import shortid from "shortid";
+
   import { getColor } from "../../core/src/utils";
 
   import { ToolType, type PanTool } from "./tools";
@@ -33,6 +35,8 @@
   const POINTER_STROKEWIDTH: number = 3;
   const RECT_STROKEWIDTH: number = 1.5;
   const MASK_STROKEWIDTH: number = 1.0;
+  const short = shortid;
+
   let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
   let timerId;
 
@@ -507,7 +511,8 @@
 
         // always clean existing masks before adding a new prediction
         group.removeChildren();
-        const new_id = Math.floor(Math.random() * 5000).toString(); //TODO use shortuiid instead
+
+        const new_id = short.generate();
         prediction = {
           id: new_id,
           viewId: viewId,

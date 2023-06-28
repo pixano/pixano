@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "konva": "^8.4.2",
-    "svelte-konva": "^0.1.1"
+    "svelte-konva": "^0.1.1",
+    "shortid": "^2.2.16"
   }
 }
