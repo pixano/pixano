@@ -32,6 +32,7 @@
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;
   const RECT_STROKEWIDTH: number = 1.5;
+  const MASK_STROKEWIDTH: number = 1.0;
   let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
   let timerId;
 
@@ -43,8 +44,6 @@
   export let masksGT: Array<MaskGT> | null;
   export let bboxes: Array<BBox> | null;
 
-  //let prevImg: string = "";
-  //export let imageEmbedding = null;
   export let selectedTool: Tool | null;
 
   // Function that maps an id to a color
@@ -442,6 +441,7 @@
       height: stage.height(),
       fill: fill,
       stroke: stroke,
+      strokeWidth: MASK_STROKEWIDTH,
       scale: scale,
       visible: visibility,
       opacity: opacity,
