@@ -109,7 +109,8 @@
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
         const cat_name = itemDetails.views[viewId].objects.category[i].name;
 
-        if (mask_rle) {   //separate in case we add bboxes or other annotation types later
+        if (mask_rle) {
+          //separate in case we add bboxes or other annotation types later
           // ensure all items goes in unique category (by name)
           if (!struct_categories[cat_name]) {
             let annotation: AnnotationsLabels = {
@@ -193,12 +194,17 @@
   }
 
   function unselectItem() {
-    selectedDataset = null;
-    selectedItem = null;
-    selectedItemEmbedding = null;
-    masksGT = [];
-    annotations = [];
-    classes = [];
+    let val = false;
+    //TODO: check if there are actually changes before warning
+    val = confirm("Warning: You have not saved your changes. Continue ?");
+    if (val == true) {
+      selectedDataset = null;
+      selectedItem = null;
+      selectedItemEmbedding = null;
+      masksGT = [];
+      annotations = [];
+      classes = [];
+    }
   }
 
   function saveAnns(data) {
