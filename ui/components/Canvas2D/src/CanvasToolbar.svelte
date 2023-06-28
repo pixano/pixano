@@ -43,7 +43,7 @@
   />
   <div class="mt-4 flex flex-col items-center">
     {#each tools as tool}
-      {#if tool['modes']}
+      {#if tool["modes"]}
         <div
           class="relative group w-full border-r-4 {tool['modes'].includes(
             selectedTool
@@ -53,15 +53,15 @@
         >
           <div
             class="w-full py-3 cursor-pointer"
-            on:click={() => selectTool(tool['modes'][0])}
+            on:click={() => selectTool(tool["modes"][0])}
           >
-            <img class="w-6 h-6 mx-auto" src={tool.icon} alt={tool.type} />
+            <img class="w-6 h-6 mx-auto" src={tool.icon} alt={tool.name} />
           </div>
 
           <div
             class="absolute top-0 left-full w-28 bg-white z-10 hidden group-hover:flex"
           >
-            {#each tool['modes'] as mode}
+            {#each tool["modes"] as mode}
               <div
                 class="w-full cursor-pointer border-b-2 {mode === selectedTool
                   ? 'bg-rose-100 border-rose-900'
@@ -71,7 +71,7 @@
                 <img
                   class="w-6 h-6 my-3 mx-auto"
                   src={mode.icon}
-                  alt={mode.type}
+                  alt={mode.name}
                 />
               </div>
             {/each}
@@ -84,7 +84,7 @@
             : 'hover:bg-rose-50 border-transparent'}"
           on:click={() => selectTool(tool)}
         >
-          <img class="w-6 h-6 my-3 mx-auto" src={tool.icon} alt={tool.type} />
+          <img class="w-6 h-6 my-3 mx-auto" src={tool.icon} alt={tool.name} />
         </div>
       {/if}
     {/each}

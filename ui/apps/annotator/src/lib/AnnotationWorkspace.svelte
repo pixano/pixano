@@ -35,7 +35,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
-    DatabaseFeats
+    DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
@@ -65,7 +65,10 @@
 
   annotationTools.push(panTool);
   annotationTools.push(
-    createMultiModalTool(ToolType.LabeledPoint, [pointPlusTool, pointMinusTool])
+    createMultiModalTool("Point selection", ToolType.LabeledPoint, [
+      pointPlusTool,
+      pointMinusTool,
+    ])
   );
   annotationTools.push(rectTool);
 

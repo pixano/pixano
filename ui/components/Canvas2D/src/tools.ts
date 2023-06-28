@@ -20,6 +20,7 @@ export enum ToolType {
 }
 
 interface Tool {
+  name: string;
   type: ToolType;
   icon: string;
   cursor: string;
@@ -63,14 +64,21 @@ function getIcon(type: ToolType, label?: number): string {
 }
 
 export function createMultiModalTool(
+  name: string,
   type: ToolType,
   tools: Array<Tool>
 ): MultiModalTool {
-  return { type: type, icon: getIcon(type), modes: tools } as MultiModalTool;
+  return {
+    name: name,
+    type: type,
+    icon: getIcon(type),
+    modes: tools,
+  } as MultiModalTool;
 }
 
 export function createLabeledPointTool(label: number): LabeledPointTool {
   return {
+    name: "Point selection" + (label ? " (Add)" : " (Remove)"),
     type: ToolType.LabeledPoint,
     label: label,
     icon: getIcon(ToolType.LabeledPoint, label),
@@ -80,6 +88,7 @@ export function createLabeledPointTool(label: number): LabeledPointTool {
 
 export function createRectangleTool(): RectangleTool {
   return {
+    name: "Rectangle selection",
     type: ToolType.Rectangle,
     icon: getIcon(ToolType.Rectangle),
     cursor: "crosshair",
@@ -88,6 +97,7 @@ export function createRectangleTool(): RectangleTool {
 
 export function createPanTool(): PanTool {
   return {
+    name: "Pan",
     type: ToolType.Pan,
     icon: getIcon(ToolType.Pan),
     cursor: "move",
