@@ -85,6 +85,8 @@
 
   let categoryColor;
 
+  let save_flag = false; //true if there is something to save
+
   // events handlers
   function handleAnnotationToolChange() {
     //console.log("New tool selected");
@@ -168,15 +170,26 @@
       prediction.label = predictionClass.category_name;
       prediction.catId = predictionClass.category_id;
       prediction.validated = true;
+
+      save_flag = true;
     }
   }
 
   function handleSaveClick() {
     dispatch("saveAnns", { anns: annotations, masks: masksGT });
+    save_flag = false;
   }
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
+    if (save_flag) {
+      if (confirm("Warning, changes not saved!")) {
+        //changes discarded
+        save_flag = false;
+      } else {
+        return;
+      }
+    }
     let new_views: Array<ViewData> = [];
     for (let view of event.detail.views) {
       new_views.push({
@@ -214,6 +227,8 @@
       //remove from list
       masksGT = masksGT.filter((mask) => mask.id !== detailId);
     }
+
+    save_flag = true;
 
     //hack svelte to reflect changes
     annotations = annotations;
@@ -329,6 +344,7 @@
     <NavigationToolbar
       database={itemData.dbName}
       imageName={itemData.id}
+      {save_flag}
       {handleCloseClick}
       {handleSaveClick}
     />

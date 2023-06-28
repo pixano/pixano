@@ -15,6 +15,7 @@
     */
   export let database: string;
   export let imageName: string;
+  export let save_flag: boolean = false;
   export let handleCloseClick;
   export let handleSaveClick;
 </script>
@@ -41,7 +42,8 @@
     <img src="icons/zoom_out.svg" alt="icon" class="h-8 w-8 cursor-pointer" />
     <img src="icons/zoom_in.svg" alt="icon" class="h-8 w-8 cursor-pointer" />
   </div> -->
-  <div class="w-30 pr-4 flex justify-end" on:click={handleSaveClick}>
+  <div class="w-30 h-full gap-y-px pt-6 pl-4 pr-4 border-b-4 flex justify-end {save_flag?"bg-rose-100 border-rose-900":"border-transparent"}"
+   on:click={handleSaveClick}>
     <img src="icons/save.svg" alt="icon" class="h-8 w-8 cursor-pointer" />
   </div>
   <div class="w-30 pr-4 flex justify-end" on:click={handleCloseClick}>
