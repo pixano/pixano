@@ -20,10 +20,10 @@ import pyarrow as pa
 
 
 class Embedding:
-    def __init__(self, embedding) -> None:
+    def __init__(self, embedding: bytes) -> None:
         self._embedding = embedding
 
-    def to_dict(self) -> dict[bytes]:
+    def to_dict(self) -> dict:
         return {"embedding": self._embedding}
 
 
@@ -36,7 +36,9 @@ class EmbeddingType(pa.ExtensionType):
     """Embedding type as PyArrow binary"""
 
     def __init__(self):
-        super(EmbeddingType, self).__init__(pa.binary(), "embedding")
+        super(EmbeddingType, self).__init__(
+            pa.struct([pa.field("bytes", pa.binary())]), "embedding"
+        )
 
     @classmethod
     def __arrow_ext_deserialize__(cls, storage_type, serialized):
@@ -54,7 +56,7 @@ class EmbeddingType(pa.ExtensionType):
 
 class EmbeddingScalar(pa.ExtensionScalar):
     def as_py(self) -> Embedding:
-        return Embedding(self.value["embedding"].as_py())
+        return Embedding(self.value["bytes"].as_py())
 
 
 class EmbeddingArray(pa.ExtensionArray):

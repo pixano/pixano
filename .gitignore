@@ -30,7 +30,7 @@ docs/site
 *.sln
 *.sw?
 *lock.yaml
-*test*.parquet
+makefile
 
 # Environment
 .ipynb_checkpoints

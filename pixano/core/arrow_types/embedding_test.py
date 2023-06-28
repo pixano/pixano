@@ -11,15 +11,40 @@
 #
 # http://www.cecill.info
 
+import tempfile
 import unittest
 
-import numpy as np
-from .embedding import Embedding
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+from .embedding import Embedding, EmbeddingArray, EmbeddingType
 
 
 class EmbeddingTestCase(unittest.TestCase):
+    #TODO when more info on embedding
     pass
 
-class TestParquetPose(unittest.TestCase):
-    #TODO test with parquet
-    pass
+
+class TestParquetEmbedding(unittest.TestCase):
+    def setUp(self) -> None:
+        self.embeddin_list = [Embedding(b"test_bytes1"), Embedding(b"test_bytes2")]
+
+    def test_embeddin_table(self):
+        embeddin_array = EmbeddingArray.from_Embedding_list(self.embeddin_list)
+
+        schema = pa.schema(
+            [
+                pa.field("embeddin", EmbeddingType()),
+            ]
+        )
+
+        table = pa.Table.from_arrays([embeddin_array], schema=schema)
+
+        with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
+            temp_file_path = temp_file.name
+            pq.write_table(table, temp_file_path, store_schema=True)
+            re_table = pq.read_table(temp_file_path)
+
+        self.assertEqual(re_table.column_names, ["embeddin"])
+        embeddin1 = re_table.take([1])["embeddin"][0].as_py()
+        self.assertTrue(isinstance(embeddin1, Embedding))
