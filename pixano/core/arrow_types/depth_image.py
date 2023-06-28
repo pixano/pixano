@@ -51,11 +51,24 @@ class DepthImage:
         return np.frombuffer(self._bytes, dtype=np.uint16).reshape(self._shape)
 
     @staticmethod
+    def load_npy(path: str) -> "DepthImage":
+        """Load depth image from npy file
+
+        Args:
+            path (str): path of file .npy. The file must contains an array of depth image.
+
+        Returns:
+            DepthImage: Instance of DepthImage
+        """
+        map = np.load(path)
+        return DepthImage(depth_map=map, shape=map.shape)
+
+    @staticmethod
     def load(path: str) -> "DepthImage":
         """Load depth image (16 bit) to instance DepthImage.
 
         Args:
-            path (str): path of the file to load
+            path (str): path of the file to load. Work with .png and .npy
 
         Returns:
             DepthImage: instance of DepthImage
@@ -92,7 +105,11 @@ class DepthImage:
 
         return DepthImage(depth_map=depth_n.astype(np.uint8))
 
+    def to_dict(self) -> dict:
+        return {"bytes": self.bytes, "shape": self._shape}
+
     def display(self):
+        """display image as plt.figure object"""
         plt.imshow(self.depth_map, cmap="gray", vmin=0, vmax=255)
         plt.axis("off")
         if self._shape is not None:
@@ -106,10 +123,18 @@ class DepthImage:
 
 
 class DepthImageType(pa.ExtensionType):
-    """Depth map extension types"""
+    """Depth image extension types"""
 
     def __init__(self):
-        super(DepthImageType, self).__init__(pa.binary(), "depthmap")
+        super(DepthImageType, self).__init__(
+            pa.struct(
+                [
+                    pa.field("bytes", pa.binary()),
+                    pa.field("shape", pa.list_(pa.int32(), list_size=2)),
+                ]
+            ),
+            "DepthImage",
+        )
 
     def __arrow_ext_serialize__(self):
         return b""
@@ -128,9 +153,29 @@ class DepthImageScalar(pa.ExtensionScalar):
     def as_py(self) -> Optional[DepthImage]:
         if pd.isna(self.value):
             return None
-        return DepthImage(self.value.as_py())
+        return DepthImage(
+            bytes_data=self.value["bytes"].as_py(), shape=self.value["shape"].as_py()
+        )
 
 
-def is_depthMap_type(t: pa.DataType) -> bool:
-    """Returns True if the type is an image type"""
+class DepthImageArray(pa.ExtensionArray):
+    """Class to use pa.array for DepthImage instance"""
+
+    @classmethod
+    def from_list(cls, depth_image_list: list[DepthImage]) -> pa.Array:
+        """Create DepthImage pa.array from DepthImage list
+
+        Args:
+            depth_image_list (list[DepthImage]): list of DepthImage
+
+        Returns:
+            pa.Array: pa.array of DepthImage
+        """
+        depth_image_dicts = [depth_image.to_dict() for depth_image in depth_image_list]
+
+        return pa.array(depth_image_dicts, DepthImageType())
+
+
+def is_depth_image_type(t: pa.DataType) -> bool:
+    """Returns True if the type is an Depthimage type"""
     return isinstance(t, DepthImageType)
