@@ -63,7 +63,6 @@
   // let imageKonva: Konva.Image;
   let highlighted_point: Konva.Circle = null;
 
-
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
     width: 1024,
@@ -300,7 +299,7 @@
           //don't add a mask that already exist
           let bbox = group.findOne(`#${bboxes[i].id}`);
           if (!bbox) {
-            addBBox(bboxes[i], image, categoryColor?.(bboxes[i].catId), group);
+            addBBox(bboxes[i], image, categoryColor(bboxes[i].catId), group);
           } else {
             //apply visibility
             bbox.visible(bboxes[i].visible);
@@ -554,7 +553,7 @@
               image.x(),
               image.y(),
               image.scale(),
-              categoryColor?.(masksGT[i].catId),
+              categoryColor(masksGT[i].catId),
               masksGT[i].visible,
               1.0,
               group
@@ -589,7 +588,7 @@
         for (let s of predictedMasks.children) {
           let shape = s as Konva.Shape;
           var pred = new Option().style;
-          pred.color = categoryColor?.(prediction.catId);
+          pred.color = categoryColor(prediction.catId);
           shape.fill(
             `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
           );
