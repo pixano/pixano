@@ -61,8 +61,7 @@
   let pointMinusTool = createLabeledPointTool(0);
   let rectTool = createRectangleTool();
   let panTool = createPanTool();
-  //let interactiveSegmenter;
-
+  
   annotationTools.push(panTool);
   annotationTools.push(
     createMultiModalTool("Point selection", ToolType.LabeledPoint, [

@@ -25,7 +25,7 @@
   export let dataset: DatabaseFeats = null;
   export let lastLoadedPage: number;
   // Function that maps an id to a color
-  export let categoryColor = null;
+  export let categoryColor = (catId)=>{"red"};
 
   let d_data = [];
 
