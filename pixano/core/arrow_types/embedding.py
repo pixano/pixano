@@ -20,11 +20,11 @@ import pyarrow as pa
 
 
 class Embedding:
-    def __init__(self, embedding: bytes) -> None:
-        self._embedding = embedding
+    def __init__(self, embedding_bytes: bytes) -> None:
+        self._embedding_bytes = embedding_bytes
 
     def to_dict(self) -> dict:
-        return {"embedding": self._embedding}
+        return {"embedding_bytes": self._embedding_bytes}
 
 
 # ------------------------------------------------
