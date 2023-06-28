@@ -134,7 +134,7 @@
       const newClass: AnnotationsLabels = {
         viewId: viewId,
         category_name: className,
-        category_id: annotations.length,
+        category_id: classes.find((obj) => obj.name === className).id,
         items: [annotation],
         visible: true,
       };
