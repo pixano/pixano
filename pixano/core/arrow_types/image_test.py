@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+import io
 import tempfile
 import unittest
 from io import BytesIO
@@ -22,13 +23,99 @@ import pyarrow.parquet as pq
 import requests
 from PIL import Image as pilImage
 
-from pixano.transforms import image_to_binary
+from pixano.transforms.image import binary_to_url, image_to_binary
 
 from .image import Image, ImageArray, ImageType
 
 
+import unittest
+from PIL import Image as PILImage
+from io import BytesIO
+from urllib.parse import urlparse
+from urllib.request import urlopen
+import cv2
+import numpy as np
+from IPython.display import Image as IPyImage
+
+# Import the Image class from your code
+
 class ImageTestCase(unittest.TestCase):
-    pass
+    def setUp(self):
+        self.uri = "https://farm8.staticflickr.com/7051/6805092802_551636b55d_z.jpg"
+        self.bytes = urlopen(self.uri).read()
+
+    def test_image_bytes(self):
+        image = Image(self.uri, self.bytes)
+        self.assertEqual(image.bytes, self.bytes)
+
+    def test_image_preview_bytes(self):
+        preview_bytes = b"preview bytes"
+        image = Image(self.uri, self.bytes, preview_bytes)
+        self.assertEqual(image.preview_bytes, preview_bytes)
+
+    def test_image_url(self):
+        image = Image(self.uri, self.bytes)
+        expected_url = binary_to_url(self.bytes)
+        self.assertEqual(image.url, expected_url)
+
+    def test_image_preview_url(self):
+        preview_bytes = b"preview bytes"
+        image = Image(self.uri, self.bytes, preview_bytes)
+        expected_url = binary_to_url(preview_bytes)
+        self.assertEqual(image.preview_url, expected_url)
+
+    def test_image_uri_relative_with_prefix(self):
+        uri_prefix = "http://example.com/images/"
+        image = Image("relative_path.png", uri_prefix=uri_prefix)
+        expected_uri = urlparse(uri_prefix)._replace(path="/images/relative_path.png").geturl()
+        self.assertEqual(image.uri, expected_uri)
+
+    def test_image_uri_relative_without_prefix(self):
+        image = Image("relative_path.png")
+        with self.assertRaises(Exception):
+            image.uri
+
+    def test_image_uri_absolute(self):
+        image = Image("http://example.com/image.png")
+        expected_uri = "http://example.com/image.png"
+        self.assertEqual(image.uri, expected_uri)
+
+    def test_image_size(self):
+        image = Image(self.uri, self.bytes)
+        pillow_image = PILImage.open(BytesIO(self.bytes))
+        expected_size = pillow_image.size
+        self.assertEqual(image.size, expected_size)
+
+    def test_image_open(self):
+        image = Image(self.uri, self.bytes)
+        with image.open() as f:
+            opened_bytes = f.read()
+        self.assertEqual(opened_bytes, self.bytes)
+
+    def test_image_as_pillow(self):
+        image = Image(self.uri, self.bytes)
+        pillow_image = image.as_pillow()
+        self.assertIsInstance(pillow_image, PILImage.Image)
+
+    def test_image_as_cv2(self):
+        image = Image(self.uri, self.bytes)
+        cv2_image = image.as_cv2()
+        self.assertIsInstance(cv2_image, np.ndarray)
+
+    def test_image_display(self):
+        image = Image(self.uri, self.bytes)
+        display_result = image.display()
+        self.assertIsInstance(display_result, IPyImage)
+
+    def test_image_to_dict(self):
+        image = Image(self.uri, self.bytes)
+        expected_dict = {
+            "uri": self.uri,
+            "bytes": self.bytes,
+            "preview_bytes": None,
+        }
+        self.assertEqual(image.to_dict(),expected_dict)
+
 
 
 class TestParquetImage(unittest.TestCase):
@@ -37,7 +124,7 @@ class TestParquetImage(unittest.TestCase):
         im_data = requests.get(uri)
         im = pilImage.open(BytesIO(im_data.content))
         im.thumbnail((128, 128))
-        im.save("thumb.png")
+        # im.save("thumb.png")
         preview = image_to_binary(im)
         image = Image(uri, None, preview)
         image_array = ImageArray.from_Image_list([image])

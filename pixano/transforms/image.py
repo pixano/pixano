@@ -55,19 +55,21 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     image.thumbnail((128, 128))
     return image_to_binary(image)
 
-
-def binary_to_base64(binary: bytes) -> str:
-    """Encode image from binary to base 64
+def binary_to_url(im_bytes: bytes) -> str:
+    """Encode image from binary to base 64 URL
 
     Args:
-        binary (bytes): Image as binary
+        im_bytes (bytes): Image as binary
 
     Returns:
         str: Image as base 64
     """
 
-    b64 = base64.b64encode(binary).decode("utf-8")
-    return f"data:image/png;base64,{b64}"
+    if im_bytes is not None:
+        encoded = base64.b64encode(im_bytes).decode("utf-8")
+        return f"data:image;base64,{encoded}"
+    else:
+        return ""
 
 
 def depth_file_to_binary(depth_path: str) -> bytes:

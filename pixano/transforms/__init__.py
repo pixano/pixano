@@ -20,7 +20,7 @@ from .boxes import (
     xyxy_to_xywh,
 )
 from .image import (
-    binary_to_base64,
+    binary_to_url,
     depth_array_to_gray,
     depth_file_to_binary,
     encode_rle,
@@ -61,4 +61,5 @@ __all__ = [
     "coco_names_91",
     "dota_ids",
     "voc_names",
+    "binary_to_url"
 ]
