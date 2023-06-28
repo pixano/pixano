@@ -165,8 +165,8 @@
       Database
     </span>
   </div>
-  <div class="flex flex-col max-h-[88vh]">
-    <div class="overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
+  <div class="flex flex-col h-full max-h-[88vh]">
+    <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
       {#each view_list as view}
         {#if view_list.length > 1}
           <div

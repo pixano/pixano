@@ -35,6 +35,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
+    DatabaseFeats
   } from "../../../../components/Canvas2D/src/interfaces";
   import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
@@ -45,7 +46,7 @@
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
   export let masksGT: Array<MaskGT>;
-  export let dbImages;
+  export let dbImages: DatabaseFeats;
   export let curPage: number;
   export let handleCloseClick;
 

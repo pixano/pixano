@@ -20,8 +20,6 @@
   import Konva from "konva";
   import shortid from "shortid";
 
-  import { getColor } from "../../core/src/utils";
-
   import { ToolType, type PanTool } from "./tools";
   import type { Tool, LabeledPointTool, RectangleTool } from "./tools";
   import type {
@@ -599,7 +597,7 @@
         //move predictedMasks to maskGT
         const masksGT_group: Konva.Group = view_layer.findOne("#masksGT");
         predictedMasks.id(prediction.id);
-        // change color  //TODO: use table of color by class or whatever
+        // change color
         for (let s of predictedMasks.children) {
           let shape = s as Konva.Shape;
           var pred = new Option().style;
