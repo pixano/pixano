@@ -46,7 +46,7 @@
   export let annotations: Array<AnnotationsLabels>;
   export let masksGT: Array<MaskGT>;
   export let dbImages;
-  export let curPage : number;
+  export let curPage: number;
   export let handleCloseClick;
 
   const dispatch = createEventDispatcher();
@@ -229,12 +229,12 @@
     dispatch("loadNextPage");
   }
 
-  onMount(()=> {
+  onMount(() => {
     if (annotations) {
       console.log("onMount - annotations", annotations);
       categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
     }
-  })
+  });
 
   afterUpdate(() => {
     //console.log("afterUpdate - itemData", itemData);
@@ -330,11 +330,11 @@
     />
     <div class="flex grow">
       <Canvas2D
+        {embedding}
         itemId={itemData.id}
         views={itemData.views}
         selectedTool={selectedAnnotationTool}
         {categoryColor}
-        {embedding}
         bind:prediction
         bind:masksGT
         bboxes={null}
