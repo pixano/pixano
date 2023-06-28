@@ -61,7 +61,7 @@
   let pointMinusTool = createLabeledPointTool(0);
   let rectTool = createRectangleTool();
   let panTool = createPanTool();
-  
+
   annotationTools.push(panTool);
   annotationTools.push(
     createMultiModalTool("Point selection", ToolType.LabeledPoint, [
@@ -182,25 +182,22 @@
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
+    let val = false;
     if (save_flag) {
-      if (confirm("Warning, changes not saved!")) {
-        //changes discarded
-        save_flag = false;
-      } else {
-        return;
+      val = confirm("Warning: You have not saved your changes. Continue ?");
+    }
+    if (val == true) {
+      let new_views: Array<ViewData> = [];
+      for (let view of event.detail.views) {
+        new_views.push({
+          viewId: view.viewId,
+          imageURL: view.img,
+        });
       }
+      itemData.views = new_views;
+      itemData = itemData;
+      dispatch("imageSelected", { id: event.detail.id });
     }
-    let new_views: Array<ViewData> = [];
-    for (let view of event.detail.views) {
-      new_views.push({
-        viewId: view.viewId,
-        imageURL: view.img,
-      });
-    }
-    itemData.views = new_views;
-    itemData = itemData;
-
-    dispatch("imageSelected", { id: event.detail.id });
   }
 
   function handleItemDeleted(item) {
