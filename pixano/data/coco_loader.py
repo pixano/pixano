@@ -15,7 +15,7 @@ import datetime
 import json
 import os
 from collections import defaultdict
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -74,7 +74,7 @@ class COCOLoader(DataLoader):
         input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
-    ) -> Generator[dict]:
+    ) -> Iterator:
         """Process dataset row for import
 
         Args:
@@ -83,7 +83,7 @@ class COCOLoader(DataLoader):
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
-            Generator[dict]: Processed rows
+            Iterator: Processed rows
         """
 
         # Open annotation files

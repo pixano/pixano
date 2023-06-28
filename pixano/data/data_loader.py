@@ -17,7 +17,7 @@ import os
 import random
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Generator
+from collections.abc import Iterator
 from io import BytesIO
 from itertools import islice
 from pathlib import Path
@@ -36,18 +36,18 @@ from pixano.core import DatasetInfo, arrow_types
 from pixano.transforms import denormalize, rle_to_urle
 
 
-def _batch_dict(iterable: iter, batch_size: int) -> Generator[dict]:
+def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
     """Batch dicts
 
     Args:
-        iterable (iter): Iterable
+        iterator (Iterator): Iterator
         batch_size (int): Batch size
 
     Yields:
-        Generator[list]: Iterable in batches
+        Iterator: Iterator in batches
     """
 
-    it = iter(iterable)
+    it = iter(iterator)
     while batch := list(islice(it, batch_size)):
         batch_dict = defaultdict(list)
         for d in batch:
@@ -89,6 +89,8 @@ class DataLoader(ABC):
             name=name,
             description=description,
             num_elements=0,
+            preview=None,
+            categories=[],
         )
         self.splits = splits
 
@@ -341,7 +343,7 @@ class DataLoader(ABC):
         input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
-    ) -> Generator[dict]:
+    ) -> Iterator:
         """Process dataset row for import
 
         Args:
@@ -350,7 +352,7 @@ class DataLoader(ABC):
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
-            Generator[dict]: Processed rows
+            Iterator: Processed rows
         """
 
         pass
