@@ -15,29 +15,25 @@ import io
 import tempfile
 import unittest
 from io import BytesIO
+from urllib.parse import urlparse
+from urllib.request import urlopen
 
+import cv2
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+from IPython.display import Image as IPyImage
+from PIL import Image as PILImage
 from PIL import Image as pilImage
 
 from pixano.transforms.image import binary_to_url, image_to_binary
 
 from .image import Image, ImageArray, ImageType
 
-
-import unittest
-from PIL import Image as PILImage
-from io import BytesIO
-from urllib.parse import urlparse
-from urllib.request import urlopen
-import cv2
-import numpy as np
-from IPython.display import Image as IPyImage
-
 # Import the Image class from your code
+
 
 class ImageTestCase(unittest.TestCase):
     def setUp(self):
@@ -67,7 +63,9 @@ class ImageTestCase(unittest.TestCase):
     def test_image_uri_relative_with_prefix(self):
         uri_prefix = "http://example.com/images/"
         image = Image("relative_path.png", uri_prefix=uri_prefix)
-        expected_uri = urlparse(uri_prefix)._replace(path="/images/relative_path.png").geturl()
+        expected_uri = (
+            urlparse(uri_prefix)._replace(path="/images/relative_path.png").geturl()
+        )
         self.assertEqual(image.uri, expected_uri)
 
     def test_image_uri_relative_without_prefix(self):
@@ -114,20 +112,21 @@ class ImageTestCase(unittest.TestCase):
             "bytes": self.bytes,
             "preview_bytes": None,
         }
-        self.assertEqual(image.to_dict(),expected_dict)
-
+        self.assertEqual(image.to_dict(), expected_dict)
 
 
 class TestParquetImage(unittest.TestCase):
+    def setUp(self) -> None:
+        uri_prefix = "http://farm3.staticflickr.com"
+
+        self.image_list = [
+            Image(uri="/2595/3984712091_e82c5ec1ca_z.jpg", uri_prefix=uri_prefix),
+            Image(uri="/7150/6601367913_ae54305467_z.jpg", uri_prefix=uri_prefix),
+        ]
+
     def test_image_table(self):
-        uri = "http://farm3.staticflickr.com/2595/3984712091_e82c5ec1ca_z.jpg"
-        im_data = requests.get(uri)
-        im = pilImage.open(BytesIO(im_data.content))
-        im.thumbnail((128, 128))
-        # im.save("thumb.png")
-        preview = image_to_binary(im)
-        image = Image(uri, None, preview)
-        image_array = ImageArray.from_Image_list([image])
+
+        image_array = ImageArray.from_Image_list(self.image_list)
 
         schema = pa.schema(
             [
