@@ -49,6 +49,7 @@
   export let dbImages: DatabaseFeats;
   export let curPage: number;
   export let handleCloseClick;
+  export let save_flag: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -84,8 +85,6 @@
   });
 
   let categoryColor;
-
-  let save_flag = false; //true if there is something to save
 
   // events handlers
   function handleAnnotationToolChange() {
@@ -184,7 +183,9 @@
     //dispatch("handleCloseClick");
     let val = true;
     if (save_flag) {
-      val = confirm("Warning: You have not saved your changes. Continue ?");
+      val = confirm(
+        "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
+      );
     }
     if (val == true) {
       let new_views: Array<ViewData> = [];
@@ -197,6 +198,7 @@
       itemData.views = new_views;
       itemData = itemData;
       dispatch("imageSelected", { id: event.detail.id });
+      save_flag = false;
     }
   }
 

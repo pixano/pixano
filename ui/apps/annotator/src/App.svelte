@@ -15,7 +15,7 @@
   */
 
   // Imports
-  import { onMount } from "svelte";
+  import { onMount, afterUpdate } from "svelte";
   import Header from "./lib/Header.svelte";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import Library from "../../../components/core/src/Library.svelte";
@@ -46,6 +46,7 @@
   let datasets = null;
   let selectedDataset = null;
   let curPage = 1;
+  let save_flag = false; //true if there is something to save
 
   let selectedItem: ItemData;
   let selectedItemEmbedding: any;
@@ -196,7 +197,7 @@
   function unselectItem() {
     let val = true;
     if (save_flag) {
-      val = confirm("Warning: You have not saved your changes. Continue ?");
+      ("Warning: You have not saved your changes.\nDo you want to discard and continue ?");
     }
     if (val == true) {
       selectedDataset = null;
@@ -205,6 +206,7 @@
       masksGT = [];
       annotations = [];
       classes = [];
+      save_flag = false;
     }
   }
 
@@ -283,6 +285,7 @@
       {masksGT}
       {classes}
       handleCloseClick={unselectItem}
+      bind:save_flag
       {dbImages}
       {curPage}
       on:imageSelected={(event) => selectItem(event.detail)}
