@@ -562,6 +562,16 @@
             //update visibility & opacity
             mask.visible(masksGT[i].visible);
             mask.opacity(masksGT[i].opacity);
+            //update color
+            let shape = mask as Konva.Shape;
+            if (typeof shape.fill === "function") {
+              var pred = new Option().style;
+              pred.color = categoryColor(masksGT[i].catId);
+              shape.fill(
+                `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
+              );
+              shape.stroke(pred.color);
+            }
           }
         }
       }
