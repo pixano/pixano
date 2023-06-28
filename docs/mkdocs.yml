@@ -34,9 +34,11 @@ nav:
     - "feature_statistics": code/analytics/feature_statistics.md
 
   - "apps":
-    - "explorer":
-      - "main": code/apps/explorer/main.md
-      - "db_utils": code/apps/explorer/db_utils.md
+    - "core":
+      - "main": code/apps/core/main.md
+      - "db_utils": code/apps/core/db_utils.md
+    - "annotator": code/apps/annotator.md
+    - "explorer": code/apps/explorer.md
 
   - "core":
     - "arrow_types": code/core/arrow_types.md

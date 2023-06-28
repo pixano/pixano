@@ -11,9 +11,9 @@
 #
 # http://www.cecill.info
 
-from .display import annotator, explorer
+from .main import app, settings
 
 __all__ = [
-    "annotator",
-    "explorer",
+    "app",
+    "settings",
 ]

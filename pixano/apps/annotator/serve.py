@@ -37,8 +37,8 @@ logo = """
 ██                         █▓                                        ▓
 """
 
-ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist/assets")
-TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
+ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist/assets")
+TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
 
 
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
@@ -52,7 +52,7 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 @click.option(
     "--port",
     type=int,
-    default=8001,
+    default=8002,
     help="Bind socket to a port.",
     show_default=True,
 )
@@ -61,7 +61,7 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
     type=str,
 )
 def main(host: str, port: int, library_dir: str):
-    """Launch Pixano Explorer
+    """Launch Pixano Annotator
 
     LIBRARY_DIR: Dataset library directory
     """

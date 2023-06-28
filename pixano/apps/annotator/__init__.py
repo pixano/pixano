@@ -10,10 +10,3 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
-from .display import annotator, explorer
-
-__all__ = [
-    "annotator",
-    "explorer",
-]

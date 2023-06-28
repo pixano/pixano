@@ -34,7 +34,7 @@ If you are using a notebook, you can run the Explorer in the background by runni
 pixano-explorer <path/to/your/datasets>
 ```
 
-You can then browse the explorer directly from notebook with this function:
+You can then browse the Explorer directly from notebook with this function:
 
 ```python
 from pixano import notebook

@@ -23,12 +23,12 @@ export default defineConfig({
   server: {
     proxy: {
       "/datasets": {
-        target: "http://127.0.0.1:8000",
+        target: "http://127.0.0.1:8002",
         changeOrigin: true,
         secure: false,
       },
       "/models": {
-        target: "http://127.0.0.1:8000",
+        target: "http://127.0.0.1:8002",
         changeOrigin: true,
         secure: false,
       },
