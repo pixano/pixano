@@ -194,9 +194,10 @@
   }
 
   function unselectItem() {
-    let val = false;
-    //TODO: check if there are actually changes before warning
-    val = confirm("Warning: You have not saved your changes. Continue ?");
+    let val = true;
+    if (save_flag) {
+      val = confirm("Warning: You have not saved your changes. Continue ?");
+    }
     if (val == true) {
       selectedDataset = null;
       selectedItem = null;

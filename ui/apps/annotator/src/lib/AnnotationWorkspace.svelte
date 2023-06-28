@@ -182,7 +182,7 @@
 
   function handleImageSelectedChange(event) {
     //dispatch("handleCloseClick");
-    let val = false;
+    let val = true;
     if (save_flag) {
       val = confirm("Warning: You have not saved your changes. Continue ?");
     }
