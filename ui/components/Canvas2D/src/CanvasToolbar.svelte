@@ -21,6 +21,7 @@
   // Inputs
   export let tools: Array<Tool> = [];
   export let selectedTool: Tool = null;
+  export let handleCloseClick;
 
   const dispatch = createEventDispatcher();
 
@@ -34,7 +35,12 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="w-20 shrink-0">
-  <img src="pixano.png" alt="pixano logo" class="h-10 w-10 m-5" />
+  <img
+    src="pixano.png"
+    alt="pixano logo"
+    class="h-10 w-10 m-5 cursor-pointer"
+    on:click={handleCloseClick}
+  />
   <div class="mt-4 flex flex-col items-center">
     {#each tools as tool}
       {#if tool.modes}

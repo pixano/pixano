@@ -319,6 +319,7 @@
   <CanvasToolbar
     tools={annotationTools}
     bind:selectedTool={selectedAnnotationTool}
+    {handleCloseClick}
     on:toolSelected={handleAnnotationToolChange}
   />
   <div class="flex flex-col grow">

@@ -22,7 +22,12 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="h-20 flex items-center shrink-0">
   <div class="flex items-center grow space-x-2 font-bold text-2xl uppercase">
-    <img src="icons/image.svg" alt="icon" class="h-6 w-6 opacity-40" />
+    <img
+      src="icons/image.svg"
+      alt="icon"
+      class="h-6 w-6 opacity-40 cursor-pointer"
+      on:click={handleCloseClick}
+    />
     <span class="cursor-pointer" on:click={handleCloseClick}>
       {database}
     </span>
