@@ -13,6 +13,7 @@
 
 from pathlib import Path
 
+import asyncio
 import click
 import fastapi
 import pkg_resources
@@ -23,7 +24,7 @@ from fastapi.templating import Jinja2Templates
 
 from pixano.apps.core import app, settings
 
-logo = """
+LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
                            ▒▓▒                                       ▓
               █▓          ▓▓                                         ▓
@@ -36,12 +37,39 @@ logo = """
 ██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
 ██                         █▓                                        ▓
 """
-
 ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist/assets")
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
 
 
+def main(library_dir: str, host: str = "127.0.0.1", port: int = 8000):
+    """Run Pixano Annotator app
+
+    Args:
+        library_dir (str): Dataset library directory
+        host (str, optional): App host. Defaults to "127.0.0.1".
+        port (int, optional): App port. Defaults to 8000.
+    """
+
+    templates = Jinja2Templates(directory=TEMPLATE_PATH)
+    settings.data_dir = Path(library_dir)
+
+    @app.get("/", response_class=HTMLResponse)
+    def main(request: fastapi.Request):
+        return templates.TemplateResponse("index.html", {"request": request})
+
+    app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
+    config = uvicorn.Config(app, host=host, port=port)
+    server = uvicorn.Server(config)
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(server.serve())
+
+
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
+@click.argument(
+    "library_dir",
+    type=str,
+)
 @click.option(
     "--host",
     type=str,
@@ -53,25 +81,16 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
     "--port",
     type=int,
     default=0,
-    help="Bind socket to a port.",
+    help="Bind socket to this port.",
     show_default=True,
 )
-@click.argument(
-    "library_dir",
-    type=str,
-)
-def main(host: str, port: int, library_dir: str):
+def command_line(library_dir: str, host: str, port: int):
     """Launch Pixano Annotator
 
     LIBRARY_DIR: Dataset library directory
     """
+    main(library_dir, host, port)
 
-    templates = Jinja2Templates(directory=TEMPLATE_PATH)
-    settings.data_dir = Path(library_dir)
 
-    @app.get("/", response_class=HTMLResponse)
-    def main(request: fastapi.Request):
-        return templates.TemplateResponse("index.html", {"request": request})
-
-    app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
-    uvicorn.run(app, host=host, port=port)
+if __name__ == "__main__":
+    main()

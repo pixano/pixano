@@ -11,8 +11,10 @@
 #
 # http://www.cecill.info
 
-from .display import display
+from .annotator.serve import main as annotate
+from .explorer.serve import main as explore
 
 __all__ = [
-    "display",
+    "annotate",
+    "explore",
 ]

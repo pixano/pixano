@@ -55,8 +55,8 @@ Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 
 [project.scripts]
-pixano-annotator = "pixano.apps.annotator.serve:main"
-pixano-explorer = "pixano.apps.explorer.serve:main"
+pixano-annotator = "pixano.apps.annotator.serve:command_line"
+pixano-explorer = "pixano.apps.explorer.serve:command_line"
 
 [tool.hatch.build]
 include = ["/pixano"]

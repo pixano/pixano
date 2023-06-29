@@ -49,32 +49,12 @@ def get_env() -> str:
     return "none"
 
 
-def explorer(height: int = 1000):
-    """Display Pixano Explorer in a notebook environment
-
-    Args:
-        height (int, optional): Frame height. Defaults to 1000.
-    """
-
-    display(url="http://127.0.0.1", port=8001, height=height)
-
-
-def annotator(height: int = 1000):
-    """Display Pixano Annotator in a notebook environment
-
-    Args:
-        height (int, optional): Frame height. Defaults to 1000.
-    """
-
-    display(url="http://127.0.0.1", port=8002, height=height)
-
-
-def display(url: str, port: int, height: int = 1000):
+def display(url: str = "http://127.0.0.1", port: int = 8000, height: int = 1000):
     """Display a Pixano app inside a notebook environment
 
     Args:
-        url (str): Pixano app URL
-        port (int): Pixano app port
+        url (str, optional): Pixano app URL. Defaults to "127.0.0.1".
+        port (int, optional): Pixano app port. Defaults to 8000.
         height (int, optional): Frame height. Defaults to 1000.
     """
 
@@ -100,7 +80,7 @@ def display_colab(url: str, port: int, height: int):
 
     # Define frame template
     shell = """
-        (async () => {
+        (() => {
             const url = new URL(%URL%);
             const port = %PORT%;
             if (port) {
