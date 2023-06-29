@@ -89,26 +89,23 @@ class LegacyPixanoLoader(DataLoader):
         Yields:
             Generator[dict]: Processed rows
         """
+        print("eze")
 
         category_ids = {}
+        feats = defaultdict(list)
         for view in self.views:
             # Open annotation files
             with open(input_dirs["workspace"] / self.json_files[view], "r") as f:
                 pix_json = json.load(f)
 
-                # read image path from annotation file
-                # images_dir = Path(pix_json["data"]["path"])
-
                 # Group annotations by image ID (timestamp)
                 annotations = defaultdict(list)
                 for ann in pix_json["annotations"]:
-                    annotations[ann["timestamp"]].append(ann)
+                    annotations[str(ann["timestamp"])].append(ann)
 
                 # Process rows
                 for im in sorted(pix_json["data"]["children"], key=lambda x: x["timestamp"]):
 
-                    # Load image annotations
-                    im_anns = annotations[im["timestamp"]]
                     # Load image
                     file_name_uri = urlparse(im["path"])
                     if file_name_uri.scheme == "":
@@ -117,92 +114,97 @@ class LegacyPixanoLoader(DataLoader):
                         im_path = Path(file_name_uri.path)
 
                     image = Image.open(BytesIO(im_path.read_bytes()))
-                    w = image.width
-                    h = image.height
-
-                    # Create image thumbnail
+                    im_w = image.width
+                    im_h = image.height
                     im_thumb = image_to_thumbnail(image)
 
-                    # Set image URI
-                    im_uri = (
-                        f"image/{split}/{im_path.name}"
-                        if portable
-                        else im_path.absolute().as_uri()
-                    )
+                    feats[str(im["timestamp"])].append({
+                        "viewId": view,
+                        "width": im_w,
+                        "height": im_h,
+                        "im_thumb": im_thumb,
+                        "im_uri": (
+                            f"image/{split}/{im_path.name}"
+                            if portable
+                            else im_path.absolute().as_uri()
+                        ),
+                        "anns": annotations[str(im["timestamp"])]
+                    })
 
-                    # Fill row with ID, image
-                    row = {
-                        "id": str(im["timestamp"]),
-                        view: arrow_types.Image(im_uri, None, im_thumb).to_dict(),
-                        "objects": [],
-                        "split": split,
-                    }
+        for timestamp in feats:
+            # Fill row with ID, image
+            row = {
+                "id": timestamp,
+                "objects": [],
+                "split": split,
+            }
+            for f in feats[timestamp]:
+                row[f['viewId']] = arrow_types.Image(f['im_uri'], None, f['im_thumb']).to_dict()
 
-                    # Fill row with list of image annotations
-                    for ann in im_anns:
-                        # collect categories to build category ids
-                        if ann["category"] not in category_ids:
-                            category_ids[ann["category"]] = len(category_ids)
+                # Fill row with list of image annotations
+                for ann in f['anns']:
+                    # collect categories to build category ids
+                    if ann["category"] not in category_ids:
+                        category_ids[ann["category"]] = len(category_ids)
 
-                        bbox = [0.0, 0.0, 0.0, 0.0]
-                        mask = None
+                    bbox = [0.0, 0.0, 0.0, 0.0]
+                    mask = None
 
-                        if "geometry" in ann:
-                            if (ann["geometry"]["type"] == "polygon" and ann["geometry"]["vertices"]):
-                                # Polygon
-                                # we have normalized coords, we must denorm before making RLE
-                                if not isnan(ann["geometry"]["vertices"][0]):
-                                    if len(ann["geometry"]["vertices"]) > 4:
-                                        denorm = denormalize(ann["geometry"]["vertices"], h, w)
-                                        rles = mask_api.frPyObjects([denorm], h, w)
-                                        mask = mask_api.merge(rles)
-                                    else:
-                                        print(
-                                            "Polygon with 2 or less points. Discarded\n",
-                                            ann["geometry"],
-                                        )
-                            elif (
-                                ann["geometry"]["type"] == "mpolygon"
-                                and ann["geometry"]["mvertices"]
-                            ):
-                                # MultiPolygon
-                                if not isnan(ann["geometry"]["mvertices"][0][0]):
-                                    denorm = [
-                                        denormalize(poly, h, w)
-                                        for poly in ann["geometry"]["mvertices"]
-                                    ]
-                                    rles = mask_api.frPyObjects(denorm, h, w)
+                    if "geometry" in ann:
+                        if (ann["geometry"]["type"] == "polygon" and ann["geometry"]["vertices"]):
+                            # Polygon
+                            # we have normalized coords, we must denorm before making RLE
+                            if not isnan(ann["geometry"]["vertices"][0]):
+                                if len(ann["geometry"]["vertices"]) > 4:
+                                    denorm = denormalize(ann["geometry"]["vertices"], f['height'], f['width'])
+                                    rles = mask_api.frPyObjects([denorm], f['height'], f['width'])
                                     mask = mask_api.merge(rles)
-                            elif (
-                                ann["geometry"]["type"] == "rectangle"
-                                and ann["geometry"]["vertices"]
-                            ):  # BBox
-                                if not isnan(ann["geometry"]["vertices"][0]):
-                                    denorm = denormalize([ann["geometry"]["vertices"]], h, w)
-                                    bbox = xyxy_to_xywh(denorm)
-                            elif (
-                                ann["geometry"]["type"] == "graph" and ann["geometry"]["vertices"]
-                            ):  # Keypoints
-                                print("Keypoints are not implemented yet")
-                            else:
-                                # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
-                                pass
+                                else:
+                                    print(
+                                        "Polygon with 2 or less points. Discarded\n",
+                                        ann["geometry"],
+                                    )
+                        elif (
+                            ann["geometry"]["type"] == "mpolygon"
+                            and ann["geometry"]["mvertices"]
+                        ):
+                            # MultiPolygon
+                            if not isnan(ann["geometry"]["mvertices"][0][0]):
+                                denorm = [
+                                    denormalize(poly, f['height'], f['width'])
+                                    for poly in ann["geometry"]["mvertices"]
+                                ]
+                                rles = mask_api.frPyObjects(denorm, f['height'], f['width'])
+                                mask = mask_api.merge(rles)
+                        elif (
+                            ann["geometry"]["type"] == "rectangle"
+                            and ann["geometry"]["vertices"]
+                        ):  # BBox
+                            if not isnan(ann["geometry"]["vertices"][0]):
+                                denorm = denormalize([ann["geometry"]["vertices"]], f['height'], f['width'])
+                                bbox = xyxy_to_xywh(denorm)
+                        elif (
+                            ann["geometry"]["type"] == "graph" and ann["geometry"]["vertices"]
+                        ):  # Keypoints
+                            print("Keypoints are not implemented yet")
                         else:
-                            print("No geometry?")  # Ca peut etre un mask, ou 3d, trackink... etc.
+                            # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
+                            pass
+                    else:
+                        print("No geometry?")  # Ca peut etre un mask, ou 3d, trackink... etc.
 
-                        row['objects'].append(arrow_types.ObjectAnnotation(
-                                id=str(ann["id"]),
-                                view_id=view,
-                                bbox=bbox,
-                                mask=mask,
-                                is_group_of=bool(ann["iscrowd"]) if "iscrowd" in ann else None,
-                                category_id=category_ids[ann["category"]],
-                                category_name=ann["category"],
-                            ).dict())
+                    row['objects'].append(arrow_types.ObjectAnnotation(
+                            id=str(ann["id"]),
+                            view_id=f['viewId'],
+                            bbox=bbox,
+                            mask=mask,
+                            is_group_of=bool(ann["iscrowd"]) if "iscrowd" in ann else None,
+                            category_id=category_ids[ann["category"]],
+                            category_name=ann["category"],
+                        ).dict())
 
-                    # print("row", row.keys(), row["id"], row["objects"])
-                    # Return row
-                    yield row
+            # Return row
+            yield row
 
     def export_dataset(self, input_dir: Path, export_dir: Path):
         """Export dataset back to original format
