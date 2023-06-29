@@ -52,7 +52,7 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 @click.option(
     "--port",
     type=int,
-    default=8001,
+    default=0,
     help="Bind socket to a port.",
     show_default=True,
 )

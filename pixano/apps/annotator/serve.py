@@ -52,7 +52,7 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
 @click.option(
     "--port",
     type=int,
-    default=8002,
+    default=0,
     help="Bind socket to a port.",
     show_default=True,
 )
