@@ -11,12 +11,15 @@
 
 ### Changed:
 - Merge inference generation and embedding precomputing into a **single inference model class**
-- Add custom PyArrow and Pydantic type for embeddings for better support of **precomputed embedding datasets** 
+- Add custom type for embeddings for better support of **precomputed embedding datasets**
+- Improve custom type for images
+- Improve ease of use of Pixano Explorer and Annotator apps in notebooks
 - Improve Pixano Explorer dataset page query speed
 - Refactor and reformat API code
 - Update READMEs and documentation
 
 ### Fixed:
+- Allow Pixano Explorer and Annotator apps to be created on any available port
 - Fix support for nonnumerical IDs in datasets
 - Fix bounding boxes not being truly optional in ObjectAnnotation 
 - Order all image transforms args to height first and width second for consistency
