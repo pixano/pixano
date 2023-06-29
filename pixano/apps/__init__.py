@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-from .annotator.serve import main as annotate
-from .explorer.serve import main as explore
+from .annotator.serve import AnnotatorApp
+from .explorer.serve import ExplorerApp
 
 __all__ = [
-    "annotate",
-    "explore",
+    "AnnotatorApp",
+    "ExplorerApp",
 ]

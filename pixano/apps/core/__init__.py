@@ -12,8 +12,10 @@
 # http://www.cecill.info
 
 from .main import app, settings
+from .serve import PixanoApp
 
 __all__ = [
     "app",
     "settings",
+    "PixanoApp",
 ]

@@ -27,18 +27,17 @@ You will then be provided with a URL to open in your browser to browse the datas
 
 ## Launching the Explorer from a notebook
 
-If you are using a notebook, you can run the Explorer in the background by running a cell like this:
+If you are using a notebook, you can start the Explorer by running a cell with:
 
 ```python
-%%bash --bg
-pixano-explorer <path/to/your/datasets>
+from pixano.apps import ExplorerApp
+explorer = ExplorerApp(<path/to/your/datasets>)
 ```
 
-You can then browse the Explorer directly from notebook with this function:
+You can then browse the Explorer directly from the notebook in another cell with:
 
 ```python
-from pixano import notebook
-notebook.display()
+explorer.display()
 ```
 
 ## Browsing a dataset with the Explorer

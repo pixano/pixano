@@ -27,18 +27,17 @@ You will then be provided with a URL to open in your browser to browse the datas
 
 ## Launching the Annotator from a notebook
 
-If you are using a notebook, you can run the Annotator in the background by running a cell like this:
+If you are using a notebook, you can start the Annotator by running a cell with:
 
 ```python
-%%bash --bg
-pixano-annotator <path/to/your/datasets>
+from pixano.apps import AnnotatorApp
+annotator = AnnotatorApp(<path/to/your/datasets>)
 ```
 
-You can then browse the Annotator directly from notebook with this function:
+You can then browse the Annotator directly from the notebook in another cell with:
 
 ```python
-from pixano import notebook
-notebook.display()
+annotator.display()
 ```
 
 ## Browsing a dataset with the Annotator
