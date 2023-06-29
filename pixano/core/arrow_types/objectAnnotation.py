@@ -208,7 +208,7 @@ class ObjectAnnotationArray(pa.ExtensionArray):
                     [value.to_dict() for value in attr_values], type=attr_type
                 )
 
-            result_dict[attr] = pa.array(attr_values)
+            result_dict[attr] = attr_values
 
         return result_dict
 
