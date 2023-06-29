@@ -14,25 +14,32 @@
   http://www.cecill.info
   */
 
+  // Assets
+  import svg_visible from "../assets/icons/visible.svg";
+  import svg_invisible from "../assets/icons/invisible.svg";
+  import svg_expand from "../assets/icons/expand.svg";
+  import svg_delete from "../assets/icons/delete.svg";
+
   // Imports
   import { createEventDispatcher, afterUpdate } from "svelte";
   import type {
     AnnotationsLabels,
     DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
-  
+
   export let annotations: Array<AnnotationsLabels>;
   export let dataset: DatabaseFeats = null;
   export let lastLoadedPage: number;
   // Function that maps an id to a color
-  export let categoryColor = (catId)=>{"red"};
+  export let categoryColor = (catId) => {
+    "red";
+  };
 
   let d_data = [];
 
   let view_list = []; //view that contains annotations for anns display (not real views list)
   let activeTab = "labels"; //"database";
   const dispatch = createEventDispatcher();
-
 
   //set classes groups opened/closed by default
   for (let group of annotations) {
@@ -177,7 +184,7 @@
               : 'bg-violet-100'}"
           >
             <img
-              src="icons/{view['visible'] ? 'visible' : 'invisible'}.svg"
+              src={view["visible"] ? svg_visible : svg_invisible}
               alt="visible"
               class="h-6 w-6 opacity-50 cursor-pointer"
               on:click={() => handleViewVisibility(view)}
@@ -187,7 +194,7 @@
               on:click={() => (view["opened"] = !view["opened"])}
             >
               <img
-                src="icons/expand.svg"
+                src={svg_expand}
                 alt="expand"
                 class="h-6 w-6 {!view['opened'] ? '-rotate-90' : ''}"
               />
@@ -214,7 +221,7 @@
                   : ''}"
               >
                 <img
-                  src="icons/{group.visible ? 'visible' : 'invisible'}.svg"
+                  src={view["visible"] ? svg_visible : svg_invisible}
                   alt="visible"
                   class="h-6 w-6 opacity-50 cursor-pointer"
                   on:click={() => handleGroupVisibility(group)}
@@ -224,7 +231,7 @@
                   on:click={() => (group["opened"] = !group["opened"])}
                 >
                   <img
-                    src="icons/expand.svg"
+                    src={svg_expand}
                     alt="expand"
                     class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}"
                   />
@@ -255,10 +262,9 @@
                       : 'border-t-2'}"
                   >
                     <img
-                      src="icons/{(group.visible && item.visible) ||
-                      item.visible
-                        ? 'visible'
-                        : 'invisible'}.svg"
+                      src={(group.visible && item.visible) || item.visible
+                        ? svg_visible
+                        : svg_invisible}
                       alt="visible"
                       class="h-5 w-5 opacity-50 cursor-pointer"
                       on:click={() => handleVisibility(group, item)}
@@ -274,7 +280,7 @@
                       </span>
                     </span>
                     <img
-                      src="icons/delete.svg"
+                      src={svg_delete}
                       alt="delete"
                       class="h-4 w-4 opacity-50 cursor-pointer"
                       on:click={() => deleteItem(item)}

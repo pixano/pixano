@@ -14,10 +14,12 @@
   http://www.cecill.info
   */
 
+  // Assets
+  import pixanoLogo from "./assets/pixano.png";
+
   // Imports
   import { onMount } from "svelte";
   import { currentPage } from "./stores";
-  import pixanoLogo from "./assets/pixano.png";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
   import * as api from "./lib/api";

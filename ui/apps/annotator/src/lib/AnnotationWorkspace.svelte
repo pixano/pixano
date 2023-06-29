@@ -14,8 +14,14 @@
   http://www.cecill.info
   */
 
-  import { onMount, afterUpdate, createEventDispatcher } from "svelte";
+  // Assets
+  import svg_plus from "../assets/icons/plus.svg";
+  import svg_minus from "../assets/icons/minus.svg";
+  import svg_ok from "../assets/icons/ok.svg";
+  import svg_expand from "../assets/icons/expand.svg";
 
+  // Imports
+  import { onMount, afterUpdate, createEventDispatcher } from "svelte";
   import DataPanel from "./DataPanel.svelte";
   import NavigationToolbar from "./NavigationToolbar.svelte";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
@@ -282,7 +288,7 @@
         <input
           type="text"
           placeholder="New Class"
-          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-[url('icons/expand.svg')] bg-no-repeat bg-right"
+          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-[url({svg_expand})] bg-no-repeat bg-right"
           bind:value={className}
         />
 
@@ -303,7 +309,7 @@
 
       {#if selectedAnnotationTool.type === ToolType.LabeledPoint}
         <img
-          src="icons/plus.svg"
+          src={svg_plus}
           alt="plus button"
           class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
           pointPlusTool
@@ -314,7 +320,7 @@
           }}
         />
         <img
-          src="icons/minus.svg"
+          src={svg_minus}
           alt="minus button"
           class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
           pointMinusTool
@@ -326,7 +332,7 @@
         />
       {/if}
       <img
-        src="icons/ok.svg"
+        src={svg_ok}
         alt="minus button"
         class="h-8 w-8 p-1 bg-rose-900 rounded cursor-pointer hover:bg-rose-700"
         on:click={handleValidate}

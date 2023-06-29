@@ -15,6 +15,7 @@
   */
 
   // Imports
+  import pixanoLogo from "../../../apps/annotator/src/assets/pixano.png";
   import { createEventDispatcher } from "svelte";
   import { type Tool } from "./tools";
 
@@ -36,7 +37,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="w-20 shrink-0">
   <img
-    src="pixano.png"
+    src={pixanoLogo}
     alt="pixano logo"
     class="h-10 w-10 m-5 cursor-pointer"
     on:click={handleCloseClick}
