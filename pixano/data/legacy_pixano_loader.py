@@ -29,9 +29,7 @@ from tqdm.auto import tqdm
 
 from pixano.core import DatasetInfo, arrow_types
 from pixano.transforms import (
-    # normalize,
     denormalize,
-    # encode_rle,
     image_to_thumbnail,
     natural_key,
     rle_to_urle,
@@ -47,9 +45,9 @@ class LegacyPixanoLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
+        views (list[str]): List of view names
+        json_files (dict[str, str]): dict {viewId: <path to json file>} paths relative to workspace
         splits (list[str]): Dataset splits
-        schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
     """
 
     def __init__(
@@ -82,7 +80,8 @@ class LegacyPixanoLoader(DataLoader):
         """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Input directories
+            input_dirs (dict[str, Path]): Input directory workspace 
+                                          (image directories are read from Pixano json files given at init)
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
