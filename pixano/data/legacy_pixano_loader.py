@@ -11,9 +11,7 @@
 #
 # http://www.cecill.info
 
-import datetime
 import json
-import os
 from math import isnan
 from pycocotools import mask as mask_api
 from collections import defaultdict
@@ -24,15 +22,11 @@ from io import BytesIO
 from PIL import Image
 
 import pyarrow as pa
-import pyarrow.parquet as pq
-from tqdm.auto import tqdm
 
-from pixano.core import DatasetInfo, arrow_types
+from pixano.core import arrow_types
 from pixano.transforms import (
     denormalize,
     image_to_thumbnail,
-    natural_key,
-    rle_to_urle,
     xyxy_to_xywh
 )
 
@@ -80,7 +74,7 @@ class LegacyPixanoLoader(DataLoader):
         """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Input directory workspace 
+            input_dirs (dict[str, Path]): Input directory workspace
                                           (image directories are read from Pixano json files given at init)
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
