@@ -82,7 +82,6 @@ class LegacyPixanoLoader(DataLoader):
         Yields:
             Generator[dict]: Processed rows
         """
-        print("eze")
 
         category_ids = {}
         feats = defaultdict(list)
