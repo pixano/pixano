@@ -14,10 +14,14 @@
 import datetime
 import json
 import os
+from math import isnan
+from pycocotools import mask as mask_api
 from collections import defaultdict
 from collections.abc import Generator
 from pathlib import Path
 from urllib.parse import urlparse
+from io import BytesIO
+from PIL import Image
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -25,12 +29,13 @@ from tqdm.auto import tqdm
 
 from pixano.core import DatasetInfo, arrow_types
 from pixano.transforms import (
+    # normalize,
     denormalize,
-    encode_rle,
+    # encode_rle,
     image_to_thumbnail,
     natural_key,
-    normalize,
     rle_to_urle,
+    xyxy_to_xywh
 )
 
 from .data_loader import DataLoader
@@ -51,7 +56,7 @@ class LegacyPixanoLoader(DataLoader):
         self,
         name: str,
         description: str,
-        views: list[pa.field],
+        views: list[str],
         json_files: dict[str, str],
         splits: list[str],
     ):
@@ -70,7 +75,7 @@ class LegacyPixanoLoader(DataLoader):
 
     def import_row(
         self,
-        input_dirs: dict[str, Path],
+        input_dirs: dict[str, Path],  # contain "workspace"
         split: str,
         portable: bool = False,
     ) -> Generator[dict]:
@@ -85,9 +90,10 @@ class LegacyPixanoLoader(DataLoader):
             Generator[dict]: Processed rows
         """
 
+        category_ids = {}
         for view in self.views:
             # Open annotation files
-            with open(input_dirs[view] / self.json_files[view], "r") as f:
+            with open(input_dirs["workspace"] / self.json_files[view], "r") as f:
                 pix_json = json.load(f)
 
                 # read image path from annotation file
@@ -99,20 +105,23 @@ class LegacyPixanoLoader(DataLoader):
                     annotations[ann["timestamp"]].append(ann)
 
                 # Process rows
-                for im in sorted(pix_json["data"]["children"], key=lambda x: natural_key(x["timestamp"])):
-                    print("qaza", im)
+                for im in sorted(pix_json["data"]["children"], key=lambda x: x["timestamp"]):
 
                     # Load image annotations
-                    im_anns = annotations[im["id"]]
+                    im_anns = annotations[im["timestamp"]]
                     # Load image
-                    file_name_uri = urlparse(im["file_name"])
+                    file_name_uri = urlparse(im["path"])
                     if file_name_uri.scheme == "":
-                        im_path = input_dirs["image"] / split / im["file_name"]
+                        im_path = input_dirs["workspace"] / im["path"]
                     else:
                         im_path = Path(file_name_uri.path)
 
+                    image = Image.open(BytesIO(im_path.read_bytes()))
+                    w = image.width
+                    h = image.height
+
                     # Create image thumbnail
-                    im_thumb = image_to_thumbnail(im_path.read_bytes())
+                    im_thumb = image_to_thumbnail(image)
 
                     # Set image URI
                     im_uri = (
@@ -121,26 +130,77 @@ class LegacyPixanoLoader(DataLoader):
                         else im_path.absolute().as_uri()
                     )
 
-                    # Fill row with ID, image, and list of image annotations
+                    # Fill row with ID, image
                     row = {
-                        "id": str(im["id"]),
-                        "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
-                        "objects": [
-                            arrow_types.ObjectAnnotation(
-                                id=str(ann["id"]),
-                                view_id="image",
-                                area=float(ann["area"]) if ann["area"] else None,
-                                bbox=normalize(ann["bbox"], im["height"], im["width"]),
-                                mask=encode_rle(ann["segmentation"], im["height"], im["width"]),
-                                is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
-                                category_id=int(ann["category_id"]),
-                                category_name=coco_names_91(ann["category_id"]),
-                            ).dict()
-                            for ann in im_anns
-                        ],
+                        "id": str(im["timestamp"]),
+                        view: arrow_types.Image(im_uri, None, im_thumb).to_dict(),
+                        "objects": [],
                         "split": split,
                     }
 
+                    # Fill row with list of image annotations
+                    for ann in im_anns:
+                        # collect categories to build category ids
+                        if ann["category"] not in category_ids:
+                            category_ids[ann["category"]] = len(category_ids)
+
+                        bbox = [0.0, 0.0, 0.0, 0.0]
+                        mask = None
+
+                        if "geometry" in ann:
+                            if (ann["geometry"]["type"] == "polygon" and ann["geometry"]["vertices"]):
+                                # Polygon
+                                # we have normalized coords, we must denorm before making RLE
+                                if not isnan(ann["geometry"]["vertices"][0]):
+                                    if len(ann["geometry"]["vertices"]) > 4:
+                                        denorm = denormalize(ann["geometry"]["vertices"], h, w)
+                                        rles = mask_api.frPyObjects([denorm], h, w)
+                                        mask = mask_api.merge(rles)
+                                    else:
+                                        print(
+                                            "Polygon with 2 or less points. Discarded\n",
+                                            ann["geometry"],
+                                        )
+                            elif (
+                                ann["geometry"]["type"] == "mpolygon"
+                                and ann["geometry"]["mvertices"]
+                            ):
+                                # MultiPolygon
+                                if not isnan(ann["geometry"]["mvertices"][0][0]):
+                                    denorm = [
+                                        denormalize(poly, h, w)
+                                        for poly in ann["geometry"]["mvertices"]
+                                    ]
+                                    rles = mask_api.frPyObjects(denorm, h, w)
+                                    mask = mask_api.merge(rles)
+                            elif (
+                                ann["geometry"]["type"] == "rectangle"
+                                and ann["geometry"]["vertices"]
+                            ):  # BBox
+                                if not isnan(ann["geometry"]["vertices"][0]):
+                                    denorm = denormalize([ann["geometry"]["vertices"]], h, w)
+                                    bbox = xyxy_to_xywh(denorm)
+                            elif (
+                                ann["geometry"]["type"] == "graph" and ann["geometry"]["vertices"]
+                            ):  # Keypoints
+                                print("Keypoints are not implemented yet")
+                            else:
+                                # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
+                                pass
+                        else:
+                            print("No geometry?")  # Ca peut etre un mask, ou 3d, trackink... etc.
+
+                        row['objects'].append(arrow_types.ObjectAnnotation(
+                                id=str(ann["id"]),
+                                view_id=view,
+                                bbox=bbox,
+                                mask=mask,
+                                is_group_of=bool(ann["iscrowd"]) if "iscrowd" in ann else None,
+                                category_id=category_ids[ann["category"]],
+                                category_name=ann["category"],
+                            ).dict())
+
+                    # print("row", row.keys(), row["id"], row["objects"])
                     # Return row
                     yield row
 
@@ -274,4 +334,3 @@ class LegacyPixanoLoader(DataLoader):
             # Save COCO json
             with open(export_dir / f"instances_{split_name}.json", "w") as f:
                 json.dump(coco_json, f)
-
