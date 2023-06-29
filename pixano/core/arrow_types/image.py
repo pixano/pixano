@@ -144,6 +144,20 @@ class Image:
         """
         return self.as_pillow().size
 
+    @staticmethod
+    def from_dict(dict: dict) -> "Image":
+        uri, bytes, preview_bytes, uri_prefix = None, None, None, None
+        if hasattr(dict, "uri"):
+            uri = dict["uri"]
+        if hasattr(dict, "bytes"):
+            bytes = dict["bytes"]
+        if hasattr(dict, "preview_bytes"):
+            preview_bytes = dict["preview_bytes"]
+        if hasattr(dict, "uri_prefix"):
+            uri_pefix = dict["uri_prefix"]
+
+        return Image(uri, bytes, preview_bytes, uri_pefix)
+
     def open(self) -> IO:
         """Open image
 
