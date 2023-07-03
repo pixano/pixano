@@ -57,7 +57,7 @@ jobs:
         pnpm i
         cd apps/explorer
         pnpm build
-        cc ../annotator
+        cd ../annotator
         pnpm build
         cd ../../..
 
