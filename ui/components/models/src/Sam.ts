@@ -22,7 +22,7 @@ export class SAM implements InteractiveImageSegmenter {
   // prediction threshold
   predictionThreshold = 0.0;
 
-  async init(modelWeights: ArrayBuffer | string) {
+  async init(modelWeights: string) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
     console.log("init sam model");
   }
@@ -151,11 +151,11 @@ export class SAM implements InteractiveImageSegmenter {
     };
   }
 
-  inputNames(): Array<string> {
+  inputNames(): Readonly<Array<string>> {
     return this.onnxModel.inputNames;
   }
 
-  outputNames(): Array<string> {
+  outputNames(): Readonly<Array<string>> {
     return this.onnxModel.outputNames;
   }
 
