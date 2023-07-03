@@ -6,17 +6,7 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    svelte(),
-    viteStaticCopy({
-      targets: [
-        {
-          src: "node_modules/onnxruntime-web/dist/*.wasm",
-          dest: ".",
-        },
-      ],
-    }),
-  ],
+  plugins: [svelte()],
   build: {
     outDir: "../../../pixano/apps/annotator/dist",
   },

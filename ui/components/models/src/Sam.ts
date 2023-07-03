@@ -11,6 +11,8 @@ import {
 import { maskDataToFortranArrayToRle } from "./mask_utils";
 import { generatePolygonSegments, convertSegmentsToSVG } from "./tracer";
 
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/";
+
 export class SAM implements InteractiveImageSegmenter {
   private onnxModel: ort.InferenceSession;
 
