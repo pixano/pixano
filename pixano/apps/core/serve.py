@@ -57,6 +57,14 @@ def _get_env() -> str:
 
 
 class PixanoApp:
+    """Pixano App
+
+    Attributes:
+        config (uvicorn.Config): App config
+        server (uvicorn.Server): App server
+        env (function): Run task function for running environment
+    """
+
     def __init__(
         self,
         library_dir: str,
@@ -65,7 +73,7 @@ class PixanoApp:
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
-        """Run Pixano app
+        """Initialize and run Pixano app
 
         Args:
             library_dir (str): Dataset library directory

@@ -35,13 +35,21 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
 
 
 class AnnotatorApp(PixanoApp):
+    """Pixano Annotator App
+
+    Attributes:
+        config (uvicorn.Config): App config
+        server (uvicorn.Server): App server
+        env (function): Run task function for running environment
+    """
+
     def __init__(
         self,
         library_dir: str,
         host: str = "127.0.0.1",
         port: int = 0,
     ) -> None:
-        """Initialize Pixano Explorer app
+        """Initialize and run Pixano Annotator app
 
         Args:
             library_dir (str): Dataset library directory

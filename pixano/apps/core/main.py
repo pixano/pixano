@@ -110,7 +110,7 @@ def load_dataset_stats(ds_id: str, settings: Settings) -> dict:
 
 
 def create_app(settings: Settings) -> FastAPI:
-    """Run explorer app in library
+    """Run Pixano app
 
     Args:
         settings (Settings): Dataset Library
