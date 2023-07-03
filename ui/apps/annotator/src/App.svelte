@@ -262,9 +262,8 @@
         await sam.init("/models/" + model_name);
         interactiveSegmenterModel.set(sam);
       } catch (e) {
-        console.error(e);
         alert(
-          `models/${model_name} not found in your dataset library!\n\nPlease refer the inference notebooks for information on how to export your model to ONNX`
+          `models/${model_name} was not found in your dataset library, or your internet connection is not working!\n\nPlease refer the inference notebooks for information on how to export your model to ONNX.`
         );
       }
     }
