@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 import glob
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 
 import pyarrow as pa
@@ -60,7 +60,7 @@ class ImageLoader(DataLoader):
         input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
-    ) -> Generator[dict]:
+    ) -> Iterator:
         """Process dataset row for import
 
         Args:
@@ -69,7 +69,7 @@ class ImageLoader(DataLoader):
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
-            Generator[dict]: Processed rows
+            Iterator: Processed rows
         """
 
         # Get images paths
