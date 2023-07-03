@@ -48,7 +48,7 @@ class DepthImage:
     def depth_map(self) -> np.ndarray:
         if self._depth_map is not None:
             return self._depth_map
-        return np.frombuffer(self._bytes, dtype=np.uint16).reshape(self._shape)
+        return np.frombuffer(self._bytes, dtype=np.float32).reshape(self._shape)
 
     @staticmethod
     def load_npy(path: str) -> "DepthImage":
@@ -68,7 +68,7 @@ class DepthImage:
         """Load depth image (16 bit) to instance DepthImage.
 
         Args:
-            path (str): path of the file to load. Work with .png and .npy
+            path (str): path of the file to load. Work with .png
 
         Returns:
             DepthImage: instance of DepthImage
@@ -103,14 +103,14 @@ class DepthImage:
 
         depth_n: np.ndarray = ((depth - min) / (max - min)) * 255
 
-        return DepthImage(depth_map=depth_n.astype(np.uint8))
+        return DepthImage(depth_map=depth_n.astype(np.uint8), shape=depth.shape)
 
     def to_dict(self) -> dict:
         return {"bytes": self.bytes, "shape": self._shape}
 
     def display(self):
         """display image as plt.figure object"""
-        plt.imshow(self.depth_map, cmap="gray", vmin=0, vmax=255)
+        plt.imshow(self.depth_map.astype(np.int8), cmap="gray", vmin=0, vmax=255)
         plt.axis("off")
         if self._shape is not None:
             plt.figure(figsize=self._shape)
