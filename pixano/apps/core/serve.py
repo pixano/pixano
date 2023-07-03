@@ -11,9 +11,9 @@
 #
 # http://www.cecill.info
 
+import asyncio
 from pathlib import Path
 
-import asyncio
 import fastapi
 import uvicorn
 from fastapi.responses import HTMLResponse
@@ -21,7 +21,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from pixano import notebook
-from pixano.apps.core import app, settings
+
+from .main import Settings, create_app
 
 
 def _get_env() -> str:
@@ -73,7 +74,8 @@ class PixanoApp:
         """
 
         templates = Jinja2Templates(directory=template_path)
-        settings.data_dir = Path(library_dir)
+        settings = Settings(data_dir=Path(library_dir))
+        app = create_app(settings)
 
         @app.get("/", response_class=HTMLResponse)
         def main(request: fastapi.Request):
