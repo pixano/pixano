@@ -11,13 +11,24 @@
 #
 # http://www.cecill.info
 
-from pathlib import Path
-
 import click
 import pkg_resources
 
 from pixano.apps.core import PixanoApp
 
+LOGO = """
+                             ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
+                           ▒▓▒                                       ▓
+              █▓          ▓▓                                         ▓
+                        ▒▓▒   ▒▓▓▓▓▓ ▒▓   ▓▒▒▓▓▓▓▒     ▒▓▓▓▓▓▒       ▓
+▓▓ ▓▓▓▓▓▓▒    ▓▒  ▒▓   ▓▒   ▒▓      ▓██   ██     ▓▒  ▒█▓     ▒█▓     ▓
+███      ▓▓   █▒   ▓█      ▒█▒       ██   █▒     ▒█  ▓▒        █     ▓
+██        █▒  █▒    ▒█▓     █▒       ██   █▒     ▒█  ▓▓        █     ▓
+██        █▒  █▒    ▓█▓█     █▒     ▓██   █▒     ▒█   ██     ▓█▒     ▓
+██▓▒    ▒▓▒   █▒   ▓▒  ▒█▓    ▒▓▓▓▓▓ ▒▓   ▓      ▒▓    ▒▓▓▓▓▓▒       ▓
+██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
+██                         █▓                                        ▓
+"""
 ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist/assets")
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 

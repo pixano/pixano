@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-
 import click
 import pkg_resources
 
