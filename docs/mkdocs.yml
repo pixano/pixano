@@ -35,8 +35,9 @@ nav:
 
   - "apps":
     - "core":
-      - "main": code/apps/core/main.md
       - "db_utils": code/apps/core/db_utils.md
+      - "main": code/apps/core/main.md
+      - "serve": code/apps/core/serve.md
     - "annotator": code/apps/annotator.md
     - "explorer": code/apps/explorer.md
 
