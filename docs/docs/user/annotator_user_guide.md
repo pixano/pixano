@@ -26,7 +26,7 @@ Click on any of them to open the annotation screen. It opens on the first elemen
 
 ## Annotation screen
 
-On the header's screen, a cross on the right allows to go back to previous screen. Or you can click on "Pixano Annotator"
+On the header's screen, a cross on the right allows to go back to previous screen, or you can click on "Pixano Annotator".
 The dataset name and element ID is displayed here. 
 
 A "Save" icon allows to save your changes. It is highlighted if there is changes to save. 
@@ -34,7 +34,7 @@ If you close this screen, or change the current element with some unsaved change
 
 On the left is the "Tools" panel.
 
-The image (or several in case of multiview dataset), annotations, and current inputs and are diplayed in the center.
+The image (or several in case of multiview dataset), annotations, and current inputs and are diplayed in the center, as well as the category selection panel when an input tool is selected.
 
 On the right, a panel with two tabs, "LABELS" and "DATASET" show annotations with some control, and list of elements, respectively.
 
