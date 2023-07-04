@@ -82,7 +82,7 @@ Click on any element to change current displayed element. If you have unsaved ch
 
 ## Annotate
 
-Currently the inputs are "Points" ('+' and '-'), and "Rectangle". Depending on the model used, it will allows to make prediction.
+Currently the inputs are "Points" ('+' and '-'), and "Rectangle". Depending on the model used, it will allow to make prediction.
 
 Points and Rectangle inputs can be used together.
 
