@@ -21,20 +21,24 @@
   import svg_expand from "../assets/icons/expand.svg";
 
   // Imports
-  import { onMount, afterUpdate, createEventDispatcher } from "svelte";
-  import DataPanel from "./DataPanel.svelte";
-  import NavigationToolbar from "./NavigationToolbar.svelte";
+  import { afterUpdate, createEventDispatcher, onMount } from "svelte";
+
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import CanvasToolbar from "../../../../components/Canvas2D/src/CanvasToolbar.svelte";
-  import { getColor } from "../../../../components/core/src/utils";
   import {
-    type Tool,
     createLabeledPointTool,
-    createRectangleTool,
-    createPanTool,
-    ToolType,
     createMultiModalTool,
+    createPanTool,
+    createRectangleTool,
+    type Tool,
+    ToolType,
   } from "../../../../components/Canvas2D/src/tools";
+  import { getColor } from "../../../../components/core/src/utils";
+  import { interactiveSegmenterModel } from "../stores";
+  import DataPanel from "./DataPanel.svelte";
+  import NavigationToolbar from "./NavigationToolbar.svelte";
+
+  import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import type {
     ItemData,
     MaskGT,
@@ -43,10 +47,8 @@
     ViewData,
     DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
-  import { type InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
 
-  import { interactiveSegmenterModel } from "../stores";
-
+  // Exports
   export let itemData: ItemData;
   export let embedding: any;
   export let classes;

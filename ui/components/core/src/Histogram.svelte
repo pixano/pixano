@@ -17,7 +17,7 @@
   // Imports
   import { VegaLite, type VisualizationSpec } from "svelte-vega";
 
-  // Represents an histogram (name, type, values)
+  // Exports
   export let hist;
 
   // Calculate histogram height

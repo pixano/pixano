@@ -13,6 +13,7 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 http://www.cecill.info
 */
 
+// Exports
 export { default as Canvas2D } from "./Canvas2D.svelte";
 export { default as CanvasToolbar } from "./CanvasToolbar.svelte";
 export * from "./tools";

@@ -1,19 +1,36 @@
+/**
+@copyright CEA-LIST/DIASI/SIALV/LVA (2023)
+@author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+@license CECILL-C
+
+This software is a collaborative computer program whose purpose is to
+generate and explore labeled data for computer vision applications.
+This software is governed by the CeCILL-C license under French law and
+abiding by the rules of distribution of free software. You can use, 
+modify and/ or redistribute the software under the terms of the CeCILL-C
+license as circulated by CEA, CNRS and INRIA at the following URL
+
+http://www.cecill.info
+*/
+
+// Imports
 import * as ort from "onnxruntime-web";
-// import * as ort from "onnxruntime-node";
+
 import {
+  Box,
   InteractiveImageSegmenter,
   InteractiveImageSegmenterInput,
   LabeledClick,
-  Box,
-  SegmentationResult,
   LabeledPointsTensor,
+  SegmentationResult,
 } from "./interactive_image_segmentation";
 import { maskDataToFortranArrayToRle } from "./mask_utils";
-import { generatePolygonSegments, convertSegmentsToSVG } from "./tracer";
+import { convertSegmentsToSVG, generatePolygonSegments } from "./tracer";
 
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";
 
+// Exports
 export class SAM implements InteractiveImageSegmenter {
   private onnxModel: ort.InferenceSession;
 

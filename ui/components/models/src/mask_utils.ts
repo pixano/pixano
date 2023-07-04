@@ -13,6 +13,7 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 http://www.cecill.info
 */
 
+// Exports
 /**
  * Converts mask array into RLE array using the fortran array
  * format where rows and columns are transposed. This is the

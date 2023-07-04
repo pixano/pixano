@@ -15,11 +15,22 @@
   */
 
   // Imports
-  import { onMount, afterUpdate } from "svelte";
-  import Header from "./lib/Header.svelte";
-  import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import Library from "../../../components/core/src/Library.svelte";
+  import * as ort from "onnxruntime-web";
+  import { onMount } from "svelte";
+
   import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import Library from "../../../components/core/src/Library.svelte";
+  import * as npyjs from "../../../components/models/src/npy";
+  import { SAM } from "../../../components/models/src/Sam";
+  import {
+    convertSegmentsToSVG,
+    generatePolygonSegments,
+  } from "../../../components/models/src/tracer";
+  import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
+  import * as api from "./lib/api";
+  import Header from "./lib/Header.svelte";
+  import { interactiveSegmenterModel } from "./stores";
+
   import type {
     ItemData,
     MaskGT,
@@ -28,19 +39,6 @@
     ViewData,
     DatabaseFeats,
   } from "../../../components/Canvas2D/src/interfaces";
-  import {
-    generatePolygonSegments,
-    convertSegmentsToSVG,
-  } from "../../../components/models/src/tracer";
-  import { SAM } from "../../../components/models/src/Sam";
-  import * as ort from "onnxruntime-web";
-  import * as npyjs from "../../../components/models/src/npy";
-
-  import { interactiveSegmenterModel } from "./stores";
-
-  import * as api from "./lib/api";
-  //import type { InteractiveImageSegmenter } from "../../../components/models/src/interactive_image_segmentation";
-  //import { MockInteractiveImageSegmenter } from "../../../tools/storybook/stories/components/canvas2d/mocks";
 
   // Dataset navigation
   let datasets = null;

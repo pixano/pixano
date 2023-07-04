@@ -15,10 +15,11 @@ http://www.cecill.info
 
 // Imports
 import "./app.css";
+
 import App from "./App.svelte";
 
+// Exports
 const app = new App({
   target: document.getElementById("app"),
 });
-
 export default app;

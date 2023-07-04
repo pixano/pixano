@@ -14,10 +14,13 @@
   http://www.cecill.info
   */
 
+  // Imports
   import { createEventDispatcher } from "svelte";
 
+  // Exports
   export let dataset: any;
   export let btn_label: string;
+
   const dispatch = createEventDispatcher();
 
   function handleClick() {

@@ -14,11 +14,13 @@
   http://www.cecill.info
   */
 
+  // Imports
   import { onMount, beforeUpdate, afterUpdate } from "svelte";
   import { createEventDispatcher } from "svelte";
   import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
   import * as Utils from "@pixano/core/src/utils";
 
+  // Exports
   export let features = null;
   export let annotations: Array<AnnotationsLabels>;
 

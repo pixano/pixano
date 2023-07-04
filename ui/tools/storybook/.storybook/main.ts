@@ -12,7 +12,11 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 
 http://www.cecill.info
 */
+
+// Imports
 import type { StorybookConfig } from "@storybook/svelte-vite";
+
+// Exports
 const config: StorybookConfig = {
   stories: [
     "../stories/**/*.mdx",

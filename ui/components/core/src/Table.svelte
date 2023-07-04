@@ -14,10 +14,12 @@
   http://www.cecill.info
   */
 
+  // Imports
   import { createEventDispatcher } from "svelte/internal";
   import TableCell from "./TableCell.svelte";
   import type { CellData } from "./cell_types";
 
+  // Exports
   export let featureNames: Array<any>;
   export let features: Array<Array<CellData>>;
 

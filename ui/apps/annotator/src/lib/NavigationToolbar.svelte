@@ -22,6 +22,7 @@
   import svg_save from "../assets/icons/save.svg";
   import svg_close from "../assets/icons/close.svg";
 
+  // Exports
   export let database: string;
   export let imageName: string;
   export let save_flag: boolean;

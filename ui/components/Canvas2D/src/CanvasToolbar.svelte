@@ -14,12 +14,14 @@
   http://www.cecill.info
   */
 
-  // Imports
+  // Assets
   import pixanoLogo from "../../../apps/annotator/src/assets/pixano.png";
+
+  // Imports
   import { createEventDispatcher } from "svelte";
   import { type Tool } from "./tools";
 
-  // Inputs
+  // Exports
   export let tools: Array<Tool> = [];
   export let selectedTool: Tool = null;
   export let handleCloseClick;

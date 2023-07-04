@@ -20,8 +20,10 @@
   import { Table, Histogram } from "@pixano/core";
   import { currentPage } from "../stores";
 
-  // Page navigation
+  // Exports
   export let dataset = null;
+
+  // Page navigation
   let itemsPerPage: number = 100;
   let datasetStats = null;
   let datasetItems = null;

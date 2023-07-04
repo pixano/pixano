@@ -21,8 +21,8 @@
   import { currentPage } from "../stores";
   import type { ItemData } from "../../../../components/Canvas2D/src/interfaces";
 
+  // Exports
   export let selectedDataset = null;
-
   export let selectedItem: ItemData;
 
   function goToLibrary() {

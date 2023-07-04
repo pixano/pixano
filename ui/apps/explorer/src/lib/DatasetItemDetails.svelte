@@ -14,11 +14,14 @@
   http://www.cecill.info
   */
 
-  import { afterUpdate, onMount } from "svelte";
-  import { createEventDispatcher } from "svelte";
-  import { getColor } from "../../../../components/core/src/utils";
+  // Imports
+  import { afterUpdate, createEventDispatcher, onMount } from "svelte";
+
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
+  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
+  import { getColor } from "../../../../components/core/src/utils";
   import AnnotationInspector from "./AnnotationInspector.svelte";
+
   import type {
     ItemData,
     MaskGT,
@@ -26,14 +29,13 @@
     AnnotationsLabels,
   } from "../../../../components/Canvas2D/src/interfaces";
 
-  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
-
+  // Exports
   export let itemData: ItemData;
   export let masksGT: Array<MaskGT>;
   export let bboxes: Array<BBox>;
   export let annotations: Array<AnnotationsLabels>;
-
   export let features = null;
+
   let panTool = createPanTool();
   let categoryColor;
 

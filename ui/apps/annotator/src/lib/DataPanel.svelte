@@ -21,12 +21,14 @@
   import svg_delete from "../assets/icons/delete.svg";
 
   // Imports
-  import { createEventDispatcher, afterUpdate } from "svelte";
+  import { afterUpdate, createEventDispatcher } from "svelte";
+
   import type {
     AnnotationsLabels,
     DatabaseFeats,
   } from "../../../../components/Canvas2D/src/interfaces";
 
+  // Exports
   export let annotations: Array<AnnotationsLabels>;
   export let dataset: DatabaseFeats = null;
   export let lastLoadedPage: number;

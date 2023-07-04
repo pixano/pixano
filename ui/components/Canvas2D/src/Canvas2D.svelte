@@ -1,26 +1,27 @@
 <script lang="ts">
   /**
-    @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-    @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-    @license CECILL-C
+  @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
+  @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+  @license CECILL-C
 
-    This software is a collaborative computer program whose purpose is to
-    generate and explore labeled data for computer vision applications.
-    This software is governed by the CeCILL-C license under French law and
-    abiding by the rules of distribution of free software. You can use, 
-    modify and/ or redistribute the software under the terms of the CeCILL-C
-    license as circulated by CEA, CNRS and INRIA at the following URL
+  This software is a collaborative computer program whose purpose is to
+  generate and explore labeled data for computer vision applications.
+  This software is governed by the CeCILL-C license under French law and
+  abiding by the rules of distribution of free software. You can use, 
+  modify and/ or redistribute the software under the terms of the CeCILL-C
+  license as circulated by CEA, CNRS and INRIA at the following URL
 
-    http://www.cecill.info
-    */
+  http://www.cecill.info
+  */
 
   // Imports
-  import { afterUpdate, onMount } from "svelte";
-  import { Stage, Layer, Group, Image as KonvaImage } from "svelte-konva";
   import Konva from "konva";
   import shortid from "shortid";
+  import { afterUpdate, onMount } from "svelte";
+  import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
-  import { ToolType, type PanTool } from "./tools";
+  import { type PanTool, ToolType } from "./tools";
+
   import type { Tool, LabeledPointTool, RectangleTool } from "./tools";
   import type {
     LabeledClick,
@@ -28,6 +29,16 @@
     InteractiveImageSegmenterOutput,
   } from "../../models/src/interactive_image_segmentation";
   import type { MaskGT, BBox, ViewData } from "./interfaces";
+
+  // Exports
+  export let embedding: any = null;
+  export let itemId: string;
+  export let views: Array<ViewData>;
+  export let masksGT: Array<MaskGT> | null;
+  export let bboxes: Array<BBox> | null;
+  export let selectedTool: Tool | null;
+  export let categoryColor = null;
+  export let prediction: InteractiveImageSegmenterOutput | null;
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;
@@ -37,22 +48,6 @@
 
   let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
   let timerId;
-
-  // Inputs
-  export let embedding: any = null;
-  export let itemId: string;
-  export let views: Array<ViewData>;
-
-  export let masksGT: Array<MaskGT> | null;
-  export let bboxes: Array<BBox> | null;
-
-  export let selectedTool: Tool | null;
-
-  // Function that maps an id to a color
-  export let categoryColor = null;
-
-  // Output
-  export let prediction: InteractiveImageSegmenterOutput | null;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;

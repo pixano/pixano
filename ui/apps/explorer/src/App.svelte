@@ -19,12 +19,18 @@
 
   // Imports
   import { onMount } from "svelte";
-  import { currentPage } from "./stores";
+
+  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import Library from "../../../components/core/src/Library.svelte";
+  import {
+    convertSegmentsToSVG,
+    generatePolygonSegments,
+  } from "../../../components/models/src/tracer";
+  import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
-  import * as api from "./lib/api";
-  import Library from "../../../components/core/src/Library.svelte";
-  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import { currentPage } from "./stores";
+
   import type {
     ItemData,
     MaskGT,
@@ -33,10 +39,6 @@
     AnnLabel,
     ViewData,
   } from "../../../components/Canvas2D/src/interfaces";
-  import {
-    generatePolygonSegments,
-    convertSegmentsToSVG,
-  } from "../../../components/models/src/tracer";
 
   // Dataset navigation
   let datasets = null;

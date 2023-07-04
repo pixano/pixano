@@ -20,6 +20,7 @@ import svg_point from "../../../apps/annotator/src/assets/icons/point.svg";
 import svg_box from "../../../apps/annotator/src/assets/icons/box.svg";
 import svg_pan from "../../../apps/annotator/src/assets/icons/pan.svg";
 
+// Exports
 export enum ToolType {
   LabeledPoint = "LABELED_POINT",
   Rectangle = "RECTANGLE",
