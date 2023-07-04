@@ -54,8 +54,8 @@
   export let masksGT: Array<MaskGT>;
   export let dbImages: DatabaseFeats;
   export let curPage: number;
-  export let handleCloseClick;
-  export let save_flag: boolean = false;
+
+  let save_flag: boolean = false;
 
   const dispatch = createEventDispatcher();
 
@@ -185,15 +185,27 @@
     save_flag = false;
   }
 
-  function handleImageSelectedChange(event) {
-    //dispatch("handleCloseClick");
+  function handleUnsavedChanges() {
     let val = true;
     if (save_flag) {
       val = confirm(
         "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
       );
     }
-    if (val == true) {
+    if (val) {
+      save_flag = false;
+    }
+    return val;
+  }
+
+  function handleCloseClick() {
+    if (handleUnsavedChanges()) {
+      dispatch("unselectItem");
+    }
+  }
+
+  function handleImageSelectedChange(event) {
+    if (handleUnsavedChanges()) {
       let new_views: Array<ViewData> = [];
       for (let view of event.detail.views) {
         new_views.push({
@@ -204,7 +216,6 @@
       itemData.views = new_views;
       itemData = itemData;
       dispatch("imageSelected", { id: event.detail.id });
-      save_flag = false;
     }
   }
 

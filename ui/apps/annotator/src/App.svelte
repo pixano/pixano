@@ -46,7 +46,6 @@
   let datasets = null;
   let selectedDataset = null;
   let curPage = 1;
-  let save_flag = false; //true if there is something to save
 
   let selectedItem: ItemData;
   let selectedItemEmbedding: any;
@@ -195,19 +194,12 @@
   }
 
   function unselectItem() {
-    let val = true;
-    if (save_flag) {
-      ("Warning: You have not saved your changes.\nDo you want to discard and continue ?");
-    }
-    if (val == true) {
-      selectedDataset = null;
-      selectedItem = null;
-      selectedItemEmbedding = null;
-      masksGT = [];
-      annotations = [];
-      classes = [];
-      save_flag = false;
-    }
+    selectedDataset = null;
+    selectedItem = null;
+    selectedItemEmbedding = null;
+    masksGT = [];
+    annotations = [];
+    classes = [];
   }
 
   function saveAnns(data) {
@@ -283,13 +275,12 @@
       {annotations}
       {masksGT}
       {classes}
-      handleCloseClick={unselectItem}
-      bind:save_flag
       {dbImages}
       {curPage}
       on:imageSelected={(event) => selectItem(event.detail)}
       on:loadNextPage={handleLoadNextPage}
       on:saveAnns={saveAnns}
+      on:unselectItem={unselectItem}
     />
   {/if}
 {:else}

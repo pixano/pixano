@@ -24,7 +24,7 @@
 
   export let database: string;
   export let imageName: string;
-  export let save_flag: boolean = false;
+  export let save_flag: boolean;
   export let handleCloseClick;
   export let handleSaveClick;
 </script>
