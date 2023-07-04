@@ -12,23 +12,19 @@
 # http://www.cecill.info
 
 import json
-from math import isnan
-from pycocotools import mask as mask_api
 from collections import defaultdict
 from collections.abc import Generator
+from io import BytesIO
+from math import isnan
 from pathlib import Path
 from urllib.parse import urlparse
-from io import BytesIO
-from PIL import Image
 
 import pyarrow as pa
+from PIL import Image
+from pycocotools import mask as mask_api
 
 from pixano.core import arrow_types
-from pixano.transforms import (
-    denormalize,
-    image_to_thumbnail,
-    xyxy_to_xywh
-)
+from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
 
 from .data_loader import DataLoader
 
@@ -63,7 +59,12 @@ class LegacyPixanoLoader(DataLoader):
         self.views = views
 
         # Initialize Data Loader
-        super().__init__(name, description, splits, [pa.field(view, arrow_types.ImageType()) for view in views])
+        super().__init__(
+            name,
+            description,
+            splits,
+            [pa.field(view, arrow_types.ImageType()) for view in views],
+        )
 
     def import_row(
         self,
@@ -75,7 +76,7 @@ class LegacyPixanoLoader(DataLoader):
 
         Args:
             input_dirs (dict[str, Path]): Input directory workspace
-                                          (image directories are read from Pixano json files given at init)
+            (image directories are read from Pixano json files given at init)
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
@@ -96,8 +97,9 @@ class LegacyPixanoLoader(DataLoader):
                     annotations[str(ann["timestamp"])].append(ann)
 
                 # Process rows
-                for im in sorted(pix_json["data"]["children"], key=lambda x: x["timestamp"]):
-
+                for im in sorted(
+                    pix_json["data"]["children"], key=lambda x: x["timestamp"]
+                ):
                     # Load image
                     file_name_uri = urlparse(im["path"])
                     if file_name_uri.scheme == "":
@@ -110,18 +112,20 @@ class LegacyPixanoLoader(DataLoader):
                     im_h = image.height
                     im_thumb = image_to_thumbnail(image)
 
-                    feats[str(im["timestamp"])].append({
-                        "viewId": view,
-                        "width": im_w,
-                        "height": im_h,
-                        "im_thumb": im_thumb,
-                        "im_uri": (
-                            f"image/{split}/{im_path.name}"
-                            if portable
-                            else im_path.absolute().as_uri()
-                        ),
-                        "anns": annotations[str(im["timestamp"])]
-                    })
+                    feats[str(im["timestamp"])].append(
+                        {
+                            "viewId": view,
+                            "width": im_w,
+                            "height": im_h,
+                            "im_thumb": im_thumb,
+                            "im_uri": (
+                                f"image/{split}/{im_path.name}"
+                                if portable
+                                else im_path.absolute().as_uri()
+                            ),
+                            "anns": annotations[str(im["timestamp"])],
+                        }
+                    )
 
         for timestamp in feats:
             # Fill row with ID, image
@@ -131,10 +135,12 @@ class LegacyPixanoLoader(DataLoader):
                 "split": split,
             }
             for f in feats[timestamp]:
-                row[f['viewId']] = arrow_types.Image(f['im_uri'], None, f['im_thumb']).to_dict()
+                row[f["viewId"]] = arrow_types.Image(
+                    f["im_uri"], None, f["im_thumb"]
+                ).to_dict()
 
                 # Fill row with list of image annotations
-                for ann in f['anns']:
+                for ann in f["anns"]:
                     # collect categories to build category ids
                     if ann["category"] not in category_ids:
                         category_ids[ann["category"]] = len(category_ids)
@@ -143,13 +149,22 @@ class LegacyPixanoLoader(DataLoader):
                     mask = None
 
                     if "geometry" in ann:
-                        if (ann["geometry"]["type"] == "polygon" and ann["geometry"]["vertices"]):
+                        if (
+                            ann["geometry"]["type"] == "polygon"
+                            and ann["geometry"]["vertices"]
+                        ):
                             # Polygon
                             # we have normalized coords, we must denorm before making RLE
                             if not isnan(ann["geometry"]["vertices"][0]):
                                 if len(ann["geometry"]["vertices"]) > 4:
-                                    denorm = denormalize(ann["geometry"]["vertices"], f['height'], f['width'])
-                                    rles = mask_api.frPyObjects([denorm], f['height'], f['width'])
+                                    denorm = denormalize(
+                                        ann["geometry"]["vertices"],
+                                        f["height"],
+                                        f["width"],
+                                    )
+                                    rles = mask_api.frPyObjects(
+                                        [denorm], f["height"], f["width"]
+                                    )
                                     mask = mask_api.merge(rles)
                                 else:
                                     print(
@@ -163,46 +178,49 @@ class LegacyPixanoLoader(DataLoader):
                             # MultiPolygon
                             if not isnan(ann["geometry"]["mvertices"][0][0]):
                                 denorm = [
-                                    denormalize(poly, f['height'], f['width'])
+                                    denormalize(poly, f["height"], f["width"])
                                     for poly in ann["geometry"]["mvertices"]
                                 ]
-                                rles = mask_api.frPyObjects(denorm, f['height'], f['width'])
+                                rles = mask_api.frPyObjects(
+                                    denorm, f["height"], f["width"]
+                                )
                                 mask = mask_api.merge(rles)
                         elif (
                             ann["geometry"]["type"] == "rectangle"
                             and ann["geometry"]["vertices"]
                         ):  # BBox
                             if not isnan(ann["geometry"]["vertices"][0]):
-                                denorm = denormalize([ann["geometry"]["vertices"]], f['height'], f['width'])
+                                denorm = denormalize(
+                                    [ann["geometry"]["vertices"]],
+                                    f["height"],
+                                    f["width"],
+                                )
                                 bbox = xyxy_to_xywh(denorm)
                         elif (
-                            ann["geometry"]["type"] == "graph" and ann["geometry"]["vertices"]
+                            ann["geometry"]["type"] == "graph"
+                            and ann["geometry"]["vertices"]
                         ):  # Keypoints
                             print("Keypoints are not implemented yet")
                         else:
                             # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
                             pass
                     else:
-                        print("No geometry?")  # Ca peut etre un mask, ou 3d, trackink... etc.
+                        # Ca peut etre un mask, ou 3d, trackink... etc.
+                        print("No geometry?")
 
-                    row['objects'].append(arrow_types.ObjectAnnotation(
+                    row["objects"].append(
+                        arrow_types.ObjectAnnotation(
                             id=str(ann["id"]),
-                            view_id=f['viewId'],
+                            view_id=f["viewId"],
                             bbox=bbox,
                             mask=mask,
-                            is_group_of=bool(ann["iscrowd"]) if "iscrowd" in ann else None,
+                            is_group_of=bool(ann["iscrowd"])
+                            if "iscrowd" in ann
+                            else None,
                             category_id=category_ids[ann["category"]],
                             category_name=ann["category"],
-                        ).dict())
+                        ).dict()
+                    )
 
             # Return row
             yield row
-
-    def export_dataset(self, input_dir: Path, export_dir: Path):
-        """Export dataset back to original format
-
-        Args:
-            input_dir (Path): Input directory
-            export_dir (Path): Export directory
-        """
-        print("Export not implemented yet")
