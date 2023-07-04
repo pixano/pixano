@@ -15,9 +15,11 @@ from typing import Optional
 
 import pyarrow as pa
 
+from pixano.core.arrow_types.utils import convert_field, fields
+
 from .bbox import BBox, BBoxType
-from .pose import Pose, PoseType
 from .compressedRLE import CompressedRLE, CompressedRLEType
+from .pose import Pose, PoseType
 
 # ------------------------------------------------
 #             Python type
@@ -175,49 +177,20 @@ class ObjectAnnotationArray(pa.ExtensionArray):
     """Class to use pa.array for ObjectAnnotationType instance"""
 
     @staticmethod
-    def from_list_to_dict(annotation_list: list[ObjectAnnotation]) -> dict:
-        """Tool function to trasnform list of ObjAnn to theirs correspondings dicts
+    def from_list(annotation_list: list[ObjectAnnotation]):
+        ObjAnn_fields = fields(ObjectAnnotationType)
+        arrays = []
 
-        Args:
-            annotation_list (list[ObjectAnnotation]): _description_
-
-        Returns:
-            dict: _description_
-        """
-
-        type_mapping = {
-            BBox: BBoxType(),
-            Pose: PoseType(),
-            CompressedRLE: CompressedRLEType(),
-            ObjectAnnotation: ObjectAnnotationType(),
-        }
-
-        result_dict = {}
-
-        if len(annotation_list) == 0:
-            return result_dict
-
-        attributes = annotation_list[0].__dict__.keys()
-
-        for attr in attributes:
-            attr_values = [getattr(annotation, attr) for annotation in annotation_list]
-
-            if isinstance(attr_values[0], tuple(type_mapping.keys())):
-                attr_type = type_mapping[type(attr_values[0])]
-                attr_values = pa.array(
-                    [value.to_dict() for value in attr_values], type=attr_type
+        for field in ObjAnn_fields:
+            arrays.append(
+                convert_field(
+                    field.name,
+                    field.type,
+                    [obj.to_dict()[field.name] for obj in annotation_list],
                 )
-
-            result_dict[attr] = attr_values
-
-        return result_dict
-
-    @classmethod
-    def from_list(cls, annotation_list: list[ObjectAnnotation]):
-        attributes_dict = ObjectAnnotationArray.from_list_to_dict(annotation_list)
-        return pa.StructArray.from_arrays(
-            list(attributes_dict.values()), names=list(attributes_dict.keys())
-        )
+            )
+        storage = pa.StructArray.from_arrays(arrays, fields=ObjAnn_fields)
+        return pa.ExtensionArray.from_storage(ObjectAnnotationType(), storage)
 
 
 def is_objectAnnotation_type(t: pa.DataType) -> bool:
