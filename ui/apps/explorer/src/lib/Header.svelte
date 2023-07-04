@@ -16,6 +16,8 @@
 
   // Assets
   import pixanoLogo from "../assets/pixano.png";
+  import svg_next from "../assets/icons/next.svg";
+  import svg_close from "../assets/icons/close.svg";
 
   // Imports
   import { currentPage } from "../stores";
@@ -35,38 +37,35 @@
 <!-- Header -->
 <header class="w-full fixed">
   <div
-    class="h-20 py-4 px-4 flex justify-start items-center bg-white border-b-2 dark:bg-zinc-800 dark:border-zinc-700"
+    class="h-20 py-4 px-4 flex justify-start items-center shrink-0 bg-white border-b-2 dark:bg-zinc-800 dark:border-zinc-700"
   >
     <!-- Logo & app name -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div
-      class="flex space-x-4 cursor-pointer hover:text-rose-800 dark:hover:text-rose-300"
-      on:click={goToLibrary}
-    >
-      <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-      <span class="text-3xl font-bold transition-colors">
-        Pixano Explorer
-      </span>
-    </div>
-    {#if selectedDataset}
-      <span
-        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300
-        dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600"
+    <div class="flex items-center grow space-x-2 font-bold text-3xl">
+      <button
+        class="cursor-pointer flex items-center space-x-2 hover:text-rose-800 dark:hover:text-rose-300"
+        on:click={goToLibrary}
       >
-        {selectedDataset.name}
-      </span>
-    {/if}
-
-    <!-- Navigation -->
-    <div class="mr-4 flex-grow text-right">
+        <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
+        <span class="transition-colors"> Pixano Explorer </span>
+      </button>
       {#if selectedDataset}
-        <button
-          class="p-2 transition-colors hover:text-rose-800 dark:hover:text-rose-300"
-          on:click={goToLibrary}
-        >
-          Back to Library
-        </button>
+        <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
+        <span>
+          {selectedDataset.name}
+        </span>
       {/if}
     </div>
+
+    <!-- Navigation -->
+    {#if selectedDataset}
+      <button class="w-30 pr-4 flex justify-end" on:click={goToLibrary}>
+        <img
+          src={svg_close}
+          alt="icon"
+          class="h-8 w-8 cursor-pointer opacity-75"
+        />
+      </button>
+    {/if}
   </div>
 </header>

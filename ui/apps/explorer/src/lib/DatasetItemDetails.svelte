@@ -14,6 +14,9 @@
   http://www.cecill.info
   */
 
+  // Assets
+  import svg_close from "../assets/icons/close.svg";
+
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
@@ -127,19 +130,8 @@
   {/if}
 
   <!-- Close button -->
-  <button class="absolute top-0 right-0 p-2 z-10" on:click={handleCloseClick}>
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="28"
-      height="28"
-      viewBox="0 0 28 28"
-      class=" fill-rose-600 hover:fill-rose-400"
-    >
-      <path
-        class="transition-colors"
-        d="M12 10.59l4.95-4.95c0.39-0.39 1.02-0.39 1.41 0l1.41 1.41c0.39 0.39 0.39 1.02 0 1.41l-4.95 4.95l4.95 4.95c0.39 0.39 0.39 1.02 0 1.41l-1.41 1.41c-0.39 0.39-1.02 0.39-1.41 0l-4.95-4.95l-4.95 4.95c-0.39 0.39-1.02 0.39-1.41 0l-1.41-1.41c-0.39-0.39-0.39-1.02 0-1.41l4.95-4.95l-4.95-4.95c-0.39-0.39-0.39-1.02 0-1.41l1.41-1.41c0.39-0.39 1.02-0.39 1.41 0l4.95 4.95z"
-      />
-    </svg>
+  <button class="absolute top-4 right-6 p-2 z-10" on:click={handleCloseClick}>
+    <img src={svg_close} alt="icon" class="h-8 w-8 cursor-pointer opacity-75" />
   </button>
 </div>
 <!-- Pixano Explorer footer -->

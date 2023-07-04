@@ -18,7 +18,6 @@
   import svg_plus from "../assets/icons/plus.svg";
   import svg_minus from "../assets/icons/minus.svg";
   import svg_ok from "../assets/icons/ok.svg";
-  import svg_expand from "../assets/icons/expand.svg";
 
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
@@ -301,7 +300,7 @@
         <input
           type="text"
           placeholder="New Class"
-          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-[url({svg_expand})] bg-no-repeat bg-right"
+          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-no-repeat bg-right"
           bind:value={className}
         />
 

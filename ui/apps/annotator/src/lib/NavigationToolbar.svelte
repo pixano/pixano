@@ -15,10 +15,7 @@
   */
 
   // Assets
-  import svg_image from "../assets/icons/image.svg";
   import svg_next from "../assets/icons/next.svg";
-  import svg_zoomout from "../assets/icons/zoom_out.svg";
-  import svg_zoomin from "../assets/icons/zoom_in.svg";
   import svg_save from "../assets/icons/save.svg";
   import svg_close from "../assets/icons/close.svg";
 
@@ -31,36 +28,37 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="h-20 flex items-center shrink-0">
-  <div class="flex items-center grow space-x-2 font-bold text-2xl">
-    <img
-      src={svg_image}
-      alt="icon"
-      class="h-6 w-6 opacity-40 cursor-pointer"
+<div
+  class="h-20 py-4 px-4 flex justify-start items-center shrink-0 bg-white border-b-2 border-white dark:bg-zinc-800 dark:border-zinc-800"
+>
+  <div class="flex items-center grow space-x-2 font-bold text-3xl">
+    <button
+      class="cursor-pointer flex items-center space-x-2 hover:text-rose-800 dark:hover:text-rose-300"
       on:click={handleCloseClick}
-    />
-    <span class="cursor-pointer" on:click={handleCloseClick}>
+    >
+      <span class="transition-colors"> Pixano Annotator</span>
+    </button>
+    <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
+    <span>
       {database}
     </span>
-    <img src={svg_next} alt="icon" class="h-6 w-6 opacity-40" />
+    <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
     <span>
       {imageName}
     </span>
   </div>
-  <!-- TODO: unused zoom buttons
-  <div class="pr-4 flex space-x-4">
-    <img src={svg_zoomout} alt="icon" class="h-8 w-8 cursor-pointer" />
-    <img src={svg_zoomin} alt="icon" class="h-8 w-8 cursor-pointer" />
-  </div> -->
-  <div
-    class="w-30 h-full gap-y-px pt-6 pl-4 pr-4 border-b-4 flex justify-end {save_flag
-      ? 'bg-rose-100 border-rose-900'
-      : 'border-transparent'}"
-    on:click={handleSaveClick}
-  >
-    <img src={svg_save} alt="icon" class="h-8 w-8 cursor-pointer" />
-  </div>
-  <div class="w-30 pr-4 flex justify-end" on:click={handleCloseClick}>
-    <img src={svg_close} alt="icon" class="h-8 w-8 cursor-pointer" />
-  </div>
+
+  <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveClick}>
+    <img
+      src={svg_save}
+      alt="icon"
+      class="h-8 w-8 cursor-pointer cursor-pointer opacity-75"
+      style={save_flag
+        ? "background-color: #ffe4e6; box-shadow: 0px 0px 5px 5px #ffe4e6;"
+        : ""}
+    />
+  </button>
+  <button class="w-30 pr-4 flex justify-end" on:click={handleCloseClick}>
+    <img src={svg_close} alt="icon" class="h-8 w-8 cursor-pointer opacity-75" />
+  </button>
 </div>

@@ -198,7 +198,8 @@
               <img
                 src={svg_expand}
                 alt="expand"
-                class="h-6 w-6 {!view['opened'] ? '-rotate-90' : ''}"
+                class="h-6 w-6 opacity-50
+                {!view['opened'] ? '-rotate-90' : ''}"
               />
               <span class="grow ml-3 font-bold text-gray-900">
                 {view.view_name}
@@ -223,7 +224,7 @@
                   : ''}"
               >
                 <img
-                  src={view["visible"] ? svg_visible : svg_invisible}
+                  src={group["visible"] ? svg_visible : svg_invisible}
                   alt="visible"
                   class="h-6 w-6 opacity-50 cursor-pointer"
                   on:click={() => handleGroupVisibility(group)}
@@ -235,7 +236,8 @@
                   <img
                     src={svg_expand}
                     alt="expand"
-                    class="h-6 w-6 {!group['opened'] ? '-rotate-90' : ''}"
+                    class="h-6 w-6 opacity-50
+                    {!group['opened'] ? '-rotate-90' : ''}"
                   />
                   <span class="grow ml-3 font-bold text-gray-900">
                     <button
