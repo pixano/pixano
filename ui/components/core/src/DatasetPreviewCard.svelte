@@ -37,7 +37,7 @@
 >
   <!-- Dataset Infos -->
   <div class="h-1/5 px-4 flex flex-col justify-center  group">
-    <h3 class="text-lg font-heavy overflow-clip text-zinc-900 dark:text-zinc-300">
+    <h3 class="text-lg font-heavy truncate text-zinc-900 dark:text-zinc-300">
       {dataset.name}
     </h3>
     <p class="text-sm text-zinc-500">
