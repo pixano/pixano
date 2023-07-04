@@ -7,6 +7,12 @@ module.exports = {
     "../../../ui/components/core/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
-  theme: {},
+  theme: {
+    extend: {
+      fontFamily: {
+        poppins: ["Poppins", "sans-serif"],
+      },
+    },
+  },
   plugins: [],
 };

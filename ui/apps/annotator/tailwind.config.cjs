@@ -7,6 +7,12 @@ module.exports = {
     "../../../ui/components/Canvas2D/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
-  theme: {},
+  theme: {
+    extend: {
+      fontFamily: {
+        poppins: ["Poppins", "sans-serif"],
+      },
+    },
+  },
   plugins: [],
 };
