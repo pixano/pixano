@@ -16,7 +16,7 @@
 
   // Imports
   import * as ort from "onnxruntime-web";
-  import { onMount } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
 
   import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
@@ -47,6 +47,7 @@
 
   let selectedItem: ItemData;
   let selectedItemEmbedding: any;
+  let save_flag: boolean = false;
 
   let masksGT: Array<MaskGT> = [];
   let annotations: Array<AnnotationsLabels> = [];
@@ -55,7 +56,8 @@
   let dbImages: DatabaseFeats = null;
 
   let sam = new SAM();
-  //let mock = new MockInteractiveImageSegmenter();
+
+  const dispatch = createEventDispatcher();
 
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
@@ -192,20 +194,22 @@
   }
 
   function unselectItem() {
-    selectedDataset = null;
-    selectedItem = null;
-    selectedItemEmbedding = null;
-    masksGT = [];
-    annotations = [];
-    classes = [];
+    if (handleUnsavedChanges()) {
+      selectedDataset = null;
+      selectedItem = null;
+      selectedItemEmbedding = null;
+      masksGT = [];
+      annotations = [];
+      classes = [];
+    }
   }
 
-  function saveAnns(data) {
+  function saveAnns(annotations, masksGT) {
     console.log("App - save annotations");
     //format annotation data for export
     let anns = [];
-    for (let mask of data.detail.masks) {
-      const mask_class = data.detail.anns.find(
+    for (let mask of masksGT) {
+      const mask_class = annotations.find(
         (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
       );
       let ann = {
@@ -230,6 +234,28 @@
       //end of dataset : reset last page
       curPage = curPage - 1;
     }
+  }
+
+  function handleSaveClick() {
+    saveAnns(annotations, masksGT);
+    save_flag = false;
+  }
+
+  function handleUnsavedChanges() {
+    let val = true;
+    if (save_flag) {
+      val = confirm(
+        "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
+      );
+    }
+    if (val) {
+      save_flag = false;
+    }
+    return val;
+  }
+
+  function enableSaveFlag() {
+    save_flag = true;
   }
 
   onMount(async () => {
@@ -261,28 +287,49 @@
 </script>
 
 {#if !datasets}
-  <Header bind:selectedDataset bind:selectedItem />
+  <Header
+    bind:selectedDataset
+    bind:selectedItem
+    {save_flag}
+    on:saveclick={handleSaveClick}
+    on:closeclick={unselectItem}
+  />
   <div class="pt-20">
     <EmptyLibrary />
   </div>
 {:else if selectedDataset}
+  <Header
+    bind:selectedDataset
+    bind:selectedItem
+    {save_flag}
+    on:saveclick={handleSaveClick}
+    on:closeclick={unselectItem}
+  />
   {#if selectedItem}
-    <AnnotationWorkspace
-      itemData={selectedItem}
-      embedding={selectedItemEmbedding}
-      {annotations}
-      {masksGT}
-      {classes}
-      {dbImages}
-      {curPage}
-      on:imageSelected={(event) => selectItem(event.detail)}
-      on:loadNextPage={handleLoadNextPage}
-      on:saveAnns={saveAnns}
-      on:unselectItem={unselectItem}
-    />
+    <div class="pt-20">
+      <AnnotationWorkspace
+        itemData={selectedItem}
+        embedding={selectedItemEmbedding}
+        bind:annotations
+        bind:masksGT
+        {classes}
+        {dbImages}
+        {curPage}
+        {handleUnsavedChanges}
+        on:imageSelected={(event) => selectItem(event.detail)}
+        on:loadNextPage={handleLoadNextPage}
+        on:enableSaveFlag={enableSaveFlag}
+      />
+    </div>
   {/if}
 {:else}
-  <Header bind:selectedDataset bind:selectedItem />
+  <Header
+    bind:selectedDataset
+    bind:selectedItem
+    {save_flag}
+    on:saveclick={handleSaveClick}
+    on:closeclick={unselectItem}
+  />
   <div class="pt-20">
     <Library {datasets} btn_label="Annotate" on:datasetclick={selectDataset} />
   </div>

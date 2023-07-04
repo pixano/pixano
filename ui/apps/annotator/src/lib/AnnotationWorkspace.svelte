@@ -35,7 +35,6 @@
   import { getColor } from "../../../../components/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
   import DataPanel from "./DataPanel.svelte";
-  import NavigationToolbar from "./NavigationToolbar.svelte";
 
   import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import type {
@@ -55,8 +54,7 @@
   export let masksGT: Array<MaskGT>;
   export let dbImages: DatabaseFeats;
   export let curPage: number;
-
-  let save_flag: boolean = false;
+  export let handleUnsavedChanges;
 
   const dispatch = createEventDispatcher();
 
@@ -177,31 +175,7 @@
       prediction.catId = predictionClass.category_id;
       prediction.validated = true;
 
-      save_flag = true;
-    }
-  }
-
-  function handleSaveClick() {
-    dispatch("saveAnns", { anns: annotations, masks: masksGT });
-    save_flag = false;
-  }
-
-  function handleUnsavedChanges() {
-    let val = true;
-    if (save_flag) {
-      val = confirm(
-        "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
-      );
-    }
-    if (val) {
-      save_flag = false;
-    }
-    return val;
-  }
-
-  function handleCloseClick() {
-    if (handleUnsavedChanges()) {
-      dispatch("unselectItem");
+      dispatch("enableSaveFlag");
     }
   }
 
@@ -245,7 +219,7 @@
       masksGT = masksGT.filter((mask) => mask.id !== detailId);
     }
 
-    save_flag = true;
+    dispatch("enableSaveFlag");
 
     //hack svelte to reflect changes
     annotations = annotations;
@@ -354,17 +328,9 @@
   <CanvasToolbar
     tools={annotationTools}
     bind:selectedTool={selectedAnnotationTool}
-    {handleCloseClick}
     on:toolSelected={handleAnnotationToolChange}
   />
   <div class="flex flex-col grow">
-    <NavigationToolbar
-      database={itemData.dbName}
-      imageName={itemData.id}
-      {save_flag}
-      {handleCloseClick}
-      {handleSaveClick}
-    />
     <div class="flex grow">
       <Canvas2D
         {embedding}
