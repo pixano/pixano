@@ -45,3 +45,7 @@ explorer.display()
 From the Explorer homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
 Simply click on one of them to open it and you will be able to see the dataset statistics if they have been computed, and browse the images from the list to check their annotations.
+
+## Explorer User Guide
+
+The [Pixano Explorer User Guide](../../../docs/docs/user/explorer_user_guide.md)
