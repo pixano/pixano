@@ -174,37 +174,26 @@
   });
 </script>
 
-{#if !datasets}
-  <Header bind:selectedDataset bind:selectedItem />
-  <div class="pt-20">
+<Header bind:selectedDataset bind:selectedItem on:closeclick={unselectItem} />
+<div class="pt-20">
+  {#if datasets}
+    {#if selectedDataset}
+      {#if selectedItem}
+        <DatasetItemDetails
+          itemData={selectedItem}
+          features={itemDetails}
+          {annotations}
+          {masksGT}
+          {bboxes}
+          on:closeclick={unselectItem}
+        />
+      {:else}
+        <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
+      {/if}
+    {:else}
+      <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
+    {/if}
+  {:else}
     <EmptyLibrary />
-  </div>
-{:else if selectedDataset}
-  {#if !showDetailsPage}
-    <Header bind:selectedDataset bind:selectedItem />
-    <div class="pt-20">
-      <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
-    </div>
-  {:else if selectedItem}
-    <Header
-      bind:selectedDataset
-      bind:selectedItem
-      on:closeclick={unselectItem}
-    />
-    <div class="pt-20">
-      <DatasetItemDetails
-        itemData={selectedItem}
-        features={itemDetails}
-        {annotations}
-        {masksGT}
-        {bboxes}
-        on:closeclick={unselectItem}
-      />
-    </div>
   {/if}
-{:else}
-  <Header bind:selectedDataset bind:selectedItem />
-  <div class="pt-20">
-    <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
-  </div>
-{/if}
+</div>

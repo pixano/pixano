@@ -286,27 +286,16 @@
   });
 </script>
 
-{#if !datasets}
-  <Header
-    bind:selectedDataset
-    bind:selectedItem
-    {save_flag}
-    on:saveclick={handleSaveClick}
-    on:closeclick={unselectItem}
-  />
-  <div class="pt-20">
-    <EmptyLibrary />
-  </div>
-{:else if selectedDataset}
-  <Header
-    bind:selectedDataset
-    bind:selectedItem
-    {save_flag}
-    on:saveclick={handleSaveClick}
-    on:closeclick={unselectItem}
-  />
-  {#if selectedItem}
-    <div class="pt-20">
+<Header
+  bind:selectedDataset
+  bind:selectedItem
+  {save_flag}
+  on:saveclick={handleSaveClick}
+  on:closeclick={unselectItem}
+/>
+<div class="pt-20">
+  {#if datasets}
+    {#if selectedItem}
       <AnnotationWorkspace
         itemData={selectedItem}
         embedding={selectedItemEmbedding}
@@ -320,17 +309,14 @@
         on:loadNextPage={handleLoadNextPage}
         on:enableSaveFlag={enableSaveFlag}
       />
-    </div>
+    {:else}
+      <Library
+        {datasets}
+        btn_label="Annotate"
+        on:datasetclick={selectDataset}
+      />
+    {/if}
+  {:else}
+    <EmptyLibrary />
   {/if}
-{:else}
-  <Header
-    bind:selectedDataset
-    bind:selectedItem
-    {save_flag}
-    on:saveclick={handleSaveClick}
-    on:closeclick={unselectItem}
-  />
-  <div class="pt-20">
-    <Library {datasets} btn_label="Annotate" on:datasetclick={selectDataset} />
-  </div>
-{/if}
+</div>
