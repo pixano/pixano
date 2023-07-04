@@ -14,9 +14,6 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import pixanoLogo from "./assets/pixano.png";
-
   // Imports
   import { onMount } from "svelte";
 
@@ -29,7 +26,7 @@
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
-  import { currentPage } from "./stores";
+  import Header from "./lib/Header.svelte";
 
   import type {
     ItemData,
@@ -164,12 +161,6 @@
     console.log("selectItem Done", masksGT, bboxes, annotations);
   }
 
-  function goToLibrary() {
-    selectedDataset = null;
-    selectedItem = null;
-    currentPage.update((n) => 1);
-  }
-
   function unselectItem() {
     showDetailsPage = false;
     selectedItem = null;
@@ -183,51 +174,17 @@
   });
 </script>
 
-<!-- Header -->
-<header class="w-full fixed">
-  <div
-    class="h-20 py-4 px-4 flex justify-start items-center bg-white border-b-2 dark:bg-zinc-800 dark:border-zinc-700"
-  >
-    <!-- Logo & app name -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div
-      class="flex space-x-4 cursor-pointer hover:text-rose-800 dark:hover:text-rose-300"
-      on:click={goToLibrary}
-    >
-      <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-      <span class="text-3xl font-bold transition-colors">
-        Pixano Explorer
-      </span>
-    </div>
-    {#if selectedDataset}
-      <span
-        class="ml-8 px-2 py-1 flex items-center justify-center bg-zinc-100 text-zinc-600 border rounded-md border-zinc-300
-        dark:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-600"
-      >
-        {selectedDataset.name}
-      </span>
-    {/if}
-
-    <!-- Navigation -->
-    <div class="mr-4 flex-grow text-right">
-      {#if selectedDataset}
-        <button
-          class="p-2 transition-colors hover:text-rose-800 dark:hover:text-rose-300"
-          on:click={goToLibrary}>Back to Library</button
-        >
-      {/if}
-    </div>
-  </div>
-</header>
-
-<!-- Page offset for header -->
-<div class="pt-20" />
-
 {#if !datasets}
-  <EmptyLibrary />
+  <Header bind:selectedDataset bind:selectedItem />
+  <div class="pt-20">
+    <EmptyLibrary />
+  </div>
 {:else if selectedDataset}
   {#if !showDetailsPage}
-    <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
+    <Header bind:selectedDataset bind:selectedItem />
+    <div class="pt-20">
+      <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
+    </div>
   {:else if selectedItem}
     <DatasetItemDetails
       itemData={selectedItem}
@@ -239,5 +196,8 @@
     />
   {/if}
 {:else}
-  <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
+  <Header bind:selectedDataset bind:selectedItem />
+  <div class="pt-20">
+    <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
+  </div>
 {/if}
