@@ -265,6 +265,33 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="flex h-full w-full">
+  <Canvas2D
+    {embedding}
+    itemId={itemData.id}
+    views={itemData.views}
+    selectedTool={selectedAnnotationTool}
+    {categoryColor}
+    bind:prediction
+    bind:masksGT
+    bboxes={null}
+  />
+  <CanvasToolbar
+    tools={annotationTools}
+    bind:selectedTool={selectedAnnotationTool}
+    on:toolSelected={handleAnnotationToolChange}
+  />
+  {#if annotations}
+    <DataPanel
+      bind:annotations
+      dataset={dbImages}
+      lastLoadedPage={curPage}
+      {categoryColor}
+      on:imageSelected={handleImageSelectedChange}
+      on:itemDeleted={handleItemDeleted}
+      on:toggleVisibility={handleVisibilityChange}
+      on:loadNextPage={handleLoadNextPage}
+    />
+  {/if}
   {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
     <div
       id="point-modal"
@@ -325,37 +352,6 @@
       />
     </div>
   {/if}
-  <CanvasToolbar
-    tools={annotationTools}
-    bind:selectedTool={selectedAnnotationTool}
-    on:toolSelected={handleAnnotationToolChange}
-  />
-  <div class="flex flex-col grow">
-    <div class="flex grow">
-      <Canvas2D
-        {embedding}
-        itemId={itemData.id}
-        views={itemData.views}
-        selectedTool={selectedAnnotationTool}
-        {categoryColor}
-        bind:prediction
-        bind:masksGT
-        bboxes={null}
-      />
-      {#if annotations}
-        <DataPanel
-          bind:annotations
-          dataset={dbImages}
-          lastLoadedPage={curPage}
-          {categoryColor}
-          on:imageSelected={handleImageSelectedChange}
-          on:itemDeleted={handleItemDeleted}
-          on:toggleVisibility={handleVisibilityChange}
-          on:loadNextPage={handleLoadNextPage}
-        />
-      {/if}
-    </div>
-  </div>
 </div>
 
 <!-- Pixano Annotator footer -->

@@ -33,12 +33,15 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="w-20 shrink-0">
-  <div class="mt-4 flex flex-col items-center">
+<div
+  class="absolute w-24 top-1/2 -translate-y-1/2 left-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow
+    dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500 shadow-xl"
+>
+  <div class="flex flex-col items-center">
     {#each tools as tool}
       {#if tool["modes"]}
         <div
-          class="relative group w-full border-r-4 {tool['modes'].includes(
+          class="relative group w-full border-b-2 {tool['modes'].includes(
             selectedTool
           )
             ? 'bg-rose-100 border-rose-900'
@@ -72,7 +75,7 @@
         </div>
       {:else}
         <div
-          class="w-full border-r-4 cursor-pointer {selectedTool === tool
+          class="w-full border-b-2 cursor-pointer {selectedTool === tool
             ? 'bg-rose-100 border-rose-900'
             : 'hover:bg-rose-50 border-transparent'}"
           on:click={() => selectTool(tool)}
@@ -81,6 +84,5 @@
         </div>
       {/if}
     {/each}
-    <div class="mt-3 w-10 border" />
   </div>
 </div>

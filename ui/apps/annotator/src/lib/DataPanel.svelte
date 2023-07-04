@@ -149,11 +149,14 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="w-80 shrink-0 bg-white">
-  <div class="h-12 flex items-center justify-evenly">
+<div
+  class="absolute h-4/6 w-64 top-1/2 -translate-y-1/2 right-6 bg-white text-zinc-900 border rounded-lg shadow
+    dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
+>
+  <div class="h-12 fixed w-full flex items-center justify-evenly">
     <span
-      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
-      'labels'
+      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tl-lg
+      {activeTab == 'labels'
         ? 'bg-rose-100 border-rose-900 text-rose-900'
         : 'bg-zinc-100 text-zinc-500'}"
       on:click={() => {
@@ -163,8 +166,8 @@
       Labels
     </span>
     <span
-      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer {activeTab ==
-      'database'
+      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tr-lg
+      {activeTab == 'database'
         ? 'bg-rose-100 border-rose-900 text-rose-900'
         : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}"
       on:click={() => {
