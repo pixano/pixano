@@ -347,8 +347,8 @@
 
     // Create a label object
     const label = new Konva.Label({
-      x: rect_x,
-      y: rect_y,
+      x: rect_x + 1,
+      y: rect_y + 1,
     });
 
     // Add a tag to the label
@@ -365,9 +365,10 @@
         text: bbox.label,
         fontSize: 6,
         fontStyle: "bold",
+        fontFamily: "poppins",
         padding: 0,
-        x: rect_x,
-        y: rect_y,
+        x: rect_x + 1,
+        y: rect_y + 1,
       })
     );
 
