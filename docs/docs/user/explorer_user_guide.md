@@ -60,7 +60,7 @@ Each object category is given a color.
 Bounding box display category, and confidence for inferences, on the top left of the box.
 
 
-on the right, a panel show some information and display controls
+On the right, a panel show some information and display controls
 
 "DATA" section give some information on this element.
 Currently, only ID is displayed

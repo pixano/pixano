@@ -45,3 +45,7 @@ annotator.display()
 From the Annotator homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
 Simply click on one of them to open it and you will be able to start annotating.
+
+## Annotator User Guide
+
+The [Pixano Annotator User Guide](../../../docs/docs/user/annotator_user_guide.md)
