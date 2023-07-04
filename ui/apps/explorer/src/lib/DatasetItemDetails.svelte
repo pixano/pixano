@@ -109,7 +109,7 @@
   });
 </script>
 
-<div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
+<div class=" flex h-screen w-screen">
   {#if itemData}
     <Canvas2D
       itemId={itemData.id}
@@ -128,11 +128,6 @@
       on:changeMaskOpacity={handleMaskOpacity}
     />
   {/if}
-
-  <!-- Close button -->
-  <button class="absolute top-4 right-6 p-2 z-10" on:click={handleCloseClick}>
-    <img src={svg_close} alt="icon" class="h-8 w-8 cursor-pointer opacity-75" />
-  </button>
 </div>
 <!-- Pixano Explorer footer -->
 <div

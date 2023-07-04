@@ -20,6 +20,8 @@
   import svg_close from "../assets/icons/close.svg";
 
   // Imports
+  import { createEventDispatcher } from "svelte";
+
   import { currentPage } from "../stores";
   import type { ItemData } from "../../../../components/Canvas2D/src/interfaces";
 
@@ -27,10 +29,16 @@
   export let selectedDataset = null;
   export let selectedItem: ItemData;
 
-  function goToLibrary() {
+  const dispatch = createEventDispatcher();
+
+  function unselectDataset() {
     selectedDataset = null;
     selectedItem = null;
     currentPage.update((n) => 1);
+  }
+
+  function handleCloseClick() {
+    dispatch("closeclick");
   }
 </script>
 
@@ -44,22 +52,36 @@
     <div class="flex items-center grow space-x-2 font-bold text-3xl">
       <button
         class="cursor-pointer flex items-center space-x-2 hover:text-rose-800 dark:hover:text-rose-300"
-        on:click={goToLibrary}
+        on:click={unselectDataset}
       >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
         <span class="transition-colors"> Pixano Explorer </span>
       </button>
       {#if selectedDataset}
         <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
-        <span>
-          {selectedDataset.name}
-        </span>
+        <button
+          class="hover:text-rose-800 dark:hover:text-rose-300"
+          on:click={handleCloseClick}
+        >
+          <span class="transition-colors">
+            {selectedDataset.name}
+          </span>
+        </button>
+        {#if selectedItem}
+          <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
+          <span>
+            {selectedItem.id}
+          </span>
+        {/if}
       {/if}
     </div>
 
     <!-- Navigation -->
     {#if selectedDataset}
-      <button class="w-30 pr-4 flex justify-end" on:click={goToLibrary}>
+      <button
+        class="w-30 pr-4 flex justify-end"
+        on:click={selectedItem ? handleCloseClick : unselectDataset}
+      >
         <img
           src={svg_close}
           alt="icon"

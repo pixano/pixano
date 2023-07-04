@@ -186,14 +186,21 @@
       <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
     </div>
   {:else if selectedItem}
-    <DatasetItemDetails
-      itemData={selectedItem}
-      features={itemDetails}
-      {annotations}
-      {masksGT}
-      {bboxes}
+    <Header
+      bind:selectedDataset
+      bind:selectedItem
       on:closeclick={unselectItem}
     />
+    <div class="pt-20">
+      <DatasetItemDetails
+        itemData={selectedItem}
+        features={itemDetails}
+        {annotations}
+        {masksGT}
+        {bboxes}
+        on:closeclick={unselectItem}
+      />
+    </div>
   {/if}
 {:else}
   <Header bind:selectedDataset bind:selectedItem />
