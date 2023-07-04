@@ -303,7 +303,9 @@
           {/each}
         {/each}
       {:else}
-        <p class="py-4 text-center">No annotations yet.</p>
+        <p class="py-4 text-center font-bold italic text-zinc-500">
+          No annotations yet.
+        </p>
       {/if}
     </div>
     <div
