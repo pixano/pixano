@@ -27,7 +27,7 @@ Click on any of them to open the dataset explore screen.
 ## Dataset explore screen
 
 On this screen's header, you will see the dataset name.
-You can click on "Pixano Explorer" or "Back to library" to go back to datasets browser screen.
+You can click on "Pixano Explorer" or the cross to go back to datasets browser screen.
 
 On the left side, available statistics on this dataset are displayed.
 Put your mouse over the graph to get some detailled information, depending of displayed graph.
@@ -48,7 +48,7 @@ Click on any of the element to open the detailed element screen
 
 ## Detailed Element screen
 
-On the top right of the screen, a red cross allows to go back to previous screen. Or you can hit the "Echap" key.
+On the top right of the screen, a cross allows to go back to previous screen. Or you can hit the "Echap" key.
 
 The selected image is displayed, or several images arranged in a grid, one by view, in case of a multi-view dataset.
 You can grab and move the image (each image independantly in case of multi view), and zoom in and out with the mouse wheel over the image.
