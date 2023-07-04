@@ -236,14 +236,14 @@
   <!-- Data -->
   <div class="flex flex-col">
     <span
-      class="mb-2 self-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-sm text-zinc-500 font-bold uppercase dark:text-zinc-400"
     >
       Data
     </span>
     <div class="flex flex-col">
       {#if features.id}
         <div>
-          <span class="font-bold"> Id : </span>
+          <span class="font-bold"> id : </span>
           <span> {features.id} </span>
         </div>
       {/if}
@@ -265,7 +265,7 @@
   <!-- Tools -->
   <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
     <span
-      class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-center text-sm text-zinc-500 font-bold uppercase dark:text-zinc-400"
     >
       Tools
     </span>

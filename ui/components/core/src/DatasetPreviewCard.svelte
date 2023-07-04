@@ -31,13 +31,13 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
   class="w-64 h-80 m-4 flex flex-col bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-md cursor-pointer transition-all
-    hover:scale-[102.5%]
-    dark:bg-zinc-800 dark:text-zinc-50 dark:border-zinc-700"
+  hover:scale-110
+  dark:bg-zinc-800 dark:text-zinc-50 dark:border-zinc-700"
   on:click={handleClick}
 >
   <!-- Dataset Infos -->
   <div class="h-1/5 px-4 flex flex-col justify-center">
-    <h3 class="text-lg font-medium text-zinc-900 dark:text-zinc-300">
+    <h3 class="text-lg font-heavy text-zinc-900 dark:text-zinc-300">
       {dataset.name}
     </h3>
     <p class="text-sm text-zinc-500">
@@ -61,10 +61,10 @@
   <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
       on:click={handleClick}
-      class="py-2 px-3 bg-rose-500 text-zinc-50 font-medium rounded-md border-2 border-rose-500 transition-all
-        hover:text-rose-600 hover:bg-zinc-50
-        dark:bg-rose-800 dark:border-rose-800
-        dark:hover:text-rose-700 dark:hover:bg-zinc-800"
+      class="py-2 px-3 bg-rose-500 text-zinc-50 font-heavy rounded-md border-2 border-rose-500 transition-all
+      hover:text-rose-600 hover:bg-zinc-50
+      dark:bg-rose-800 dark:border-rose-800
+      dark:hover:text-rose-700 dark:hover:bg-zinc-800"
     >
       {btn_label}
     </button>

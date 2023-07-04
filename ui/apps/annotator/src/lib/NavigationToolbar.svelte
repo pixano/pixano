@@ -32,7 +32,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="h-20 flex items-center shrink-0">
-  <div class="flex items-center grow space-x-2 font-bold text-2xl uppercase">
+  <div class="flex items-center grow space-x-2 font-bold text-2xl">
     <img
       src={svg_image}
       alt="icon"
