@@ -171,7 +171,7 @@
         activeTab = "database";
       }}
     >
-      Database
+      Dataset
     </span>
   </div>
   <div class="flex flex-col h-full max-h-[88vh]">
