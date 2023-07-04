@@ -15,7 +15,9 @@
   */
 </script>
 
-<div class="mt-4 flex w-full justify-center font-bold italic text-zinc-500">
+<div
+  class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500"
+>
   Loading datasets...
 </div>
 <div

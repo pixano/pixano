@@ -28,16 +28,24 @@
   }
 </script>
 
-<div class="mx-auto px-8">
-  <div
-    class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
-  >
-    {#each datasets as dataset}
-      <DatasetPreviewCard
-        {dataset}
-        {btn_label}
-        on:click={() => handleDatasetClick(dataset)}
-      />
-    {/each}
+{#if datasets.length != 0}
+  <div class="mx-auto px-8">
+    <div
+      class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
+    >
+      {#each datasets as dataset}
+        <DatasetPreviewCard
+          {dataset}
+          {btn_label}
+          on:click={() => handleDatasetClick(dataset)}
+        />
+      {/each}
+    </div>
   </div>
-</div>
+{:else}
+  <div
+    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500"
+  >
+    No datasets found...
+  </div>
+{/if}
