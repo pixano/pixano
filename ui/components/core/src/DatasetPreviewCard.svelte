@@ -46,8 +46,9 @@
     <!-- on Hover -->
     <div class="absolute h-1/5 px-4 py-14 flex flex-col justify-center hidden group-hover:block">
       <div class="px-2 py-1 text-zinc-700 rounded bg-zinc-50 border">
-        <p><i>Name:</i> {dataset.name}</p>
-        <p><i>Description:</i> {dataset.description}</p>
+        <p><i>Name:</i></p><p>{dataset.name}</p>
+        <br>
+        <p><i>Description:</i></p><p>{dataset.description}</p>
       </div>
     </div>
   </div>
