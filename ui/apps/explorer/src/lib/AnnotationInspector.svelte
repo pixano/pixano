@@ -230,7 +230,7 @@
 
 <!-- Toolbox -->
 <div
-  class="absolute w-64 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow
+  class="absolute w-64 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow-xl
     dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
 >
   <!-- Data -->
