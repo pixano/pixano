@@ -36,13 +36,20 @@
   on:click={handleClick}
 >
   <!-- Dataset Infos -->
-  <div class="h-1/5 px-4 flex flex-col justify-center">
-    <h3 class="text-lg font-heavy text-zinc-900 dark:text-zinc-300">
+  <div class="h-1/5 px-4 flex flex-col justify-center  group">
+    <h3 class="text-lg font-heavy overflow-clip text-zinc-900 dark:text-zinc-300">
       {dataset.name}
     </h3>
     <p class="text-sm text-zinc-500">
       {dataset.num_elements} elements
     </p>
+    <!-- on Hover -->
+    <div class="absolute h-1/5 px-4 py-14 flex flex-col justify-center hidden group-hover:block">
+      <div class="px-2 py-1 text-zinc-700 rounded bg-zinc-50 border">
+        <p><i>Name:</i> {dataset.name}</p>
+        <p><i>Description:</i> {dataset.description}</p>
+      </div>
+    </div>
   </div>
 
   <!-- Dataset Thumbnail -->
