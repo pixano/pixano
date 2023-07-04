@@ -293,7 +293,7 @@
   on:saveclick={handleSaveClick}
   on:closeclick={unselectItem}
 />
-<div class="pt-20">
+<div class="pt-20 h-screen w-screen">
   {#if datasets}
     {#if selectedItem}
       <AnnotationWorkspace
