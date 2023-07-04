@@ -109,7 +109,7 @@
   });
 </script>
 
-<div class=" flex h-screen w-screen">
+<div class="flex h-screen w-screen">
   {#if itemData}
     <Canvas2D
       itemId={itemData.id}
