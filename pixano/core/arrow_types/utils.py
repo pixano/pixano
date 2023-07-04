@@ -53,7 +53,7 @@ def convert_field(
         return pa.array(field_data, type=field_type)
 
 
-def register_extension_types(pa_types):
+def register_extension_types(pa_types: list):
     """Register PyArrow ExtensionTypes"""
 
     for t in pa_types:

@@ -15,11 +15,10 @@ from typing import Optional
 
 import pyarrow as pa
 
-from pixano.core.arrow_types.utils import convert_field, fields
-
 from .bbox import BBox, BBoxType
 from .compressedRLE import CompressedRLE, CompressedRLEType
 from .pose import Pose, PoseType
+from .utils import convert_field, fields
 
 # ------------------------------------------------
 #             Python type

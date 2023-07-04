@@ -62,7 +62,7 @@ __all__ = [
     "DepthImageArray",
     "convert_field",
     "fields",
-    "is_number"
+    "is_number",
 ]
 
 

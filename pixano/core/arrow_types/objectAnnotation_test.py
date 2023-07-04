@@ -20,7 +20,7 @@ import pyarrow.parquet as pq
 
 from .bbox import BBox
 from .compressedRLE import CompressedRLE
-from .objectAnnotation import ObjectAnnotation, ObjectAnnotationArray
+from .objectAnnotation import ObjectAnnotation, ObjectAnnotationArray, ObjectAnnotationType
 from .pose import Pose
 
 
@@ -74,13 +74,16 @@ class TestParquetObjectAnnotation(unittest.TestCase):
     def test_object_annotation_table(self):
         objAnn_arr = ObjectAnnotationArray.from_list(self.object_annotations_list)
 
-        table = pa.Table.from_arrays([objAnn_arr], names=["objAnn"])
+        schema = pa.schema([pa.field("ObjectAnn", ObjectAnnotationType(), nullable=True)])
+
+        table = pa.Table.from_arrays([objAnn_arr], schema = schema)
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name
             pq.write_table(table, temp_file_path)
             re_table = pq.read_table(temp_file_path)
 
-        self.assertEqual(re_table.column_names, ["objAnn"])
+        self.assertEqual(re_table.column_names, ["ObjectAnn"])
 
-        # self.assertTrue(isinstance(objectAnnotation1, ObjectAnnotation))
+        objectAnnotation1 = re_table.to_pylist()[0]["ObjectAnn"]
+        self.assertTrue(isinstance(objectAnnotation1, ObjectAnnotation))

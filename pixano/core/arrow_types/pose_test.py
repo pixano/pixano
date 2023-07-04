@@ -16,6 +16,7 @@ import unittest
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 from .pose import Pose, PoseArray, PoseType
 
 
