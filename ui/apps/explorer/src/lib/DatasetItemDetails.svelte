@@ -14,9 +14,6 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import svg_close from "../assets/icons/close.svg";
-
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 

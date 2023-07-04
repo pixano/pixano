@@ -16,7 +16,7 @@
 
   // Imports
   import * as ort from "onnxruntime-web";
-  import { createEventDispatcher, onMount } from "svelte";
+  import { onMount } from "svelte";
 
   import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
@@ -56,8 +56,6 @@
   let dbImages: DatabaseFeats = null;
 
   let sam = new SAM();
-
-  const dispatch = createEventDispatcher();
 
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
