@@ -34,6 +34,12 @@ repo_name: pixano/pixano
 copyright: Licensed under the CeCILL-C license
 extra:
   social:
+    - icon: material/email-outline
+      link: mailto:pixano@cea.fr
+      name: Contact us
+    - icon: material/web
+      link: https://list.cea.fr/en/
+      name: CEA LIST
     - icon: fontawesome/brands/github 
       link: https://github.com/pixano/pixano
       name: Pixano on GitHub
@@ -57,8 +63,8 @@ plugins:
           show_source: true
           heading_level: 1
 
+          
 nav:
-- "Getting started": index.md
 
 - "User guides":
 
