@@ -1,107 +1,89 @@
-<div align="center">
-<picture>
-    <img src="https://raw.githubusercontent.com/pixano/pixano/main/images/pixano_logo.png" alt="Pixano" height="100"/>
-</picture>
-<br/>
-
-**Data-centric AI building blocks for computer vision applications**
-
-***Under active development, subject to API change***
-
-</div>
-
-# Pixano Annotator : User Guide
+# User guide for Pixano Annotator
 
 
-## Pixano Annotator main screen : datasets browser
+## Home page
 
-From the Annotator homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
+From the Annotator home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
-Each dataset show the dataset name, the number of elements it contains, and six samples images drawn from the datasets.
+For each dataset, you can see its name, the number of elements inside it, and a thumbnail composed from six sample elements.
 
-You can put mouse pointer over the dataset name to see the complete name (full name may have been truncated if too long) and the dataset description.
+You can hover over a dataset name to check the dataset description if it has one.
 
-Click on any of them to open the annotation screen. It opens on the first elements of the dataset.
+You can click on a dataset to open its annotation page on its first element.
 
 
-## Annotation screen
+## Annotation page
 
-On the header's screen, a cross on the right allows to go back to previous screen, or you can click on "Pixano Annotator".
-The dataset name and element ID is displayed here. 
+### Element view
 
-A "Save" icon allows to save your changes. It is highlighted if there is changes to save. 
-If you close this screen, or change the current element with some unsaved changes, you will be warned that it would discard your unsaved changes. You can choose "OK" to discard them.
+The selected element (image or images for multi-view datasets) is displayed.
 
-On the left is the "Tools" panel.
+You can zoom in and out with the mouse wheel.
 
-The image (or several in case of multiview dataset), annotations, and current inputs and are diplayed in the center, as well as the category selection panel when an input tool is selected.
+You can grab and move images with the the middle click or with the ***Pan*** tool available in the left *toolbar*. 
 
-On the right, a panel with two tabs, "LABELS" and "DATASET" show annotations with some control, and list of elements, respectively.
-
-### Tools
-
-On the left are displayed the available tools:
-- the "Pan" tool. It allows to move image(s).
-- the "Point" tool. It allows to draw input points to annotate. A panel open to choose '+' (green) or '-' (red) when you put pointer over this tool.
-- the "Rectangle" tool. It allows to draw an input bounding box to annotate.
-
-*(coming soon: new tools such as "Paint", ...)*
-
-### Image views
-
-The selected image is displayed, or several images arranged in a grid, one by view, in case of a multi-view dataset.
-
-With the "Pan" tool, or you with middle-click, can grab and move the image (each image independantly in case of multi view), and zoom in and out with the mouse wheel over the image.
-
-Double-click on an image to move it to top in case of multi-view dataset.
+You can double click on an image to move it above other images.
 
 Annotations, in form of segmentations mask, are displayed.
 Each object category is given a color.
 
 On the top of the image, when you have an input Tool selected, a panel is displayed that allow to choose a category.
 
-### LABELS tab
+### Left toolbar
 
-"LABELS" tab display the list of annotation, grouped by view (if revelent), and by categories
-Each group can be expanded or closed by clicking on it, showed or hidden by clicking on the "eye" icon, as well as each element inside a category group.
-The element is represented by it's ID. On hover, you can see a generated label.
+A *toolbar* is available on the left side of the page with the following tools:
 
-(*coming soon: custom meta data per element*)
+- ***Pan***: Allows you to grab and move an image
+- ***Points***: Allows you to place input points to interactively segment your image
+    - You can place positive points with the **+** tool (points shown in green) to indicate what must be included in the segmentation
+    - You can place negative points with **-** tool (points shown in red) to indicate what must not be included in the segmentation
+    - You can hover over any point and press the *Del* key to remove it
+    - You can click and hold on any point to relocate it
+- ***Rectangle***: Allows you to draw rectangles to interactively segment your image
+    - You can click and drag on the image to draw a rectangle
+    - There can only be one rectangle at a time, so drawing a new rectangle will discard the previous one
 
-The "trash" icon allows to delete an annotation.
+The ***Points*** and ***Rectangle*** tools depend on an ONNX segmentation model you have to provide. Please look at the interactive annotation documentation and notebook for more information. 
 
-### DATASET tab
+*More tools will be coming soon.*
 
-"DATASET" tab allows to navigate through the dataset.
-Each element of the dataset is displayed, the image (or one view by image with multiview dataset) and the element's ID.
-This list will be automatically appended by scrolling down.
+### Center toolbar
 
-Click on any element to change current displayed element. If you have unsaved changes, you will be asked if you want to discard theses changes ("OK") or stay on the current element ("Cancel").
+When an annotation tool is selected, a *toolbar* is available on the center on the page with the following tools:
 
-*(coming soon: new annotations types such as keypoints, ...)*
+- A *text box* to enter the label name for your annotation or select the label from the lift of existing labels
+- If the ***Points*** tool is selected, a **+** icon and a **-** icon to quickly switch between positive and negative points
+- A *Validate* icon to validate your annotation with the entered label
 
-## Annotate
+### Right toolbar
 
-Currently the inputs are "Points" ('+' and '-'), and "Rectangle". Depending on the model used, it will allow to make prediction.
+A *toolbar* is available on the right side of the page with the following tabs:
 
-Points and Rectangle inputs can be used together.
+- ***Labels***: This tab displays your annotations grouped by views and by labels
+    - Each annotation group can be opened or closed by clicking on it
+    - Each annotation and annotation group can be shown or hidden on the relevant image by clicking on the *Visibility* icon
+    - Each annotation can be deleted by clicking on the *Delete* icon
+    - Each annotation is represented by its unique ID.
+- ***Dataset***: This tab allows you to navigate through the dataset
+    - Each element of the dataset is displayed with its ID and its thumbnail
+    - The list will automatically expand as you scroll down
+    - You can click on any element to change current element
 
-Pixano annotator make a new prediction (displayed in green) for every new input. 
+### Annotating
 
-The category selection panel displayed whith an input tool allows to enter a category name, or chose one in the drop-down list. All existing categories in this element are listed, plus predefined categories if provided. Manually entered categories are also kept.
-The "check" button validate the current prediction with the current category name. Or you can hit "Enter" key to validate.
+You can currently annotate with the ***Points*** (**+** and **-**), and ***Rectangle*** tools available in the left toolbar as described above.
 
-"Echap" key discards all inputs and current prediction.
+When using these tools, the generated annotation will be displayed in green. You can use the tools together to refine your annotation.
 
-### Points input
+You can press the *Enter* key to validate your annotation, or the *Esc* key to reset all your ***Points*** and ***Rectangle*** inputs.
 
-With the "Point" input tool, click anywhere on a image to put an input point. As long as your pointer is on the point, it will be highlighted. You can grab it and move it then. New prediction will be continuously computed (whenever you stop moving, or move slowly enough, or release the point). 
-Hit the "Suppr" key over an highlighted point to delete it. It makes a new prediction with remaining inputs if any.
 
-With this tool selected, the category selection panel also allows to select between '+' and '-' point. The currently selected tool is highlighted.
+### Saving
 
-### Rectangle input
+To save your annotations, a *Save* icon is available in the top right as well. It will be highlighted if there are unsaved changes.
 
-With the "Rectangle" input tool, click and drag to draw a rectangle box as input. It's displayed as a white dotted rectangle on screen.
-There can be only one input rectangle at a time, so drawing a new one will discard the previous one.
+If you try to go back to the home page or change element with unsaved changes, you will see a confirmation window. You can choose "OK" to discard your changes, or cancel to be able to go back save them.
 
+### Going home
+
+To go back to the home page, click on "Pixano Annotator" in the top left or on the *Close* icon in the top right.
