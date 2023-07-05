@@ -3,7 +3,7 @@
 
 ## Home page
 
-![Pixano Annotator Home Page](../images/annotator_home.png)
+![Pixano Annotator Home Page](../assets/user/annotator_home.png)
 
 From the Annotator home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
@@ -16,9 +16,9 @@ You can click on a dataset to open its annotation page on its first element.
 
 ## Annotation page
 
-![Pixano Annotator Annotation Page](../images/annotator_elementview.png)
-
 ### Element view
+
+![Pixano Annotator Element View](../assets/user/annotator_elementview.png)
 
 The selected element (image or images for multi-view datasets) is displayed.
 
@@ -75,7 +75,7 @@ A *toolbar* is available on the right side of the page with the following tabs:
 
 ### Annotating
 
-![Pixano Annotator Annotate](../images/annotator_annotate.png)
+![Pixano Annotator Annotate](../assets/user/annotator_annotation.png)
 
 
 You can currently annotate with the ***Points*** (**+** and **-**), and ***Rectangle*** tools available in the left toolbar as described above.

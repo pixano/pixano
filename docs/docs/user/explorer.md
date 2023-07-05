@@ -3,7 +3,7 @@
 
 ## Home page
 
-![Pixano Explorer Home Page](../images/explorer_home.png)
+![Pixano Explorer Home Page](../assets/user/explorer_home.png)
 
 From the Explorer home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
@@ -16,7 +16,7 @@ You can click on a dataset to open its exploration page.
 
 ## Exploration page
 
-![Pixano Explorer Dataset Exploration Page](../images/explorer_exploration.png)
+![Pixano Explorer Dataset Exploration Page](../assets/user/explorer_exploration.png)
 
 ### Statistics
 
@@ -47,7 +47,7 @@ To go back to the home page, click on "Pixano Annotator" in the top left or on t
 
 ## Element view page
 
-![Pixano Explorer Element View Page](../images/explorer_elementview.png)
+![Pixano Explorer Element View Page](../assets/user/explorer_elementview.png)
 
 ### Element view
 
