@@ -107,9 +107,6 @@ nav:
   - "models":
     - "InferenceModel": code/models/inference_model.md
 
-  - "notebook":
-    - "display": code/notebook/display.md
-
   - "transforms":
     - "boxes": code/transforms/boxes.md
     - "image": code/transforms/image.md
