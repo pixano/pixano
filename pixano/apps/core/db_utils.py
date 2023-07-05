@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -20,11 +21,28 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
+from pydantic import BaseModel
 
 from pixano import transforms
 from pixano.core import arrow_types
-from pixano.data import models
-from pixano.transforms import natural_key, urle_to_rle, urle_to_bbox
+from pixano.transforms import natural_key, urle_to_bbox, urle_to_rle
+
+
+class Feature(BaseModel):
+    """Feature
+
+    Attributes:
+        name (str): Feature name
+        dtype (str): Feature dtype
+        value (Any): Feature value
+    """
+
+    name: str
+    dtype: str
+    value: Any
+
+
+Features = list[Feature]
 
 
 def get_item_details(
@@ -136,7 +154,7 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
         params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
 
     Returns:
-        AbstractPage: List of models.Feature for UI (DatasetExplorer)
+        AbstractPage: List of Features for UI (DatasetExplorer)
     """
 
     # Get page parameters
@@ -151,14 +169,14 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
         return None
     items_table = dataset.take(range(start, stop))
 
-    def _create_features(row: list) -> list[models.Feature]:
+    def _create_features(row: list) -> list[Feature]:
         """Create features based on field types
 
         Args:
             row (list): Input row
 
         Returns:
-            list[models.Feature]: Row as list of features
+            list[Feature]: Row as list of features
         """
 
         features = []
@@ -168,20 +186,18 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
             # Number fields
             if arrow_types.is_number(field.type):
                 features.append(
-                    models.Feature(
-                        name=field.name, dtype="number", value=row[field.name]
-                    )
+                    Feature(name=field.name, dtype="number", value=row[field.name])
                 )
             # Image fields
             elif arrow_types.is_image_type(field.type):
                 thumbnail = row[field.name].preview_url
                 features.append(
-                    models.Feature(name=field.name, dtype="image", value=thumbnail)
+                    Feature(name=field.name, dtype="image", value=thumbnail)
                 )
             # String fields
             elif pa.types.is_string(field.type):
                 features.append(
-                    models.Feature(name=field.name, dtype="text", value=row[field.name])
+                    Feature(name=field.name, dtype="text", value=row[field.name])
                 )
 
         return features

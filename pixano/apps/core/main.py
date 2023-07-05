@@ -29,7 +29,6 @@ from pixano.core import (
     InferenceDataset,
     arrow_types,
 )
-from pixano.data import models
 
 from . import db_utils
 
@@ -149,7 +148,7 @@ def create_app(settings: Settings) -> FastAPI:
     async def get_datasets_list():
         return load_library(settings)
 
-    @app.get("/datasets/{ds_id}/items", response_model=Page[models.Features])
+    @app.get("/datasets/{ds_id}/items", response_model=Page[db_utils.Features])
     async def get_dataset_items(ds_id, params: Params = Depends()):
         # Load dataset
         ds = load_dataset(ds_id, settings)
