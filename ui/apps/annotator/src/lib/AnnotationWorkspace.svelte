@@ -300,7 +300,7 @@
       <div class="group">
         <input
           type="text"
-          placeholder="New Class"
+          placeholder="New label"
           class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-no-repeat bg-right"
           bind:value={className}
         />
