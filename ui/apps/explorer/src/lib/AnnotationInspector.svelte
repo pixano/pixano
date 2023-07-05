@@ -281,7 +281,7 @@
         on:change={toggleAllCategoriesVisibility}
       />
       <label class="font-bold cursor-pointer" for="toggle-items">
-        Show all items
+        Show all annotations
       </label>
     </div>
 
@@ -295,7 +295,7 @@
         on:change={toggleAllBBoxVisbility}
       />
       <label class="font-bold cursor-pointer" for="toggle-boxes">
-        Show boxes
+        Show bounding boxes
       </label>
     </div>
 
