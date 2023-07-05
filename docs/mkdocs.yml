@@ -52,7 +52,13 @@ plugins:
       python:
         paths: ["../pixano"]
         import:
-          - https://docs.python.org/3/objects.inv
+          - https://docs.python.org/3.10/objects.inv
+          - https://numpy.org/doc/1.23/objects.inv
+          - https://pandas.pydata.org/pandas-docs/version/1.5/objects.inv
+          - https://pillow.readthedocs.io/en/stable/objects.inv
+          - https://arrow.apache.org/docs/objects.inv
+          - https://docs.pydantic.dev/2.0/objects.inv # no objects.inv available for 1.10
+          - https://ipython.readthedocs.io/en/8.13.2/objects.inv
         options:
           docstring_style: google
           docstring_options:
