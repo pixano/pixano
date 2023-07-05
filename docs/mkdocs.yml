@@ -28,6 +28,7 @@ theme:
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.tracking
+    - navigation.top
 plugins:
 - search
 - mkdocstrings:
