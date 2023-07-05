@@ -55,7 +55,7 @@ The ***Points*** and ***Rectangle*** tools depend on an ONNX segmentation model 
 
 When an annotation tool is selected, a *toolbar* is available on the center on the page with the following tools:
 
-- A *text box* to enter the label name for your annotation or select the label from the lift of existing labels
+- A *text box* to enter the label name for your annotation or select the label from the list of existing labels
 - If the ***Points*** tool is selected, a **+** icon and a **-** icon to quickly switch between positive and negative points
 - A *Validate* icon to validate your annotation with the entered label
 
