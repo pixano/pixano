@@ -70,15 +70,15 @@
   <div class="flex">
     <!-- Stats -->
     <div
-      class="w-1/2 h-[85vh] pr-4 flex flex-col items-center border rounded-lg overflow-y-scroll
+      class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
        dark:border-zinc-700 dark:bg-zinc-800"
     >
       <span class="font-bold text-xl mt-3"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
-        <div class="grid grid-cols-3 my-2">
+        <div class="grid grid-cols-1 2xl:grid-cols-2 w-full gap-4 p-4">
           <!-- If charts are ready to be displayed, display them -->
           {#each datasetStats as chart}
-            <div class="ml-2 mb-2">
+            <div class="w-full">
               <Histogram hist={chart} />
             </div>
           {/each}
@@ -92,7 +92,7 @@
     <div class="w-1/2 ml-4">
       {#if datasetItems}
         <!-- Items list -->
-        <div class=" h-[85vh] w-full mb-1">
+        <div class=" h-[85vh] w-full max-w-7xl">
           <Table
             features={datasetItems.items}
             {featureNames}
@@ -101,7 +101,9 @@
         </div>
 
         <!-- Page navigation -->
-        <div class="flex justify-end items-center w-full space-x-2">
+        <div
+          class="flex justify-end items-center w-full max-w-7xl space-x-2 p-4"
+        >
           <span class="mr-2">
             {1 + itemsPerPage * (curPage - 1)} - {Math.min(
               itemsPerPage * curPage,

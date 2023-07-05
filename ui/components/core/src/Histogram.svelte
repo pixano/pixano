@@ -109,12 +109,12 @@
 
 <!-- Histogram -->
 <div
-  class="h-56 w-72 flex flex-col justify-center items-center border rounded-lg bg-zinc-100"
+  class="h-full w-full flex flex-col justify-center items-center border rounded-lg bg-zinc-100"
 >
   <span class="py-1 text-sm font-bold text-zinc-900">
     {hist.name}
   </span>
-  <div class="max-h-48 overflow-y-scroll">
+  <div class="max-h-48 w-full place-items-center overflow-y-scroll">
     <VegaLite {spec} {options} />
   </div>
 </div>
