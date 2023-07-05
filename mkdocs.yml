@@ -51,7 +51,7 @@ plugins:
 - mkdocstrings:
     handlers:
       python:
-        paths: ["../pixano"]
+        paths: ["pixano"]
         import:
           - https://docs.python.org/3.10/objects.inv
           - https://numpy.org/doc/1.23/objects.inv
