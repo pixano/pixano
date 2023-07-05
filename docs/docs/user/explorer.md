@@ -1,4 +1,4 @@
-# User guide for Pixano Explorer
+# Using Pixano Explorer
 
 
 ## Home page

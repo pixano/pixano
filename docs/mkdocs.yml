@@ -29,6 +29,8 @@ theme:
     - navigation.tabs.sticky
     - navigation.tracking
     - navigation.top
+    - navigation.indexes
+    - toc.integrate
 repo_url: https://github.com/pixano/pixano
 repo_name: pixano/pixano
 copyright: Licensed under the CeCILL-C license
@@ -66,12 +68,19 @@ plugins:
           
 nav:
 
-- "User guides":
+- "Home": index.md
 
-  - "Pixano Explorer": user/explorer.md
-  - "Pixano Annotator": user/annotator.md
+- "Getting started":
+  - user/index.md
+  - "Installing Pixano": user/install.md
+  - "Importing datasets": user/import.md
+  - "Exporting datasets": user/export.md
+  - "Launching an app": user/launch.md
+  - "Using Pixano Explorer": user/explorer.md
+  - "Using Pixano Annotator": user/annotator.md
   
-- "API reference":
+- "API reference": 
+  - code/index.md
 
   - "analytics":
     - "feature_statistics": code/analytics/feature_statistics.md

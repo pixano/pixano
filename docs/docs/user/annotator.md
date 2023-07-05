@@ -1,4 +1,4 @@
-# User guide for Pixano Annotator
+# Using Pixano Annotator
 
 
 ## Home page
