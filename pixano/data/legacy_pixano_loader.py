@@ -13,7 +13,7 @@
 
 import json
 from collections import defaultdict
-from collections.abc import Generator
+from collections.abc import Iterator
 from io import BytesIO
 from math import isnan
 from pathlib import Path
@@ -30,7 +30,7 @@ from .data_loader import DataLoader
 
 
 class LegacyPixanoLoader(DataLoader):
-    """Data Loader class for Pixano legacy annotation format instances dataset
+    """Data Loader class for Pixano legacy format datasets
 
     Attributes:
         name (str): Dataset name
@@ -68,10 +68,10 @@ class LegacyPixanoLoader(DataLoader):
 
     def import_row(
         self,
-        input_dirs: dict[str, Path],  # contain "workspace"
+        input_dirs: dict[str, Path],
         split: str,
         portable: bool = False,
-    ) -> Generator[dict]:
+    ) -> Iterator:
         """Process dataset row for import
 
         Args:
@@ -81,7 +81,7 @@ class LegacyPixanoLoader(DataLoader):
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
-            Generator[dict]: Processed rows
+            Iterator: Processed rows
         """
 
         category_ids = {}
