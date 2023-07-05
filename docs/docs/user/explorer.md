@@ -65,8 +65,8 @@ A *toolbar* is available on the right side of the page with the following sectio
 - A ***Data*** section to display information on the element, like its ID
 
 - A ***Tools*** section to filter the annotations
-    - The *Show all items* checkbox allows you to toggle annotations visibility
-    - The *Show boxes* checkbox allows you to toggle bounding box visibility
+    - The *Show all annotations* checkbox allows you to toggle annotations visibility
+    - The *Show bounding boxes* checkbox allows you to toggle bounding box visibility
     - The *Mask opacity* slider allows you to adjust the opacity of segmentations masks
     - The *Confidence threshold* slider allows you to adjust the threshold displaying inferences
     - The *Labels* list allows you to see the number of annotations for any label, and to toggle annotations visibility for individual labels by click on their names
