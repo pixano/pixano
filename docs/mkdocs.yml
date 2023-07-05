@@ -11,7 +11,9 @@ theme:
     text: Poppins
   features:
     - navigation.instant
-    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tracking
 plugins:
 - search
 - mkdocstrings:
