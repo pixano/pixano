@@ -3,6 +3,8 @@ theme:
   name: material
   logo: assets/pixano_white.png
   favicon: assets/pixano.png
+  icon:
+    repo: fontawesome/brands/github
   palette:
     primary: pink
   features:
@@ -27,7 +29,8 @@ plugins:
           show_root_heading: true
           show_source: true
           heading_level: 1
-
+repo_url: https://github.com/pixano/pixano
+repo_name: pixano/pixano
 
 nav:
 - "Getting started": index.md
