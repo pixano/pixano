@@ -29,6 +29,14 @@ theme:
     - navigation.tabs.sticky
     - navigation.tracking
     - navigation.top
+repo_url: https://github.com/pixano/pixano
+repo_name: pixano/pixano
+copyright: Licensed under the CeCILL-C license
+extra:
+  social:
+    - icon: fontawesome/brands/github 
+      link: https://github.com/pixano/pixano
+      name: Pixano on GitHub
 plugins:
 - search
 - mkdocstrings:
@@ -48,8 +56,6 @@ plugins:
           show_root_heading: true
           show_source: true
           heading_level: 1
-repo_url: https://github.com/pixano/pixano
-repo_name: pixano/pixano
 
 nav:
 - "Getting started": index.md
