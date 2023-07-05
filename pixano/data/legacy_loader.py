@@ -29,7 +29,7 @@ from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
 from .data_loader import DataLoader
 
 
-class LegacyPixanoLoader(DataLoader):
+class LegacyLoader(DataLoader):
     """Data Loader class for Pixano legacy format datasets
 
     Attributes:
