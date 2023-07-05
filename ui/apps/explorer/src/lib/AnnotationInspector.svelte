@@ -331,7 +331,7 @@
   </div>
 
   <!-- Item Categories -->
-  <span class="font-bold mb-2 mt-2"> Categories : </span>
+  <span class="font-bold mb-2 mt-2"> Labels: </span>
   <div class="flex flex-wrap">
     {#if categoryColor != null}
       {#each features.categoryStats as category}
