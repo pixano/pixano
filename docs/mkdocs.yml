@@ -6,7 +6,21 @@ theme:
   icon:
     repo: fontawesome/brands/github
   palette:
-    primary: pink
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: pink
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      primary: pink
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   font:
     text: Poppins
   features:
