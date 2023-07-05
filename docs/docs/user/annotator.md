@@ -75,6 +75,9 @@ A *toolbar* is available on the right side of the page with the following tabs:
 
 ### Annotating
 
+![Pixano Annotator Annotate](../images/annotator_annotate.png)
+
+
 You can currently annotate with the ***Points*** (**+** and **-**), and ***Rectangle*** tools available in the left toolbar as described above.
 
 When using these tools, the generated annotation will be displayed in green. You can use the tools together to refine your annotation.
