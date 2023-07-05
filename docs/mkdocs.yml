@@ -28,6 +28,11 @@ plugins:
 nav:
 - "Getting started": index.md
 
+- "User guides":
+
+  - "Pixano Explorer": user/explorer.md
+  - "Pixano Annotator": user/annotator.md
+  
 - "API reference":
 
   - "analytics":
