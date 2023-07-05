@@ -109,9 +109,6 @@ nav:
   - "notebook":
     - "display": code/notebook/display.md
 
-  - "tools":
-    - "converter": code/tools/converter.md
-
   - "transforms":
     - "boxes": code/transforms/boxes.md
     - "image": code/transforms/image.md
