@@ -1,6 +1,10 @@
 site_name: Pixano Documentation
 theme:
   name: material
+  logo: assets/pixano_white.png
+  favicon: assets/pixano.png
+  palette:
+    primary: pink
   features:
     - navigation.instant
     - navigation.sections
