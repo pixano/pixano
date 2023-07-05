@@ -8,6 +8,7 @@
 - Add **dataset conversion notebooks** and template data loader to make conversion to Pixano format **more accessible** to users
 - Add **data loaders** rebuilt from the ground up with support for **COCO format datasets, image-only datasets, and DOTAv2 dataset** 
 - Add **thumbnail and statistics generation** to dataset conversion process
+- Add **user guides** for the Pixano Explorer and Annotator apps
 
 ### Changed:
 - Merge inference generation and embedding precomputing into a **single inference model class**
@@ -15,11 +16,13 @@
 - Improve custom type for images
 - Improve ease of use of Pixano Explorer and Annotator apps in notebooks
 - Improve Pixano Explorer dataset page query speed
-- Refactor and reformat API code
+- Update Pixano Explorer for consistency with the new Pixano Annotator
+- Refactor and reformat both backend and frontend code
 - Update READMEs and documentation
 
 ### Fixed:
 - Allow Pixano Explorer and Annotator apps to be created on any available port
+- Check if dataset library exists when launching an app
 - Fix support for nonnumerical IDs in datasets
 - Fix bounding boxes not being truly optional in ObjectAnnotation 
 - Order all image transforms args to height first and width second for consistency
