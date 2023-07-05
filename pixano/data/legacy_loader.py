@@ -75,8 +75,7 @@ class LegacyLoader(DataLoader):
         """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Input directory workspace
-            (image directories are read from Pixano json files given at init)
+            input_dirs (dict[str, Path]): Input directory workspace (image directories are read from Pixano json files given at init)
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
