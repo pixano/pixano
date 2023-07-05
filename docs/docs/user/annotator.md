@@ -3,6 +3,8 @@
 
 ## Home page
 
+![Pixano Annotator Home Page](../images/annotator_home.png)
+
 From the Annotator home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
 For each dataset, you can see its name, the number of elements inside it, and a thumbnail composed from six sample elements.
@@ -13,6 +15,8 @@ You can click on a dataset to open its annotation page on its first element.
 
 
 ## Annotation page
+
+![Pixano Annotator Annotation Page](../images/annotator_elementview.png)
 
 ### Element view
 

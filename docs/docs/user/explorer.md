@@ -3,16 +3,20 @@
 
 ## Home page
 
+![Pixano Explorer Home Page](../images/explorer_home.png)
+
 From the Explorer home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
 For each dataset, you can see its name, the number of elements inside it, and a thumbnail composed from six sample elements.
 
 You can hover over a dataset name to check the dataset description if it has one.
 
-You can click on a dataset to open its annotation page on its first element.
+You can click on a dataset to open its exploration page.
 
 
 ## Exploration page
+
+![Pixano Explorer Dataset Exploration Page](../images/explorer_exploration.png)
 
 ### Statistics
 
@@ -43,13 +47,15 @@ To go back to the home page, click on "Pixano Annotator" in the top left or on t
 
 ## Element view page
 
+![Pixano Explorer Element View Page](../images/explorer_elementview.png)
+
 ### Element view
 
 The selected element (image or images for multi-view datasets) is displayed.
 
 You can zoom in and out with the mouse wheel.
 
-You can grab and move images with the the middle click. 
+You can grab and move images.
 
 You can double click on an image to move it above other images.
 
