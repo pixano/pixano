@@ -148,7 +148,7 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
-  class="absolute h-4/6 w-64 top-1/2 -translate-y-1/2 right-6 bg-white text-zinc-900 border rounded-lg shadow
+  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 bg-white text-zinc-900 border rounded-lg shadow
     dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
