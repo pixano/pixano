@@ -101,7 +101,8 @@ nav:
     - "DataLoader": code/data/data_loader.md
     - "CocoLoader": code/data/coco_loader.md
     - "ImageLoader": code/data/image_loader.md
-    - "models": code/data/models.md
+    - "DOTALoader": code/data/dota_loader.md
+    - "LegacyLoader": code/data/legacy_loader.md
 
   - "inference":
     - "InferenceModel": code/inference/inference_model.md
