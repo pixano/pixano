@@ -134,8 +134,15 @@ def create_app(settings: Settings) -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Check if library exists
+    if not settings.data_dir.exists():
+        raise FileNotFoundError(
+            f"Dataset library '{settings.data_dir.absolute()}' not found"
+        )
+
+    # Create models folder
     model_dir = settings.data_dir / "models"
-    model_dir.mkdir(parents=True, exist_ok=True)
+    model_dir.mkdir(exist_ok=True)
     app.mount("/models", StaticFiles(directory=model_dir), name="models")
 
     @app.get("/datasets", response_model=list[DatasetInfo])
