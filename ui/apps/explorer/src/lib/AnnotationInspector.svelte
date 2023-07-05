@@ -301,7 +301,7 @@
 
     <!-- Opacity slider -->
     <label class="font-bold mt-2 mb-1" for="slider">
-      Mask opacity : {maskOpacity * 100}%
+      Mask opacity: {maskOpacity * 100}%
     </label>
     <input
       class="cursor-pointer"
@@ -316,7 +316,7 @@
 
     <!-- Confidence filter -->
     <label class="font-bold mt-2 mb-1" for="slider">
-      Minimum confidence : {minConfidence}
+      Confidence threshold: {Math.round(minConfidence * 100)}%
     </label>
     <input
       class="cursor-pointer"
