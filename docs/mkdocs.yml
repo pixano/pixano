@@ -60,7 +60,7 @@ plugins:
           show_submodules: no
           docstring_section_style: list
           members_order: alphabetical
-          merge_init_into_class: no
+          merge_init_into_class: yes
           show_root_heading: true
           show_source: true
           heading_level: 1
