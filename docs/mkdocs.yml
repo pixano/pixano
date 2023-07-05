@@ -104,8 +104,8 @@ nav:
     - "DOTALoader": code/data/dota_loader.md
     - "LegacyLoader": code/data/legacy_loader.md
 
-  - "inference":
-    - "InferenceModel": code/inference/inference_model.md
+  - "models":
+    - "InferenceModel": code/models/inference_model.md
 
   - "notebook":
     - "display": code/notebook/display.md
