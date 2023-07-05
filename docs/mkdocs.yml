@@ -7,6 +7,8 @@ theme:
     repo: fontawesome/brands/github
   palette:
     primary: pink
+  font:
+    text: Poppins
   features:
     - navigation.instant
     - navigation.sections
