@@ -19,79 +19,55 @@ pip install pixano
 ```
 
 
-## Importing your datasets
+## Importing and exporting your datasets
 
-Please refer to [this notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/import_dataset.ipynb) for information on how to import your datasets.
+Please refer to the [import notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/import_dataset.ipynb) and the [export notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/export_dataset.ipynb) for information on how to import and export your datasets.
 
+## Launching a Pixano App
 
-## Using the Pixano Explorer
+### From a terminal
 
-### Launching the Explorer from a terminal
-
-You can start the Explorer with the following command:
+You can start the Explorer or Annotator app with the following command:
 
 ```shell
 pixano-explorer <path/to/your/datasets>
 ```
 
-You will then be provided with a URL to open in your browser to browse the dataset.
+```shell
+pixano-annotator <path/to/your/datasets>
+```
 
-### Launching the Explorer from a notebook
+You will then be provided with a URL to open in your browser to use the app.
 
-If you are using a notebook, you can start the Explorer by running a cell with:
+### From a notebook
+
+If you are using a notebook, you can start the Explorer or Annotator app by running a cell with:
 
 ```python
 from pixano.apps import ExplorerApp
 explorer = ExplorerApp(<path/to/your/datasets>)
 ```
 
-You can then browse the Explorer directly from the notebook in another cell with:
-
-```python
-explorer.display()
-```
-
-### Browsing a dataset with the Explorer
-
-From the Explorer homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
-
-Simply click on one of them to open it and you will be able to see the dataset statistics if they have been computed, and browse the images from the list to check their annotations.
-
-
-## Using the Pixano Annotator
-
-### Launching the Annotator from a terminal
-
-You can start the Annotator with the following command:
-
-```shell
-pixano-annotator <path/to/your/datasets>
-```
-
-You will then be provided with a URL to open in your browser to browse the dataset.
-
-### Launching the Annotator from a notebook
-
-If you are using a notebook, you can start the Annotator by running a cell with:
-
 ```python
 from pixano.apps import AnnotatorApp
 annotator = AnnotatorApp(<path/to/your/datasets>)
 ```
 
-You can then browse the Annotator directly from the notebook in another cell with:
+You can then use the app directly from the notebook in another cell with:
+
+```python
+explorer.display()
+```
 
 ```python
 annotator.display()
 ```
 
-### Browsing a dataset with the Annotator
+## Using a Pixano App
 
-From the Annotator homepage, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
+Please refer to the user guides for information on how to use the Pixano apps:
 
-Simply click on one of them to open it and you will be able to start annotating.
+- [User guide for Pixano Explorer](user/explorer.md)
+- [User guide for Pixano Annotator](user/annotator.md)
 
 
-## Exporting your datasets
-
-Please refer to [this notebook](https://github.com/pixano/pixano/tree/main/notebooks/dataset/export_dataset.ipynb) for information on how to import your datasets.
