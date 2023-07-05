@@ -39,7 +39,8 @@ class ExplorerApp(PixanoApp):
     Attributes:
         config (uvicorn.Config): App config
         server (uvicorn.Server): App server
-        env (function): Run task function for running environment
+        task_function (typing.Callable): Run task function for running environment
+        display_function (typing.Callable): Display function for running environment
     """
 
     def __init__(
