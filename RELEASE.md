@@ -5,9 +5,10 @@
 
 ### Added:
 - Add **Pixano Annotator** for smart dataset annotation using AI models like the **Segment Anything Model (SAM)**
-- Add **dataset conversion notebooks** and template data loader to make conversion to Pixano format **more accessible** to users
-- Add **data loaders** rebuilt from the ground up with support for **COCO format datasets, image-only datasets, and DOTAv2 dataset** 
-- Add **thumbnail and statistics generation** to dataset conversion process
+- Add support for **importing datasets to Pixano** (image-only, COCO format, DOTAv2, and legacy Pixano datasets)
+- Add support for **exporting Pixano datasets** to COCO format 
+- Add **dataset import and export notebooks** for an easier process 
+- Add **thumbnail and statistics generation** to dataset import process
 - Add **user guides** for the Pixano Explorer and Annotator apps
 
 ### Changed:
@@ -18,13 +19,14 @@
 - Improve Pixano Explorer dataset page query speed
 - Update Pixano Explorer for consistency with the new Pixano Annotator
 - Refactor and reformat both backend and frontend code
-- Update READMEs and documentation
+- Improve READMEs and documentation
 
 ### Fixed:
 - Allow Pixano Explorer and Annotator apps to be created on any available port
 - Check if dataset library exists when launching an app
 - Fix support for nonnumerical IDs in datasets
-- Fix bounding boxes not being truly optional in ObjectAnnotation 
+- Fix annotations not being truly optional in ObjectAnnotation class and in Pixano Explorer
+- Round confidence values for bounding box tooltips in Pixano Explorer
 - Order all image transforms args to height first and width second for consistency
 - Check provided user data in inference and dataset notebooks before running scripts, like splits folder or source media folders
 
