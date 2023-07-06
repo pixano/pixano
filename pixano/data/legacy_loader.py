@@ -35,18 +35,18 @@ class LegacyLoader(DataLoader):
     Attributes:
         name (str): Dataset name
         description (str): Dataset description
-        views (list[str]): List of view names
-        json_files (dict[str, str]): dict {viewId: <path to json file>} paths relative to workspace
         splits (list[str]): Dataset splits
+        views (list[str]): Dataset views
+        json_files (dict[str, str]): json file paths relative to workspace
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        splits: list[str],
         views: list[str],
         json_files: dict[str, str],
-        splits: list[str],
     ):
         """Initialize Pixano Legacy Loader
 
@@ -54,9 +54,12 @@ class LegacyLoader(DataLoader):
             name (str): Dataset name
             description (str): Dataset description
             splits (list[str]): Dataset splits
+            views (list[str]): Dataset views
+            json_files (dict[str, str]): json file paths relative to workspace
         """
-        self.json_files = json_files
+
         self.views = views
+        self.json_files = json_files
 
         # Initialize Data Loader
         super().__init__(
@@ -75,7 +78,7 @@ class LegacyLoader(DataLoader):
         """Process dataset row for import
 
         Args:
-            input_dirs (dict[str, Path]): Input directory workspace (image directories are read from Pixano json files given at init)
+            input_dirs (dict[str, Path]): Input directory workspace for json files and images
             split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
