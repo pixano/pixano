@@ -14,7 +14,7 @@
 import click
 import pkg_resources
 
-from pixano.apps.core import PixanoApp
+from pixano.apps import PixanoApp
 
 LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒

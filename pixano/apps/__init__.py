@@ -11,10 +11,12 @@
 #
 # http://www.cecill.info
 
+from .core.serve import PixanoApp
 from .annotator.serve import AnnotatorApp
 from .explorer.serve import ExplorerApp
 
 __all__ = [
+    "PixanoApp",
     "AnnotatorApp",
     "ExplorerApp",
 ]

@@ -10,12 +10,3 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
-from .main import app, settings
-from .serve import PixanoApp
-
-__all__ = [
-    "app",
-    "settings",
-    "PixanoApp",
-]
