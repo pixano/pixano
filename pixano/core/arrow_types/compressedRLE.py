@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+from types import NoneType
 from PIL import Image
 
 import pyarrow as pa
@@ -31,9 +32,9 @@ from pixano.transforms.image import (
 
 
 class CompressedRLE:
-    def __init__(self, size: list[float], counts: bytes):
+    def __init__(self, size: list[float], counts: bytes | NoneType):
         self._size = size
-        self._counts = counts
+        self._counts = counts if not None else b""
 
     @property
     def size(self) -> list[float]:

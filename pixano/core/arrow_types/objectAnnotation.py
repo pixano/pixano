@@ -50,19 +50,18 @@ class ObjectAnnotation:
         self,
         id: str,
         view_id: Optional[str] = None,
-        bbox: Optional[BBox] = [0] * 4,
+        bbox: Optional[BBox] = BBox.from_xyxy([0, 0, 0, 0]),
         bbox_source: Optional[str] = None,
         bbox_confidence: Optional[float] = None,
         is_group_of: Optional[bool] = None,
         is_difficult: Optional[bool] = None,
         is_truncated: Optional[bool] = None,
-        mask: Optional[CompressedRLE] = None,
+        mask: Optional[CompressedRLE] = CompressedRLE.from_dict(
+            {"size": [0, 0], "counts": b""}
+        ),
         mask_source: Optional[str] = None,
         area: Optional[float] = None,
-        pose: Optional[Pose] = {
-            "cam_R_m2c": [0] * 9,
-            "cam_t_m2c": [0] * 3,
-        },
+        pose: Optional[Pose] = Pose([0.0] * 9, [0.0] * 3),
         category_id: Optional[int] = None,
         category_name: Optional[str] = None,
         identity: Optional[str] = None,
@@ -88,16 +87,16 @@ class ObjectAnnotation:
         annotation_dict = {
             "id": self.id,
             "view_id": self.view_id,
-            "bbox": self.bbox.to_dict(),
+            "bbox": self.bbox.to_dict() if self.bbox is not None else None,
             "bbox_source": self.bbox_source,
             "bbox_confidence": self.bbox_confidence,
             "is_group_of": self.is_group_of,
             "is_difficult": self.is_difficult,
             "is_truncated": self.is_truncated,
-            "mask": self.mask.to_dict(),
+            "mask": self.mask.to_dict() if self.mask is not None else None,
             "mask_source": self.mask_source,
             "area": self.area,
-            "pose": self.pose.to_dict(),
+            "pose": self.pose.to_dict() if self.pose is not None else None,
             "category_id": self.category_id,
             "category_name": self.category_name,
             "identity": self.identity,
@@ -181,11 +180,19 @@ class ObjectAnnotationArray(pa.ExtensionArray):
         arrays = []
 
         for field in ObjAnn_fields:
+            data = []
+            for obj in annotation_list:
+                # print(obj)
+                if obj is not None:
+                    data.append(obj.to_dict()[field.name])
+                else:
+                    data.append(None)
+
             arrays.append(
                 convert_field(
                     field.name,
                     field.type,
-                    [obj.to_dict()[field.name] for obj in annotation_list],
+                    data,
                 )
             )
         storage = pa.StructArray.from_arrays(arrays, fields=ObjAnn_fields)
