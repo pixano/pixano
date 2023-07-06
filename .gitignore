@@ -16,7 +16,7 @@ dist-ssr
 .cache
 
 # Docs
-docs/site
+site
 
 # Editor directories and files
 .vscode
