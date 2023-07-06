@@ -16,11 +16,9 @@ import tempfile
 import unittest
 
 import numpy as np
-import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-
-from .bbox import BBox, BBoxArray
+from pixano.core.arrow_types.bbox import BBox, BBoxType
 
 
 class BBoxTestCase(unittest.TestCase):
@@ -68,40 +66,22 @@ class BBoxTestCase(unittest.TestCase):
 class TestParquetBBox(unittest.TestCase):
     def setUp(self) -> None:
         self.bbox_list = [
-            BBox([0.1, 0.2, 0.3, 0.4], "xyxy", True),
-            BBox([0.1, 0.2, 0.2, 0.2], "xywh", True),
-            BBox([12, 2.9, 3.3, 7], "xyxy", False),
+            BBox.from_xywh([0.1, 0.2, 0.3, 0.4]),
+            BBox.from_xyxy([0.1, 0.2, 0.2, 0.2]),
         ]
 
     def test_bbox_table(self):
-        bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
+        bbox_arr = BBoxType.Array.from_list(self.bbox_list)
 
-        table = pa.Table.from_arrays([bbox_arr], names=["bbox"])
+        table = pa.Table.from_arrays(
+            [bbox_arr], schema=pa.schema([pa.field('bbox', BBoxType)])
+        )
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name
             pq.write_table(table, temp_file_path, store_schema=True)
-
             re_table = pq.read_table(temp_file_path)
-            self.assertEqual(re_table.column_names, ["bbox"])
-            Bbox0 = re_table.take([0])["bbox"][0].as_py()
-            self.assertTrue(isinstance(Bbox0, BBox))
-            self.assertTrue(np.allclose(self.bbox_list[0].to_xyxy(), Bbox0.to_xyxy()))
-
-    @unittest.skip("panda give dict")
-    def test_bbox_table_with_panda(self):
-        bbox_arr = BBoxArray.from_BBox_list(self.bbox_list)
-
-        pd_bbox = bbox_arr.to_pandas()
-
-        df = pd.DataFrame(pd_bbox, columns=["bbox"])
-        pd_table = pa.Table.from_pandas(df)
-
-        pq.write_table(pd_table, "test_bbox.parquet")
-
-        reload_pd_table = pq.read_pandas("test_bbox.parquet")
-        BBox1 = reload_pd_table.take([0])["bbox"][0].as_py()
-
-        self.assertEqual(reload_pd_table.column_names, ["bbox"])
-        # panda give dict
-        self.assertTrue(isinstance(BBox1, BBox))
+        self.assertEqual(re_table.column_names, ['bbox'])
+        Bbox0 = re_table.to_pylist()[0]['bbox']
+        self.assertTrue(isinstance(Bbox0, BBox))
+        self.assertTrue(np.allclose(self.bbox_list[0].to_xyxy(), Bbox0.to_xyxy()))

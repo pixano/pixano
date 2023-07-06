@@ -18,6 +18,11 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from pixano.core.arrow_types.compressedRLE import (
+    CompressedRLE,
+    CompressedRLEArray,
+    CompressedRLEType,
+)
 from pixano.transforms.image import (
     mask_to_rle,
     polygons_to_rle,
@@ -26,8 +31,6 @@ from pixano.transforms.image import (
     rle_to_urle,
     urle_to_rle,
 )
-
-from .compressedRLE import CompressedRLE, CompressedRLEArray, CompressedRLEType
 
 
 class CompressedRLETestCase(unittest.TestCase):

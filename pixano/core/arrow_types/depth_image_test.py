@@ -7,7 +7,11 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .depth_image import DepthImage, DepthImageArray, DepthImageType
+from pixano.core.arrow_types.depth_image import (
+    DepthImage,
+    DepthImageArray,
+    DepthImageType,
+)
 
 
 class DepthImageTestCase(unittest.TestCase):

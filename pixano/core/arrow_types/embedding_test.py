@@ -17,11 +17,11 @@ import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .embedding import Embedding, EmbeddingArray, EmbeddingType
+from pixano.core.arrow_types.embedding import Embedding, EmbeddingArray, EmbeddingType
 
 
 class EmbeddingTestCase(unittest.TestCase):
-    #TODO when more info on embedding
+    # TODO when more info on embedding
     pass
 
 

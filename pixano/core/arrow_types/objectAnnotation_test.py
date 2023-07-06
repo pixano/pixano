@@ -18,10 +18,14 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .bbox import BBox
-from .compressedRLE import CompressedRLE
-from .objectAnnotation import ObjectAnnotation, ObjectAnnotationArray, ObjectAnnotationType
-from .pose import Pose
+from pixano.core.arrow_types.bbox import BBox
+from pixano.core.arrow_types.compressedRLE import CompressedRLE
+from pixano.core.arrow_types.objectAnnotation import (
+    ObjectAnnotation,
+    ObjectAnnotationArray,
+    ObjectAnnotationType,
+)
+from pixano.core.arrow_types.pose import Pose
 
 
 class ObjectAnnotationTestCase(unittest.TestCase):
@@ -74,9 +78,11 @@ class TestParquetObjectAnnotation(unittest.TestCase):
     def test_object_annotation_table(self):
         objAnn_arr = ObjectAnnotationArray.from_list(self.object_annotations_list)
 
-        schema = pa.schema([pa.field("ObjectAnn", ObjectAnnotationType(), nullable=True)])
+        schema = pa.schema(
+            [pa.field("ObjectAnn", ObjectAnnotationType(), nullable=True)]
+        )
 
-        table = pa.Table.from_arrays([objAnn_arr], schema = schema)
+        table = pa.Table.from_arrays([objAnn_arr], schema=schema)
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name

@@ -24,9 +24,8 @@ import pyarrow.parquet as pq
 from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
 
+from pixano.core.arrow_types.image import Image, ImageArray, ImageType
 from pixano.transforms.image import binary_to_url
-
-from .image import Image, ImageArray, ImageType
 
 
 class ImageTestCase(unittest.TestCase):
