@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pixano"
+dynamic = ["version"]
+description = 'Data-centric AI building blocks for computer vision applications' 
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
+keywords = [
+  "machine learning",
+  "computer vision",
+  "data",
+  "visualization"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3.10",
+  "License :: CeCILL-C Free Software License Agreement (CECILL-C)",
+]
+dependencies = [
+  "duckdb ~= 0.7.0",
+  "etils ~= 1.1.0",
+  "fastapi-pagination ~= 0.11.4",
+  "imageio ~= 2.25.0",
+  "importlib-resources ~= 5.12.0",
+  "ipywidgets ~= 8.0.0",
+  "jinja2 ~= 3.1.2",
+  "numpy ~= 1.23.0",
+  "onnx ~= 1.13.0",
+  "onnxruntime ~= 1.14.0",
+  "opencv-python ~= 4.7.0",
+  "pandas ~= 1.5.0",
+  "Pillow ~= 9.4.0",
+  "pyarrow ~= 11.0.0",
+  "pycocotools ~= 2.0.0",
+  "setuptools ~= 65.6.0",
+  "shortuuid ~= 1.0.0",
+  "tqdm ~= 4.64.0",
+  "uvicorn ~= 0.20.0",
+]
+
+[project.optional-dependencies]
+documentation = [
+  "mkdocs-material ~= 9.1.0",
+  "mkdocstrings-python ~= 0.9.0"
+]
+
+[project.urls]
+Documentation = "https://github.com/pixano/pixano#readme"
+Issues = "https://github.com/pixano/pixano/issues"
+Source = "https://github.com/pixano/pixano"
+
+[project.scripts]
+pixano-explorer = "pixano.apps.explorer.serve:main"
+
+[tool.hatch.build]
+include = ["/pixano"]
+exclude = ["__pycache__"]
+artifacts = ["/pixano/apps/explorer/dist"]
+
+[tool.hatch.version]
+path = "pixano/__version__.py"

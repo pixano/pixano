@@ -1,0 +1,65 @@
+site_name: Pixano Documentation
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.sections
+plugins:
+- search
+- mkdocstrings:
+    handlers:
+      python:
+        paths: ["../pixano"]
+        import:
+          - https://docs.python.org/3/objects.inv
+        options:
+          docstring_style: google
+          docstring_options:
+            ignore_init_summary: yes
+          show_submodules: no
+          docstring_section_style: list
+          members_order: alphabetical
+          merge_init_into_class: no
+          show_root_heading: true
+          show_source: true
+          heading_level: 1
+
+
+nav:
+- "Getting started": index.md
+
+- "API reference":
+
+  - "analytics":
+    - "feature_statistics": code/analytics/feature_statistics.md
+
+  - "apps":
+    - "explorer":
+      - "main": code/apps/explorer/main.md
+      - "db_utils": code/apps/explorer/db_utils.md
+
+  - "core":
+    - "arrow_types": code/core/arrow_types.md
+    - "dataset": code/core/dataset.md
+
+  - "data":
+    - "DataLoader": code/data/data_loader.md
+    - "CocoLoader": code/data/coco_loader.md
+    - "PixanoLoader": code/data/pixano_loader.md
+    - "models": code/data/models.md
+
+  - "inference":
+    - "InferenceModel": code/inference/inference_model.md
+    - "OfflineModel": code/inference/offline_model.md
+    - "OnlineModel": code/inference/online_model.md
+
+  - "notebook":
+    - "display": code/notebook/display.md
+
+  - "tools":
+    - "converter": code/tools/converter.md
+
+  - "transforms":
+    - "boxes": code/transforms/boxes.md
+    - "image": code/transforms/image.md
+    - "labels": code/transforms/labels.md
