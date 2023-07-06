@@ -205,7 +205,7 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
     # Create items features
     items = [_create_features(e) for e in items_table.to_pylist()]
 
-    return create_page(items=items, total=total, params=params)
+    return create_page(items, total=total, params=params)
 
 
 def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
