@@ -118,7 +118,7 @@ class ObjectAnnotationType(pa.ExtensionType):
                 [
                     pa.field("id", pa.string()),
                     pa.field("view_id", pa.string(), nullable=True),
-                    pa.field("bbox", BBoxType(), nullable=True),
+                    pa.field("bbox", BBoxType, nullable=True),
                     pa.field("bbox_source", pa.string(), nullable=True),
                     pa.field("bbox_confidence", pa.float32(), nullable=True),
                     pa.field("is_group_of", pa.bool_(), nullable=True),

@@ -13,30 +13,43 @@
 
 import pyarrow as pa
 
-from .bbox import BBox, BBoxArray, BBoxType, is_bbox_type
-from .compressedRLE import (
+from pixano.core.arrow_types.all_pixano_types import createPaType
+from pixano.core.arrow_types.bbox import BBox, BBoxType
+from pixano.core.arrow_types.compressedRLE import (
     CompressedRLE,
     CompressedRLEArray,
     CompressedRLEType,
     is_compressedRLE_type,
 )
-from .depth_image import DepthImage, DepthImageArray, DepthImageType
-from .embedding import Embedding, EmbeddingArray, EmbeddingType, is_embedding_type
-from .image import Image, ImageArray, ImageType, is_image_type
-from .objectAnnotation import (
+from pixano.core.arrow_types.depth_image import (
+    DepthImage,
+    DepthImageArray,
+    DepthImageType,
+)
+from pixano.core.arrow_types.embedding import (
+    Embedding,
+    EmbeddingArray,
+    EmbeddingType,
+    is_embedding_type,
+)
+from pixano.core.arrow_types.image import Image, ImageArray, ImageType, is_image_type
+from pixano.core.arrow_types.objectAnnotation import (
     ObjectAnnotation,
     ObjectAnnotationArray,
     ObjectAnnotationType,
     is_objectAnnotation_type,
 )
-from .pose import Pose, PoseArray, PoseType, is_pose_type
-from .utils import convert_field, fields, is_number, register_extension_types
+from pixano.core.arrow_types.pose import Pose, PoseArray, PoseType, is_pose_type
+from pixano.core.arrow_types.utils import (
+    convert_field,
+    fields,
+    is_number,
+    register_extension_types,
+)
 
 __all__ = [
     "BBox",
     "BBoxType",
-    "BBoxArray",
-    "is_bbox_type",
     "Embedding",
     "EmbeddingType",
     "EmbeddingArray",
@@ -67,7 +80,6 @@ __all__ = [
 
 
 arrow_types = [
-    BBoxType,
     PoseType,
     CompressedRLEType,
     EmbeddingType,
