@@ -15,77 +15,33 @@ import pyarrow as pa
 
 from pixano.core.arrow_types.all_pixano_types import createPaType
 from pixano.core.arrow_types.bbox import BBox, BBoxType
-from pixano.core.arrow_types.compressedRLE import (
-    CompressedRLE,
-    CompressedRLEArray,
-    CompressedRLEType,
-    is_compressedRLE_type,
-)
-from pixano.core.arrow_types.depth_image import (
-    DepthImage,
-    DepthImageArray,
-    DepthImageType,
-)
-from pixano.core.arrow_types.embedding import (
-    Embedding,
-    EmbeddingArray,
-    EmbeddingType,
-    is_embedding_type,
-)
-from pixano.core.arrow_types.image import Image, ImageArray, ImageType, is_image_type
+from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
+from pixano.core.arrow_types.depth_image import DepthImage, DepthImageType
+from pixano.core.arrow_types.embedding import Embedding, EmbeddingType
+from pixano.core.arrow_types.image import Image, ImageType
 from pixano.core.arrow_types.objectAnnotation import (
     ObjectAnnotation,
-    ObjectAnnotationArray,
     ObjectAnnotationType,
-    is_objectAnnotation_type,
 )
-from pixano.core.arrow_types.pose import Pose, PoseArray, PoseType, is_pose_type
-from pixano.core.arrow_types.utils import (
-    convert_field,
-    fields,
-    is_number,
-    register_extension_types,
-)
+from pixano.core.arrow_types.pose import Pose, PoseType
+from pixano.core.arrow_types.utils import convert_field, fields, is_number
 
 __all__ = [
     "BBox",
     "BBoxType",
     "Embedding",
     "EmbeddingType",
-    "EmbeddingArray",
-    "is_embedding_type",
     "ObjectAnnotation",
     "ObjectAnnotationType",
-    "ObjectAnnotationArray",
-    "is_objectAnnotation_type",
     "CompressedRLE",
     "CompressedRLEType",
-    "CompressedRLEArray",
-    "is_compressedRLE_type",
     "Image",
     "ImageType",
-    "ImageArray",
-    "is_image_type",
     "Pose",
     "PoseType",
-    "PoseArray",
-    "is_pose_type",
     "DepthImage",
     "DepthImageType",
-    "DepthImageArray",
     "convert_field",
     "fields",
     "is_number",
 ]
-
-
-arrow_types = [
-    PoseType,
-    CompressedRLEType,
-    EmbeddingType,
-    ImageType,
-    DepthImageType,
-    ObjectAnnotationType,
-]
-
-register_extension_types(arrow_types)

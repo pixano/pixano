@@ -16,6 +16,7 @@ from PIL import Image
 
 import pyarrow as pa
 from numpy import ndarray
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
 from pixano.transforms.image import (
     mask_to_rle,
@@ -31,10 +32,10 @@ from pixano.transforms.image import (
 # ------------------------------------------------
 
 
-class CompressedRLE:
+class CompressedRLE(PixanoType):
     def __init__(self, size: list[float], counts: bytes | NoneType):
         self._size = size
-        self._counts = counts if not None else b""
+        self._counts = counts
 
     @property
     def size(self) -> list[float]:
@@ -42,20 +43,8 @@ class CompressedRLE:
 
     @property
     def counts(self) -> bytes:
-        return self._counts
-
-    @staticmethod
-    def from_dict(dict: dict) -> "CompressedRLE":
-        return CompressedRLE(dict["size"], dict["counts"])
-
-    def to_dict(self) -> dict:
-        """convert compressedRLE to dict
-
-        Returns:
-            dict: dict containing "size" and "counts"
-        """
-        return {"size": self.size, "counts": self.counts}
-
+        return self._counts if not None else b""
+    
     def to_mask(self) -> ndarray:
         return rle_to_mask(self.to_dict())
 
@@ -81,76 +70,14 @@ class CompressedRLE:
     ) -> "CompressedRLE":
         rle_dict = polygons_to_rle(polygons, height, width)
         return CompressedRLE.from_dict(rle_dict)
-
-
-# ------------------------------------------------
-#             Py arrow integration
-# ------------------------------------------------
-
-
-class CompressedRLEType(pa.ExtensionType):
-    """Segmentation mask type as PyArrow StructType"""
-
-    def __init__(self):
-        super(CompressedRLEType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("size", pa.list_(pa.int32(), list_size=2)),
-                    pa.field("counts", pa.binary()),
-                ]
-            ),
-            "mask[rle]",
+    
+    @classmethod
+    def to_struct(cls):
+        return pa.struct(
+            [
+                pa.field("size", pa.list_(pa.int32(), list_size=2)),
+                pa.field("counts", pa.binary()),
+            ]
         )
 
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return CompressedRLEType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
-    def __arrow_ext_scalar_class__(self):
-        return CompressedRLEScalar
-
-    def __arrow_ext_class__(self):
-        return CompressedRLEArray
-
-
-class CompressedRLEScalar(pa.ExtensionScalar):
-    def as_py(self) -> CompressedRLE:
-        return CompressedRLE(self.value["size"].as_py(), self.value["counts"].as_py())
-
-
-class CompressedRLEArray(pa.ExtensionArray):
-    """Class to use pa.array for CompressedRLE instance"""
-
-    @classmethod
-    def from_CompressedRLE_list(
-        cls, compressedRLE_list: list[CompressedRLE]
-    ) -> pa.Array:
-        """Create CompressedRLE pa.array from compressedRLE list
-
-        Args:
-            compressedRLE_list (list[compressedRLE]): list of compressedRLE
-
-        Returns:
-            pa.Array: pa.array of CompressedRLE
-        """
-        compressedRLE_dicts = [
-            compressedRLE.to_dict() for compressedRLE in compressedRLE_list
-        ]
-
-        return pa.array(compressedRLE_dicts, CompressedRLEType())
-
-
-def is_compressedRLE_type(t: pa.DataType) -> bool:
-    """Returns True if value is an instance of CompressedRLEType
-
-    Args:
-        t (pa.DataType): Value to check
-
-    Returns:
-        bool: Type checking response
-    """
-
-    return isinstance(t, CompressedRLEType)
+CompressedRLEType = createPaType(CompressedRLE.to_struct(), "CrompressedLE", CompressedRLE)

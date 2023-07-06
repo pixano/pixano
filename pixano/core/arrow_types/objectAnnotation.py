@@ -15,6 +15,8 @@ from typing import Optional
 
 import pyarrow as pa
 
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+
 from .bbox import BBox, BBoxType
 from .compressedRLE import CompressedRLE, CompressedRLEType
 from .pose import Pose, PoseType
@@ -25,7 +27,7 @@ from .utils import convert_field, fields
 # ------------------------------------------------
 
 
-class ObjectAnnotation:
+class ObjectAnnotation(PixanoType):
     """ObjectAnnotation type using all annotation data
 
     Attributes:
@@ -82,122 +84,27 @@ class ObjectAnnotation:
         self.category_name = category_name
         self.identity = identity
 
-    def to_dict(self) -> dict:
-        """Converts the ObjectAnnotation instance to a dictionary."""
-        annotation_dict = {
-            "id": self.id,
-            "view_id": self.view_id,
-            "bbox": self.bbox.to_dict() if self.bbox is not None else None,
-            "bbox_source": self.bbox_source,
-            "bbox_confidence": self.bbox_confidence,
-            "is_group_of": self.is_group_of,
-            "is_difficult": self.is_difficult,
-            "is_truncated": self.is_truncated,
-            "mask": self.mask.to_dict() if self.mask is not None else None,
-            "mask_source": self.mask_source,
-            "area": self.area,
-            "pose": self.pose.to_dict() if self.pose is not None else None,
-            "category_id": self.category_id,
-            "category_name": self.category_name,
-            "identity": self.identity,
-        }
-        return annotation_dict
-
-
-# ------------------------------------------------
-#             Py arrow integration
-# ------------------------------------------------
-
-
-class ObjectAnnotationType(pa.ExtensionType):
-    """ObjectAnnotationType type as PyArrow binary"""
-
-    def __init__(self):
-        super(ObjectAnnotationType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("id", pa.string()),
-                    pa.field("view_id", pa.string(), nullable=True),
-                    pa.field("bbox", BBoxType, nullable=True),
-                    pa.field("bbox_source", pa.string(), nullable=True),
-                    pa.field("bbox_confidence", pa.float32(), nullable=True),
-                    pa.field("is_group_of", pa.bool_(), nullable=True),
-                    pa.field("is_difficult", pa.bool_(), nullable=True),
-                    pa.field("is_truncated", pa.bool_(), nullable=True),
-                    pa.field("mask", CompressedRLEType(), nullable=True),
-                    pa.field("mask_source", pa.string(), nullable=True),
-                    pa.field("area", pa.float32(), nullable=True),
-                    pa.field("pose", PoseType(), nullable=True),
-                    pa.field("category_id", pa.int32(), nullable=True),
-                    pa.field("category_name", pa.string(), nullable=True),
-                    pa.field("identity", pa.string(), nullable=True),
-                ]
-            ),
-            "ObjectAnnotation",
-        )
 
     @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return ObjectAnnotationType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
-    def __arrow_ext_scalar_class__(self):
-        return ObjectAnnotationTypeScalar
-
-    def __arrow_ext_class__(self):
-        return ObjectAnnotationArray
-
-
-class ObjectAnnotationTypeScalar(pa.ExtensionScalar):
-    def as_py(self) -> ObjectAnnotation:
-        return ObjectAnnotation(
-            self.value["id"].as_py(),
-            self.value["view_id"].as_py(),
-            self.value["bbox"].as_py(),
-            self.value["bbox_source"].as_py(),
-            self.value["bbox_confidence"].as_py(),
-            self.value["is_group_of"].as_py(),
-            self.value["is_difficult"].as_py(),
-            self.value["is_truncated"].as_py(),
-            self.value["mask"].as_py(),
-            self.value["mask_source"].as_py(),
-            self.value["area"].as_py(),
-            self.value["pose"].as_py(),
-            self.value["category_id"].as_py(),
-            self.value["category_name"].as_py(),
-            self.value["identity"].as_py(),
+    def to_struct(cls) -> pa.StructType:
+        return pa.struct(
+            [
+                pa.field("id", pa.string()),
+                pa.field("view_id", pa.string(), nullable=True),
+                pa.field("bbox", BBoxType, nullable=True),
+                pa.field("bbox_source", pa.string(), nullable=True),
+                pa.field("bbox_confidence", pa.float32(), nullable=True),
+                pa.field("is_group_of", pa.bool_(), nullable=True),
+                pa.field("is_difficult", pa.bool_(), nullable=True),
+                pa.field("is_truncated", pa.bool_(), nullable=True),
+                pa.field("mask", CompressedRLEType, nullable=True),
+                pa.field("mask_source", pa.string(), nullable=True),
+                pa.field("area", pa.float32(), nullable=True),
+                pa.field("pose", PoseType, nullable=True),
+                pa.field("category_id", pa.int32(), nullable=True),
+                pa.field("category_name", pa.string(), nullable=True),
+                pa.field("identity", pa.string(), nullable=True),
+            ]
         )
 
-
-class ObjectAnnotationArray(pa.ExtensionArray):
-    """Class to use pa.array for ObjectAnnotationType instance"""
-
-    @staticmethod
-    def from_list(annotation_list: list[ObjectAnnotation]):
-        ObjAnn_fields = fields(ObjectAnnotationType)
-        arrays = []
-
-        for field in ObjAnn_fields:
-            data = []
-            for obj in annotation_list:
-                # print(obj)
-                if obj is not None:
-                    data.append(obj.to_dict()[field.name])
-                else:
-                    data.append(None)
-
-            arrays.append(
-                convert_field(
-                    field.name,
-                    field.type,
-                    data,
-                )
-            )
-        storage = pa.StructArray.from_arrays(arrays, fields=ObjAnn_fields)
-        return pa.ExtensionArray.from_storage(ObjectAnnotationType(), storage)
-
-
-def is_objectAnnotation_type(t: pa.DataType) -> bool:
-    return isinstance(t, ObjectAnnotationType)
+ObjectAnnotationType = createPaType(ObjectAnnotation.to_struct(), 'ObjectAnnotation', ObjectAnnotation)

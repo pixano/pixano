@@ -17,7 +17,7 @@ import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.embedding import Embedding, EmbeddingArray, EmbeddingType
+from pixano.core.arrow_types.embedding import Embedding, EmbeddingType
 
 
 class EmbeddingTestCase(unittest.TestCase):
@@ -27,14 +27,14 @@ class EmbeddingTestCase(unittest.TestCase):
 
 class TestParquetEmbedding(unittest.TestCase):
     def setUp(self) -> None:
-        self.embeddin_list = [Embedding(b"test_bytes1"), Embedding(b"test_bytes2")]
+        self.embedding_list = [Embedding(b"test_bytes1"), Embedding(b"test_bytes2")]
 
     def test_embeddin_table(self):
-        embeddin_array = EmbeddingArray.from_Embedding_list(self.embeddin_list)
+        embeddin_array = EmbeddingType.Array.from_list(self.embedding_list)
 
         schema = pa.schema(
             [
-                pa.field("embeddin", EmbeddingType()),
+                pa.field("embedding", EmbeddingType),
             ]
         )
 
@@ -45,6 +45,6 @@ class TestParquetEmbedding(unittest.TestCase):
             pq.write_table(table, temp_file_path, store_schema=True)
             re_table = pq.read_table(temp_file_path)
 
-        self.assertEqual(re_table.column_names, ["embeddin"])
-        embeddin1 = re_table.take([1])["embeddin"][0].as_py()
+        self.assertEqual(re_table.column_names, ["embedding"])
+        embeddin1 = re_table.take([1])["embedding"][0].as_py()
         self.assertTrue(isinstance(embeddin1, Embedding))

@@ -22,6 +22,7 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import binary_to_url
 
 # ------------------------------------------------
@@ -29,7 +30,7 @@ from pixano.transforms.image import binary_to_url
 # ------------------------------------------------
 
 
-class Image:
+class Image(PixanoType):
     """Image type using URI or bytes
 
     Attributes:
@@ -144,20 +145,6 @@ class Image:
         """
         return self.as_pillow().size
 
-    @staticmethod
-    def from_dict(dict: dict) -> "Image":
-        uri, bytes, preview_bytes, uri_prefix = None, None, None, None
-        if hasattr(dict, "uri"):
-            uri = dict["uri"]
-        if hasattr(dict, "bytes"):
-            bytes = dict["bytes"]
-        if hasattr(dict, "preview_bytes"):
-            preview_bytes = dict["preview_bytes"]
-        if hasattr(dict, "uri_prefix"):
-            uri_pefix = dict["uri_prefix"]
-
-        return Image(uri, bytes, preview_bytes, uri_pefix)
-
     def open(self) -> IO:
         """Open image
 
@@ -199,89 +186,15 @@ class Image:
         im_bytes = self._preview_bytes if preview else self.bytes
         return IPyImage(url=binary_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
-    def to_dict(self) -> dict:
-        """Return image attributes as dict
-
-        Returns:
-            dict: Image attributes
-        """
-
-        return {
-            "uri": self._uri,
-            "bytes": self._bytes,
-            "preview_bytes": self._preview_bytes,
-        }
-
-
-# ------------------------------------------------
-#             Py arrow integration
-# ------------------------------------------------
-
-
-class ImageType(pa.ExtensionType):
-    """Image type as PyArrow StructType"""
-
-    def __init__(self):
-        super(ImageType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("uri", pa.utf8()),
-                    pa.field("bytes", pa.binary()),
-                    pa.field("preview_bytes", pa.binary()),
-                ]
-            ),
-            "Image",
-        )
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
     @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return ImageType()
-
-    def __arrow_ext_scalar_class__(self):
-        return ImageScalar
-
-    def __arrow_ext_class__(self):
-        return ImageArray
-
-
-class ImageScalar(pa.ExtensionScalar):
-    def as_py(self) -> Image:
-        return Image(
-            self.value["uri"].as_py(),
-            self.value["bytes"].as_py(),
-            self.value["preview_bytes"].as_py(),
+    def to_struct(cls) -> pa.StructType:
+        return pa.struct(
+            [
+                pa.field("uri", pa.utf8()),
+                pa.field("bytes", pa.binary()),
+                pa.field("preview_bytes", pa.binary()),
+            ]
         )
 
 
-class ImageArray(pa.ExtensionArray):
-    """Class to use pa.array for Image instance"""
-
-    @classmethod
-    def from_Image_list(cls, image_list: list[Image]) -> pa.Array:
-        """Create Image pa.array from image list
-
-        Args:
-            image_list (list[Bbox]): list of image
-
-        Returns:
-            pa.Array: pa.array of Image
-        """
-        image_dicts = [image.to_dict() for image in image_list]
-
-        return pa.array(image_dicts, ImageType())
-
-
-def is_image_type(t: pa.DataType) -> bool:
-    """Returns True if value is an instance of ImageType
-
-    Args:
-        t (pa.DataType): Value to check
-
-    Returns:
-        bool: Type checking response
-    """
-
-    return isinstance(t, ImageType)
+ImageType = createPaType(Image.to_struct(), 'Image', Image)

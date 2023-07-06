@@ -20,7 +20,6 @@ import pyarrow.parquet as pq
 
 from pixano.core.arrow_types.compressedRLE import (
     CompressedRLE,
-    CompressedRLEArray,
     CompressedRLEType,
 )
 from pixano.transforms.image import (
@@ -101,13 +100,13 @@ class TestParquetCompressedRLE(unittest.TestCase):
         ]
 
     def test_compressedRLE_table(self):
-        compressedRLE_array = CompressedRLEArray.from_CompressedRLE_list(
+        compressedRLE_array = CompressedRLEType.Array.from_list(
             self.compressedRLE_list
         )
 
         schema = pa.schema(
             [
-                pa.field("compressedRLE", CompressedRLEType()),
+                pa.field("compressedRLE", CompressedRLEType),
             ]
         )
 

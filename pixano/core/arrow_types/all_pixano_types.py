@@ -7,19 +7,42 @@ from pixano.core.arrow_types.utils import convert_field, fields
 
 
 class PixanoType(ABC):
-    def to_dict(self) -> dict[str, any]:
-        return {key: getattr(self, key) for key in self.__dict__.keys() if not key.startswith("_")}
-
-    @classmethod
-    def from_dict(cls: Type["PixanoType"], data: dict[str, any]) -> "PixanoType":
-        instance = cls.__new__(cls)
-        instance.__dict__.update(data)
-        return instance
 
     @abstractmethod
     def to_struct(cls) -> pa.StructType:
+        """Abstract method who must return the pyarrow struct corresponding to pixano type
+
+        Raises:
+            NotImplementedError: 
+
+        Returns:
+            pa.StructType: Struct corresponding to type
+        """
         raise NotImplementedError
 
+    def to_dict(self) -> dict[str, any]:
+        """Transform type to dict based on pyarrow struct
+
+        Returns:
+            dict[str, any]: Dict with field correspond to struct
+        """
+
+        #TODO recursively
+        return {field.name : getattr(self,field.name) for field in self.to_struct()}
+
+
+    @classmethod
+    def from_dict(cls: Type["PixanoType"], data: dict[str, any]) -> "PixanoType":
+        """Instance type from dict
+
+        Args:
+            cls (Type[PixanoType]): Type to instance
+            data (dict[str, any]): Dict wih args corresponding to constructor
+
+        Returns:
+            PixanoType: New instance of type
+        """
+        return cls(**data)
 
 def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataType:
 

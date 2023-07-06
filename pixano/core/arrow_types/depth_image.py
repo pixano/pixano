@@ -20,6 +20,8 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
+from pixano.core.arrow_types.all_pixano_types import createPaType
+
 # ------------------------------------------------
 #             Python type
 # ------------------------------------------------
@@ -105,8 +107,14 @@ class DepthImage:
 
         return DepthImage(depth_map=depth_n.astype(np.uint8), shape=depth.shape)
 
-    def to_dict(self) -> dict:
-        return {"bytes": self.bytes, "shape": self._shape}
+    @classmethod
+    def to_struct(cls):
+        return pa.struct(
+            [
+                pa.field("bytes", pa.binary()),
+                pa.field("shape", pa.list_(pa.int32(), list_size=2)),
+            ]
+        )
 
     def display(self):
         """display image as plt.figure object"""
@@ -116,66 +124,4 @@ class DepthImage:
             plt.figure(figsize=self._shape)
         plt.show()
 
-
-# ------------------------------------------------
-#             Py arrow integration
-# ------------------------------------------------
-
-
-class DepthImageType(pa.ExtensionType):
-    """Depth image extension types"""
-
-    def __init__(self):
-        super(DepthImageType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("bytes", pa.binary()),
-                    pa.field("shape", pa.list_(pa.int32(), list_size=2)),
-                ]
-            ),
-            "DepthImage",
-        )
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return DepthImageType()
-
-    def __arrow_ext_scalar_class__(self):
-        return DepthImageScalar
-
-
-class DepthImageScalar(pa.ExtensionScalar):
-    """Used by ExtensionArray.to_pylist()"""
-
-    def as_py(self) -> Optional[DepthImage]:
-        if pd.isna(self.value):
-            return None
-        return DepthImage(
-            bytes_data=self.value["bytes"].as_py(), shape=self.value["shape"].as_py()
-        )
-
-
-class DepthImageArray(pa.ExtensionArray):
-    """Class to use pa.array for DepthImage instance"""
-
-    @classmethod
-    def from_list(cls, depth_image_list: list[DepthImage]) -> pa.Array:
-        """Create DepthImage pa.array from DepthImage list
-
-        Args:
-            depth_image_list (list[DepthImage]): list of DepthImage
-
-        Returns:
-            pa.Array: pa.array of DepthImage
-        """
-        depth_image_dicts = [depth_image.to_dict() for depth_image in depth_image_list]
-
-        return pa.array(depth_image_dicts, DepthImageType())
-
-
-def is_depth_image_type(t: pa.DataType) -> bool:
-    """Returns True if the type is an Depthimage type"""
-    return isinstance(t, DepthImageType)
+DepthImageType = createPaType(DepthImage.to_struct(), 'DepthImage', DepthImage)

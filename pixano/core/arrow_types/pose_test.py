@@ -17,7 +17,7 @@ import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.pose import Pose, PoseArray, PoseType
+from pixano.core.arrow_types.pose import Pose, PoseType
 
 
 class PoseTestCase(unittest.TestCase):
@@ -32,11 +32,11 @@ class TestParquetPose(unittest.TestCase):
         self.pose_list = [Pose(cam_R_m2c0, cam_t_m2c0), Pose(cam_R_m2c1, cam_t_m2c1)]
 
     def test_pose_table(self):
-        pose_array = PoseArray.from_Pose_list(self.pose_list)
+        pose_array = PoseType.Array.from_list(self.pose_list)
 
         schema = pa.schema(
             [
-                pa.field("pose", PoseType()),
+                pa.field("pose", PoseType),
             ]
         )
 
