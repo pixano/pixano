@@ -5,7 +5,7 @@
 
 ![Pixano Explorer Home Page](../assets/user/explorer_home.png)
 
-From the Explorer home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
+From the Explorer home page, you will be greeted with a list of all the datasets in Pixano format found in the directory you provided.
 
 For each dataset, you can see its name, the number of elements inside it, and a thumbnail composed from six sample elements.
 
@@ -36,13 +36,13 @@ You can navigate between pages with the *Previous* and *Next* buttons at the bot
 
 You can click on any element to open it in the exploration page.
 
-For each element, you can see columns for its ID, a thumbnail for each of its media, and the split it comes from.
+For each element, you can see columns for its ID, a thumbnail for each of its media, and the dataset split it comes from.
 
 *Filtering your dataset based on these columns will soon be available.*
 
 ### Going home
 
-To go back to the home page, click on "Pixano Annotator" in the top left or on the *Close* icon in the top right.
+To go back to the home page, click on "Pixano Explorer" in the top left-hand corner or on the *Close* icon in the top right-hand corner.
 
 
 ## Element view page
@@ -55,14 +55,14 @@ The selected element (image or images for multi-view datasets) is displayed.
 
 You can zoom in and out with the mouse wheel.
 
-You can grab and move images.
+You can grab and move images on the canvas.
 
-You can double click on an image to move it above other images.
+You can double click on an image to move it above other images with a multi-view dataset.
 
-Annotations, in form of segmentations mask and bounding boxes, are displayed.
+Annotations, in form of segmentation masks and bounding boxes, are displayed.
 Each object category is given a color.
 
-For bounding boxes, you can see the category, and the bounding box confidence in case of inferences, on their top left corners.
+On each bounding box, the object category is displayed in the top left-hand corner, together with the confidence score if the bounding box was obtained by the inference of a given model.
 
 ### Right toolbar
 
@@ -73,9 +73,9 @@ A *toolbar* is available on the right side of the page with the following sectio
 - A ***Tools*** section to filter the annotations
     - The *Show all annotations* checkbox allows you to toggle annotations visibility
     - The *Show bounding boxes* checkbox allows you to toggle bounding box visibility
-    - The *Mask opacity* slider allows you to adjust the opacity of segmentations masks
-    - The *Confidence threshold* slider allows you to adjust the threshold displaying inferences
-    - The *Labels* list allows you to see the number of annotations for any label, and to toggle annotations visibility for individual labels by click on their names
+    - The *Mask opacity* slider allows you to adjust the opacity of segmentation masks
+    - The *Confidence threshold* slider allows you to adjust the threshold to filter the inferred boxes to display
+    - The *Labels* list allows you to see the number of annotations for any label, and to toggle annotations visibility for individual labels by clicking on their names
 
 *More options to display ground truths and inference annotations separately and with different colors will be coming soon.*
 
@@ -83,6 +83,6 @@ A *toolbar* is available on the right side of the page with the following sectio
 
 ### Going home
 
-To go back to the home page, click on "Pixano Annotator" in the top left.
+To go back to the home page, click on "Pixano Explorer" in the top left-hand corner.
 
-To go back to the exploration page, click on the dataset name in the top left or on the *Close* icon in the top right, or press the *Esc* key.
+To go back to the exploration page, click on the dataset name in the top left-hand corner or on the *Close* icon in the top right-hand corner, or press the *Esc* key.
