@@ -44,4 +44,4 @@ annotator.display()
 
 ## Using the Annotator
 
-Please refer to the [User guide for Pixano Annotator](../../../docs/docs/user/annotator.md) for more information on how to use it.
+Please refer to our [user guide for Pixano Annotator](https://pixano.github.io/user/annotator/) on our documentation website for more information on how to use it.

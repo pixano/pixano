@@ -44,4 +44,4 @@ explorer.display()
 
 ## Using the Explorer
 
-Please refer to the [User guide for Pixano Explorer](../../../docs/docs/user/explorer.md) for more information on how to use it.
+Please refer to our [user guide for Pixano Explorer](https://pixano.github.io/user/explorer/) on our documentation website for more information on how to use it.

@@ -11,9 +11,10 @@
 
 ***Under active development, subject to API change***
 
-[![License](https://img.shields.io/badge/license-CeCILL--C-green.svg)](LICENSE)
 [![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
 [![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
+[![Documentation](https://img.shields.io/website/https/pixano.github.io?up_message=online&up_color=green&down_message=offline&down_color=orange&label=docs)](https://pixano.github.io)
+[![License](https://img.shields.io/badge/license-CeCILL--C-green.svg)](LICENSE)
 [![Python version](https://img.shields.io/pypi/pyversions/pixano?color=important&logo=python&logoColor=white)](https://www.python.org/downloads/)
 
 </div>
@@ -36,12 +37,13 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
-# Using Pixano
+# Using your datasets
 
-- [Importing your datasets](notebooks/dataset/import_dataset.ipynb)
-- [Using the Pixano Explorer](pixano/apps/explorer/README.md)
-- [Using the Pixano Annotator](pixano/apps/annotator/README.md)
-- [Exporting your datasets](notebooks/dataset/export_dataset.ipynb)
+Please refer to our Jupyter notebooks for [importing](notebooks/dataset/import_dataset.ipynb) and [exporting](notebooks/dataset/export_dataset.ipynb) your datasets.
+
+# Using the Pixano apps
+
+Please refer to these links for using the [Pixano Explorer](pixano/apps/explorer/README.md) and the [Pixano Annotator](pixano/apps/explorer/README.md) apps.
 
 # Contributing
 
