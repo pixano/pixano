@@ -11,10 +11,11 @@ requires-python = "~=3.10"
 license = "CeCILL-C"
 authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
 keywords = [
-  "machine learning",
   "computer vision",
-  "data",
-  "visualization"
+  "deep learning",
+  "machine learning",
+  "data visualization",
+  "data annotation"
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
