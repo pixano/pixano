@@ -80,11 +80,11 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
 
         class Scalar(pa.ExtensionScalar):
             def as_py(self):
-                def as_py_dict(pa_dict) -> dict:
-                    """Recusively convert py arrow dict as py dict
+                def as_py_dict(pa_dict:dict) -> dict:
+                    """Recusively convert dict with py arrow object to py dict
 
                     Args:
-                        pa_dict (_type_): dict containing py arrow types
+                        pa_dict (dict): dict containing py arrow object
 
                     Returns:
                         dict: dict with only scalar python types
