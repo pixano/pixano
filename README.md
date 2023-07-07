@@ -37,11 +37,11 @@ pip install pixano
 
 # Using your datasets
 
-Please refer to our Jupyter notebooks for [importing](notebooks/dataset/import_dataset.ipynb) and [exporting](notebooks/dataset/export_dataset.ipynb) your datasets.
+Please refer to our Jupyter notebooks for <a href="https://github.com/pixano/pixano/blob/main/notebooks/dataset/import_dataset.ipynb" target="_blank">importing</a> and <a href="https://github.com/pixano/pixano/blob/main/notebooks/dataset/export_dataset.ipynb" target="_blank">exporting</a> your datasets.
 
 # Using the Pixano apps
 
-Please refer to these links for using the [Pixano Explorer](pixano/apps/explorer/README.md) and the [Pixano Annotator](pixano/apps/explorer/README.md) apps.
+Please refer to these links for using the <a href="https://github.com/pixano/pixano/tree/main/pixano/apps/explorer/README.md" target="_blank">Pixano Explorer</a> and the <a href="https://github.com/pixano/pixano/tree/main/pixano/apps/annotator/README.md" target="_blank">Pixano Annotator</a> apps.
 
 # Contributing
 
