@@ -277,7 +277,7 @@
         interactiveSegmenterModel.set(sam);
       } catch (e) {
         alert(
-          `models/${model_name} was not found in your dataset library, or your internet connection is not working!\n\nPlease refer the inference notebooks for information on how to export your model to ONNX.`
+          `models/${model_name} was not found in your dataset library, or your internet connection is not working!\n\nPlease refer the interactive annotation notebook for information on how to export your model to ONNX.`
         );
       }
     }
