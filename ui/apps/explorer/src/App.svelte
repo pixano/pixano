@@ -123,6 +123,9 @@
             visible: true,
             opacity: 1.0,
           };
+          if (bbox && bbox.is_predict) {
+            item.confidence = bbox.confidence;
+          }
           struct_categories[cat_name].items.push(item);
         }
         if (bbox) {
