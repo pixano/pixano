@@ -1,6 +1,14 @@
 # Release notes
 
 
+## Pixano v0.3.1
+
+### Fixed:
+- Fix READMEs pictures and links
+- Fix getting splits when processing dataset with an InferenceModel
+- Add warnings in inference notebooks for selecting CPU or GPU deviceW
+
+
 ## Pixano v0.3.0
 
 ### Added:
