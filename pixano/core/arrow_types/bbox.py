@@ -75,8 +75,6 @@ class BBox(PixanoType):
     def from_mask(mask: Image.Image):
         return BBox.from_xywh(mask_to_bbox(mask))
 
-
-
     def to_xyxy(self) -> list[float]:
         """Get bounding box xyxy coordinates
 
@@ -123,7 +121,6 @@ class BBox(PixanoType):
 
         self.coords = normalize(self.coords, height, width)
 
-
     @classmethod
     def to_struct(cls) -> pa.StructType:
         return pa.struct(
@@ -133,5 +130,6 @@ class BBox(PixanoType):
                 pa.field("format", pa.string()),
             ]
         )
+
 
 BBoxType = createPaType(BBox.to_struct(), "Bbox", BBox)

@@ -24,7 +24,7 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 class Embedding(PixanoType):
     def __init__(self, bytes: bytes) -> None:
         self._bytes = bytes
-    
+
     @property
     def bytes(self):
         return self._bytes
@@ -33,6 +33,5 @@ class Embedding(PixanoType):
     def to_struct(cls):
         return pa.struct([pa.field("bytes", pa.binary())])
 
-EmbeddingType = createPaType(Embedding.to_struct(), 'Embedding', Embedding)
 
-
+EmbeddingType = createPaType(Embedding.to_struct(), "Embedding", Embedding)

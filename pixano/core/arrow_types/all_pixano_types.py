@@ -1,19 +1,18 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, Type, Callable
+from typing import Type
 
 import pyarrow as pa
 
-from pixano.core.arrow_types.utils import convert_field, fields
+from pixano.core.arrow_types.utils import convert_field
 
 
 class PixanoType(ABC):
-
     @abstractmethod
     def to_struct(cls) -> pa.StructType:
         """Abstract method who must return the pyarrow struct corresponding to pixano type
 
         Raises:
-            NotImplementedError: 
+            NotImplementedError:
 
         Returns:
             pa.StructType: Struct corresponding to type
@@ -24,12 +23,25 @@ class PixanoType(ABC):
         """Transform type to dict based on pyarrow struct
 
         Returns:
-            dict[str, any]: Dict with field correspond to struct
+            dict[str, any]: Dict with fields corresponding to struct
         """
 
-        #TODO recursively
-        return {field.name : getattr(self,field.name) for field in self.to_struct()}
+        def convert_value_as_dict(value):
+            """Recursively convert value to dict if possible"""
+            if isinstance(value, PixanoType):
+                return value.to_dict()
+            elif isinstance(value, dict):
+                return {k: convert_value_as_dict(v) for k, v in value.items()}
+            elif isinstance(value, (list, tuple)):
+                return [convert_value_as_dict(item) for item in value]
+            else:
+                return value
 
+        struct_fields = self.to_struct()
+        return {
+            field.name: convert_value_as_dict(getattr(self, field.name))
+            for field in struct_fields
+        }
 
     @classmethod
     def from_dict(cls: Type["PixanoType"], data: dict[str, any]) -> "PixanoType":
@@ -44,10 +56,10 @@ class PixanoType(ABC):
         """
         return cls(**data)
 
-def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataType:
 
+def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.DataType:
     class CustomExtensionType(pa.ExtensionType):
-        def __init__(self, struct_type: pa.StructType, name:str):
+        def __init__(self, struct_type: pa.StructType, name: str):
             super().__init__(struct_type, name)
 
         @classmethod
@@ -62,13 +74,12 @@ def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataTy
 
         def __arrow_ext_class__(self):
             return self.Array
-        
+
         def __repr__(self):
-            return f'<{name}Type object at {hex(id(self))}>\n{self}'
+            return f"<{name}Type object at {hex(id(self))}>\n{self}"
 
         class Scalar(pa.ExtensionScalar):
             def as_py(self):
-
                 def as_py_dict(pa_dict) -> dict:
                     """Recusively convert py arrow dict as py dict
 
@@ -80,19 +91,19 @@ def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataTy
                     """
                     py_dict = {}
                     for key, value in pa_dict.items():
-                        if hasattr(value, 'as_py') and callable(getattr(value, 'as_py')):
+                        if hasattr(value, "as_py") and callable(
+                            getattr(value, "as_py")
+                        ):
                             py_dict[key] = value.as_py()
                         elif isinstance(value, dict):
-                            py_dict[key] = as_py_dict(value) 
+                            py_dict[key] = as_py_dict(value)
                     return py_dict
 
                 return pyType.from_dict(as_py_dict(self.value))
 
-
         class Array(pa.ExtensionArray):
-
             def __repr__(self):
-                return f'<{name}Array object at {hex(id(self))}>\n{self}'
+                return f"<{name}Array object at {hex(id(self))}>\n{self}"
 
             @classmethod
             def from_list(cls, lst: list):
@@ -103,7 +114,9 @@ def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataTy
                     data = []
                     for obj in lst:
                         if obj is not None:
-                            if hasattr(obj, 'to_dict') and callable(getattr(obj, 'to_dict')):
+                            if hasattr(obj, "to_dict") and callable(
+                                getattr(obj, "to_dict")
+                            ):
                                 data.append(obj.to_dict().get(field.name))
                             else:
                                 data.append(obj)
@@ -119,7 +132,7 @@ def createPaType(struct_type: pa.StructType, name:str, pyType:Type) -> pa.DataTy
                     )
                 sto = pa.StructArray.from_arrays(arrays, fields=Fields)
                 return pa.ExtensionArray.from_storage(new_type, sto)
-    
+
     new_type = CustomExtensionType(struct_type, name)
     try:
         pa.register_extension_type(new_type)

@@ -20,25 +20,29 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-from pixano.core.arrow_types.all_pixano_types import createPaType
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
 # ------------------------------------------------
 #             Python type
 # ------------------------------------------------
 
 
-class DepthImage:
+class DepthImage(PixanoType):
     """DepthImage stored as uint16 images"""
 
     def __init__(
         self,
         depth_map: np.ndarray = None,
-        bytes_data: bytes = None,
+        bytes: bytes = None,
         shape: list[int] = None,
     ):
-        self._bytes = bytes_data
+        self._bytes = bytes
         self._depth_map = depth_map
         self._shape = shape
+
+    @property
+    def shape(self) -> list[int] | np.ndarray:
+        return self._shape
 
     @property
     def bytes(self) -> bytes:
@@ -124,4 +128,5 @@ class DepthImage:
             plt.figure(figsize=self._shape)
         plt.show()
 
-DepthImageType = createPaType(DepthImage.to_struct(), 'DepthImage', DepthImage)
+
+DepthImageType = createPaType(DepthImage.to_struct(), "DepthImage", DepthImage)

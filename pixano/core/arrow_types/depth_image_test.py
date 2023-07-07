@@ -7,11 +7,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.depth_image import (
-    DepthImage,
-    DepthImageArray,
-    DepthImageType,
-)
+from pixano.core.arrow_types.depth_image import DepthImage, DepthImageType
 
 
 class DepthImageTestCase(unittest.TestCase):
@@ -19,14 +15,14 @@ class DepthImageTestCase(unittest.TestCase):
         # Création d'une image de profondeur fictive
         self.depth_map = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint16)
         self.shape = self.depth_map.shape
-        self.bytes_data = self.depth_map.tobytes()
+        self.bytes = self.depth_map.tobytes()
         self.depth_image = DepthImage(
-            depth_map=self.depth_map, shape=self.shape, bytes_data=self.bytes_data
+            depth_map=self.depth_map, shape=self.shape, bytes=self.bytes
         )
 
     def test_bytes_property(self):
-        bytes_data = self.depth_image.bytes
-        self.assertEqual(bytes_data, self.bytes_data)
+        bytes = self.depth_image.bytes
+        self.assertEqual(bytes, self.bytes)
 
     def test_depth_map_property(self):
         depth_map = self.depth_image.depth_map
@@ -61,7 +57,7 @@ class DepthImageTestCase(unittest.TestCase):
             self.assertIsNotNone(io_obj)
             # Vérification que les données ouvertes correspondent aux données initiales
             loaded_bytes = io_obj.read()
-            self.assertEqual(loaded_bytes, self.bytes_data)
+            self.assertEqual(loaded_bytes, self.bytes)
 
     def test_to_gray_levels(self):
         gray_image = self.depth_image.to_gray_levels()
@@ -87,11 +83,11 @@ class TestParquetDepthImage(unittest.TestCase):
         ]
 
     def test_depth_image_table(self):
-        depth_image_array = DepthImageArray.from_list(self.depth_image_list)
+        depth_image_array = DepthImageType.Array.from_list(self.depth_image_list)
 
         schema = pa.schema(
             [
-                pa.field("DepthImage", DepthImageType()),
+                pa.field("DepthImage", DepthImageType),
             ]
         )
         table = pa.Table.from_arrays([depth_image_array], schema=schema)

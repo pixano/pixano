@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
 
-from pixano.core.arrow_types.image import Image, ImageArray, ImageType
+from pixano.core.arrow_types.image import Image, ImageType
 from pixano.transforms.image import binary_to_url
 
 
@@ -118,11 +118,11 @@ class TestParquetImage(unittest.TestCase):
         ]
 
     def test_image_table(self):
-        image_array = ImageArray.from_Image_list(self.image_list)
+        image_array = ImageType.Array.from_list(self.image_list)
 
         schema = pa.schema(
             [
-                pa.field("image", ImageType()),
+                pa.field("image", ImageType),
             ]
         )
         table = pa.Table.from_arrays([image_array], schema=schema)

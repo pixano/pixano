@@ -18,10 +18,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.compressedRLE import (
-    CompressedRLE,
-    CompressedRLEType,
-)
+from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
 from pixano.transforms.image import (
     mask_to_rle,
     polygons_to_rle,
@@ -100,9 +97,7 @@ class TestParquetCompressedRLE(unittest.TestCase):
         ]
 
     def test_compressedRLE_table(self):
-        compressedRLE_array = CompressedRLEType.Array.from_list(
-            self.compressedRLE_list
-        )
+        compressedRLE_array = CompressedRLEType.Array.from_list(self.compressedRLE_list)
 
         schema = pa.schema(
             [

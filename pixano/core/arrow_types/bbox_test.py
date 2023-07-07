@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
+
 from pixano.core.arrow_types.bbox import BBox, BBoxType
 
 
@@ -74,14 +75,14 @@ class TestParquetBBox(unittest.TestCase):
         bbox_arr = BBoxType.Array.from_list(self.bbox_list)
 
         table = pa.Table.from_arrays(
-            [bbox_arr], schema=pa.schema([pa.field('bbox', BBoxType)])
+            [bbox_arr], schema=pa.schema([pa.field("bbox", BBoxType)])
         )
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name
             pq.write_table(table, temp_file_path, store_schema=True)
             re_table = pq.read_table(temp_file_path)
-        self.assertEqual(re_table.column_names, ['bbox'])
-        Bbox0 = re_table.to_pylist()[0]['bbox']
+        self.assertEqual(re_table.column_names, ["bbox"])
+        Bbox0 = re_table.to_pylist()[0]["bbox"]
         self.assertTrue(isinstance(Bbox0, BBox))
         self.assertTrue(np.allclose(self.bbox_list[0].to_xyxy(), Bbox0.to_xyxy()))

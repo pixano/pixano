@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import pyarrow as pa
 
 from pixano.core.arrow_types.all_pixano_types import createPaType
 from pixano.core.arrow_types.bbox import BBox, BBoxType
@@ -41,6 +40,7 @@ __all__ = [
     "PoseType",
     "DepthImage",
     "DepthImageType",
+    "createPaType",
     "convert_field",
     "fields",
     "is_number",

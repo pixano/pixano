@@ -12,12 +12,12 @@
 # http://www.cecill.info
 
 from types import NoneType
-from PIL import Image
 
 import pyarrow as pa
 from numpy import ndarray
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+from PIL import Image
 
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import (
     mask_to_rle,
     polygons_to_rle,
@@ -44,7 +44,7 @@ class CompressedRLE(PixanoType):
     @property
     def counts(self) -> bytes:
         return self._counts if not None else b""
-    
+
     def to_mask(self) -> ndarray:
         return rle_to_mask(self.to_dict())
 
@@ -70,7 +70,7 @@ class CompressedRLE(PixanoType):
     ) -> "CompressedRLE":
         rle_dict = polygons_to_rle(polygons, height, width)
         return CompressedRLE.from_dict(rle_dict)
-    
+
     @classmethod
     def to_struct(cls):
         return pa.struct(
@@ -80,4 +80,7 @@ class CompressedRLE(PixanoType):
             ]
         )
 
-CompressedRLEType = createPaType(CompressedRLE.to_struct(), "CrompressedLE", CompressedRLE)
+
+CompressedRLEType = createPaType(
+    CompressedRLE.to_struct(), "CrompressedLE", CompressedRLE
+)

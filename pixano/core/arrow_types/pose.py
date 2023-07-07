@@ -58,14 +58,15 @@ class Pose(PixanoType):
         """
 
         return self._cam_t_m2c
-    
+
     @classmethod
     def to_struct(cls):
         return pa.struct(
-                [
-                    pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
-                    pa.field("cam_t_m2c", pa.list_(pa.float64(), list_size=3)),
-                ]
-            )
+            [
+                pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
+                pa.field("cam_t_m2c", pa.list_(pa.float64(), list_size=3)),
+            ]
+        )
 
-PoseType = createPaType(Pose.to_struct(), 'Pose', Pose)
+
+PoseType = createPaType(Pose.to_struct(), "Pose", Pose)

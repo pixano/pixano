@@ -20,7 +20,6 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from .bbox import BBox, BBoxType
 from .compressedRLE import CompressedRLE, CompressedRLEType
 from .pose import Pose, PoseType
-from .utils import convert_field, fields
 
 # ------------------------------------------------
 #             Python type
@@ -84,7 +83,6 @@ class ObjectAnnotation(PixanoType):
         self.category_name = category_name
         self.identity = identity
 
-
     @classmethod
     def to_struct(cls) -> pa.StructType:
         return pa.struct(
@@ -107,4 +105,7 @@ class ObjectAnnotation(PixanoType):
             ]
         )
 
-ObjectAnnotationType = createPaType(ObjectAnnotation.to_struct(), 'ObjectAnnotation', ObjectAnnotation)
+
+ObjectAnnotationType = createPaType(
+    ObjectAnnotation.to_struct(), "ObjectAnnotation", ObjectAnnotation
+)
