@@ -29,7 +29,7 @@ You will then be provided with a URL to open in your browser to use the app.
 
 ### From a notebook
 
-If you are using a notebook, you can start the Annotator app by running a cell with:
+If you are in a Jupyter or Google Colab notebook, you can start the Annotator app by running a cell with:
 
 ```python
 from pixano.apps import AnnotatorApp

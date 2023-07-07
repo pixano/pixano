@@ -16,7 +16,7 @@ You will then be provided with a URL to open in your browser to use the app.
 
 ## From a notebook
 
-If you are using a notebook, you can start the Explorer and Annotator apps by running the following cells:
+If you are in a Jupyter or Google Colab notebook, you can start the Explorer and Annotator apps by running the following cells:
 
 ```python
 from pixano.apps import ExplorerApp
