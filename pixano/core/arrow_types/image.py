@@ -129,9 +129,7 @@ class Image(PixanoType):
                 return parsed_uri.geturl()
             # No URI prefix
             else:
-                raise Exception(
-                    "Cannot create URI from a relative path without a URI prefix."
-                )
+                return self._uri
         # Complete URI
         else:
             return self._uri

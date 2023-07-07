@@ -14,9 +14,11 @@
 
 from pixano.core.arrow_types.all_pixano_types import createPaType
 from pixano.core.arrow_types.bbox import BBox, BBoxType
+from pixano.core.arrow_types.camera import Camera, CameraType
 from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
 from pixano.core.arrow_types.depth_image import DepthImage, DepthImageType
 from pixano.core.arrow_types.embedding import Embedding, EmbeddingType
+from pixano.core.arrow_types.gt_info import GtInfo, GtInfoType
 from pixano.core.arrow_types.image import Image, ImageType
 from pixano.core.arrow_types.objectAnnotation import (
     ObjectAnnotation,
@@ -40,6 +42,10 @@ __all__ = [
     "PoseType",
     "DepthImage",
     "DepthImageType",
+    "Camera",
+    "CameraType",
+    "GtInfo",
+    "GtInfoType",
     "createPaType",
     "convert_field",
     "fields",

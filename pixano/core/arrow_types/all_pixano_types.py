@@ -132,6 +132,25 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
                     )
                 sto = pa.StructArray.from_arrays(arrays, fields=Fields)
                 return pa.ExtensionArray.from_storage(new_type, sto)
+        
+            @classmethod
+            def from_lists(cls, list:list[list[Type]]) -> pa.ListArray:
+                """Return paListArray corresponding to list of list of type
+
+                Args:
+                    list (list[list[Type]]): list of list of type
+
+                Returns:
+                    pa.ListArray: List array with offset corresponding to list
+                """
+                offset = [0]
+                for sub_list in list:
+                    offset.append(len(sub_list) + offset[-1])
+                
+                flat_list = [item for sublist in list for item in sublist]
+                flat_array = cls.from_list(flat_list)
+
+                return pa.ListArray.from_arrays(offset, flat_array, type=pa.list_(new_type))
 
     new_type = CustomExtensionType(struct_type, name)
     try:
