@@ -199,6 +199,7 @@
       masksGT = [];
       annotations = [];
       classes = [];
+      curPage = 1;
     }
   }
 
