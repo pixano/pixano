@@ -22,7 +22,7 @@
   import {
     convertSegmentsToSVG,
     generatePolygonSegments,
-  } from "../../../components/models/src/tracer";
+  } from "../../../components/models/src/mask_utils";
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";

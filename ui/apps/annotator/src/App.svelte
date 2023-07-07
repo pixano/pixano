@@ -25,7 +25,7 @@
   import {
     convertSegmentsToSVG,
     generatePolygonSegments,
-  } from "../../../components/models/src/tracer";
+  } from "../../../components/models/src/mask_utils";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import * as api from "./lib/api";
   import Header from "./lib/Header.svelte";

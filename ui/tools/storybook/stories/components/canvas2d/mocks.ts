@@ -19,11 +19,11 @@ import type {
   InteractiveImageSegmenterInput,
 } from "@pixano/models/src/lib/interactive_image_segmentation";
 // import { SegmentationResult } from "../../../../../components/models/src/interactive_image_segmentation";
-import { maskDataToFortranArrayToRle } from "../../../../../components/models/src/mask_utils";
 import {
   generatePolygonSegments,
   convertSegmentsToSVG,
-} from "../../../../../components/models/src/tracer";
+  maskDataToFortranArrayToRle,
+} from "../../../../../components/models/src/mask_utils";
 
 function flattenArray(image: number[][]): number[] {
   const flattenedArray: number[] = [];

@@ -24,8 +24,11 @@ import {
   LabeledPointsTensor,
   SegmentationResult,
 } from "./interactive_image_segmentation";
-import { maskDataToFortranArrayToRle } from "./mask_utils";
-import { convertSegmentsToSVG, generatePolygonSegments } from "./tracer";
+import {
+  convertSegmentsToSVG,
+  generatePolygonSegments,
+  maskDataToFortranArrayToRle,
+} from "./mask_utils";
 
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";
