@@ -143,9 +143,7 @@ class InferenceModel(ABC):
             splits = [s.name for s in os.scandir(input_dir / "db") if s.is_dir()]
         # Else, format provided splits
         else:
-            splits = [
-                f"split={s}" if not s.startswith("split=") else s for s in self.splits
-            ]
+            splits = [f"split={s}" if not s.startswith("split=") else s for s in splits]
         # Check if the splits exist
         for split in splits:
             split_dir = input_dir / "db" / split
