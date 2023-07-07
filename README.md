@@ -1,8 +1,6 @@
 <div align="center">
 
-<picture>
-    <img src="https://raw.githubusercontent.com/pixano/pixano/main/docs/assets/pixano_wide.png" alt="Pixano" height="100"/>
-</picture>
+<img src="https://raw.githubusercontent.com/pixano/pixano/main/docs/assets/pixano_wide.png" alt="Pixano" height="100"/>
 
 <br/>
 <br/>
