@@ -14,15 +14,32 @@
   http://www.cecill.info
   */
 
-  import { onMount } from "svelte";
-  import { createEventDispatcher } from "svelte";
-  import { ImageDetails } from "@pixano/core";
-  import { getItemDetails } from "./api";
+  // Imports
+  import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  export let datasetId;
-  export let rowIndex;
+  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
+  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
+  import { getColor } from "../../../../components/core/src/utils";
+  import AnnotationInspector from "./AnnotationInspector.svelte";
 
-  let features = null;
+  import type {
+    ItemData,
+    MaskGT,
+    BBox,
+    AnnotationsLabels,
+  } from "../../../../components/Canvas2D/src/interfaces";
+
+  // Exports
+  export let itemData: ItemData;
+  export let masksGT: Array<MaskGT>;
+  export let bboxes: Array<BBox>;
+  export let annotations: Array<AnnotationsLabels>;
+  export let features = null;
+
+  let panTool = createPanTool();
+  let categoryColor;
+
+  let allBBoxVisible = true;
 
   const dispatch = createEventDispatcher();
 
@@ -30,35 +47,84 @@
     dispatch("closeclick");
   }
 
+  /**
+   * get item by id from annotations
+   */
+  function getItemById(id: string) {
+    for (let cat of annotations) {
+      for (let item of cat.items) {
+        if (item.id === id) {
+          return item;
+        }
+      }
+    }
+  }
+
+  function handleCatVisChanged(event) {
+    if (allBBoxVisible) {
+      for (let bbox of bboxes) {
+        bbox.visible = getItemById(bbox.id).visible;
+      }
+      bboxes = bboxes;
+    }
+    for (let mask of masksGT) {
+      mask.visible = getItemById(mask.id).visible;
+    }
+    masksGT = masksGT;
+  }
+
+  function handleAllBBoxVisChanged(event) {
+    allBBoxVisible = event.detail;
+    for (let bbox of bboxes) {
+      bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
+    }
+    bboxes = bboxes;
+  }
+
+  function handleMaskOpacity(event) {
+    for (let mask of masksGT) {
+      mask.opacity = getItemById(mask.id).opacity;
+    }
+    masksGT = masksGT;
+  }
+
   async function handleKeyDown(e) {
     if (e.keyCode == 27) handleCloseClick(); // Escape key pressed
   }
 
   onMount(async () => {
-    features = await getItemDetails(datasetId, rowIndex);
+    //features = await getItemDetails(datasetId, rowIndex);
+    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations);
+  });
+
+  afterUpdate(() => {
+    // needed for annotations update
+    if (annotations) {
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      annotations = annotations;
+    }
   });
 </script>
 
-<div class="absolute top-0 bg-white w-screen h-screen dark:bg-zinc-900">
-  {#if features}
-    <ImageDetails {features} />
+<div class="flex h-full w-full">
+  {#if itemData}
+    <Canvas2D
+      itemId={itemData.id}
+      views={itemData.views}
+      selectedTool={panTool}
+      prediction={null}
+      {masksGT}
+      {bboxes}
+      {categoryColor}
+    />
+    <AnnotationInspector
+      {features}
+      bind:annotations
+      on:toggleCatVis={handleCatVisChanged}
+      on:toggleAllBBoxVis={handleAllBBoxVisChanged}
+      on:changeMaskOpacity={handleMaskOpacity}
+    />
   {/if}
-
-  <!-- Close button -->
-  <button class="absolute top-0 right-0 p-2 z-10" on:click={handleCloseClick}>
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="28"
-      height="28"
-      viewBox="0 0 28 28"
-      class=" fill-rose-600 hover:fill-rose-400"
-    >
-      <path
-        class="transition-colors"
-        d="M12 10.59l4.95-4.95c0.39-0.39 1.02-0.39 1.41 0l1.41 1.41c0.39 0.39 0.39 1.02 0 1.41l-4.95 4.95l4.95 4.95c0.39 0.39 0.39 1.02 0 1.41l-1.41 1.41c-0.39 0.39-1.02 0.39-1.41 0l-4.95-4.95l-4.95 4.95c-0.39 0.39-1.02 0.39-1.41 0l-1.41-1.41c-0.39-0.39-0.39-1.02 0-1.41l4.95-4.95l-4.95-4.95c-0.39-0.39-0.39-1.02 0-1.41l1.41-1.41c0.39-0.39 1.02-0.39 1.41 0l4.95 4.95z"
-      />
-    </svg>
-  </button>
 </div>
 <!-- Pixano Explorer footer -->
 <div

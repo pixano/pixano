@@ -14,14 +14,16 @@
 import numpy as np
 from PIL import Image
 
+from .image import rle_to_mask, urle_to_rle
 
-def denormalize(coord: list[float], w: int, h: int) -> list[float]:
+
+def denormalize(coord: list[float], height: int, width: int) -> list[float]:
     """Denormalize coordinates
 
     Args:
         coord (list[float]): Normalized coordinates
-        w (int): Width
-        h (int): Height
+        height (int): Height
+        width (int): Width
 
     Returns:
         list[float]: Unnormalized coordinates
@@ -31,20 +33,20 @@ def denormalize(coord: list[float], w: int, h: int) -> list[float]:
 
     for i, c in enumerate(coord):
         if i % 2 == 0:
-            denorm.append(c * w)
+            denorm.append(c * width)
         else:
-            denorm.append(c * h)
+            denorm.append(c * height)
 
     return denorm
 
 
-def normalize(coord: list[float], w: int, h: int) -> list[float]:
+def normalize(coord: list[float], height: int, width: int) -> list[float]:
     """Normalize coordinates
 
     Args:
         coord (list[float]): Unnormalized coordinates
-        w (int): Width
-        h (int): Height
+        height (int): Height
+        width (int): Width
 
     Returns:
         list[float]: Normalized coordinates
@@ -54,24 +56,24 @@ def normalize(coord: list[float], w: int, h: int) -> list[float]:
 
     for i, c in enumerate(coord):
         if i % 2 == 0:
-            norm.append(c / w)
+            norm.append(c / width)
         else:
-            norm.append(c / h)
+            norm.append(c / height)
 
     return norm
 
 
-def mask_to_bbox(mask: Image.Image) -> list[float]:
+def mask_to_bbox(mask: np.ndarray) -> list[float]:
     """Returns the smallest bounding box containing all the mask pixels
 
     Args:
-        mask (Image.Image): Mask as Pillow (or NumPy Array)
+        mask (np.ndarray): Mask as NumPy Array
 
     Returns:
         list[float]: Normalized xywh bounding box
     """
 
-    w_img, h_img = mask.size
+    height, width = mask.shape
     bool_mask = np.array(mask).astype(bool)
 
     # Find all columns and rows that contain ones
@@ -82,11 +84,46 @@ def mask_to_bbox(mask: Image.Image) -> list[float]:
     rmin, rmax = np.where(rows)[0][[0, -1]]
     cmin, cmax = np.where(cols)[0][[0, -1]]
 
-    # Calculate height and width
-    h = (rmax - rmin + 1) / h_img
-    w = (cmax - cmin + 1) / w_img
+    # Calculate bbox height and width
+    w = (cmax - cmin + 1) / width
+    h = (rmax - rmin + 1) / height
 
-    return [cmin / w_img, rmin / h_img, w, h]
+    return [cmin / width, rmin / height, w, h]
+
+
+def urle_to_bbox(urle: dict) -> list[float]:
+    """Returns the smallest bounding box containing all the mask pixels
+
+    Args:
+        urle (dict): Mask as uncompressed RLE
+
+    Returns:
+        list[float]: Normalized xywh bounding box
+    """
+
+    return mask_to_bbox(rle_to_mask(urle_to_rle(urle)))
+
+
+def format_bbox(bbox, is_predicted=False, confidence=None) -> dict:
+    """Convert bounding box to frontend format
+
+    Args:
+        bbox (list[float]): Bounding box
+        is_predicted (bool, optional): True for prediction, False for ground truth. Defaults to False.
+        confidence (float, optional): Bounding box confidence. Defaults to None.
+
+    Returns:
+        dict: Bounding box in frontend format
+    """
+
+    return {
+        "x": float(bbox[0]),
+        "y": float(bbox[1]),
+        "width": float(bbox[2]),
+        "height": float(bbox[3]),
+        "is_predict": is_predicted,
+        "confidence": confidence,
+    }
 
 
 def xywh_to_xyxy(xywh: list[float]) -> list[float]:

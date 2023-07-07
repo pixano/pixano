@@ -10,3 +10,10 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from .feature_statistics import compute_additional_data, compute_stats
+
+__all__ = [
+    "compute_additional_data",
+    "compute_stats",
+]

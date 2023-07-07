@@ -11,19 +11,12 @@
 #
 # http://www.cecill.info
 
-from pathlib import Path
-
 import click
-import fastapi
 import pkg_resources
-import uvicorn
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
-from .main import app, settings
+from pixano.apps import PixanoApp
 
-logo = """
+LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
                            ▒▓▒                                       ▓
               █▓          ▓▓                                         ▓
@@ -36,12 +29,42 @@ logo = """
 ██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
 ██                         █▓                                        ▓
 """
-
 ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist/assets")
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 
 
+class ExplorerApp(PixanoApp):
+    """Pixano Explorer App
+
+    Attributes:
+        config (uvicorn.Config): App config
+        server (uvicorn.Server): App server
+        task_function (typing.Callable): Run task function for running environment
+        display_function (typing.Callable): Display function for running environment
+    """
+
+    def __init__(
+        self,
+        library_dir: str,
+        host: str = "127.0.0.1",
+        port: int = 0,
+    ) -> None:
+        """Initialize and run Pixano Explorer app
+
+        Args:
+            library_dir (str): Dataset library directory
+            host (str, optional): App host. Defaults to "127.0.0.1".
+            port (int, optional): App port. Defaults to 0.
+        """
+
+        super().__init__(library_dir, ASSETS_PATH, TEMPLATE_PATH, host, port)
+
+
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
+@click.argument(
+    "library_dir",
+    type=str,
+)
 @click.option(
     "--host",
     type=str,
@@ -52,19 +75,13 @@ TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 @click.option(
     "--port",
     type=int,
-    default=8000,
+    default=0,
     help="Bind socket to this port.",
     show_default=True,
 )
-@click.argument("library_dir")
-def main(host: str, port: int, library_dir: str):
-    templates = Jinja2Templates(directory=TEMPLATE_PATH)
+def main(library_dir: str, host: str, port: int):
+    """Launch Pixano Explorer
 
-    settings.data_dir = Path(library_dir)
-
-    @app.get("/", response_class=HTMLResponse)
-    def main(request: fastapi.Request):
-        return templates.TemplateResponse("index.html", {"request": request})
-
-    app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
-    uvicorn.run(app, host=host, port=port)
+    LIBRARY_DIR: Dataset library directory
+    """
+    ExplorerApp(library_dir, host, port)

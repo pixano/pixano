@@ -16,7 +16,7 @@ dist-ssr
 .cache
 
 # Docs
-docs/site
+site
 
 # Editor directories and files
 .vscode
@@ -38,6 +38,8 @@ __pycache__
 .env
 
 # Inference
+*.npy
 *.pt
 *.pth
 *.onnx
+*.wasm

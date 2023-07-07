@@ -21,6 +21,7 @@
   import HistogramCell from "./TableCells/HistogramCell.svelte";
   import type { CellData } from "./cell_types";
 
+  // Exports
   export let data: CellData;
 
   // Map types to cell components

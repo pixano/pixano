@@ -14,6 +14,7 @@
   http://www.cecill.info
   */
 
+  // Exports
   export let value: string;
 </script>
 

@@ -11,12 +11,16 @@
 #
 # http://www.cecill.info
 
-from .coco_loader import CocoLoader
+from .coco_loader import COCOLoader
 from .data_loader import DataLoader
-from .pixano_loader import PixanoLoader
+from .dota_loader import DOTALoader
+from .image_loader import ImageLoader
+from .legacy_loader import LegacyLoader
 
 __all__ = [
     "DataLoader",
-    "PixanoLoader",
-    "CocoLoader",
+    "COCOLoader",
+    "DOTALoader",
+    "ImageLoader",
+    "LegacyLoader",
 ]

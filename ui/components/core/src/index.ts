@@ -13,7 +13,7 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 http://www.cecill.info
 */
 
-export { default as ImageDetails } from "./ImageDetails.svelte";
+// Exports
 export { default as Table } from "./Table.svelte";
 export { default as TableCell } from "./TableCell.svelte";
 export { default as Histogram } from "./Histogram.svelte";

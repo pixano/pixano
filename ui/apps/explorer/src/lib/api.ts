@@ -13,6 +13,7 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 http://www.cecill.info
 */
 
+// Exports
 /**
  * Get the list of all datasets in the library
  * @returns
@@ -65,6 +66,11 @@ export async function getDatasetStats(datasetId: String) {
 
   try {
     const response = await fetch(`/datasets/${datasetId}/stats`);
+    if (!response.ok) {
+      //TODO: error cases other than 404 ?
+      console.log("No stats");
+      return [];
+    }
     datasetStats = await response.json();
   } catch (e) {
     console.log(e);
@@ -76,9 +82,7 @@ export async function getDatasetStats(datasetId: String) {
 export async function getItemDetails(datasetId: String, itemId: Number) {
   let features = null;
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}`
-    );
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     features = await response.json();
   } catch (e) {
     console.log(e);
