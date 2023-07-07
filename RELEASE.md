@@ -5,8 +5,8 @@
 
 ### Fixed:
 - Fix READMEs pictures and links
-- Fix getting splits when processing dataset with an InferenceModel
-- Add warnings in inference notebooks for selecting CPU or GPU deviceW
+- Fix getting splits when processing dataset with an inference model
+- Add warnings in inference notebooks for selecting CPU or GPU device
 
 
 ## Pixano v0.3.0
