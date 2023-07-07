@@ -16,5 +16,6 @@ http://www.cecill.info
 // Imports
 import { writable } from "svelte/store";
 
+// Exports
 // Stores the current page when browsing a dataset
 export const currentPage = writable(1);

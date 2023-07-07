@@ -1,44 +1,47 @@
 <div align="center">
 
-<img src="../../../images/pixano_logo.png" alt="Pixano" height="100"/>
+<picture>
+    <img src="https://raw.githubusercontent.com/pixano/pixano/main/images/pixano_logo.png" alt="Pixano" height="100"/>
+</picture>
 
-**Data Centric AI Building Blocks for Computer Vision Application**
+<br/>
 
+**Data-centric AI building blocks for computer vision applications**
+
+***Under active development, subject to API change***
 
 </div>
 
+
 # Pixano Explorer
 
-*We will soon provide a guide on how to convert your datasets to parquet format to access them with Pixano.*
+## Launching the Explorer
 
-## Launching the Explorer from a terminal
+### From a terminal
 
-You can start the Explorer with the following command:
+You can start the Explorer app with the following command:
 
 ```shell
 pixano-explorer <path/to/your/datasets>
 ```
 
-You will then be provided with a URL to open in your browser to browse the dataset.
+You will then be provided with a URL to open in your browser to use the app.
 
-## Launching the Explorer from a notebook
+### From a notebook
 
-If you are using a notebook, you can run the Explorer in the background by running a cell like this:
-
-```python
-%%bash --bg
-pixano-explorer <path/to/your/datasets>
-```
-
-You can then browse the explorer directly from notebook with this function:
+If you are in a Jupyter or Google Colab notebook, you can start the Explorer app by running a cell with:
 
 ```python
-from pixano import notebook
-notebook.display()
+from pixano.apps import ExplorerApp
+explorer = ExplorerApp(<path/to/your/datasets>)
 ```
 
-## Browsing a dataset with the Explorer
+You can then use the app directly from the notebook in another cell with:
 
-From the Explorer homepage, you will be greeted with a list of all the parquet datasets found in the directory you provided.
+```python
+explorer.display()
+```
 
-Simply click on one of them to open it and you will be able to see the dataset statistics if they have been computed, and browse the images from the list to check their annotations.
+## Using the Explorer
+
+Please refer to our [user guide for Pixano Explorer](https://pixano.github.io/user/explorer/) on our documentation website for more information on how to use it.

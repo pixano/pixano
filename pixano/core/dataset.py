@@ -11,13 +11,11 @@
 #
 # http://www.cecill.info
 
-import time
 from pathlib import Path
 from typing import Optional
 
 import pyarrow as pa
 import pyarrow.dataset as ds
-import pyarrow.parquet as pq
 import pydantic
 
 
@@ -30,6 +28,7 @@ class DatasetInfo(pydantic.BaseModel):
         description (str): Dataset description
         num_elements (int): Number of elements in dataset
         preview (str, optional): Dataset preview
+        categories (list[dict], optional): Dataset categories
     """
 
     id: str
@@ -37,6 +36,7 @@ class DatasetInfo(pydantic.BaseModel):
     description: str
     num_elements: int
     preview: Optional[str]
+    categories: Optional[list[dict]]
 
 
 class Dataset:
@@ -45,8 +45,12 @@ class Dataset:
     Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
-        _table (pa.Table): Dataset table
+        _partitioning (ds.partitioning): Dataset partitioning
     """
+
+    _partitioning: ds.partitioning = ds.partitioning(
+        pa.schema([("split", pa.string())]), flavor="hive"
+    )
 
     def __init__(self, path: Path):
         """Initialize dataset
@@ -57,32 +61,21 @@ class Dataset:
 
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "spec.json")
-        self._table = None
 
     @property
     def info(self):
         return self._info
 
     @property
-    def media_path(self):
-        return self._path / "media"
+    def path(self):
+        return self._path
 
     @property
-    def table(self):
-        if self._table is None:
-            st = time.process_time()
-            self._table = pq.read_table(self._path / "db", use_legacy_dataset=False)
-            et = time.process_time()
-            res = et - st
-            print("CPU Execution time:", res, "seconds")
-
-        return self._table
+    def media_dir(self):
+        return self._path / "media"
 
     def load(self):
-        partitioning = ds.partitioning(
-            pa.schema([("split", pa.string())]), flavor="hive"
-        )
-        return ds.dataset(self._path / "db", partitioning=partitioning)
+        return ds.dataset(self._path / "db", partitioning=self._partitioning)
 
 
 class InferenceDataset(Dataset):
@@ -91,22 +84,16 @@ class InferenceDataset(Dataset):
     Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
-        _table (pa.Table): Dataset table
+        _partitioning (ds.partitioning): Dataset partitioning
     """
 
     def __init__(self, path: Path):
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "infer.json")
-        self._table = None
 
     def load(self):
-        partitioning = ds.partitioning(
-            pa.schema([("split", pa.string())]), flavor="hive"
-        )
         return ds.dataset(
-            self._path,
-            partitioning=partitioning,
-            ignore_prefixes=["info", "infer.json"],
+            self._path, partitioning=self._partitioning, ignore_prefixes=["infer.json"]
         )
 
 
@@ -116,20 +103,14 @@ class EmbeddingDataset(Dataset):
     Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
-        _table (pa.Table): Dataset table
+        _partitioning (ds.partitioning): Dataset partitioning
     """
 
     def __init__(self, path: Path):
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "embed.json")
-        self._table = None
 
     def load(self):
-        partitioning = ds.partitioning(
-            pa.schema([("split", pa.string())]), flavor="hive"
-        )
         return ds.dataset(
-            self._path,
-            partitioning=partitioning,
-            ignore_prefixes=["info", "embed.json"],
+            self._path, partitioning=self._partitioning, ignore_prefixes=["embed.json"]
         )

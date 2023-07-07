@@ -17,6 +17,7 @@
   // Imports
   import Histogram from "../Histogram.svelte";
 
+  // Exports
   // Represents an histogram (name, type, values)
   export let value: any;
 </script>

@@ -13,9 +13,11 @@ license as circulated by CEA, CNRS and INRIA at the following URL
 http://www.cecill.info
 */
 
+// Imports
 import { schemeSet3 } from "d3-scale-chromatic";
 import { scaleOrdinal } from "d3";
 
+// Exports
 /**
  * Generates an unique color based on a given id.
  * @param id the id
