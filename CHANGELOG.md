@@ -1,7 +1,14 @@
-# Release notes
+# Changelog
+
+All notable changes to Pixano will be documented in this file.
+
+## [Unreleased]
+
+### Fixed:
+- Update CHANGELOG format
 
 
-## Pixano v0.3.1
+## [0.3.1] - 2023-07-07
 
 ### Fixed:
 - Fix READMEs pictures and links
@@ -9,7 +16,7 @@
 - Add warnings in inference notebooks for selecting CPU or GPU device
 
 
-## Pixano v0.3.0
+## [0.3.0] - 2023-07-07
 
 ### Added:
 - Add **Pixano Annotator** for smart dataset annotation using AI models like the **Segment Anything Model (SAM)**
@@ -39,13 +46,13 @@
 - Check provided user data in inference and dataset notebooks before running scripts, like splits folder or source media folders
 
 
-## Pixano v0.2.1
+## [0.2.1] - 2023-06-06
 
 ### Added
 - Add GitHub workflow for automatically publishing new releases to PyPI
 
 
-## Pixano v0.2.0
+## [0.2.0] - 2023-05-22
 
 ### Added
 - Add **embedding precomputing**
@@ -61,13 +68,22 @@
 - Fix License, Python version, and Python requirements in pyproject.toml file
 
 
-## Pixano v0.1.1
+## [0.1.1] - 2023-05-11
 
 ### Fixed
 - Fix Python requirements
 
 
-## Pixano v0.1.0
+## [0.1.0] - 2023-05-11
 
 ### Added
 - Create first public release
+
+[Unreleased]: https://github.com/pixano/pixano/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/pixano/pixano/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/pixano/pixano/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/pixano/pixano/compare/v0.1.1...v0.2.0
+[0.1.1]: https://github.com/pixano/pixano/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/pixano/pixano/releases/tag/v0.1.0
+
