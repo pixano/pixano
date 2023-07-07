@@ -224,3 +224,8 @@ def create_app(settings: Settings) -> FastAPI:
     add_pagination(app)
 
     return app
+
+
+def app():
+    settings = Settings()
+    return create_app(settings)

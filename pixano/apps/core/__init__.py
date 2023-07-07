@@ -10,3 +10,9 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from .main import app
+
+__all__ = [
+    "app",
+]
