@@ -149,7 +149,7 @@ class InferenceModel(ABC):
         # Check if the splits exist
         for split in splits:
             split_dir = input_dir / "db" / split
-            if split_dir.exists():
+            if not split_dir.exists():
                 raise Exception(f"{split_dir} does not exist.")
             if not any(split_dir.iterdir()):
                 raise Exception(f"{split_dir} is empty.")
