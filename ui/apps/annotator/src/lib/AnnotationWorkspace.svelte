@@ -34,7 +34,7 @@
   } from "../../../../components/Canvas2D/src/tools";
   import { getColor } from "../../../../components/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
-  import DataPanel from "./DataPanel.svelte";
+  import AnnotationPanel from "./AnnotationPanel.svelte";
 
   import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import type {
@@ -150,7 +150,7 @@
       annotations.push(newClass);
     }
 
-    // Hack to force update in DataPanel
+    // Hack to force update in AnnotationPanel
     annotations = annotations;
   }
 
@@ -281,7 +281,7 @@
     on:toolSelected={handleAnnotationToolChange}
   />
   {#if annotations}
-    <DataPanel
+    <AnnotationPanel
       bind:annotations
       dataset={dbImages}
       lastLoadedPage={curPage}
