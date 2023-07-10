@@ -20,7 +20,7 @@
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import { createPanTool } from "../../../../components/Canvas2D/src/tools";
   import { getColor } from "@pixano/core/src/utils";
-  import AnnotationInspector from "./AnnotationInspector.svelte";
+  import ExplorationPanel from "./ExplorationPanel.svelte";
 
   import type {
     ItemData,
@@ -122,7 +122,7 @@
       {bboxes}
       {categoryColor}
     />
-    <AnnotationInspector
+    <ExplorationPanel
       {features}
       bind:annotations
       on:toggleCatVis={handleCatVisChanged}
