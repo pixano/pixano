@@ -1106,7 +1106,10 @@
   }
 </script>
 
-<div class="h-full w-full relative bg-zinc-100" bind:this={stageContainer}>
+<div
+  class="h-full w-full relative bg-zinc-100 dark:bg-zinc-900"
+  bind:this={stageContainer}
+>
   <Stage
     bind:config={stageConfig}
     bind:handle={stage}

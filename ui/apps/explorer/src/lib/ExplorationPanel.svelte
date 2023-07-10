@@ -17,7 +17,7 @@
   // Imports
   import { onMount, beforeUpdate } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import type { AnnotationsLabels } from "../../../../components/Canvas2D/src/interfaces";
+  import type { AnnotationsLabels } from "../../../../components/canvas2d/src/interfaces";
   import * as Utils from "@pixano/core/src/utils";
 
   // Exports
@@ -230,13 +230,16 @@
 
 <!-- Toolbox -->
 <div
-  class="absolute w-72 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow-xl
-    dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
+  class="absolute w-72 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col border rounded-lg shadow-xl
+  text-zinc-900 dark:text-zinc-300
+  bg-white dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   <!-- Data -->
   <div class="flex flex-col">
     <span
-      class="mb-2 self-center text-sm text-zinc-500 font-bold uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-sm font-bold uppercase
+      text-zinc-500 dark:text-zinc-300"
     >
       Data
     </span>
@@ -263,9 +266,12 @@
   </div>
 
   <!-- Tools -->
-  <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
+  <div
+    class="mt-2 pt-2 flex flex-col border-t border-zinc-300 dark:border-zinc-500"
+  >
     <span
-      class="mb-2 self-center text-center text-sm text-zinc-500 font-bold uppercase dark:text-zinc-400"
+      class="mb-2 self-center text-center text-sm font-bold uppercase
+      text-zinc-500 dark:text-zinc-300"
     >
       Tools
     </span>
@@ -274,7 +280,7 @@
     <div class="mb-2 flex items-center space-x-2">
       <!-- Show all items checkbox -->
       <input
-        class="cursor-pointer checked:accent-rose-500"
+        class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
         type="checkbox"
         id="toggle-items"
         checked
@@ -288,7 +294,7 @@
     <div class="mb-2 flex items-center space-x-2">
       <!-- Show boxes checkbox -->
       <input
-        class="cursor-pointer checked:accent-rose-500"
+        class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
         type="checkbox"
         id="toggle-boxes"
         checked
@@ -348,7 +354,7 @@
           <!-- Category count index -->
           {#if category.count != 1}
             <span
-              class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 text-white font-bold"
+              class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 dark:bg-rose-600 text-white font-bold"
             >
               {category.count}
             </span>
@@ -360,9 +366,11 @@
 
   <!-- Views -->
   {#if Object.keys(features.views).length != 1}
-    <div class="mt-2 pt-2 flex flex-col border-t dark:border-zinc-700">
+    <div
+      class="mt-2 pt-2 flex flex-col border-t border-zinc-300 dark:border-zinc-500"
+    >
       <span
-        class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase dark:text-zinc-400"
+        class="mb-2 self-center text-center text-sm text-zinc-500 font-medium uppercase text-zinc-500 dark:text-zinc-300"
       >
         Views
       </span>
@@ -370,7 +378,7 @@
       <div class="mb-2 flex items-center space-x-2">
         <!-- Show all views checkbox -->
         <input
-          class="cursor-pointer checked:accent-rose-500"
+          class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
           type="checkbox"
           id="toggle-views"
           checked
@@ -389,7 +397,7 @@
           <div class="ml-1 flex items-center space-x-2">
             <!-- Show all views checkbox -->
             <input
-              class="cursor-pointer checked:accent-rose-500"
+              class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
               type="checkbox"
               id="view-{view}"
               checked

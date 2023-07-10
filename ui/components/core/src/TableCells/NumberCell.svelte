@@ -18,4 +18,4 @@
   export let value: number;
 </script>
 
-<div class="pl-2 text-zinc-900">{value}</div>
+<div class="pl-2 text-zinc-800 dark:text-zinc-300">{value}</div>

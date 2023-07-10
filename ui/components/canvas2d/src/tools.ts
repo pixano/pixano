@@ -14,11 +14,11 @@
 */
 
 // Assets
-import svg_minus from "../../../apps/annotator/src/assets/icons/minus.svg";
-import svg_plus from "../../../apps/annotator/src/assets/icons/plus.svg";
-import svg_point from "../../../apps/annotator/src/assets/icons/point.svg";
-import svg_box from "../../../apps/annotator/src/assets/icons/box.svg";
-import svg_pan from "../../../apps/annotator/src/assets/icons/pan.svg";
+import svg_minus from "../../core/src/assets/icons/minus.svg";
+import svg_plus from "../../core/src/assets/icons/plus.svg";
+import svg_point from "../../core/src/assets/icons/point.svg";
+import svg_box from "../../core/src/assets/icons/box.svg";
+import svg_pan from "../../core/src/assets/icons/pan.svg";
 
 // Exports
 export enum ToolType {

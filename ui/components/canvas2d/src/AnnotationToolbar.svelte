@@ -34,18 +34,19 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
-  class="absolute w-24 top-1/2 -translate-y-1/2 left-6 py-2 px-4 flex flex-col bg-white text-zinc-900 border rounded-lg shadow
-    dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500 shadow-xl"
+  class="absolute w-24 top-1/2 -translate-y-1/2 left-6 py-2 px-4 flex flex-col border rounded-lg shadow-xl
+    bg-white dark:bg-zinc-800
+    border-zinc-300 dark:border-zinc-500"
 >
   <div class="flex flex-col items-center">
     {#each tools as tool}
       {#if tool["modes"]}
         <div
-          class="relative group w-full border-b-2 {tool['modes'].includes(
-            selectedTool
-          )
-            ? 'bg-rose-100 border-rose-900'
-            : 'hover:bg-rose-50 border-transparent'}"
+          class="relative group w-full border-b-2
+          hover:bg-zinc-100 dark:hover:bg-zinc-700
+          {tool['modes'].includes(selectedTool)
+            ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
+            : 'border-transparent'}"
         >
           <div
             class="w-full py-3 cursor-pointer"
@@ -55,13 +56,16 @@
           </div>
 
           <div
-            class="absolute top-0 left-full w-28 bg-white z-10 hidden group-hover:flex"
+            class="absolute top-0 left-full w-28 z-10 hidden group-hover:flex
+            bg-white dark:bg-zinc-800"
           >
             {#each tool["modes"] as mode}
               <div
-                class="w-full cursor-pointer border-b-2 {mode === selectedTool
-                  ? 'bg-rose-100 border-rose-900'
-                  : 'hover:bg-rose-50 border-transparent'}"
+                class="w-full cursor-pointer border-b-2
+                hover:bg-zinc-100 dark:hover:bg-zinc-700
+                {mode === selectedTool
+                  ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
+                  : 'border-transparent'}"
                 on:click={() => selectTool(mode)}
               >
                 <img
@@ -75,9 +79,11 @@
         </div>
       {:else}
         <div
-          class="w-full border-b-2 cursor-pointer {selectedTool === tool
-            ? 'bg-rose-100 border-rose-900'
-            : 'hover:bg-rose-50 border-transparent'}"
+          class="w-full border-b-2 cursor-pointer
+          hover:bg-zinc-100 dark:hover:bg-zinc-700
+          {selectedTool === tool
+            ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
+            : 'border-transparent'}"
           on:click={() => selectTool(tool)}
         >
           <img class="w-6 h-6 my-3 mx-auto" src={tool.icon} alt={tool.name} />

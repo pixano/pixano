@@ -14,20 +14,20 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import CanvasToolbar from "../../../../../components/Canvas2D/src/CanvasToolbar.svelte";
+import AnnotationToolbar from "../../../../../components/canvas2d/src/AnnotationToolbar.svelte";
 import {
   ToolType,
   createLabeledPointTool,
   createMultiModalTool,
   createRectangleTool,
   createPanTool,
-} from "../../../../../components/Canvas2D/src/tools";
+} from "../../../../../components/canvas2d/src/tools";
 
 const meta = {
-  title: "Components/Canvas2D/CanvasToolbar",
-  component: CanvasToolbar,
+  title: "Components/Canvas2D/AnnotationToolbar",
+  component: AnnotationToolbar,
   tags: ["autodocs"],
-} satisfies Meta<CanvasToolbar>;
+} satisfies Meta<AnnotationToolbar>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
