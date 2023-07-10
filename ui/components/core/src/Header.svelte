@@ -15,18 +15,19 @@
   */
 
   // Assets
-  import pixanoLogo from "../assets/pixano.png";
-  import svg_next from "../assets/icons/next.svg";
-  import svg_close from "../assets/icons/close.svg";
-  import svg_save from "../assets/icons/save.svg";
+  import pixanoLogo from "./assets/pixano.png";
+  import svg_next from "./assets/icons/next.svg";
+  import svg_close from "./assets/icons/close.svg";
+  import svg_save from "./assets/icons/save.svg";
 
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import { currentPage } from "../stores";
-  import type { ItemData } from "../../../../components/Canvas2D/src/interfaces";
+  import { currentPage } from "../../../apps/explorer/src/stores";
+  import type { ItemData } from "../../Canvas2D/src/interfaces";
 
   // Exports
+  export let app = "";
   export let selectedDataset = null;
   export let selectedItem: ItemData;
   export let save_flag: boolean;
@@ -65,11 +66,14 @@
         on:click={unselectDataset}
       >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-        <span class="transition-colors"> Pixano Annotator </span>
+        <span class="transition-colors"> Pixano {app} </span>
       </button>
       {#if selectedDataset}
         <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
-        <button class="hover:text-rose-500 dark:hover:text-rose-600">
+        <button
+          class="hover:text-rose-500 dark:hover:text-rose-600"
+          on:click={handleCloseClick}
+        >
           <span class="transition-colors">
             {selectedDataset.name}
           </span>
@@ -85,7 +89,7 @@
 
     <!-- Navigation -->
     {#if selectedDataset}
-      {#if selectedItem}
+      {#if selectedItem && app === "Annotator"}
         <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveClick}>
           <img
             src={svg_save}

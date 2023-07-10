@@ -18,6 +18,7 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
+  import Header from "../../../components/core/src/Header.svelte";
   import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import * as npyjs from "../../../components/models/src/npy";
@@ -28,7 +29,6 @@
   } from "../../../components/models/src/mask_utils";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import * as api from "./lib/api";
-  import Header from "./lib/Header.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
@@ -286,6 +286,7 @@
 </script>
 
 <Header
+  app="Annotator"
   bind:selectedDataset
   bind:selectedItem
   {save_flag}

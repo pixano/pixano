@@ -17,6 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
+  import Header from "../../../components/core/src/Header.svelte";
   import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import {
@@ -26,7 +27,6 @@
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
-  import Header from "./lib/Header.svelte";
 
   import type {
     ItemData,
@@ -177,7 +177,13 @@
   });
 </script>
 
-<Header bind:selectedDataset bind:selectedItem on:closeclick={unselectItem} />
+<Header
+  app="Explorer"
+  bind:selectedDataset
+  bind:selectedItem
+  save_flag={false}
+  on:closeclick={unselectItem}
+/>
 <div
   class="pt-20 h-screen w-screen text-zinc-500 dark:text-zinc-300 dark:bg-zinc-800"
 >

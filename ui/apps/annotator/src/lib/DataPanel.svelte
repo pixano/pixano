@@ -15,10 +15,10 @@
   */
 
   // Assets
-  import svg_visible from "../assets/icons/visible.svg";
-  import svg_invisible from "../assets/icons/invisible.svg";
-  import svg_expand from "../assets/icons/expand.svg";
-  import svg_delete from "../assets/icons/delete.svg";
+  import svg_visible from "../../../../components/core/src/assets/icons/visible.svg";
+  import svg_invisible from "../../../../components/core/src/assets/icons/invisible.svg";
+  import svg_expand from "../../../../components/core/src/assets/icons/expand.svg";
+  import svg_delete from "../../../../components/core/src/assets/icons/delete.svg";
 
   // Imports
   import { afterUpdate, createEventDispatcher } from "svelte";

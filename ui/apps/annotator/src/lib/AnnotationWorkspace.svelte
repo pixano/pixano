@@ -15,9 +15,9 @@
   */
 
   // Assets
-  import svg_plus from "../assets/icons/plus.svg";
-  import svg_minus from "../assets/icons/minus.svg";
-  import svg_ok from "../assets/icons/ok.svg";
+  import svg_plus from "../../../../components/core/src/assets/icons/plus.svg";
+  import svg_minus from "../../../../components/core/src/assets/icons/minus.svg";
+  import svg_ok from "../../../../components/core/src/assets/icons/ok.svg";
 
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
