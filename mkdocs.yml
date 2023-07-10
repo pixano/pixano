@@ -119,4 +119,4 @@ nav:
     - "image": code/transforms/image.md
     - "labels": code/transforms/labels.md
 
-- "Pixano inference": https://pixano.github.io/pixano-inference/
+- "Pixano Inference": https://pixano.github.io/pixano-inference/
