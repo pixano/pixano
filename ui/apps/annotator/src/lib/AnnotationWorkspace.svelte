@@ -17,9 +17,9 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import AnnotationToolbar from "../../../../components/Canvas2D/src/AnnotationToolbar.svelte";
-  import LabelToolbar from "../../../../components/Canvas2D/src/LabelToolbar.svelte";
-  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
+  import AnnotationToolbar from "../../../../components/canvas2d/src/AnnotationToolbar.svelte";
+  import LabelToolbar from "../../../../components/canvas2d/src/LabelToolbar.svelte";
+  import Canvas2D from "../../../../components/canvas2d/src/Canvas2D.svelte";
   import {
     createLabeledPointTool,
     createMultiModalTool,
@@ -27,7 +27,7 @@
     createRectangleTool,
     type Tool,
     ToolType,
-  } from "../../../../components/Canvas2D/src/tools";
+  } from "../../../../components/canvas2d/src/tools";
   import { getColor } from "../../../../components/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
   import AnnotationPanel from "./AnnotationPanel.svelte";
@@ -40,7 +40,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;

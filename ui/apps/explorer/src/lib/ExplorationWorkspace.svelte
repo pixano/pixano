@@ -17,8 +17,8 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
-  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
+  import Canvas2D from "../../../../components/canvas2d/src/Canvas2D.svelte";
+  import { createPanTool } from "../../../../components/canvas2d/src/tools";
   import { getColor } from "@pixano/core/src/utils";
   import ExplorationPanel from "./ExplorationPanel.svelte";
 
@@ -27,7 +27,7 @@
     MaskGT,
     BBox,
     AnnotationsLabels,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;

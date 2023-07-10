@@ -26,7 +26,7 @@
   import type {
     AnnotationsLabels,
     DatabaseFeats,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let annotations: Array<AnnotationsLabels>;

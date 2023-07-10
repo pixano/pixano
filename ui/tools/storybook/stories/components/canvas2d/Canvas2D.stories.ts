@@ -14,11 +14,11 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Canvas2D from "../../../../../components/Canvas2D/src/Canvas2D.svelte";
+import Canvas2D from "../../../../../components/canvas2d/src/Canvas2D.svelte";
 import {
   createLabeledPointTool,
   createRectangleTool,
-} from "../../../../../components/Canvas2D/src/tools";
+} from "../../../../../components/canvas2d/src/tools";
 import * as mocks from "./mocks";
 
 //import { initModel } from "../../../../../apps/annotator/src/lib/sam_api"

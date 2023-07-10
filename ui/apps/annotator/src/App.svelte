@@ -38,7 +38,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../components/Canvas2D/src/interfaces";
+  } from "../../../components/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;

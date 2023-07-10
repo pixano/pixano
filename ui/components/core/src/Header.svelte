@@ -24,7 +24,7 @@
   import { createEventDispatcher } from "svelte";
 
   import { currentPage } from "../../../apps/explorer/src/stores";
-  import type { ItemData } from "../../Canvas2D/src/interfaces";
+  import type { ItemData } from "../../canvas2d/src/interfaces";
 
   // Exports
   export let app = "";
