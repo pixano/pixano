@@ -110,7 +110,8 @@ border-zinc-300 dark:border-zinc-500"
       src={svg_ok}
       alt="Validate"
       class="h-8 w-8 p-1 rounded cursor-pointer
-      bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
+      bg-rose-500 dark:bg-rose-600
+      hover:bg-rose-600 dark:hover:bg-rose-500"
     />
   </button>
 </div>

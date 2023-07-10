@@ -71,9 +71,11 @@
     <button
       on:click={handleClick}
       class="py-2 px-3 font-heavy rounded-md border-2 transition-all
-      text-zinc-50 hover:text-rose-500 dark:hover:text-rose-600
-      bg-rose-500 hover:bg-zinc-50 dark:bg-rose-600 dark:hover:bg-zinc-800
-      border-rose-500 dark:border-rose-600"
+      text-zinc-50
+      bg-rose-500 dark:bg-rose-600
+      hover:bg-rose-600 dark:hover:bg-rose-500
+      border-rose-500 dark:border-rose-600
+      hover:border-rose-600 dark:hover:border-rose-500"
     >
       {btn_label}
     </button>
