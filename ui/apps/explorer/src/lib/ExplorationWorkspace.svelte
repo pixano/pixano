@@ -19,7 +19,7 @@
 
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import { createPanTool } from "../../../../components/Canvas2D/src/tools";
-  import { getColor } from "../../../../components/core/src/utils";
+  import { getColor } from "@pixano/core/src/utils";
   import AnnotationInspector from "./AnnotationInspector.svelte";
 
   import type {
@@ -94,7 +94,12 @@
 
   onMount(async () => {
     //features = await getItemDetails(datasetId, rowIndex);
-    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations);
+    console.log(
+      "ExplorationWorkspace - onMount",
+      itemData,
+      masksGT,
+      annotations
+    );
   });
 
   afterUpdate(() => {

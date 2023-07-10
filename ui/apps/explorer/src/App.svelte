@@ -26,7 +26,7 @@
   } from "../../../components/models/src/mask_utils";
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
-  import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
+  import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
 
   import type {
     ItemData,
@@ -190,7 +190,7 @@
   {#if datasets}
     {#if selectedDataset}
       {#if selectedItem}
-        <DatasetItemDetails
+        <ExplorationWorkspace
           itemData={selectedItem}
           features={itemDetails}
           {annotations}
