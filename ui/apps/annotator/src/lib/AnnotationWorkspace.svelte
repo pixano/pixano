@@ -116,7 +116,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-${existingClass.items.length}`,
+        label: `${className} ${existingClass.items.length}`,
         visible: true,
         opacity: 1.0,
       };
@@ -130,7 +130,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-0`,
+        label: `${className} 0`,
         visible: true,
         opacity: 1.0,
       };
