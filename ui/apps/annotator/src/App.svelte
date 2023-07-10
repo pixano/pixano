@@ -18,7 +18,7 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import * as npyjs from "../../../components/models/src/npy";
   import { SAM } from "../../../components/models/src/Sam";
@@ -316,6 +316,6 @@
       />
     {/if}
   {:else}
-    <EmptyLibrary />
+    <LoadingLibrary />
   {/if}
 </div>

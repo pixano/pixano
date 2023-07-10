@@ -17,7 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import {
     convertSegmentsToSVG,
@@ -197,6 +197,6 @@
       <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
     {/if}
   {:else}
-    <EmptyLibrary />
+    <LoadingLibrary />
   {/if}
 </div>
