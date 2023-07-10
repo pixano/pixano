@@ -14,11 +14,6 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import svg_plus from "../../core/src/assets/icons/plus.svg";
-  import svg_minus from "../../core/src/assets/icons/minus.svg";
-  import svg_ok from "../../core/src/assets/icons/ok.svg";
-
   // Imports
   import { createEventDispatcher } from "svelte";
   import { ToolType } from "./tools";
@@ -41,19 +36,19 @@
 <div
   id="point-modal"
   class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10 shadow-xl
-bg-white dark:bg-zinc-800
-border-zinc-300 dark:border-zinc-500"
+  bg-white dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   <div class="group">
     <input
       type="text"
       placeholder="New label"
       class="py-1 px-2 border rounded focus:outline-none
-    bg-zinc-100 dark:bg-zinc-700
-    text-zinc-900 dark:text-zinc-200
-    border-zinc-300 dark:border-zinc-500
-    focus:border-rose-600 dark:focus:border-rose-500
-    "
+      bg-zinc-100 dark:bg-zinc-700
+      text-zinc-900 dark:text-zinc-200
+      border-zinc-300 dark:border-zinc-500
+      focus:border-rose-600 dark:focus:border-rose-500
+      "
       bind:value={className}
     />
 
@@ -79,39 +74,62 @@ border-zinc-300 dark:border-zinc-500"
         selectedAnnotationTool = pointPlusTool;
       }}
     >
-      <img
-        src={svg_plus}
-        alt="Plus"
-        class="h-8 w-8 p-1 border rounded cursor-pointer
-        bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        height="48"
+        viewBox="0 -960 960 960"
+        width="48"
+        class="h-8 w-8 p-1 border-2 rounded
+        bg-white dark:bg-zinc-800
+        hover:bg-zinc-200 dark:hover:bg-zinc-600
         {selectedAnnotationTool === pointPlusTool
           ? 'border-rose-500 dark:border-rose-600'
           : 'border-transparent'}"
-      />
+      >
+        <title>Positive point</title>
+        <path
+          d="M450-200v-250H200v-60h250v-250h60v250h250v60H510v250h-60Z"
+          fill="currentcolor"
+        />
+      </svg>
     </button>
     <button
       on:click={() => {
         selectedAnnotationTool = pointMinusTool;
       }}
     >
-      <img
-        src={svg_minus}
-        alt="Minus"
-        class="h-8 w-8 p-1 border rounded cursor-pointer
-        bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        height="48"
+        viewBox="0 -960 960 960"
+        width="48"
+        class="h-8 w-8 p-1 border-2 rounded
+        bg-white dark:bg-zinc-800
+        hover:bg-zinc-200 dark:hover:bg-zinc-600
         {selectedAnnotationTool === pointMinusTool
           ? 'border-rose-500 dark:border-rose-600'
           : 'border-transparent'}"
-      />
+      >
+        <title>Negative point</title>
+        <path d="M200-450v-60h560v60H200Z" fill="currentcolor" />
+      </svg>
     </button>
   {/if}
   <button on:click={validate}>
-    <img
-      src={svg_ok}
-      alt="Validate"
-      class="h-8 w-8 p-1 rounded cursor-pointer
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      height="48"
+      viewBox="0 -960 960 960"
+      width="48"
+      class="h-8 w-8 p-1 rounded cursor-pointer text-zinc-50
       bg-rose-500 dark:bg-rose-600
       hover:bg-rose-600 dark:hover:bg-rose-500"
-    />
+    >
+      <title>Validate</title>
+      <path
+        d="M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z"
+        fill="currentcolor"
+      />
+    </svg>
   </button>
 </div>
