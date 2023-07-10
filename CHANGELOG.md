@@ -2,10 +2,16 @@
 
 All notable changes to Pixano will be documented in this file.
 
+
+
 ## [Unreleased]
+
+### Changed:
+- Add links to Pixano Inference documentation
 
 ### Fixed:
 - Update CHANGELOG format
+
 
 
 ## [0.3.1] - 2023-07-07
@@ -14,6 +20,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix READMEs pictures and links
 - Fix getting splits when processing dataset with an inference model
 - Add warnings in inference notebooks for selecting CPU or GPU device
+
 
 
 ## [0.3.0] - 2023-07-07
@@ -46,10 +53,12 @@ All notable changes to Pixano will be documented in this file.
 - Check provided user data in inference and dataset notebooks before running scripts, like splits folder or source media folders
 
 
+
 ## [0.2.1] - 2023-06-06
 
 ### Added
 - Add GitHub workflow for automatically publishing new releases to PyPI
+
 
 
 ## [0.2.0] - 2023-05-22
@@ -68,16 +77,20 @@ All notable changes to Pixano will be documented in this file.
 - Fix License, Python version, and Python requirements in pyproject.toml file
 
 
+
 ## [0.1.1] - 2023-05-11
 
 ### Fixed
 - Fix Python requirements
 
 
+
 ## [0.1.0] - 2023-05-11
 
 ### Added
 - Create first public release
+
+
 
 [Unreleased]: https://github.com/pixano/pixano/compare/v0.3.1...HEAD
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
