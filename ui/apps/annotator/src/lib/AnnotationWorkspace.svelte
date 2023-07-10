@@ -14,15 +14,11 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import svg_plus from "../../../../components/core/src/assets/icons/plus.svg";
-  import svg_minus from "../../../../components/core/src/assets/icons/minus.svg";
-  import svg_ok from "../../../../components/core/src/assets/icons/ok.svg";
-
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
   import AnnotationToolbar from "../../../../components/Canvas2D/src/AnnotationToolbar.svelte";
+  import LabelToolbar from "../../../../components/Canvas2D/src/LabelToolbar.svelte";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
   import {
     createLabeledPointTool,
@@ -293,74 +289,14 @@
     />
   {/if}
   {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
-    <div
-      id="point-modal"
-      class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10 shadow-xl
-      bg-white dark:bg-zinc-800
-      border-zinc-300 dark:border-zinc-500"
-    >
-      <div class="group">
-        <input
-          type="text"
-          placeholder="New label"
-          class="py-1 px-2 border rounded focus:outline-none
-          bg-zinc-100 dark:bg-zinc-700
-          text-zinc-900 dark:text-zinc-200
-          border-zinc-300 dark:border-zinc-500
-          focus:border-rose-600 dark:focus:border-rose-500
-          "
-          bind:value={className}
-        />
-
-        <div
-          class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
-          style="overflow-y:scroll; max-height: 500px;"
-        >
-          {#each classes as cls}
-            <span
-              class="py-1 px-2 text-sm cursor-pointer bg-white rounded-lg hover:bg-zinc-100"
-              on:click={() => (className = cls.name)}
-            >
-              {cls.name}
-            </span>
-          {/each}
-        </div>
-      </div>
-
-      {#if selectedAnnotationTool.type === ToolType.LabeledPoint}
-        <img
-          src={svg_plus}
-          alt="Plus"
-          class="h-8 w-8 p-1 border rounded cursor-pointer
-          bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
-          {selectedAnnotationTool === pointPlusTool
-            ? 'border-rose-500 dark:border-rose-600'
-            : 'border-transparent'}"
-          on:click={() => {
-            selectedAnnotationTool = pointPlusTool;
-          }}
-        />
-        <img
-          src={svg_minus}
-          alt="Minus"
-          class="h-8 w-8 p-1 border rounded cursor-pointer
-          bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
-          {selectedAnnotationTool === pointMinusTool
-            ? 'border-rose-500 dark:border-rose-600'
-            : 'border-transparent'}"
-          on:click={() => {
-            selectedAnnotationTool = pointMinusTool;
-          }}
-        />
-      {/if}
-      <img
-        src={svg_ok}
-        alt="Validate"
-        class="h-8 w-8 p-1 rounded cursor-pointer
-        bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
-        on:click={handleValidate}
-      />
-    </div>
+    <LabelToolbar
+      bind:className
+      bind:classes
+      bind:selectedAnnotationTool
+      {pointPlusTool}
+      {pointMinusTool}
+      on:validate={handleValidate}
+    />
   {/if}
 </div>
 
