@@ -15,5 +15,5 @@ http://www.cecill.info
 
 // Exports
 export { default as Canvas2D } from "./Canvas2D.svelte";
-export { default as CanvasToolbar } from "./CanvasToolbar.svelte";
+export { default as AnnotationToolbar } from "./AnnotationToolbar.svelte";
 export * from "./tools";

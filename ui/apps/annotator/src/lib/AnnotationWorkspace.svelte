@@ -22,8 +22,8 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
+  import AnnotationToolbar from "../../../../components/Canvas2D/src/AnnotationToolbar.svelte";
   import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
-  import CanvasToolbar from "../../../../components/Canvas2D/src/CanvasToolbar.svelte";
   import {
     createLabeledPointTool,
     createMultiModalTool,
@@ -275,7 +275,7 @@
     bind:masksGT
     bboxes={null}
   />
-  <CanvasToolbar
+  <AnnotationToolbar
     tools={annotationTools}
     bind:selectedTool={selectedAnnotationTool}
     on:toolSelected={handleAnnotationToolChange}
