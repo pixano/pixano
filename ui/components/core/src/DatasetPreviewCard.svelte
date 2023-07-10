@@ -44,7 +44,9 @@
       <div
         class="absolute h-1/5 px-4 py-0 flex flex-col justify-center hidden group-hover:block"
       >
-        <div class="px-2 py-1 text-zinc-600 text-sm rounded bg-zinc-50 border">
+        <div
+          class="px-2 py-1 text-zinc-600 text-sm rounded bg-zinc-50 z-10 border"
+        >
           <p>{dataset.name}</p>
           <br />
           <i>{dataset.description}</i>

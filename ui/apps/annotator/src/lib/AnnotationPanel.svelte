@@ -278,13 +278,13 @@
                         class="h-5 w-5 opacity-50 cursor-pointer"
                         on:click={() => handleVisibility(group, item)}
                       />
-                      <span
-                        class="relative pl-3 grow text-sm group cursor-default"
-                      >
+                      <span class="relative pl-3 text-sm grow group">
                         {item.id}
                         <span
-                          class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block"
+                          class="absolute z-10 px-2 py-1 rounded border hidden group-hover:block
+                          text-zinc-700 bg-zinc-50"
                         >
+                          id: {item.id}
                           label: {item.label}
                         </span>
                       </span>
