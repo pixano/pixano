@@ -178,7 +178,9 @@
 </script>
 
 <Header bind:selectedDataset bind:selectedItem on:closeclick={unselectItem} />
-<div class="pt-20 h-screen w-screen">
+<div
+  class="pt-20 h-screen w-screen text-zinc-500 dark:text-zinc-300 dark:bg-zinc-800"
+>
   {#if datasets}
     {#if selectedDataset}
       {#if selectedItem}

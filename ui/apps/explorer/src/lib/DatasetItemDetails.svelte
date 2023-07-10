@@ -128,8 +128,10 @@
 </div>
 <!-- Pixano Explorer footer -->
 <div
-  class="absolute bottom-0 right-0 px-2 py-1 bg-zinc-50 text-zinc-500 text-sm border-t border-l rounded-tl-lg
-  dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-500"
+  class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
+  text-zinc-500 dark:text-zinc-300
+  bg-zinc-50 dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   Pixano Explorer
 </div>

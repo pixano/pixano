@@ -51,13 +51,17 @@
 <!-- Header -->
 <header class="w-full fixed">
   <div
-    class="h-20 py-4 px-4 flex justify-start items-center shrink-0 bg-white border-b-2 dark:bg-zinc-800 dark:border-zinc-700"
+    class="h-20 py-4 px-4 flex justify-start items-center shrink-0 border-b-2
+    text-zinc-800 dark:text-zinc-300
+    bg-white dark:bg-zinc-800
+    border-zinc-200 dark:border-zinc-600"
   >
     <!-- Logo & app name -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div class="flex items-center grow space-x-2 font-bold text-3xl">
       <button
-        class="cursor-pointer flex items-center space-x-2 hover:text-rose-800 dark:hover:text-rose-300"
+        class="cursor-pointer flex items-center space-x-2
+        hover:text-rose-500 dark:hover:text-rose-600"
         on:click={unselectDataset}
       >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
@@ -65,7 +69,7 @@
       </button>
       {#if selectedDataset}
         <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
-        <button class="hover:text-rose-800 dark:hover:text-rose-300">
+        <button class="hover:text-rose-500 dark:hover:text-rose-600">
           <span class="transition-colors">
             {selectedDataset.name}
           </span>

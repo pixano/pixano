@@ -295,13 +295,20 @@
   {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
     <div
       id="point-modal"
-      class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 bg-white rounded-lg shadow-xl z-10"
+      class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10 shadow-xl
+      bg-white dark:bg-zinc-800
+      border-zinc-300 dark:border-zinc-500"
     >
       <div class="group">
         <input
           type="text"
           placeholder="New label"
-          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-no-repeat bg-right"
+          class="py-1 px-2 border rounded focus:outline-none
+          bg-zinc-100 dark:bg-zinc-700
+          text-zinc-900 dark:text-zinc-200
+          border-zinc-300 dark:border-zinc-500
+          focus:border-rose-600 dark:focus:border-rose-500
+          "
           bind:value={className}
         />
 
@@ -323,10 +330,11 @@
       {#if selectedAnnotationTool.type === ToolType.LabeledPoint}
         <img
           src={svg_plus}
-          alt="plus button"
-          class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
-          pointPlusTool
-            ? 'border-rose-900'
+          alt="Plus"
+          class="h-8 w-8 p-1 border rounded cursor-pointer
+          bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
+          {selectedAnnotationTool === pointPlusTool
+            ? 'border-rose-500 dark:border-rose-600'
             : 'border-transparent'}"
           on:click={() => {
             selectedAnnotationTool = pointPlusTool;
@@ -334,10 +342,11 @@
         />
         <img
           src={svg_minus}
-          alt="minus button"
-          class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
-          pointMinusTool
-            ? 'border-rose-900'
+          alt="Minus"
+          class="h-8 w-8 p-1 border rounded cursor-pointer
+          bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-600
+          {selectedAnnotationTool === pointMinusTool
+            ? 'border-rose-500 dark:border-rose-600'
             : 'border-transparent'}"
           on:click={() => {
             selectedAnnotationTool = pointMinusTool;
@@ -346,8 +355,9 @@
       {/if}
       <img
         src={svg_ok}
-        alt="minus button"
-        class="h-8 w-8 p-1 bg-rose-900 rounded cursor-pointer hover:bg-rose-700"
+        alt="Validate"
+        class="h-8 w-8 p-1 rounded cursor-pointer
+        bg-rose-500 hover:bg-rose-600 dark:bg-rose-600 dark:hover:bg-rose-700"
         on:click={handleValidate}
       />
     </div>
@@ -356,8 +366,10 @@
 
 <!-- Pixano Annotator footer -->
 <div
-  class="absolute bottom-0 right-0 px-2 py-1 bg-zinc-50 text-zinc-500 text-sm border-t border-l rounded-tl-lg
-  dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-500"
+  class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
+  text-zinc-500 dark:text-zinc-300
+  bg-zinc-50 dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   Pixano Annotator
 </div>

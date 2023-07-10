@@ -148,15 +148,19 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
-  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 bg-white text-zinc-900 border rounded-lg shadow
-    dark:text-zinc-300 dark:bg-zinc-900 dark:border-zinc-500"
+  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
+    text-zinc-900 dark:text-zinc-300
+    bg-white dark:bg-zinc-800
+    border-zinc-300 dark:border-zinc-500"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tl-lg
+      text-zinc-500 dark:text-zinc-300
+      hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'labels'
-        ? 'bg-rose-100 border-rose-900 text-rose-900'
-        : 'bg-zinc-100 text-zinc-500'}"
+        ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
+        : 'border-zinc-300 dark:border-zinc-500'}"
       on:click={() => {
         activeTab = "labels";
       }}
@@ -165,9 +169,11 @@
     </span>
     <span
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tr-lg
+      text-zinc-500 dark:text-zinc-300
+      hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'database'
-        ? 'bg-rose-100 border-rose-900 text-rose-900'
-        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'}"
+        ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
+        : 'border-zinc-300 dark:border-zinc-500'}"
       on:click={() => {
         activeTab = "database";
       }}
@@ -181,11 +187,9 @@
         {#each view_list as view}
           {#if view_list.length > 1}
             <div
-              class="py-5 px-8 flex items-center space-x-1 select-none border-b-2 {view[
-                'opened'
-              ]
-                ? 'bg-violet-200'
-                : 'bg-violet-100'}"
+              class="py-5 px-8 flex items-center space-x-1 select-none border-b-2
+            border-zinc-300 dark:border-zinc-500
+            {view['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
               <img
                 src={view["visible"] ? svg_visible : svg_invisible}
@@ -203,12 +207,11 @@
                   class="h-6 w-6 opacity-50
                 {!view['opened'] ? '-rotate-90' : ''}"
                 />
-                <span class="grow ml-3 font-bold text-gray-900">
+                <span class="grow ml-3 font-bold">
                   {view.view_name}
                 </span>
-                <!-- TODO : add different colors -->
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-white font-bold"
                 >
                   {view.num_objs}
                 </span>
@@ -220,14 +223,12 @@
               <div
                 class="{view['opened']
                   ? 'flex'
-                  : 'hidden'} flex-col border-b-2 last:border-transparent"
+                  : 'hidden'} flex-col border-b-2 last:border-transparent
+                  border-zinc-300 dark:border-zinc-500"
               >
                 <div
-                  class="py-5 px-8 flex items-center space-x-1 select-none {group[
-                    'opened'
-                  ]
-                    ? 'bg-zinc-100'
-                    : ''}"
+                  class="py-5 px-8 flex items-center space-x-1 select-none
+                  {group['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
                   <img
                     src={group["visible"] ? svg_visible : svg_invisible}
@@ -255,9 +256,8 @@
                         {group.category_name}
                       </button>
                     </span>
-                    <!-- TODO : add different colors -->
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-900 rounded-full text-xs text-white font-bold"
+                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-white font-bold"
                     >
                       {group.items.length}
                     </span>
@@ -266,10 +266,9 @@
                 <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
                   {#each group.items as item, index}
                     <div
-                      class="py-3 pl-12 pr-8 flex items-center space-x-1 {index ===
-                      0
-                        ? ''
-                        : 'border-t-2'}"
+                      class="py-3 pl-12 pr-8 flex items-center space-x-1
+                      {index === 0 ? '' : 'border-t-2'}
+                      border-zinc-300 dark:border-zinc-500"
                     >
                       <img
                         src={(group.visible && item.visible) || item.visible
@@ -303,7 +302,10 @@
           {/each}
         {/each}
       {:else}
-        <p class="py-4 text-center font-bold italic text-zinc-500">
+        <p
+          class="py-4 text-center font-bold italic
+          text-zinc-500 dark:text-zinc-300"
+        >
           No annotations yet.
         </p>
       {/if}
@@ -317,7 +319,7 @@
     >
       {#each d_data as data, i}
         <div
-          class="p-2 flex flex-col rounded bg-white cursor-pointer hover:bg-zinc-200"
+          class="p-2 flex flex-col rounded cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
           on:click={() => selectImage(data)}
         >
           <div class="flex flex-row">

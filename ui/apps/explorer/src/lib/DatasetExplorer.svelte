@@ -71,7 +71,7 @@
     <!-- Stats -->
     <div
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-       dark:border-zinc-700 dark:bg-zinc-800"
+      border-zinc-300 dark:border-zinc-500"
     >
       <span class="font-bold text-xl mt-3"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
@@ -85,7 +85,9 @@
         </div>
       {:else}
         <!-- Else show a message -->
-        <span class="mt-80 italic text-zinc-500">No stats available.</span>
+        <span class="mt-80 italic text-zinc-500 dark:text-zinc-300">
+          No stats available.
+        </span>
       {/if}
     </div>
 
@@ -104,30 +106,36 @@
         <div
           class="flex justify-end items-center w-full max-w-7xl space-x-2 p-4"
         >
-          <span class="mr-2">
+          <span class="mr-2 text-zinc-900 dark:text-zinc-300">
             {1 + itemsPerPage * (curPage - 1)} - {Math.min(
               itemsPerPage * curPage,
               datasetItems.total
             )} of {datasetItems.total}
           </span>
           <button
-            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
-            hover:bg-zinc-100
-            dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300
-            dark:hover:bg-zinc-700"
-            on:click={handleGoToPreviousPage}>PREV</button
+            class="py-1 px-2 border-2 rounded-lg text-sm font-medium
+            text-zinc-900 dark:text-zinc-300
+            bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-900
+            border-zinc-200 dark:border-zinc-900"
+            on:click={handleGoToPreviousPage}
           >
+            PREV
+          </button>
           <button
-            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
-            hover:bg-zinc-100
-            dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300
-            dark:hover:bg-zinc-700"
-            on:click={handleGoToNextPage}>NEXT</button
+            class="py-1 px-2 border-2 rounded-lg text-sm font-medium
+            text-zinc-900 dark:text-zinc-300
+            bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-900
+            border-zinc-200 dark:border-zinc-900"
+            on:click={handleGoToNextPage}
           >
+            NEXT
+          </button>
         </div>
       {:else}
         <div class="h-full flex justify-center items-center">
-          <span class="text-zinc-500 italic">Loading items ...</span>
+          <span class="italic text-zinc-500 dark:text-zinc-300">
+            Loading items ...
+          </span>
         </div>
       {/if}
     </div>

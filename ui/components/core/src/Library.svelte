@@ -44,7 +44,7 @@
   </div>
 {:else}
   <div
-    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500"
+    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
   >
     <p align="center">
       No datasets found... <br /> <br />
