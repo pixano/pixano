@@ -107,7 +107,7 @@ export function createRectangleTool(): RectangleTool {
 
 export function createPanTool(): PanTool {
   return {
-    name: "Pan",
+    name: "Move image",
     type: ToolType.Pan,
     icon: getIcon(ToolType.Pan),
     cursor: "move",
