@@ -187,7 +187,7 @@
         {#each view_list as view}
           {#if view_list.length > 1}
             <div
-              class="py-5 px-8 flex items-center space-x-1 select-none border-b-2
+              class="p-5 flex items-center space-x-1 select-none border-b-2
             border-zinc-300 dark:border-zinc-500
             {view['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
@@ -244,7 +244,7 @@
                   border-zinc-300 dark:border-zinc-500"
               >
                 <div
-                  class="py-5 px-8 flex items-center space-x-1 select-none
+                  class="p-5 flex items-center space-x-1 select-none
                   {group['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
                   <button on:click={() => handleGroupVisibility(group)}>
@@ -299,7 +299,7 @@
                 <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
                   {#each group.items as item, index}
                     <div
-                      class="py-3 pl-12 pr-8 flex items-center space-x-1
+                      class="py-3 px-8 flex items-center space-x-1
                       {index === 0 ? '' : 'border-t-2'}
                       border-zinc-300 dark:border-zinc-500"
                     >
