@@ -231,6 +231,7 @@
                 </span>
                 <span
                   class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                  title="{view.num_objs} items"
                 >
                   {view.num_objs}
                 </span>
@@ -293,6 +294,7 @@
                     </span>
                     <span
                       class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                      title="{group.items.length} items"
                     >
                       {group.items.length}
                     </span>
@@ -326,15 +328,11 @@
                           />
                         </svg>
                       </button>
-                      <span class="relative pl-3 text-sm grow group">
+                      <span
+                        class="relative pl-3 text-sm grow truncate"
+                        title="{item.id} ({item.label})"
+                      >
                         {item.id}
-                        <span
-                          class="absolute z-10 px-2 py-1 rounded border hidden group-hover:block
-                          text-zinc-700 bg-zinc-50"
-                        >
-                          id: {item.id} <br />
-                          label: {item.label}
-                        </span>
                       </span>
                       <button on:click={() => deleteItem(item)}>
                         <svg
