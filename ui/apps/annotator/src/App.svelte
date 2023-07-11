@@ -18,7 +18,8 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import Header from "../../../components/core/src/Header.svelte";
+  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import * as npyjs from "../../../components/models/src/npy";
   import { SAM } from "../../../components/models/src/Sam";
@@ -28,7 +29,6 @@
   } from "../../../components/models/src/mask_utils";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import * as api from "./lib/api";
-  import Header from "./lib/Header.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
@@ -38,7 +38,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../components/Canvas2D/src/interfaces";
+  } from "../../../components/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;
@@ -199,6 +199,7 @@
       masksGT = [];
       annotations = [];
       classes = [];
+      curPage = 1;
     }
   }
 
@@ -285,13 +286,16 @@
 </script>
 
 <Header
+  app="Annotator"
   bind:selectedDataset
   bind:selectedItem
   {save_flag}
   on:saveclick={handleSaveClick}
   on:closeclick={unselectItem}
 />
-<div class="pt-20 h-screen w-screen">
+<div
+  class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+>
   {#if datasets}
     {#if selectedItem}
       <AnnotationWorkspace
@@ -315,6 +319,6 @@
       />
     {/if}
   {:else}
-    <EmptyLibrary />
+    <LoadingLibrary />
   {/if}
 </div>

@@ -30,39 +30,28 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
-  class="w-64 h-80 m-4 flex flex-col bg-zinc-50 text-zinc-900 border border-zinc-300 rounded-md cursor-pointer transition-all
-  hover:scale-110
-  dark:bg-zinc-800 dark:text-zinc-50 dark:border-zinc-700"
+  class="w-64 h-80 m-4 flex flex-col rounded-md cursor-pointer transition-all hover:scale-110
+  border border-zinc-300 dark:border-zinc-500"
   on:click={handleClick}
 >
   <!-- Dataset Infos -->
   <div class="h-1/5 px-4 flex flex-col justify-center">
     <div class="group">
-      <h3 class="text-lg font-heavy truncate text-zinc-900 dark:text-zinc-300">
+      <h3
+        class="text-lg font-heavy truncate"
+        title="{dataset.name} - {dataset.description}"
+      >
         {dataset.name}
       </h3>
-      <!-- on Hover -->
-      <div
-        class="absolute h-1/5 px-4 py-0 flex flex-col justify-center hidden group-hover:block"
-      >
-        <div class="px-2 py-1 text-zinc-700 text-sm rounded bg-zinc-50 border">
-          <p>{dataset.name}</p>
-          <br />
-          <i>{dataset.description}</i>
-        </div>
-      </div>
     </div>
 
-    <p class="text-sm text-zinc-500">
+    <p class="text-sm text-zinc-600 dark:text-zinc-400">
       {dataset.num_elements} elements
     </p>
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div
-    class="h-3/5 border-t border-b border-zinc-200
-    dark:border-zinc-700"
-  >
+  <div class="h-3/5">
     <img
       src={dataset.preview}
       alt={dataset.name}
@@ -74,10 +63,12 @@
   <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
       on:click={handleClick}
-      class="py-2 px-3 bg-rose-500 text-zinc-50 font-heavy rounded-md border-2 border-rose-500 transition-all
-      hover:text-rose-600 hover:bg-zinc-50
-      dark:bg-rose-800 dark:border-rose-800
-      dark:hover:text-rose-700 dark:hover:bg-zinc-800"
+      class="py-2 px-3 font-heavy rounded-md border-2 transition-all
+      text-zinc-50
+      bg-rose-500 dark:bg-rose-600
+      hover:bg-rose-600 dark:hover:bg-rose-500
+      border-rose-500 dark:border-rose-600
+      hover:border-rose-600 dark:hover:border-rose-500"
     >
       {btn_label}
     </button>

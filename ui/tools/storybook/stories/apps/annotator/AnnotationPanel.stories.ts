@@ -14,21 +14,20 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import DataPanel from "../../../../../apps/annotator/src/lib/DataPanel.svelte";
+import AnnotationPanel from "../../../../../apps/annotator/src/lib/AnnotationPanel.svelte";
 import { getColor } from "../../../../../components/core/src/utils";
 
 const meta = {
-  title: "Applications/Annotator/DataPanel",
-  component: DataPanel,
+  title: "Applications/Annotator/AnnotationPanel",
+  component: AnnotationPanel,
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<DataPanel>;
+} satisfies Meta<AnnotationPanel>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
-
 
 let catCol = getColor([1, 2]); // Define a color map for each category id
 

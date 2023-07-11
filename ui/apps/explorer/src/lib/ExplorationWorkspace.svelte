@@ -17,17 +17,17 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
-  import { createPanTool } from "../../../../components/Canvas2D/src/tools";
-  import { getColor } from "../../../../components/core/src/utils";
-  import AnnotationInspector from "./AnnotationInspector.svelte";
+  import Canvas2D from "../../../../components/canvas2d/src/Canvas2D.svelte";
+  import { createPanTool } from "../../../../components/canvas2d/src/tools";
+  import { getColor } from "@pixano/core/src/utils";
+  import ExplorationPanel from "./ExplorationPanel.svelte";
 
   import type {
     ItemData,
     MaskGT,
     BBox,
     AnnotationsLabels,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;
@@ -94,7 +94,12 @@
 
   onMount(async () => {
     //features = await getItemDetails(datasetId, rowIndex);
-    console.log("DatasetItemDetails - onMount", itemData, masksGT, annotations);
+    console.log(
+      "ExplorationWorkspace - onMount",
+      itemData,
+      masksGT,
+      annotations
+    );
   });
 
   afterUpdate(() => {
@@ -106,7 +111,7 @@
   });
 </script>
 
-<div class="flex h-full w-full">
+<div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   {#if itemData}
     <Canvas2D
       itemId={itemData.id}
@@ -117,7 +122,7 @@
       {bboxes}
       {categoryColor}
     />
-    <AnnotationInspector
+    <ExplorationPanel
       {features}
       bind:annotations
       on:toggleCatVis={handleCatVisChanged}
@@ -128,8 +133,10 @@
 </div>
 <!-- Pixano Explorer footer -->
 <div
-  class="absolute bottom-0 right-0 px-2 py-1 bg-zinc-50 text-zinc-500 text-sm border-t border-l rounded-tl-lg
-  dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-500"
+  class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
+  text-zinc-500 dark:text-zinc-300
+  bg-zinc-50 dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   Pixano Explorer
 </div>

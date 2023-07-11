@@ -40,12 +40,20 @@
     dispatch("itemclick", { id: event.detail.id });
   }
 
+  async function handleGoToFirstPage() {
+    if (curPage > 1) {
+      currentPage.update((n) => 1);
+      datasetItems = null;
+      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+    }
+  }
+
   async function handleGoToPreviousPage() {
     if (curPage > 1) {
       currentPage.update((n) => n - 1);
       datasetItems = null;
       datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
-    } else alert("There is no previous page.");
+    }
   }
 
   async function handleGoToNextPage() {
@@ -53,7 +61,15 @@
       currentPage.update((n) => n + 1);
       datasetItems = null;
       datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
-    } else alert("Last page reached.");
+    }
+  }
+
+  async function handleGoToLastPage() {
+    if (datasetItems.total > curPage * itemsPerPage) {
+      currentPage.update((n) => Math.ceil(datasetItems.total / itemsPerPage));
+      datasetItems = null;
+      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+    }
   }
 
   onMount(async () => {
@@ -71,7 +87,7 @@
     <!-- Stats -->
     <div
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-       dark:border-zinc-700 dark:bg-zinc-800"
+      border-zinc-300 dark:border-zinc-500"
     >
       <span class="font-bold text-xl mt-3"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
@@ -85,7 +101,9 @@
         </div>
       {:else}
         <!-- Else show a message -->
-        <span class="mt-80 italic text-zinc-500">No stats available.</span>
+        <span class="mt-80 italic text-zinc-500 dark:text-zinc-300">
+          No stats available.
+        </span>
       {/if}
     </div>
 
@@ -110,24 +128,53 @@
               datasetItems.total
             )} of {datasetItems.total}
           </span>
-          <button
-            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
-            hover:bg-zinc-100
-            dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300
-            dark:hover:bg-zinc-700"
-            on:click={handleGoToPreviousPage}>PREV</button
-          >
-          <button
-            class="py-1 px-2 bg-white border-2 rounded-lg text-zinc-500 text-sm font-medium
-            hover:bg-zinc-100
-            dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-300
-            dark:hover:bg-zinc-700"
-            on:click={handleGoToNextPage}>NEXT</button
-          >
+          {#if datasetItems.total > itemsPerPage}
+            <button
+              class="py-1 px-2 border rounded-lg text-sm font-medium
+              bg-white dark:bg-zinc-800
+              hover:bg-zinc-100 dark:hover:bg-zinc-700
+              border-zinc-300 dark:border-zinc-500"
+              on:click={handleGoToFirstPage}
+            >
+              FIRST
+            </button>
+
+            <button
+              class="py-1 px-2 border rounded-lg text-sm font-medium
+              bg-white dark:bg-zinc-800
+              hover:bg-zinc-100 dark:hover:bg-zinc-700
+              border-zinc-300 dark:border-zinc-500"
+              on:click={handleGoToPreviousPage}
+            >
+              PREV
+            </button>
+
+            <button
+              class="py-1 px-2 border rounded-lg text-sm font-medium
+              bg-white dark:bg-zinc-800
+              hover:bg-zinc-100 dark:hover:bg-zinc-700
+              border-zinc-300 dark:border-zinc-500"
+              on:click={handleGoToNextPage}
+            >
+              NEXT
+            </button>
+
+            <button
+              class="py-1 px-2 border rounded-lg text-sm font-medium
+              bg-white dark:bg-zinc-800
+              hover:bg-zinc-100 dark:hover:bg-zinc-700
+              border-zinc-300 dark:border-zinc-500"
+              on:click={handleGoToLastPage}
+            >
+              LAST
+            </button>
+          {/if}
         </div>
       {:else}
         <div class="h-full flex justify-center items-center">
-          <span class="text-zinc-500 italic">Loading items ...</span>
+          <span class="italic text-zinc-500 dark:text-zinc-300">
+            Loading items...
+          </span>
         </div>
       {/if}
     </div>

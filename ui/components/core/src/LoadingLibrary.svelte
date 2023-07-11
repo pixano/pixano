@@ -16,13 +16,12 @@
 </script>
 
 <div
-  class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500"
+  class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
 >
   Loading datasets...
 </div>
 <div
-  class="mt-8 mx-auto border border-zinc-100 shadow rounded-md p-4 max-w-sm w-full
-  dark:border-zinc-700"
+  class="mt-8 mx-auto border border-zinc-300 shadow rounded-md p-4 max-w-sm w-full dark:border-zinc-500"
 >
   <div class="animate-pulse flex space-x-4">
     <div class="rounded-full bg-slate-200 h-10 w-10" />

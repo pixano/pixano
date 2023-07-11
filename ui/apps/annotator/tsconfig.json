@@ -20,7 +20,7 @@
     "src/**/*.ts",
     "src/**/*.js",
     "src/**/*.svelte",
-    "../../components/Canvas2D/src/annotator_handlers.ts"
+    "../../components/canvas2d/src/annotator_handlers.ts"
   ],
   "references": [
     {

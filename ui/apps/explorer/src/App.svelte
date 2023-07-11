@@ -17,7 +17,8 @@
   // Imports
   import { onMount } from "svelte";
 
-  import EmptyLibrary from "../../../components/core/src/EmptyLibrary.svelte";
+  import Header from "../../../components/core/src/Header.svelte";
+  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
   import {
     convertSegmentsToSVG,
@@ -25,8 +26,7 @@
   } from "../../../components/models/src/mask_utils";
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
-  import DatasetItemDetails from "./lib/DatasetItemDetails.svelte";
-  import Header from "./lib/Header.svelte";
+  import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
 
   import type {
     ItemData,
@@ -35,7 +35,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
-  } from "../../../components/Canvas2D/src/interfaces";
+  } from "../../../components/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;
@@ -177,12 +177,20 @@
   });
 </script>
 
-<Header bind:selectedDataset bind:selectedItem on:closeclick={unselectItem} />
-<div class="pt-20 h-screen w-screen">
+<Header
+  app="Explorer"
+  bind:selectedDataset
+  bind:selectedItem
+  save_flag={false}
+  on:closeclick={unselectItem}
+/>
+<div
+  class="pt-20 h-screen w-screen text-zinc-800 dark:text-zinc-300 dark:bg-zinc-800"
+>
   {#if datasets}
     {#if selectedDataset}
       {#if selectedItem}
-        <DatasetItemDetails
+        <ExplorationWorkspace
           itemData={selectedItem}
           features={itemDetails}
           {annotations}
@@ -197,6 +205,6 @@
       <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
     {/if}
   {:else}
-    <EmptyLibrary />
+    <LoadingLibrary />
   {/if}
 </div>

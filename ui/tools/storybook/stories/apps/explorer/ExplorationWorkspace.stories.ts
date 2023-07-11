@@ -14,16 +14,16 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import DatasetItemDetails from "../../../../../apps/explorer/src/lib/DatasetItemDetails.svelte";
+import ExplorationWorkspace from "../../../../../apps/explorer/src/lib/ExplorationWorkspace.svelte";
 
 const meta = {
-  title: "Applications/Explorer/DatasetItemDetails",
-  component: DatasetItemDetails,
+  title: "Applications/Explorer/ExplorationWorkspace",
+  component: ExplorationWorkspace,
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<DatasetItemDetails>;
+} satisfies Meta<ExplorationWorkspace>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

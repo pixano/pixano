@@ -14,16 +14,12 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import svg_plus from "../assets/icons/plus.svg";
-  import svg_minus from "../assets/icons/minus.svg";
-  import svg_ok from "../assets/icons/ok.svg";
-
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import Canvas2D from "../../../../components/Canvas2D/src/Canvas2D.svelte";
-  import CanvasToolbar from "../../../../components/Canvas2D/src/CanvasToolbar.svelte";
+  import AnnotationToolbar from "../../../../components/canvas2d/src/AnnotationToolbar.svelte";
+  import LabelToolbar from "../../../../components/canvas2d/src/LabelToolbar.svelte";
+  import Canvas2D from "../../../../components/canvas2d/src/Canvas2D.svelte";
   import {
     createLabeledPointTool,
     createMultiModalTool,
@@ -31,10 +27,10 @@
     createRectangleTool,
     type Tool,
     ToolType,
-  } from "../../../../components/Canvas2D/src/tools";
+  } from "../../../../components/canvas2d/src/tools";
   import { getColor } from "../../../../components/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
-  import DataPanel from "./DataPanel.svelte";
+  import AnnotationPanel from "./AnnotationPanel.svelte";
 
   import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import type {
@@ -44,7 +40,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../../components/Canvas2D/src/interfaces";
+  } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;
@@ -62,13 +58,15 @@
 
   let prediction: InteractiveImageSegmenterOutput = null;
 
+  export let tools_lists: Tool[][] = [];
+  const imageTools: Tool[] = [];
   const annotationTools: Tool[] = [];
   let pointPlusTool = createLabeledPointTool(1);
   let pointMinusTool = createLabeledPointTool(0);
   let rectTool = createRectangleTool();
   let panTool = createPanTool();
 
-  annotationTools.push(panTool);
+  imageTools.push(panTool);
   annotationTools.push(
     createMultiModalTool("Point selection", ToolType.LabeledPoint, [
       pointPlusTool,
@@ -76,6 +74,8 @@
     ])
   );
   annotationTools.push(rectTool);
+  tools_lists.push(imageTools);
+  tools_lists.push(annotationTools);
 
   let selectedAnnotationTool: Tool = pointPlusTool;
 
@@ -120,7 +120,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-${existingClass.items.length}`,
+        label: `${className} ${existingClass.items.length}`,
         visible: true,
         opacity: 1.0,
       };
@@ -134,7 +134,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-0`,
+        label: `${className} 0`,
         visible: true,
         opacity: 1.0,
       };
@@ -150,7 +150,7 @@
       annotations.push(newClass);
     }
 
-    // Hack to force update in DataPanel
+    // Hack to force update in AnnotationPanel
     annotations = annotations;
   }
 
@@ -264,7 +264,7 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="flex h-full w-full">
+<div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   <Canvas2D
     {embedding}
     itemId={itemData.id}
@@ -275,13 +275,13 @@
     bind:masksGT
     bboxes={null}
   />
-  <CanvasToolbar
-    tools={annotationTools}
+  <AnnotationToolbar
+    {tools_lists}
     bind:selectedTool={selectedAnnotationTool}
     on:toolSelected={handleAnnotationToolChange}
   />
   {#if annotations}
-    <DataPanel
+    <AnnotationPanel
       bind:annotations
       dataset={dbImages}
       lastLoadedPage={curPage}
@@ -293,71 +293,23 @@
     />
   {/if}
   {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
-    <div
-      id="point-modal"
-      class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 bg-white rounded-lg shadow-xl z-10"
-    >
-      <div class="group">
-        <input
-          type="text"
-          placeholder="New label"
-          class="py-1 px-2 border rounded focus:outline-none focus:border-rose-300 bg-no-repeat bg-right"
-          bind:value={className}
-        />
-
-        <div
-          class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
-          style="overflow-y:scroll; max-height: 500px;"
-        >
-          {#each classes as cls}
-            <span
-              class="py-1 px-2 text-sm cursor-pointer bg-white rounded-lg hover:bg-zinc-100"
-              on:click={() => (className = cls.name)}
-            >
-              {cls.name}
-            </span>
-          {/each}
-        </div>
-      </div>
-
-      {#if selectedAnnotationTool.type === ToolType.LabeledPoint}
-        <img
-          src={svg_plus}
-          alt="plus button"
-          class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
-          pointPlusTool
-            ? 'border-rose-900'
-            : 'border-transparent'}"
-          on:click={() => {
-            selectedAnnotationTool = pointPlusTool;
-          }}
-        />
-        <img
-          src={svg_minus}
-          alt="minus button"
-          class="h-8 w-8 p-1 bg-white border rounded cursor-pointer hover:bg-zinc-100 {selectedAnnotationTool ===
-          pointMinusTool
-            ? 'border-rose-900'
-            : 'border-transparent'}"
-          on:click={() => {
-            selectedAnnotationTool = pointMinusTool;
-          }}
-        />
-      {/if}
-      <img
-        src={svg_ok}
-        alt="minus button"
-        class="h-8 w-8 p-1 bg-rose-900 rounded cursor-pointer hover:bg-rose-700"
-        on:click={handleValidate}
-      />
-    </div>
+    <LabelToolbar
+      bind:className
+      bind:classes
+      bind:selectedAnnotationTool
+      {pointPlusTool}
+      {pointMinusTool}
+      on:validate={handleValidate}
+    />
   {/if}
 </div>
 
 <!-- Pixano Annotator footer -->
 <div
-  class="absolute bottom-0 right-0 px-2 py-1 bg-zinc-50 text-zinc-500 text-sm border-t border-l rounded-tl-lg
-  dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-500"
+  class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
+  text-zinc-500 dark:text-zinc-300
+  bg-zinc-50 dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-500"
 >
   Pixano Annotator
 </div>
