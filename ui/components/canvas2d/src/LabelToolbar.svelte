@@ -36,6 +36,22 @@
   function validate() {
     dispatch("validate");
   }
+
+  function filterLabels() {
+    var input, filter, a, i;
+    input = document.getElementById("label_input");
+    filter = input.value.toUpperCase();
+    let div = document.getElementById("label_list");
+    a = div.getElementsByTagName("button");
+    for (i = 0; i < a.length; i++) {
+      let txtValue = a[i].textContent || a[i].innerText;
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        a[i].style.display = "";
+      } else {
+        a[i].style.display = "none";
+      }
+    }
+  }
 </script>
 
 <div
@@ -48,16 +64,18 @@
     <input
       type="text"
       placeholder="New label"
+      id="label_input"
       class="py-1 px-2 border rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-700
-      text-zinc-900 dark:text-zinc-200
       border-zinc-300 dark:border-zinc-500
       focus:border-rose-600 dark:focus:border-rose-500
       "
+      on:keyup={filterLabels}
       bind:value={className}
     />
 
     <div
+      id="label_list"
       class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
       style="overflow-y:scroll; max-height: 500px;"
     >
