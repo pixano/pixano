@@ -46,18 +46,20 @@
   <div
     class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
   >
-    <p align="center">
+    <span style="text-align: center;">
       No datasets found... <br /> <br />
       Please refer to
       <u>
         <a
           href="https://github.com/pixano/pixano/tree/main/notebooks/dataset/import_dataset.ipynb"
           target="_blank"
+          class="text-rose-500 dark:text-rose-600
+          hover:text-rose-600 dark:hover:text-rose-500"
         >
           this Jupyter notebook
         </a>
       </u>
       for information on how to import your datasets.
-    </p>
+    </span>
   </div>
 {/if}
