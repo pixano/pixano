@@ -154,8 +154,8 @@
     border-zinc-300 dark:border-zinc-500"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
-    <span
-      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tl-lg
+    <button
+      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tl-lg
       text-zinc-500 dark:text-zinc-300
       hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'labels'
@@ -166,9 +166,9 @@
       }}
     >
       Labels
-    </span>
-    <span
-      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase cursor-pointer rounded-tr-lg
+    </button>
+    <button
+      class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tr-lg
       text-zinc-500 dark:text-zinc-300
       hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'database'
@@ -179,7 +179,7 @@
       }}
     >
       Dataset
-    </span>
+    </button>
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
