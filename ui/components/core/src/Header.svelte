@@ -22,6 +22,7 @@
 
   import { currentPage } from "../../../apps/explorer/src/stores";
   import type { ItemData } from "../../canvas2d/src/interfaces";
+  import { svg_open, svg_save, svg_quit } from "./icons";
 
   // Exports
   export let app = "";
@@ -73,10 +74,7 @@
           width="48"
           class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
         >
-          <path
-            d="m375-240-43-43 198-198-198-198 43-43 241 241-241 241Z"
-            fill="currentcolor"
-          />
+          <path d={svg_open} fill="currentcolor" />
         </svg>
         <button
           class="hover:text-rose-600 dark:hover:text-rose-500"
@@ -94,10 +92,7 @@
             width="48"
             class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
           >
-            <path
-              d="m375-240-43-43 198-198-198-198 43-43 241 241-241 241Z"
-              fill="currentcolor"
-            />
+            <path d={svg_open} fill="currentcolor" />
           </svg>
           <span>
             {selectedItem.id}
@@ -119,10 +114,7 @@
             {save_flag ? 'text-rose-500 dark:text-rose-600' : ''}"
           >
             <title>Save</title>
-            <path
-              d="M840-683v503q0 24-18 42t-42 18H180q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h503l157 157Zm-60 27L656-780H180v600h600v-476ZM479.765-245Q523-245 553.5-275.265q30.5-30.264 30.5-73.5Q584-392 553.735-422.5q-30.264-30.5-73.5-30.5Q437-453 406.5-422.735q-30.5 30.264-30.5 73.5Q376-306 406.265-275.5q30.264 30.5 73.5 30.5ZM233-584h358v-143H233v143Zm-53-72v476-600 124Z"
-              fill="currentcolor"
-            />
+            <path d={svg_save} fill="currentcolor" />
           </svg>
         </button>
       {/if}
@@ -139,10 +131,7 @@
           name="close"
         >
           <title>Close</title>
-          <path
-            d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"
-            fill="currentcolor"
-          />
+          <path d={svg_quit} fill="currentcolor" />
         </svg>
       </button>
     {/if}

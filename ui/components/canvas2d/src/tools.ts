@@ -13,6 +13,15 @@
   http://www.cecill.info
 */
 
+// Imports
+import {
+  svg_pan,
+  svg_point,
+  svg_rectangle,
+  svg_point_plus,
+  svg_point_minus,
+} from "../../core/src/icons";
+
 // Exports
 export enum ToolType {
   LabeledPoint = "LABELED_POINT",
@@ -51,16 +60,16 @@ function getIcon(type: ToolType, label?: number): string {
     case ToolType.LabeledPoint:
       switch (label) {
         case 0:
-          return "M200-450v-60h560v60H200Z";
+          return svg_point_minus;
         case 1:
-          return "M450-200v-250H200v-60h250v-250h60v250h250v60H510v250h-60Z";
+          return svg_point_plus;
         default:
-          return "M468-240q-96-5-162-74t-66-166q0-100 70-170t170-70q97 0 166 66t74 163l-63-20q-11-64-60-106.5T480-660q-75 0-127.5 52.5T300-480q0 67 42.5 116.5T449-303l19 63Zm48 158q-9 1-18 1.5t-18 .5q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 9-.5 18t-1.5 18l-58-18v-18q0-142-99-241t-241-99q-142 0-241 99t-99 241q0 142 99 241t241 99h18l18 58Zm305 22L650-231 600-80 480-480l400 120-151 50 171 171-79 79Z";
+          return svg_point;
       }
     case ToolType.Rectangle:
-      return "M180-120q-24 0-42-18t-18-42h60v60Zm-60-148v-83h60v83h-60Zm0-171v-83h60v83h-60Zm0-170v-83h60v83h-60Zm0-171q0-24 18-42t42-18v60h-60Zm148 660v-60h83v60h-83Zm0-660v-60h83v60h-83Zm171 660v-60h83v60h-83Zm0-660v-60h83v60h-83Zm170 660v-60h83v60h-83Zm0-660v-60h83v60h-83Zm171 660v-60h60q0 24-18 42t-42 18Zm0-148v-83h60v83h-60Zm0-171v-83h60v83h-60Zm0-170v-83h60v83h-60Zm0-171v-60q24 0 42 18t18 42h-60Z";
+      return svg_rectangle;
     case ToolType.Pan:
-      return "M480-80 317-243l44-44 89 89v-252H198l84 84-44 44L80-480l159-159 44 44-85 85h252v-252l-84 84-44-44 158-158 158 158-44 44-84-84v252h252l-84-84 44-44 158 158-158 158-44-44 84-84H510v252l89-89 44 44L480-80Z";
+      return svg_pan;
   }
 }
 

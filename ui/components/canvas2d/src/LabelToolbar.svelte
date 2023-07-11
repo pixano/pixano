@@ -17,6 +17,11 @@
   // Imports
   import { createEventDispatcher } from "svelte";
   import { ToolType } from "./tools";
+  import {
+    svg_point_plus,
+    svg_point_minus,
+    svg_validate,
+  } from "../../core/src/icons";
 
   // Exports
   export let className;
@@ -87,10 +92,7 @@
           : 'border-transparent'}"
       >
         <title>Positive point</title>
-        <path
-          d="M450-200v-250H200v-60h250v-250h60v250h250v60H510v250h-60Z"
-          fill="currentcolor"
-        />
+        <path d={svg_point_plus} fill="currentcolor" />
       </svg>
     </button>
     <button
@@ -111,7 +113,7 @@
           : 'border-transparent'}"
       >
         <title>Negative point</title>
-        <path d="M200-450v-60h560v60H200Z" fill="currentcolor" />
+        <path d={svg_point_minus} fill="currentcolor" />
       </svg>
     </button>
   {/if}
@@ -126,10 +128,7 @@
       hover:bg-rose-600 dark:hover:bg-rose-500"
     >
       <title>Validate</title>
-      <path
-        d="M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z"
-        fill="currentcolor"
-      />
+      <path d={svg_validate} fill="currentcolor" />
     </svg>
   </button>
 </div>
