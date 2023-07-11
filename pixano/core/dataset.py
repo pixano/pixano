@@ -18,6 +18,8 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import pydantic
 
+from pixano.core.features import Features
+
 
 class DatasetInfo(pydantic.BaseModel):
     """DatasetInfo
@@ -27,6 +29,7 @@ class DatasetInfo(pydantic.BaseModel):
         name (str): Dataset name
         description (str): Dataset description
         num_elements (int): Number of elements in dataset
+        features: dict[str, any]: Features of dataset
         preview (str, optional): Dataset preview
         categories (list[dict], optional): Dataset categories
     """
@@ -34,11 +37,11 @@ class DatasetInfo(pydantic.BaseModel):
     id: str
     name: str
     description: str
-    num_elements: int
-    features: dict[str, Any]
+    features: dict[str, str]
+    num_elements: Optional[int]
     preview: Optional[str]
     previews: Optional[list[str]]
-    categories: Optional[list[dict]]
+    categories: Optional[list[dict]]        
 
 
 class Dataset:

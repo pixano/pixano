@@ -1,61 +1,49 @@
-import json
-from typing import Self
-import numpy as np
 import pyarrow as pa
 from pixano.core.arrow_types import *
-from pixano.core.arrow_types.all_pixano_types import PixanoType
 
-def convert_type(type : PixanoType | type | list[type]):
-    py_type_mapping = {
-        int: pa.int64(),
-        float: pa.float64(),
-        bool: pa.bool_(),
-        str: pa.string(),
-        bytes: pa.binary(),
-        np.ndarray: pa.list_(pa.float32()),
-        Image: ImageType,
-        DepthImage: DepthImageType,
-        Camera: CameraType,
-        ObjectAnnotation: ObjectAnnotationType,
-        CompressedRLE: CompressedRLEType,
-        Pose: PoseType,
-        BBox: BBoxType,
-        GtInfo: GtInfoType,
-        Embedding: EmbeddingType,
+def convert_type(input_type: str) -> pa.DataType:
+    """convert string type to pyarrow type
+
+    Args:
+        input_type (str): string , can be written as list form : [myType]
+
+    Returns:
+        pa.DataType: pyarrow data type or list of data type
+    """
+
+    pa_type_mapping = {
+        'int': pa.int64(),
+        'float': pa.float32(),
+        'bool': pa.bool_(),
+        'str': pa.string(),
+        'bytes': pa.binary(),
+        'np.ndarray': pa.list_(pa.float32()),
+        'Image': ImageType,
+        'DepthImage': DepthImageType,
+        'Camera': CameraType,
+        'ObjectAnnotation': ObjectAnnotationType,
+        'CompressedRLE': CompressedRLEType,
+        'Pose': PoseType,
+        'BBox': BBoxType,
+        'GtInfo': GtInfoType,
+        'Embedding': EmbeddingType,
     }
 
-    if isinstance(type, list):
-        element_type = convert_type(type[0])
-        return pa.list_(element_type)
-    return py_type_mapping[type]
+    # str
+    if isinstance(input_type, str):
+        if input_type.startswith("[") and input_type.endswith("]"):
+            return pa.list_(pa_type_mapping[input_type.removeprefix("[").removesuffix("]")])
+        return pa_type_mapping[input_type]
 
 class Features:
-    def __init__(self, dict) -> None:
-        self.features_dict = dict
+    def __init__(self, dict: dict[str, str]) -> None:
+        self.dict = dict
     
     @staticmethod
-    def from_dict(features_dict):
+    def from_string_dict(features_dict: dict[str,str]) -> 'Features':
         return Features(features_dict)
-    
-
-    def to_json(self, json_file_path):
-        """Write schema string to JSON file
-
-        Args:
-            schema_string (str): Schema string
-            json_file_path (str): Path to the JSON file
-        """
-        features = {}
-        for key, val in self.features_dict.items():
-            if isinstance(val ,list):
-                features[key] = f'[{val[0].__name__}]'
-            else :
-                features[key] = val.__name__
-
-        with open(json_file_path, 'w') as f:
-            json.dump({'features': features}, f, indent=4)
         
-    def to_schema(self):
+    def to_fields(self) -> list[pa.field]:
         """Convert dict containing python type to arrow schema
 
         Args:
@@ -65,9 +53,8 @@ class Features:
             pa.schema: Schema in arrow format
         """
         fields = []
-        for field_name, field_type in self.features_dict.items():
+        for field_name, field_type in self.dict.items():
             # Convert the field type to PyArrow type
-            arrow_type = convert_type(field_type)
-            field = pa.field(field_name, arrow_type, nullable=True)
+            field = pa.field(field_name, convert_type(field_type), nullable=True)
             fields.append(field)
-        return pa.schema(fields)
+        return fields

@@ -90,7 +90,8 @@ class DataLoader(ABC):
             id=shortuuid.uuid(),
             name=name,
             description=description,
-            num_elements=0,
+            features={}
+            num_elements=0
         )
         self.splits = splits
 

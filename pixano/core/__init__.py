@@ -11,8 +11,8 @@
 #
 # http://www.cecill.info
 
-from .dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
-from .features import Features
+from pixano.core.dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.core.features import Features
 
 __all__ = [
     "Features",
