@@ -31,21 +31,21 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
   class="w-64 h-80 m-4 flex flex-col rounded-md cursor-pointer transition-all hover:scale-110
-  text-zinc-800 border dark:text-zinc-300 border-zinc-300 dark:border-zinc-500"
+  border border-zinc-300 dark:border-zinc-500"
   on:click={handleClick}
 >
   <!-- Dataset Infos -->
   <div class="h-1/5 px-4 flex flex-col justify-center">
     <div class="group">
       <h3
-        class="text-lg font-heavy truncate text-zinc-800 dark:text-zinc-300"
+        class="text-lg font-heavy truncate"
         title="{dataset.name} - {dataset.description}"
       >
         {dataset.name}
       </h3>
     </div>
 
-    <p class="text-sm text-zinc-500 dark:text-zinc-400">
+    <p class="text-sm text-zinc-600 dark:text-zinc-400">
       {dataset.num_elements} elements
     </p>
   </div>

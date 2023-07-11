@@ -231,7 +231,6 @@
 <!-- Toolbox -->
 <div
   class="absolute w-72 top-1/2 -translate-y-1/2 right-6 py-2 px-4 flex flex-col border rounded-lg shadow-xl
-  text-zinc-900 dark:text-zinc-300
   bg-white dark:bg-zinc-800
   border-zinc-300 dark:border-zinc-500"
 >
@@ -344,8 +343,8 @@
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- Toggle Category Button -->
         <button
-          class="relative px-1 mb-2 mr-4 rounded-lg text-sm text-zinc-900 font-bold border-2 border-transparent
-            hover:border-rose-500"
+          class="relative px-1 mb-2 mr-4 rounded-lg text-sm font-bold border-2 border-transparent
+          text-zinc-800 hover:border-rose-500"
           style="background-color: {categoryColor(category.id)};"
           id="cat-{category.id}"
           on:click={() => toggleCategoryVisibility(category.name)}

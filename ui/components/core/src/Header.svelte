@@ -72,7 +72,7 @@
           height="48"
           viewBox="0 -960 960 960"
           width="48"
-          class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
+          class="h-6 w-6"
         >
           <path d={svg_open} fill="currentcolor" />
         </svg>
@@ -90,7 +90,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
+            class="h-6 w-6"
           >
             <path d={svg_open} fill="currentcolor" />
           </svg>

@@ -106,7 +106,7 @@
         <div
           class="flex justify-end items-center w-full max-w-7xl space-x-2 p-4"
         >
-          <span class="mr-2 text-zinc-900 dark:text-zinc-300">
+          <span class="mr-2">
             {1 + itemsPerPage * (curPage - 1)} - {Math.min(
               itemsPerPage * curPage,
               datasetItems.total
@@ -114,7 +114,6 @@
           </span>
           <button
             class="py-1 px-2 border rounded-lg text-sm font-medium
-            text-zinc-900 dark:text-zinc-300
             bg-white dark:bg-zinc-800
             hover:bg-zinc-100 dark:hover:bg-zinc-700
             border-zinc-300 dark:border-zinc-500"
@@ -124,7 +123,6 @@
           </button>
           <button
             class="py-1 px-2 border rounded-lg text-sm font-medium
-            text-zinc-900 dark:text-zinc-300
             bg-white dark:bg-zinc-800
             hover:bg-zinc-100 dark:hover:bg-zinc-700
             border-zinc-300 dark:border-zinc-500"

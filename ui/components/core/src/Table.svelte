@@ -40,7 +40,7 @@
   border-zinc-300 dark:border-zinc-500"
 >
   <table class="table-auto w-full text-sm text-left">
-    <thead class="text-xs uppercase text-zinc-700 dark:text-zinc-300">
+    <thead class="text-xs uppercase">
       <tr
         class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-500 dark:bg-zinc-700"
       >

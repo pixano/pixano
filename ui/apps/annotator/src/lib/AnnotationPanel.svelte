@@ -149,7 +149,6 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
   class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
-    text-zinc-900 dark:text-zinc-300
     bg-white dark:bg-zinc-800
     border-zinc-300 dark:border-zinc-500"
 >
@@ -282,7 +281,7 @@
                         fill="currentcolor"
                       />
                     </svg>
-                    <span class="grow ml-3 font-bold text-gray-900">
+                    <span class="grow ml-3 font-bold text-zinc-800">
                       <button
                         class="relative px-1 rounded-lg text-sm"
                         style="background-color: {categoryColor(
