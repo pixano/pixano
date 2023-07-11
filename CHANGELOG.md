@@ -6,6 +6,11 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+
+
+
+## [0.3.2] - 2023-07-11
+
 ### Added:
 - Add first and last page buttons in Pixano Explorer
 - Add search in label toolbar in Pixano Annotator
@@ -107,6 +112,7 @@ All notable changes to Pixano will be documented in this file.
 
 
 [Unreleased]: https://github.com/pixano/pixano/compare/v0.3.1...HEAD
+[0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/pixano/pixano/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/pixano/pixano/compare/v0.2.0...v0.2.1
