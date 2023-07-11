@@ -492,10 +492,18 @@
       alert(
         "No interactive model set up, cannot segment. \n\nPlease refer to the interactive annotation notebook for information on how to export your model to ONNX."
       );
+      for (let view of views) {
+        clearInputs(view.viewId);
+        clearCurrentMask(view.viewId);
+      }
     } else if (embedding == null) {
       alert(
         "No embedding directory found, cannot segment.\n\nPlease refer to the interactive annotation notebook for information on how to precompute embeddings on your dataset."
       );
+      for (let view of views) {
+        clearInputs(view.viewId);
+        clearCurrentMask(view.viewId);
+      }
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
