@@ -37,21 +37,12 @@
   <!-- Dataset Infos -->
   <div class="h-1/5 px-4 flex flex-col justify-center">
     <div class="group">
-      <h3 class="text-lg font-heavy truncate text-zinc-800 dark:text-zinc-300">
+      <h3
+        class="text-lg font-heavy truncate text-zinc-800 dark:text-zinc-300"
+        title="{dataset.name} - {dataset.description}"
+      >
         {dataset.name}
       </h3>
-      <!-- on Hover -->
-      <div
-        class="absolute h-1/5 px-4 py-0 flex flex-col justify-center hidden group-hover:block"
-      >
-        <div
-          class="px-2 py-1 text-zinc-600 text-sm rounded bg-zinc-50 z-10 border"
-        >
-          <p>{dataset.name}</p>
-          <br />
-          <i>{dataset.description}</i>
-        </div>
-      </div>
     </div>
 
     <p class="text-sm text-zinc-500 dark:text-zinc-400">
