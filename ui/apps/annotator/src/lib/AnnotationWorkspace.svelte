@@ -58,13 +58,15 @@
 
   let prediction: InteractiveImageSegmenterOutput = null;
 
+  export let tools_lists: Tool[][] = [];
+  const imageTools: Tool[] = [];
   const annotationTools: Tool[] = [];
   let pointPlusTool = createLabeledPointTool(1);
   let pointMinusTool = createLabeledPointTool(0);
   let rectTool = createRectangleTool();
   let panTool = createPanTool();
 
-  annotationTools.push(panTool);
+  imageTools.push(panTool);
   annotationTools.push(
     createMultiModalTool("Point selection", ToolType.LabeledPoint, [
       pointPlusTool,
@@ -72,6 +74,8 @@
     ])
   );
   annotationTools.push(rectTool);
+  tools_lists.push(imageTools);
+  tools_lists.push(annotationTools);
 
   let selectedAnnotationTool: Tool = pointPlusTool;
 
@@ -272,7 +276,7 @@
     bboxes={null}
   />
   <AnnotationToolbar
-    tools={annotationTools}
+    {tools_lists}
     bind:selectedTool={selectedAnnotationTool}
     on:toolSelected={handleAnnotationToolChange}
   />
