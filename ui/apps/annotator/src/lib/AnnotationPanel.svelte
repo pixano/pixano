@@ -224,7 +224,9 @@
                   />
                 </svg>
 
-                <span class="grow ml-3 font-bold">
+                <span
+                  class="grow ml-3 font-bold text-zinc-500 dark:text-zinc-300"
+                >
                   {view.view_name}
                 </span>
                 <span
