@@ -6,10 +6,17 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+### Added:
+- Add first and last page buttons in Pixano Explorer
+- Add search in label toolbar in Pixano Annotator
+
 ### Changed:
 - Add links to Pixano Inference documentation
+- Refactor Pixano Apps components
 
 ### Fixed:
+- Fix dark mode for Pixano apps
+- Fix tooltips for buttons and truncated texts in Pixano Apps 
 - Update CHANGELOG format
 
 
