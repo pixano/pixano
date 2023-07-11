@@ -54,7 +54,7 @@
   <div class="h-3/5">
     <img
       src={dataset.preview}
-      alt={dataset.name}
+      alt=""
       class="h-full w-full object-cover object-center"
     />
   </div>
