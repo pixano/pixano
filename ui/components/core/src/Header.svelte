@@ -59,7 +59,7 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div class="flex items-center grow space-x-2 font-bold text-3xl">
       <button
-        class="cursor-pointer flex items-center space-x-2
+        class="flex items-center space-x-2
         hover:text-rose-600 dark:hover:text-rose-500"
         on:click={unselectDataset}
       >

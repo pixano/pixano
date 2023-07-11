@@ -63,7 +63,7 @@
     >
       {#each classes as cls}
         <button
-          class="py-1 px-2 text-sm cursor-pointer bg-white rounded-lg hover:bg-zinc-100"
+          class="py-1 px-2 text-sm bg-white rounded-lg hover:bg-zinc-100"
           style="text-align:left"
           on:click={() => (className = cls.name)}
         >
