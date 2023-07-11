@@ -16,15 +16,13 @@
 
   // Assets
   import pixanoLogo from "./assets/pixano.png";
-  import svg_next from "./assets/icons/next.svg";
-  import svg_close from "./assets/icons/close.svg";
-  import svg_save from "./assets/icons/save.svg";
 
   // Imports
   import { createEventDispatcher } from "svelte";
 
   import { currentPage } from "../../../apps/explorer/src/stores";
   import type { ItemData } from "../../canvas2d/src/interfaces";
+  import { svg_open, svg_save, svg_quit } from "./icons";
 
   // Exports
   export let app = "";
@@ -52,26 +50,34 @@
 <!-- Header -->
 <header class="w-full fixed">
   <div
-    class="h-20 py-4 px-4 flex justify-start items-center shrink-0 border-b-2
+    class="h-20 z-50 py-4 px-4 flex justify-start items-center shrink-0 border-b
     text-zinc-800 dark:text-zinc-300
     bg-white dark:bg-zinc-800
-    border-zinc-200 dark:border-zinc-600"
+    border-zinc-300 dark:border-zinc-500"
   >
     <!-- Logo & app name -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div class="flex items-center grow space-x-2 font-bold text-3xl">
       <button
         class="cursor-pointer flex items-center space-x-2
-        hover:text-rose-500 dark:hover:text-rose-600"
+        hover:text-rose-600 dark:hover:text-rose-500"
         on:click={unselectDataset}
       >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
         <span class="transition-colors"> Pixano {app} </span>
       </button>
       {#if selectedDataset}
-        <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="48"
+          viewBox="0 -960 960 960"
+          width="48"
+          class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
+        >
+          <path d={svg_open} fill="currentcolor" />
+        </svg>
         <button
-          class="hover:text-rose-500 dark:hover:text-rose-600"
+          class="hover:text-rose-600 dark:hover:text-rose-500"
           on:click={handleCloseClick}
         >
           <span class="transition-colors">
@@ -79,7 +85,15 @@
           </span>
         </button>
         {#if selectedItem}
-          <img src={svg_next} alt="icon" class="h-6 w-6 opacity-75" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="h-6 w-6 text-zinc-800 dark:text-zinc-300"
+          >
+            <path d={svg_open} fill="currentcolor" />
+          </svg>
           <span>
             {selectedItem.id}
           </span>
@@ -91,25 +105,34 @@
     {#if selectedDataset}
       {#if selectedItem && app === "Annotator"}
         <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveClick}>
-          <img
-            src={svg_save}
-            alt="icon"
-            class="h-8 w-8 cursor-pointer cursor-pointer opacity-75"
-            style={save_flag
-              ? "background-color: #ffe4e6; box-shadow: 0px 0px 5px 5px #ffe4e6;"
-              : ""}
-          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="hover:text-rose-600 dark:hover:text-rose-500 h-8 w-8
+            {save_flag ? 'text-rose-500 dark:text-rose-600' : ''}"
+          >
+            <title>Save</title>
+            <path d={svg_save} fill="currentcolor" />
+          </svg>
         </button>
       {/if}
       <button
         class="w-30 pr-4 flex justify-end"
         on:click={selectedItem ? handleCloseClick : unselectDataset}
       >
-        <img
-          src={svg_close}
-          alt="icon"
-          class="h-8 w-8 cursor-pointer opacity-75"
-        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="48"
+          viewBox="0 -960 960 960"
+          width="48"
+          class="h-8 w-8 hover:text-rose-600 dark:hover:text-rose-500"
+          name="close"
+        >
+          <title>Close</title>
+          <path d={svg_quit} fill="currentcolor" />
+        </svg>
       </button>
     {/if}
   </div>

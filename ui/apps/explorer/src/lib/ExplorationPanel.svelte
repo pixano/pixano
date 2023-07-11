@@ -354,7 +354,7 @@
           <!-- Category count index -->
           {#if category.count != 1}
             <span
-              class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 dark:bg-rose-600 text-white font-bold"
+              class="block absolute -right-3 -top-2 h-fit px-1 text-xs rounded-full bg-rose-500 dark:bg-rose-600 text-zinc-50 font-bold"
             >
               {category.count}
             </span>

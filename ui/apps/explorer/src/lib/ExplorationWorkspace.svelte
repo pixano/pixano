@@ -111,7 +111,7 @@
   });
 </script>
 
-<div class="flex h-full w-full">
+<div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   {#if itemData}
     <Canvas2D
       itemId={itemData.id}

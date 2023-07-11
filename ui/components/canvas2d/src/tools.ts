@@ -13,12 +13,14 @@
   http://www.cecill.info
 */
 
-// Assets
-import svg_minus from "../../core/src/assets/icons/minus.svg";
-import svg_plus from "../../core/src/assets/icons/plus.svg";
-import svg_point from "../../core/src/assets/icons/point.svg";
-import svg_box from "../../core/src/assets/icons/box.svg";
-import svg_pan from "../../core/src/assets/icons/pan.svg";
+// Imports
+import {
+  svg_pan,
+  svg_point,
+  svg_rectangle,
+  svg_point_plus,
+  svg_point_minus,
+} from "../../core/src/icons";
 
 // Exports
 export enum ToolType {
@@ -58,14 +60,14 @@ function getIcon(type: ToolType, label?: number): string {
     case ToolType.LabeledPoint:
       switch (label) {
         case 0:
-          return svg_minus;
+          return svg_point_minus;
         case 1:
-          return svg_plus;
+          return svg_point_plus;
         default:
           return svg_point;
       }
     case ToolType.Rectangle:
-      return svg_box;
+      return svg_rectangle;
     case ToolType.Pan:
       return svg_pan;
   }
@@ -86,7 +88,7 @@ export function createMultiModalTool(
 
 export function createLabeledPointTool(label: number): LabeledPointTool {
   return {
-    name: "Point selection" + (label ? " (Add)" : " (Remove)"),
+    name: "Point selection" + (label ? " (Positive)" : " (Negative)"),
     type: ToolType.LabeledPoint,
     label: label,
     icon: getIcon(ToolType.LabeledPoint, label),

@@ -116,7 +116,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-${existingClass.items.length}`,
+        label: `${className} ${existingClass.items.length}`,
         visible: true,
         opacity: 1.0,
       };
@@ -130,7 +130,7 @@
       const annotation: AnnLabel = {
         id: id,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className}-0`,
+        label: `${className} 0`,
         visible: true,
         opacity: 1.0,
       };
@@ -260,7 +260,7 @@
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
-<div class="flex h-full w-full">
+<div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   <Canvas2D
     {embedding}
     itemId={itemData.id}

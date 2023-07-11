@@ -14,15 +14,16 @@
   http://www.cecill.info
   */
 
-  // Assets
-  import svg_visible from "../../../../components/core/src/assets/icons/visible.svg";
-  import svg_invisible from "../../../../components/core/src/assets/icons/invisible.svg";
-  import svg_expand from "../../../../components/core/src/assets/icons/expand.svg";
-  import svg_delete from "../../../../components/core/src/assets/icons/delete.svg";
-
   // Imports
   import { afterUpdate, createEventDispatcher } from "svelte";
 
+  import {
+    svg_hide,
+    svg_show,
+    svg_open,
+    svg_close,
+    svg_delete,
+  } from "../../../../components/core/src/icons";
   import type {
     AnnotationsLabels,
     DatabaseFeats,
@@ -32,7 +33,6 @@
   export let annotations: Array<AnnotationsLabels>;
   export let dataset: DatabaseFeats = null;
   export let lastLoadedPage: number;
-  // Function that maps an id to a color
   export let categoryColor = null;
 
   let d_data = [];
@@ -191,27 +191,44 @@
             border-zinc-300 dark:border-zinc-500
             {view['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
-              <img
-                src={view["visible"] ? svg_visible : svg_invisible}
-                alt="visible"
-                class="h-6 w-6 opacity-50 cursor-pointer"
-                on:click={() => handleViewVisibility(view)}
-              />
+              <button on:click={() => handleViewVisibility(view)}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                >
+                  <title>{view["visible"] ? "Hide" : "Show"}</title>
+                  <path
+                    d={view["visible"] ? svg_hide : svg_show}
+                    fill="currentcolor"
+                  />
+                </svg>
+              </button>
               <div
                 class="flex grow items-center space-x-1 cursor-pointer"
                 on:click={() => (view["opened"] = !view["opened"])}
               >
-                <img
-                  src={svg_expand}
-                  alt="expand"
-                  class="h-6 w-6 opacity-50
-                {!view['opened'] ? '-rotate-90' : ''}"
-                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                >
+                  <title>{view["opened"] ? "Close" : "Open"}</title>
+                  <path
+                    d={view["opened"] ? svg_close : svg_open}
+                    fill="currentcolor"
+                  />
+                </svg>
+
                 <span class="grow ml-3 font-bold">
                   {view.view_name}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-white font-bold"
+                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
                 >
                   {view.num_objs}
                 </span>
@@ -230,22 +247,38 @@
                   class="py-5 px-8 flex items-center space-x-1 select-none
                   {group['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
-                  <img
-                    src={group["visible"] ? svg_visible : svg_invisible}
-                    alt="visible"
-                    class="h-6 w-6 opacity-50 cursor-pointer"
-                    on:click={() => handleGroupVisibility(group)}
-                  />
+                  <button on:click={() => handleGroupVisibility(group)}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                    >
+                      <title>{group["visible"] ? "Hide" : "Show"}</title>
+                      <path
+                        d={group["visible"] ? svg_hide : svg_show}
+                        fill="currentcolor"
+                      />
+                    </svg>
+                  </button>
                   <div
                     class="flex grow items-center space-x-1 cursor-pointer"
                     on:click={() => (group["opened"] = !group["opened"])}
                   >
-                    <img
-                      src={svg_expand}
-                      alt="expand"
-                      class="h-6 w-6 opacity-50
-                    {!group['opened'] ? '-rotate-90' : ''}"
-                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                    >
+                      <title>{group["opened"] ? "Close" : "Open"}</title>
+                      <path
+                        d={group["opened"] ? svg_close : svg_open}
+                        fill="currentcolor"
+                      />
+                    </svg>
                     <span class="grow ml-3 font-bold text-gray-900">
                       <button
                         class="relative px-1 rounded-lg text-sm"
@@ -257,7 +290,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-white font-bold"
+                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
                     >
                       {group.items.length}
                     </span>
@@ -270,30 +303,49 @@
                       {index === 0 ? '' : 'border-t-2'}
                       border-zinc-300 dark:border-zinc-500"
                     >
-                      <img
-                        src={(group.visible && item.visible) || item.visible
-                          ? svg_visible
-                          : svg_invisible}
-                        alt="visible"
-                        class="h-5 w-5 opacity-50 cursor-pointer"
-                        on:click={() => handleVisibility(group, item)}
-                      />
-                      <span
-                        class="relative pl-3 grow text-sm group cursor-default"
-                      >
+                      <button on:click={() => handleVisibility(group, item)}>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          height="48"
+                          viewBox="0 -960 960 960"
+                          width="48"
+                          class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
+                        >
+                          <title>
+                            {(group.visible && item.visible) || item.visible
+                              ? "Hide"
+                              : "Show"}
+                          </title>
+                          <path
+                            d={(group.visible && item.visible) || item.visible
+                              ? svg_hide
+                              : svg_show}
+                            fill="currentcolor"
+                          />
+                        </svg>
+                      </button>
+                      <span class="relative pl-3 text-sm grow group">
                         {item.id}
                         <span
-                          class="absolute px-2 py-1 text-zinc-700 rounded bg-zinc-50 border hidden group-hover:block"
+                          class="absolute z-10 px-2 py-1 rounded border hidden group-hover:block
+                          text-zinc-700 bg-zinc-50"
                         >
+                          id: {item.id} <br />
                           label: {item.label}
                         </span>
                       </span>
-                      <img
-                        src={svg_delete}
-                        alt="delete"
-                        class="h-4 w-4 opacity-50 cursor-pointer"
-                        on:click={() => deleteItem(item)}
-                      />
+                      <button on:click={() => deleteItem(item)}>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          height="48"
+                          viewBox="0 -960 960 960"
+                          width="48"
+                          class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
+                        >
+                          <title>Delete</title>
+                          <path d={svg_delete} fill="currentcolor" />
+                        </svg>
+                      </button>
                     </div>
                   {/each}
                 </div>

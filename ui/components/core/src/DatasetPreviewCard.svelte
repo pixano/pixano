@@ -44,7 +44,9 @@
       <div
         class="absolute h-1/5 px-4 py-0 flex flex-col justify-center hidden group-hover:block"
       >
-        <div class="px-2 py-1 text-zinc-600 text-sm rounded bg-zinc-50 border">
+        <div
+          class="px-2 py-1 text-zinc-600 text-sm rounded bg-zinc-50 z-10 border"
+        >
           <p>{dataset.name}</p>
           <br />
           <i>{dataset.description}</i>
@@ -71,9 +73,11 @@
     <button
       on:click={handleClick}
       class="py-2 px-3 font-heavy rounded-md border-2 transition-all
-      text-zinc-50 hover:text-rose-500 dark:hover:text-rose-600
-      bg-rose-500 hover:bg-zinc-50 dark:bg-rose-600 dark:hover:bg-zinc-800
-      border-rose-500 dark:border-rose-600"
+      text-zinc-50
+      bg-rose-500 dark:bg-rose-600
+      hover:bg-rose-600 dark:hover:bg-rose-500
+      border-rose-500 dark:border-rose-600
+      hover:border-rose-600 dark:hover:border-rose-500"
     >
       {btn_label}
     </button>

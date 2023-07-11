@@ -113,19 +113,21 @@
             )} of {datasetItems.total}
           </span>
           <button
-            class="py-1 px-2 border-2 rounded-lg text-sm font-medium
+            class="py-1 px-2 border rounded-lg text-sm font-medium
             text-zinc-900 dark:text-zinc-300
-            bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-900
-            border-zinc-200 dark:border-zinc-900"
+            bg-white dark:bg-zinc-800
+            hover:bg-zinc-100 dark:hover:bg-zinc-700
+            border-zinc-300 dark:border-zinc-500"
             on:click={handleGoToPreviousPage}
           >
             PREV
           </button>
           <button
-            class="py-1 px-2 border-2 rounded-lg text-sm font-medium
+            class="py-1 px-2 border rounded-lg text-sm font-medium
             text-zinc-900 dark:text-zinc-300
-            bg-white hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-900
-            border-zinc-200 dark:border-zinc-900"
+            bg-white dark:bg-zinc-800
+            hover:bg-zinc-100 dark:hover:bg-zinc-700
+            border-zinc-300 dark:border-zinc-500"
             on:click={handleGoToNextPage}
           >
             NEXT
