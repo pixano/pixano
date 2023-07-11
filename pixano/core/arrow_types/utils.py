@@ -65,10 +65,10 @@ def register_extension_types(pa_types: list):
             pass
 
 
-def fields(type: pa.DataType) -> list:
+def fields(struct_type: pa.DataType) -> list:
     Fields = []
-    for f in range(type().storage_type.num_fields):
-        Fields.append(type().storage_type.field(f))
+    for f in range(struct_type.storage_type.num_fields):
+        Fields.append(struct_type.storage_type.field(f))
     return Fields
 
 

@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 
-from pixano.core.arrow_types.all_pixano_types import createPaType
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.core.arrow_types.bbox import BBox, BBoxType
 from pixano.core.arrow_types.camera import Camera, CameraType
 from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
@@ -46,6 +46,7 @@ __all__ = [
     "CameraType",
     "GtInfo",
     "GtInfoType",
+    "PixanoType",
     "createPaType",
     "convert_field",
     "fields",

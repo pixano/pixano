@@ -82,5 +82,5 @@ class CompressedRLE(PixanoType):
 
 
 CompressedRLEType = createPaType(
-    CompressedRLE.to_struct(), "CrompressedLE", CompressedRLE
+    CompressedRLE.to_struct(), "CompressedRLE", CompressedRLE
 )

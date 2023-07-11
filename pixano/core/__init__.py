@@ -12,8 +12,10 @@
 # http://www.cecill.info
 
 from .dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
+from .features import Features
 
 __all__ = [
+    "Features",
     "DatasetInfo",
     "Dataset",
     "InferenceDataset",

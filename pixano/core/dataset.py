@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -35,6 +35,7 @@ class DatasetInfo(pydantic.BaseModel):
     name: str
     description: str
     num_elements: int
+    features: dict[str, Any]
     preview: Optional[str]
     previews: Optional[list[str]]
     categories: Optional[list[dict]]

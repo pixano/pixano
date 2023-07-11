@@ -76,7 +76,7 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
             return self.Array
 
         def __repr__(self):
-            return f"<{name}Type object at {hex(id(self))}>\n{self}"
+            return f"ExtensionType<{name}Type>"
 
         class Scalar(pa.ExtensionScalar):
             def as_py(self):
