@@ -11,12 +11,19 @@ All notable changes to Pixano will be documented in this file.
 - Add search in label toolbar in Pixano Annotator
 
 ### Changed:
-- Add links to Pixano Inference documentation
+- Separate image tools and annotation tools in Pixano Annotator
 - Refactor Pixano Apps components
+- Add links to Pixano Inference documentation in Pixano documentation
+- Add link to dataset import notebook in Pixano apps
 
 ### Fixed:
-- Fix dark mode for Pixano apps
-- Fix tooltips for buttons and truncated texts in Pixano Apps 
+- Fix version requirement for pydantic package
+- Fix color schemes and dark mode in Pixano apps
+- Fix uses of svg icons in Pixano apps
+- Fix tooltips for buttons and truncated texts in Pixano apps
+- Fix display in Pixano Explorer for datasets without annotations
+- Fix default device for embedding precomputing in notebook
+- Fix default images paths for dataset import in notebook
 - Update CHANGELOG format
 
 
