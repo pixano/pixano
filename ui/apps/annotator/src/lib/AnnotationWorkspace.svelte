@@ -55,6 +55,7 @@
   const dispatch = createEventDispatcher();
 
   let className = "";
+  let classNameAlert = false;
 
   let prediction: InteractiveImageSegmenterOutput = null;
 
@@ -158,7 +159,7 @@
     if (prediction) {
       // Validate user input
       if (className === "") {
-        alert("Please set a class name");
+        handleClassNameAlert();
         return;
       }
 
@@ -177,6 +178,10 @@
 
       dispatch("enableSaveFlag");
     }
+  }
+
+  function handleClassNameAlert() {
+    classNameAlert = !classNameAlert;
   }
 
   function handleImageSelectedChange(event) {
@@ -301,6 +306,29 @@
       {pointMinusTool}
       on:validate={handleValidate}
     />
+  {/if}
+  {#if classNameAlert}
+    <div class="fixed inset-0 z-50 overflow-y-auto">
+      <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+      <div class="flex min-h-full justify-center text-center items-center">
+        <div
+          class="relative transform overflow-hidden rounded-lg p-6
+          bg-white dark:bg-zinc-800
+          text-zinc-800 dark:text-zinc-300"
+        >
+          <p class="pb-1">Please set a label to save your annotation.</p>
+          <button
+            type="button"
+            class="rounded text-zinc-50 mt-3 py-1 px-3
+            bg-rose-500 dark:bg-rose-600
+            hover:bg-rose-600 dark:hover:bg-rose-500"
+            on:click={handleClassNameAlert}
+          >
+            Ok
+          </button>
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
 
