@@ -46,7 +46,7 @@
   let curPage = 1;
 
   let selectedItem: ItemData;
-  let selectedItemEmbedding: any;
+  let selectedItemEmbeddings = {};
   let save_flag: boolean = false;
 
   let masksGT: Array<MaskGT> = [];
@@ -171,23 +171,26 @@
 
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getViewEmbedding(
-      selectedDataset.id,
-      itemDetails.id,
-      itemDetails.viewId
-    );
-    try {
-      const embeddingArr = npyjs.parse(embeddingArrByte);
-      selectedItemEmbedding = new ort.Tensor(
-        "float32",
-        embeddingArr.data,
-        embeddingArr.shape
+    for (let viewId of Object.keys(itemDetails.views)) {
+      const embeddingArrByte = await api.getViewEmbedding(
+        selectedDataset.id,
+        itemDetails.id,
+        viewId
       );
-    } catch (err) {
-      console.log("Embedding not loaded", err);
-      selectedItemEmbedding = null;
+      let selectedItemEmbedding = null;
+      try {
+        const embeddingArr = npyjs.parse(embeddingArrByte);
+        selectedItemEmbedding = new ort.Tensor(
+          "float32",
+          embeddingArr.data,
+          embeddingArr.shape
+        );
+      } catch (err) {
+        console.log("Embedding not loaded", err);
+      }
+      selectedItemEmbeddings[viewId] = selectedItemEmbedding;
     }
-    console.log("Embedding:", selectedItemEmbedding);
+    console.log("Embedding:", selectedItemEmbeddings);
     console.log("DONE");
   }
 
@@ -195,7 +198,7 @@
     if (handleUnsavedChanges()) {
       selectedDataset = null;
       selectedItem = null;
-      selectedItemEmbedding = null;
+      selectedItemEmbeddings = {};
       masksGT = [];
       annotations = [];
       classes = [];
@@ -300,7 +303,7 @@
     {#if selectedItem}
       <AnnotationWorkspace
         itemData={selectedItem}
-        embedding={selectedItemEmbedding}
+        embeddings={selectedItemEmbeddings}
         bind:annotations
         bind:masksGT
         {classes}

@@ -44,7 +44,7 @@
 
   // Exports
   export let itemData: ItemData;
-  export let embedding: any;
+  export let embeddings = {};
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
   export let masksGT: Array<MaskGT>;
@@ -266,7 +266,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   <Canvas2D
-    {embedding}
+    {embeddings}
     itemId={itemData.id}
     views={itemData.views}
     selectedTool={selectedAnnotationTool}

@@ -31,7 +31,7 @@
   import type { MaskGT, BBox, ViewData } from "./interfaces";
 
   // Exports
-  export let embedding: any = null;
+  export let embeddings = {};
   export let itemId: string;
   export let views: Array<ViewData>;
   export let masksGT: Array<MaskGT> | null;
@@ -483,7 +483,7 @@
     const box = getBox(viewId);
     const input = {
       image: images[viewId],
-      embedding: embedding,
+      embedding: (viewId in embeddings)?embeddings[viewId]:null,
       points: points,
       box: box,
     };
@@ -492,7 +492,7 @@
       alert(
         "No interactive model set up, cannot segment. \n\nPlease refer to the interactive annotation notebook for information on how to export your model to ONNX."
       );
-    } else if (embedding == null) {
+    } else if (!(viewId in embeddings) || (viewId in embeddings && embeddings[viewId] == null)) {
       alert(
         "No embedding directory found, cannot segment.\n\nPlease refer to the interactive annotation notebook for information on how to precompute embeddings on your dataset."
       );
