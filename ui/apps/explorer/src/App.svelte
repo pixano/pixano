@@ -41,7 +41,6 @@
   let datasets = null;
   let selectedDataset = null;
   let selectedItem: ItemData = null;
-  let showDetailsPage: boolean = false;
   let masksGT: Array<MaskGT> = [];
   let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationsLabels> = [];
@@ -52,9 +51,6 @@
   }
 
   async function selectItem(event: CustomEvent) {
-    showDetailsPage = true;
-    //selectedItem = event.detail.id;
-
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
@@ -165,7 +161,6 @@
   }
 
   function unselectItem() {
-    showDetailsPage = false;
     selectedItem = null;
     masksGT = [];
     bboxes = [];
