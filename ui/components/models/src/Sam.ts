@@ -159,6 +159,7 @@ export class SAM implements InteractiveImageSegmenter {
     console.log("RUN SAM PREDICTION");
     console.log("SAM inputs: ", samInputs);
     const results = await this.onnxModel.run(samInputs);
+    this.previousMask = results.low_res_masks;
     const rleMask = maskDataToFortranArrayToRle(
       results.masks.data,
       imageHeight,

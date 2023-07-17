@@ -278,6 +278,7 @@
     let masks: Konva.Group = view_layer.findOne("#masks");
     let predictedMasks = masks.findOne("#predictedMasks") as Konva.Group;
     if (predictedMasks) predictedMasks.destroy();
+    if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
   }
 
   function addAllBBox(viewId, itemId) {
