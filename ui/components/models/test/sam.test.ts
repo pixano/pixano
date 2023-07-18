@@ -19,7 +19,6 @@ import fs from "fs";
 import { describe, test, expect } from "vitest";
 import { SAM } from "../src/Sam";
 import {
-  InteractiveImageSegmenterInput,
   LabeledClick,
 } from "../src/interactive_image_segmentation";
 import * as ort from "onnxruntime-node";
@@ -64,14 +63,14 @@ describe("SAM", () => {
 
     const expectedLabels = [1, 1, 0, -1];
 
-    const inputClicks = [
+    const inputClicks: Array<LabeledClick> = [
       { x: 291, y: 100, label: 1 },
       { x: 490, y: 167, label: 1 },
       { x: 627, y: 179, label: 0 },
     ];
 
     const sam = new SAM();
-    const samPoints = sam.preProcessClicks(inputClicks, W, H);
+    const samPoints = sam.preProcessInputs(inputClicks, null, W, H);
 
     for (let i = 0; i < expectedPointsCoords.length; ++i) {
       expect(samPoints.points.data[i]).toBeCloseTo(expectedPointsCoords[i]);

@@ -100,15 +100,9 @@
   }
 
   afterUpdate(() => {
-    /*
-    if (view_list) {
-      view_list = view_list;
-    }
-    */
     if (annotations) {
       //build views list
       let viewIds = new Set();
-      view_list = [];
       for (let ann of annotations) {
         viewIds.add(ann.viewId);
       }
@@ -119,17 +113,24 @@
             num_objs += ann.items.length;
           }
         }
-        view_list.push({
-          view_name: viewId,
-          opened: true,
-          visible: true,
-          num_objs: num_objs,
-        });
+        let vl = view_list.find(v => v.view_name == viewId);
+        if (vl) {
+          vl.num_objs = num_objs;
+          //hack for svelte refresh
+          view_list = view_list;
+        } else {
+          view_list.push({
+            view_name: viewId,
+            opened: true,
+            visible: true,
+            num_objs: num_objs,
+          });
+        }
       }
     }
 
     if (dataset && dataset.items) {
-      //build weel-formed dataset from dataset input
+      //build well-formed dataset from dataset input
       d_data = [];
       for (let feats of dataset.items) {
         let data = { views: [] };

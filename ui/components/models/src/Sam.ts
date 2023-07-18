@@ -44,8 +44,10 @@ export class SAM implements InteractiveImageSegmenter {
 
   // prediction threshold
   predictionThreshold = 0.0;
-
-  async init(modelWeights: string) {
+  
+  async init(modelWeights: ArrayBuffer);
+  async init(modelWeights: string);
+  async init(modelWeights: any) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
     console.log("init sam model");
   }
@@ -78,7 +80,7 @@ export class SAM implements InteractiveImageSegmenter {
   /** Pre-process UI inputs before feeding them into SAM */
   preProcessInputs(
     clicks: Array<LabeledClick>,
-    box: Box,
+    box: Box | null,
     imageWidth: number,
     imageHeight: number
   ): LabeledPointsTensor {
