@@ -28,6 +28,7 @@
     Box,
     InteractiveImageSegmenterOutput,
   } from "../../models/src/interactive_image_segmentation";
+  import WarningModal from "../../core/src/WarningModal.svelte";
   import type { MaskGT, BBox, ViewData } from "./interfaces";
 
   // Exports
@@ -45,6 +46,9 @@
   const RECT_STROKEWIDTH: number = 1.5;
   const MASK_STROKEWIDTH: number = 1.0;
   const short = shortid;
+
+  let inferenceModelWarning = false;
+  let embeddingDirectoryWarning = false;
 
   let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
   let timerId;
@@ -97,6 +101,14 @@
       }
     }
   });
+
+  function toggleInferenceModelWarning() {
+    inferenceModelWarning = !inferenceModelWarning;
+  }
+
+  function toggleEmbeddingDirectoryWarning() {
+    embeddingDirectoryWarning = !embeddingDirectoryWarning;
+  }
 
   async function onLoadViewImage(event, viewId: string) {
     images[viewId] = event.target;
@@ -484,19 +496,26 @@
     const box = getBox(viewId);
     const input = {
       image: images[viewId],
-      embedding: (viewId in embeddings)?embeddings[viewId]:null,
+      embedding: viewId in embeddings ? embeddings[viewId] : null,
       points: points,
       box: box,
     };
 
     if (selectedTool.postProcessor == null) {
-      alert(
-        "No interactive model set up, cannot segment. \n\nPlease refer to the interactive annotation notebook for information on how to export your model to ONNX."
-      );
-    } else if (!(viewId in embeddings) || (viewId in embeddings && embeddings[viewId] == null)) {
-      alert(
-        "No embedding directory found, cannot segment.\n\nPlease refer to the interactive annotation notebook for information on how to precompute embeddings on your dataset."
-      );
+      toggleInferenceModelWarning();
+      for (let view of views) {
+        clearInputs(view.viewId);
+        clearCurrentMask(view.viewId);
+      }
+    } else if (
+      !(viewId in embeddings) ||
+      (viewId in embeddings && embeddings[viewId] == null)
+    ) {
+      toggleEmbeddingDirectoryWarning();
+      for (let view of views) {
+        clearInputs(view.viewId);
+        clearCurrentMask(view.viewId);
+      }
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
@@ -1141,4 +1160,18 @@
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
+{#if inferenceModelWarning}
+  <WarningModal
+    message="No interactive model set up, cannot segment."
+    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+    on:confirmed={toggleInferenceModelWarning}
+  />
+{/if}
+{#if embeddingDirectoryWarning}
+  <WarningModal
+    message="No embedding directory found, cannot segment."
+    details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
+    on:confirmed={toggleEmbeddingDirectoryWarning}
+  />
+{/if}
 <svelte:window on:keydown={handleKeyDown} />

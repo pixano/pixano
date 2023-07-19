@@ -18,9 +18,12 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
+  import ConfirmModal from "../../../components/core/src/ConfirmModal.svelte";
   import Header from "../../../components/core/src/Header.svelte";
   import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
   import Library from "../../../components/core/src/Library.svelte";
+  import PromptModal from "../../../components/core/src/PromptModal.svelte";
+  import WarningModal from "../../../components/core/src/WarningModal.svelte";
   import * as npyjs from "../../../components/models/src/npy";
   import { SAM } from "../../../components/models/src/Sam";
   import {
@@ -47,7 +50,9 @@
 
   let selectedItem: ItemData;
   let selectedItemEmbeddings = {};
-  let save_flag: boolean = false;
+
+  let saveFlag: boolean = false;
+  let unselectItemConfirm = false;
 
   let masksGT: Array<MaskGT> = [];
   let annotations: Array<AnnotationsLabels> = [];
@@ -55,7 +60,19 @@
   let itemDetails = null;
   let dbImages: DatabaseFeats = null;
 
+  let modelPrompt = false;
+  let modelNotFoundWarning = false;
+  let modelInput: string;
+
   let sam = new SAM();
+
+  function until(conditionFunction) {
+    const poll = (resolve) => {
+      if (conditionFunction()) resolve();
+      else setTimeout((_) => poll(resolve), 400);
+    };
+    return new Promise(poll);
+  }
 
   async function selectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
@@ -194,16 +211,36 @@
     console.log("DONE");
   }
 
-  function unselectItem() {
-    if (handleUnsavedChanges()) {
-      selectedDataset = null;
-      selectedItem = null;
-      selectedItemEmbeddings = {};
-      masksGT = [];
-      annotations = [];
-      classes = [];
-      curPage = 1;
+  function toggleUnselectItemConfirm() {
+    unselectItemConfirm = !unselectItemConfirm;
+  }
+
+  function confirmUnselectItem() {
+    saveFlag = false;
+    toggleUnselectItemConfirm();
+  }
+
+  async function handleUnselectItem() {
+    if (!saveFlag) {
+      unselectItem();
+    } else {
+      toggleUnselectItemConfirm();
+      await until((_) => unselectItemConfirm == false);
+      if (!saveFlag) {
+        unselectItem();
+      }
     }
+  }
+
+  function unselectItem() {
+    unselectItemConfirm = false;
+    selectedDataset = null;
+    selectedItem = null;
+    selectedItemEmbeddings = {};
+    masksGT = [];
+    annotations = [];
+    classes = [];
+    curPage = 1;
   }
 
   function saveAnns(annotations, masksGT) {
@@ -238,52 +275,42 @@
     }
   }
 
-  function handleSaveClick() {
-    saveAnns(annotations, masksGT);
-    save_flag = false;
+  async function toggleModelPrompt() {
+    modelPrompt = false;
+    // Try loading model name from user input
+    try {
+      await sam.init("/models/" + modelInput);
+      interactiveSegmenterModel.set(sam);
+    } catch (e) {
+      toggleModelNotFoundWarning();
+    }
   }
 
-  function handleUnsavedChanges() {
-    let val = true;
-    if (save_flag) {
-      val = confirm(
-        "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
-      );
-    }
-    if (val) {
-      save_flag = false;
-    }
-    return val;
+  function toggleModelNotFoundWarning() {
+    modelNotFoundWarning = !modelNotFoundWarning;
+  }
+
+  function handleSaveClick() {
+    saveAnns(annotations, masksGT);
+    saveFlag = false;
   }
 
   function enableSaveFlag() {
-    save_flag = true;
+    saveFlag = true;
   }
 
   onMount(async () => {
     datasets = await api.getDatasetsList();
 
-    let model_name = "sam_vit_h_4b8939.onnx";
+    let modelName = "sam_vit_h_4b8939.onnx";
 
     // Try loading default model name
     try {
-      await sam.init("/models/" + model_name);
+      await sam.init("/models/" + modelName);
       interactiveSegmenterModel.set(sam);
     } catch (e) {
       // If default not found, ask user for model name
-      model_name = prompt(
-        "Please provide the name of your ONNX model for interactive segmentation",
-        model_name
-      );
-      // Try loading model name from user input
-      try {
-        await sam.init("/models/" + model_name);
-        interactiveSegmenterModel.set(sam);
-      } catch (e) {
-        alert(
-          `models/${model_name} was not found in your dataset library, or your internet connection is not working!\n\nPlease refer the interactive annotation notebook for information on how to export your model to ONNX.`
-        );
-      }
+      modelPrompt = true;
     }
   });
 </script>
@@ -292,9 +319,9 @@
   app="Annotator"
   bind:selectedDataset
   bind:selectedItem
-  {save_flag}
+  {saveFlag}
   on:saveclick={handleSaveClick}
-  on:closeclick={unselectItem}
+  on:closeclick={handleUnselectItem}
 />
 <div
   class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
@@ -309,8 +336,8 @@
         {classes}
         {dbImages}
         {curPage}
-        {handleUnsavedChanges}
-        on:imageSelected={(event) => selectItem(event.detail)}
+        bind:saveFlag
+        on:selectItem={(event) => selectItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}
         on:enableSaveFlag={enableSaveFlag}
       />
@@ -323,5 +350,29 @@
     {/if}
   {:else}
     <LoadingLibrary />
+  {/if}
+  {#if modelPrompt}
+    <PromptModal
+      message="Please provide the name of your ONNX model for interactive segmentation."
+      placeholder="sam_vit_h_4b8939.onnx"
+      bind:input={modelInput}
+      on:confirmed={toggleModelPrompt}
+    />
+  {/if}
+  {#if modelNotFoundWarning}
+    <WarningModal
+      message="models/{modelInput} was not found in your dataset library."
+      details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+      moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
+      on:confirmed={toggleModelNotFoundWarning}
+    />
+  {/if}
+  {#if unselectItemConfirm}
+    <ConfirmModal
+      message="You have unsaved changes."
+      confirm="Close without saving"
+      on:confirmed={confirmUnselectItem}
+      on:canceled={toggleUnselectItemConfirm}
+    />
   {/if}
 </div>

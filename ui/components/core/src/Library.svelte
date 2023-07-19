@@ -18,6 +18,7 @@
   import { createEventDispatcher } from "svelte";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
 
+  // Exports
   export let datasets: any;
   export let btn_label: string;
 
