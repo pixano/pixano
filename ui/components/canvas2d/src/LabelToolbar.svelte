@@ -63,12 +63,12 @@
   <div class="group">
     <input
       type="text"
-      placeholder="New label"
+      placeholder="Label"
       id="label_input"
-      class="py-1 px-2 border rounded focus:outline-none
+      class="h-8 py-1 px-2 w-80 border-2 rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-700
       border-zinc-300 dark:border-zinc-500
-      focus:border-rose-600 dark:focus:border-rose-500
+      focus:border-rose-500 dark:focus:border-rose-600
       "
       on:keyup={filterLabels}
       bind:value={className}
@@ -76,12 +76,15 @@
 
     <div
       id="label_list"
-      class="absolute left-0 top-14 w-full px-2 py-2 hidden bg-white rounded-b-lg group-focus-within:flex hover:flex flex-col"
+      class="absolute left-4 w-80 top-14 w-full hidden rounded-lg group-focus-within:flex hover:flex flex-col
+      bg-white dark:bg-zinc-800"
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
         <button
-          class="py-1 px-2 text-sm bg-white rounded-lg hover:bg-zinc-100"
+          class="py-1 px-2 text-sm rounded-lg
+          bg-white dark:bg-zinc-800
+          hover:bg-zinc-100 dark:hover:bg-zinc-700"
           style="text-align:left"
           on:click={() => (className = cls.name)}
         >
