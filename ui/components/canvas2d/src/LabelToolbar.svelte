@@ -141,11 +141,9 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="h-8 w-8 p-1 rounded border cursor-pointer text-zinc-50
+      class="h-8 w-8 p-1 rounded border border-transparent cursor-pointer text-zinc-50
       bg-rose-500 dark:bg-rose-600
-      border-rose-500 dark:border-rose-600
-      hover:bg-rose-600 dark:hover:bg-rose-500
-      hover:border-rose-600 dark:hover:border-rose-500"
+      hover:bg-rose-600 dark:hover:bg-rose-500"
     >
       <title>Validate</title>
       <path d={svg_validate} fill="currentcolor" />

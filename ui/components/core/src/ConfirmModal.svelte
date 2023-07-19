@@ -56,10 +56,9 @@
       </button>
       <button
         type="button"
-        class="rounded border text-zinc-50 mt-3 mx-1 py-1 px-3
+        class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
         bg-rose-500 dark:bg-rose-600
-        hover:bg-rose-600 dark:hover:bg-rose-500
-        border-rose-500 dark:border-rose-600"
+        hover:bg-rose-600 dark:hover:bg-rose-500"
         on:click={handleConfirm}
       >
         {confirm}

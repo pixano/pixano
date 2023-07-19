@@ -63,12 +63,10 @@
   <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
       on:click={handleClick}
-      class="py-2 px-3 font-heavy rounded-md border-2 transition-all
+      class="py-2 px-3 border border-transparent font-heavy rounded-md transition-all
       text-zinc-50
       bg-rose-500 dark:bg-rose-600
-      hover:bg-rose-600 dark:hover:bg-rose-500
-      border-rose-500 dark:border-rose-600
-      hover:border-rose-600 dark:hover:border-rose-500"
+      hover:bg-rose-600 dark:hover:bg-rose-500"
     >
       {btn_label}
     </button>
