@@ -6,6 +6,11 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+### Changed:
+- Replace JavaScript popup boxes by integrated windows in Pixano Apps to fix notebook integration
+
+## Fixed:
+- Clear selection if either inference model or embedding directory is missing in Pixano Annotator 
 
 
 
