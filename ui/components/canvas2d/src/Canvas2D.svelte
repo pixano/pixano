@@ -163,9 +163,9 @@
     // Load Image(s)
     for (let view of views) {
       zoomFactor[view.viewId] = 1;
-      const img = new Image();
-      img.src = view.imageURL;
-      img.onload = (event) => {
+      const image = new Image();
+      image.src = view.imageURL;
+      image.onload = (event) => {
         onLoadViewImage(event, view.viewId).then(() => {
           scaleView(view);
           //hack to refresh view (display masks/bboxes)
@@ -185,14 +185,14 @@
 
   function resetStage() {
     //find groups for all views
-    let inputs = stage.find("#input") as Array<Konva.Group>;
-    let maskss = stage.find("#masks") as Array<Konva.Group>;
-    let bboxess = stage.find("#bboxes") as Array<Konva.Group>;
+    let input_groups = stage.find("#input") as Array<Konva.Group>;
+    let mask_groups = stage.find("#masks") as Array<Konva.Group>;
+    let bbox_groups = stage.find("#bboxes") as Array<Konva.Group>;
 
     //destroy all
-    for (let input of inputs) input.destroyChildren();
-    for (let masks of maskss) masks.destroyChildren();
-    for (let bboxes of bboxess) bboxes.destroyChildren();
+    for (let input_group of input_groups) input_group.destroyChildren();
+    for (let mask_group of mask_groups) mask_group.destroyChildren();
+    for (let bbox_group of bbox_groups) bbox_group.destroyChildren();
   }
 
   afterUpdate(() => {
@@ -222,12 +222,12 @@
         clearInputs(view.viewId);
         clearCurrentMask(view.viewId);
         zoomFactor[view.viewId] = 1;
-        const img = new Image();
-        img.src = view.imageURL;
-        img.onload = (event) => {
+        const image = new Image();
+        image.src = view.imageURL;
+        image.onload = (event) => {
           onLoadViewImage(event, view.viewId).then(() => {
             const konvaImg = view_layer.findOne(`#${itemId}`) as Konva.Image;
-            konvaImg.image(img);
+            konvaImg.image(image);
             scaleView(view);
             //hack to refresh view (display masks/bboxes)
             masksGT = masksGT;
@@ -287,8 +287,8 @@
 
   function clearCurrentMask(viewId) {
     const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    let masks: Konva.Group = view_layer.findOne("#masks");
-    let predictedMasks = masks.findOne("#predictedMasks") as Konva.Group;
+    let mask_group: Konva.Group = view_layer.findOne("#masks");
+    let predictedMasks = mask_group.findOne("#predictedMasks") as Konva.Group;
     if (predictedMasks) predictedMasks.destroy();
     if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
   }
@@ -477,16 +477,18 @@
     const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
 
     // findOrCreate mask group;
-    let masks: Konva.Group = view_layer.findOne("#masks");
+    let mask_group: Konva.Group = view_layer.findOne("#masks");
 
     // Get and update the current predicted masks
-    let predictedMasksGroup = masks.findOne("#predictedMasks") as Konva.Group;
+    let predictedMasksGroup = mask_group.findOne(
+      "#predictedMasks"
+    ) as Konva.Group;
 
     if (!predictedMasksGroup) {
       predictedMasksGroup = new Konva.Group({
         id: "predictedMasks",
       });
-      masks.add(predictedMasksGroup);
+      mask_group.add(predictedMasksGroup);
     }
     return predictedMasksGroup;
   }
@@ -741,16 +743,16 @@
     // Defines zoom speed
     const zoomScale = 1.05;
 
-    const layerView = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
 
     // Get old scaling
-    const oldScale = layerView.scaleX();
+    const oldScale = view_layer.scaleX();
 
     // Get mouse position
     const pointer = stage.getRelativePointerPosition();
     const mousePointTo = {
-      x: (pointer.x - layerView.x()) / oldScale,
-      y: (pointer.y - layerView.y()) / oldScale,
+      x: (pointer.x - view_layer.x()) / oldScale,
+      y: (pointer.y - view_layer.y()) / oldScale,
     };
 
     // Calculate new scaling
@@ -764,8 +766,8 @@
     };
 
     // Change scaling and position
-    layerView.scale({ x: newScale, y: newScale });
-    layerView.position(newPos);
+    view_layer.scale({ x: newScale, y: newScale });
+    view_layer.position(newPos);
 
     return newScale;
   }
@@ -940,8 +942,8 @@
     stage.container().style.cursor = "grabbing";
 
     const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    const img = view_layer.findOne(`#${itemId}`);
-    const img_size = img.getSize();
+    const image = view_layer.findOne(`#${itemId}`);
+    const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
     } else if (drag_point.x() > img_size.width) {
