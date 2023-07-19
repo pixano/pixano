@@ -28,6 +28,7 @@
     type Tool,
     ToolType,
   } from "../../../../components/canvas2d/src/tools";
+  import ConfirmModal from "../../../../components/core/src/ConfirmModal.svelte";
   import WarningModal from "../../../../components/core/src/WarningModal.svelte";
   import { getColor } from "../../../../components/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
@@ -51,12 +52,14 @@
   export let masksGT: Array<MaskGT>;
   export let dbImages: DatabaseFeats;
   export let curPage: number;
-  export let handleUnsavedChanges;
+  export let saveFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
   let className = "";
   let classNameWarning = false;
+
+  let selectItemConfirm = false;
 
   let prediction: InteractiveImageSegmenterOutput = null;
 
@@ -100,6 +103,14 @@
 
   function handleKeyPress(event) {
     if (event.key === "Enter" || event.keyCode === 13) handleValidate();
+  }
+
+  function until(conditionFunction) {
+    const poll = (resolve) => {
+      if (conditionFunction()) resolve();
+      else setTimeout((_) => poll(resolve), 400);
+    };
+    return new Promise(poll);
   }
 
   function addAnnotation(className: string, id: string, viewId: string) {
@@ -160,7 +171,7 @@
     if (prediction) {
       // Validate user input
       if (className === "") {
-        handleClassNameWarning();
+        toggleClassNameWarning();
         return;
       }
 
@@ -181,23 +192,42 @@
     }
   }
 
-  function handleClassNameWarning() {
+  function toggleClassNameWarning() {
     classNameWarning = !classNameWarning;
   }
 
-  function handleImageSelectedChange(event) {
-    if (handleUnsavedChanges()) {
-      let new_views: Array<ViewData> = [];
-      for (let view of event.detail.views) {
-        new_views.push({
-          viewId: view.viewId,
-          imageURL: view.img,
-        });
+  function toggleSelectItemConfirm() {
+    selectItemConfirm = !selectItemConfirm;
+  }
+
+  function confirmChangeSelectedItem() {
+    saveFlag = false;
+    toggleSelectItemConfirm();
+  }
+
+  async function handleChangeSelectedItem(event) {
+    if (!saveFlag) {
+      changeSelectedItem(event);
+    } else {
+      toggleSelectItemConfirm();
+      await until((_) => selectItemConfirm == false);
+      if (!saveFlag) {
+        changeSelectedItem(event);
       }
-      itemData.views = new_views;
-      itemData = itemData;
-      dispatch("imageSelected", { id: event.detail.id });
     }
+  }
+
+  function changeSelectedItem(event) {
+    let new_views: Array<ViewData> = [];
+    for (let view of event.detail.views) {
+      new_views.push({
+        viewId: view.viewId,
+        imageURL: view.img,
+      });
+    }
+    itemData.views = new_views;
+    itemData = itemData;
+    dispatch("selectItem", { id: event.detail.id });
   }
 
   function handledeleteAnnotation(item) {
@@ -311,7 +341,15 @@
   {#if classNameWarning}
     <WarningModal
       message="Please set a label to save your annotation."
-      on:warningClosed={handleClassNameWarning}
+      on:confirmed={toggleClassNameWarning}
+    />
+  {/if}
+  {#if selectItemConfirm}
+    <ConfirmModal
+      message="You have unsaved changes."
+      confirm="Continue without saving"
+      on:confirmed={confirmChangeSelectedItem}
+      on:canceled={toggleSelectItemConfirm}
     />
   {/if}
 </div>

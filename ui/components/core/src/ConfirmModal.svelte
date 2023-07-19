@@ -20,10 +20,13 @@
   // Exports
   export let message: string;
   export let details: string = "";
-  export let moreDetails: string = "";
+  export let confirm: string = "Ok";
 
   const dispatch = createEventDispatcher();
 
+  function handleCancel() {
+    dispatch("canceled");
+  }
   function handleConfirm() {
     dispatch("confirmed");
   }
@@ -34,16 +37,23 @@
   <div class="flex min-h-full justify-center text-center items-center">
     <div
       class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-      bg-white dark:bg-zinc-800
-      text-zinc-800 dark:text-zinc-300"
+        bg-white dark:bg-zinc-800
+        text-zinc-800 dark:text-zinc-300"
     >
       <p class="pb-1">{message}</p>
       {#if details}
         <p class="pb-1 italic">{details}</p>
       {/if}
-      {#if moreDetails}
-        <p class="pb-1 italic">{moreDetails}</p>
-      {/if}
+      <button
+        type="button"
+        class="rounded border mt-3 mx-1 py-1 px-3
+        bg-white dark:bg-zinc-800
+        hover:bg-zinc-100 dark:hover:bg-zinc-700
+        border-zinc-300 dark:border-zinc-500"
+        on:click={handleCancel}
+      >
+        Cancel
+      </button>
       <button
         type="button"
         class="rounded border text-zinc-50 mt-3 mx-1 py-1 px-3
@@ -52,7 +62,7 @@
         border-rose-500 dark:border-rose-600"
         on:click={handleConfirm}
       >
-        Ok
+        {confirm}
       </button>
     </div>
   </div>

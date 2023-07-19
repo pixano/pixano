@@ -1,0 +1,68 @@
+<script lang="ts">
+  /**
+      @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
+      @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+      @license CECILL-C
+    
+      This software is a collaborative computer program whose purpose is to
+      generate and explore labeled data for computer vision applications.
+      This software is governed by the CeCILL-C license under French law and
+      abiding by the rules of distribution of free software. You can use, 
+      modify and/ or redistribute the software under the terms of the CeCILL-C
+      license as circulated by CEA, CNRS and INRIA at the following URL
+    
+      http://www.cecill.info
+      */
+
+  // Imports
+  import { createEventDispatcher } from "svelte";
+
+  // Exports
+  export let message: string;
+  export let placeholder: string;
+  export let input: string;
+
+  const dispatch = createEventDispatcher();
+
+  function handleConfirm() {
+    dispatch("confirmed");
+  }
+  function handleKeyPress(event) {
+    if (event.key === "Enter" || event.keyCode === 13) handleConfirm();
+  }
+</script>
+
+<div class="fixed inset-0 z-50 overflow-y-auto">
+  <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" />
+  <div class="flex min-h-full justify-center text-center items-center">
+    <div
+      class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
+          bg-white dark:bg-zinc-800
+          text-zinc-800 dark:text-zinc-300"
+    >
+      <p class="pb-1">{message}</p>
+      <input
+        type="text"
+        {placeholder}
+        class="py-1 px-2 border rounded focus:outline-none
+        bg-zinc-100 dark:bg-zinc-700
+        border-zinc-300 dark:border-zinc-500
+        focus:border-rose-600 dark:focus:border-rose-500
+        "
+        bind:value={input}
+      />
+      <button
+        type="button"
+        class="rounded border text-zinc-50 mt-3 mx-1 py-1 px-3
+        bg-rose-500 dark:bg-rose-600
+        hover:bg-rose-600 dark:hover:bg-rose-500
+        border-rose-500 dark:border-rose-600"
+        on:click={handleConfirm}
+      >
+        Ok
+      </button>
+    </div>
+  </div>
+</div>
+
+<svelte:window on:keydown={handleKeyPress} />
