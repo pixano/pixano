@@ -26,7 +26,7 @@
   // Exports
   export let className;
   export let classes;
-  export let selectedAnnotationTool;
+  export let selectedTool;
   export let pointPlusTool;
   export let pointMinusTool;
 
@@ -94,10 +94,10 @@
     </div>
   </div>
 
-  {#if selectedAnnotationTool.type === ToolType.LabeledPoint}
+  {#if selectedTool.type === ToolType.LabeledPoint}
     <button
       on:click={() => {
-        selectedAnnotationTool = pointPlusTool;
+        selectedTool = pointPlusTool;
       }}
     >
       <svg
@@ -108,7 +108,7 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedAnnotationTool === pointPlusTool
+        {selectedTool === pointPlusTool
           ? 'border-rose-500 dark:border-rose-600'
           : 'border-transparent'}"
       >
@@ -118,7 +118,7 @@
     </button>
     <button
       on:click={() => {
-        selectedAnnotationTool = pointMinusTool;
+        selectedTool = pointMinusTool;
       }}
     >
       <svg
@@ -129,7 +129,7 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedAnnotationTool === pointMinusTool
+        {selectedTool === pointMinusTool
           ? 'border-rose-500 dark:border-rose-600'
           : 'border-transparent'}"
       >

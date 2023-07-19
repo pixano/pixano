@@ -23,8 +23,9 @@
   import {
     createLabeledPointTool,
     createMultiModalTool,
-    createPanTool,
     createRectangleTool,
+    createDeleteTool,
+    createPanTool,
     type Tool,
     ToolType,
   } from "../../../../components/canvas2d/src/tools";
@@ -68,21 +69,23 @@
   const annotationTools: Tool[] = [];
   let pointPlusTool = createLabeledPointTool(1);
   let pointMinusTool = createLabeledPointTool(0);
-  let rectTool = createRectangleTool();
+  let rectangleTool = createRectangleTool();
+  let deleteTool = createDeleteTool();
   let panTool = createPanTool();
 
-  imageTools.push(panTool);
   annotationTools.push(
     createMultiModalTool("Point selection", ToolType.LabeledPoint, [
       pointPlusTool,
       pointMinusTool,
     ])
   );
-  annotationTools.push(rectTool);
+  annotationTools.push(rectangleTool);
+  annotationTools.push(deleteTool);
+  imageTools.push(panTool);
   tools_lists.push(imageTools);
   tools_lists.push(annotationTools);
 
-  let selectedAnnotationTool: Tool = pointPlusTool;
+  let selectedTool: Tool = pointPlusTool;
 
   interactiveSegmenterModel.subscribe((segmenter) => {
     console.log("Interactive Segmenter set in the workspace");
@@ -90,17 +93,13 @@
     if (segmenter) {
       pointPlusTool.postProcessor = segmenter;
       pointMinusTool.postProcessor = segmenter;
-      rectTool.postProcessor = segmenter;
+      rectangleTool.postProcessor = segmenter;
     }
   });
 
   let categoryColor;
 
   // events handlers
-  function handleAnnotationToolChange() {
-    //console.log("New tool selected");
-  }
-
   function handleKeyPress(event) {
     if (event.key === "Enter" || event.keyCode === 13) handleValidate();
   }
@@ -305,17 +304,13 @@
     {embeddings}
     itemId={itemData.id}
     views={itemData.views}
-    selectedTool={selectedAnnotationTool}
+    bind:selectedTool
     {categoryColor}
     bind:prediction
     bind:masks
     bboxes={null}
   />
-  <AnnotationToolbar
-    {tools_lists}
-    bind:selectedTool={selectedAnnotationTool}
-    on:toolSelected={handleAnnotationToolChange}
-  />
+  <AnnotationToolbar {tools_lists} bind:selectedTool />
   {#if annotations}
     <AnnotationPanel
       bind:annotations
@@ -328,11 +323,11 @@
       on:loadNextPage={handleLoadNextPage}
     />
   {/if}
-  {#if selectedAnnotationTool && selectedAnnotationTool.type != ToolType.Pan}
+  {#if selectedTool && selectedTool.type != ToolType.Pan && selectedTool.type != ToolType.Delete}
     <LabelToolbar
       bind:className
       bind:classes
-      bind:selectedAnnotationTool
+      bind:selectedTool
       {pointPlusTool}
       {pointMinusTool}
       on:validate={handleValidate}

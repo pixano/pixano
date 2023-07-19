@@ -15,20 +15,15 @@
   */
 
   // Imports
-  import { createEventDispatcher } from "svelte";
   import { type Tool } from "./tools";
 
   // Exports
   export let tools_lists: Array<Array<Tool>> = [];
   export let selectedTool: Tool = null;
 
-  const dispatch = createEventDispatcher();
-
-  // Change selected tool
   function selectTool(tool: Tool) {
-    if (tool === selectedTool) return; // Prevent re-selecting the active tool
-    selectedTool = tool;
-    dispatch("toolSelected", selectTool);
+    // Prevent re-selecting the active tool
+    if (tool !== selectedTool) selectedTool = tool;
   }
 </script>
 

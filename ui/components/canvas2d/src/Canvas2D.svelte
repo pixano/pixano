@@ -20,9 +20,15 @@
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
-  import { type PanTool, ToolType } from "./tools";
+  import { ToolType } from "./tools";
+  import type {
+    Tool,
+    LabeledPointTool,
+    RectangleTool,
+    DeleteTool,
+    PanTool,
+  } from "./tools";
 
-  import type { Tool, LabeledPointTool, RectangleTool } from "./tools";
   import type {
     LabeledClick,
     Box,
@@ -159,10 +165,9 @@
 
     if (views !== prev_views) {
       // Load Image(s)
+      clearAnnotationAndInputs();
       for (let view of views) {
         const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
-        clearInputs(view.viewId);
-        clearCurrentAnnotation(view.viewId);
         zoomFactor[view.viewId] = 1;
         const image = new Image();
         image.src = view.imageURL;
@@ -234,6 +239,11 @@
       }
     });
     return viewId;
+  }
+
+  function selectTool(tool: Tool) {
+    // Prevent re-selecting the active tool
+    if (tool !== selectedTool) selectedTool = tool;
   }
 
   // ********** BOUNDING BOXES AND MASKS ********** //
@@ -484,19 +494,13 @@
 
     if (selectedTool.postProcessor == null) {
       toggleInferenceModelWarning();
-      for (let view of views) {
-        clearInputs(view.viewId);
-        clearCurrentAnnotation(view.viewId);
-      }
+      clearAnnotationAndInputs();
     } else if (
       !(viewId in embeddings) ||
       (viewId in embeddings && embeddings[viewId] == null)
     ) {
       toggleEmbeddingDirectoryWarning();
-      for (let view of views) {
-        clearInputs(view.viewId);
-        clearCurrentAnnotation(view.viewId);
-      }
+      clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
@@ -614,6 +618,10 @@
         displayInputRectTool(selectedTool as RectangleTool);
         // Enable box creation or change cursor style
         break;
+      case ToolType.Delete:
+        clearAnnotationAndInputs();
+        displayInputDeleteTool(selectedTool as DeleteTool);
+        break;
       case ToolType.Pan:
         displayPanTool(selectedTool as PanTool);
         // Enable box creation or change cursor style
@@ -667,10 +675,8 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Point
-      let other = toolsLayer.findOne("#crossline");
-      if (other) {
-        other.destroy();
-      }
+      let crossline = toolsLayer.findOne("#crossline");
+      if (crossline) crossline.destroy();
 
       let pointer = findOrCreateInputPointPointer(tool.type);
       const pointerColor = tool.label === 1 ? "green" : "red";
@@ -900,6 +906,32 @@
     }
   }
 
+  // ********** INPUT DELETE TOOL ********** //
+
+  function displayInputDeleteTool(tool: DeleteTool) {
+    if (toolsLayer) {
+      //clean other tools
+      //TODO: etre générique sur l'ensemble des outils != DELETE
+      let pointer: Konva.Circle = stage.findOne(`#${ToolType.LabeledPoint}`);
+      if (pointer) pointer.destroy();
+      let crossline = stage.findOne("#crossline");
+      if (crossline) crossline.destroy();
+
+      if (!highlighted_point) {
+        stage.container().style.cursor = tool.cursor;
+      }
+    }
+  }
+
+  function clearAnnotationAndInputs() {
+    for (let view of views) {
+      clearInputs(view.viewId);
+      clearCurrentAnnotation(view.viewId);
+    }
+    stage.container().style.cursor = selectedTool.cursor;
+    prediction = null;
+  }
+
   // ********** MOUSE EVENTS ********** //
 
   function handleMouseMoveStage() {
@@ -1097,12 +1129,7 @@
       }
     }
     if (event.key == "Escape") {
-      for (let view of views) {
-        clearInputs(view.viewId);
-        clearCurrentAnnotation(view.viewId);
-      }
-      stage.container().style.cursor = selectedTool.cursor;
-      prediction = null;
+      clearAnnotationAndInputs();
     }
     if (event.key == "i") {
       console.log("INFOS");

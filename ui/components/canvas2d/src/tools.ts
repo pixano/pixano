@@ -15,17 +15,19 @@
 
 // Imports
 import {
-  svg_pan,
   svg_point,
-  svg_rectangle,
   svg_point_plus,
   svg_point_minus,
+  svg_rectangle,
+  svg_delete,
+  svg_pan,
 } from "../../core/src/icons";
 
 // Exports
 export enum ToolType {
   LabeledPoint = "LABELED_POINT",
   Rectangle = "RECTANGLE",
+  Delete = "DELETE",
   Pan = "PAN",
 }
 
@@ -50,6 +52,10 @@ interface RectangleTool extends Tool {
   type: ToolType.Rectangle;
 }
 
+interface DeleteTool extends Tool {
+  type: ToolType.Delete;
+}
+
 interface PanTool extends Tool {
   type: ToolType.Pan;
 }
@@ -67,6 +73,8 @@ function getIcon(type: ToolType, label?: number): string {
       }
     case ToolType.Rectangle:
       return svg_rectangle;
+    case ToolType.Delete:
+      return svg_delete;
     case ToolType.Pan:
       return svg_pan;
   }
@@ -87,7 +95,7 @@ export function createMultiModalTool(
 
 export function createLabeledPointTool(label: number): LabeledPointTool {
   return {
-    name: "Point selection" + (label ? " (Positive)" : " (Negative)"),
+    name: (label ? "Positive" : "Negative") + " point selection",
     type: ToolType.LabeledPoint,
     label: label,
     icon: getIcon(ToolType.LabeledPoint, label),
@@ -104,6 +112,15 @@ export function createRectangleTool(): RectangleTool {
   } as RectangleTool;
 }
 
+export function createDeleteTool(): DeleteTool {
+  return {
+    name: "Delete selection",
+    type: ToolType.Delete,
+    icon: getIcon(ToolType.Delete),
+    cursor: "auto",
+  } as DeleteTool;
+}
+
 export function createPanTool(): PanTool {
   return {
     name: "Move image",
@@ -113,4 +130,4 @@ export function createPanTool(): PanTool {
   } as PanTool;
 }
 
-export type { Tool, LabeledPointTool, RectangleTool, PanTool };
+export type { Tool, LabeledPointTool, RectangleTool, DeleteTool, PanTool };
