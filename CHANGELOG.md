@@ -11,7 +11,7 @@ All notable changes to Pixano will be documented in this file.
 
 ## Fixed:
 - Clear selection if either inference model or embedding directory is missing in Pixano Annotator 
-
+- Fix Pixano Annotator for multi-views datasets
 
 
 ## [0.3.2] - 2023-07-11
