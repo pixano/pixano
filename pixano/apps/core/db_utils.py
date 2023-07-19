@@ -85,8 +85,14 @@ def get_item_details(
     }
 
     # Category statistics
-    cat_ids = [obj["category_id"] for obj in item["objects"] if obj["category_id"]]
-    cat_names = [obj["category_name"] for obj in item["objects"] if obj["category_id"]]
+    cat_ids = [
+        obj["category_id"] for obj in item["objects"] if obj["category_id"] is not None
+    ]
+    cat_names = [
+        obj["category_name"]
+        for obj in item["objects"]
+        if obj["category_id"] is not None
+    ]
     cat, index, count = np.unique(cat_ids, return_index=True, return_counts=True)
     # Add to features
     features["categoryStats"] = [
