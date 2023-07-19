@@ -71,6 +71,7 @@ export interface DBFeat {
   dtype: string;
   value: string;
 }
+
 export interface DatabaseFeats {
   items: Array<Array<DBFeat>>;
   total: number;

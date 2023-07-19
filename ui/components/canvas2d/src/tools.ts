@@ -41,7 +41,6 @@ interface Tool {
 interface MultiModalTool extends Tool {
   modes: Array<Tool>;
 }
-
 interface LabeledPointTool extends Tool {
   type: ToolType.LabeledPoint;
   label: number;
