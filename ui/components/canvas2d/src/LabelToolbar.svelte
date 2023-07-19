@@ -65,7 +65,7 @@
       type="text"
       placeholder="Label"
       id="label_input"
-      class="h-8 py-1 px-2 w-80 border-2 rounded focus:outline-none
+      class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-700
       border-zinc-300 dark:border-zinc-500
       focus:border-rose-500 dark:focus:border-rose-600
@@ -105,7 +105,7 @@
         height="48"
         viewBox="0 -960 960 960"
         width="48"
-        class="h-8 w-8 p-1 border-2 rounded
+        class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
         {selectedAnnotationTool === pointPlusTool
@@ -126,7 +126,7 @@
         height="48"
         viewBox="0 -960 960 960"
         width="48"
-        class="h-8 w-8 p-1 border-2 rounded
+        class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
         {selectedAnnotationTool === pointMinusTool
@@ -144,7 +144,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="h-8 w-8 p-1 rounded border border-transparent cursor-pointer text-zinc-50
+      class="h-10 w-10 p-1 rounded border border-transparent cursor-pointer text-zinc-50
       bg-rose-500 dark:bg-rose-600
       hover:bg-rose-600 dark:hover:bg-rose-500"
     >
