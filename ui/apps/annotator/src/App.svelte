@@ -36,7 +36,7 @@
 
   import type {
     ItemData,
-    MaskGT,
+    Mask,
     AnnotationsLabels,
     AnnLabel,
     ViewData,
@@ -54,7 +54,7 @@
   let saveFlag: boolean = false;
   let unselectItemConfirm = false;
 
-  let masksGT: Array<MaskGT> = [];
+  let masksGT: Array<Mask> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let classes = [];
   let itemDetails = null;

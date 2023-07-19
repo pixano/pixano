@@ -37,7 +37,7 @@
   import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
   import type {
     ItemData,
-    MaskGT,
+    Mask,
     AnnotationsLabels,
     AnnLabel,
     ViewData,
@@ -49,7 +49,7 @@
   export let embeddings = {};
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
-  export let masksGT: Array<MaskGT>;
+  export let masksGT: Array<Mask>;
   export let dbImages: DatabaseFeats;
   export let curPage: number;
   export let saveFlag: boolean;

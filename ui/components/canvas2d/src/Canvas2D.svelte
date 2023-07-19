@@ -29,13 +29,13 @@
     InteractiveImageSegmenterOutput,
   } from "../../models/src/interactive_image_segmentation";
   import WarningModal from "../../core/src/WarningModal.svelte";
-  import type { MaskGT, BBox, ViewData } from "./interfaces";
+  import type { Mask, BBox, ViewData } from "./interfaces";
 
   // Exports
   export let embeddings = {};
   export let itemId: string;
   export let views: Array<ViewData>;
-  export let masksGT: Array<MaskGT> | null;
+  export let masksGT: Array<Mask> | null;
   export let bboxes: Array<BBox> | null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;

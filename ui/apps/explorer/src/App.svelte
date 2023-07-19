@@ -30,7 +30,7 @@
 
   import type {
     ItemData,
-    MaskGT,
+    Mask,
     BBox,
     AnnotationsLabels,
     AnnLabel,
@@ -41,7 +41,7 @@
   let datasets = null;
   let selectedDataset = null;
   let selectedItem: ItemData = null;
-  let masksGT: Array<MaskGT> = [];
+  let masksGT: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let itemDetails = null;

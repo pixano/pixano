@@ -30,7 +30,7 @@ export interface ItemData {
   views: Array<ViewData>;
 }
 
-export interface MaskGT {
+export interface Mask {
   viewId: string;
   id: string;
   mask: MaskSVG;

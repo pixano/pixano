@@ -24,14 +24,14 @@
 
   import type {
     ItemData,
-    MaskGT,
+    Mask,
     BBox,
     AnnotationsLabels,
   } from "../../../../components/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;
-  export let masksGT: Array<MaskGT>;
+  export let masksGT: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let annotations: Array<AnnotationsLabels>;
   export let features = null;
