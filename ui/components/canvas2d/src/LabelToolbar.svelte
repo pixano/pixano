@@ -82,7 +82,7 @@
     >
       {#each classes as cls}
         <button
-          class="py-1 px-2 text-sm rounded-lg
+          class="py-1 px-2 text-sm
           bg-white dark:bg-zinc-800
           hover:bg-zinc-100 dark:hover:bg-zinc-700"
           style="text-align:left"
