@@ -121,7 +121,7 @@ class LegacyLoader(DataLoader):
                             "height": im_h,
                             "im_thumb": im_thumb,
                             "im_uri": (
-                                f"image/{split}/{im_path.name}"
+                                f"{view}/{split}/{im_path.name}"
                                 if portable
                                 else im_path.absolute().as_uri()
                             ),
