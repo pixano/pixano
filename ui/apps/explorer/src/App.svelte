@@ -41,7 +41,7 @@
   let datasets = null;
   let selectedDataset = null;
   let selectedItem: ItemData = null;
-  let masksGT: Array<Mask> = [];
+  let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let itemDetails = null;
@@ -69,7 +69,7 @@
     };
     console.log("item loaded:", selectedItem);
 
-    //build annotations, masksGT, bboxes and classes
+    //build annotations, masks, bboxes and classes
     let struct_categories = {};
     for (let viewId of Object.keys(itemDetails.views)) {
       for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
@@ -100,7 +100,7 @@
           const maskPolygons = generatePolygonSegments(rle, size[0]);
           const masksSVG = convertSegmentsToSVG(maskPolygons);
 
-          masksGT.push({
+          masks.push({
             viewId: viewId,
             id: itemDetails.views[viewId].objects.id[i],
             mask: masksSVG,
@@ -157,12 +157,12 @@
     for (let cat_name in struct_categories)
       annotations.push(struct_categories[cat_name]);
 
-    console.log("selectItem Done", masksGT, bboxes, annotations);
+    console.log("selectItem Done", masks, bboxes, annotations);
   }
 
   function unselectItem() {
     selectedItem = null;
-    masksGT = [];
+    masks = [];
     bboxes = [];
     annotations = [];
   }
@@ -189,7 +189,7 @@
           itemData={selectedItem}
           features={itemDetails}
           {annotations}
-          {masksGT}
+          {masks}
           {bboxes}
           on:closeclick={unselectItem}
         />

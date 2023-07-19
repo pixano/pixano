@@ -49,7 +49,7 @@
   export let embeddings = {};
   export let classes;
   export let annotations: Array<AnnotationsLabels>;
-  export let masksGT: Array<Mask>;
+  export let masks: Array<Mask>;
   export let dbImages: DatabaseFeats;
   export let curPage: number;
   export let saveFlag: boolean;
@@ -248,11 +248,11 @@
       }
     }
 
-    // Find the mask to delete from masksGT
-    const mask_to_del = masksGT.find((mask) => mask.id === detailId);
+    // Find the mask to delete from masks
+    const mask_to_del = masks.find((mask) => mask.id === detailId);
     if (mask_to_del) {
       //remove from list
-      masksGT = masksGT.filter((mask) => mask.id !== detailId);
+      masks = masks.filter((mask) => mask.id !== detailId);
     }
 
     dispatch("enableSaveFlag");
@@ -262,12 +262,12 @@
   }
 
   function handleChangeVisibility(item) {
-    const mask_to_toggle = masksGT.find(
+    const mask_to_toggle = masks.find(
       (mask) => mask.id === item.detail.id && mask.viewId === item.detail.viewId
     );
     mask_to_toggle.visible = item.detail.visible;
     //hack svelte to reflect changes
-    masksGT = masksGT;
+    masks = masks;
   }
 
   async function handleLoadNextPage(event) {
@@ -283,7 +283,7 @@
 
   afterUpdate(() => {
     //console.log("afterUpdate - itemData", itemData);
-    //console.log("afterUpdate - masksGT", masksGT);
+    //console.log("afterUpdate - masks", masks);
     //console.log("afterUpdate - annotations", annotations);
     //console.log("afterUpdate - classes", classes);
 
@@ -308,7 +308,7 @@
     selectedTool={selectedAnnotationTool}
     {categoryColor}
     bind:prediction
-    bind:masksGT
+    bind:masks
     bboxes={null}
   />
   <AnnotationToolbar

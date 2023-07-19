@@ -35,7 +35,7 @@
   export let embeddings = {};
   export let itemId: string;
   export let views: Array<ViewData>;
-  export let masksGT: Array<Mask> | null;
+  export let masks: Array<Mask> | null;
   export let bboxes: Array<BBox> | null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;
@@ -115,8 +115,8 @@
   }
 
   function scaleView(view: ViewData) {
-    const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
-    if (view_layer) {
+    const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+    if (viewLayer) {
       // Calculate max dims for every image in the grid
       let maxWidth = stage.width() / gridSize.cols;
       let maxHeight = stage.height() / gridSize.rows;
@@ -140,7 +140,7 @@
       //set zoomFactor for view
       zoomFactor[view.viewId] = scale;
 
-      view_layer.scale({ x: scale, y: scale });
+      viewLayer.scale({ x: scale, y: scale });
 
       // Center view
       let offsetX =
@@ -149,8 +149,8 @@
       let offsetY =
         (maxHeight - images[view.viewId].height * scale) / 2 +
         grid_pos.y * maxHeight;
-      view_layer.x(offsetX);
-      view_layer.y(offsetY);
+      viewLayer.x(offsetX);
+      viewLayer.y(offsetY);
     } else {
       console.log("   CANNOT scale");
     }
@@ -169,7 +169,7 @@
         onLoadViewImage(event, view.viewId).then(() => {
           scaleView(view);
           //hack to refresh view (display masks/bboxes)
-          masksGT = masksGT;
+          masks = masks;
         });
       };
     }
@@ -183,54 +183,39 @@
     resizeObserver.observe(stageContainer);
   });
 
-  function resetStage() {
-    //find groups for all views
-    let input_groups = stage.find("#input") as Array<Konva.Group>;
-    let mask_groups = stage.find("#masks") as Array<Konva.Group>;
-    let bbox_groups = stage.find("#bboxes") as Array<Konva.Group>;
-
-    //destroy all
-    for (let input_group of input_groups) input_group.destroyChildren();
-    for (let mask_group of mask_groups) mask_group.destroyChildren();
-    for (let bbox_group of bbox_groups) bbox_group.destroyChildren();
-  }
-
   afterUpdate(() => {
     if (selectedTool) {
-      handleToolChange();
+      handleChangeTool();
     } else {
       // reset
       stage.container().style.cursor = "default";
     }
     if (prediction && prediction.validated) {
-      handleMaskValidated(prediction.viewId);
+      handleValidateCurrentMasks(prediction.viewId);
     }
-    if (masksGT) {
-      for (let view of views) addMaskGT(view.viewId, itemId);
+    if (masks) {
+      for (let view of views) addMasks(view.viewId, itemId);
     }
     if (bboxes) {
-      for (let view of views) addAllBBox(view.viewId, itemId);
+      for (let view of views) addBboxes(view.viewId, itemId);
     }
 
     if (views !== prev_views) {
-      // Reset stage
-      //resetStage();
-
       // Load Image(s)
       for (let view of views) {
-        const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+        const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
         clearInputs(view.viewId);
-        clearCurrentMask(view.viewId);
+        clearCurrentAnnotation(view.viewId);
         zoomFactor[view.viewId] = 1;
         const image = new Image();
         image.src = view.imageURL;
         image.onload = (event) => {
           onLoadViewImage(event, view.viewId).then(() => {
-            const konvaImg = view_layer.findOne(`#${itemId}`) as Konva.Image;
+            const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
             konvaImg.image(image);
             scaleView(view);
             //hack to refresh view (display masks/bboxes)
-            masksGT = masksGT;
+            masks = masks;
           });
         };
       }
@@ -238,12 +223,12 @@
     }
   });
 
-  function getBox(viewId): Box {
+  function getInputBox(viewId): Box {
     //get box as Box
     let box: Box = null;
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    let input_group: Konva.Group = view_layer.findOne("#input");
-    for (let rect of input_group.children) {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    let inputGroup: Konva.Group = viewLayer.findOne("#input");
+    for (let rect of inputGroup.children) {
       if (rect instanceof Konva.Rect) {
         //need to convert rect pos / size to topleft/bottomright
         let size = rect.size();
@@ -261,12 +246,12 @@
     return box;
   }
 
-  function getAllClicks(viewId): Array<LabeledClick> {
+  function getInputClicks(viewId): Array<LabeledClick> {
     //get points as Array<LabeledClick>
     let points: Array<LabeledClick> = [];
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    let input_group: Konva.Group = view_layer.findOne("#input");
-    for (let pt of input_group.children) {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    let inputGroup: Konva.Group = viewLayer.findOne("#input");
+    for (let pt of inputGroup.children) {
       if (pt instanceof Konva.Circle) {
         let lblclick: LabeledClick = {
           x: pt.x(),
@@ -280,35 +265,42 @@
   }
 
   function clearInputs(viewId) {
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    const input_group = view_layer.findOne("#input") as Konva.Group;
-    input_group.destroyChildren();
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+    inputGroup.destroyChildren();
   }
 
-  function clearCurrentMask(viewId) {
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    let mask_group: Konva.Group = view_layer.findOne("#masks");
-    let predictedMasks = mask_group.findOne("#predictedMasks") as Konva.Group;
-    if (predictedMasks) predictedMasks.destroy();
+  function clearCurrentAnnotation(viewId) {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    let currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
+    let currentMasksGroup = currentAnnGroup.findOne(
+      "#currentMasks"
+    ) as Konva.Group;
+    if (currentMasksGroup) currentMasksGroup.destroy();
     if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
   }
 
-  function addAllBBox(viewId, itemId) {
-    const view_layer: Konva.Layer = stage.findOne(`#${viewId}`);
+  function addBboxes(viewId, itemId) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
-    if (view_layer) {
-      const group: Konva.Group = view_layer.findOne("#bboxes");
-      const image: Konva.Image = view_layer.findOne(`#${itemId}`);
+    if (viewLayer) {
+      const bboxesGroup: Konva.Group = viewLayer.findOne("#bboxes");
+      const image: Konva.Image = viewLayer.findOne(`#${itemId}`);
 
       const listBboxIds = [];
       for (let i = 0; i < bboxes.length; ++i) {
         if (bboxes[i].viewId === viewId) {
           listBboxIds.push(bboxes[i].id);
 
-          //don't add a mask that already exist
-          let bbox = group.findOne(`#${bboxes[i].id}`);
+          //don't add a bbox that already exist
+          let bbox = bboxesGroup.findOne(`#${bboxes[i].id}`);
           if (!bbox) {
-            addBBox(bboxes[i], image, categoryColor(bboxes[i].catId), group);
+            addBBox(
+              bboxes[i],
+              image,
+              categoryColor(bboxes[i].catId),
+              bboxesGroup
+            );
           } else {
             //apply visibility
             bbox.visible(bboxes[i].visible);
@@ -318,10 +310,10 @@
 
       //remove bbox that's no longer exist in bboxes
       const list_to_destroy = []; //need to build a list to not destroy while looping children
-      for (let mask of group.children) {
-        if (!listBboxIds.includes(mask.id())) list_to_destroy.push(mask);
+      for (let bbox of bboxesGroup.children) {
+        if (!listBboxIds.includes(bbox.id())) list_to_destroy.push(bbox);
       }
-      for (let mask of list_to_destroy) mask.destroy();
+      for (let bbox of list_to_destroy) bbox.destroy();
     }
   }
 
@@ -329,7 +321,7 @@
     bbox: BBox,
     image: Konva.Image,
     color: any,
-    group: Konva.Group
+    bboxesGroup: Konva.Group
   ) {
     const img_w = (image.image() as HTMLImageElement).naturalWidth;
     const img_h = (image.image() as HTMLImageElement).naturalHeight;
@@ -338,7 +330,7 @@
     const rect_width = bbox.bbox[2] * img_w;
     const rect_height = bbox.bbox[3] * img_h;
 
-    const bbox_group = new Konva.Group({
+    const bboxGroup = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
       listening: false,
@@ -356,7 +348,7 @@
       strokeWidth: 1.0,
       scale: image.scale(),
     });
-    bbox_group.add(kbbox);
+    bboxGroup.add(kbbox);
 
     // Create a label object
     const label = new Konva.Label({
@@ -386,15 +378,10 @@
     );
 
     // Add the label to the group
-    bbox_group.add(label);
-
-    group.add(bbox_group);
+    bboxGroup.add(label);
+    bboxesGroup.add(bboxGroup);
   }
 
-  /**
-     * Add set of mask to its specific group
-        if (results) {
-    */
   function addMask(
     masksSVG: Array<string>,
     id: string,
@@ -404,7 +391,7 @@
     stroke: string,
     visibility: boolean,
     opacity: number,
-    group: Konva.Group
+    masksGroup: Konva.Group
   ) {
     let fill: string;
     switch (stroke) {
@@ -470,32 +457,31 @@
         ctx.fillStrokeShape(shape);
       },
     });
-    group.add(mask);
+    masksGroup.add(mask);
   }
 
-  function findOrCreatePredictedMaskGroup(viewId): Konva.Group {
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
+  function findOrCreateCurrentMaskGroup(viewId): Konva.Group {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
 
-    // findOrCreate mask group;
-    let mask_group: Konva.Group = view_layer.findOne("#masks");
+    let currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
 
-    // Get and update the current predicted masks
-    let predictedMasksGroup = mask_group.findOne(
-      "#predictedMasks"
+    // Get and update the current annotation masks
+    let currentMasksGroup = currentAnnGroup.findOne(
+      "#currentMasks"
     ) as Konva.Group;
 
-    if (!predictedMasksGroup) {
-      predictedMasksGroup = new Konva.Group({
-        id: "predictedMasks",
+    if (!currentMasksGroup) {
+      currentMasksGroup = new Konva.Group({
+        id: "currentMasks",
       });
-      mask_group.add(predictedMasksGroup);
+      currentAnnGroup.add(currentMasksGroup);
     }
-    return predictedMasksGroup;
+    return currentMasksGroup;
   }
 
-  async function addMaskPrediction(itemId, viewId) {
-    const points = getAllClicks(viewId);
-    const box = getBox(viewId);
+  async function addCurrentMask(itemId, viewId) {
+    const points = getInputClicks(viewId);
+    const box = getInputBox(viewId);
     const input = {
       image: images[viewId],
       embedding: viewId in embeddings ? embeddings[viewId] : null,
@@ -507,7 +493,7 @@
       toggleInferenceModelWarning();
       for (let view of views) {
         clearInputs(view.viewId);
-        clearCurrentMask(view.viewId);
+        clearCurrentAnnotation(view.viewId);
       }
     } else if (
       !(viewId in embeddings) ||
@@ -516,17 +502,17 @@
       toggleEmbeddingDirectoryWarning();
       for (let view of views) {
         clearInputs(view.viewId);
-        clearCurrentMask(view.viewId);
+        clearCurrentAnnotation(view.viewId);
       }
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
-        const group = findOrCreatePredictedMaskGroup(viewId);
-        const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-        const image = view_layer.findOne(`#${itemId}`);
+        const currentMasksGroup = findOrCreateCurrentMaskGroup(viewId);
+        const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+        const image = viewLayer.findOne(`#${itemId}`);
 
         // always clean existing masks before adding a new prediction
-        group.removeChildren();
+        currentMasksGroup.removeChildren();
 
         const new_id = short.generate();
         prediction = {
@@ -548,46 +534,46 @@
           "green",
           true,
           1.0,
-          group
+          currentMasksGroup
         );
       }
     }
   }
 
-  function addMaskGT(viewId, itemId) {
-    const view_layer: Konva.Layer = stage.findOne(`#${viewId}`);
+  function addMasks(viewId, itemId) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
-    if (view_layer) {
-      const group: Konva.Group = view_layer.findOne("#masksGT");
-      const image = view_layer.findOne(`#${itemId}`);
+    if (viewLayer) {
+      const masksGroup: Konva.Group = viewLayer.findOne("#masks");
+      const image = viewLayer.findOne(`#${itemId}`);
 
-      let listMaskGTIds = [];
-      for (let i = 0; i < masksGT.length; ++i) {
-        listMaskGTIds.push(masksGT[i].id);
-        if (masksGT[i].viewId === viewId) {
+      let maskIds = [];
+      for (let i = 0; i < masks.length; ++i) {
+        maskIds.push(masks[i].id);
+        if (masks[i].viewId === viewId) {
           //don't add a mask that already exist
-          let mask = group.findOne(`#${masksGT[i].id}`);
+          let mask = masksGroup.findOne(`#${masks[i].id}`);
           if (!mask) {
             addMask(
-              masksGT[i].mask,
-              masksGT[i].id,
+              masks[i].mask,
+              masks[i].id,
               image.x(),
               image.y(),
               image.scale(),
-              categoryColor(masksGT[i].catId),
-              masksGT[i].visible,
+              categoryColor(masks[i].catId),
+              masks[i].visible,
               1.0,
-              group
+              masksGroup
             );
           } else {
             //update visibility & opacity
-            mask.visible(masksGT[i].visible);
-            mask.opacity(masksGT[i].opacity);
+            mask.visible(masks[i].visible);
+            mask.opacity(masks[i].opacity);
             //update color
             let shape = mask as Konva.Shape;
             if (typeof shape.fill === "function") {
               var pred = new Option().style;
-              pred.color = categoryColor(masksGT[i].catId);
+              pred.color = categoryColor(masks[i].catId);
               shape.fill(
                 `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
               );
@@ -597,26 +583,26 @@
         }
       }
 
-      //remove masks that's no longer exist in masksGT
+      //remove masks that no longer exists
       const list_to_destroy = []; //need to build a list to not destroy while looping children
-      for (let mask of group.children) {
-        if (!listMaskGTIds.includes(mask.id())) list_to_destroy.push(mask);
+      for (let mask of masksGroup.children) {
+        if (!maskIds.includes(mask.id())) list_to_destroy.push(mask);
       }
       for (let mask of list_to_destroy) mask.destroy();
     }
   }
 
   // Events Handlers
-  function handleMaskValidated(viewId) {
+  function handleValidateCurrentMasks(viewId) {
     if (prediction.validated) {
-      const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-      let predictedMasks = findOrCreatePredictedMaskGroup(viewId);
-      if (predictedMasks) {
-        //move predictedMasks to maskGT
-        const masksGT_group: Konva.Group = view_layer.findOne("#masksGT");
-        predictedMasks.id(prediction.id);
+      const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+      let currentMasksGroup = findOrCreateCurrentMaskGroup(viewId);
+      if (currentMasksGroup) {
+        //move currentMasksGroup to masksGroup
+        const masksGroup: Konva.Group = viewLayer.findOne("#masks");
+        currentMasksGroup.id(prediction.id);
         // change color
-        for (let s of predictedMasks.children) {
+        for (let s of currentMasksGroup.children) {
           let shape = s as Konva.Shape;
           var pred = new Option().style;
           pred.color = categoryColor(prediction.catId);
@@ -625,8 +611,8 @@
           );
           shape.stroke(pred.color);
         }
-        predictedMasks.moveTo(masksGT_group);
-        masksGT.push({
+        currentMasksGroup.moveTo(masksGroup);
+        masks.push({
           viewId: viewId,
           id: prediction.id,
           mask: prediction.output.masksImageSVG,
@@ -636,14 +622,14 @@
           opacity: 1.0,
         });
 
-        if (highlighted_point) unhighlightPoint(highlighted_point);
+        if (highlighted_point) unhighlightInputPoint(highlighted_point);
         clearInputs(prediction.viewId);
         prediction = null;
       }
     }
   }
 
-  function handleToolChange() {
+  function handleChangeTool() {
     //make sure tools layer is on front
     if (toolsLayer) toolsLayer.moveToTop();
 
@@ -651,14 +637,14 @@
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
       case ToolType.LabeledPoint:
-        displayLabeledPointCreator(selectedTool as LabeledPointTool);
+        displayInputPointTool(selectedTool as LabeledPointTool);
         break;
       case ToolType.Rectangle:
-        displayRectangleCreator(selectedTool as RectangleTool);
+        displayInputBoxTool(selectedTool as RectangleTool);
         // Enable box creation or change cursor style
         break;
       case ToolType.Pan:
-        displayPanMode(selectedTool as PanTool);
+        displayPanTool(selectedTool as PanTool);
         // Enable box creation or change cursor style
         break;
       default:
@@ -673,11 +659,11 @@
 
     // Update tools states
     if (selectedTool?.type == ToolType.LabeledPoint) {
-      updateLabeledPointToolState(position);
+      updateInputPointStage(position);
     }
 
     if (selectedTool?.type == ToolType.Rectangle) {
-      updateRectangleToolState(position);
+      updateInputBoxState(position);
     }
   }
 
@@ -686,6 +672,7 @@
       tool.show();
     }
   }
+
   function handleMouseLeaveStage(event) {
     for (let tool of toolsLayer.children) {
       tool.hide();
@@ -693,36 +680,32 @@
   }
 
   // Views events Handlers
-  function handleDragMoveOnView() {
-    handleMouseMoveStage();
-  }
-
   function handleDragEndOnView(viewId: string) {
-    const view_layer = stage.findOne(`#${viewId}`);
-    view_layer.draggable(false);
-    view_layer.off("dragend dragmove");
+    const viewLayer = stage.findOne(`#${viewId}`);
+    viewLayer.draggable(false);
+    viewLayer.off("dragend dragmove");
   }
 
   function handlePointerUpOnImage(event, viewId: string) {
-    const view_layer = stage.findOne(`#${viewId}`);
-    view_layer.draggable(false);
-    view_layer.off("dragend dragmove");
+    const viewLayer = stage.findOne(`#${viewId}`);
+    viewLayer.draggable(false);
+    viewLayer.off("dragend dragmove");
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
       //Note: could be better, but usually it will work
-      const pos = view_layer.getRelativePointerPosition();
+      const pos = viewLayer.getRelativePointerPosition();
       const hl_pos = highlighted_point.position();
       if (pos.x !== hl_pos.x || pos.y !== hl_pos.y)
-        unhighlightPoint(highlighted_point, viewId);
+        unhighlightInputPoint(highlighted_point, viewId);
     }
   }
 
   function scaleInputs(viewId) {
     //keep points/box at constant scale
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    const input_group = view_layer.findOne("#input") as Konva.Group;
-    for (let pt of input_group.children) {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+    for (let pt of inputGroup.children) {
       if (pt instanceof Konva.Circle) {
         pt.radius(POINTER_RADIUS / zoomFactor[viewId]);
         pt.strokeWidth(POINTER_STROKEWIDTH / zoomFactor[viewId]);
@@ -743,16 +726,16 @@
     // Defines zoom speed
     const zoomScale = 1.05;
 
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
 
     // Get old scaling
-    const oldScale = view_layer.scaleX();
+    const oldScale = viewLayer.scaleX();
 
     // Get mouse position
     const pointer = stage.getRelativePointerPosition();
     const mousePointTo = {
-      x: (pointer.x - view_layer.x()) / oldScale,
-      y: (pointer.y - view_layer.y()) / oldScale,
+      x: (pointer.x - viewLayer.x()) / oldScale,
+      y: (pointer.y - viewLayer.y()) / oldScale,
     };
 
     // Calculate new scaling
@@ -766,8 +749,8 @@
     };
 
     // Change scaling and position
-    view_layer.scale({ x: newScale, y: newScale });
-    view_layer.position(newPos);
+    viewLayer.scale({ x: newScale, y: newScale });
+    viewLayer.position(newPos);
 
     return newScale;
   }
@@ -783,28 +766,28 @@
 
     //zoom reset highlighted point scaling
     if (highlighted_point) {
-      highlightPoint(highlighted_point, viewId);
+      highlightInputPoint(highlighted_point, viewId);
     }
   }
 
-  function handleDblClickOnImage(event, viewId: string) {
+  function handleDoubleClickOnImage(event, viewId: string) {
     // put double-clickd view on top of views
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    view_layer.moveToTop();
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    viewLayer.moveToTop();
     //keeps tools on top
     toolsLayer.moveToTop();
   }
 
   async function handleClickOnImage(event, itemId: string, viewId: string) {
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     // Perfome tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
     if (selectedTool?.type == ToolType.Pan || event.detail.evt.which == 2) {
-      view_layer.draggable(true);
-      view_layer.on("dragmove", handleDragMoveOnView);
-      view_layer.on("dragend", () => handleDragEndOnView(viewId));
+      viewLayer.draggable(true);
+      viewLayer.on("dragmove", handleMouseMoveStage);
+      viewLayer.on("dragend", () => handleDragEndOnView(viewId));
     } else if (selectedTool?.type == ToolType.LabeledPoint) {
-      const clickOnViewPos = view_layer.getRelativePointerPosition();
+      const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
       const input_point = new Konva.Circle({
@@ -821,28 +804,28 @@
         draggable: true,
       });
       input_point.on("pointerenter", (event) =>
-        highlightPoint(event.target as Konva.Circle, viewId)
+        highlightInputPoint(event.target as Konva.Circle, viewId)
       );
       input_point.on("pointerout", (event) =>
-        unhighlightPoint(event.target as Konva.Circle, viewId)
+        unhighlightInputPoint(event.target as Konva.Circle, viewId)
       );
       input_point.on("dragmove", (event) =>
-        dragPointMove(event.target as Konva.Circle, itemId, viewId)
+        dragInputPointMove(event.target as Konva.Circle, itemId, viewId)
       );
       input_point.on("dragend", (event) =>
-        dragPointEnd(event.target as Konva.Circle, viewId)
+        dragInputPointEnd(event.target as Konva.Circle, viewId)
       );
-      const input_group = view_layer.findOne("#input") as Konva.Group;
-      input_group.add(input_point);
-      highlightPoint(input_point, viewId);
+      const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+      inputGroup.add(input_point);
+      highlightInputPoint(input_point, viewId);
 
-      addMaskPrediction(itemId, viewId);
+      addCurrentMask(itemId, viewId);
     } else if (selectedTool?.type == ToolType.Rectangle) {
-      const pos = view_layer.getRelativePointerPosition();
-      const input_group = view_layer.findOne("#input") as Konva.Group;
+      const pos = viewLayer.getRelativePointerPosition();
+      const inputGroup = viewLayer.findOne("#input") as Konva.Group;
 
       //add RECT
-      let rect = input_group.findOne("#drag-rect") as Konva.Rect;
+      let rect = inputGroup.findOne("#drag-rect") as Konva.Rect;
       if (rect) {
         rect.position({ x: pos.x, y: pos.y });
         rect.size({ width: 0, height: 0 });
@@ -859,20 +842,20 @@
           strokeWidth: RECT_STROKEWIDTH / zoomFactor[viewId],
           listening: false,
         });
-        input_group.add(rect);
+        inputGroup.add(rect);
       }
-      view_layer.on("pointermove", () => handleToolBoxDragMove(viewId));
-      view_layer.on("pointerup", () => handleToolBoxDragEnd(viewId));
+      viewLayer.on("pointermove", () => dragInputBoxMove(viewId));
+      viewLayer.on("pointerup", () => dragInputBoxEnd(viewId));
     }
   }
 
-  function handleToolBoxDragMove(viewId: string) {
+  function dragInputBoxMove(viewId: string) {
     if (selectedTool?.type == ToolType.Rectangle) {
-      const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-      const input_group = view_layer.findOne("#input") as Konva.Group;
-      const rect = input_group.findOne("#drag-rect") as Konva.Rect;
+      const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+      const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+      const rect = inputGroup.findOne("#drag-rect") as Konva.Rect;
       if (rect) {
-        const pos = view_layer.getRelativePointerPosition();
+        const pos = viewLayer.getRelativePointerPosition();
         rect.width(pos.x - rect.x());
         rect.size({
           width: pos.x - rect.x(),
@@ -882,11 +865,11 @@
     }
   }
 
-  function handleToolBoxDragEnd(viewId: string): void {
+  function dragInputBoxEnd(viewId: string): void {
     if (selectedTool?.type == ToolType.Rectangle) {
-      const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-      const input_group = view_layer.findOne("#input") as Konva.Group;
-      const rect = input_group.findOne("#drag-rect") as Konva.Rect;
+      const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+      const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+      const rect = inputGroup.findOne("#drag-rect") as Konva.Rect;
       if (rect) {
         const { width, height } = rect.size();
         if (width == 0 || height == 0) {
@@ -894,10 +877,10 @@
           rect.destroy();
         } else {
           //predict
-          addMaskPrediction(itemId, viewId);
+          addCurrentMask(itemId, viewId);
         }
-        view_layer.off("pointermove");
-        view_layer.off("pointerup");
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
       }
     }
   }
@@ -914,7 +897,7 @@
   }
 
   //point event handler
-  function highlightPoint(hl_point: Konva.Circle, viewId: string) {
+  function highlightInputPoint(hl_point: Konva.Circle, viewId: string) {
     let pointer = findOrCreatePointer(selectedTool.type, viewId);
     pointer.hide();
     highlighted_point = hl_point;
@@ -922,7 +905,10 @@
     stage.container().style.cursor = "grab";
   }
 
-  function unhighlightPoint(hl_point: Konva.Circle, viewId: string = null) {
+  function unhighlightInputPoint(
+    hl_point: Konva.Circle,
+    viewId: string = null
+  ) {
     let pointer = findOrCreatePointer(selectedTool.type, viewId);
     pointer.show();
     if (!viewId) {
@@ -934,15 +920,15 @@
     stage.batchDraw();
   }
 
-  function dragPointEnd(drag_point: Konva.Circle, viewId) {
+  function dragInputPointEnd(drag_point: Konva.Circle, viewId) {
     stage.container().style.cursor = "grab";
   }
 
-  function dragPointMove(drag_point: Konva.Circle, itemId, viewId) {
+  function dragInputPointMove(drag_point: Konva.Circle, itemId, viewId) {
     stage.container().style.cursor = "grabbing";
 
-    const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    const image = view_layer.findOne(`#${itemId}`);
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+    const image = viewLayer.findOne(`#${itemId}`);
     const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
@@ -957,7 +943,7 @@
 
     // new prediction on new location
     clearTimeout(timerId); // reinit timer on each move move
-    timerId = setTimeout(() => addMaskPrediction(itemId, viewId), 50); // delay before predict to spare CPU
+    timerId = setTimeout(() => addCurrentMask(itemId, viewId), 50); // delay before predict to spare CPU
   }
 
   // Drawing helpers
@@ -996,7 +982,7 @@
       xLimit = new Konva.Line({
         id: "xline",
         points: [0, 0, 0, stageHeight],
-        stroke: "red",
+        stroke: "white",
         strokeWidth: 1,
         opacity: 0.75,
         dash: [5, 1],
@@ -1004,7 +990,7 @@
       yLimit = new Konva.Line({
         id: "yline",
         points: [0, 0, stageWidth, 0],
-        stroke: "red",
+        stroke: "white",
         strokeWidth: 1,
         opacity: 0.75,
         dash: [5, 1],
@@ -1017,7 +1003,7 @@
   }
 
   // Pointer tool events
-  function displayLabeledPointCreator(tool: LabeledPointTool) {
+  function displayInputPointTool(tool: LabeledPointTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Point
@@ -1041,43 +1027,43 @@
       //get viewId of highlighted_point
       const viewId = findViewId(highlighted_point);
       const to_destroy_hl_point = highlighted_point;
-      unhighlightPoint(highlighted_point, viewId);
+      unhighlightInputPoint(highlighted_point, viewId);
       //remove Konva Circle
       to_destroy_hl_point.destroy();
 
       //if existing construct (points, box, ...)
-      const view_layer = stage.findOne(`#${viewId}`) as Konva.Layer;
-      const input_group = view_layer.findOne("#input") as Konva.Group;
-      if (input_group.children.length > 0) {
+      const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+      const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+      if (inputGroup.children.length > 0) {
         //trigger a prediction with existing constructs
-        addMaskPrediction(itemId, viewId);
+        addCurrentMask(itemId, viewId);
       } else {
-        clearCurrentMask(viewId);
+        clearCurrentAnnotation(viewId);
       }
     }
     if (event.key == "Escape") {
       for (let view of views) {
         clearInputs(view.viewId);
-        clearCurrentMask(view.viewId);
+        clearCurrentAnnotation(view.viewId);
       }
       stage.container().style.cursor = selectedTool.cursor;
       prediction = null;
     }
     if (event.key == "i") {
       console.log("INFOS");
-      console.log("masksGT", masksGT);
+      console.log("masks", masks);
       console.log("prediction", prediction);
       console.log("stage", stage);
       for (let view of views) {
-        const view_layer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
-        const MGTgroup: Konva.Group = view_layer.findOne("#masksGT");
-        console.log("masksGT Konva group:", MGTgroup);
-        console.log("masksGT children length:", MGTgroup.children?.length);
+        const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+        const masksGroup: Konva.Group = viewLayer.findOne("#masks");
+        console.log("masks Konva group:", masksGroup);
+        console.log("masks children length:", masksGroup.children?.length);
       }
     }
   }
 
-  function displayRectangleCreator(tool: RectangleTool) {
+  function displayInputBoxTool(tool: RectangleTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Rectangle
@@ -1090,7 +1076,7 @@
     }
   }
 
-  function displayPanMode(tool: PanTool) {
+  function displayPanTool(tool: PanTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
@@ -1104,7 +1090,7 @@
     }
   }
 
-  function updateLabeledPointToolState(mousePos: Konva.Vector2d) {
+  function updateInputPointStage(mousePos: Konva.Vector2d) {
     let pointer = findOrCreatePointer(selectedTool.type);
     const scale = stage.scaleX();
     const pointerScale = Math.max(1, 1 / scale);
@@ -1114,7 +1100,7 @@
     pointer.y(mousePos.y + 1);
   }
 
-  function updateRectangleToolState(mousePos: Konva.Vector2d) {
+  function updateInputBoxState(mousePos: Konva.Vector2d) {
     const scale = stage.scaleX();
     const lineScale = Math.max(1, 1 / scale);
 
@@ -1150,10 +1136,11 @@
             on:pointerdown={(event) =>
               handleClickOnImage(event, itemId, view.viewId)}
             on:pointerup={(event) => handlePointerUpOnImage(event, view.viewId)}
-            on:dblclick={(event) => handleDblClickOnImage(event, view.viewId)}
+            on:dblclick={(event) =>
+              handleDoubleClickOnImage(event, view.viewId)}
           />
+          <Group config={{ id: "currentAnnotation" }} />
           <Group config={{ id: "masks" }} />
-          <Group config={{ id: "masksGT" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
         </Layer>

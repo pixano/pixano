@@ -31,7 +31,7 @@
 
   // Exports
   export let itemData: ItemData;
-  export let masksGT: Array<Mask>;
+  export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let annotations: Array<AnnotationsLabels>;
   export let features = null;
@@ -67,10 +67,10 @@
       }
       bboxes = bboxes;
     }
-    for (let mask of masksGT) {
+    for (let mask of masks) {
       mask.visible = getItemById(mask.id).visible;
     }
-    masksGT = masksGT;
+    masks = masks;
   }
 
   function handleAllBBoxVisChanged(event) {
@@ -82,10 +82,10 @@
   }
 
   function handleMaskOpacity(event) {
-    for (let mask of masksGT) {
+    for (let mask of masks) {
       mask.opacity = getItemById(mask.id).opacity;
     }
-    masksGT = masksGT;
+    masks = masks;
   }
 
   async function handleKeyDown(e) {
@@ -94,12 +94,7 @@
 
   onMount(async () => {
     //features = await getItemDetails(datasetId, rowIndex);
-    console.log(
-      "ExplorationWorkspace - onMount",
-      itemData,
-      masksGT,
-      annotations
-    );
+    console.log("ExplorationWorkspace - onMount", itemData, masks, annotations);
   });
 
   afterUpdate(() => {
@@ -118,7 +113,7 @@
       views={itemData.views}
       selectedTool={panTool}
       prediction={null}
-      {masksGT}
+      {masks}
       {bboxes}
       {categoryColor}
     />

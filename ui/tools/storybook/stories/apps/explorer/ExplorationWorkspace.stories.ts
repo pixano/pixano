@@ -42,7 +42,7 @@ export const Base: Story = {
     },
     //sample for bear image "img-02.jpg"
     //bear left eye...
-    masksGT: [
+    masks: [
       {
         viewId: "view",
         catId: 11,

@@ -54,7 +54,7 @@
   let saveFlag: boolean = false;
   let unselectItemConfirm = false;
 
-  let masksGT: Array<Mask> = [];
+  let masks: Array<Mask> = [];
   let annotations: Array<AnnotationsLabels> = [];
   let classes = [];
   let itemDetails = null;
@@ -109,8 +109,8 @@
     };
     console.log("item loaded:", selectedItem);
 
-    //build annotations, masksGT and classes
-    masksGT = [];
+    //build annotations, masks and classes
+    masks = [];
     annotations = [];
 
     //predefined classes from spec.json "categories"
@@ -145,7 +145,7 @@
           const maskPolygons = generatePolygonSegments(rle, size[0]);
           const masksSVG = convertSegmentsToSVG(maskPolygons);
 
-          masksGT.push({
+          masks.push({
             viewId: viewId,
             id: itemDetails.views[viewId].objects.id[i],
             mask: masksSVG,
@@ -175,7 +175,7 @@
       }
     }
 
-    console.log("init masksGT", masksGT);
+    console.log("init masks", masks);
     //unique classes from existing annotations
     for (let ann of annotations) {
       if (!classes.some((cls) => cls.id === ann.category_id)) {
@@ -237,17 +237,17 @@
     selectedDataset = null;
     selectedItem = null;
     selectedItemEmbeddings = {};
-    masksGT = [];
+    masks = [];
     annotations = [];
     classes = [];
     curPage = 1;
   }
 
-  function saveAnns(annotations, masksGT) {
+  function saveAnns(annotations, masks) {
     console.log("App - save annotations");
     //format annotation data for export
     let anns = [];
-    for (let mask of masksGT) {
+    for (let mask of masks) {
       const mask_class = annotations.find(
         (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
       );
@@ -291,7 +291,7 @@
   }
 
   function handleSaveClick() {
-    saveAnns(annotations, masksGT);
+    saveAnns(annotations, masks);
     saveFlag = false;
   }
 
@@ -332,7 +332,7 @@
         itemData={selectedItem}
         embeddings={selectedItemEmbeddings}
         bind:annotations
-        bind:masksGT
+        bind:masks
         {classes}
         {dbImages}
         {curPage}
