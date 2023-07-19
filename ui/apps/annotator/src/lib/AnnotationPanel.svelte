@@ -47,12 +47,12 @@
   }
 
   // Change selected image
-  function selectImage(img) {
-    dispatch("imageSelected", img);
+  function selectItem(img) {
+    dispatch("selectItem", img);
   }
 
-  function deleteItem(item: any) {
-    dispatch("itemDeleted", item);
+  function deleteAnnotation(item: any) {
+    dispatch("deleteAnnotation", item);
   }
 
   function handleVisibility(group: any, item: any) {
@@ -333,7 +333,7 @@
                       >
                         {item.id}
                       </span>
-                      <button on:click={() => deleteItem(item)}>
+                      <button on:click={() => deleteAnnotation(item)}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
@@ -371,7 +371,7 @@
       {#each d_data as data, i}
         <div
           class="p-2 flex flex-col rounded cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
-          on:click={() => selectImage(data)}
+          on:click={() => selectItem(data)}
         >
           <div class="flex flex-row">
             {#each data.views as view}

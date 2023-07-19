@@ -200,7 +200,7 @@
     }
   }
 
-  function handleItemDeleted(item) {
+  function handledeleteAnnotation(item) {
     const detailId = item.detail.id;
 
     // Find the annotation object that contains the item
@@ -231,7 +231,7 @@
     annotations = annotations;
   }
 
-  function handleVisibilityChange(item) {
+  function handleChangeVisibility(item) {
     const mask_to_toggle = masksGT.find(
       (mask) => mask.id === item.detail.id && mask.viewId === item.detail.viewId
     );
@@ -292,9 +292,9 @@
       dataset={dbImages}
       lastLoadedPage={curPage}
       {categoryColor}
-      on:imageSelected={handleImageSelectedChange}
-      on:itemDeleted={handleItemDeleted}
-      on:toggleVisibility={handleVisibilityChange}
+      on:selectItem={handleChangeSelectedItem}
+      on:deleteAnnotation={handledeleteAnnotation}
+      on:toggleVisibility={handleChangeVisibility}
       on:loadNextPage={handleLoadNextPage}
     />
   {/if}

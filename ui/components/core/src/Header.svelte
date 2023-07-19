@@ -28,7 +28,7 @@
   export let app = "";
   export let selectedDataset = null;
   export let selectedItem: ItemData;
-  export let save_flag: boolean;
+  export let saveFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
@@ -111,7 +111,7 @@
             viewBox="0 -960 960 960"
             width="48"
             class="hover:text-rose-600 dark:hover:text-rose-500 h-8 w-8
-            {save_flag ? 'text-rose-500 dark:text-rose-600' : ''}"
+            {saveFlag ? 'text-rose-500 dark:text-rose-600' : ''}"
           >
             <title>Save</title>
             <path d={svg_save} fill="currentcolor" />

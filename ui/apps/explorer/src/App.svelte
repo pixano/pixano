@@ -181,7 +181,7 @@
   app="Explorer"
   bind:selectedDataset
   bind:selectedItem
-  save_flag={false}
+  saveFlag={false}
   on:closeclick={unselectItem}
 />
 <div
