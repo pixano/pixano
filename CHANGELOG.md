@@ -8,10 +8,12 @@ All notable changes to Pixano will be documented in this file.
 
 ### Changed:
 - Replace JavaScript popup boxes by integrated windows in Pixano Apps to fix notebook integration
+- Update import dataset portable option from moving files to copying them 
 
 ## Fixed:
 - Clear selection if either inference model or embedding directory is missing in Pixano Annotator 
 - Fix Pixano Annotator for multi-views datasets
+- Fix imports and dependency versions for Pixano apps and UI components
 
 
 ## [0.3.2] - 2023-07-11
