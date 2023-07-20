@@ -88,18 +88,26 @@
     masks = masks;
   }
 
-  async function handleKeyDown(e) {
+  async function handleKeyPress(e) {
     if (e.keyCode == 27) handleCloseClick(); // Escape key pressed
   }
 
   onMount(async () => {
-    //features = await getItemDetails(datasetId, rowIndex);
-    console.log("ExplorationWorkspace - onMount", itemData, masks, annotations);
+    if (annotations) {
+      console.log(
+        "ExplorationWorkspace - onMount",
+        itemData,
+        masks,
+        annotations
+      );
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+    }
   });
 
   afterUpdate(() => {
     // needed for annotations update
     if (annotations) {
+      console.log("afterUpdate - annotations", annotations);
       categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
       annotations = annotations;
     }
@@ -112,20 +120,23 @@
       itemId={itemData.id}
       views={itemData.views}
       selectedTool={panTool}
+      {categoryColor}
       prediction={null}
       {masks}
       {bboxes}
-      {categoryColor}
     />
-    <ExplorationPanel
-      {features}
-      bind:annotations
-      on:toggleCatVis={handleCatVisChanged}
-      on:toggleAllBBoxVis={handleAllBBoxVisChanged}
-      on:changeMaskOpacity={handleMaskOpacity}
-    />
+    {#if annotations}
+      <ExplorationPanel
+        {features}
+        bind:annotations
+        on:toggleCatVis={handleCatVisChanged}
+        on:toggleAllBBoxVis={handleAllBBoxVisChanged}
+        on:changeMaskOpacity={handleMaskOpacity}
+      />
+    {/if}
   {/if}
 </div>
+
 <!-- Pixano Explorer footer -->
 <div
   class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
@@ -136,4 +147,4 @@
   Pixano Explorer
 </div>
 
-<svelte:window on:keydown={handleKeyDown} />
+<svelte:window on:keydown={handleKeyPress} />
