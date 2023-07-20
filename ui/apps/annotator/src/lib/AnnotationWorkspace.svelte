@@ -275,17 +275,17 @@
 
   onMount(() => {
     if (annotations) {
-      console.log("onMount - annotations", annotations);
+      console.log(
+        "AnnotationWorkspace - onMount",
+        itemData,
+        masks,
+        annotations
+      );
       categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
     }
   });
 
   afterUpdate(() => {
-    //console.log("afterUpdate - itemData", itemData);
-    //console.log("afterUpdate - masks", masks);
-    //console.log("afterUpdate - annotations", annotations);
-    //console.log("afterUpdate - classes", classes);
-
     // needed for annotations update
     if (annotations) {
       console.log("afterUpdate - annotations", annotations);
@@ -299,52 +299,54 @@
 </script>
 
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
-  <Canvas2D
-    {embeddings}
-    itemId={itemData.id}
-    views={itemData.views}
-    bind:selectedTool
-    {categoryColor}
-    bind:prediction
-    bind:masks
-    bboxes={null}
-  />
-  <AnnotationToolbar {tools_lists} bind:selectedTool />
-  {#if annotations}
-    <AnnotationPanel
-      bind:annotations
-      dataset={dbImages}
-      lastLoadedPage={curPage}
-      {categoryColor}
-      on:selectItem={handleChangeSelectedItem}
-      on:deleteAnnotation={handledeleteAnnotation}
-      on:toggleVisibility={handleChangeVisibility}
-      on:loadNextPage={handleLoadNextPage}
-    />
-  {/if}
-  {#if selectedTool && selectedTool.type != ToolType.Pan && selectedTool.type != ToolType.Delete}
-    <LabelToolbar
-      bind:className
-      bind:classes
+  {#if itemData}
+    <Canvas2D
+      {embeddings}
+      itemId={itemData.id}
+      views={itemData.views}
       bind:selectedTool
-      {pointPlusTool}
-      {pointMinusTool}
-      on:validate={handleValidate}
+      {categoryColor}
+      bind:prediction
+      bind:masks
+      bboxes={null}
     />
-  {/if}
-  {#if classNameWarning}
-    <WarningModal
-      message="Please set a label to save your annotation."
-      on:confirmed={toggleClassNameWarning}
-    />
-  {/if}
-  {#if selectItemConfirm}
-    <ConfirmModal
-      message="You have unsaved changes."
-      confirm="Continue without saving"
-      on:confirmed={confirmChangeSelectedItem}
-      on:canceled={toggleSelectItemConfirm}
-    />
+    <AnnotationToolbar {tools_lists} bind:selectedTool />
+    {#if annotations}
+      <AnnotationPanel
+        bind:annotations
+        dataset={dbImages}
+        lastLoadedPage={curPage}
+        {categoryColor}
+        on:selectItem={handleChangeSelectedItem}
+        on:deleteAnnotation={handledeleteAnnotation}
+        on:toggleVisibility={handleChangeVisibility}
+        on:loadNextPage={handleLoadNextPage}
+      />
+    {/if}
+    {#if selectedTool && selectedTool.type != ToolType.Pan && selectedTool.type != ToolType.Delete}
+      <LabelToolbar
+        bind:className
+        bind:classes
+        bind:selectedTool
+        {pointPlusTool}
+        {pointMinusTool}
+        on:validate={handleValidate}
+      />
+    {/if}
+    {#if classNameWarning}
+      <WarningModal
+        message="Please set a label to save your annotation."
+        on:confirmed={toggleClassNameWarning}
+      />
+    {/if}
+    {#if selectItemConfirm}
+      <ConfirmModal
+        message="You have unsaved changes."
+        confirm="Continue without saving"
+        on:confirmed={confirmChangeSelectedItem}
+        on:canceled={toggleSelectItemConfirm}
+      />
+    {/if}
   {/if}
 </div>
 
