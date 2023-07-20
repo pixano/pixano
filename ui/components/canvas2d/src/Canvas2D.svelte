@@ -667,6 +667,8 @@
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
+      // deactivate drag on input points
+      toggleInputDrag(false);
     }
   }
 
@@ -685,6 +687,8 @@
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
+      // activate drag on input points
+      toggleInputDrag(true);
     }
   }
 
@@ -735,6 +739,17 @@
       }
     }
     return points;
+  }
+
+  function toggleInputDrag(toggle: boolean) {
+    const input_groups = stage.find("#input");
+    for (let input_group of input_groups) {
+      for (let node of (input_group as Konva.Group).children) {
+        if (node instanceof Konva.Circle) {
+          node.listening(toggle);
+        }
+      }
+    }
   }
 
   function dragInputPointEnd(drag_point: Konva.Circle, viewId) {
@@ -798,6 +813,8 @@
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
+      // activate drag on input points
+      toggleInputDrag(true);
     }
   }
 
