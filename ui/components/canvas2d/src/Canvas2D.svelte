@@ -111,11 +111,11 @@
 
   // ********** WARNINGS ********** //
 
-  function toggleInferenceModelWarning() {
+  function toggleInferenceModelModal() {
     inferenceModelWarning = !inferenceModelWarning;
   }
 
-  function toggleEmbeddingDirectoryWarning() {
+  function toggleEmbeddingDirectoryModal() {
     embeddingDirectoryWarning = !embeddingDirectoryWarning;
   }
 
@@ -494,13 +494,13 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      toggleInferenceModelWarning();
+      toggleInferenceModelModal();
       clearAnnotationAndInputs();
     } else if (
       !(viewId in embeddings) ||
       (viewId in embeddings && embeddings[viewId] == null)
     ) {
-      toggleEmbeddingDirectoryWarning();
+      toggleEmbeddingDirectoryModal();
       clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
@@ -1186,14 +1186,14 @@
   <WarningModal
     message="No interactive model set up, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirmed={toggleInferenceModelWarning}
+    on:confirmed={toggleInferenceModelModal}
   />
 {/if}
 {#if embeddingDirectoryWarning}
   <WarningModal
     message="No embedding directory found, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
-    on:confirmed={toggleEmbeddingDirectoryWarning}
+    on:confirmed={toggleEmbeddingDirectoryModal}
   />
 {/if}
 <svelte:window on:keydown={handleKeyDown} />

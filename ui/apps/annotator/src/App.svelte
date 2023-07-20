@@ -214,20 +214,20 @@
     console.log("DONE");
   }
 
-  function toggleUnselectItemConfirm() {
+  function toggleUnselectItemModal() {
     unselectItemConfirm = !unselectItemConfirm;
   }
 
   function confirmUnselectItem() {
     saveFlag = false;
-    toggleUnselectItemConfirm();
+    toggleUnselectItemModal();
   }
 
   async function handleUnselectItem() {
     if (!saveFlag) {
       unselectItem();
     } else {
-      toggleUnselectItemConfirm();
+      toggleUnselectItemModal();
       await until((_) => unselectItemConfirm == false);
       if (!saveFlag) {
         unselectItem();
@@ -285,11 +285,11 @@
       await sam.init("/models/" + modelInput);
       interactiveSegmenterModel.set(sam);
     } catch (e) {
-      toggleModelNotFoundWarning();
+      toggleModelNotFoundModal();
     }
   }
 
-  function toggleModelNotFoundWarning() {
+  function toggleModelNotFoundModal() {
     modelNotFoundWarning = !modelNotFoundWarning;
   }
 
@@ -368,7 +368,7 @@
       message="models/{modelInput} was not found in your dataset library."
       details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
       moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-      on:confirmed={toggleModelNotFoundWarning}
+      on:confirmed={toggleModelNotFoundModal}
     />
   {/if}
   {#if unselectItemConfirm}
@@ -376,7 +376,7 @@
       message="You have unsaved changes."
       confirm="Close without saving"
       on:confirmed={confirmUnselectItem}
-      on:canceled={toggleUnselectItemConfirm}
+      on:canceled={toggleUnselectItemModal}
     />
   {/if}
 </div>

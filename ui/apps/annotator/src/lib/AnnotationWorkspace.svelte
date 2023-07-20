@@ -169,7 +169,7 @@
     if (prediction) {
       // Validate user input
       if (className === "") {
-        toggleClassNameWarning();
+        toggleClassNameModal();
         return;
       }
 
@@ -190,24 +190,24 @@
     }
   }
 
-  function toggleClassNameWarning() {
+  function toggleClassNameModal() {
     classNameWarning = !classNameWarning;
   }
 
-  function toggleSelectItemConfirm() {
+  function toggleSelectItemModal() {
     selectItemConfirm = !selectItemConfirm;
   }
 
   function confirmChangeSelectedItem() {
     saveFlag = false;
-    toggleSelectItemConfirm();
+    toggleSelectItemModal();
   }
 
   async function handleChangeSelectedItem(event) {
     if (!saveFlag) {
       changeSelectedItem(event);
     } else {
-      toggleSelectItemConfirm();
+      toggleSelectItemModal();
       await until((_) => selectItemConfirm == false);
       if (!saveFlag) {
         changeSelectedItem(event);
@@ -335,7 +335,7 @@
     {#if classNameWarning}
       <WarningModal
         message="Please set a label to save your annotation."
-        on:confirmed={toggleClassNameWarning}
+        on:confirmed={toggleClassNameModal}
       />
     {/if}
     {#if selectItemConfirm}
@@ -343,7 +343,7 @@
         message="You have unsaved changes."
         confirm="Continue without saving"
         on:confirmed={confirmChangeSelectedItem}
-        on:canceled={toggleSelectItemConfirm}
+        on:canceled={toggleSelectItemModal}
       />
     {/if}
   {/if}
