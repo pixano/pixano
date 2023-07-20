@@ -14,8 +14,7 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Library from "../../../../components/core/src/Library.svelte";
-
+import { Library } from "@pixano/core";
 
 const meta = {
   title: "Components/Library",
@@ -53,6 +52,6 @@ export const Base: Story = {
         preview: "img-04.jpg",
       },
     ],
-    btn_label: "Explore"
+    btn_label: "Explore",
   },
 };

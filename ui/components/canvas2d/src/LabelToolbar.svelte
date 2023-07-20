@@ -21,7 +21,7 @@
     svg_point_plus,
     svg_point_minus,
     svg_validate,
-  } from "../../core/src/icons";
+  } from "@pixano/core/src/icons";
 
   // Exports
   export let className;

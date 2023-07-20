@@ -14,16 +14,11 @@ http://www.cecill.info
 */
 
 // Imports
-import type {
-  InteractiveImageSegmenter,
-  InteractiveImageSegmenterInput,
-} from "@pixano/models/src/lib/interactive_image_segmentation";
-// import { SegmentationResult } from "../../../../../components/models/src/interactive_image_segmentation";
 import {
-  generatePolygonSegments,
-  convertSegmentsToSVG,
-  maskDataToFortranArrayToRle,
-} from "../../../../../components/models/src/mask_utils";
+  mask_utils,
+  type InteractiveImageSegmenter,
+  type InteractiveImageSegmenterInput,
+} from "@pixano/models";
 
 function flattenArray(image: number[][]): number[] {
   const flattenedArray: number[] = [];
@@ -85,11 +80,15 @@ export class MockInteractiveImageSegmenter
       }
     }
 
-    const maskRLE = maskDataToFortranArrayToRle(this.currentMask, h, w);
+    const maskRLE = mask_utils.maskDataToFortranArrayToRle(
+      this.currentMask,
+      h,
+      w
+    );
     //console.log(maskRLE)
-    const maskPolygons = generatePolygonSegments(maskRLE, h);
+    const maskPolygons = mask_utils.generatePolygonSegments(maskRLE, h);
     //console.log(maskPolygons);
-    const masksSVG = convertSegmentsToSVG(maskPolygons);
+    const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
     //console.log(masksSVG);
     //console.log(masksSVG.length);
     return { masksImageSVG: masksSVG };

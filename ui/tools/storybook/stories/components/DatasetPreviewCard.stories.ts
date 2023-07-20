@@ -14,7 +14,7 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import DatasetPreviewCard from "../../../../components/core/src/DatasetPreviewCard.svelte";
+import { DatasetPreviewCard } from "@pixano/core";
 
 const meta = {
   title: "Components/DatasetPreviewCard",
@@ -38,6 +38,6 @@ export const Base: Story = {
       preview:
         "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
     },
-    btn_label: "Explore"
+    btn_label: "Explore",
   },
 };

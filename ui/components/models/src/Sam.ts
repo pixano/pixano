@@ -16,7 +16,7 @@ http://www.cecill.info
 // Imports
 import * as ort from "onnxruntime-web";
 
-import {
+import type {
   Box,
   InteractiveImageSegmenter,
   InteractiveImageSegmenterInput,
@@ -44,7 +44,7 @@ export class SAM implements InteractiveImageSegmenter {
 
   // prediction threshold
   predictionThreshold = 0.0;
-  
+
   async init(modelWeights: ArrayBuffer);
   async init(modelWeights: string);
   async init(modelWeights: any) {

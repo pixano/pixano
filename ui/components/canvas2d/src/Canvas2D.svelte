@@ -33,8 +33,8 @@
     LabeledClick,
     Box,
     InteractiveImageSegmenterOutput,
-  } from "../../models/src/interactive_image_segmentation";
-  import WarningModal from "../../core/src/WarningModal.svelte";
+  } from "@pixano/models";
+  import WarningModal from "@pixano/core/src/WarningModal.svelte";
   import type { Mask, BBox, ViewData } from "./interfaces";
 
   // Exports

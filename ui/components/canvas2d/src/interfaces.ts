@@ -14,10 +14,7 @@ http://www.cecill.info
 */
 
 // Imports
-import type {
-  MaskRLE,
-  MaskSVG,
-} from "../../../components/models/src/interactive_image_segmentation";
+import type { MaskRLE, MaskSVG } from "@pixano/models";
 
 // Exports
 export interface ViewData {

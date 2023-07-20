@@ -23,11 +23,11 @@
     svg_open,
     svg_close,
     svg_delete,
-  } from "../../../../components/core/src/icons";
+  } from "@pixano/core/src/icons";
   import type {
     AnnotationsLabels,
     DatabaseFeats,
-  } from "../../../../components/canvas2d/src/interfaces";
+  } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
   export let annotations: Array<AnnotationsLabels>;

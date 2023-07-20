@@ -14,8 +14,8 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import AnnotationPanel from "../../../../../apps/annotator/src/lib/AnnotationPanel.svelte";
-import { getColor } from "../../../../../components/core/src/utils";
+import { AnnotationPanel } from "@pixano/annotator";
+import { getColor } from "@pixano/core/src/utils";
 
 const meta = {
   title: "Applications/Annotator/AnnotationPanel",

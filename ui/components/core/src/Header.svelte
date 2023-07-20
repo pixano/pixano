@@ -20,8 +20,7 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import { currentPage } from "../../../apps/explorer/src/stores";
-  import type { ItemData } from "../../canvas2d/src/interfaces";
+  import type { ItemData } from "@pixano/canvas2d/src/interfaces";
   import { svg_open, svg_save, svg_quit } from "./icons";
 
   // Exports
@@ -32,18 +31,16 @@
 
   const dispatch = createEventDispatcher();
 
-  function unselectDataset() {
-    selectedDataset = null;
-    selectedItem = null;
-    currentPage.update((n) => 1);
+  function handleUnselectDataset() {
+    dispatch("unselectDataset");
   }
 
   function handleSaveClick() {
-    dispatch("saveclick");
+    dispatch("saveClick");
   }
 
   function handleCloseClick() {
-    dispatch("closeclick");
+    dispatch("closeClick");
   }
 </script>
 
@@ -60,7 +57,7 @@
       <button
         class="flex items-center space-x-2
         hover:text-rose-600 dark:hover:text-rose-500"
-        on:click={unselectDataset}
+        on:click={handleUnselectDataset}
       >
         <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
         <span class="transition-colors"> Pixano {app} </span>
@@ -119,7 +116,7 @@
       {/if}
       <button
         class="w-30 pr-4 flex justify-end"
-        on:click={selectedItem ? handleCloseClick : unselectDataset}
+        on:click={selectedItem ? handleCloseClick : handleUnselectDataset}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

@@ -17,16 +17,12 @@
   // Imports
   import { onMount } from "svelte";
 
-  import Header from "../../../components/core/src/Header.svelte";
-  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
-  import Library from "../../../components/core/src/Library.svelte";
-  import {
-    convertSegmentsToSVG,
-    generatePolygonSegments,
-  } from "../../../components/models/src/mask_utils";
+  import { Header, Library, LoadingLibrary } from "@pixano/core";
+  import { mask_utils } from "@pixano/models";
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
+  import { currentPage } from "./stores";
 
   import type {
     ItemData,
@@ -35,7 +31,7 @@
     AnnotationsLabels,
     AnnLabel,
     ViewData,
-  } from "../../../components/canvas2d/src/interfaces";
+  } from "@pixano/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;
@@ -97,8 +93,8 @@
         if (mask_rle) {
           const rle = mask_rle["counts"];
           const size = mask_rle["size"];
-          const maskPolygons = generatePolygonSegments(rle, size[0]);
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
+          const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
+          const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
             viewId: viewId,
@@ -160,6 +156,12 @@
     console.log("selectItem Done", masks, bboxes, annotations);
   }
 
+  function unselectDataset() {
+    selectedDataset = null;
+    selectedItem = null;
+    currentPage.update((n) => 1);
+  }
+
   function unselectItem() {
     selectedItem = null;
     masks = [];
@@ -177,7 +179,8 @@
   bind:selectedDataset
   bind:selectedItem
   saveFlag={false}
-  on:closeclick={unselectItem}
+  on:closeClick={unselectItem}
+  on:unselectDataset={unselectDataset}
 />
 <div
   class="pt-20 h-screen w-screen text-zinc-800 dark:text-zinc-300 dark:bg-zinc-800"

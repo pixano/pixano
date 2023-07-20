@@ -21,7 +21,7 @@ import {
   svg_rectangle,
   svg_delete,
   svg_pan,
-} from "../../core/src/icons";
+} from "@pixano/core/src/icons";
 
 // Exports
 export enum ToolType {

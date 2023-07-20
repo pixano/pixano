@@ -17,7 +17,7 @@
   // Imports
   import { onMount, beforeUpdate } from "svelte";
   import { createEventDispatcher } from "svelte";
-  import type { AnnotationsLabels } from "../../../../components/canvas2d/src/interfaces";
+  import type { AnnotationsLabels } from "@pixano/canvas2d/src/interfaces";
   import * as Utils from "@pixano/core/src/utils";
 
   // Exports

@@ -14,5 +14,15 @@ http://www.cecill.info
 */
 
 // Exports
-export type { InteractiveImageSegmenter } from "./interactive_image_segmentation";
+export type {
+  Box,
+  InteractiveImageSegmenter,
+  InteractiveImageSegmenterInput,
+  InteractiveImageSegmenterOutput,
+  LabeledClick,
+  MaskRLE,
+  MaskSVG,
+} from "./interactive_image_segmentation";
+export * as mask_utils from "./mask_utils";
+export * as npy from "./npy";
 export { SAM } from "./Sam";

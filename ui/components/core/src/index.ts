@@ -14,6 +14,16 @@ http://www.cecill.info
 */
 
 // Exports
+export { default as Header } from "./Header.svelte";
+// Library
+export { default as DatasetPreviewCard } from "./DatasetPreviewCard.svelte";
+export { default as Library } from "./Library.svelte";
+export { default as LoadingLibrary } from "./LoadingLibrary.svelte";
+// Modals
+export { default as ConfirmModal } from "./ConfirmModal.svelte";
+export { default as PromptModal } from "./PromptModal.svelte";
+export { default as WarningModal } from "./WarningModal.svelte";
+// Exploration
+export { default as Histogram } from "./Histogram.svelte";
 export { default as Table } from "./Table.svelte";
 export { default as TableCell } from "./TableCell.svelte";
-export { default as Histogram } from "./Histogram.svelte";

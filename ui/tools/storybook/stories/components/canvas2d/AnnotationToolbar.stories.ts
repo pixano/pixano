@@ -14,14 +14,14 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import AnnotationToolbar from "../../../../../components/canvas2d/src/AnnotationToolbar.svelte";
+import AnnotationToolbar from "@pixano/canvas2d/src/AnnotationToolbar.svelte";
 import {
   ToolType,
   createLabeledPointTool,
   createMultiModalTool,
   createRectangleTool,
   createPanTool,
-} from "../../../../../components/canvas2d/src/tools";
+} from "@pixano/canvas2d/src/tools";
 
 const meta = {
   title: "Components/Canvas2D/AnnotationToolbar",

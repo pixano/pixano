@@ -18,18 +18,15 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import ConfirmModal from "../../../components/core/src/ConfirmModal.svelte";
-  import Header from "../../../components/core/src/Header.svelte";
-  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
-  import Library from "../../../components/core/src/Library.svelte";
-  import PromptModal from "../../../components/core/src/PromptModal.svelte";
-  import WarningModal from "../../../components/core/src/WarningModal.svelte";
-  import * as npyjs from "../../../components/models/src/npy";
-  import { SAM } from "../../../components/models/src/Sam";
   import {
-    convertSegmentsToSVG,
-    generatePolygonSegments,
-  } from "../../../components/models/src/mask_utils";
+    ConfirmModal,
+    Header,
+    LoadingLibrary,
+    Library,
+    PromptModal,
+    WarningModal,
+  } from "@pixano/core";
+  import { SAM, npy, mask_utils } from "@pixano/models";
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import * as api from "./lib/api";
   import { interactiveSegmenterModel } from "./stores";
@@ -41,7 +38,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../components/canvas2d/src/interfaces";
+  } from "@pixano/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;
@@ -86,6 +83,11 @@
         break;
       }
     }
+  }
+
+  function unselectDataset() {
+    selectedDataset = null;
+    selectedItem = null;
   }
 
   async function selectItem(data) {
@@ -142,8 +144,8 @@
         if (mask_rle) {
           const rle = mask_rle["counts"];
           const size = mask_rle["size"];
-          const maskPolygons = generatePolygonSegments(rle, size[0]);
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
+          const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
+          const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
             viewId: viewId,
@@ -196,7 +198,7 @@
       );
       let selectedItemEmbedding = null;
       try {
-        const embeddingArr = npyjs.parse(embeddingArrByte);
+        const embeddingArr = npy.parse(embeddingArrByte);
         selectedItemEmbedding = new ort.Tensor(
           "float32",
           embeddingArr.data,
@@ -320,8 +322,9 @@
   bind:selectedDataset
   bind:selectedItem
   {saveFlag}
-  on:saveclick={handleSaveClick}
-  on:closeclick={handleUnselectItem}
+  on:saveClick={handleSaveClick}
+  on:closeClick={handleUnselectItem}
+  on:unselectDataset={unselectDataset}
 />
 <div
   class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"

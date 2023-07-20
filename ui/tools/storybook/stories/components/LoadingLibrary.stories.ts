@@ -14,7 +14,7 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import LoadingLibrary from "../../../../components/core/src/LoadingLibrary.svelte";
+import { LoadingLibrary } from "@pixano/core";
 
 const meta = {
   title: "Components/LoadingLibrary",

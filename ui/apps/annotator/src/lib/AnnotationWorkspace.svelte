@@ -17,9 +17,7 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import AnnotationToolbar from "../../../../components/canvas2d/src/AnnotationToolbar.svelte";
-  import LabelToolbar from "../../../../components/canvas2d/src/LabelToolbar.svelte";
-  import Canvas2D from "../../../../components/canvas2d/src/Canvas2D.svelte";
+  import { AnnotationToolbar, Canvas2D, LabelToolbar } from "@pixano/canvas2d";
   import {
     createLabeledPointTool,
     createMultiModalTool,
@@ -28,14 +26,13 @@
     createPanTool,
     type Tool,
     ToolType,
-  } from "../../../../components/canvas2d/src/tools";
-  import ConfirmModal from "../../../../components/core/src/ConfirmModal.svelte";
-  import WarningModal from "../../../../components/core/src/WarningModal.svelte";
-  import { getColor } from "../../../../components/core/src/utils";
+  } from "@pixano/canvas2d/src/tools";
+  import { ConfirmModal, WarningModal } from "@pixano/core";
+  import { getColor } from "@pixano/core/src/utils";
   import { interactiveSegmenterModel } from "../stores";
   import AnnotationPanel from "./AnnotationPanel.svelte";
 
-  import type { InteractiveImageSegmenterOutput } from "../../../../components/models/src/interactive_image_segmentation";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
     ItemData,
     Mask,
@@ -43,7 +40,7 @@
     AnnLabel,
     ViewData,
     DatabaseFeats,
-  } from "../../../../components/canvas2d/src/interfaces";
+  } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
   export let itemData: ItemData;
