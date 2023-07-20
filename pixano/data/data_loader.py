@@ -13,6 +13,7 @@
 
 import json
 import random
+import shutil
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterator
@@ -438,11 +439,13 @@ class DataLoader(ABC):
 
         # Move media directories if portable
         if portable:
-            for field in tqdm(self.schema, desc=f"Moving media directories"):
+            for field in tqdm(self.schema, desc="Moving media directories"):
                 if arrow_types.is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
-                    input_dirs[field.name].rename(field_dir)
+                    shutil.copytree(
+                        input_dirs[field.name], field_dir, dirs_exist_ok=True
+                    )
 
         # Create stats
         self.create_stats(import_dir)
