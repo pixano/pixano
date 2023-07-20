@@ -15,10 +15,11 @@
    */
 
   // Imports
-  import { onMount, beforeUpdate } from "svelte";
-  import { createEventDispatcher } from "svelte";
+  import { beforeUpdate, createEventDispatcher, onMount } from "svelte";
+
+  import { getColor } from "@pixano/core/src/utils";
+
   import type { AnnotationsLabels } from "@pixano/canvas2d/src/interfaces";
-  import * as Utils from "@pixano/core/src/utils";
 
   // Exports
   export let features = null;
@@ -129,7 +130,7 @@
   beforeUpdate(() => {
     // If the image has changed
     if (features.id != oldID) {
-      categoryColor = Utils.getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
 
       // Calculate new grid size
       let viewsCount = Object.keys(features.views).length;

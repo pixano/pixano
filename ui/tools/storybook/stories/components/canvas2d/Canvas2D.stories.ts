@@ -19,6 +19,7 @@ import {
   createLabeledPointTool,
   createRectangleTool,
 } from "@pixano/canvas2d/src/tools";
+
 import * as mocks from "./mocks";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction

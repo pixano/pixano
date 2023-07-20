@@ -14,14 +14,13 @@
    * http://www.cecill.info
    */
 
-  // Assets
-  import pixanoLogo from "./assets/pixano.png";
-
   // Imports
   import { createEventDispatcher } from "svelte";
 
+  import pixanoLogo from "./assets/pixano.png";
+  import { svg_open, svg_quit, svg_save } from "./icons";
+
   import type { ItemData } from "@pixano/canvas2d/src/interfaces";
-  import { svg_open, svg_save, svg_quit } from "./icons";
 
   // Exports
   export let app = "";

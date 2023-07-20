@@ -14,10 +14,11 @@
  */
 
 // Imports
-import {
-  mask_utils,
-  type InteractiveImageSegmenter,
-  type InteractiveImageSegmenterInput,
+import { mask_utils } from "@pixano/models";
+
+import type {
+  InteractiveImageSegmenter,
+  InteractiveImageSegmenterInput,
 } from "@pixano/models";
 
 function flattenArray(image: number[][]): number[] {

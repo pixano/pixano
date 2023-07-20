@@ -15,12 +15,12 @@
 
 // Imports
 import {
-  svg_point,
-  svg_point_plus,
-  svg_point_minus,
-  svg_rectangle,
   svg_delete,
   svg_pan,
+  svg_point,
+  svg_point_minus,
+  svg_point_plus,
+  svg_rectangle,
 } from "@pixano/core/src/icons";
 
 // Exports

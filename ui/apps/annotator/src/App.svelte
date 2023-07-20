@@ -21,12 +21,13 @@
   import {
     ConfirmModal,
     Header,
-    LoadingLibrary,
     Library,
+    LoadingLibrary,
     PromptModal,
     WarningModal,
   } from "@pixano/core";
-  import { SAM, npy, mask_utils } from "@pixano/models";
+  import { mask_utils, npy, SAM } from "@pixano/models";
+
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import * as api from "./lib/api";
   import { interactiveSegmenterModel } from "./stores";

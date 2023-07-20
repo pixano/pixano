@@ -16,9 +16,11 @@
 
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
-  import { getDatasetItems, getDatasetStats } from "./api";
-  import { Table, Histogram } from "@pixano/core";
+
+  import { Histogram, Table } from "@pixano/core";
+
   import { currentPage } from "../stores";
+  import { getDatasetItems, getDatasetStats } from "./api";
 
   // Exports
   export let dataset = null;

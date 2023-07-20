@@ -7,7 +7,8 @@
   "scripts": {
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "test": "vitest"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
@@ -16,7 +17,8 @@
     "svelte-check": "^3.0.0",
     "tslib": "^2.5.0",
     "typescript": "^5.0.0",
-    "vite": "^4.3.0"
+    "vite": "^4.3.0",
+    "vitest": "^0.30.0"
   },
   "dependencies": {
     "onnxruntime-node": "^1.15.0",

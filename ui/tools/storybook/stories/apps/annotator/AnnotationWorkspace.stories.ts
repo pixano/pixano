@@ -15,8 +15,9 @@
 
 import type { Meta, StoryObj } from "@storybook/svelte";
 import { AnnotationWorkspace } from "@pixano/annotator";
-import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
 import { interactiveSegmenterModel } from "@pixano/annotator/src/stores";
+
+import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
 
 const meta = {
   title: "Applications/Annotator/AnnotationWorkspace",

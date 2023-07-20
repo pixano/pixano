@@ -14,13 +14,14 @@
  */
 
 // Imports
-import { readFile } from "fs/promises";
 import fs from "fs";
-import { describe, test, expect } from "vitest";
-import { SAM } from "../src/Sam";
-import { LabeledClick } from "../src/interactive_image_segmentation";
+import { readFile } from "fs/promises";
 import * as ort from "onnxruntime-node";
+import { describe, expect, test } from "vitest";
+
+import { LabeledClick } from "../src/interactive_image_segmentation";
 import * as npyjs from "../src/npy";
+import { SAM } from "../src/Sam";
 
 // Target values are generated from the sam python notebook with the following parameters
 const W: number = 768;

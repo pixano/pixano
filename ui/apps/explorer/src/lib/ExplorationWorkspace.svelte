@@ -20,6 +20,7 @@
   import { Canvas2D } from "@pixano/canvas2d";
   import { createPanTool } from "@pixano/canvas2d/src/tools";
   import { getColor } from "@pixano/core/src/utils";
+
   import ExplorationPanel from "./ExplorationPanel.svelte";
 
   import type {

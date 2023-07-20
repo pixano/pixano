@@ -19,6 +19,7 @@
 
   import { Header, Library, LoadingLibrary } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
+
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";

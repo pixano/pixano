@@ -16,6 +16,12 @@
 // Imports
 import * as ort from "onnxruntime-web";
 
+import {
+  convertSegmentsToSVG,
+  generatePolygonSegments,
+  maskDataToFortranArrayToRle,
+} from "./mask_utils";
+
 import type {
   Box,
   InteractiveImageSegmenter,
@@ -24,11 +30,6 @@ import type {
   LabeledPointsTensor,
   SegmentationResult,
 } from "./interactive_image_segmentation";
-import {
-  convertSegmentsToSVG,
-  generatePolygonSegments,
-  maskDataToFortranArrayToRle,
-} from "./mask_utils";
 
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";

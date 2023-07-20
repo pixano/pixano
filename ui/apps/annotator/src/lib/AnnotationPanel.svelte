@@ -18,12 +18,13 @@
   import { afterUpdate, createEventDispatcher } from "svelte";
 
   import {
-    svg_hide,
-    svg_show,
-    svg_open,
     svg_close,
     svg_delete,
+    svg_hide,
+    svg_open,
+    svg_show,
   } from "@pixano/core/src/icons";
+
   import type {
     AnnotationsLabels,
     DatabaseFeats,

@@ -16,12 +16,14 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import { ToolType } from "./tools";
+
   import {
-    svg_point_plus,
     svg_point_minus,
+    svg_point_plus,
     svg_validate,
   } from "@pixano/core/src/icons";
+
+  import { ToolType } from "./tools";
 
   // Exports
   export let className;

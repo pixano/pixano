@@ -16,7 +16,9 @@
 
   // Imports
   import { createEventDispatcher } from "svelte/internal";
+
   import TableCell from "./TableCell.svelte";
+
   import type { CellData } from "./cell_types";
 
   // Exports

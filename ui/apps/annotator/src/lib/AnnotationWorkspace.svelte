@@ -19,20 +19,19 @@
 
   import { AnnotationToolbar, Canvas2D, LabelToolbar } from "@pixano/canvas2d";
   import {
+    createDeleteTool,
     createLabeledPointTool,
     createMultiModalTool,
-    createRectangleTool,
-    createDeleteTool,
     createPanTool,
-    type Tool,
+    createRectangleTool,
     ToolType,
   } from "@pixano/canvas2d/src/tools";
   import { ConfirmModal, WarningModal } from "@pixano/core";
   import { getColor } from "@pixano/core/src/utils";
+
   import { interactiveSegmenterModel } from "../stores";
   import AnnotationPanel from "./AnnotationPanel.svelte";
 
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
     ItemData,
     Mask,
@@ -41,6 +40,9 @@
     ViewData,
     DatabaseFeats,
   } from "@pixano/canvas2d/src/interfaces";
+  import type { Tool } from "@pixano/canvas2d/src/tools";
+
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
   export let itemData: ItemData;

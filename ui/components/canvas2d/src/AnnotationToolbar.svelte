@@ -15,7 +15,7 @@
    */
 
   // Imports
-  import { type Tool } from "./tools";
+  import type { Tool } from "./tools";
 
   // Exports
   export let tools_lists: Array<Array<Tool>> = [];

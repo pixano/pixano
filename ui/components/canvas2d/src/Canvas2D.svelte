@@ -20,7 +20,10 @@
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
+  import { WarningModal } from "@pixano/core";
+
   import { ToolType } from "./tools";
+
   import type {
     Tool,
     LabeledPointTool,
@@ -28,13 +31,11 @@
     DeleteTool,
     PanTool,
   } from "./tools";
-
   import type {
     LabeledClick,
     Box,
     InteractiveImageSegmenterOutput,
   } from "@pixano/models";
-  import WarningModal from "@pixano/core/src/WarningModal.svelte";
   import type { Mask, BBox, ViewData } from "./interfaces";
 
   // Exports

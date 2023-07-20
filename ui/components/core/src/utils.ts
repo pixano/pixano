@@ -14,8 +14,8 @@
  */
 
 // Imports
-import { schemeSet3 } from "d3-scale-chromatic";
 import { scaleOrdinal } from "d3";
+import { schemeSet3 } from "d3-scale-chromatic";
 
 // Exports
 /**

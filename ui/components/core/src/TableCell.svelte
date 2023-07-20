@@ -15,10 +15,11 @@
    */
 
   // Imports
+  import HistogramCell from "./TableCells/HistogramCell.svelte";
+  import ImageCell from "./TableCells/ImageCell.svelte";
   import NumberCell from "./TableCells/NumberCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
-  import ImageCell from "./TableCells/ImageCell.svelte";
-  import HistogramCell from "./TableCells/HistogramCell.svelte";
+
   import type { CellData } from "./cell_types";
 
   // Exports
