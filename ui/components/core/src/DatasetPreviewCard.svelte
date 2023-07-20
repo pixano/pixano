@@ -28,9 +28,8 @@
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div
-  class="w-64 h-80 m-4 flex flex-col rounded-md cursor-pointer transition-all hover:scale-110
+<button
+  class="w-64 h-80 m-4 flex flex-col rounded-md transition-all hover:scale-110 text-left
   border border-zinc-300 dark:border-zinc-500"
   on:click={handleClick}
 >
@@ -71,4 +70,4 @@
       {btn_label}
     </button>
   </div>
-</div>
+</button>

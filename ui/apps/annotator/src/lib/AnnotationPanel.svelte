@@ -113,7 +113,7 @@
             num_objs += ann.items.length;
           }
         }
-        let vl = view_list.find(v => v.view_name == viewId);
+        let vl = view_list.find((v) => v.view_name == viewId);
         if (vl) {
           vl.num_objs = num_objs;
           //hack for svelte refresh
@@ -147,7 +147,6 @@
   });
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
   class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
     bg-white dark:bg-zinc-800
@@ -206,8 +205,8 @@
                   />
                 </svg>
               </button>
-              <div
-                class="flex grow items-center space-x-1 cursor-pointer"
+              <button
+                class="flex grow items-center space-x-1 text-left"
                 on:click={() => (view["opened"] = !view["opened"])}
               >
                 <svg
@@ -235,7 +234,7 @@
                 >
                   {view.num_objs}
                 </span>
-              </div>
+              </button>
             </div>
           {/if}
           {#each annotations as group}
@@ -265,8 +264,8 @@
                       />
                     </svg>
                   </button>
-                  <div
-                    class="flex grow items-center space-x-1 cursor-pointer"
+                  <button
+                    class="flex grow items-center space-x-1 text-left"
                     on:click={() => (group["opened"] = !group["opened"])}
                   >
                     <svg
@@ -298,7 +297,7 @@
                     >
                       {group.items.length}
                     </span>
-                  </div>
+                  </button>
                 </div>
                 <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
                   {#each group.items as item, index}
@@ -370,8 +369,9 @@
       on:scroll={handleDatabaseScroll}
     >
       {#each d_data as data, i}
-        <div
-          class="p-2 flex flex-col rounded cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
+        <button
+          class="flex p-1 flex-col rounded
+          hover:bg-zinc-100 dark:hover:bg-zinc-700"
           on:click={() => selectItem(data)}
         >
           <div class="flex flex-row">
@@ -379,12 +379,12 @@
               <img
                 src={view.img}
                 alt="#{view}-#{i}"
-                class="w-24 h-24 object-cover rounded"
+                class="w-24 h-24 p-1 object-cover rounded"
               />
             {/each}
           </div>
-          <span class="w-24 mt-2 text-xs font-semibold">{data.id}</span>
-        </div>
+          <span class="text-xs text-center font-semibold">{data.id}</span>
+        </button>
       {/each}
     </div>
   </div>

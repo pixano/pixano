@@ -56,7 +56,6 @@
     border-zinc-300 dark:border-zinc-500"
   >
     <!-- Logo & app name -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div class="flex items-center grow space-x-2 font-bold text-3xl">
       <button
         class="flex items-center space-x-2

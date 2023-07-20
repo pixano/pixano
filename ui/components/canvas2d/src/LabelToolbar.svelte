@@ -144,7 +144,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="h-10 w-10 p-1 rounded border border-transparent cursor-pointer text-zinc-50
+      class="h-10 w-10 p-1 rounded border border-transparent text-zinc-50
       bg-rose-500 dark:bg-rose-600
       hover:bg-rose-600 dark:hover:bg-rose-500"
     >

@@ -298,7 +298,6 @@
   });
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   <Canvas2D
     {embeddings}

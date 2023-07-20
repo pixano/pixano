@@ -27,8 +27,6 @@
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-
 <div class="absolute top-1/2 -translate-y-1/2 left-6">
   {#each tools_lists as tools}
     <div
