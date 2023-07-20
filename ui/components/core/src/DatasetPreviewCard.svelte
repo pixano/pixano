@@ -34,11 +34,11 @@
   on:click={handleClick}
 >
   <!-- Dataset Infos -->
-  <div class="h-1/5 px-4 flex flex-col justify-center">
+  <div class="w-full h-1/5 px-4 flex flex-col justify-center">
     <div class="group">
       <h3
         class="text-lg font-heavy truncate"
-        title="{dataset.name} - {dataset.description}"
+        title="{dataset.name}&#10;&#13;{dataset.description}"
       >
         {dataset.name}
       </h3>
