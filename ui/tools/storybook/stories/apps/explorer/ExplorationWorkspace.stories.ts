@@ -14,7 +14,7 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import ExplorationWorkspace from "../../../../../apps/explorer/src/lib/ExplorationWorkspace.svelte";
+import { ExplorationWorkspace } from "@pixano/explorer";
 
 const meta = {
   title: "Applications/Explorer/ExplorationWorkspace",

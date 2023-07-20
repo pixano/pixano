@@ -14,9 +14,9 @@ http://www.cecill.info
 */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import AnnotationWorkspace from "../../../../../apps/annotator/src/lib/AnnotationWorkspace.svelte";
+import { AnnotationWorkspace } from "@pixano/annotator";
 import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
-import { interactiveSegmenterModel } from "../../../../../apps/annotator/src/stores";
+import { interactiveSegmenterModel } from "@pixano/annotator/src/stores";
 
 const meta = {
   title: "Applications/Annotator/AnnotationWorkspace",
