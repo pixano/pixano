@@ -14,7 +14,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Canvas2D from "@pixano/canvas2d/src/Canvas2D.svelte";
+import { Canvas2D } from "@pixano/canvas2d";
 import {
   createLabeledPointTool,
   createRectangleTool,

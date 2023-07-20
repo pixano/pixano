@@ -14,7 +14,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import AnnotationToolbar from "@pixano/canvas2d/src/AnnotationToolbar.svelte";
+import { AnnotationToolbar } from "@pixano/canvas2d";
 import {
   ToolType,
   createLabeledPointTool,
