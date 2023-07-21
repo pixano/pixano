@@ -22,7 +22,6 @@
 
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
-  import { datasetPage } from "./stores";
 
   import type {
     ItemData,
@@ -36,7 +35,10 @@
   // Dataset navigation
   let datasets = null;
   let selectedDataset = null;
+  let currentPage = 1;
+
   let selectedItem: ItemData = null;
+
   let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationCategory> = [];
@@ -153,7 +155,7 @@
   function handleUnselectDataset() {
     selectedDataset = null;
     selectedItem = null;
-    datasetPage.update((n) => 1);
+    currentPage = 1;
   }
 
   function handleUnselectItem() {
@@ -191,7 +193,11 @@
           on:unselectItem={handleUnselectItem}
         />
       {:else}
-        <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
+        <DatasetExplorer
+          {selectedDataset}
+          {currentPage}
+          on:selectItem={handleSelectItem}
+        />
       {/if}
     {:else}
       <Library

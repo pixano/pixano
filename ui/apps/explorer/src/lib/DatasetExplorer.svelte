@@ -19,22 +19,16 @@
 
   import { api, Histogram, Table } from "@pixano/core";
 
-  import { datasetPage } from "../stores";
-
   import type { DatasetItems } from "@pixano/core/src/interfaces";
 
   // Exports
   export let selectedDataset = null;
+  export let currentPage: number;
 
   // Page navigation
   let itemsPerPage: number = 100;
   let datasetStats = null;
   let datasetItems: DatasetItems = null;
-  let currentPage: number;
-
-  datasetPage.subscribe((value) => {
-    currentPage = value;
-  });
 
   const dispatch = createEventDispatcher();
 
@@ -44,7 +38,7 @@
 
   async function handleGoToFirstPage() {
     if (currentPage > 1) {
-      datasetPage.update((n) => 1);
+      currentPage = 1;
       datasetItems = null;
       datasetItems = await api.getDatasetItems(
         selectedDataset.id,
@@ -56,7 +50,7 @@
 
   async function handleGoToPreviousPage() {
     if (currentPage > 1) {
-      datasetPage.update((n) => n - 1);
+      currentPage -= 1;
       datasetItems = null;
       datasetItems = await api.getDatasetItems(
         selectedDataset.id,
@@ -68,7 +62,7 @@
 
   async function handleGoToNextPage() {
     if (datasetItems.total > currentPage * itemsPerPage) {
-      datasetPage.update((n) => n + 1);
+      currentPage += 1;
       datasetItems = null;
       datasetItems = await api.getDatasetItems(
         selectedDataset.id,
@@ -80,7 +74,7 @@
 
   async function handleGoToLastPage() {
     if (datasetItems.total > currentPage * itemsPerPage) {
-      datasetPage.update((n) => Math.ceil(datasetItems.total / itemsPerPage));
+      currentPage = Math.ceil(datasetItems.total / itemsPerPage);
       datasetItems = null;
       datasetItems = await api.getDatasetItems(
         selectedDataset.id,

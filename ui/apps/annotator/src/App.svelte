@@ -89,6 +89,7 @@
   function handleUnselectDataset() {
     selectedDataset = null;
     selectedItem = null;
+    currentPage = 1;
   }
 
   async function handleSelectItem(data) {
