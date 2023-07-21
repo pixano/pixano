@@ -99,6 +99,7 @@
       selectedDataset = null;
       currentPage = 1;
     }
+  }
 
   async function handleSelectItem(id: string) {
     console.log("App.handleSelectItem");
