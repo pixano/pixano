@@ -242,11 +242,6 @@
     return viewId;
   }
 
-  function selectTool(tool: Tool) {
-    // Prevent re-selecting the active tool
-    if (tool !== selectedTool) selectedTool = tool;
-  }
-
   // ********** BOUNDING BOXES AND MASKS ********** //
 
   function addBboxes(viewId, itemId) {
@@ -668,7 +663,7 @@
         stage.container().style.cursor = tool.cursor;
       }
       // deactivate drag on input points
-      toggleInputDrag(false);
+      toggleInputPointDrag(false);
     }
   }
 
@@ -688,7 +683,7 @@
         stage.container().style.cursor = tool.cursor;
       }
       // activate drag on input points
-      toggleInputDrag(true);
+      toggleInputPointDrag(true);
     }
   }
 
@@ -741,7 +736,7 @@
     return points;
   }
 
-  function toggleInputDrag(toggle: boolean) {
+  function toggleInputPointDrag(toggle: boolean) {
     const input_groups = stage.find("#input");
     for (let input_group of input_groups) {
       for (let node of (input_group as Konva.Group).children) {
@@ -814,7 +809,7 @@
         stage.container().style.cursor = tool.cursor;
       }
       // activate drag on input points
-      toggleInputDrag(true);
+      toggleInputPointDrag(true);
     }
   }
 
@@ -938,6 +933,8 @@
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
+      // deactivate drag on input points
+      toggleInputPointDrag(false);
     }
   }
 
