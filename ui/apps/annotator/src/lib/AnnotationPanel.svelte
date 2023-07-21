@@ -22,13 +22,13 @@
   import type {
     AnnotationLabel,
     AnnotationCategory,
-    DatasetItems,
+    Dataset,
     DatasetItemFeature,
   } from "@pixano/core";
 
   // Exports
+  export let selectedDataset: Dataset;
   export let annotations: Array<AnnotationCategory>;
-  export let datasetItems: DatasetItems = null;
   export let currentPage: number;
   export let categoryColor = null;
 
@@ -90,7 +90,7 @@
   }
 
   async function handleDatasetScroll(event) {
-    if (currentPage * 100 < datasetItems.total) {
+    if (currentPage * 100 < selectedDataset.page.total) {
       const totalContentHeight =
         event.target.scrollHeight - event.target.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
@@ -362,7 +362,7 @@
         : 'hidden'}"
       on:scroll={handleDatasetScroll}
     >
-      {#each datasetItems.items as item, i}
+      {#each selectedDataset.page.items as item, i}
         <button
           class="flex p-1 flex-col rounded
           hover:bg-zinc-100 dark:hover:bg-zinc-700"

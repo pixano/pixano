@@ -29,62 +29,38 @@ type Story = StoryObj<typeof meta>;
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const Base: Story = {
   args: {
-    featureNames: [
-      { name: "id", type: "number" },
-      { name: "image", type: "image" },
-      { name: "description", type: "text" },
-      { name: "graph", type: "histogram" },
-    ],
-    features: [
-      [
-        { dtype: "number", value: 10 },
-        {
-          dtype: "image",
-          value:
-            "http://farm4.staticflickr.com/3796/9478086045_6c5580fb62_z.jpg",
-        },
-        { dtype: "text", value: "A boat on a lake, with some swans." },
-        {
-          dtype: "histogram",
-          value: {
-            name: "categories",
-            type: "categorical",
-            histogram: [
-              { categories: "woman", counts: 838421, split: "train" },
-              { categories: "man", counts: 738421, split: "train" },
-              { categories: "car", counts: 19901, split: "train" },
-              { categories: "dog", counts: 300000, split: "train" },
-              { categories: "cat", counts: 150000, split: "train" },
-            ],
-          },
-        },
-      ],
-      [
-        { dtype: "number", value: 65 },
-        {
-          dtype: "image",
-          value:
-            "http://farm4.staticflickr.com/3284/5710807775_555410e5b1_z.jpg",
-        },
-        {
-          dtype: "text",
-          value: "An upside-down broccoli surrounded by glasses.",
-        },
-        {
-          dtype: "histogram",
-          value: {
-            name: "categories",
-            type: "categorical",
-            histogram: [
-              { categories: "woman", counts: 838421, split: "train" },
-              { categories: "man", counts: 738421, split: "train" },
-              { categories: "car", counts: 19901, split: "train" },
-              { categories: "dog", counts: 300000, split: "train" },
-              { categories: "cat", counts: 150000, split: "train" },
-            ],
-          },
-        },
-      ],
-    ],
+    selectedDataset: {
+      id: "euHS4xM5SSvQKAhmv3sFcp",
+      name: "Dataset",
+      description: "Dataset description",
+      num_elements: 4,
+      preview: "",
+      categories: [],
+      page: {
+        items: [
+          [
+            { name: "id", dtype: "text", value: "1" },
+            { name: "view1", dtype: "image", value: "img-01.jpg" },
+            { name: "view2", dtype: "image", value: "img-02.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "2" },
+            { name: "view1", dtype: "image", value: "img-03.jpg" },
+            { name: "view2", dtype: "image", value: "img-04.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "3" },
+            { name: "view1", dtype: "image", value: "img-05.jpg" },
+            { name: "view2", dtype: "image", value: "img-06.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "4" },
+            { name: "view1", dtype: "image", value: "img-07.jpg" },
+            { name: "view2", dtype: "image", value: "img-08.jpg" },
+          ],
+        ],
+        total: 4,
+      },
+    },
   },
 };

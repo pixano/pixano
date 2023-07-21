@@ -19,12 +19,12 @@
 
   import TableCell from "./TableCell.svelte";
 
-  import type { DatasetItemFeature, DatasetItems } from "./interfaces";
+  import type { Dataset, DatasetItemFeature } from "./interfaces";
 
   // Exports
-  export let datasetItems: DatasetItems;
+  export let selectedDataset: Dataset;
 
-  let featureNames = datasetItems.items[0].map((feature) => {
+  let featureNames = selectedDataset.page.items[0].map((feature) => {
     return { name: feature.name, type: feature.dtype };
   });
 
@@ -57,7 +57,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each datasetItems.items as item}
+      {#each selectedDataset.page.items as item}
         <tr
           class="cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
           on:click={() => {

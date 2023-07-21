@@ -33,6 +33,39 @@ let catCol = utils.getColor([1, 2]); // Define a color map for each category id
 
 export const Base: Story = {
   args: {
+    selectedDataset: {
+      id: "euHS4xM5SSvQKAhmv3sFcp",
+      name: "Dataset",
+      description: "Dataset description",
+      num_elements: 4,
+      preview: "",
+      categories: [],
+      page: {
+        items: [
+          [
+            { name: "id", dtype: "text", value: "1" },
+            { name: "view1", dtype: "image", value: "img-01.jpg" },
+            { name: "view2", dtype: "image", value: "img-02.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "2" },
+            { name: "view1", dtype: "image", value: "img-03.jpg" },
+            { name: "view2", dtype: "image", value: "img-04.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "3" },
+            { name: "view1", dtype: "image", value: "img-05.jpg" },
+            { name: "view2", dtype: "image", value: "img-06.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "4" },
+            { name: "view1", dtype: "image", value: "img-07.jpg" },
+            { name: "view2", dtype: "image", value: "img-08.jpg" },
+          ],
+        ],
+        total: 4,
+      },
+    },
     categoryColor: catCol,
     annotations: [
       {
@@ -88,31 +121,7 @@ export const Base: Story = {
         visible: true,
       },
     ],
-    datasetItems: {
-      items: [
-        [
-          { name: "id", dtype: "text", value: "1" },
-          { name: "view1", dtype: "image", value: "img-01.jpg" },
-          { name: "view2", dtype: "image", value: "img-02.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "2" },
-          { name: "view1", dtype: "image", value: "img-03.jpg" },
-          { name: "view2", dtype: "image", value: "img-04.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "3" },
-          { name: "view1", dtype: "image", value: "img-05.jpg" },
-          { name: "view2", dtype: "image", value: "img-06.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "4" },
-          { name: "view1", dtype: "image", value: "img-07.jpg" },
-          { name: "view2", dtype: "image", value: "img-08.jpg" },
-        ],
-      ],
-      total: 4,
-    },
+
     currentPage: 1,
   },
 };

@@ -29,7 +29,8 @@ type Story = StoryObj<typeof meta>;
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const Text: Story = {
   args: {
-    data: {
+    itemFeature: {
+      name: "text cell",
       dtype: "text",
       value: "This is a text cell.",
     },
@@ -38,7 +39,8 @@ export const Text: Story = {
 
 export const Number: Story = {
   args: {
-    data: {
+    itemFeature: {
+      name: "number cell",
       dtype: "number",
       value: 5.4,
     },
@@ -47,7 +49,8 @@ export const Number: Story = {
 
 export const Image: Story = {
   args: {
-    data: {
+    itemFeature: {
+      name: "image cell",
       dtype: "image",
       value: "http://farm4.staticflickr.com/3796/9478086045_6c5580fb62_z.jpg",
     },
@@ -56,7 +59,8 @@ export const Image: Story = {
 
 export const Histogram: Story = {
   args: {
-    data: {
+    itemFeature: {
+      name: "histogram cell",
       dtype: "histogram",
       value: {
         name: "categories",

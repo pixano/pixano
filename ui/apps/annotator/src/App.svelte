@@ -39,7 +39,6 @@
     AnnotationCategory,
     AnnotationLabel,
     ViewData,
-    DatasetItems,
   } from "@pixano/core";
 
   // Dataset navigation
@@ -57,7 +56,6 @@
   let annotations: Array<AnnotationCategory> = [];
   let classes = [];
   let itemDetails = null;
-  let datasetItems: DatasetItems = null;
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";
   let inputModelName: string;
@@ -78,7 +76,10 @@
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
     const start = Date.now();
-    datasetItems = await api.getDatasetItems(selectedDataset.id, currentPage);
+    selectedDataset.page = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
     console.log(
       "App.handleSelectDataset - api.getDatasetItems in",
       Date.now() - start,
@@ -86,7 +87,7 @@
     );
 
     // Select first item
-    const firstItemId = datasetItems.items[0].find((feature) => {
+    const firstItemId = selectedDataset.page.items[0].find((feature) => {
       return feature.name === "id";
     }).value;
     handleSelectItem(firstItemId);
@@ -298,7 +299,9 @@
     );
 
     if (new_dbImages) {
-      datasetItems.items = datasetItems.items.concat(new_dbImages.items);
+      selectedDataset.page.items = selectedDataset.page.items.concat(
+        new_dbImages.items
+      );
     } else {
       // End of dataset: reset last page
       currentPage = currentPage - 1;
@@ -352,12 +355,12 @@
   {#if datasets}
     {#if selectedItem}
       <AnnotationWorkspace
+        {selectedDataset}
         {selectedItem}
         {embeddings}
         bind:annotations
         bind:masks
         {classes}
-        {datasetItems}
         {currentPage}
         bind:saveFlag
         on:selectItem={(event) => handleSelectItem(event.detail.id)}

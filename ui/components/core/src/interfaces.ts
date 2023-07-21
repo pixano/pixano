@@ -78,7 +78,7 @@ export interface Dataset {
   num_elements: number;
   preview: string;
   categories: any;
-  items: Array<Array<DatasetItemFeature>>;
+  page: DatasetItems;
 }
 
 export interface MaskRLE {

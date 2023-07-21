@@ -35,6 +35,39 @@ stores.interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {
   args: {
+    selectedDataset: {
+      id: "euHS4xM5SSvQKAhmv3sFcp",
+      name: "Dataset",
+      description: "Dataset description",
+      num_elements: 4,
+      preview: "",
+      categories: [],
+      page: {
+        items: [
+          [
+            { name: "id", dtype: "text", value: "1" },
+            { name: "view1", dtype: "image", value: "img-01.jpg" },
+            { name: "view2", dtype: "image", value: "img-02.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "2" },
+            { name: "view1", dtype: "image", value: "img-03.jpg" },
+            { name: "view2", dtype: "image", value: "img-04.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "3" },
+            { name: "view1", dtype: "image", value: "img-05.jpg" },
+            { name: "view2", dtype: "image", value: "img-06.jpg" },
+          ],
+          [
+            { name: "id", dtype: "text", value: "4" },
+            { name: "view1", dtype: "image", value: "img-07.jpg" },
+            { name: "view2", dtype: "image", value: "img-08.jpg" },
+          ],
+        ],
+        total: 4,
+      },
+    },
     selectedItem: {
       dbName: "photos db",
       views: [
@@ -82,27 +115,7 @@ export const Base: Story = {
       { id: 1, name: "Cat" },
       { id: 11, name: "eye" },
     ],
-    datasetItems: {
-      items: [
-        [
-          { name: "id", dtype: "text", value: "id1111" },
-          { name: "view", dtype: "image", value: "img-01.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "id2684" },
-          { name: "view", dtype: "image", value: "img-02.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "id3333" },
-          { name: "view", dtype: "image", value: "img-03.jpg" },
-        ],
-        [
-          { name: "id", dtype: "text", value: "id4444" },
-          { name: "view", dtype: "image", value: "img-04.jpg" },
-        ],
-      ],
-      total: 4,
-    },
+
     currentPage: 1,
     saveFlag: false,
   },

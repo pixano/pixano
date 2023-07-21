@@ -34,19 +34,19 @@
     AnnotationCategory,
     AnnotationLabel,
     ViewData,
-    DatasetItems,
+    Dataset,
     DatasetItemFeature,
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
+  export let selectedDataset: Dataset;
   export let selectedItem: ItemData;
   export let embeddings = {};
   export let classes;
   export let annotations: Array<AnnotationCategory>;
   export let masks: Array<Mask>;
-  export let datasetItems: DatasetItems;
   export let currentPage: number;
   export let saveFlag: boolean;
 
@@ -284,8 +284,8 @@
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
       <AnnotationPanel
+        {selectedDataset}
         bind:annotations
-        {datasetItems}
         {currentPage}
         {categoryColor}
         on:selectItem={handleChangeSelectedItem}

@@ -19,16 +19,15 @@
 
   import { api, Histogram, Table } from "@pixano/core";
 
-  import type { DatasetItems } from "@pixano/core";
+  import type { Dataset } from "@pixano/core";
 
   // Exports
-  export let selectedDataset = null;
+  export let selectedDataset: Dataset;
   export let currentPage: number;
 
   // Page navigation
   let itemsPerPage: number = 100;
-  let datasetStats = null;
-  let datasetItems: DatasetItems = null;
+  let datasetStats: any;
 
   const dispatch = createEventDispatcher();
 
@@ -37,9 +36,9 @@
   }
 
   async function loadPage() {
-    datasetItems = null;
+    selectedDataset.page = null;
     const start = Date.now();
-    datasetItems = await api.getDatasetItems(
+    selectedDataset.page = await api.getDatasetItems(
       selectedDataset.id,
       currentPage,
       itemsPerPage
@@ -66,25 +65,21 @@
   }
 
   async function handleGoToNextPage() {
-    if (datasetItems.total > currentPage * itemsPerPage) {
+    if (selectedDataset.page.total > currentPage * itemsPerPage) {
       currentPage += 1;
       loadPage();
     }
   }
 
   async function handleGoToLastPage() {
-    if (datasetItems.total > currentPage * itemsPerPage) {
-      currentPage = Math.ceil(datasetItems.total / itemsPerPage);
+    if (selectedDataset.page.total > currentPage * itemsPerPage) {
+      currentPage = Math.ceil(selectedDataset.page.total / itemsPerPage);
       loadPage();
     }
   }
 
   onMount(async () => {
-    datasetItems = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage,
-      itemsPerPage
-    );
+    loadPage();
     datasetStats = await api.getDatasetStats(selectedDataset.id);
   });
 </script>
@@ -115,10 +110,10 @@
     </div>
 
     <div class="w-1/2 ml-4">
-      {#if datasetItems}
+      {#if selectedDataset.page}
         <!-- Items list -->
         <div class=" h-[85vh] z-0 w-full max-w-7xl">
-          <Table {datasetItems} on:selectItem={handleSelectItem} />
+          <Table {selectedDataset} on:selectItem={handleSelectItem} />
         </div>
 
         <!-- Page navigation -->
@@ -128,10 +123,10 @@
           <span class="mr-2">
             {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
               itemsPerPage * currentPage,
-              datasetItems.total
-            )} of {datasetItems.total}
+              selectedDataset.page.total
+            )} of {selectedDataset.page.total}
           </span>
-          {#if datasetItems.total > itemsPerPage}
+          {#if selectedDataset.page.total > itemsPerPage}
             <button
               class="py-1 px-2 border rounded-lg text-sm font-medium
               bg-white dark:bg-zinc-800
