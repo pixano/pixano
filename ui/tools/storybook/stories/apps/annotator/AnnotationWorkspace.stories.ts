@@ -36,8 +36,8 @@ interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {
   args: {
-    curPage: 1,
-    itemData: {
+    currentPage: 1,
+    selectedItem: {
       dbName: "photos db",
       views: [
         {
@@ -79,7 +79,7 @@ export const Base: Story = {
       },
     ],
     embedding: [], //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
-    dbImages: {
+    datasetItems: {
       items: [
         [
           { name: "id", dtype: "text", value: "id1111" },

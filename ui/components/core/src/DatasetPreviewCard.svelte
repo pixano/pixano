@@ -19,7 +19,7 @@
 
   // Exports
   export let dataset: any;
-  export let btn_label: string;
+  export let buttonLabel: string;
 
   const dispatch = createEventDispatcher();
 
@@ -67,7 +67,7 @@
       bg-rose-500 dark:bg-rose-600
       hover:bg-rose-600 dark:hover:bg-rose-500"
     >
-      {btn_label}
+      {buttonLabel}
     </button>
   </div>
 </button>

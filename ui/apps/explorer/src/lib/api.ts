@@ -14,17 +14,17 @@
  */
 
 // Exports
-/**
- * Get the list of all datasets in the library
- * @returns
- */
+
 export async function getDatasetsList() {
   let datasets = null;
 
   try {
     const response = await fetch("/datasets");
-
-    datasets = await response.json();
+    if (response.ok) {
+      datasets = await response.json();
+    } else {
+      console.log(response.status, response.statusText, await response.text());
+    }
   } catch (e) {
     console.log(e);
   }
@@ -32,11 +32,6 @@ export async function getDatasetsList() {
   return datasets;
 }
 
-/**
- * Get dataset items
- * @param datasetId
- * @returns
- */
 export async function getDatasetItems(
   datasetId: String,
   page: number = 1,
@@ -48,7 +43,11 @@ export async function getDatasetItems(
     const response = await fetch(
       `/datasets/${datasetId}/items?page=${page}&size=${size}`
     );
-    datasetItems = await response.json();
+    if (response.ok) {
+      datasetItems = await response.json();
+    } else {
+      console.log(response.status, response.statusText, await response.text());
+    }
   } catch (e) {
     console.log(e);
   }
@@ -56,22 +55,16 @@ export async function getDatasetItems(
   return datasetItems;
 }
 
-/**
- * Get dataset items
- * @param datasetId
- * @returns
- */
 export async function getDatasetStats(datasetId: String) {
   let datasetStats = null;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/stats`);
-    if (!response.ok) {
-      //TODO: error cases other than 404 ?
-      console.log("No stats");
-      return [];
+    if (response.ok) {
+      datasetStats = await response.json();
+    } else {
+      console.log(response.status, response.statusText, await response.text());
     }
-    datasetStats = await response.json();
   } catch (e) {
     console.log(e);
   }
@@ -80,13 +73,17 @@ export async function getDatasetStats(datasetId: String) {
 }
 
 export async function getItemDetails(datasetId: String, itemId: Number) {
-  let features = null;
+  let itemDetails = null;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
-    features = await response.json();
+    if (response.ok) {
+      itemDetails = await response.json();
+    } else {
+      console.log(response.status, response.statusText, await response.text());
+    }
   } catch (e) {
     console.log(e);
   }
 
-  return features;
+  return itemDetails;
 }

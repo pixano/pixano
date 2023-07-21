@@ -27,17 +27,20 @@
     ItemData,
     Mask,
     BBox,
-    AnnotationsLabels,
+    AnnotationCategory,
   } from "@pixano/canvas2d/src/interfaces";
+  import type { Tool } from "@pixano/canvas2d/src/tools";
 
   // Exports
-  export let itemData: ItemData;
+  export let selectedItem: ItemData;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let annotations: Array<AnnotationsLabels>;
+  export let annotations: Array<AnnotationCategory>;
   export let features = null;
 
   let panTool = createPanTool();
+  let selectedTool: Tool = panTool;
+
   let categoryColor;
 
   let allBBoxVisible = true;
@@ -52,10 +55,10 @@
    * get item by id from annotations
    */
   function getItemById(id: string) {
-    for (let cat of annotations) {
-      for (let item of cat.items) {
-        if (item.id === id) {
-          return item;
+    for (let category of annotations) {
+      for (let label of category.labels) {
+        if (label.id === id) {
+          return label;
         }
       }
     }
@@ -97,11 +100,11 @@
     if (annotations) {
       console.log(
         "ExplorationWorkspace - onMount",
-        itemData,
+        selectedItem,
         masks,
         annotations
       );
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -109,27 +112,26 @@
     // needed for annotations update
     if (annotations) {
       console.log("afterUpdate - annotations", annotations);
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
   });
 </script>
 
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
-  {#if itemData}
+  {#if selectedItem}
     <Canvas2D
-      itemId={itemData.id}
-      views={itemData.views}
-      selectedTool={panTool}
+      itemId={selectedItem.id}
+      views={selectedItem.views}
+      {selectedTool}
       {categoryColor}
-      prediction={null}
       {masks}
       {bboxes}
     />
     {#if annotations}
       <ExplorationPanel
         {features}
-        bind:annotations
+        {annotations}
         on:categoryVisibility={handleCategoryVisibility}
         on:bboxesVisibility={handleBboxesVisibility}
         on:maskOpacity={handleMaskOpacity}

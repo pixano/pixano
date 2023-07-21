@@ -43,10 +43,10 @@
   export let itemId: string;
   export let views: Array<ViewData>;
   export let masks: Array<Mask> | null;
-  export let bboxes: Array<BBox> | null;
+  export let bboxes: Array<BBox> = null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;
-  export let prediction: InteractiveImageSegmenterOutput | null;
+  export let prediction: InteractiveImageSegmenterOutput = null;
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;

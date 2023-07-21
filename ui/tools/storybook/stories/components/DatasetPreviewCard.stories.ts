@@ -38,6 +38,6 @@ export const Base: Story = {
       preview:
         "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
     },
-    btn_label: "Explore",
+    buttonLabel: "Explore",
   },
 };

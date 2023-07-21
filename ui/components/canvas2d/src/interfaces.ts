@@ -46,30 +46,30 @@ export interface BBox {
   visible: boolean;
 }
 
-export interface AnnLabel {
+export interface AnnotationLabel {
   id: string;
+  viewId: string;
   type: string; //bbox, mask, ...
   confidence?: number;
-  label: string;
-  visible: boolean;
   opacity: number;
-}
-
-export interface AnnotationsLabels {
-  viewId: string;
-  category_name: string;
-  category_id: number;
-  items: Array<AnnLabel>;
   visible: boolean;
 }
 
-export interface DBFeat {
+export interface AnnotationCategory {
+  id: number;
+  name: string;
+  viewId: string;
+  labels: Array<AnnotationLabel>;
+  visible: boolean;
+}
+
+export interface DatasetItemFeature {
   name: string;
   dtype: string;
   value: string;
 }
 
-export interface DatabaseFeats {
-  items: Array<Array<DBFeat>>;
+export interface DatasetItems {
+  items: Array<Array<DatasetItemFeature>>;
   total: number;
 }

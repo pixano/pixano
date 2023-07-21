@@ -19,21 +19,22 @@
 
   import { Histogram, Table } from "@pixano/core";
 
-  import { currentPage } from "../stores";
+  import { datasetPage } from "../stores";
   import { getDatasetItems, getDatasetStats } from "./api";
 
+  import type { DatasetItems } from "@pixano/canvas2d/src/interfaces";
+
   // Exports
-  export let dataset = null;
+  export let selectedDataset = null;
 
   // Page navigation
   let itemsPerPage: number = 100;
   let datasetStats = null;
-  let datasetItems = null;
-  let featureNames;
-  let curPage: number;
+  let datasetItems: DatasetItems = null;
+  let currentPage: number;
 
-  currentPage.subscribe((value) => {
-    curPage = value;
+  datasetPage.subscribe((value) => {
+    currentPage = value;
   });
 
   const dispatch = createEventDispatcher();
@@ -43,44 +44,60 @@
   }
 
   async function handleGoToFirstPage() {
-    if (curPage > 1) {
-      currentPage.update((n) => 1);
+    if (currentPage > 1) {
+      datasetPage.update((n) => 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+      datasetItems = await getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
     }
   }
 
   async function handleGoToPreviousPage() {
-    if (curPage > 1) {
-      currentPage.update((n) => n - 1);
+    if (currentPage > 1) {
+      datasetPage.update((n) => n - 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+      datasetItems = await getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
     }
   }
 
   async function handleGoToNextPage() {
-    if (datasetItems.total > curPage * itemsPerPage) {
-      currentPage.update((n) => n + 1);
+    if (datasetItems.total > currentPage * itemsPerPage) {
+      datasetPage.update((n) => n + 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+      datasetItems = await getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
     }
   }
 
   async function handleGoToLastPage() {
-    if (datasetItems.total > curPage * itemsPerPage) {
-      currentPage.update((n) => Math.ceil(datasetItems.total / itemsPerPage));
+    if (datasetItems.total > currentPage * itemsPerPage) {
+      datasetPage.update((n) => Math.ceil(datasetItems.total / itemsPerPage));
       datasetItems = null;
-      datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
+      datasetItems = await getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
     }
   }
 
   onMount(async () => {
-    datasetItems = await getDatasetItems(dataset.id, curPage, itemsPerPage);
-    featureNames = datasetItems.items[0].map((c) => {
-      return { name: c.name, type: c.dtype };
-    });
-
-    datasetStats = await getDatasetStats(dataset.id);
+    datasetItems = await getDatasetItems(
+      selectedDataset.id,
+      currentPage,
+      itemsPerPage
+    );
+    datasetStats = await getDatasetStats(selectedDataset.id);
   });
 </script>
 
@@ -112,12 +129,8 @@
     <div class="w-1/2 ml-4">
       {#if datasetItems}
         <!-- Items list -->
-        <div class=" h-[85vh] w-full max-w-7xl">
-          <Table
-            features={datasetItems.items}
-            {featureNames}
-            on:selectItem={handleSelectItem}
-          />
+        <div class=" h-[85vh] z-0 w-full max-w-7xl">
+          <Table {datasetItems} on:selectItem={handleSelectItem} />
         </div>
 
         <!-- Page navigation -->
@@ -125,8 +138,8 @@
           class="flex justify-end items-center w-full max-w-7xl space-x-2 p-4"
         >
           <span class="mr-2">
-            {1 + itemsPerPage * (curPage - 1)} - {Math.min(
-              itemsPerPage * curPage,
+            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
+              itemsPerPage * currentPage,
               datasetItems.total
             )} of {datasetItems.total}
           </span>

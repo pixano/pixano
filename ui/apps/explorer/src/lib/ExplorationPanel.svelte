@@ -19,11 +19,11 @@
 
   import { getColor } from "@pixano/core/src/utils";
 
-  import type { AnnotationsLabels } from "@pixano/canvas2d/src/interfaces";
+  import type { AnnotationCategory } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
   export let features = null;
-  export let annotations: Array<AnnotationsLabels>;
+  export let annotations: Array<AnnotationCategory>;
 
   const dispatch = createEventDispatcher();
 
@@ -49,8 +49,8 @@
   }
 
   function updateConfidenceFilter(confidence) {
-    for (let cat of annotations) {
-      for (let item of cat.items) {
+    for (let category of annotations) {
+      for (let item of category.labels) {
         if (item.confidence) {
           item.visible = item.confidence >= confidence;
         }
@@ -61,8 +61,8 @@
 
   // Change every mask opacity to match the desired value.
   function handleMaskOpacity() {
-    for (let cat of annotations) {
-      for (let item of cat.items) {
+    for (let category of annotations) {
+      for (let item of category.labels) {
         item.opacity = maskOpacity;
       }
     }
@@ -77,22 +77,22 @@
    * Toggle on/off a category visibility.
    * @param category category to show/hide
    */
-  function handleCategoryVisibility(category: string) {
+  function handleCategoryVisibility(category_name: string) {
     let allVisible = true;
-    for (let cat of annotations) {
-      if (cat.category_name === category) {
-        cat.visible = !cat.visible;
-        let categoryButton = document.getElementById(`cat-${cat.category_id}`);
-        if (cat.visible) {
+    for (let category of annotations) {
+      if (category.name === category_name) {
+        category.visible = !category.visible;
+        let categoryButton = document.getElementById(`cat-${category.id}`);
+        if (category.visible) {
           categoryButton.classList.remove("grayscale");
         } else {
           categoryButton.classList.add("grayscale");
         }
-        for (let item of cat.items) {
-          item.visible = cat.visible;
+        for (let label of category.labels) {
+          label.visible = category.visible;
         }
       }
-      allVisible = allVisible && cat.visible;
+      allVisible = allVisible && category.visible;
     }
     // Update showAllCategories button
     let allVis_elem = document.getElementById(
@@ -105,17 +105,17 @@
 
   // Show or hide every category.
   function handleAllCategoriesVisibility(event) {
-    for (let cat of annotations) {
-      cat.visible = event.target.checked;
-      for (let item of cat.items) {
-        let categoryButton = document.getElementById(`cat-${cat.category_id}`);
-        if (cat.visible) {
+    for (let category of annotations) {
+      category.visible = event.target.checked;
+      for (let label of category.labels) {
+        let categoryButton = document.getElementById(`cat-${category.id}`);
+        if (category.visible) {
           categoryButton.classList.remove("grayscale");
         } else {
           categoryButton.classList.add("grayscale");
         }
-        if (item.visible !== cat.visible) {
-          item.visible = cat.visible;
+        if (label.visible !== category.visible) {
+          label.visible = category.visible;
         }
       }
     }
@@ -130,7 +130,7 @@
   beforeUpdate(() => {
     // If the image has changed
     if (features.id != oldID) {
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
 
       // Calculate new grid size
       let viewsCount = Object.keys(features.views).length;

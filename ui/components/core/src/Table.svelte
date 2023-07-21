@@ -19,19 +19,25 @@
 
   import TableCell from "./TableCell.svelte";
 
-  import type { CellData } from "./cell_types";
+  import type {
+    DatasetItemFeature,
+    DatasetItems,
+  } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
-  export let featureNames: Array<any>;
-  export let features: Array<Array<CellData>>;
+  export let datasetItems: DatasetItems;
+
+  let featureNames = datasetItems.items[0].map((feature) => {
+    return { name: feature.name, type: feature.dtype };
+  });
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectItem(selectedFeatures) {
-    const itemId = selectedFeatures.find((col) => {
-      return col.name === "id";
-    });
-    dispatch("selectItem", { id: itemId.value });
+  function handleSelectItem(item: DatasetItemFeature[]) {
+    let itemId = item.find((feature) => {
+      return feature.name === "id";
+    }).value;
+    dispatch("selectItem", { id: itemId });
   }
 </script>
 
@@ -41,7 +47,7 @@
   text-zinc-500 dark:text-zinc-300
   border-zinc-300 dark:border-zinc-500"
 >
-  <table class="table-auto w-full text-sm text-left">
+  <table class="table-auto z-0 w-full text-sm text-left">
     <thead class="text-xs uppercase">
       <tr
         class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-500 dark:bg-zinc-700"
@@ -54,17 +60,17 @@
       </tr>
     </thead>
     <tbody>
-      {#each features as columns}
+      {#each datasetItems.items as item}
         <tr
           class="cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
           on:click={() => {
-            handleSelectItem(columns);
+            handleSelectItem(item);
           }}
         >
-          {#each columns as col}
-            {#if col.dtype != "hidden"}
+          {#each item as itemFeature}
+            {#if itemFeature.dtype != "hidden"}
               <td class="border-b py-2 border-zinc-300 dark:border-zinc-500">
-                <TableCell data={col} />
+                <TableCell {itemFeature} />
               </td>
             {/if}
           {/each}

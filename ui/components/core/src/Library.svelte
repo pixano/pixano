@@ -21,7 +21,7 @@
 
   // Exports
   export let datasets: any;
-  export let btn_label: string;
+  export let buttonLabel: string;
 
   const dispatch = createEventDispatcher();
 
@@ -38,7 +38,7 @@
       {#each datasets as dataset}
         <DatasetPreviewCard
           {dataset}
-          {btn_label}
+          {buttonLabel}
           on:selectDataset={() => handleSelectDataset(dataset)}
         />
       {/each}

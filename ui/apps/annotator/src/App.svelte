@@ -35,28 +35,28 @@
   import type {
     ItemData,
     Mask,
-    AnnotationsLabels,
-    AnnLabel,
+    AnnotationCategory,
+    AnnotationLabel,
     ViewData,
-    DatabaseFeats,
+    DatasetItems,
   } from "@pixano/canvas2d/src/interfaces";
 
   // Dataset navigation
   let datasets = null;
   let selectedDataset = null;
-  let curPage = 1;
+  let currentPage = 1;
 
   let selectedItem: ItemData;
-  let selectedItemEmbeddings = {};
+  let embeddings = {};
 
   let saveFlag: boolean = false;
   let unselectItemConfirm = false;
 
   let masks: Array<Mask> = [];
-  let annotations: Array<AnnotationsLabels> = [];
+  let annotations: Array<AnnotationCategory> = [];
   let classes = [];
   let itemDetails = null;
-  let dbImages: DatabaseFeats = null;
+  let datasetItems: DatasetItems = null;
 
   let modelPrompt = false;
   let modelNotFoundWarning = false;
@@ -75,9 +75,9 @@
   async function handleSelectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
 
-    dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
+    datasetItems = await api.getDatasetItems(selectedDataset.id, currentPage);
     //select first item
-    let firstItem = dbImages.items[0];
+    let firstItem = datasetItems.items[0];
     for (let feat of firstItem) {
       if (feat.name === "id") {
         handleSelectItem({ id: feat.value });
@@ -121,7 +121,7 @@
 
     let struct_views_categories = {};
     for (let viewId of Object.keys(itemDetails.views)) {
-      let struct_categories = {};
+      let struct_categories: { [key: string]: AnnotationCategory } = {};
 
       for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
@@ -131,11 +131,11 @@
           //separate in case we add bboxes or other annotation types later
           // ensure all items goes in unique category (by name)
           if (!struct_categories[cat_name]) {
-            let annotation: AnnotationsLabels = {
+            let annotation: AnnotationCategory = {
+              id: itemDetails.views[viewId].objects.category[i].id,
+              name: cat_name,
               viewId: viewId,
-              category_name: cat_name,
-              category_id: itemDetails.views[viewId].objects.category[i].id,
-              items: [],
+              labels: [],
               visible: true,
             };
             struct_categories[cat_name] = annotation;
@@ -154,20 +154,17 @@
             mask: masksSVG,
             rle: mask_rle,
             catId: itemDetails.views[viewId].objects.category[i].id,
-            visible: true,
             opacity: 1.0,
+            visible: true,
           });
-          let item: AnnLabel = {
+          let label: AnnotationLabel = {
             id: itemDetails.views[viewId].objects.id[i],
+            viewId: viewId,
             type: "mask",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
-            visible: true,
             opacity: 1.0,
+            visible: true,
           };
-          struct_categories[cat_name].items.push(item);
+          struct_categories[cat_name].labels.push(label);
         }
       }
       struct_views_categories[viewId] = struct_categories;
@@ -180,11 +177,11 @@
 
     console.log("init masks", masks);
     //unique classes from existing annotations
-    for (let ann of annotations) {
-      if (!classes.some((cls) => cls.id === ann.category_id)) {
+    for (let category of annotations) {
+      if (!classes.some((cls) => cls.id === category.id)) {
         classes.push({
-          id: ann.category_id,
-          name: ann.category_name,
+          id: category.id,
+          name: category.name,
         });
       }
     }
@@ -192,25 +189,25 @@
     // Embeddings
     console.log("=== LOADING EMBEDDING ===");
     for (let viewId of Object.keys(itemDetails.views)) {
-      const embeddingArrByte = await api.getViewEmbedding(
+      const viewEmbeddingArrayBytes = await api.getViewEmbedding(
         selectedDataset.id,
         itemDetails.id,
         viewId
       );
-      let selectedItemEmbedding = null;
+      let viewEmbedding = null;
       try {
-        const embeddingArr = npy.parse(embeddingArrByte);
-        selectedItemEmbedding = new ort.Tensor(
+        const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
+        viewEmbedding = new ort.Tensor(
           "float32",
-          embeddingArr.data,
-          embeddingArr.shape
+          viewEmbeddingArray.data,
+          viewEmbeddingArray.shape
         );
       } catch (err) {
         console.log("Embedding not loaded", err);
       }
-      selectedItemEmbeddings[viewId] = selectedItemEmbedding;
+      embeddings[viewId] = viewEmbedding;
     }
-    console.log("Embedding:", selectedItemEmbeddings);
+    console.log("Embedding:", embeddings);
     console.log("DONE");
   }
 
@@ -239,11 +236,11 @@
     unselectItemConfirm = false;
     selectedDataset = null;
     selectedItem = null;
-    selectedItemEmbeddings = {};
+    embeddings = {};
     masks = [];
     annotations = [];
     classes = [];
-    curPage = 1;
+    currentPage = 1;
   }
 
   function saveAnns(annotations, masks) {
@@ -268,13 +265,16 @@
   }
 
   async function handleLoadNextPage() {
-    curPage = curPage + 1;
-    let new_dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
+    currentPage = currentPage + 1;
+    let new_dbImages = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
     if (new_dbImages) {
-      dbImages.items = dbImages.items.concat(new_dbImages.items);
+      datasetItems.items = datasetItems.items.concat(new_dbImages.items);
     } else {
       //end of dataset : reset last page
-      curPage = curPage - 1;
+      currentPage = currentPage - 1;
     }
   }
 
@@ -333,13 +333,13 @@
   {#if datasets}
     {#if selectedItem}
       <AnnotationWorkspace
-        itemData={selectedItem}
-        embeddings={selectedItemEmbeddings}
+        {selectedItem}
+        {embeddings}
         bind:annotations
         bind:masks
         {classes}
-        {dbImages}
-        {curPage}
+        {datasetItems}
+        {currentPage}
         bind:saveFlag
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}
@@ -348,7 +348,7 @@
     {:else}
       <Library
         {datasets}
-        btn_label="Annotate"
+        buttonLabel="Annotate"
         on:selectDataset={handleSelectDataset}
       />
     {/if}

@@ -20,10 +20,10 @@
   import NumberCell from "./TableCells/NumberCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
 
-  import type { CellData } from "./cell_types";
+  import type { DatasetItemFeature } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
-  export let data: CellData;
+  export let itemFeature: DatasetItemFeature;
 
   // Map types to cell components
   const componentsMap = {
@@ -34,4 +34,7 @@
   };
 </script>
 
-<svelte:component this={componentsMap[data.dtype]} value={data.value} />
+<svelte:component
+  this={componentsMap[itemFeature.dtype]}
+  value={itemFeature.value}
+/>

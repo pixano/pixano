@@ -26,71 +26,77 @@
   } from "@pixano/core/src/icons";
 
   import type {
-    AnnotationsLabels,
-    DatabaseFeats,
+    AnnotationLabel,
+    AnnotationCategory,
+    DatasetItems,
+    DatasetItemFeature,
   } from "@pixano/canvas2d/src/interfaces";
 
   // Exports
-  export let annotations: Array<AnnotationsLabels>;
-  export let dataset: DatabaseFeats = null;
-  export let lastLoadedPage: number;
+  export let annotations: Array<AnnotationCategory>;
+  export let datasetItems: DatasetItems = null;
+  export let currentPage: number;
   export let categoryColor = null;
 
-  let d_data = [];
-
   let view_list = []; //view that contains annotations for anns display (not real views list)
-  let activeTab = "labels"; //"database";
+  let activeTab = "labels"; //"dataset";
   const dispatch = createEventDispatcher();
 
-  //set classes groups opened/closed by default
-  for (let group of annotations) {
-    group["opened"] = false;
+  // Set categories as closed by default
+  for (let category of annotations) {
+    category["opened"] = false;
   }
 
   // Change selected image
-  function handleSelectItem(img) {
-    dispatch("selectItem", img);
+  function handleSelectItem(item: DatasetItemFeature[]) {
+    dispatch("selectItem", item);
   }
 
-  function handleDeleteAnn(item: any) {
-    dispatch("deleteAnn", item);
+  function handleDeleteLabel(label: AnnotationLabel) {
+    dispatch("deleteLabel", label);
   }
 
-  function handleItemVisibility(group: any, item: any) {
-    item.visible = !item.visible;
-    if (item.visible && !group.visible) {
-      group.visible = true;
+  function handleLabelVisibility(
+    view: any,
+    category: AnnotationCategory,
+    label: AnnotationLabel
+  ) {
+    label.visible = !label.visible;
+    if (label.visible && !view.visible) {
+      view.visible = true;
     }
-    //add viewId info
-    let detail = item;
-    detail.viewId = group.viewId;
-    dispatch("itemVisibility", detail);
+    if (label.visible && !category.visible) {
+      category.visible = true;
+    }
+    dispatch("labelVisibility", label);
   }
 
-  function handleCategoryVisibility(group: any) {
-    group.visible = !group.visible;
-    for (let item of group.items) {
-      item.visible = group.visible;
-      //add viewId info
-      let detail = item;
-      detail.viewId = group.viewId;
-      dispatch("itemVisibility", detail);
+  function handleCategoryVisibility(view: any, category: AnnotationCategory) {
+    category.visible = !category.visible;
+    if (category.visible && !view.visible) {
+      view.visible = true;
+    }
+    for (let label of category.labels) {
+      label.visible = category.visible;
+      dispatch("labelVisibility", label);
     }
   }
 
   function handleViewVisibility(view: any) {
     view.visible = !view.visible;
-    for (let ann of annotations) {
-      if (ann.viewId === view.view_name) {
-        handleCategoryVisibility(ann);
+    for (let category of annotations) {
+      if (category.viewId === view.view_name) {
+        category.visible = view.visible;
+        for (let label of category.labels) {
+          label.visible = category.visible;
+          dispatch("labelVisibility", label);
+        }
       }
     }
-    //hack to refresh icon
-    view_list = view_list;
   }
 
-  async function handleDatabaseScroll(event) {
-    if (lastLoadedPage * 100 < dataset.total) {
+  async function handleDatasetScroll(event) {
+    if (currentPage * 100 < datasetItems.total) {
       const totalContentHeight =
         event.target.scrollHeight - event.target.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
@@ -111,7 +117,7 @@
         let num_objs = 0;
         for (let ann of annotations) {
           if (ann.viewId === viewId) {
-            num_objs += ann.items.length;
+            num_objs += ann.labels.length;
           }
         }
         let vl = view_list.find((v) => v.view_name == viewId);
@@ -127,22 +133,6 @@
             num_objs: num_objs,
           });
         }
-      }
-    }
-
-    if (dataset && dataset.items) {
-      //build well-formed dataset from dataset input
-      d_data = [];
-      for (let feats of dataset.items) {
-        let data = { views: [] };
-        for (let feat of feats) {
-          if (feat.dtype === "image") {
-            data.views.push({ viewId: feat.name, img: feat.value });
-          } else {
-            data[feat.name] = feat.value;
-          }
-        }
-        d_data.push(data);
       }
     }
   });
@@ -171,11 +161,11 @@
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tr-lg
       text-zinc-500 dark:text-zinc-300
       hover:bg-zinc-100 dark:hover:bg-zinc-700
-      {activeTab == 'database'
+      {activeTab == 'dataset'
         ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
         : 'border-zinc-300 dark:border-zinc-500'}"
       on:click={() => {
-        activeTab = "database";
+        activeTab = "dataset";
       }}
     >
       Dataset
@@ -231,15 +221,15 @@
                 </span>
                 <span
                   class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
-                  title="{view.num_objs} items"
+                  title="{view.num_objs} labels"
                 >
                   {view.num_objs}
                 </span>
               </button>
             </div>
           {/if}
-          {#each annotations as group}
-            {#if group.viewId === view.view_name}
+          {#each annotations as category}
+            {#if category.viewId === view.view_name}
               <div
                 class="{view['opened']
                   ? 'flex'
@@ -248,26 +238,10 @@
               >
                 <div
                   class="p-5 flex items-center space-x-1 select-none
-                  {group['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+                  {category['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
-                  <button on:click={() => handleCategoryVisibility(group)}>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="48"
-                      viewBox="0 -960 960 960"
-                      width="48"
-                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
-                    >
-                      <title>{group["visible"] ? "Hide" : "Show"}</title>
-                      <path
-                        d={group["visible"] ? svg_hide : svg_show}
-                        fill="currentcolor"
-                      />
-                    </svg>
-                  </button>
                   <button
-                    class="flex grow items-center space-x-1 text-left"
-                    on:click={() => (group["opened"] = !group["opened"])}
+                    on:click={() => handleCategoryVisibility(view, category)}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -276,39 +250,56 @@
                       width="48"
                       class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
                     >
-                      <title>{group["opened"] ? "Close" : "Open"}</title>
+                      <title>{category["visible"] ? "Hide" : "Show"}</title>
                       <path
-                        d={group["opened"] ? svg_close : svg_open}
+                        d={category["visible"] ? svg_hide : svg_show}
+                        fill="currentcolor"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    class="flex grow items-center space-x-1 text-left"
+                    on:click={() => (category["opened"] = !category["opened"])}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                    >
+                      <title>{category["opened"] ? "Close" : "Open"}</title>
+                      <path
+                        d={category["opened"] ? svg_close : svg_open}
                         fill="currentcolor"
                       />
                     </svg>
                     <span class="grow ml-3 font-bold text-zinc-800">
                       <button
                         class="relative px-1 rounded-lg text-sm"
-                        style="background-color: {categoryColor(
-                          group.category_id
-                        )};"
+                        style="background-color: {categoryColor(category.id)};"
                       >
-                        {group.category_name}
+                        {category.name}
                       </button>
                     </span>
                     <span
                       class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
-                      title="{group.items.length} items"
+                      title="{category.labels.length} labels"
                     >
-                      {group.items.length}
+                      {category.labels.length}
                     </span>
                   </button>
                 </div>
-                <div class="{group['opened'] ? 'flex' : 'hidden'} flex-col">
-                  {#each group.items as item, index}
+                <div class="{category['opened'] ? 'flex' : 'hidden'} flex-col">
+                  {#each category.labels as label, index}
                     <div
                       class="py-3 px-8 flex items-center space-x-1
                       {index === 0 ? '' : 'border-t-2'}
                       border-zinc-300 dark:border-zinc-500"
                     >
                       <button
-                        on:click={() => handleItemVisibility(group, item)}
+                        on:click={() =>
+                          handleLabelVisibility(view, category, label)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -318,12 +309,14 @@
                           class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
                         >
                           <title>
-                            {(group.visible && item.visible) || item.visible
+                            {(category.visible && label.visible) ||
+                            label.visible
                               ? "Hide"
                               : "Show"}
                           </title>
                           <path
-                            d={(group.visible && item.visible) || item.visible
+                            d={(category.visible && label.visible) ||
+                            label.visible
                               ? svg_hide
                               : svg_show}
                             fill="currentcolor"
@@ -332,11 +325,11 @@
                       </button>
                       <span
                         class="relative pl-3 text-sm grow truncate"
-                        title="{item.id} ({item.label})"
+                        title={label.id}
                       >
-                        {item.id}
+                        {label.id}
                       </span>
-                      <button on:click={() => handleDeleteAnn(item)}>
+                      <button on:click={() => handleDeleteLabel(label)}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
@@ -366,27 +359,35 @@
     </div>
     <div
       class="w-full h-full py-4 flex flex-wrap justify-center overflow-auto {activeTab ==
-      'database'
+      'dataset'
         ? ''
         : 'hidden'}"
-      on:scroll={handleDatabaseScroll}
+      on:scroll={handleDatasetScroll}
     >
-      {#each d_data as data, i}
+      {#each datasetItems.items as item, i}
         <button
           class="flex p-1 flex-col rounded
           hover:bg-zinc-100 dark:hover:bg-zinc-700"
-          on:click={() => handleSelectItem(data)}
+          on:click={() => handleSelectItem(item)}
         >
           <div class="flex flex-row">
-            {#each data.views as view}
-              <img
-                src={view.img}
-                alt="#{view}-#{i}"
-                class="w-24 h-24 p-1 object-cover rounded"
-              />
+            {#each item as itemFeature}
+              {#if itemFeature.dtype === "image"}
+                <img
+                  src={itemFeature.value}
+                  alt="#{itemFeature.name}-#{i}"
+                  class="w-24 h-24 p-1 object-cover rounded"
+                />
+              {/if}
             {/each}
           </div>
-          <span class="text-xs text-center font-semibold">{data.id}</span>
+          {#each item as itemFeature}
+            {#if itemFeature.name === "id"}
+              <span class="text-xs text-center font-semibold"
+                >{itemFeature.value}</span
+              >
+            {/if}
+          {/each}
         </button>
       {/each}
     </div>

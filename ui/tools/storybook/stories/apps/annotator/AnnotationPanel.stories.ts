@@ -88,7 +88,7 @@ export const Base: Story = {
         visible: true,
       },
     ],
-    dataset: {
+    datasetItems: {
       items: [
         [
           { name: "id", dtype: "text", value: "1" },
@@ -113,6 +113,6 @@ export const Base: Story = {
       ],
       total: 4,
     },
-    lastLoadedPage: 1,
+    currentPage: 1,
   },
 };

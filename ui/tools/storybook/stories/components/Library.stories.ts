@@ -52,6 +52,6 @@ export const Base: Story = {
         preview: "img-04.jpg",
       },
     ],
-    btn_label: "Explore",
+    buttonLabel: "Explore",
   },
 };

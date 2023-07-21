@@ -23,14 +23,14 @@
   import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
-  import { currentPage } from "./stores";
+  import { datasetPage } from "./stores";
 
   import type {
     ItemData,
     Mask,
     BBox,
-    AnnotationsLabels,
-    AnnLabel,
+    AnnotationCategory,
+    AnnotationLabel,
     ViewData,
   } from "@pixano/canvas2d/src/interfaces";
 
@@ -40,7 +40,7 @@
   let selectedItem: ItemData = null;
   let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
-  let annotations: Array<AnnotationsLabels> = [];
+  let annotations: Array<AnnotationCategory> = [];
   let itemDetails = null;
 
   async function handleSelectDataset(event: CustomEvent) {
@@ -67,7 +67,7 @@
     console.log("item loaded:", selectedItem);
 
     //build annotations, masks, bboxes and classes
-    let struct_categories = {};
+    let struct_categories: { [key: string]: AnnotationCategory } = {};
     for (let viewId of Object.keys(itemDetails.views)) {
       for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
         const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
@@ -76,11 +76,11 @@
 
         // ensure all items goes in unique category (by name)
         if (!struct_categories[cat_name]) {
-          let annotation: AnnotationsLabels = {
+          let annotation: AnnotationCategory = {
+            id: itemDetails.views[viewId].objects.category[i].id,
+            name: cat_name,
             viewId: viewId,
-            category_name: cat_name,
-            category_id: itemDetails.views[viewId].objects.category[i].id,
-            items: [],
+            labels: [],
             visible: true,
           };
           struct_categories[cat_name] = annotation;
@@ -106,20 +106,17 @@
             visible: true,
             opacity: 1.0,
           });
-          let item: AnnLabel = {
+          let label: AnnotationLabel = {
             id: itemDetails.views[viewId].objects.id[i],
+            viewId: viewId,
             type: "mask",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
             visible: true,
             opacity: 1.0,
           };
           if (bbox && bbox.is_predict) {
-            item.confidence = bbox.confidence;
+            label.confidence = bbox.confidence;
           }
-          struct_categories[cat_name].items.push(item);
+          struct_categories[cat_name].labels.push(label);
         }
         if (bbox) {
           bboxes.push({
@@ -134,20 +131,17 @@
             catId: itemDetails.views[viewId].objects.category[i].id,
             visible: true,
           });
-          let item: AnnLabel = {
+          let label: AnnotationLabel = {
             id: itemDetails.views[viewId].objects.id[i],
+            viewId: viewId,
             type: "bbox",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
             visible: true,
             opacity: 1.0,
           };
           if (bbox.is_predict) {
-            item.confidence = bbox.confidence;
+            label.confidence = bbox.confidence;
           }
-          struct_categories[cat_name].items.push(item);
+          struct_categories[cat_name].labels.push(label);
         }
       }
     }
@@ -160,7 +154,7 @@
   function handleUnselectDataset() {
     selectedDataset = null;
     selectedItem = null;
-    currentPage.update((n) => 1);
+    datasetPage.update((n) => 1);
   }
 
   function handleUnselectItem() {
@@ -190,7 +184,7 @@
     {#if selectedDataset}
       {#if selectedItem}
         <ExplorationWorkspace
-          itemData={selectedItem}
+          {selectedItem}
           features={itemDetails}
           {annotations}
           {masks}
@@ -198,15 +192,12 @@
           on:unselectItem={handleUnselectItem}
         />
       {:else}
-        <DatasetExplorer
-          dataset={selectedDataset}
-          on:selectItem={handleSelectItem}
-        />
+        <DatasetExplorer {selectedDataset} on:selectItem={handleSelectItem} />
       {/if}
     {:else}
       <Library
         {datasets}
-        btn_label="Explore"
+        buttonLabel="Explore"
         on:selectDataset={handleSelectDataset}
       />
     {/if}

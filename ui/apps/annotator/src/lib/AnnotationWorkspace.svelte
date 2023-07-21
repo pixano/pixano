@@ -35,23 +35,24 @@
   import type {
     ItemData,
     Mask,
-    AnnotationsLabels,
-    AnnLabel,
+    AnnotationCategory,
+    AnnotationLabel,
     ViewData,
-    DatabaseFeats,
+    DatasetItems,
+    DatasetItemFeature,
   } from "@pixano/canvas2d/src/interfaces";
   import type { Tool } from "@pixano/canvas2d/src/tools";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
-  export let itemData: ItemData;
+  export let selectedItem: ItemData;
   export let embeddings = {};
   export let classes;
-  export let annotations: Array<AnnotationsLabels>;
+  export let annotations: Array<AnnotationCategory>;
   export let masks: Array<Mask>;
-  export let dbImages: DatabaseFeats;
-  export let curPage: number;
+  export let datasetItems: DatasetItems;
+  export let currentPage: number;
   export let saveFlag: boolean;
 
   const dispatch = createEventDispatcher();
@@ -114,7 +115,7 @@
   function addAnnotation(className: string, id: string, viewId: string) {
     // Check if the class already exists in the annotation array
     const existingClass = annotations.find(
-      (obj) => obj.category_name === className && obj.viewId === viewId
+      (cat) => cat.name === className && cat.viewId === viewId
     );
 
     // Add the class to the default class list if it doesn't already exist.
@@ -128,34 +129,34 @@
 
     if (existingClass) {
       // Set item name
-      const annotation: AnnLabel = {
+      const annotation: AnnotationLabel = {
         id: id,
+        viewId: viewId,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className} ${existingClass.items.length}`,
-        visible: true,
         opacity: 1.0,
+        visible: true,
       };
 
       // If the class exists, add the item to its 'items' array
-      existingClass.items.push(annotation);
+      existingClass.labels.push(annotation);
       //in case class was invisible, make it visible
       existingClass.visible = true;
     } else {
       // Set item name
-      const annotation: AnnLabel = {
+      const annotation: AnnotationLabel = {
         id: id,
+        viewId: viewId,
         type: "??", //TODO put annotation type (bbox/mask)
-        label: `${className} 0`,
-        visible: true,
         opacity: 1.0,
+        visible: true,
       };
 
       // If the class doesn't exist, create a new object and add it to the annotation array
-      const newClass: AnnotationsLabels = {
+      const newClass: AnnotationCategory = {
+        id: classes.find((obj) => obj.name === className).id,
+        name: className,
         viewId: viewId,
-        category_name: className,
-        category_id: classes.find((obj) => obj.name === className).id,
-        items: [annotation],
+        labels: [annotation],
         visible: true,
       };
       annotations.push(newClass);
@@ -177,13 +178,12 @@
 
       // prediction class
       const predictionClass = annotations.find(
-        (obj) =>
-          obj.category_name === className && obj.viewId === prediction.viewId
+        (cat) => cat.name === className && cat.viewId === prediction.viewId
       );
 
       //validate
-      prediction.label = predictionClass.category_name;
-      prediction.catId = predictionClass.category_id;
+      prediction.label = predictionClass.name;
+      prediction.catId = predictionClass.id;
       prediction.validated = true;
 
       dispatch("enableSaveFlag");
@@ -204,53 +204,61 @@
   }
 
   async function handleChangeSelectedItem(event) {
-    if (!saveFlag) {
-      changeSelectedItem(event);
-    } else {
-      toggleSelectItemModal();
-      await until((_) => selectItemConfirm == false);
+    let newItemId: string = event.detail.find((feature) => {
+      return feature.name === "id";
+    }).value;
+
+    if (newItemId !== selectedItem.id) {
       if (!saveFlag) {
-        changeSelectedItem(event);
+        changeSelectedItem(newItemId, event.detail);
+      } else {
+        toggleSelectItemModal();
+        await until((_) => selectItemConfirm == false);
+        if (!saveFlag) {
+          changeSelectedItem(newItemId, event.detail);
+        }
       }
     }
   }
 
-  function changeSelectedItem(event) {
-    let new_views: Array<ViewData> = [];
-    for (let view of event.detail.views) {
-      new_views.push({
-        viewId: view.viewId,
-        imageURL: view.img,
-      });
+  function changeSelectedItem(newItemId: string, item: DatasetItemFeature[]) {
+    let newItemViews: Array<ViewData> = [];
+    for (let itemFeature of item) {
+      if (itemFeature.dtype === "image") {
+        newItemViews.push({
+          viewId: itemFeature.name,
+          imageURL: itemFeature.value,
+        });
+      }
     }
-    itemData.views = new_views;
-    itemData = itemData;
-    dispatch("selectItem", { id: event.detail.id });
+    selectedItem.views = newItemViews;
+    selectedItem = selectedItem;
+    dispatch("selectItem", { id: newItemId });
   }
 
-  function handleDeleteAnn(item) {
-    const detailId = item.detail.id;
+  function handleDeleteLabel(event) {
+    const labelId = event.detail.id;
 
-    // Find the annotation object that contains the item
-    const newAnnots = annotations.find((annotation) =>
-      annotation.items.some((annotatedItem) => annotatedItem.id === detailId)
+    // Find the category that contains the item
+    const labelCategory = annotations.find((category) =>
+      category.labels.some((label) => label.id === labelId)
     );
 
-    if (newAnnots) {
-      // Filter out the item from the items array
-      newAnnots.items = newAnnots.items.filter(
-        (annotatedItem) => annotatedItem.id !== detailId
+    if (labelCategory) {
+      // Filter out the item from the category
+      labelCategory.labels = labelCategory.labels.filter(
+        (label) => label.id !== labelId
       );
-      if (newAnnots.items.length === 0) {
-        annotations = annotations.filter((ann) => ann !== newAnnots);
+      if (labelCategory.labels.length === 0) {
+        annotations = annotations.filter((ann) => ann !== labelCategory);
       }
     }
 
-    // Find the mask to delete from masks
-    const mask_to_del = masks.find((mask) => mask.id === detailId);
-    if (mask_to_del) {
+    // Find the label mask
+    const labelMask = masks.find((mask) => mask.id === labelId);
+    if (labelMask) {
       //remove from list
-      masks = masks.filter((mask) => mask.id !== detailId);
+      masks = masks.filter((mask) => mask.id !== labelId);
     }
 
     dispatch("enableSaveFlag");
@@ -259,11 +267,12 @@
     annotations = annotations;
   }
 
-  function handleItemVisibility(item) {
+  function handleLabelVisibility(event) {
     const mask_to_toggle = masks.find(
-      (mask) => mask.id === item.detail.id && mask.viewId === item.detail.viewId
+      (mask) =>
+        mask.id === event.detail.id && mask.viewId === event.detail.viewId
     );
-    mask_to_toggle.visible = item.detail.visible;
+    mask_to_toggle.visible = event.detail.visible;
     //hack svelte to reflect changes
     masks = masks;
   }
@@ -276,11 +285,11 @@
     if (annotations) {
       console.log(
         "AnnotationWorkspace - onMount",
-        itemData,
+        selectedItem,
         masks,
         annotations
       );
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -288,7 +297,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("afterUpdate - annotations", annotations);
-      categoryColor = getColor(annotations.map((it) => it.category_id)); // Define a color map for each category id
+      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
     if (classes) {
@@ -298,27 +307,26 @@
 </script>
 
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
-  {#if itemData}
+  {#if selectedItem}
     <Canvas2D
       {embeddings}
-      itemId={itemData.id}
-      views={itemData.views}
+      itemId={selectedItem.id}
+      views={selectedItem.views}
       bind:selectedTool
       {categoryColor}
       bind:prediction
       bind:masks
-      bboxes={null}
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
       <AnnotationPanel
         bind:annotations
-        dataset={dbImages}
-        lastLoadedPage={curPage}
+        {datasetItems}
+        {currentPage}
         {categoryColor}
         on:selectItem={handleChangeSelectedItem}
-        on:deleteAnn={handleDeleteAnn}
-        on:itemVisibility={handleItemVisibility}
+        on:deleteLabel={handleDeleteLabel}
+        on:labelVisibility={handleLabelVisibility}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}
