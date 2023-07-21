@@ -92,12 +92,13 @@
     handleSelectItem(firstItemId);
   }
 
-  function handleUnselectDataset() {
+  async function handleUnselectDataset() {
+    await handleUnselectItem();
     console.log("App.handleUnselectDataset");
-    selectedDataset = null;
-    selectedItem = null;
-    currentPage = 1;
-  }
+    if (!saveFlag) {
+      selectedDataset = null;
+      currentPage = 1;
+    }
 
   async function handleSelectItem(id: string) {
     console.log("App.handleSelectItem");
@@ -232,7 +233,7 @@
     if (!saveFlag) {
       unselectItem();
     } else {
-      unselectItemModal = false;
+      unselectItemModal = true;
       await until((_) => unselectItemModal == false);
       if (!saveFlag) {
         unselectItem();

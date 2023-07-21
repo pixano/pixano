@@ -51,9 +51,9 @@
   }
 
   function handleUnselectDataset() {
+    handleUnselectItem();
     console.log("App.handleUnselectDataset");
     selectedDataset = null;
-    selectedItem = null;
     currentPage = 1;
   }
 
@@ -169,6 +169,7 @@
   function handleUnselectItem() {
     console.log("App.handleUnselectItem");
     selectedItem = null;
+    itemDetails = null;
     masks = [];
     bboxes = [];
     annotations = [];
