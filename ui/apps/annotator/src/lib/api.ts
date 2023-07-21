@@ -107,7 +107,7 @@ export async function getViewEmbedding(
       }
     );
     if (response.ok) {
-      embedding = await response.json();
+      embedding = await response.arrayBuffer();
     } else {
       console.log(response.status, response.statusText, await response.text());
     }
