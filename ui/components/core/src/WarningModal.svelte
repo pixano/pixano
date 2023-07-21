@@ -25,7 +25,7 @@
   const dispatch = createEventDispatcher();
 
   function handleConfirm() {
-    dispatch("confirmed");
+    dispatch("confirm");
   }
 </script>
 

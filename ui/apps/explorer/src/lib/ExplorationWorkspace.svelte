@@ -44,8 +44,8 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleCloseClick() {
-    dispatch("closeclick");
+  function handleUnselectItem() {
+    dispatch("unselectItem");
   }
 
   /**
@@ -61,7 +61,7 @@
     }
   }
 
-  function handleCatVisChanged(event) {
+  function handleCategoryVisibility(event) {
     if (allBBoxVisible) {
       for (let bbox of bboxes) {
         bbox.visible = getItemById(bbox.id).visible;
@@ -74,7 +74,7 @@
     masks = masks;
   }
 
-  function handleAllBBoxVisChanged(event) {
+  function handleBboxesVisibility(event) {
     allBBoxVisible = event.detail;
     for (let bbox of bboxes) {
       bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
@@ -90,7 +90,7 @@
   }
 
   async function handleKeyPress(e) {
-    if (e.keyCode == 27) handleCloseClick(); // Escape key pressed
+    if (e.keyCode == 27) handleUnselectItem(); // Escape key pressed
   }
 
   onMount(async () => {
@@ -130,9 +130,9 @@
       <ExplorationPanel
         {features}
         bind:annotations
-        on:toggleCatVis={handleCatVisChanged}
-        on:toggleAllBBoxVis={handleAllBBoxVisChanged}
-        on:changeMaskOpacity={handleMaskOpacity}
+        on:categoryVisibility={handleCategoryVisibility}
+        on:bboxesVisibility={handleBboxesVisibility}
+        on:maskOpacity={handleMaskOpacity}
       />
     {/if}
   {/if}

@@ -25,7 +25,7 @@
   const dispatch = createEventDispatcher();
 
   function handleConfirm() {
-    dispatch("confirmed");
+    dispatch("confirm");
   }
   function handleKeyPress(event) {
     if (event.key === "Enter" || event.keyCode === 13) handleConfirm();

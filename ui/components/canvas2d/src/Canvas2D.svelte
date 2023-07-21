@@ -1200,14 +1200,14 @@
   <WarningModal
     message="No interactive model set up, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirmed={toggleInferenceModelModal}
+    on:confirm={toggleInferenceModelModal}
   />
 {/if}
 {#if embeddingDirectoryWarning}
   <WarningModal
     message="No embedding directory found, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
-    on:confirmed={toggleEmbeddingDirectoryModal}
+    on:confirm={toggleEmbeddingDirectoryModal}
   />
 {/if}
 <svelte:window on:keydown={handleKeyDown} />

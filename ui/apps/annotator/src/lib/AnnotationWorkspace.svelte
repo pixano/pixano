@@ -228,7 +228,7 @@
     dispatch("selectItem", { id: event.detail.id });
   }
 
-  function handledeleteAnnotation(item) {
+  function handleDeleteAnn(item) {
     const detailId = item.detail.id;
 
     // Find the annotation object that contains the item
@@ -259,7 +259,7 @@
     annotations = annotations;
   }
 
-  function handleChangeVisibility(item) {
+  function handleItemVisibility(item) {
     const mask_to_toggle = masks.find(
       (mask) => mask.id === item.detail.id && mask.viewId === item.detail.viewId
     );
@@ -317,8 +317,8 @@
         lastLoadedPage={curPage}
         {categoryColor}
         on:selectItem={handleChangeSelectedItem}
-        on:deleteAnnotation={handledeleteAnnotation}
-        on:toggleVisibility={handleChangeVisibility}
+        on:deleteAnn={handleDeleteAnn}
+        on:itemVisibility={handleItemVisibility}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}
@@ -335,15 +335,15 @@
     {#if classNameWarning}
       <WarningModal
         message="Please set a label to save your annotation."
-        on:confirmed={toggleClassNameModal}
+        on:confirm={toggleClassNameModal}
       />
     {/if}
     {#if selectItemConfirm}
       <ConfirmModal
         message="You have unsaved changes."
         confirm="Continue without saving"
-        on:confirmed={confirmChangeSelectedItem}
-        on:canceled={toggleSelectItemModal}
+        on:confirm={confirmChangeSelectedItem}
+        on:cancel={toggleSelectItemModal}
       />
     {/if}
   {/if}

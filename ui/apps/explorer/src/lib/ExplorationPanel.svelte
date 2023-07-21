@@ -44,7 +44,7 @@
   let maskOpacity: number = 1.0;
   let minConfidence: number = 0.5;
 
-  function updateConfidenceFilterEvent(event) {
+  function handleConfidenceFilter(event) {
     updateConfidenceFilter(parseFloat(event.target.value));
   }
 
@@ -56,28 +56,28 @@
         }
       }
     }
-    dispatch("toggleCatVis");
+    dispatch("categoryVisibility");
   }
 
   // Change every mask opacity to match the desired value.
-  function updateMasksOpacity() {
+  function handleMaskOpacity() {
     for (let cat of annotations) {
       for (let item of cat.items) {
         item.opacity = maskOpacity;
       }
     }
-    dispatch("changeMaskOpacity", maskOpacity);
+    dispatch("maskOpacity", maskOpacity);
   }
 
-  function toggleAllBBoxVisbility(event) {
-    dispatch("toggleAllBBoxVis", event.target.checked);
+  function handleBboxesVisibility(event) {
+    dispatch("bboxesVisibility", event.target.checked);
   }
 
   /**
    * Toggle on/off a category visibility.
    * @param category category to show/hide
    */
-  function toggleCategoryVisibility(category: string) {
+  function handleCategoryVisibility(category: string) {
     let allVisible = true;
     for (let cat of annotations) {
       if (cat.category_name === category) {
@@ -100,11 +100,11 @@
     ) as HTMLInputElement;
     allVis_elem.checked = allVisible;
 
-    dispatch("toggleCatVis");
+    dispatch("categoryVisibility");
   }
 
   // Show or hide every category.
-  function toggleAllCategoriesVisibility(event) {
+  function handleAllCategoriesVisibility(event) {
     for (let cat of annotations) {
       cat.visible = event.target.checked;
       for (let item of cat.items) {
@@ -119,7 +119,7 @@
         }
       }
     }
-    dispatch("toggleCatVis");
+    dispatch("categoryVisibility");
   }
 
   onMount(() => {
@@ -187,7 +187,7 @@
             type="checkbox"
             id="toggle-items"
             checked
-            on:change={toggleAllCategoriesVisibility}
+            on:change={handleAllCategoriesVisibility}
           />
           <label class="font-bold cursor-pointer" for="toggle-items">
             Show all annotations
@@ -201,7 +201,7 @@
             type="checkbox"
             id="toggle-boxes"
             checked
-            on:change={toggleAllBBoxVisbility}
+            on:change={handleBboxesVisibility}
           />
           <label class="font-bold cursor-pointer" for="toggle-boxes">
             Show bounding boxes
@@ -220,7 +220,7 @@
           max="1"
           step="0.1"
           bind:value={maskOpacity}
-          on:input={updateMasksOpacity}
+          on:input={handleMaskOpacity}
         />
 
         <!-- Confidence filter -->
@@ -235,7 +235,7 @@
           max="1"
           step="0.01"
           bind:value={minConfidence}
-          on:input={updateConfidenceFilterEvent}
+          on:input={handleConfidenceFilter}
         />
       </div>
       <!-- Item Categories -->
@@ -248,7 +248,7 @@
               text-zinc-800 hover:border-rose-500"
               style="background-color: {categoryColor(category.id)};"
               id="cat-{category.id}"
-              on:click={() => toggleCategoryVisibility(category.name)}
+              on:click={() => handleCategoryVisibility(category.name)}
             >
               {category.name}
               <!-- Category count index -->

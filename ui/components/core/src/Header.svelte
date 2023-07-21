@@ -34,12 +34,12 @@
     dispatch("unselectDataset");
   }
 
-  function handleSaveClick() {
-    dispatch("saveClick");
+  function handleUnselectItem() {
+    dispatch("unselectItem");
   }
 
-  function handleCloseClick() {
-    dispatch("closeClick");
+  function handleSaveAnns() {
+    dispatch("saveAnns");
   }
 </script>
 
@@ -73,7 +73,7 @@
         </svg>
         <button
           class="hover:text-rose-600 dark:hover:text-rose-500"
-          on:click={handleCloseClick}
+          on:click={handleUnselectItem}
         >
           <span class="transition-colors">
             {selectedDataset.name}
@@ -99,7 +99,7 @@
     <!-- Navigation -->
     {#if selectedDataset}
       {#if selectedItem && app === "Annotator"}
-        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveClick}>
+        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveAnns}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"
@@ -115,7 +115,7 @@
       {/if}
       <button
         class="w-30 pr-4 flex justify-end"
-        on:click={selectedItem ? handleCloseClick : handleUnselectDataset}
+        on:click={selectedItem ? handleUnselectItem : handleUnselectDataset}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

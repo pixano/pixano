@@ -48,15 +48,15 @@
   }
 
   // Change selected image
-  function selectItem(img) {
+  function handleSelectItem(img) {
     dispatch("selectItem", img);
   }
 
-  function deleteAnnotation(item: any) {
-    dispatch("deleteAnnotation", item);
+  function handleDeleteAnn(item: any) {
+    dispatch("deleteAnn", item);
   }
 
-  function handleVisibility(group: any, item: any) {
+  function handleItemVisibility(group: any, item: any) {
     item.visible = !item.visible;
     if (item.visible && !group.visible) {
       group.visible = true;
@@ -64,17 +64,17 @@
     //add viewId info
     let detail = item;
     detail.viewId = group.viewId;
-    dispatch("toggleVisibility", detail);
+    dispatch("itemVisibility", detail);
   }
 
-  function handleGroupVisibility(group: any) {
+  function handleCategoryVisibility(group: any) {
     group.visible = !group.visible;
     for (let item of group.items) {
       item.visible = group.visible;
       //add viewId info
       let detail = item;
       detail.viewId = group.viewId;
-      dispatch("toggleVisibility", detail);
+      dispatch("itemVisibility", detail);
     }
   }
 
@@ -82,7 +82,7 @@
     view.visible = !view.visible;
     for (let ann of annotations) {
       if (ann.viewId === view.view_name) {
-        handleGroupVisibility(ann);
+        handleCategoryVisibility(ann);
       }
     }
     //hack to refresh icon
@@ -250,7 +250,7 @@
                   class="p-5 flex items-center space-x-1 select-none
                   {group['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
-                  <button on:click={() => handleGroupVisibility(group)}>
+                  <button on:click={() => handleCategoryVisibility(group)}>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       height="48"
@@ -307,7 +307,9 @@
                       {index === 0 ? '' : 'border-t-2'}
                       border-zinc-300 dark:border-zinc-500"
                     >
-                      <button on:click={() => handleVisibility(group, item)}>
+                      <button
+                        on:click={() => handleItemVisibility(group, item)}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
@@ -334,7 +336,7 @@
                       >
                         {item.id}
                       </span>
-                      <button on:click={() => deleteAnnotation(item)}>
+                      <button on:click={() => handleDeleteAnn(item)}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
@@ -373,7 +375,7 @@
         <button
           class="flex p-1 flex-col rounded
           hover:bg-zinc-100 dark:hover:bg-zinc-700"
-          on:click={() => selectItem(data)}
+          on:click={() => handleSelectItem(data)}
         >
           <div class="flex flex-row">
             {#each data.views as view}

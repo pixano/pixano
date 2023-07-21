@@ -25,8 +25,8 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleDatasetClick(dataset) {
-    dispatch("datasetclick", { dataset: dataset });
+  function handleSelectDataset(dataset) {
+    dispatch("selectDataset", { dataset: dataset });
   }
 </script>
 
@@ -39,7 +39,7 @@
         <DatasetPreviewCard
           {dataset}
           {btn_label}
-          on:click={() => handleDatasetClick(dataset)}
+          on:selectDataset={() => handleSelectDataset(dataset)}
         />
       {/each}
     </div>

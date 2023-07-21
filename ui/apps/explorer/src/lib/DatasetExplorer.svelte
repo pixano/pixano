@@ -38,8 +38,8 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleItemClick(event: CustomEvent) {
-    dispatch("itemclick", { id: event.detail.id });
+  function handleSelectItem(event: CustomEvent) {
+    dispatch("selectItem", { id: event.detail.id });
   }
 
   async function handleGoToFirstPage() {
@@ -116,7 +116,7 @@
           <Table
             features={datasetItems.items}
             {featureNames}
-            on:itemclick={handleItemClick}
+            on:selectItem={handleSelectItem}
           />
         </div>
 

@@ -35,7 +35,7 @@
   const dispatch = createEventDispatcher();
 
   // Validate annotation
-  function validate() {
+  function handleValidate() {
     dispatch("validate");
   }
 
@@ -140,7 +140,7 @@
       </svg>
     </button>
   {/if}
-  <button on:click={validate}>
+  <button on:click={handleValidate}>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       height="48"

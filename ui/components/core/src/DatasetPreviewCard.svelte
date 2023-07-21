@@ -23,15 +23,15 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleClick() {
-    dispatch("click");
+  function handleSelectDataset() {
+    dispatch("selectDataset");
   }
 </script>
 
 <button
   class="w-64 h-80 m-4 flex flex-col rounded-md transition-all hover:scale-110 text-left
   border border-zinc-300 dark:border-zinc-500"
-  on:click={handleClick}
+  on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
   <div class="w-full h-1/5 px-4 flex flex-col justify-center">
@@ -61,7 +61,7 @@
   <!-- Actions -->
   <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
-      on:click={handleClick}
+      on:click={handleSelectDataset}
       class="py-2 px-3 border border-transparent font-heavy rounded-md transition-all
       text-zinc-50
       bg-rose-500 dark:bg-rose-600

@@ -27,11 +27,11 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleItemClick(selectedFeatures) {
+  function handleSelectItem(selectedFeatures) {
     const itemId = selectedFeatures.find((col) => {
       return col.name === "id";
     });
-    dispatch("itemclick", { id: itemId.value });
+    dispatch("selectItem", { id: itemId.value });
   }
 </script>
 
@@ -58,7 +58,7 @@
         <tr
           class="cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
           on:click={() => {
-            handleItemClick(columns);
+            handleSelectItem(columns);
           }}
         >
           {#each columns as col}

@@ -72,7 +72,7 @@
     return new Promise(poll);
   }
 
-  async function selectDataset(event: CustomEvent) {
+  async function handleSelectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
 
     dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
@@ -80,18 +80,18 @@
     let firstItem = dbImages.items[0];
     for (let feat of firstItem) {
       if (feat.name === "id") {
-        selectItem({ id: feat.value });
+        handleSelectItem({ id: feat.value });
         break;
       }
     }
   }
 
-  function unselectDataset() {
+  function handleUnselectDataset() {
     selectedDataset = null;
     selectedItem = null;
   }
 
-  async function selectItem(data) {
+  async function handleSelectItem(data) {
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     const start = Date.now();
@@ -278,7 +278,7 @@
     }
   }
 
-  async function toggleModelPrompt() {
+  async function toggleModelPromptModal() {
     modelPrompt = false;
     // Try loading model name from user input
     try {
@@ -293,12 +293,12 @@
     modelNotFoundWarning = !modelNotFoundWarning;
   }
 
-  function handleSaveClick() {
+  function handleSaveAnns() {
     saveAnns(annotations, masks);
     saveFlag = false;
   }
 
-  function enableSaveFlag() {
+  function handleEnableSaveFlag() {
     saveFlag = true;
   }
 
@@ -323,9 +323,9 @@
   bind:selectedDataset
   bind:selectedItem
   {saveFlag}
-  on:saveClick={handleSaveClick}
-  on:closeClick={handleUnselectItem}
-  on:unselectDataset={unselectDataset}
+  on:unselectDataset={handleUnselectDataset}
+  on:unselectItem={handleUnselectItem}
+  on:saveAnns={handleSaveAnns}
 />
 <div
   class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
@@ -341,15 +341,15 @@
         {dbImages}
         {curPage}
         bind:saveFlag
-        on:selectItem={(event) => selectItem(event.detail)}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={enableSaveFlag}
+        on:enableSaveFlag={handleEnableSaveFlag}
       />
     {:else}
       <Library
         {datasets}
         btn_label="Annotate"
-        on:datasetclick={selectDataset}
+        on:selectDataset={handleSelectDataset}
       />
     {/if}
   {:else}
@@ -360,7 +360,7 @@
       message="Please provide the name of your ONNX model for interactive segmentation."
       placeholder="sam_vit_h_4b8939.onnx"
       bind:input={modelInput}
-      on:confirmed={toggleModelPrompt}
+      on:confirm={toggleModelPromptModal}
     />
   {/if}
   {#if modelNotFoundWarning}
@@ -368,15 +368,15 @@
       message="models/{modelInput} was not found in your dataset library."
       details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
       moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-      on:confirmed={toggleModelNotFoundModal}
+      on:confirm={toggleModelNotFoundModal}
     />
   {/if}
   {#if unselectItemConfirm}
     <ConfirmModal
       message="You have unsaved changes."
       confirm="Close without saving"
-      on:confirmed={confirmUnselectItem}
-      on:canceled={toggleUnselectItemModal}
+      on:confirm={confirmUnselectItem}
+      on:cancel={toggleUnselectItemModal}
     />
   {/if}
 </div>

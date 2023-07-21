@@ -25,10 +25,10 @@
   const dispatch = createEventDispatcher();
 
   function handleCancel() {
-    dispatch("canceled");
+    dispatch("cancel");
   }
   function handleConfirm() {
-    dispatch("confirmed");
+    dispatch("confirm");
   }
 </script>
 

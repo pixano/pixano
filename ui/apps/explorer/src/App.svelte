@@ -43,11 +43,11 @@
   let annotations: Array<AnnotationsLabels> = [];
   let itemDetails = null;
 
-  async function selectDataset(event: CustomEvent) {
+  async function handleSelectDataset(event: CustomEvent) {
     selectedDataset = event.detail.dataset;
   }
 
-  async function selectItem(event: CustomEvent) {
+  async function handleSelectItem(event: CustomEvent) {
     //selected item
     console.log("=== LOADING SELECTED ITEM ===");
     itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
@@ -157,13 +157,13 @@
     console.log("selectItem Done", masks, bboxes, annotations);
   }
 
-  function unselectDataset() {
+  function handleUnselectDataset() {
     selectedDataset = null;
     selectedItem = null;
     currentPage.update((n) => 1);
   }
 
-  function unselectItem() {
+  function handleUnselectItem() {
     selectedItem = null;
     masks = [];
     bboxes = [];
@@ -180,8 +180,8 @@
   bind:selectedDataset
   bind:selectedItem
   saveFlag={false}
-  on:closeClick={unselectItem}
-  on:unselectDataset={unselectDataset}
+  on:unselectDataset={handleUnselectDataset}
+  on:unselectItem={handleUnselectItem}
 />
 <div
   class="pt-20 h-screen w-screen text-zinc-800 dark:text-zinc-300 dark:bg-zinc-800"
@@ -195,13 +195,20 @@
           {annotations}
           {masks}
           {bboxes}
-          on:closeclick={unselectItem}
+          on:unselectItem={handleUnselectItem}
         />
       {:else}
-        <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
+        <DatasetExplorer
+          dataset={selectedDataset}
+          on:selectItem={handleSelectItem}
+        />
       {/if}
     {:else}
-      <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
+      <Library
+        {datasets}
+        btn_label="Explore"
+        on:selectDataset={handleSelectDataset}
+      />
     {/if}
   {:else}
     <LoadingLibrary />
