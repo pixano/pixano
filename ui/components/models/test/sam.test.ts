@@ -19,7 +19,7 @@ import { readFile } from "fs/promises";
 import * as ort from "onnxruntime-node";
 import { describe, expect, test } from "vitest";
 
-import { LabeledClick } from "../src/interactive_image_segmentation";
+import { LabeledClick } from "../src/interfaces";
 import * as npyjs from "../src/npy";
 import { SAM } from "../src/Sam";
 

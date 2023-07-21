@@ -29,7 +29,7 @@ import type {
   LabeledClick,
   LabeledPointsTensor,
   SegmentationResult,
-} from "./interactive_image_segmentation";
+} from "./interfaces";
 
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";

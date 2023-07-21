@@ -30,7 +30,7 @@
     AnnotationCategory,
     DatasetItems,
     DatasetItemFeature,
-  } from "@pixano/canvas2d/src/interfaces";
+  } from "@pixano/core/src/interfaces";
 
   // Exports
   export let annotations: Array<AnnotationCategory>;

@@ -36,7 +36,7 @@
     Box,
     InteractiveImageSegmenterOutput,
   } from "@pixano/models";
-  import type { Mask, BBox, ViewData } from "./interfaces";
+  import type { Mask, BBox, ViewData } from "@pixano/core/src/interfaces";
 
   // Exports
   export let embeddings = {};

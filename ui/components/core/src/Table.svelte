@@ -19,10 +19,7 @@
 
   import TableCell from "./TableCell.svelte";
 
-  import type {
-    DatasetItemFeature,
-    DatasetItems,
-  } from "@pixano/canvas2d/src/interfaces";
+  import type { DatasetItemFeature, DatasetItems } from "./interfaces";
 
   // Exports
   export let datasetItems: DatasetItems;

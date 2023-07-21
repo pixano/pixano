@@ -13,9 +13,6 @@
  * http://www.cecill.info
  */
 
-// Imports
-import type { MaskRLE, MaskSVG } from "@pixano/models";
-
 // Exports
 export interface ViewData {
   viewId: string;
@@ -73,3 +70,10 @@ export interface DatasetItems {
   items: Array<Array<DatasetItemFeature>>;
   total: number;
 }
+
+export interface MaskRLE {
+  counts: Array<number>;
+  size: Array<number>;
+}
+
+export type MaskSVG = Array<string>;

@@ -17,10 +17,9 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { Header, Library, LoadingLibrary } from "@pixano/core";
+  import { api, Header, Library, LoadingLibrary } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
-  import * as api from "./lib/api";
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
   import { datasetPage } from "./stores";
@@ -32,7 +31,7 @@
     AnnotationCategory,
     AnnotationLabel,
     ViewData,
-  } from "@pixano/canvas2d/src/interfaces";
+  } from "@pixano/core/src/interfaces";
 
   // Dataset navigation
   let datasets = null;

@@ -20,7 +20,6 @@
     "vite": "^4.3.0"
   },
   "dependencies": {
-    "@pixano/canvas2d": "workspace:^0.3.0",
     "d3": "^7.8.2",
     "d3-color": "^3.1.0",
     "d3-scale-chromatic": "^3.0.0",

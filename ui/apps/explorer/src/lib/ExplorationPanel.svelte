@@ -19,7 +19,7 @@
 
   import { getColor } from "@pixano/core/src/utils";
 
-  import type { AnnotationCategory } from "@pixano/canvas2d/src/interfaces";
+  import type { AnnotationCategory } from "@pixano/core/src/interfaces";
 
   // Exports
   export let features = null;

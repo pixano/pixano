@@ -14,6 +14,7 @@
  */
 
 // Exports
+export * as api from "./api";
 export { default as Header } from "./Header.svelte";
 // Library
 export { default as DatasetPreviewCard } from "./DatasetPreviewCard.svelte";

@@ -19,6 +19,7 @@
   import { onMount } from "svelte";
 
   import {
+    api,
     ConfirmModal,
     Header,
     Library,
@@ -29,7 +30,6 @@
   import { mask_utils, npy, SAM } from "@pixano/models";
 
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import * as api from "./lib/api";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
@@ -39,7 +39,7 @@
     AnnotationLabel,
     ViewData,
     DatasetItems,
-  } from "@pixano/canvas2d/src/interfaces";
+  } from "@pixano/core/src/interfaces";
 
   // Dataset navigation
   let datasets = null;

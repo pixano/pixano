@@ -20,7 +20,7 @@
   import NumberCell from "./TableCells/NumberCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
 
-  import type { DatasetItemFeature } from "@pixano/canvas2d/src/interfaces";
+  import type { DatasetItemFeature } from "./interfaces";
 
   // Exports
   export let itemFeature: DatasetItemFeature;

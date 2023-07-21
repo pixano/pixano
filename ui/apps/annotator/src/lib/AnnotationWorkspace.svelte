@@ -40,7 +40,7 @@
     ViewData,
     DatasetItems,
     DatasetItemFeature,
-  } from "@pixano/canvas2d/src/interfaces";
+  } from "@pixano/core/src/interfaces";
   import type { Tool } from "@pixano/canvas2d/src/tools";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";

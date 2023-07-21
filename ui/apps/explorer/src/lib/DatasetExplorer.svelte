@@ -17,12 +17,11 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { Histogram, Table } from "@pixano/core";
+  import { api, Histogram, Table } from "@pixano/core";
 
   import { datasetPage } from "../stores";
-  import { getDatasetItems, getDatasetStats } from "./api";
 
-  import type { DatasetItems } from "@pixano/canvas2d/src/interfaces";
+  import type { DatasetItems } from "@pixano/core/src/interfaces";
 
   // Exports
   export let selectedDataset = null;
@@ -47,7 +46,7 @@
     if (currentPage > 1) {
       datasetPage.update((n) => 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(
+      datasetItems = await api.getDatasetItems(
         selectedDataset.id,
         currentPage,
         itemsPerPage
@@ -59,7 +58,7 @@
     if (currentPage > 1) {
       datasetPage.update((n) => n - 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(
+      datasetItems = await api.getDatasetItems(
         selectedDataset.id,
         currentPage,
         itemsPerPage
@@ -71,7 +70,7 @@
     if (datasetItems.total > currentPage * itemsPerPage) {
       datasetPage.update((n) => n + 1);
       datasetItems = null;
-      datasetItems = await getDatasetItems(
+      datasetItems = await api.getDatasetItems(
         selectedDataset.id,
         currentPage,
         itemsPerPage
@@ -83,7 +82,7 @@
     if (datasetItems.total > currentPage * itemsPerPage) {
       datasetPage.update((n) => Math.ceil(datasetItems.total / itemsPerPage));
       datasetItems = null;
-      datasetItems = await getDatasetItems(
+      datasetItems = await api.getDatasetItems(
         selectedDataset.id,
         currentPage,
         itemsPerPage
@@ -92,12 +91,12 @@
   }
 
   onMount(async () => {
-    datasetItems = await getDatasetItems(
+    datasetItems = await api.getDatasetItems(
       selectedDataset.id,
       currentPage,
       itemsPerPage
     );
-    datasetStats = await getDatasetStats(selectedDataset.id);
+    datasetStats = await api.getDatasetStats(selectedDataset.id);
   });
 </script>
 

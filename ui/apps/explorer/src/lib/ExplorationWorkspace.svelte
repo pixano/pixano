@@ -28,7 +28,7 @@
     Mask,
     BBox,
     AnnotationCategory,
-  } from "@pixano/canvas2d/src/interfaces";
+  } from "@pixano/core/src/interfaces";
   import type { Tool } from "@pixano/canvas2d/src/tools";
 
   // Exports
