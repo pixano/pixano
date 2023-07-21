@@ -17,11 +17,7 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import {
-    svg_point_minus,
-    svg_point_plus,
-    svg_validate,
-  } from "@pixano/core/src/icons";
+  import { icons } from "@pixano/core";
 
   import { ToolType } from "./tools";
 
@@ -115,7 +111,7 @@
           : 'border-transparent'}"
       >
         <title>Positive point</title>
-        <path d={svg_point_plus} fill="currentcolor" />
+        <path d={icons.svg_point_plus} fill="currentcolor" />
       </svg>
     </button>
     <button
@@ -136,7 +132,7 @@
           : 'border-transparent'}"
       >
         <title>Negative point</title>
-        <path d={svg_point_minus} fill="currentcolor" />
+        <path d={icons.svg_point_minus} fill="currentcolor" />
       </svg>
     </button>
   {/if}
@@ -151,7 +147,7 @@
       hover:bg-rose-600 dark:hover:bg-rose-500"
     >
       <title>Validate</title>
-      <path d={svg_validate} fill="currentcolor" />
+      <path d={icons.svg_validate} fill="currentcolor" />
     </svg>
   </button>
 </div>

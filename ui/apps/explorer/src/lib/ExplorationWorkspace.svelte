@@ -17,19 +17,12 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { Canvas2D } from "@pixano/canvas2d";
-  import { createPanTool } from "@pixano/canvas2d/src/tools";
-  import { getColor } from "@pixano/core/src/utils";
+  import { Canvas2D, tools } from "@pixano/canvas2d";
+  import { utils } from "@pixano/core";
 
   import ExplorationPanel from "./ExplorationPanel.svelte";
 
-  import type {
-    ItemData,
-    Mask,
-    BBox,
-    AnnotationCategory,
-  } from "@pixano/core/src/interfaces";
-  import type { Tool } from "@pixano/canvas2d/src/tools";
+  import type { ItemData, Mask, BBox, AnnotationCategory } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
@@ -38,8 +31,8 @@
   export let annotations: Array<AnnotationCategory>;
   export let features = null;
 
-  let panTool = createPanTool();
-  let selectedTool: Tool = panTool;
+  let panTool = tools.createPanTool();
+  let selectedTool: tools.Tool = panTool;
 
   let categoryColor;
 
@@ -104,7 +97,7 @@
         masks,
         annotations
       );
-      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -112,7 +105,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("afterUpdate - annotations", annotations);
-      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
   });

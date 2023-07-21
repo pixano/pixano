@@ -17,9 +17,9 @@
   // Imports
   import { beforeUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { getColor } from "@pixano/core/src/utils";
+  import { utils } from "@pixano/core";
 
-  import type { AnnotationCategory } from "@pixano/core/src/interfaces";
+  import type { AnnotationCategory } from "@pixano/core";
 
   // Exports
   export let features = null;
@@ -130,7 +130,7 @@
   beforeUpdate(() => {
     // If the image has changed
     if (features.id != oldID) {
-      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
 
       // Calculate new grid size
       let viewsCount = Object.keys(features.views).length;

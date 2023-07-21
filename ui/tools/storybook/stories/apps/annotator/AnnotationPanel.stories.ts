@@ -15,7 +15,7 @@
 
 import type { Meta, StoryObj } from "@storybook/svelte";
 import { AnnotationPanel } from "@pixano/annotator";
-import { getColor } from "@pixano/core/src/utils";
+import { utils } from "@pixano/core";
 
 const meta = {
   title: "Applications/Annotator/AnnotationPanel",
@@ -29,28 +29,28 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-let catCol = getColor([1, 2]); // Define a color map for each category id
+let catCol = utils.getColor([1, 2]); // Define a color map for each category id
 
 export const Base: Story = {
   args: {
     categoryColor: catCol,
     annotations: [
       {
-        category_name: "Dog",
-        category_id: 1,
+        id: 1,
+        name: "Dog",
         viewId: "view1",
-        items: [
+        labels: [
           {
             id: "0x123",
+            viewId: "view1",
             type: "mask",
-            label: "dog-0",
             visible: true,
             opacity: 1.0,
           },
           {
             id: "0x354",
+            viewId: "view1",
             type: "mask",
-            label: "dog-1",
             visible: true,
             opacity: 1.0,
           },
@@ -58,14 +58,14 @@ export const Base: Story = {
         visible: true,
       },
       {
-        category_name: "Cat",
-        category_id: 2,
+        id: 2,
+        name: "Cat",
         viewId: "view1",
-        items: [
+        labels: [
           {
             id: "0x237",
+            viewId: "view1",
             type: "mask",
-            label: "cat-0",
             visible: true,
             opacity: 1.0,
           },
@@ -73,14 +73,14 @@ export const Base: Story = {
         visible: true,
       },
       {
-        category_name: "Cat",
-        category_id: 2,
+        id: 2,
+        name: "Cat",
         viewId: "view2",
-        items: [
+        labels: [
           {
             id: "0x487",
+            viewId: "view2",
             type: "mask",
-            label: "cat-0",
             visible: true,
             opacity: 1.0,
           },

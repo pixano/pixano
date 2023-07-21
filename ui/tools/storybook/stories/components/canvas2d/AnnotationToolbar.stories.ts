@@ -14,14 +14,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { AnnotationToolbar } from "@pixano/canvas2d";
-import {
-  ToolType,
-  createLabeledPointTool,
-  createMultiModalTool,
-  createRectangleTool,
-  createPanTool,
-} from "@pixano/canvas2d/src/tools";
+import { AnnotationToolbar, tools } from "@pixano/canvas2d";
 
 const meta = {
   title: "Components/Canvas2D/AnnotationToolbar",
@@ -35,12 +28,13 @@ type Story = StoryObj<typeof meta>;
 export const BasicToolbar: Story = {
   args: {
     tools: [
-      createMultiModalTool(ToolType.LabeledPoint, [
-        createLabeledPointTool(1),
-        createLabeledPointTool(0),
-      ]),
-      createRectangleTool(),
-      createPanTool(),
+      tools.createMultiModalTool(
+        "Point selection",
+        tools.ToolType.LabeledPoint,
+        [tools.createLabeledPointTool(1), tools.createLabeledPointTool(0)]
+      ),
+      tools.createRectangleTool(),
+      tools.createPanTool(),
     ],
   },
 };

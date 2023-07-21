@@ -14,6 +14,7 @@
  */
 
 // Exports
+export * as stores from "./stores";
 export { default as App } from "./App.svelte";
 export { default as AnnotationPanel } from "./lib/AnnotationPanel.svelte";
 export { default as AnnotationWorkspace } from "./lib/AnnotationWorkspace.svelte";

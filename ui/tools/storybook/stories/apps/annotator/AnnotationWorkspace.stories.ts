@@ -14,8 +14,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { AnnotationWorkspace } from "@pixano/annotator";
-import { interactiveSegmenterModel } from "@pixano/annotator/src/stores";
+import { AnnotationWorkspace, stores } from "@pixano/annotator/";
 
 import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
 
@@ -32,11 +31,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 let mock = new MockInteractiveImageSegmenter();
-interactiveSegmenterModel.set(mock);
+stores.interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {
   args: {
-    currentPage: 1,
     selectedItem: {
       dbName: "photos db",
       views: [
@@ -49,6 +47,24 @@ export const Base: Story = {
     },
     //sample for bear image "img-02.jpg"
     //bear left eye...
+    embeddings: [], //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
+    annotations: [
+      {
+        id: 11,
+        name: "eye",
+        viewId: "view",
+        labels: [
+          {
+            id: "245",
+            viewId: "view",
+            type: "mask",
+            visible: true,
+            opacity: 1.0,
+          },
+        ],
+        visible: true,
+      },
+    ],
     masks: [
       {
         viewId: "view",
@@ -61,24 +77,11 @@ export const Base: Story = {
         opacity: 1.0,
       },
     ],
-    annotations: [
-      {
-        category_name: "eye",
-        category_id: 11,
-        viewId: "view",
-        items: [
-          {
-            id: "245",
-            type: "mask",
-            label: "eye-0",
-            visible: true,
-            opacity: 1.0,
-          },
-        ],
-        visible: true,
-      },
+    classes: [
+      { id: 0, name: "Dog" },
+      { id: 1, name: "Cat" },
+      { id: 11, name: "eye" },
     ],
-    embedding: [], //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
     datasetItems: {
       items: [
         [
@@ -100,11 +103,7 @@ export const Base: Story = {
       ],
       total: 4,
     },
-    classes: [
-      { id: 0, name: "Dog" },
-      { id: 1, name: "Cat" },
-      { id: 11, name: "eye" },
-    ],
-    handleCloseClick: null,
+    currentPage: 1,
+    saveFlag: false,
   },
 };

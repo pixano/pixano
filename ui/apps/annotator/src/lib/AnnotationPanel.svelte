@@ -17,20 +17,14 @@
   // Imports
   import { afterUpdate, createEventDispatcher } from "svelte";
 
-  import {
-    svg_close,
-    svg_delete,
-    svg_hide,
-    svg_open,
-    svg_show,
-  } from "@pixano/core/src/icons";
+  import { icons } from "@pixano/core";
 
   import type {
     AnnotationLabel,
     AnnotationCategory,
     DatasetItems,
     DatasetItemFeature,
-  } from "@pixano/core/src/interfaces";
+  } from "@pixano/core";
 
   // Exports
   export let annotations: Array<AnnotationCategory>;
@@ -191,7 +185,7 @@
                 >
                   <title>{view["visible"] ? "Hide" : "Show"}</title>
                   <path
-                    d={view["visible"] ? svg_hide : svg_show}
+                    d={view["visible"] ? icons.svg_hide : icons.svg_show}
                     fill="currentcolor"
                   />
                 </svg>
@@ -209,7 +203,7 @@
                 >
                   <title>{view["opened"] ? "Close" : "Open"}</title>
                   <path
-                    d={view["opened"] ? svg_close : svg_open}
+                    d={view["opened"] ? icons.svg_close : icons.svg_open}
                     fill="currentcolor"
                   />
                 </svg>
@@ -252,7 +246,9 @@
                     >
                       <title>{category["visible"] ? "Hide" : "Show"}</title>
                       <path
-                        d={category["visible"] ? svg_hide : svg_show}
+                        d={category["visible"]
+                          ? icons.svg_hide
+                          : icons.svg_show}
                         fill="currentcolor"
                       />
                     </svg>
@@ -270,7 +266,9 @@
                     >
                       <title>{category["opened"] ? "Close" : "Open"}</title>
                       <path
-                        d={category["opened"] ? svg_close : svg_open}
+                        d={category["opened"]
+                          ? icons.svg_close
+                          : icons.svg_open}
                         fill="currentcolor"
                       />
                     </svg>
@@ -317,8 +315,8 @@
                           <path
                             d={(category.visible && label.visible) ||
                             label.visible
-                              ? svg_hide
-                              : svg_show}
+                              ? icons.svg_hide
+                              : icons.svg_show}
                             fill="currentcolor"
                           />
                         </svg>
@@ -338,7 +336,7 @@
                           class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
                         >
                           <title>Delete</title>
-                          <path d={svg_delete} fill="currentcolor" />
+                          <path d={icons.svg_delete} fill="currentcolor" />
                         </svg>
                       </button>
                     </div>

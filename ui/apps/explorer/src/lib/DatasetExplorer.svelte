@@ -19,7 +19,7 @@
 
   import { api, Histogram, Table } from "@pixano/core";
 
-  import type { DatasetItems } from "@pixano/core/src/interfaces";
+  import type { DatasetItems } from "@pixano/core";
 
   // Exports
   export let selectedDataset = null;

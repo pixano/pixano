@@ -17,17 +17,13 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { AnnotationToolbar, Canvas2D, LabelToolbar } from "@pixano/canvas2d";
   import {
-    createDeleteTool,
-    createLabeledPointTool,
-    createMultiModalTool,
-    createPanTool,
-    createRectangleTool,
-    ToolType,
-  } from "@pixano/canvas2d/src/tools";
-  import { ConfirmModal, WarningModal } from "@pixano/core";
-  import { getColor } from "@pixano/core/src/utils";
+    AnnotationToolbar,
+    Canvas2D,
+    LabelToolbar,
+    tools,
+  } from "@pixano/canvas2d";
+  import { ConfirmModal, utils, WarningModal } from "@pixano/core";
 
   import { interactiveSegmenterModel } from "../stores";
   import AnnotationPanel from "./AnnotationPanel.svelte";
@@ -40,8 +36,7 @@
     ViewData,
     DatasetItems,
     DatasetItemFeature,
-  } from "@pixano/core/src/interfaces";
-  import type { Tool } from "@pixano/canvas2d/src/tools";
+  } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
@@ -64,17 +59,17 @@
 
   let prediction: InteractiveImageSegmenterOutput = null;
 
-  export let tools_lists: Tool[][] = [];
-  const imageTools: Tool[] = [];
-  const annotationTools: Tool[] = [];
-  let pointPlusTool = createLabeledPointTool(1);
-  let pointMinusTool = createLabeledPointTool(0);
-  let rectangleTool = createRectangleTool();
-  let deleteTool = createDeleteTool();
-  let panTool = createPanTool();
+  export let tools_lists: tools.Tool[][] = [];
+  const imageTools: tools.Tool[] = [];
+  const annotationTools: tools.Tool[] = [];
+  let pointPlusTool = tools.createLabeledPointTool(1);
+  let pointMinusTool = tools.createLabeledPointTool(0);
+  let rectangleTool = tools.createRectangleTool();
+  let deleteTool = tools.createDeleteTool();
+  let panTool = tools.createPanTool();
 
   annotationTools.push(
-    createMultiModalTool("Point selection", ToolType.LabeledPoint, [
+    tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
       pointMinusTool,
     ])
@@ -85,7 +80,7 @@
   tools_lists.push(imageTools);
   tools_lists.push(annotationTools);
 
-  let selectedTool: Tool = pointPlusTool;
+  let selectedTool: tools.Tool = pointPlusTool;
 
   interactiveSegmenterModel.subscribe((segmenter) => {
     console.log("Interactive Segmenter set in the workspace");
@@ -240,8 +235,8 @@
     const labelId = event.detail.id;
 
     // Find the category that contains the item
-    const labelCategory = annotations.find((category) =>
-      category.labels.some((label) => label.id === labelId)
+    const labelCategory = annotations.find((cat) =>
+      cat.labels.some((label) => label.id === labelId)
     );
 
     if (labelCategory) {
@@ -289,7 +284,7 @@
         masks,
         annotations
       );
-      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -297,7 +292,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("afterUpdate - annotations", annotations);
-      categoryColor = getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
     if (classes) {
@@ -330,7 +325,7 @@
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}
-    {#if selectedTool && selectedTool.type != ToolType.Pan && selectedTool.type != ToolType.Delete}
+    {#if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
       <LabelToolbar
         bind:className
         bind:classes

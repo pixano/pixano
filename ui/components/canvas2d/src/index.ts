@@ -14,6 +14,7 @@
  */
 
 // Exports
+export * as tools from "./tools";
 export { default as Canvas2D } from "./Canvas2D.svelte";
 export { default as AnnotationToolbar } from "./AnnotationToolbar.svelte";
 export { default as LabelToolbar } from "./LabelToolbar.svelte";

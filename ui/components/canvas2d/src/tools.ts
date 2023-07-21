@@ -14,14 +14,7 @@
 */
 
 // Imports
-import {
-  svg_delete,
-  svg_pan,
-  svg_point,
-  svg_point_minus,
-  svg_point_plus,
-  svg_rectangle,
-} from "@pixano/core/src/icons";
+import { icons } from "@pixano/core";
 
 // Exports
 export enum ToolType {
@@ -65,18 +58,18 @@ function getIcon(type: ToolType, label?: number): string {
     case ToolType.LabeledPoint:
       switch (label) {
         case 0:
-          return svg_point_minus;
+          return icons.svg_point_minus;
         case 1:
-          return svg_point_plus;
+          return icons.svg_point_plus;
         default:
-          return svg_point;
+          return icons.svg_point;
       }
     case ToolType.Rectangle:
-      return svg_rectangle;
+      return icons.svg_rectangle;
     case ToolType.Delete:
-      return svg_delete;
+      return icons.svg_delete;
     case ToolType.Pan:
-      return svg_pan;
+      return icons.svg_pan;
   }
 }
 

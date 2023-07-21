@@ -39,7 +39,7 @@
     AnnotationLabel,
     ViewData,
     DatasetItems,
-  } from "@pixano/core/src/interfaces";
+  } from "@pixano/core";
 
   // Dataset navigation
   let datasets = null;

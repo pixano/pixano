@@ -14,7 +14,11 @@
  */
 
 // Exports
+export * from "./interfaces";
 export * as api from "./api";
+export * as icons from "./icons";
+export * as utils from "./utils";
+// Header
 export { default as Header } from "./Header.svelte";
 // Library
 export { default as DatasetPreviewCard } from "./DatasetPreviewCard.svelte";

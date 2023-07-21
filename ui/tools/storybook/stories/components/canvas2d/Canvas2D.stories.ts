@@ -14,11 +14,7 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Canvas2D } from "@pixano/canvas2d";
-import {
-  createLabeledPointTool,
-  createRectangleTool,
-} from "@pixano/canvas2d/src/tools";
+import { Canvas2D, tools } from "@pixano/canvas2d";
 
 import * as mocks from "./mocks";
 
@@ -54,7 +50,7 @@ export const CanvasWithoutSelectedTool: Story = {
 };
 
 const segmenter = new mocks.MockInteractiveImageSegmenter();
-let labeledPointCreator = createLabeledPointTool(1);
+let labeledPointCreator = tools.createLabeledPointTool(1);
 labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
@@ -75,7 +71,7 @@ export const CanvasWithLabeledPointTool: Story = {
   },
 };
 
-let rectangleCreator = createRectangleTool();
+let rectangleCreator = tools.createRectangleTool();
 rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
