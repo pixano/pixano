@@ -19,13 +19,15 @@
 
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
 
+  import type { Dataset } from "./interfaces";
+
   // Exports
-  export let datasets: any;
+  export let datasets: Array<Dataset>;
   export let buttonLabel: string;
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectDataset(dataset) {
+  function handleSelectDataset(dataset: Dataset) {
     dispatch("selectDataset", { dataset: dataset });
   }
 </script>

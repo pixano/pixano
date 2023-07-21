@@ -50,7 +50,6 @@ export class SAM implements InteractiveImageSegmenter {
   async init(modelWeights: string);
   async init(modelWeights: any) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
-    console.log("init sam model");
   }
 
   getScalingFactor(imageWidth: number, imageHeight: number) {
@@ -159,9 +158,9 @@ export class SAM implements InteractiveImageSegmenter {
       has_mask_input: previousMask[1],
     };
 
-    console.log("RUN SAM PREDICTION");
-    console.log("SAM inputs: ", samInputs);
+    const start = Date.now();
     const results = await this.onnxModel.run(samInputs);
+    console.log("SAM.segmentImage in", Date.now() - start, "ms");
     this.previousMask = results.low_res_masks;
     const rleMask = maskDataToFortranArrayToRle(
       results.masks.data,

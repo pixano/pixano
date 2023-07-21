@@ -71,6 +71,16 @@ export interface DatasetItems {
   total: number;
 }
 
+export interface Dataset {
+  id: string;
+  name: string;
+  description: string;
+  num_elements: number;
+  preview: string;
+  categories: any;
+  items: Array<Array<DatasetItemFeature>>;
+}
+
 export interface MaskRLE {
   counts: Array<number>;
   size: Array<number>;

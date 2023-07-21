@@ -36,51 +36,46 @@
     dispatch("selectItem", { id: event.detail.id });
   }
 
+  async function loadPage() {
+    datasetItems = null;
+    const start = Date.now();
+    datasetItems = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage,
+      itemsPerPage
+    );
+    console.log(
+      "DatasetExplorer.loadPage - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
+  }
+
   async function handleGoToFirstPage() {
     if (currentPage > 1) {
       currentPage = 1;
-      datasetItems = null;
-      datasetItems = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage
-      );
+      loadPage();
     }
   }
 
   async function handleGoToPreviousPage() {
     if (currentPage > 1) {
       currentPage -= 1;
-      datasetItems = null;
-      datasetItems = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage
-      );
+      loadPage();
     }
   }
 
   async function handleGoToNextPage() {
     if (datasetItems.total > currentPage * itemsPerPage) {
       currentPage += 1;
-      datasetItems = null;
-      datasetItems = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage
-      );
+      loadPage();
     }
   }
 
   async function handleGoToLastPage() {
     if (datasetItems.total > currentPage * itemsPerPage) {
       currentPage = Math.ceil(datasetItems.total / itemsPerPage);
-      datasetItems = null;
-      datasetItems = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage
-      );
+      loadPage();
     }
   }
 

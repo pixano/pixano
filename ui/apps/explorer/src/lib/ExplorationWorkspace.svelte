@@ -44,9 +44,6 @@
     dispatch("unselectItem");
   }
 
-  /**
-   * get item by id from annotations
-   */
   function getItemById(id: string) {
     for (let category of annotations) {
       for (let label of category.labels) {
@@ -57,7 +54,8 @@
     }
   }
 
-  function handleCategoryVisibility(event) {
+  function handleCategoryVisibility() {
+    console.log("ExplorationWorkspace.handleCategoryVisibility");
     if (allBBoxVisible) {
       for (let bbox of bboxes) {
         bbox.visible = getItemById(bbox.id).visible;
@@ -71,6 +69,7 @@
   }
 
   function handleBboxesVisibility(event) {
+    console.log("ExplorationWorkspace.handleBboxesVisibility");
     allBBoxVisible = event.detail;
     for (let bbox of bboxes) {
       bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
@@ -78,7 +77,8 @@
     bboxes = bboxes;
   }
 
-  function handleMaskOpacity(event) {
+  function handleMaskOpacity() {
+    console.log("ExplorationWorkspace.handleMaskOpacity");
     for (let mask of masks) {
       mask.opacity = getItemById(mask.id).opacity;
     }
@@ -91,12 +91,7 @@
 
   onMount(async () => {
     if (annotations) {
-      console.log(
-        "ExplorationWorkspace - onMount",
-        selectedItem,
-        masks,
-        annotations
-      );
+      console.log("ExplorationWorkspace.onMount");
       categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
@@ -104,7 +99,7 @@
   afterUpdate(() => {
     // needed for annotations update
     if (annotations) {
-      console.log("afterUpdate - annotations", annotations);
+      console.log("ExplorationWorkspace.afterUpdate");
       categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }

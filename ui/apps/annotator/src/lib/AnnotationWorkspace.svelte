@@ -52,12 +52,12 @@
 
   const dispatch = createEventDispatcher();
 
-  let className = "";
-  let classNameWarning = false;
+  let currentAnnCategory = "";
+  let categoryNameModal = false;
 
-  let selectItemConfirm = false;
+  let selectItemModal = false;
 
-  let prediction: InteractiveImageSegmenterOutput = null;
+  let currentAnn: InteractiveImageSegmenterOutput = null;
 
   export let tools_lists: tools.Tool[][] = [];
   const imageTools: tools.Tool[] = [];
@@ -83,8 +83,6 @@
   let selectedTool: tools.Tool = pointPlusTool;
 
   interactiveSegmenterModel.subscribe((segmenter) => {
-    console.log("Interactive Segmenter set in the workspace");
-    console.log(segmenter);
     if (segmenter) {
       pointPlusTool.postProcessor = segmenter;
       pointMinusTool.postProcessor = segmenter;
@@ -94,11 +92,6 @@
 
   let categoryColor;
 
-  // events handlers
-  function handleKeyPress(event) {
-    if (event.key === "Enter" || event.keyCode === 13) handleValidate();
-  }
-
   function until(conditionFunction) {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
@@ -107,99 +100,77 @@
     return new Promise(poll);
   }
 
-  function addAnnotation(className: string, id: string, viewId: string) {
-    // Check if the class already exists in the annotation array
-    const existingClass = annotations.find(
-      (cat) => cat.name === className && cat.viewId === viewId
-    );
-
-    // Add the class to the default class list if it doesn't already exist.
-    if (!classes.some((cls) => cls.name === className)) {
-      // Hack to force update
-      let newClasses = classes;
-      let newClassId = Math.max(...newClasses.map((o) => o.id)) + 1;
-      newClasses.push({ id: newClassId, name: className });
-      classes = newClasses;
-    }
-
-    if (existingClass) {
-      // Set item name
-      const annotation: AnnotationLabel = {
-        id: id,
-        viewId: viewId,
-        type: "??", //TODO put annotation type (bbox/mask)
-        opacity: 1.0,
-        visible: true,
-      };
-
-      // If the class exists, add the item to its 'items' array
-      existingClass.labels.push(annotation);
-      //in case class was invisible, make it visible
-      existingClass.visible = true;
-    } else {
-      // Set item name
-      const annotation: AnnotationLabel = {
-        id: id,
-        viewId: viewId,
-        type: "??", //TODO put annotation type (bbox/mask)
-        opacity: 1.0,
-        visible: true,
-      };
-
-      // If the class doesn't exist, create a new object and add it to the annotation array
-      const newClass: AnnotationCategory = {
-        id: classes.find((obj) => obj.name === className).id,
-        name: className,
-        viewId: viewId,
-        labels: [annotation],
-        visible: true,
-      };
-      annotations.push(newClass);
-    }
-
-    // Hack to force update in AnnotationPanel
-    annotations = annotations;
+  function handleKeyPress(event) {
+    if (event.key === "Enter" || event.keyCode === 13) handleAddCurrentAnn();
   }
 
-  function handleValidate() {
-    if (prediction) {
-      // Validate user input
-      if (className === "") {
-        toggleClassNameModal();
+  function handleAddCurrentAnn() {
+    console.log("AnnotationWorkspace.handleAddCurrentAnn");
+    if (currentAnn) {
+      // Check if category name provided
+      if (currentAnnCategory === "") {
+        categoryNameModal = true;
         return;
       }
 
-      addAnnotation(className, prediction.id, prediction.viewId);
-
-      // prediction class
-      const predictionClass = annotations.find(
-        (cat) => cat.name === className && cat.viewId === prediction.viewId
-      );
-
-      //validate
-      prediction.label = predictionClass.name;
-      prediction.catId = predictionClass.id;
-      prediction.validated = true;
-
+      // Add current annotation
+      addCurrentAnn();
       dispatch("enableSaveFlag");
     }
   }
 
-  function toggleClassNameModal() {
-    classNameWarning = !classNameWarning;
-  }
+  function addCurrentAnn() {
+    // Set a new label
+    const newLabel: AnnotationLabel = {
+      id: currentAnn.id,
+      viewId: currentAnn.viewId,
+      type: "??", //TODO put annotation type (bbox/mask)
+      opacity: 1.0,
+      visible: true,
+    };
 
-  function toggleSelectItemModal() {
-    selectItemConfirm = !selectItemConfirm;
-  }
+    // Add the new label's category to the class list if it doesn't already exist.
+    if (!classes.some((cls) => cls.name === currentAnnCategory)) {
+      // Hack to force update
+      let newClasses = classes;
+      let newClassId = Math.max(...newClasses.map((o) => o.id)) + 1;
+      newClasses.push({ id: newClassId, name: currentAnnCategory });
+      classes = newClasses;
+    }
 
-  function confirmChangeSelectedItem() {
-    saveFlag = false;
-    toggleSelectItemModal();
+    // Check if the new label's category already exists in the current annotations
+    const existingCategory = annotations.find(
+      (cat) =>
+        cat.name === currentAnnCategory && cat.viewId === currentAnn.viewId
+    );
+    if (existingCategory) {
+      existingCategory.labels.push(newLabel);
+      existingCategory.visible = true;
+      currentAnn.label = existingCategory.name;
+      currentAnn.catId = existingCategory.id;
+    } else {
+      const newCategory: AnnotationCategory = {
+        id: classes.find((obj) => obj.name === currentAnnCategory).id,
+        name: currentAnnCategory,
+        viewId: currentAnn.viewId,
+        labels: [newLabel],
+        visible: true,
+      };
+      annotations.push(newCategory);
+      currentAnn.label = newCategory.name;
+      currentAnn.catId = newCategory.id;
+    }
+
+    // Validate current annotation
+    currentAnn.validated = true;
+
+    // Update visibility
+    annotations = annotations;
   }
 
   async function handleChangeSelectedItem(event) {
-    let newItemId: string = event.detail.find((feature) => {
+    console.log("AnnotationWorkspace.handleDeleteLabel");
+    const newItemId: string = event.detail.find((feature) => {
       return feature.name === "id";
     }).value;
 
@@ -207,8 +178,8 @@
       if (!saveFlag) {
         changeSelectedItem(newItemId, event.detail);
       } else {
-        toggleSelectItemModal();
-        await until((_) => selectItemConfirm == false);
+        selectItemModal = true;
+        await until((_) => selectItemModal == false);
         if (!saveFlag) {
           changeSelectedItem(newItemId, event.detail);
         }
@@ -217,7 +188,7 @@
   }
 
   function changeSelectedItem(newItemId: string, item: DatasetItemFeature[]) {
-    let newItemViews: Array<ViewData> = [];
+    const newItemViews: Array<ViewData> = [];
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {
         newItemViews.push({
@@ -232,6 +203,7 @@
   }
 
   function handleDeleteLabel(event) {
+    console.log("AnnotationWorkspace.handleDeleteLabel");
     const labelId = event.detail.id;
 
     // Find the category that contains the item
@@ -258,32 +230,29 @@
 
     dispatch("enableSaveFlag");
 
-    //hack svelte to reflect changes
+    // Update visibility
     annotations = annotations;
   }
 
   function handleLabelVisibility(event) {
-    const mask_to_toggle = masks.find(
+    console.log("AnnotationWorkspace.handleLabelVisibility");
+    const maskToToggle = masks.find(
       (mask) =>
         mask.id === event.detail.id && mask.viewId === event.detail.viewId
     );
-    mask_to_toggle.visible = event.detail.visible;
-    //hack svelte to reflect changes
+    maskToToggle.visible = event.detail.visible;
+
+    // Update visibility
     masks = masks;
   }
 
-  async function handleLoadNextPage(event) {
+  async function handleLoadNextPage() {
     dispatch("loadNextPage");
   }
 
   onMount(() => {
     if (annotations) {
-      console.log(
-        "AnnotationWorkspace - onMount",
-        selectedItem,
-        masks,
-        annotations
-      );
+      console.log("AnnotationWorkspace.onMount");
       categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
@@ -291,7 +260,7 @@
   afterUpdate(() => {
     // needed for annotations update
     if (annotations) {
-      console.log("afterUpdate - annotations", annotations);
+      console.log("AnnotationWorkspace.afterUpdate");
       categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
@@ -309,7 +278,7 @@
       views={selectedItem.views}
       bind:selectedTool
       {categoryColor}
-      bind:prediction
+      bind:currentAnn
       bind:masks
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
@@ -327,26 +296,26 @@
     {/if}
     {#if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
       <LabelToolbar
-        bind:className
+        bind:currentAnnCategory
         bind:classes
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
-        on:validate={handleValidate}
+        on:addCurrentAnn={handleAddCurrentAnn}
       />
     {/if}
-    {#if classNameWarning}
+    {#if categoryNameModal}
       <WarningModal
-        message="Please set a label to save your annotation."
-        on:confirm={toggleClassNameModal}
+        message="Please set a category name to save your annotation."
+        on:confirm={() => (categoryNameModal = false)}
       />
     {/if}
-    {#if selectItemConfirm}
+    {#if selectItemModal}
       <ConfirmModal
         message="You have unsaved changes."
         confirm="Continue without saving"
-        on:confirm={confirmChangeSelectedItem}
-        on:cancel={toggleSelectItemModal}
+        on:confirm={() => ((saveFlag = false), (selectItemModal = false))}
+        on:cancel={() => (selectItemModal = !selectItemModal)}
       />
     {/if}
   {/if}

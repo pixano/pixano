@@ -33,6 +33,7 @@
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
+    Dataset,
     ItemData,
     Mask,
     AnnotationCategory,
@@ -50,7 +51,7 @@
   let embeddings = {};
 
   let saveFlag: boolean = false;
-  let unselectItemConfirm = false;
+  let unselectItemModal = false;
 
   let masks: Array<Mask> = [];
   let annotations: Array<AnnotationCategory> = [];
@@ -58,9 +59,10 @@
   let itemDetails = null;
   let datasetItems: DatasetItems = null;
 
-  let modelPrompt = false;
-  let modelNotFoundWarning = false;
-  let modelInput: string;
+  const defaultModelName = "sam_vit_h_4b8939.onnx";
+  let inputModelName: string;
+  let modelPromptModal = false;
+  let modelNotFoundModal = false;
 
   let sam = new SAM();
 
@@ -72,32 +74,41 @@
     return new Promise(poll);
   }
 
-  async function handleSelectDataset(event: CustomEvent) {
-    selectedDataset = event.detail.dataset;
-
+  async function handleSelectDataset(dataset: Dataset) {
+    console.log("App.handleSelectDataset");
+    selectedDataset = dataset;
+    const start = Date.now();
     datasetItems = await api.getDatasetItems(selectedDataset.id, currentPage);
-    //select first item
-    let firstItem = datasetItems.items[0];
-    for (let feat of firstItem) {
-      if (feat.name === "id") {
-        handleSelectItem({ id: feat.value });
-        break;
-      }
-    }
+    console.log(
+      "App.handleSelectDataset - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
+
+    // Select first item
+    const firstItemId = datasetItems.items[0].find((feature) => {
+      return feature.name === "id";
+    }).value;
+    handleSelectItem(firstItemId);
   }
 
   function handleUnselectDataset() {
+    console.log("App.handleUnselectDataset");
     selectedDataset = null;
     selectedItem = null;
     currentPage = 1;
   }
 
-  async function handleSelectItem(data) {
-    //selected item
-    console.log("=== LOADING SELECTED ITEM ===");
+  async function handleSelectItem(id: string) {
+    console.log("App.handleSelectItem");
     const start = Date.now();
-    itemDetails = await api.getItemDetails(selectedDataset.id, data.id);
-    console.log("getItemDetails time (ms):", Date.now() - start);
+    itemDetails = await api.getItemDetails(selectedDataset.id, id);
+    console.log(
+      "App.handleSelectItem - api.getItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
+
     let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
       let view: ViewData = {
@@ -108,10 +119,9 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      id: data.id,
+      id: id,
       views: views,
     };
-    console.log("item loaded:", selectedItem);
 
     //build annotations, masks and classes
     masks = [];
@@ -176,7 +186,6 @@
       }
     }
 
-    console.log("init masks", masks);
     //unique classes from existing annotations
     for (let category of annotations) {
       if (!classes.some((cls) => cls.id === category.id)) {
@@ -188,45 +197,43 @@
     }
 
     // Embeddings
-    console.log("=== LOADING EMBEDDING ===");
     for (let viewId of Object.keys(itemDetails.views)) {
+      let viewEmbedding = null;
+      const start = Date.now();
       const viewEmbeddingArrayBytes = await api.getViewEmbedding(
         selectedDataset.id,
         itemDetails.id,
         viewId
       );
-      let viewEmbedding = null;
-      try {
-        const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
-        viewEmbedding = new ort.Tensor(
-          "float32",
-          viewEmbeddingArray.data,
-          viewEmbeddingArray.shape
-        );
-      } catch (err) {
-        console.log("Embedding not loaded", err);
+      console.log(
+        "App.handleSelectItem - api.getViewEmbedding in",
+        Date.now() - start,
+        "ms"
+      );
+
+      if (viewEmbeddingArrayBytes) {
+        try {
+          const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
+          viewEmbedding = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape
+          );
+        } catch (e) {
+          console.log("App.handleSelectItem - Error loading embeddings", e);
+        }
       }
       embeddings[viewId] = viewEmbedding;
     }
-    console.log("Embedding:", embeddings);
-    console.log("DONE");
-  }
-
-  function toggleUnselectItemModal() {
-    unselectItemConfirm = !unselectItemConfirm;
-  }
-
-  function confirmUnselectItem() {
-    saveFlag = false;
-    toggleUnselectItemModal();
   }
 
   async function handleUnselectItem() {
+    console.log("App.handleUnselectItem");
     if (!saveFlag) {
       unselectItem();
     } else {
-      toggleUnselectItemModal();
-      await until((_) => unselectItemConfirm == false);
+      unselectItemModal = false;
+      await until((_) => unselectItemModal == false);
       if (!saveFlag) {
         unselectItem();
       }
@@ -234,7 +241,7 @@
   }
 
   function unselectItem() {
-    unselectItemConfirm = false;
+    unselectItemModal = false;
     selectedDataset = null;
     selectedItem = null;
     embeddings = {};
@@ -244,77 +251,86 @@
     currentPage = 1;
   }
 
-  function saveAnns(annotations, masks) {
-    console.log("App - save annotations");
-    //format annotation data for export
+  function handleSaveAnns() {
+    console.log("App.handleSaveAnns");
+    saveFlag = false;
     let anns = [];
+
     for (let mask of masks) {
-      const mask_class = annotations.find(
-        (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
+      const maskCategory = annotations.find(
+        (cat) => cat.id === mask.catId && cat.viewId === mask.viewId
       );
       let ann = {
         id: mask.id,
         view_id: mask.viewId,
-        category_id: mask_class.category_id,
-        category_name: mask_class.category_name,
+        category_id: maskCategory.id,
+        category_name: maskCategory.name,
         mask: mask.rle,
         mask_source: "Pixano Annotator",
       };
       anns.push(ann);
     }
+
+    const start = Date.now();
     api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
+    console.log(
+      "App.handleSaveAnns - api.postAnnotations in",
+      Date.now() - start,
+      "ms"
+    );
   }
 
   async function handleLoadNextPage() {
+    console.log("App.handleLoadNextPage");
     currentPage = currentPage + 1;
+
+    const start = Date.now();
     let new_dbImages = await api.getDatasetItems(
       selectedDataset.id,
       currentPage
     );
+    console.log(
+      "App.handleLoadNextPage - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
+
     if (new_dbImages) {
       datasetItems.items = datasetItems.items.concat(new_dbImages.items);
     } else {
-      //end of dataset : reset last page
+      // End of dataset: reset last page
       currentPage = currentPage - 1;
     }
   }
 
-  async function toggleModelPromptModal() {
-    modelPrompt = false;
+  async function handleModelPrompt() {
+    modelPromptModal = false;
     // Try loading model name from user input
     try {
-      await sam.init("/models/" + modelInput);
+      await sam.init("/models/" + inputModelName);
       interactiveSegmenterModel.set(sam);
     } catch (e) {
-      toggleModelNotFoundModal();
+      modelNotFoundModal = false;
     }
   }
 
-  function toggleModelNotFoundModal() {
-    modelNotFoundWarning = !modelNotFoundWarning;
-  }
-
-  function handleSaveAnns() {
-    saveAnns(annotations, masks);
-    saveFlag = false;
-  }
-
-  function handleEnableSaveFlag() {
-    saveFlag = true;
-  }
-
   onMount(async () => {
+    console.log("App.onMount");
+    const start = Date.now();
     datasets = await api.getDatasetsList();
+    console.log(
+      "App.onMount - api.getDatasetsList in",
+      Date.now() - start,
+      "ms"
+    );
 
-    let modelName = "sam_vit_h_4b8939.onnx";
-
-    // Try loading default model name
+    // Try loading default model
     try {
-      await sam.init("/models/" + modelName);
+      await sam.init("/models/" + defaultModelName);
       interactiveSegmenterModel.set(sam);
     } catch (e) {
-      // If default not found, ask user for model name
-      modelPrompt = true;
+      // If default not found, ask user for model
+      modelPromptModal = true;
     }
   });
 </script>
@@ -342,42 +358,42 @@
         {datasetItems}
         {currentPage}
         bind:saveFlag
-        on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:selectItem={(event) => handleSelectItem(event.detail.id)}
         on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={handleEnableSaveFlag}
+        on:enableSaveFlag={() => (saveFlag = true)}
       />
     {:else}
       <Library
         {datasets}
         buttonLabel="Annotate"
-        on:selectDataset={handleSelectDataset}
+        on:selectDataset={(event) => handleSelectDataset(event.detail.dataset)}
       />
     {/if}
   {:else}
     <LoadingLibrary />
   {/if}
-  {#if modelPrompt}
+  {#if modelPromptModal}
     <PromptModal
       message="Please provide the name of your ONNX model for interactive segmentation."
-      placeholder="sam_vit_h_4b8939.onnx"
-      bind:input={modelInput}
-      on:confirm={toggleModelPromptModal}
+      placeholder={defaultModelName}
+      bind:input={inputModelName}
+      on:confirm={handleModelPrompt}
     />
   {/if}
-  {#if modelNotFoundWarning}
+  {#if modelNotFoundModal}
     <WarningModal
-      message="models/{modelInput} was not found in your dataset library."
+      message="models/{inputModelName} was not found in your dataset library."
       details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
       moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-      on:confirm={toggleModelNotFoundModal}
+      on:confirm={() => (modelNotFoundModal = false)}
     />
   {/if}
-  {#if unselectItemConfirm}
+  {#if unselectItemModal}
     <ConfirmModal
       message="You have unsaved changes."
       confirm="Close without saving"
-      on:confirm={confirmUnselectItem}
-      on:cancel={toggleUnselectItemModal}
+      on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
+      on:cancel={() => (unselectItemModal = false)}
     />
   {/if}
 </div>

@@ -123,7 +123,6 @@
   }
 
   onMount(() => {
-    console.log("AnnInspector - onMount (anns):", annotations);
     updateConfidenceFilter(minConfidence);
   });
 

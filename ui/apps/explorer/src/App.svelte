@@ -24,6 +24,7 @@
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
 
   import type {
+    Dataset,
     ItemData,
     Mask,
     BBox,
@@ -33,8 +34,8 @@
   } from "@pixano/core";
 
   // Dataset navigation
-  let datasets = null;
-  let selectedDataset = null;
+  let datasets: Array<Dataset>;
+  let selectedDataset: Dataset = null;
   let currentPage = 1;
 
   let selectedItem: ItemData = null;
@@ -44,14 +45,28 @@
   let annotations: Array<AnnotationCategory> = [];
   let itemDetails = null;
 
-  async function handleSelectDataset(event: CustomEvent) {
-    selectedDataset = event.detail.dataset;
+  async function handleSelectDataset(dataset: Dataset) {
+    console.log("App.handleSelectDataset");
+    selectedDataset = dataset;
   }
 
-  async function handleSelectItem(event: CustomEvent) {
-    //selected item
-    console.log("=== LOADING SELECTED ITEM ===");
-    itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
+  function handleUnselectDataset() {
+    console.log("App.handleUnselectDataset");
+    selectedDataset = null;
+    selectedItem = null;
+    currentPage = 1;
+  }
+
+  async function handleSelectItem(id: string) {
+    console.log("App.handleSelectItem");
+    const start = Date.now();
+    itemDetails = await api.getItemDetails(selectedDataset.id, id);
+    console.log(
+      "App.handleSelectItem - api.getItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
+
     let views: Array<ViewData> = [];
     for (let viewId of Object.keys(itemDetails.views)) {
       let view: ViewData = {
@@ -62,10 +77,9 @@
     }
     selectedItem = {
       dbName: selectedDataset.name,
-      id: event.detail.id,
+      id: id,
       views: views,
     };
-    console.log("item loaded:", selectedItem);
 
     //build annotations, masks, bboxes and classes
     let struct_categories: { [key: string]: AnnotationCategory } = {};
@@ -88,7 +102,9 @@
         }
 
         if (!(bbox || mask_rle)) {
-          console.log("WARNING!, no mask nor bounding box!!");
+          console.log(
+            "App.handleSelectItem - Warning: no mask nor bounding box"
+          );
           continue;
         }
 
@@ -148,17 +164,10 @@
     }
     for (let cat_name in struct_categories)
       annotations.push(struct_categories[cat_name]);
-
-    console.log("selectItem Done", masks, bboxes, annotations);
-  }
-
-  function handleUnselectDataset() {
-    selectedDataset = null;
-    selectedItem = null;
-    currentPage = 1;
   }
 
   function handleUnselectItem() {
+    console.log("App.handleUnselectItem");
     selectedItem = null;
     masks = [];
     bboxes = [];
@@ -166,7 +175,14 @@
   }
 
   onMount(async () => {
+    console.log("App.onMount");
+    const start = Date.now();
     datasets = await api.getDatasetsList();
+    console.log(
+      "App.onMount - api.getDatasetsList in",
+      Date.now() - start,
+      "ms"
+    );
   });
 </script>
 
@@ -196,14 +212,14 @@
         <DatasetExplorer
           {selectedDataset}
           {currentPage}
-          on:selectItem={handleSelectItem}
+          on:selectItem={(event) => handleSelectItem(event.detail.id)}
         />
       {/if}
     {:else}
       <Library
         {datasets}
         buttonLabel="Explore"
-        on:selectDataset={handleSelectDataset}
+        on:selectDataset={(event) => handleSelectDataset(event.detail.dataset)}
       />
     {/if}
   {:else}

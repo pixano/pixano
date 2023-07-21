@@ -23,10 +23,15 @@ export async function getDatasetsList() {
     if (response.ok) {
       datasets = await response.json();
     } else {
-      console.log(response.status, response.statusText, await response.text());
+      console.log(
+        "api.getDatasetsList -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.getDatasetsList -", e);
   }
 
   return datasets;
@@ -46,10 +51,15 @@ export async function getDatasetItems(
     if (response.ok) {
       datasetItems = await response.json();
     } else {
-      console.log(response.status, response.statusText, await response.text());
+      console.log(
+        "api.getDatasetItems -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.getDatasetItems -", e);
   }
 
   return datasetItems;
@@ -63,26 +73,36 @@ export async function getDatasetStats(datasetId: String) {
     if (response.ok) {
       datasetStats = await response.json();
     } else {
-      console.log(response.status, response.statusText, await response.text());
+      console.log(
+        "api.getDatasetStats -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.getDatasetStats -", e);
   }
 
   return datasetStats;
 }
 
-export async function getItemDetails(datasetId: String, itemId: Number) {
+export async function getItemDetails(datasetId: String, itemId: string) {
   let itemDetails = null;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       itemDetails = await response.json();
     } else {
-      console.log(response.status, response.statusText, await response.text());
+      console.log(
+        "api.getItemDetails -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.getItemDetails -", e);
   }
 
   return itemDetails;
@@ -109,10 +129,15 @@ export async function getViewEmbedding(
     if (response.ok) {
       embedding = await response.arrayBuffer();
     } else {
-      console.log(response.status, response.statusText, await response.text());
+      console.log(
+        "api.getViewEmbedding -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.getViewEmbedding -", e);
   }
   return embedding;
 }
@@ -134,12 +159,15 @@ export async function postAnnotations(
         method: "POST",
       }
     );
-    if (response.ok) {
-      console.log("Annotations sent");
-    } else {
-      console.log(response.status, response.statusText, await response.text());
+    if (!response.ok) {
+      console.log(
+        "api.postAnnotations -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
     }
   } catch (e) {
-    console.log(e);
+    console.log("api.postAnnotations -", e);
   }
 }

@@ -22,7 +22,7 @@
   import { ToolType } from "./tools";
 
   // Exports
-  export let className;
+  export let currentAnnCategory;
   export let classes;
   export let selectedTool;
   export let pointPlusTool;
@@ -30,18 +30,18 @@
 
   const dispatch = createEventDispatcher();
 
-  // Validate annotation
-  function handleValidate() {
-    dispatch("validate");
+  function handleAddCurrentAnn() {
+    dispatch("addCurrentAnn");
   }
 
-  function filterLabels() {
-    var input, filter, a, i;
-    input = document.getElementById("label_input");
-    filter = input.value.toUpperCase();
-    let div = document.getElementById("label_list");
-    a = div.getElementsByTagName("button");
-    for (i = 0; i < a.length; i++) {
+  function handleFilterCategories() {
+    // Input filter
+    const input = <HTMLInputElement>document.getElementById("category_input");
+    const filter = input.value.toUpperCase();
+    // Category list
+    const list = document.getElementById("category_list");
+    const a = list.getElementsByTagName("button");
+    for (let i = 0; i < a.length; i++) {
       let txtValue = a[i].textContent || a[i].innerText;
       if (txtValue.toUpperCase().indexOf(filter) > -1) {
         a[i].style.display = "";
@@ -61,20 +61,20 @@
   <div class="group">
     <input
       type="text"
-      placeholder="Label"
-      id="label_input"
+      placeholder="Category name"
+      id="category_input"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-700
       border-zinc-300 dark:border-zinc-500
       focus:border-rose-500 dark:focus:border-rose-600
       "
-      on:keyup={filterLabels}
-      bind:value={className}
+      on:keyup={handleFilterCategories}
+      bind:value={currentAnnCategory}
     />
 
     <div
-      id="label_list"
-      class="absolute left-4 w-80 top-14 w-full hidden rounded-lg group-focus-within:flex hover:flex flex-col
+      id="category_list"
+      class="absolute left-4 w-80 top-14 hidden rounded-lg group-focus-within:flex hover:flex flex-col
       bg-white dark:bg-zinc-800"
       style="overflow-y:scroll; max-height: 500px;"
     >
@@ -84,7 +84,7 @@
           bg-white dark:bg-zinc-800
           hover:bg-zinc-100 dark:hover:bg-zinc-700"
           style="text-align:left"
-          on:click={() => (className = cls.name)}
+          on:click={() => (currentAnnCategory = cls.name)}
         >
           {cls.name}
         </button>
@@ -136,7 +136,7 @@
       </svg>
     </button>
   {/if}
-  <button on:click={handleValidate}>
+  <button on:click={handleAddCurrentAnn}>
     <svg
       xmlns="http://www.w3.org/2000/svg"
       height="48"

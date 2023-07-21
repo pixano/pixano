@@ -46,7 +46,7 @@
   export let bboxes: Array<BBox> = null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;
-  export let prediction: InteractiveImageSegmenterOutput = null;
+  export let currentAnn: InteractiveImageSegmenterOutput = null;
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;
@@ -54,8 +54,8 @@
   const MASK_STROKEWIDTH: number = 1.0;
   const short = shortid;
 
-  let inferenceModelWarning = false;
-  let embeddingDirectoryWarning = false;
+  let inferenceModelModal = false;
+  let embeddingDirectoryModal = false;
 
   let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
   let timerId;
@@ -109,21 +109,9 @@
     }
   });
 
-  // ********** WARNINGS ********** //
-
-  function toggleInferenceModelModal() {
-    inferenceModelWarning = !inferenceModelWarning;
-  }
-
-  function toggleEmbeddingDirectoryModal() {
-    embeddingDirectoryWarning = !embeddingDirectoryWarning;
-  }
-
   // ********** INIT ********** //
 
   onMount(() => {
-    //console.log(`selected tool ${selectedTool?.type}`);
-
     // Load Image(s)
     for (let view of views) {
       zoomFactor[view.viewId] = 1;
@@ -154,8 +142,8 @@
       // reset
       stage.container().style.cursor = "default";
     }
-    if (prediction && prediction.validated) {
-      validateCurrentMask(prediction.viewId);
+    if (currentAnn && currentAnn.validated) {
+      validateCurrentMask(currentAnn.viewId);
     }
     if (masks) {
       for (let view of views) addMasks(view.viewId, itemId);
@@ -228,7 +216,7 @@
       viewLayer.x(offsetX);
       viewLayer.y(offsetY);
     } else {
-      console.log("   CANNOT scale");
+      console.log("Canvas2D.scaleView - Error: Cannot scale");
     }
   }
 
@@ -489,13 +477,13 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      toggleInferenceModelModal();
+      inferenceModelModal = true;
       clearAnnotationAndInputs();
     } else if (
       !(viewId in embeddings) ||
       (viewId in embeddings && embeddings[viewId] == null)
     ) {
-      toggleEmbeddingDirectoryModal();
+      embeddingDirectoryModal = true;
       clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
@@ -504,11 +492,11 @@
         const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
         const image = viewLayer.findOne(`#${itemId}`);
 
-        // always clean existing masks before adding a new prediction
+        // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
 
         const new_id = short.generate();
-        prediction = {
+        currentAnn = {
           id: new_id,
           viewId: viewId,
           label: "",
@@ -552,7 +540,7 @@
     return currentMaskGroup;
   }
 
-  function clearCurrentAnnotation(viewId) {
+  function clearCurrentAnn(viewId) {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     let currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
     let currentMaskGroup = currentAnnGroup.findOne(
@@ -563,18 +551,18 @@
   }
 
   function validateCurrentMask(viewId) {
-    if (prediction.validated) {
+    if (currentAnn.validated) {
       const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
       let currentMaskGroup = findOrCreateCurrentMask(viewId);
       if (currentMaskGroup) {
         //move currentMaskGroup to masksGroup
         const masksGroup: Konva.Group = viewLayer.findOne("#masks");
-        currentMaskGroup.id(prediction.id);
+        currentMaskGroup.id(currentAnn.id);
         // change color
         for (let s of currentMaskGroup.children) {
           let shape = s as Konva.Shape;
           var pred = new Option().style;
-          pred.color = categoryColor(prediction.catId);
+          pred.color = categoryColor(currentAnn.catId);
           shape.fill(
             `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
           );
@@ -583,17 +571,17 @@
         currentMaskGroup.moveTo(masksGroup);
         masks.push({
           viewId: viewId,
-          id: prediction.id,
-          mask: prediction.output.masksImageSVG,
-          rle: prediction.output.rle,
-          catId: prediction.catId,
+          id: currentAnn.id,
+          mask: currentAnn.output.masksImageSVG,
+          rle: currentAnn.output.rle,
+          catId: currentAnn.catId,
           visible: true,
           opacity: 1.0,
         });
 
         if (highlighted_point) unhighlightInputPoint(highlighted_point);
-        clearInputs(prediction.viewId);
-        prediction = null;
+        clearInputs(currentAnn.viewId);
+        currentAnn = null;
       }
     }
   }
@@ -768,7 +756,7 @@
       drag_point.y(img_size.height);
     }
 
-    // new prediction on new location
+    // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
     timerId = setTimeout(() => updateCurrentMask(itemId, viewId), 50); // delay before predict to spare CPU
   }
@@ -941,10 +929,10 @@
   function clearAnnotationAndInputs() {
     for (let view of views) {
       clearInputs(view.viewId);
-      clearCurrentAnnotation(view.viewId);
+      clearCurrentAnn(view.viewId);
     }
     stage.container().style.cursor = selectedTool.cursor;
-    prediction = null;
+    currentAnn = null;
   }
 
   // ********** MOUSE EVENTS ********** //
@@ -1137,19 +1125,19 @@
       const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
       const inputGroup = viewLayer.findOne("#input") as Konva.Group;
       if (inputGroup.children.length > 0) {
-        //trigger a prediction with existing constructs
+        //trigger a currentAnn with existing constructs
         updateCurrentMask(itemId, viewId);
       } else {
-        clearCurrentAnnotation(viewId);
+        clearCurrentAnn(viewId);
       }
     }
     if (event.key == "Escape") {
       clearAnnotationAndInputs();
     }
     if (event.key == "i") {
-      console.log("INFOS");
+      console.log("Canvas2D - Infos");
       console.log("masks", masks);
-      console.log("prediction", prediction);
+      console.log("currentAnn", currentAnn);
       console.log("stage", stage);
       for (let view of views) {
         const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
@@ -1196,18 +1184,18 @@
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
-{#if inferenceModelWarning}
+{#if inferenceModelModal}
   <WarningModal
     message="No interactive model set up, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={toggleInferenceModelModal}
+    on:confirm={() => (inferenceModelModal = false)}
   />
 {/if}
-{#if embeddingDirectoryWarning}
+{#if embeddingDirectoryModal}
   <WarningModal
     message="No embedding directory found, cannot segment."
     details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
-    on:confirm={toggleEmbeddingDirectoryModal}
+    on:confirm={() => (embeddingDirectoryModal = false)}
   />
 {/if}
 <svelte:window on:keydown={handleKeyDown} />
