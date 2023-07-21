@@ -32,20 +32,22 @@ type Story = StoryObj<typeof meta>;
 // initModel("sam_vit_b_01ec64.onnx");
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
+
 export const CanvasWithoutSelectedTool: Story = {
   args: {
+    embeddings: {},
+    itemId: "image_moyenne",
     views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
       },
     ],
-    itemId: "image_moyenne",
-    annotations: [],
     masks: null,
-    bboxes: null,
+    bboxes: [],
     selectedTool: null,
-    prediction: null,
+    currentAnn: null,
+    categoryColor: null,
   },
 };
 
@@ -55,19 +57,19 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
+    embeddings: {},
+    itemId: "image_moyenne",
     views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
       },
     ],
-    itemId: "image_moyenne",
-    annotations: [],
-    embedding: [],
     masks: null,
-    bboxes: null,
-    prediction: null,
-    selectedTool: labeledPointCreator,
+    bboxes: [],
+    selectedTool: null,
+    currentAnn: null,
+    categoryColor: null,
   },
 };
 
@@ -76,18 +78,18 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
+    embeddings: {},
+    itemId: "image_moyenne",
     views: [
       {
         viewId: "view",
         imageURL: "image_moyenne.jpg",
       },
     ],
-    itemId: "image_moyenne",
-    annotations: [],
-    embedding: [],
     masks: null,
-    bboxes: null,
-    prediction: null,
-    selectedTool: rectangleCreator,
+    bboxes: [],
+    selectedTool: null,
+    currentAnn: null,
+    categoryColor: null,
   },
 };

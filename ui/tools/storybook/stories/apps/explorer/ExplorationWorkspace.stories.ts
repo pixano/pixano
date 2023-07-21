@@ -57,14 +57,14 @@ export const Base: Story = {
     bboxes: [],
     annotations: [
       {
-        category_name: "eye",
-        category_id: 11,
+        id: 11,
+        name: "eye",
         viewId: "view",
-        items: [
+        labels: [
           {
             id: "245",
+            viewId: "view",
             type: "mask",
-            label: "eye-0",
             visible: true,
             opacity: 1.0,
           },

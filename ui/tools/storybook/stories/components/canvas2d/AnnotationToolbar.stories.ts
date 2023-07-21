@@ -27,14 +27,17 @@ type Story = StoryObj<typeof meta>;
 
 export const BasicToolbar: Story = {
   args: {
-    tools: [
-      tools.createMultiModalTool(
-        "Point selection",
-        tools.ToolType.LabeledPoint,
-        [tools.createLabeledPointTool(1), tools.createLabeledPointTool(0)]
-      ),
-      tools.createRectangleTool(),
-      tools.createPanTool(),
+    tools_lists: [
+      [tools.createPanTool()],
+      [
+        tools.createMultiModalTool(
+          "Point selection",
+          tools.ToolType.LabeledPoint,
+          [tools.createLabeledPointTool(1), tools.createLabeledPointTool(0)]
+        ),
+        tools.createRectangleTool(),
+        tools.createDeleteTool(),
+      ],
     ],
   },
 };

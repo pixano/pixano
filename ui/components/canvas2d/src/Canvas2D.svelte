@@ -46,7 +46,7 @@
   export let bboxes: Array<BBox> = null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;
-  export let currentAnn: InteractiveImageSegmenterOutput = null;
+  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const POINTER_RADIUS: number = 6;
   const POINTER_STROKEWIDTH: number = 3;

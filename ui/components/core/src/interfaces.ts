@@ -14,14 +14,16 @@
  */
 
 // Exports
+
+export interface ItemData {
+  id: string;
+  dbName: string;
+  views: Array<ViewData>;
+}
+
 export interface ViewData {
   viewId: string;
   imageURL: string;
-}
-export interface ItemData {
-  dbName: string;
-  id: string;
-  views: Array<ViewData>;
 }
 
 export interface Mask {
@@ -60,17 +62,6 @@ export interface AnnotationCategory {
   visible: boolean;
 }
 
-export interface DatasetItemFeature {
-  name: string;
-  dtype: string;
-  value: string;
-}
-
-export interface DatasetItems {
-  items: Array<Array<DatasetItemFeature>>;
-  total: number;
-}
-
 export interface Dataset {
   id: string;
   name: string;
@@ -79,6 +70,17 @@ export interface Dataset {
   preview: string;
   categories: any;
   page: DatasetItems;
+}
+
+export interface DatasetItems {
+  items: Array<Array<DatasetItemFeature>>;
+  total: number;
+}
+
+export interface DatasetItemFeature {
+  name: string;
+  dtype: string;
+  value: string;
 }
 
 export interface MaskRLE {
