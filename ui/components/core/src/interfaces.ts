@@ -51,7 +51,7 @@ export interface CategoryData {
 export interface Mask {
   viewId: string;
   id: string;
-  mask: MaskSVG;
+  svg: MaskSVG;
   rle?: MaskRLE;
   catId: number;
   visible: boolean;
@@ -61,7 +61,7 @@ export interface Mask {
 export interface BBox {
   viewId: string;
   id: string;
-  bbox: Array<number>; //format xywh, normalized
+  bbox: Array<number>;
   tooltip: string;
   catId: number;
   visible: boolean;

@@ -39,13 +39,13 @@
   import type { Mask, BBox, ViewData } from "@pixano/core";
 
   // Exports
-  export let embeddings = {};
   export let itemId: string;
   export let views: Array<ViewData>;
-  export let masks: Array<Mask> | null;
-  export let bboxes: Array<BBox> = null;
   export let selectedTool: Tool | null;
   export let categoryColor = null;
+  export let masks: Array<Mask>;
+  export let bboxes: Array<BBox> = [];
+  export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const POINTER_RADIUS: number = 6;
@@ -83,7 +83,7 @@
     cols: 0,
   };
 
-  let prev_views: Array<ViewData>;
+  let currentId: string;
 
   // Dynamically set the canvas stage size
   const resizeObserver = new ResizeObserver((entries) => {
@@ -112,25 +112,10 @@
   // ********** INIT ********** //
 
   onMount(() => {
-    // Load Image(s)
-    for (let view of views) {
-      zoomFactor[view.id] = 1;
-      const image = new Image();
-      image.src = view.url;
-      image.onload = (event) => {
-        onLoadViewImage(event, view.id).then(() => {
-          scaleView(view);
-          //hack to refresh view (display masks/bboxes)
-          masks = masks;
-        });
-      };
-    }
-    prev_views = views;
-
+    loadItem();
     // Calculate new grid size
     gridSize.cols = Math.ceil(Math.sqrt(views.length));
     gridSize.rows = Math.ceil(views.length / gridSize.cols);
-
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
   });
@@ -146,34 +131,40 @@
       validateCurrentMask(currentAnn.viewId);
     }
     if (masks) {
-      for (let view of views) addMasks(view.id, itemId);
+      for (let view of views) updateMasks(view.id, itemId);
     }
     if (bboxes) {
-      for (let view of views) addBboxes(view.id, itemId);
+      for (let view of views) updateBboxes(view.id, itemId);
     }
+    loadItem();
+  });
 
-    if (views !== prev_views) {
-      // Load Image(s)
-      clearAnnotationAndInputs();
+  function loadItem() {
+    if (currentId !== itemId) {
+      // Clear annotations in case a previous item was already loaded
+      if (currentId) clearAnnotationAndInputs();
+
       for (let view of views) {
-        const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
         zoomFactor[view.id] = 1;
         const image = new Image();
         image.src = view.url;
         image.onload = (event) => {
           onLoadViewImage(event, view.id).then(() => {
-            const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
-            konvaImg.image(image);
+            // Find existing Konva elements in case a previous item was already loaded
+            if (currentId) {
+              const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
+              const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
+              konvaImg.image(image);
+            }
             scaleView(view);
             //hack to refresh view (display masks/bboxes)
             masks = masks;
           });
         };
       }
-      prev_views = views;
+      currentId = itemId;
     }
-  });
-
+  }
   async function onLoadViewImage(event, viewId: string) {
     images[viewId] = event.target;
   }
@@ -231,26 +222,26 @@
 
   // ********** BOUNDING BOXES AND MASKS ********** //
 
-  function addBboxes(viewId, itemId) {
+  function updateBboxes(viewId, itemId) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     if (viewLayer) {
-      const bboxesGroup: Konva.Group = viewLayer.findOne("#bboxes");
-      const image: Konva.Image = viewLayer.findOne(`#${itemId}`);
+      const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+      const image = viewLayer.findOne(`#${itemId}`) as Konva.Image;
+      const bboxIds = [];
 
-      const listBboxIds = [];
       for (let i = 0; i < bboxes.length; ++i) {
         if (bboxes[i].viewId === viewId) {
-          listBboxIds.push(bboxes[i].id);
+          bboxIds.push(bboxes[i].id);
 
           //don't add a bbox that already exist
-          let bbox = bboxesGroup.findOne(`#${bboxes[i].id}`);
+          let bbox = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bbox) {
             addBBox(
               bboxes[i],
               image,
               categoryColor(bboxes[i].catId),
-              bboxesGroup
+              bboxGroup
             );
           } else {
             //apply visibility
@@ -259,12 +250,7 @@
         }
       }
 
-      //remove bbox that's no longer exist in bboxes
-      const list_to_destroy = []; //need to build a list to not destroy while looping children
-      for (let bbox of bboxesGroup.children) {
-        if (!listBboxIds.includes(bbox.id())) list_to_destroy.push(bbox);
-      }
-      for (let bbox of list_to_destroy) bbox.destroy();
+      destroyDeletedObjects(bboxIds, bboxGroup);
     }
   }
 
@@ -272,7 +258,7 @@
     bbox: BBox,
     image: Konva.Image,
     color: any,
-    bboxesGroup: Konva.Group
+    bboxGroup: Konva.Group
   ) {
     const img_w = (image.image() as HTMLImageElement).naturalWidth;
     const img_h = (image.image() as HTMLImageElement).naturalHeight;
@@ -281,16 +267,13 @@
     const rect_width = bbox.bbox[2] * img_w;
     const rect_height = bbox.bbox[3] * img_h;
 
-    const bboxGroup = new Konva.Group({
+    const bboxKonva = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
       listening: false,
     });
 
-    const kbbox = new Konva.Rect({
-      //TMP: height et width sont inversés car parquet généré avec normalisation inversés
-      //(because on a remplacé un normalize(w,h) par un normalize(h,w)...)
-      //dès qu'un nouveau package permettant de générer correctement les bbox est ready je rebascule
+    const bboxRect = new Konva.Rect({
       x: rect_x,
       y: rect_y,
       width: rect_width,
@@ -299,24 +282,24 @@
       strokeWidth: 1.0,
       scale: image.scale(),
     });
-    bboxGroup.add(kbbox);
+    bboxKonva.add(bboxRect);
 
-    // Create a label object
-    const label = new Konva.Label({
+    // Create a tooltip for bounding box category and confidence
+    const tooltip = new Konva.Label({
       x: rect_x + 1,
       y: rect_y + 1,
     });
 
-    // Add a tag to the label
-    label.add(
+    // Add a tag
+    tooltip.add(
       new Konva.Tag({
         fill: color,
         stroke: color,
       })
     );
 
-    // Add some text to the label
-    label.add(
+    // Add text
+    tooltip.add(
       new Konva.Text({
         text: bbox.tooltip,
         fontSize: 6,
@@ -328,36 +311,27 @@
       })
     );
 
-    // Add the label to the group
-    bboxGroup.add(label);
-    bboxesGroup.add(bboxGroup);
+    // Add to group
+    bboxKonva.add(tooltip);
+    bboxGroup.add(bboxKonva);
   }
 
-  function addMasks(viewId, itemId) {
+  function updateMasks(viewId, itemId) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     if (viewLayer) {
-      const masksGroup: Konva.Group = viewLayer.findOne("#masks");
-      const image = viewLayer.findOne(`#${itemId}`);
+      const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+      const image = viewLayer.findOne(`#${itemId}`) as Konva.Image;
+      const maskIds = [];
 
-      let maskIds = [];
       for (let i = 0; i < masks.length; ++i) {
-        maskIds.push(masks[i].id);
         if (masks[i].viewId === viewId) {
+          maskIds.push(masks[i].id);
+
           //don't add a mask that already exist
-          let mask = masksGroup.findOne(`#${masks[i].id}`);
+          let mask = maskGroup.findOne(`#${masks[i].id}`);
           if (!mask) {
-            addMask(
-              masks[i].mask,
-              masks[i].id,
-              image.x(),
-              image.y(),
-              image.scale(),
-              categoryColor(masks[i].catId),
-              masks[i].visible,
-              1.0,
-              masksGroup
-            );
+            addMask(masks[i], image, categoryColor(masks[i].catId), maskGroup);
           } else {
             //update visibility & opacity
             mask.visible(masks[i].visible);
@@ -376,37 +350,28 @@
         }
       }
 
-      //remove masks that no longer exists
-      const list_to_destroy = []; //need to build a list to not destroy while looping children
-      for (let mask of masksGroup.children) {
-        if (!maskIds.includes(mask.id())) list_to_destroy.push(mask);
-      }
-      for (let mask of list_to_destroy) mask.destroy();
+      destroyDeletedObjects(maskIds, maskGroup);
     }
   }
 
   function addMask(
-    masksSVG: Array<string>,
-    id: string,
-    x: number,
-    y: number,
-    scale: Konva.Vector2d,
-    stroke: string,
-    visibility: boolean,
-    opacity: number,
-    masksGroup: Konva.Group
+    mask: Mask,
+    image: Konva.Image,
+    color: string,
+    maskGroup: Konva.Group
   ) {
+    const x = image.x();
+    const y = image.y();
+    const scale = image.scale();
+
     let fill: string;
-    switch (stroke) {
+    switch (color) {
       case "green":
         fill = "rgba(0, 255, 0, 0.25)";
         break;
-      case "blue":
-        fill = "rgba(0, 0, 255, 0.25)";
-        break;
       default:
-        var s = new Option().style;
-        s.color = stroke;
+        let s = new Option().style;
+        s.color = color;
         if (s.color !== "") {
           fill = `rgba(${s.color.replace("rgb(", "").replace(")", "")}, 0.35)`;
         } else {
@@ -434,25 +399,25 @@
       }
       return res;
     }
-    const mask = new Konva.Shape({
-      id: id,
+    const maskKonva = new Konva.Shape({
+      id: mask.id,
       x: x,
       y: y,
       width: stage.width(),
       height: stage.height(),
       fill: fill,
-      stroke: stroke,
+      stroke: color,
       strokeWidth: MASK_STROKEWIDTH,
       scale: scale,
-      visible: visibility,
-      opacity: opacity,
+      visible: mask.visible,
+      opacity: 1.0,
       listening: false,
       sceneFunc: (ctx, shape) => {
         ctx.beginPath();
-        for (let i = 0; i < masksSVG.length; ++i) {
-          const start = m_part(masksSVG[i]);
+        for (let i = 0; i < mask.svg.length; ++i) {
+          const start = m_part(mask.svg[i]);
           ctx.moveTo(start.x, start.y);
-          const l_pts = l_part(masksSVG[i]);
+          const l_pts = l_part(mask.svg[i]);
           for (let pt of l_pts) {
             ctx.lineTo(pt.x, pt.y);
           }
@@ -460,7 +425,19 @@
         ctx.fillStrokeShape(shape);
       },
     });
-    masksGroup.add(mask);
+    maskGroup.add(maskKonva);
+  }
+
+  function destroyDeletedObjects(
+    objectsIds: Array<string>,
+    objectsGroup: Konva.Group
+  ) {
+    // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
+    const objectsToDestroy = []; //need to build a list to not destroy while looping children
+    for (let object of objectsGroup.children) {
+      if (!objectsIds.includes(object.id())) objectsToDestroy.push(object);
+    }
+    for (let object of objectsToDestroy) object.destroy();
   }
 
   // ********** CURRENT ANNOTATION ********** //
@@ -489,7 +466,7 @@
       if (results) {
         const currentMaskGroup = findOrCreateCurrentMask(viewId);
         const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
-        const image = viewLayer.findOne(`#${itemId}`);
+        const image = viewLayer.findOne(`#${itemId}`) as Konva.Image;
 
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
@@ -505,17 +482,15 @@
           input_box: box,
           validated: false,
         };
-        addMask(
-          results.masksImageSVG,
-          new_id,
-          image.x(),
-          image.y(),
-          image.scale(),
-          "green",
-          true,
-          1.0,
-          currentMaskGroup
-        );
+        let currentMask = <Mask>{
+          viewId: viewId,
+          id: short.generate(),
+          svg: results.masksImageSVG,
+          catId: -1,
+          visible: true,
+          opacity: 1.0,
+        };
+        addMask(currentMask, image, "green", currentMaskGroup);
       }
     }
   }
@@ -554,8 +529,8 @@
       const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
       let currentMaskGroup = findOrCreateCurrentMask(viewId);
       if (currentMaskGroup) {
-        //move currentMaskGroup to masksGroup
-        const masksGroup: Konva.Group = viewLayer.findOne("#masks");
+        //move currentMaskGroup to maskGroup
+        const maskGroup: Konva.Group = viewLayer.findOne("#masks");
         currentMaskGroup.id(currentAnn.id);
         // change color
         for (let s of currentMaskGroup.children) {
@@ -567,11 +542,11 @@
           );
           shape.stroke(pred.color);
         }
-        currentMaskGroup.moveTo(masksGroup);
+        currentMaskGroup.moveTo(maskGroup);
         masks.push({
           viewId: viewId,
           id: currentAnn.id,
-          mask: currentAnn.output.masksImageSVG,
+          svg: currentAnn.output.masksImageSVG,
           rle: currentAnn.output.rle,
           catId: currentAnn.catId,
           visible: true,
@@ -1140,9 +1115,9 @@
       console.log("stage", stage);
       for (let view of views) {
         const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
-        const masksGroup: Konva.Group = viewLayer.findOne("#masks");
-        console.log("masks Konva group:", masksGroup);
-        console.log("masks children length:", masksGroup.children?.length);
+        const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+        console.log("masks Konva group:", maskGroup);
+        console.log("masks children length:", maskGroup.children?.length);
       }
     }
   }

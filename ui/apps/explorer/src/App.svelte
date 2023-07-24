@@ -101,7 +101,7 @@
           masks.push({
             viewId: view.id,
             id: selectedItem.objects[view.id].id[i],
-            mask: masksSVG,
+            svg: masksSVG,
             rle: maskRLE,
             catId: selectedItem.objects[view.id].categories[i].id,
             visible: true,

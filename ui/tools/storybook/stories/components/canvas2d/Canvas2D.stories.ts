@@ -35,7 +35,6 @@ type Story = StoryObj<typeof meta>;
 
 export const CanvasWithoutSelectedTool: Story = {
   args: {
-    embeddings: {},
     itemId: "image_moyenne",
     views: [
       {
@@ -43,11 +42,12 @@ export const CanvasWithoutSelectedTool: Story = {
         url: "image_moyenne.jpg",
       },
     ],
-    masks: null,
-    bboxes: [],
     selectedTool: null,
-    currentAnn: null,
     categoryColor: null,
+    masks: [],
+    bboxes: [],
+    embeddings: {},
+    currentAnn: null,
   },
 };
 
@@ -57,7 +57,7 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    embeddings: {"view":[]},
+    embeddings: { view: [] },
     itemId: "image_moyenne",
     views: [
       {
@@ -65,7 +65,7 @@ export const CanvasWithLabeledPointTool: Story = {
         url: "image_moyenne.jpg",
       },
     ],
-    masks: null,
+    masks: [],
     bboxes: [],
     selectedTool: labeledPointCreator,
     currentAnn: null,
@@ -78,7 +78,7 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    embeddings: {"view":[]},
+    embeddings: { view: [] },
     itemId: "image_moyenne",
     views: [
       {
@@ -86,7 +86,7 @@ export const CanvasWithRectangleTool: Story = {
         url: "image_moyenne.jpg",
       },
     ],
-    masks: null,
+    masks: [],
     bboxes: [],
     selectedTool: rectangleCreator,
     currentAnn: null,
