@@ -101,7 +101,9 @@
   }
 
   afterUpdate(() => {
+    console.log("AA")
     if (annotations) {
+      console.log("BB")
       //build views list
       let viewIds = new Set();
       for (let ann of annotations) {
@@ -117,8 +119,6 @@
         let vl = view_list.find((v) => v.view_name == viewId);
         if (vl) {
           vl.num_objs = num_objs;
-          //hack for svelte refresh
-          view_list = view_list;
         } else {
           view_list.push({
             view_name: viewId,
@@ -128,6 +128,8 @@
           });
         }
       }
+      //hack for svelte refresh
+      view_list = view_list;
     }
   });
 </script>
