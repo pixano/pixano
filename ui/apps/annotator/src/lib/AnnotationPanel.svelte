@@ -117,6 +117,8 @@
         let vl = view_list.find((v) => v.view_name == viewId);
         if (vl) {
           vl.num_objs = num_objs;
+          //hack for svelte refresh
+          view_list = view_list;
         } else {
           view_list.push({
             view_name: viewId,
@@ -124,10 +126,12 @@
             visible: true,
             num_objs: num_objs,
           });
+          //view_list = view_list; 
+          // BUG: Issue with AnnotationWorkspace story with it, and with AnnotationPanel story without.
+          // In app it's not usefull, for AnnotationPanel story it allows to have labels at opening
+          // else we need a refresh (ex: change tab)
         }
       }
-      //hack for svelte refresh
-      view_list = view_list;
     }
   });
 </script>

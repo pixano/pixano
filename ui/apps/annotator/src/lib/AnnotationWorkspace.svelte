@@ -169,7 +169,7 @@
   }
 
   async function handleChangeSelectedItem(event) {
-    console.log("AnnotationWorkspace.handleDeleteLabel");
+    console.log("AnnotationWorkspace.handleChangeSelectedItem");
     const newItemId: string = event.detail.find((feature) => {
       return feature.name === "id";
     }).value;
