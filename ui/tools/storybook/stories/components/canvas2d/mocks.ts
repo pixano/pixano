@@ -49,15 +49,17 @@ export class MockInteractiveImageSegmenter
     }
     this.currentMask.fill(0);
 
-    for (let i = 0; i < input.points.length; ++i) {
-      const point = input.points[i];
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
-          const distanceX = x - point.x;
-          const distanceY = y - point.y;
-          const d = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-          if (d < 100) {
-            if (this.currentMask) this.currentMask[x + y * w] = 1;
+    if (input.points) {
+      for (let i = 0; i < input.points.length; ++i) {
+        const point = input.points[i];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const distanceX = x - point.x;
+            const distanceY = y - point.y;
+            const d = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+            if (d < 100) {
+              if (this.currentMask) this.currentMask[x + y * w] = 1;
+            }
           }
         }
       }
@@ -92,7 +94,7 @@ export class MockInteractiveImageSegmenter
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
     //console.log(masksSVG);
     //console.log(masksSVG.length);
-    return { masksImageSVG: masksSVG };
+    return Promise.resolve({ masksImageSVG: masksSVG, rle:null });
   }
 
   reset() {
