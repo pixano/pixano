@@ -24,7 +24,7 @@ from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
 from pixano import transforms
-from pixano.core import arrow_types
+from pixano.core import arrow_types, Dataset
 from pixano.transforms import natural_key, urle_to_bbox, urle_to_rle
 
 
@@ -46,7 +46,7 @@ Features = list[Feature]
 
 
 def get_item_details(
-    dataset: ds.Dataset,
+    dataset: Dataset,
     item_id: str,
     media_dir: Path,
     inf_datasets: list[ds.Dataset] = [],
@@ -54,7 +54,7 @@ def get_item_details(
     """Get item details
 
     Args:
-        dataset (ds.Dataset): Dataset
+        dataset (Dataset): Dataset
         item_id (str): Selected item ID
         media_dir (Path): Dataset media directory
         inf_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
@@ -63,13 +63,17 @@ def get_item_details(
         dict: ImageDetails features for UI
     """
 
+    # Load dataset
+    pa_ds = dataset.load()
+
     # Get item
-    scanner = dataset.scanner(filter=ds.field("id").isin([item_id]))
+    scanner = pa_ds.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
 
     # Get item inference objects
     for inf_ds in inf_datasets:
-        inf_scanner = inf_ds.scanner(filter=ds.field("id").isin([item_id]))
+        pa_inf_ds = inf_ds.load()
+        inf_scanner = pa_inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
             item["objects"].extend(inf_item["objects"])
@@ -77,11 +81,13 @@ def get_item_details(
     # Create features
     features = {
         "id": item["id"],
+        "datasetId": dataset.info.id,
         "filename": None,
-        "width": None,
         "height": None,
-        "categoryStats": [],
-        "views": {},
+        "width": None,
+        "views": [],
+        "objects": {},
+        "catStats": [],
     }
 
     # Category statistics
@@ -95,7 +101,7 @@ def get_item_details(
     ]
     cat, index, count = np.unique(cat_ids, return_index=True, return_counts=True)
     # Add to features
-    features["categoryStats"] = [
+    features["catStats"] = [
         {
             "id": int(cat[i]),
             "name": str(cat_names[index[i]]),
@@ -106,7 +112,7 @@ def get_item_details(
     ]
 
     # Views
-    for field in dataset.schema:
+    for field in pa_ds.schema:
         if arrow_types.is_image_type(field.type):
             # Image
             image = item[field.name]
@@ -114,13 +120,11 @@ def get_item_details(
 
             # Objects IDs
             ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]
-            # Categories
-            cats = [
-                {"id": obj["category_id"], "name": obj["category_name"]}
+            # Masks
+            masks = [
+                transforms.rle_to_urle(obj["mask"])
                 for obj in item["objects"]
-                if obj["view_id"] == field.name
-                and obj["category_id"] is not None
-                and obj["category_name"] is not None
+                if obj["view_id"] == field.name and obj["mask"] is not None
             ]
             # Bounding boxes
             boxes = [
@@ -132,48 +136,53 @@ def get_item_details(
                 for obj in item["objects"]
                 if obj["view_id"] == field.name and obj["bbox"] is not None
             ]
-            # Masks
-            masks = [
-                transforms.rle_to_urle(obj["mask"])
+            # Categories
+            cats = [
+                {"id": obj["category_id"], "name": obj["category_name"]}
                 for obj in item["objects"]
-                if obj["view_id"] == field.name and obj["mask"] is not None
+                if obj["view_id"] == field.name
+                and obj["category_id"] is not None
+                and obj["category_name"] is not None
             ]
+
             # Add to features
-            features["views"][field.name] = {
-                "image": image.url,
-                "objects": {
-                    "id": ids,
-                    "category": cats,
-                    "boundingBox": boxes,
-                    "segmentation": masks,
-                },
+            features["views"].append({"id": field.name, "url": image.url})
+            features["objects"][field.name] = {
+                "id": ids,
+                "viewId": field.name,
+                "masks": masks,
+                "bboxes": boxes,
+                "categories": cats,
             }
 
     return features
 
 
-def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPage:
+def get_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     """Get items
 
     Args:
-        dataset (pa.Dataset): Dataset
+        dataset (Dataset): Dataset
         params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
 
     Returns:
         AbstractPage: List of Features for UI (DatasetExplorer)
     """
 
+    # Load dataset
+    pa_ds = dataset.load()
+
     # Get page parameters
     params = resolve_params(params)
     raw_params = params.to_raw_params()
-    total = dataset.count_rows()
+    total = pa_ds.count_rows()
 
     # Get page items
     start = raw_params.offset
     stop = min(raw_params.offset + raw_params.limit, total)
     if start >= stop:
         return None
-    items_table = dataset.take(range(start, stop))
+    items_table = pa_ds.take(range(start, stop))
 
     def _create_features(row: list) -> list[Feature]:
         """Create features based on field types
@@ -188,7 +197,7 @@ def get_items(dataset: ds.Dataset, params: AbstractParams = None) -> AbstractPag
         features = []
 
         # Iterate on fields
-        for field in dataset.schema:
+        for field in pa_ds.schema:
             # Number fields
             if arrow_types.is_number(field.type):
                 features.append(
@@ -226,8 +235,11 @@ def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> byte
         bytes: Embedding in base 64
     """
 
+    # Load dataset
+    pa_emb_ds = emb_ds.load()
+
     # Get item
-    emb_scanner = emb_ds.scanner(filter=ds.field("id").isin([item_id]))
+    emb_scanner = pa_emb_ds.scanner(filter=ds.field("id").isin([item_id]))
     emb_item = emb_scanner.to_table().to_pylist()[0]
     return emb_item[f"{view}_embedding"]
 

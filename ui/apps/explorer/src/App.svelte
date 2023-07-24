@@ -30,20 +30,18 @@
     BBox,
     AnnotationCategory,
     AnnotationLabel,
-    ViewData,
   } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
-  let selectedDataset: Dataset = null;
+  let selectedDataset: Dataset;
   let currentPage = 1;
 
-  let selectedItem: ItemData = null;
+  let selectedItem: ItemData;
 
   let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
   let annotations: Array<AnnotationCategory> = [];
-  let itemDetails = null;
 
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
@@ -60,116 +58,99 @@
   async function handleSelectItem(id: string) {
     console.log("App.handleSelectItem");
     const start = Date.now();
-    itemDetails = await api.getItemDetails(selectedDataset.id, id);
+    selectedItem = await api.getItemDetails(selectedDataset.id, id);
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
       "ms"
     );
 
-    let views: Array<ViewData> = [];
-    for (let viewId of Object.keys(itemDetails.views)) {
-      let view: ViewData = {
-        viewId: viewId,
-        imageURL: itemDetails.views[viewId].image,
-      };
-      views.push(view);
-    }
-    selectedItem = {
-      dbName: selectedDataset.name,
-      id: id,
-      views: views,
-    };
-
     //build annotations, masks, bboxes and classes
     let struct_categories: { [key: string]: AnnotationCategory } = {};
-    for (let viewId of Object.keys(itemDetails.views)) {
-      for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
-        const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
-        const bbox = itemDetails.views[viewId].objects.boundingBox[i];
-        const cat_name = itemDetails.views[viewId].objects.category[i].name;
+    for (let view of selectedItem.views) {
+      for (let i = 0; i < selectedItem.objects[view.id].id.length; ++i) {
+        const maskRLE = selectedItem.objects[view.id].masks[i];
+        const bboxXYWH = selectedItem.objects[view.id].bboxes[i];
+        const catName = selectedItem.objects[view.id].categories[i].name;
 
         // ensure all items goes in unique category (by name)
-        if (!struct_categories[cat_name]) {
+        if (!struct_categories[catName]) {
           let annotation: AnnotationCategory = {
-            id: itemDetails.views[viewId].objects.category[i].id,
-            name: cat_name,
-            viewId: viewId,
+            id: selectedItem.objects[view.id].categories[i].id,
+            name: catName,
+            viewId: view.id,
             labels: [],
             visible: true,
           };
-          struct_categories[cat_name] = annotation;
+          struct_categories[catName] = annotation;
         }
 
-        if (!(bbox || mask_rle)) {
+        if (!(maskRLE || bboxXYWH)) {
           console.log(
             "App.handleSelectItem - Warning: no mask nor bounding box"
           );
           continue;
         }
 
-        if (mask_rle) {
-          const rle = mask_rle["counts"];
-          const size = mask_rle["size"];
+        if (maskRLE) {
+          const rle = maskRLE["counts"];
+          const size = maskRLE["size"];
           const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
           const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
+            viewId: view.id,
+            id: selectedItem.objects[view.id].id[i],
             mask: masksSVG,
-            rle: mask_rle,
-            catId: itemDetails.views[viewId].objects.category[i].id,
+            rle: maskRLE,
+            catId: selectedItem.objects[view.id].categories[i].id,
             visible: true,
             opacity: 1.0,
           });
           let label: AnnotationLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            viewId: viewId,
+            id: selectedItem.objects[view.id].id[i],
+            viewId: view.id,
             type: "mask",
             visible: true,
             opacity: 1.0,
           };
-          if (bbox && bbox.is_predict) {
-            label.confidence = bbox.confidence;
+          if (bboxXYWH && bboxXYWH.predicted) {
+            label.confidence = bboxXYWH.confidence;
           }
-          struct_categories[cat_name].labels.push(label);
+          struct_categories[catName].labels.push(label);
         }
-        if (bbox) {
+        if (bboxXYWH) {
           bboxes.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
-            bbox: [bbox.x, bbox.y, bbox.width, bbox.height], //still normalized
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              (bbox.is_predict
-                ? " " + parseFloat(bbox.confidence).toFixed(2)
-                : ""),
-            catId: itemDetails.views[viewId].objects.category[i].id,
+            viewId: view.id,
+            id: selectedItem.objects[view.id].id[i],
+            bbox: [bboxXYWH.x, bboxXYWH.y, bboxXYWH.width, bboxXYWH.height], //still normalized
+            tooltip:
+              selectedItem.objects[view.id].categories[i].name +
+              (bboxXYWH.predicted ? " " + bboxXYWH.confidence.toFixed(2) : ""),
+            catId: selectedItem.objects[view.id].categories[i].id,
             visible: true,
           });
           let label: AnnotationLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            viewId: viewId,
+            id: selectedItem.objects[view.id].id[i],
+            viewId: view.id,
             type: "bbox",
             visible: true,
             opacity: 1.0,
           };
-          if (bbox.is_predict) {
-            label.confidence = bbox.confidence;
+          if (bboxXYWH.predicted) {
+            label.confidence = bboxXYWH.confidence;
           }
-          struct_categories[cat_name].labels.push(label);
+          struct_categories[catName].labels.push(label);
         }
       }
     }
-    for (let cat_name in struct_categories)
-      annotations.push(struct_categories[cat_name]);
+    for (let catName in struct_categories)
+      annotations.push(struct_categories[catName]);
   }
 
   function handleUnselectItem() {
     console.log("App.handleUnselectItem");
     selectedItem = null;
-    itemDetails = null;
     masks = [];
     bboxes = [];
     annotations = [];
@@ -203,7 +184,6 @@
       {#if selectedItem}
         <ExplorationWorkspace
           {selectedItem}
-          features={itemDetails}
           {annotations}
           {masks}
           {bboxes}

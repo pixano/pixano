@@ -19,19 +19,16 @@
 
   import { utils } from "@pixano/core";
 
-  import type { AnnotationCategory } from "@pixano/core";
+  import type { AnnotationCategory, ItemData } from "@pixano/core";
 
   // Exports
-  export let features = null;
+  export let selectedItem: ItemData;
   export let annotations: Array<AnnotationCategory>;
 
   const dispatch = createEventDispatcher();
 
-  let oldID: number;
-
+  let currentID: string;
   let activeTab = "labels";
-
-  // Function that maps an id to a color
   let categoryColor = null;
 
   // Multiview image grid
@@ -123,18 +120,21 @@
   }
 
   onMount(() => {
+    console.log("ExplorationPanel.onMount");
     updateConfidenceFilter(minConfidence);
   });
 
   beforeUpdate(() => {
+    console.log("ExplorationPanel.beforeUpdate");
     // If the image has changed
-    if (features.id != oldID) {
+    if (currentID !== selectedItem.id) {
       categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
 
       // Calculate new grid size
-      let viewsCount = Object.keys(features.views).length;
+      let viewsCount = Object.keys(selectedItem.views).length;
       gridSize.cols = Math.ceil(Math.sqrt(viewsCount));
       gridSize.rows = Math.ceil(viewsCount / gridSize.cols);
+      currentID = selectedItem.id;
     }
   });
 </script>
@@ -161,18 +161,18 @@
       class="h-full px-4 overflow-auto {activeTab == 'labels' ? '' : 'hidden'}"
     >
       <!-- Details -->
-      {#if features.filename || (features.width && features.height)}
+      {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
         <div class="flex flex-col py-4">
-          {#if features.filename}
+          {#if selectedItem.filename}
             <div>
               <span class="font-bold"> Filename : </span>
-              <span> {features.filename} </span>
+              <span> {selectedItem.filename} </span>
             </div>
           {/if}
-          {#if features.width && features.height}
+          {#if selectedItem.width && selectedItem.height}
             <div>
               <span class="font-bold"> Size : </span>
-              <span> {features.width}x{features.height}px</span>
+              <span> {selectedItem.width}x{selectedItem.height}px</span>
             </div>
           {/if}
         </div>
@@ -240,7 +240,7 @@
       <!-- Item Categories -->
       <div class="flex flex-wrap py-4">
         {#if categoryColor != null}
-          {#each features.categoryStats as category}
+          {#each selectedItem.catStats as category}
             <!-- Toggle Category Button -->
             <button
               class="relative px-1 mb-2 mr-4 rounded-lg text-sm font-bold border-2 border-transparent

@@ -29,7 +29,6 @@
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let annotations: Array<AnnotationCategory>;
-  export let features = null;
 
   let panTool = tools.createPanTool();
   let selectedTool: tools.Tool = panTool;
@@ -118,7 +117,7 @@
     />
     {#if annotations}
       <ExplorationPanel
-        {features}
+        {selectedItem}
         {annotations}
         on:categoryVisibility={handleCategoryVisibility}
         on:bboxesVisibility={handleBboxesVisibility}

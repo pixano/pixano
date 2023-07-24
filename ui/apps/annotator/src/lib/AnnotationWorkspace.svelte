@@ -192,8 +192,8 @@
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {
         newItemViews.push({
-          viewId: itemFeature.name,
-          imageURL: itemFeature.value,
+          id: itemFeature.name,
+          url: itemFeature.value,
         });
       }
     }

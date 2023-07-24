@@ -15,15 +15,37 @@
 
 // Exports
 
+export interface Dictionary<Type> {
+  [key: string]: Type;
+}
+
 export interface ItemData {
   id: string;
-  dbName: string;
+  datasetId: string;
+  filename?: string;
+  height?: number;
+  width?: number;
   views: Array<ViewData>;
+  objects: Dictionary<ObjectsData>;
+  catStats: Array<CategoryData>;
 }
 
 export interface ViewData {
-  viewId: string;
-  imageURL: string;
+  id: string;
+  url: string;
+}
+
+export interface ObjectsData {
+  id: string;
+  masks: Array<MaskRLE>;
+  bboxes: Array<BBoxXYWH>;
+  categories: Array<CategoryData>;
+}
+
+export interface CategoryData {
+  id: number;
+  name: string;
+  count: number;
 }
 
 export interface Mask {
@@ -40,7 +62,7 @@ export interface BBox {
   viewId: string;
   id: string;
   bbox: Array<number>; //format xywh, normalized
-  label: string;
+  tooltip: string;
   catId: number;
   visible: boolean;
 }
@@ -89,3 +111,12 @@ export interface MaskRLE {
 }
 
 export type MaskSVG = Array<string>;
+
+export interface BBoxXYWH {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  predicted: boolean;
+  confidence?: number;
+}

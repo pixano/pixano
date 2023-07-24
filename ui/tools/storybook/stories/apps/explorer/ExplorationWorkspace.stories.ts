@@ -31,14 +31,24 @@ type Story = StoryObj<typeof meta>;
 export const Base: Story = {
   args: {
     selectedItem: {
-      dbName: "photos db",
+      id: "id2684",
+      datasetId: "dataset0004",
       views: [
         {
-          viewId: "view",
-          imageURL: "img-02.jpg",
+          id: "view",
+          url: "img-02.jpg",
         },
       ],
-      id: "id2684",
+      objects: {
+        view: { id: "object0001", masks: [], bboxes: [], categories: [] },
+      },
+      catStats: [
+        {
+          id: 11,
+          name: "eye",
+          count: 1,
+        },
+      ],
     },
     //sample for bear image "img-02.jpg"
     //bear left eye...
@@ -72,16 +82,5 @@ export const Base: Story = {
         visible: true,
       },
     ],
-    features: {
-      id: "1",
-      views: [{ viewId: "view", imageURL: "img-02.jpg" }],
-      categoryStats: [
-        {
-          id: 11,
-          name: "eye",
-          count: 1,
-        },
-      ],
-    },
   },
 };

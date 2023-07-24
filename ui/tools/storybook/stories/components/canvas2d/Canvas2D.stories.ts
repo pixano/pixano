@@ -39,8 +39,8 @@ export const CanvasWithoutSelectedTool: Story = {
     itemId: "image_moyenne",
     views: [
       {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+        id: "view",
+        url: "image_moyenne.jpg",
       },
     ],
     masks: null,
@@ -61,8 +61,8 @@ export const CanvasWithLabeledPointTool: Story = {
     itemId: "image_moyenne",
     views: [
       {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+        id: "view",
+        url: "image_moyenne.jpg",
       },
     ],
     masks: null,
@@ -82,8 +82,8 @@ export const CanvasWithRectangleTool: Story = {
     itemId: "image_moyenne",
     views: [
       {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+        id: "view",
+        url: "image_moyenne.jpg",
       },
     ],
     masks: null,

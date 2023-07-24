@@ -114,11 +114,11 @@
   onMount(() => {
     // Load Image(s)
     for (let view of views) {
-      zoomFactor[view.viewId] = 1;
+      zoomFactor[view.id] = 1;
       const image = new Image();
-      image.src = view.imageURL;
+      image.src = view.url;
       image.onload = (event) => {
-        onLoadViewImage(event, view.viewId).then(() => {
+        onLoadViewImage(event, view.id).then(() => {
           scaleView(view);
           //hack to refresh view (display masks/bboxes)
           masks = masks;
@@ -146,22 +146,22 @@
       validateCurrentMask(currentAnn.viewId);
     }
     if (masks) {
-      for (let view of views) addMasks(view.viewId, itemId);
+      for (let view of views) addMasks(view.id, itemId);
     }
     if (bboxes) {
-      for (let view of views) addBboxes(view.viewId, itemId);
+      for (let view of views) addBboxes(view.id, itemId);
     }
 
     if (views !== prev_views) {
       // Load Image(s)
       clearAnnotationAndInputs();
       for (let view of views) {
-        const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
-        zoomFactor[view.viewId] = 1;
+        const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
+        zoomFactor[view.id] = 1;
         const image = new Image();
-        image.src = view.imageURL;
+        image.src = view.url;
         image.onload = (event) => {
-          onLoadViewImage(event, view.viewId).then(() => {
+          onLoadViewImage(event, view.id).then(() => {
             const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
             konvaImg.image(image);
             scaleView(view);
@@ -179,7 +179,7 @@
   }
 
   function scaleView(view: ViewData) {
-    const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+    const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
     if (viewLayer) {
       // Calculate max dims for every image in the grid
       let maxWidth = stage.width() / gridSize.cols;
@@ -189,7 +189,7 @@
       let i = 0;
       //get view index
       for (let v of views) {
-        if (v.viewId === view.viewId) break;
+        if (v.id === view.id) break;
         i++;
       }
       let grid_pos = {
@@ -198,20 +198,19 @@
       };
 
       // Fit stage
-      let scaleByHeight = maxHeight / images[view.viewId].height;
-      let scaleByWidth = maxWidth / images[view.viewId].width;
+      let scaleByHeight = maxHeight / images[view.id].height;
+      let scaleByWidth = maxWidth / images[view.id].width;
       let scale = Math.min(scaleByWidth, scaleByHeight);
       //set zoomFactor for view
-      zoomFactor[view.viewId] = scale;
+      zoomFactor[view.id] = scale;
 
       viewLayer.scale({ x: scale, y: scale });
 
       // Center view
       let offsetX =
-        (maxWidth - images[view.viewId].width * scale) / 2 +
-        grid_pos.x * maxWidth;
+        (maxWidth - images[view.id].width * scale) / 2 + grid_pos.x * maxWidth;
       let offsetY =
-        (maxHeight - images[view.viewId].height * scale) / 2 +
+        (maxHeight - images[view.id].height * scale) / 2 +
         grid_pos.y * maxHeight;
       viewLayer.x(offsetX);
       viewLayer.y(offsetY);
@@ -319,7 +318,7 @@
     // Add some text to the label
     label.add(
       new Konva.Text({
-        text: bbox.label,
+        text: bbox.tooltip,
         fontSize: 6,
         fontStyle: "bold",
         fontFamily: "poppins",
@@ -928,8 +927,8 @@
 
   function clearAnnotationAndInputs() {
     for (let view of views) {
-      clearInputs(view.viewId);
-      clearCurrentAnn(view.viewId);
+      clearInputs(view.id);
+      clearCurrentAnn(view.id);
     }
     stage.container().style.cursor = selectedTool.cursor;
     currentAnn = null;
@@ -1140,7 +1139,7 @@
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
       for (let view of views) {
-        const viewLayer = stage.findOne(`#${view.viewId}`) as Konva.Layer;
+        const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
         const masksGroup: Konva.Group = viewLayer.findOne("#masks");
         console.log("masks Konva group:", masksGroup);
         console.log("masks children length:", masksGroup.children?.length);
@@ -1161,18 +1160,17 @@
     on:mouseleave={handleMouseLeaveStage}
   >
     {#each views as view}
-      {#if images[view.viewId]}
+      {#if images[view.id]}
         <Layer
-          config={{ id: view.viewId }}
-          on:wheel={(event) => handleWheelOnImage(event, view.viewId)}
+          config={{ id: view.id }}
+          on:wheel={(event) => handleWheelOnImage(event, view.id)}
         >
           <KonvaImage
-            config={{ image: images[view.viewId], id: itemId }}
+            config={{ image: images[view.id], id: itemId }}
             on:pointerdown={(event) =>
-              handleClickOnImage(event, itemId, view.viewId)}
-            on:pointerup={(event) => handlePointerUpOnImage(event, view.viewId)}
-            on:dblclick={(event) =>
-              handleDoubleClickOnImage(event, view.viewId)}
+              handleClickOnImage(event, itemId, view.id)}
+            on:pointerup={(event) => handlePointerUpOnImage(event, view.id)}
+            on:dblclick={(event) => handleDoubleClickOnImage(event, view.id)}
           />
           <Group config={{ id: "currentAnnotation" }} />
           <Group config={{ id: "masks" }} />

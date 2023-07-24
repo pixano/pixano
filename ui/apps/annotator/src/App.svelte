@@ -38,7 +38,6 @@
     Mask,
     AnnotationCategory,
     AnnotationLabel,
-    ViewData,
   } from "@pixano/core";
 
   // Dataset navigation
@@ -55,7 +54,6 @@
   let masks: Array<Mask> = [];
   let annotations: Array<AnnotationCategory> = [];
   let classes = [];
-  let itemDetails = null;
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";
   let inputModelName: string;
@@ -105,83 +103,65 @@
   async function handleSelectItem(id: string) {
     console.log("App.handleSelectItem");
     const start = Date.now();
-    itemDetails = await api.getItemDetails(selectedDataset.id, id);
+    selectedItem = await api.getItemDetails(selectedDataset.id, id);
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
       "ms"
     );
 
-    let views: Array<ViewData> = [];
-    for (let viewId of Object.keys(itemDetails.views)) {
-      let view: ViewData = {
-        viewId: viewId,
-        imageURL: itemDetails.views[viewId].image,
-      };
-      views.push(view);
-    }
-    selectedItem = {
-      dbName: selectedDataset.name,
-      id: id,
-      views: views,
-    };
-
     //build annotations, masks and classes
     masks = [];
     annotations = [];
-
-    //predefined classes from spec.json "categories"
     classes = selectedDataset.categories;
-
     let struct_views_categories = {};
-    for (let viewId of Object.keys(itemDetails.views)) {
+    for (let view of selectedItem.views) {
       let struct_categories: { [key: string]: AnnotationCategory } = {};
+      for (let i = 0; i < selectedItem.objects[view.id].id.length; ++i) {
+        const maskRLE = selectedItem.objects[view.id].masks[i];
+        const catName = selectedItem.objects[view.id].categories[i].name;
 
-      for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
-        const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
-        const cat_name = itemDetails.views[viewId].objects.category[i].name;
-
-        if (mask_rle) {
+        if (maskRLE) {
           //separate in case we add bboxes or other annotation types later
           // ensure all items goes in unique category (by name)
-          if (!struct_categories[cat_name]) {
+          if (!struct_categories[catName]) {
             let annotation: AnnotationCategory = {
-              id: itemDetails.views[viewId].objects.category[i].id,
-              name: cat_name,
-              viewId: viewId,
+              id: selectedItem.objects[view.id].categories[i].id,
+              name: catName,
+              viewId: view.id,
               labels: [],
               visible: true,
             };
-            struct_categories[cat_name] = annotation;
+            struct_categories[catName] = annotation;
           }
         }
 
-        if (mask_rle) {
-          const rle = mask_rle["counts"];
-          const size = mask_rle["size"];
+        if (maskRLE) {
+          const rle = maskRLE["counts"];
+          const size = maskRLE["size"];
           const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
           const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
+            viewId: view.id,
+            id: selectedItem.objects[view.id].id[i],
             mask: masksSVG,
-            rle: mask_rle,
-            catId: itemDetails.views[viewId].objects.category[i].id,
+            rle: maskRLE,
+            catId: selectedItem.objects[view.id].categories[i].id,
             opacity: 1.0,
             visible: true,
           });
           let label: AnnotationLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            viewId: viewId,
+            id: selectedItem.objects[view.id].id[i],
+            viewId: view.id,
             type: "mask",
             opacity: 1.0,
             visible: true,
           };
-          struct_categories[cat_name].labels.push(label);
+          struct_categories[catName].labels.push(label);
         }
       }
-      struct_views_categories[viewId] = struct_categories;
+      struct_views_categories[view.id] = struct_categories;
     }
     for (let view in struct_views_categories) {
       for (let cat_name in struct_views_categories[view]) {
@@ -200,13 +180,13 @@
     }
 
     // Embeddings
-    for (let viewId of Object.keys(itemDetails.views)) {
+    for (let view of selectedItem.views) {
       let viewEmbedding = null;
       const start = Date.now();
       const viewEmbeddingArrayBytes = await api.getViewEmbedding(
         selectedDataset.id,
-        itemDetails.id,
-        viewId
+        selectedItem.id,
+        view.id
       );
       console.log(
         "App.handleSelectItem - api.getViewEmbedding in",
@@ -226,7 +206,7 @@
           console.log("App.handleSelectItem - Error loading embeddings", e);
         }
       }
-      embeddings[viewId] = viewEmbedding;
+      embeddings[view.id] = viewEmbedding;
     }
   }
 

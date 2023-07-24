@@ -121,7 +121,6 @@ export const Base: Story = {
         visible: true,
       },
     ],
-
     currentPage: 1,
   },
 };
