@@ -3,7 +3,6 @@ module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{svelte,js,ts}",
-    "../../../ui/components/core/src/*.{svelte,js,ts}",
     "../../../ui/components/core/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
