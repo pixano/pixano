@@ -57,7 +57,7 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    embeddings: {},
+    embeddings: {"view":[]},
     itemId: "image_moyenne",
     views: [
       {
@@ -67,7 +67,7 @@ export const CanvasWithLabeledPointTool: Story = {
     ],
     masks: null,
     bboxes: [],
-    selectedTool: null,
+    selectedTool: labeledPointCreator,
     currentAnn: null,
     categoryColor: null,
   },
@@ -78,7 +78,7 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    embeddings: {},
+    embeddings: {"view":[]},
     itemId: "image_moyenne",
     views: [
       {
@@ -88,7 +88,7 @@ export const CanvasWithRectangleTool: Story = {
     ],
     masks: null,
     bboxes: [],
-    selectedTool: null,
+    selectedTool: rectangleCreator,
     currentAnn: null,
     categoryColor: null,
   },
