@@ -101,9 +101,7 @@
   }
 
   afterUpdate(() => {
-    console.log("AA")
     if (annotations) {
-      console.log("BB")
       //build views list
       let viewIds = new Set();
       for (let ann of annotations) {
