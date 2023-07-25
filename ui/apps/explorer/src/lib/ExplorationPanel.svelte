@@ -237,7 +237,10 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
-      <div class="px-4">
+      <div
+        class="px-4 border-b-2
+      border-zinc-300 dark:border-zinc-500"
+      >
         <!-- Details -->
         {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
           <div class="flex flex-col py-4">
