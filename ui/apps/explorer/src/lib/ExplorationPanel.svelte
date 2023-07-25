@@ -17,19 +17,25 @@
   // Imports
   import { beforeUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { utils } from "@pixano/core";
-
-  import type { AnnotationCategory, ItemData } from "@pixano/core";
+  import type {
+    ItemData,
+    ItemLabels,
+    Label,
+    SourceLabels,
+    ViewLabels,
+  } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
-  export let annotations: Array<AnnotationCategory>;
+  export let annotations: ItemLabels;
 
   const dispatch = createEventDispatcher();
 
   let currentID: string;
   let activeTab = "labels";
   let categoryColor = null;
+  let allAnnHidden = false;
+  let allBBoxHidden = false;
 
   // Multiview image grid
   let gridSize = {
@@ -41,95 +47,147 @@
   let maskOpacity: number = 1.0;
   let minConfidence: number = 0.5;
 
-  function handleConfidenceFilter(event) {
-    updateConfidenceFilter(parseFloat(event.target.value));
-  }
-
-  function updateConfidenceFilter(confidence) {
-    for (let category of annotations) {
-      for (let item of category.labels) {
-        if (item.confidence) {
-          item.visible = item.confidence >= confidence;
+  function handleConfidenceFilter() {
+    for (let view of Object.values(annotations)) {
+      for (let source of Object.values(view.sources)) {
+        for (let category of Object.values(source.categories)) {
+          for (let label of Object.values(category.labels)) {
+            if (
+              label.confidence &&
+              !allAnnHidden &&
+              ((label.type === "bbox" && !allBBoxHidden) ||
+                label.type === "mask")
+            ) {
+              handleLabelVisibility(label, label.confidence >= minConfidence);
+            }
+          }
         }
       }
     }
-    dispatch("categoryVisibility");
+  }
+
+  function handleLabelVisibility(label: Label, visibility: boolean) {
+    if (label.confidence) {
+      label.visible = visibility && label.confidence >= minConfidence;
+    } else {
+      label.visible = visibility;
+    }
+    dispatch("labelVisibility", label);
+  }
+
+  function handleCategoryVisibility(categoryName: string) {
+    // Toggle visibility
+    for (let view of Object.values(annotations)) {
+      for (let source of Object.values(view.sources)) {
+        for (let category of Object.values(source.categories)) {
+          if (category.name === categoryName) {
+            category.visible = !category.visible;
+            for (let label of Object.values(category.labels)) {
+              handleLabelVisibility(label, category.visible);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  function handleSourceVisibility(view: ViewLabels, source: SourceLabels) {
+    // Toggle visibility
+    source.visible = !source.visible;
+    // Toggle parents if needed
+    if (source.visible && !view.visible) {
+      view.visible = true;
+    }
+    // Dispatch label visibility change
+    for (let category of Object.values(source.categories)) {
+      category.visible = source.visible;
+      for (let label of Object.values(category.labels)) {
+        label.visible = source.visible;
+        dispatch("labelVisibility", label);
+      }
+    }
+  }
+
+  function handleViewVisibility(view: ViewLabels) {
+    // Toggle visibility
+    view.visible = !view.visible;
+    // Dispatch label visibility change
+    for (let source of Object.values(view.sources)) {
+      source.visible = view.visible;
+      for (let category of Object.values(source.categories)) {
+        category.visible = view.visible;
+        for (let label of Object.values(category.labels)) {
+          label.visible = view.visible;
+          dispatch("labelVisibility", label);
+        }
+      }
+    }
+  }
+
+  function handleAllVisibility() {
+    allAnnHidden = !allAnnHidden;
+    for (let view of Object.values(annotations)) {
+      // Toggle visibility
+      view.visible = !view.visible;
+      // Dispatch label visibility change
+      for (let source of Object.values(view.sources)) {
+        source.visible = view.visible;
+        for (let category of Object.values(source.categories)) {
+          category.visible = view.visible;
+          for (let label of Object.values(category.labels)) {
+            if (
+              (label.type === "bbox" && !allBBoxHidden) ||
+              label.type === "mask"
+            ) {
+              handleLabelVisibility(label, !label.visible);
+            }
+          }
+        }
+      }
+    }
   }
 
   // Change every mask opacity to match the desired value.
   function handleMaskOpacity() {
-    for (let category of annotations) {
-      for (let item of category.labels) {
-        item.opacity = maskOpacity;
-      }
-    }
-    dispatch("maskOpacity", maskOpacity);
-  }
-
-  function handleBboxesVisibility(event) {
-    dispatch("bboxesVisibility", event.target.checked);
-  }
-
-  /**
-   * Toggle on/off a category visibility.
-   * @param category category to show/hide
-   */
-  function handleCategoryVisibility(category_name: string) {
-    let allVisible = true;
-    for (let category of annotations) {
-      if (category.name === category_name) {
-        category.visible = !category.visible;
-        let categoryButton = document.getElementById(`cat-${category.id}`);
-        if (category.visible) {
-          categoryButton.classList.remove("grayscale");
-        } else {
-          categoryButton.classList.add("grayscale");
-        }
-        for (let label of category.labels) {
-          label.visible = category.visible;
-        }
-      }
-      allVisible = allVisible && category.visible;
-    }
-    // Update showAllCategories button
-    let allVis_elem = document.getElementById(
-      "toggle-items"
-    ) as HTMLInputElement;
-    allVis_elem.checked = allVisible;
-
-    dispatch("categoryVisibility");
-  }
-
-  // Show or hide every category.
-  function handleAllCategoriesVisibility(event) {
-    for (let category of annotations) {
-      category.visible = event.target.checked;
-      for (let label of category.labels) {
-        let categoryButton = document.getElementById(`cat-${category.id}`);
-        if (category.visible) {
-          categoryButton.classList.remove("grayscale");
-        } else {
-          categoryButton.classList.add("grayscale");
-        }
-        if (label.visible !== category.visible) {
-          label.visible = category.visible;
+    for (let view of Object.values(annotations)) {
+      for (let source of Object.values(view.sources)) {
+        for (let category of Object.values(source.categories)) {
+          for (let label of Object.values(category.labels)) {
+            if (label.type === "mask") {
+              label.opacity = maskOpacity;
+              dispatch("labelVisibility", label);
+            }
+          }
         }
       }
     }
-    dispatch("categoryVisibility");
+  }
+
+  function handleBboxesVisibility() {
+    allBBoxHidden = !allBBoxHidden;
+    for (let view of Object.values(annotations)) {
+      for (let source of Object.values(view.sources)) {
+        for (let category of Object.values(source.categories)) {
+          for (let label of Object.values(category.labels)) {
+            if (label.type === "bbox" && !allAnnHidden) {
+              handleLabelVisibility(label, !label.visible);
+            }
+          }
+        }
+      }
+    }
   }
 
   onMount(() => {
     console.log("ExplorationPanel.onMount");
-    updateConfidenceFilter(minConfidence);
+    console.log(selectedItem.catStats);
+    handleConfidenceFilter();
   });
 
   beforeUpdate(() => {
     console.log("ExplorationPanel.beforeUpdate");
     // If the image has changed
     if (currentID !== selectedItem.id) {
-      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
-
       // Calculate new grid size
       let viewsCount = Object.keys(selectedItem.views).length;
       gridSize.cols = Math.ceil(Math.sqrt(viewsCount));
@@ -186,7 +244,7 @@
             type="checkbox"
             id="toggle-items"
             checked
-            on:change={handleAllCategoriesVisibility}
+            on:change={handleAllVisibility}
           />
           <label class="font-bold cursor-pointer" for="toggle-items">
             Show all annotations

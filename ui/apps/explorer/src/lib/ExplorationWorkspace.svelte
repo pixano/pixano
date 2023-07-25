@@ -22,76 +22,52 @@
 
   import ExplorationPanel from "./ExplorationPanel.svelte";
 
-  import type { ItemData, Mask, BBox, AnnotationCategory } from "@pixano/core";
+  import type { ItemData, Mask, BBox, ItemLabels } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
+  export let annotations: ItemLabels;
+  export let classes;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let annotations: Array<AnnotationCategory>;
 
   let panTool = tools.createPanTool();
   let selectedTool: tools.Tool = panTool;
 
   let categoryColor;
 
-  let allBBoxVisible = true;
-
   const dispatch = createEventDispatcher();
 
-  function handleUnselectItem() {
-    dispatch("unselectItem");
-  }
+  function handleLabelVisibility(event) {
+    console.log("AnnotationWorkspace.handleLabelVisibility");
+    if (event.detail.type === "mask") {
+      const mask = masks.find(
+        (mask) =>
+          mask.id === event.detail.id && mask.viewId === event.detail.viewId
+      );
+      mask.visible = event.detail.visible;
+      mask.opacity = event.detail.opacity;
+    } else if (event.detail.type === "bbox") {
+      const bbox = bboxes.find(
+        (bbox) =>
+          bbox.id === event.detail.id && bbox.viewId === event.detail.viewId
+      );
+      bbox.visible = event.detail.visible;
+    }
 
-  function getItemById(id: string) {
-    for (let category of annotations) {
-      for (let label of category.labels) {
-        if (label.id === id) {
-          return label;
-        }
-      }
-    }
-  }
-
-  function handleCategoryVisibility() {
-    console.log("ExplorationWorkspace.handleCategoryVisibility");
-    if (allBBoxVisible) {
-      for (let bbox of bboxes) {
-        bbox.visible = getItemById(bbox.id).visible;
-      }
-      bboxes = bboxes;
-    }
-    for (let mask of masks) {
-      mask.visible = getItemById(mask.id).visible;
-    }
+    // Update visibility
     masks = masks;
-  }
-
-  function handleBboxesVisibility(event) {
-    console.log("ExplorationWorkspace.handleBboxesVisibility");
-    allBBoxVisible = event.detail;
-    for (let bbox of bboxes) {
-      bbox.visible = allBBoxVisible && getItemById(bbox.id).visible;
-    }
     bboxes = bboxes;
   }
 
-  function handleMaskOpacity() {
-    console.log("ExplorationWorkspace.handleMaskOpacity");
-    for (let mask of masks) {
-      mask.opacity = getItemById(mask.id).opacity;
-    }
-    masks = masks;
-  }
-
   async function handleKeyPress(e) {
-    if (e.keyCode == 27) handleUnselectItem(); // Escape key pressed
+    if (e.keyCode == 27) dispatch("unselectItem"); // Escape key pressed
   }
 
   onMount(async () => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
-      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -99,7 +75,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("ExplorationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
   });
@@ -119,9 +95,7 @@
       <ExplorationPanel
         {selectedItem}
         {annotations}
-        on:categoryVisibility={handleCategoryVisibility}
-        on:bboxesVisibility={handleBboxesVisibility}
-        on:maskOpacity={handleMaskOpacity}
+        on:labelVisibility={handleLabelVisibility}
       />
     {/if}
   {/if}

@@ -23,14 +23,7 @@
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
 
-  import type {
-    Dataset,
-    ItemData,
-    Mask,
-    BBox,
-    AnnotationCategory,
-    AnnotationLabel,
-  } from "@pixano/core";
+  import type { Dataset, ItemData, ItemLabels, Mask, BBox } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -39,9 +32,10 @@
 
   let selectedItem: ItemData;
 
+  let annotations: ItemLabels = {};
+  let classes = [];
   let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
-  let annotations: Array<AnnotationCategory> = [];
 
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
@@ -56,6 +50,10 @@
   }
 
   async function handleSelectItem(id: string) {
+    annotations = {};
+    classes = [];
+    masks = [];
+
     console.log("App.handleSelectItem");
     const start = Date.now();
     selectedItem = await api.getItemDetails(selectedDataset.id, id);
@@ -65,100 +63,154 @@
       "ms"
     );
 
-    //build annotations, masks, bboxes and classes
-    let struct_categories: { [key: string]: AnnotationCategory } = {};
     for (let view of selectedItem.views) {
+      // Initialize annotations
+      annotations[view.id] = {
+        sources: {},
+        numLabels: 0,
+        opened: true,
+        visible: true,
+      };
+      for (let sourceId of selectedItem.objects[view.id].maskSources) {
+        annotations[view.id].sources[sourceId] = {
+          categories: {},
+          numLabels: 0,
+          opened: true,
+          visible: true,
+        };
+      }
+
+      // Initalize classes
+      classes = selectedDataset.categories;
+
       for (let i = 0; i < selectedItem.objects[view.id].ids.length; ++i) {
+        const labelId = selectedItem.objects[view.id].ids[i];
         const maskRLE = selectedItem.objects[view.id].masks[i];
         const bboxXYWH = selectedItem.objects[view.id].bboxes[i];
+        const maskSourceId = selectedItem.objects[view.id].maskSources[i];
+        const bboxSourceId = selectedItem.objects[view.id].bboxSources[i];
+        const catId = selectedItem.objects[view.id].categories[i].id;
         const catName = selectedItem.objects[view.id].categories[i].name;
 
-        // Classes
-        if (!struct_categories[catName]) {
-          let annotation: AnnotationCategory = {
-            id: selectedItem.objects[view.id].categories[i].id,
-            name: catName,
-            viewId: view.id,
-            labels: [],
-            visible: true,
-          };
-          struct_categories[catName] = annotation;
-        }
+        // Masks and bounding boxes
+        if (maskRLE || bboxXYWH) {
+          // Add class if new
+          if (!classes.some((cls) => cls.id === catId)) {
+            classes.push({
+              id: catId,
+              name: catName,
+            });
+          }
 
-        if (!(maskRLE || bboxXYWH)) {
+          if (maskRLE) {
+            const rle = maskRLE["counts"];
+            const size = maskRLE["size"];
+            const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+            const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+            // Add category if new
+            if (
+              !annotations[view.id].sources[maskSourceId].categories[catName]
+            ) {
+              annotations[view.id].sources[maskSourceId].categories[catName] = {
+                labels: {},
+                id: catId,
+                name: catName,
+                opened: false,
+                visible: true,
+              };
+            }
+
+            // Add mask label
+            annotations[view.id].sources[maskSourceId].categories[
+              catName
+            ].labels[`${labelId}_mask`] = {
+              id: labelId,
+              categoryId: catId,
+              categoryName: catName,
+              sourceId: maskSourceId,
+              viewId: view.id,
+              type: "mask",
+              confidence:
+                bboxXYWH && bboxXYWH.predicted ? bboxXYWH.confidence : null,
+              opacity: 1.0,
+              visible: true,
+            };
+
+            // Add mask
+            masks.push({
+              id: selectedItem.objects[view.id].ids[i],
+              viewId: view.id,
+              svg: masksSVG,
+              rle: maskRLE,
+              catId: selectedItem.objects[view.id].categories[i].id,
+              visible: true,
+              opacity: 1.0,
+            });
+          }
+          if (bboxXYWH) {
+            // Add category if new
+            if (
+              !annotations[view.id].sources[bboxSourceId].categories[catName]
+            ) {
+              annotations[view.id].sources[bboxSourceId].categories[catName] = {
+                labels: {},
+                id: catId,
+                name: catName,
+                opened: false,
+                visible: true,
+              };
+            }
+            // Add bbox label
+            annotations[view.id].sources[bboxSourceId].categories[
+              catName
+            ].labels[`${labelId}_bbox`] = {
+              id: labelId,
+              categoryId: catId,
+              categoryName: catName,
+              sourceId: bboxSourceId,
+              viewId: view.id,
+              type: "bbox",
+              confidence: bboxXYWH.predicted ? bboxXYWH.confidence : null,
+              opacity: 1.0,
+              visible: true,
+            };
+
+            // Add bbox
+            bboxes.push({
+              id: selectedItem.objects[view.id].ids[i],
+              viewId: view.id,
+              bbox: [bboxXYWH.x, bboxXYWH.y, bboxXYWH.width, bboxXYWH.height], //still normalized
+              tooltip:
+                selectedItem.objects[view.id].categories[i].name +
+                (bboxXYWH.predicted
+                  ? " " + bboxXYWH.confidence.toFixed(2)
+                  : ""),
+              catId: selectedItem.objects[view.id].categories[i].id,
+              visible: true,
+            });
+          }
+          annotations[view.id].numLabels += 1;
+          annotations[view.id].sources[
+            maskSourceId || bboxSourceId
+          ].numLabels += 1;
+        } else {
           console.log(
             "App.handleSelectItem - Warning: no mask nor bounding box"
           );
           continue;
         }
-
-        // Masks
-        if (maskRLE) {
-          const rle = maskRLE["counts"];
-          const size = maskRLE["size"];
-          const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
-          const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
-
-          masks.push({
-            id: selectedItem.objects[view.id].ids[i],
-            viewId: view.id,
-            svg: masksSVG,
-            rle: maskRLE,
-            catId: selectedItem.objects[view.id].categories[i].id,
-            visible: true,
-            opacity: 1.0,
-          });
-          let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].ids[i],
-            viewId: view.id,
-            sourceId: selectedItem.objects[view.id].maskSources[i],
-            type: "mask",
-            visible: true,
-            opacity: 1.0,
-          };
-          if (bboxXYWH && bboxXYWH.predicted) {
-            label.confidence = bboxXYWH.confidence;
-          }
-          struct_categories[catName].labels.push(label);
-        }
-
-        // BBoxes
-        if (bboxXYWH) {
-          bboxes.push({
-            id: selectedItem.objects[view.id].ids[i],
-            viewId: view.id,
-            bbox: [bboxXYWH.x, bboxXYWH.y, bboxXYWH.width, bboxXYWH.height], //still normalized
-            tooltip:
-              selectedItem.objects[view.id].categories[i].name +
-              (bboxXYWH.predicted ? " " + bboxXYWH.confidence.toFixed(2) : ""),
-            catId: selectedItem.objects[view.id].categories[i].id,
-            visible: true,
-          });
-          let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].ids[i],
-            viewId: view.id,
-            sourceId: selectedItem.objects[view.id].bboxSources[i],
-            type: "bbox",
-            visible: true,
-            opacity: 1.0,
-          };
-          if (bboxXYWH.predicted) {
-            label.confidence = bboxXYWH.confidence;
-          }
-          struct_categories[catName].labels.push(label);
-        }
       }
     }
-    for (let catName in struct_categories)
-      annotations.push(struct_categories[catName]);
   }
 
   function handleUnselectItem() {
     console.log("App.handleUnselectItem");
     selectedItem = null;
+    annotations = {};
+    classes = [];
     masks = [];
     bboxes = [];
-    annotations = [];
   }
 
   onMount(async () => {
@@ -190,6 +242,7 @@
         <ExplorationWorkspace
           {selectedItem}
           {annotations}
+          {classes}
           {masks}
           {bboxes}
           on:unselectItem={handleUnselectItem}
