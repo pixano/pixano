@@ -339,6 +339,7 @@
     const tooltip = new Konva.Label({
       x: rect_x,
       y: rect_y,
+      offsetY: 18,
       scale: {
         x: 1 / zoomFactor[viewId],
         y: 1 / zoomFactor[viewId],
