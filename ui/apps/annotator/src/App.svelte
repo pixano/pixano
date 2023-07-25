@@ -32,13 +32,7 @@
   import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
-  import type {
-    Dataset,
-    ItemData,
-    Mask,
-    AnnotationCategory,
-    AnnotationLabel,
-  } from "@pixano/core";
+  import type { Dataset, ItemData, ItemLabels, Mask } from "@pixano/core";
 
   // Dataset navigation
   let datasets = null;
@@ -52,7 +46,7 @@
   let unselectItemModal = false;
 
   let masks: Array<Mask> = [];
-  let annotations: Array<AnnotationCategory> = [];
+  let annotations: ItemLabels = {};
   let classes = [];
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";
@@ -101,7 +95,11 @@
   }
 
   async function handleSelectItem(id: string) {
-    console.log("App.handleSelectItem");
+    embeddings = {};
+    masks = [];
+    annotations = {};
+    classes = [];
+
     const start = Date.now();
     selectedItem = await api.getItemDetails(selectedDataset.id, id);
     console.log(
@@ -110,29 +108,67 @@
       "ms"
     );
 
-    //build annotations, masks and classes
-    masks = [];
-    annotations = [];
-    classes = selectedDataset.categories;
-    let struct_views_categories = {};
     for (let view of selectedItem.views) {
-      let struct_categories: { [key: string]: AnnotationCategory } = {};
+      // Initialize annotations
+      annotations[view.id] = {
+        sources: {},
+        numLabels: 0,
+        opened: true,
+        visible: true,
+      };
+      for (let sourceId of selectedItem.objects[view.id].maskSources) {
+        annotations[view.id].sources[sourceId] = {
+          categories: {},
+          numLabels: 0,
+          opened: true,
+          visible: true,
+        };
+      }
+      // Initalize classes
+      classes = selectedDataset.categories;
+
       for (let i = 0; i < selectedItem.objects[view.id].ids.length; ++i) {
+        const labelId = selectedItem.objects[view.id].ids[i];
         const maskRLE = selectedItem.objects[view.id].masks[i];
+        const maskSourceId = selectedItem.objects[view.id].maskSources[i];
+        const catId = selectedItem.objects[view.id].categories[i].id;
         const catName = selectedItem.objects[view.id].categories[i].name;
 
-        // Classes
+        // Annotations and classes (only masks are considered in Pixano Annotator)
         if (maskRLE) {
-          if (!struct_categories[catName]) {
-            let annotation: AnnotationCategory = {
-              id: selectedItem.objects[view.id].categories[i].id,
+          // Add class if new
+          if (!classes.some((cls) => cls.id === catId)) {
+            classes.push({
+              id: catId,
               name: catName,
-              viewId: view.id,
-              labels: [],
+            });
+          }
+          // Add category if new
+          if (!annotations[view.id].sources[maskSourceId].categories[catName]) {
+            annotations[view.id].sources[maskSourceId].categories[catName] = {
+              labels: {},
+              id: catId,
+              name: catName,
+              opened: false,
               visible: true,
             };
-            struct_categories[catName] = annotation;
           }
+
+          // Add label
+          annotations[view.id].sources[maskSourceId].categories[catName].labels[
+            labelId
+          ] = {
+            id: labelId,
+            categoryId: catId,
+            categoryName: catName,
+            sourceId: maskSourceId,
+            viewId: view.id,
+            type: "mask",
+            opacity: 1.0,
+            visible: true,
+          };
+          annotations[view.id].numLabels += 1;
+          annotations[view.id].sources[maskSourceId].numLabels += 1;
         }
 
         // Masks
@@ -151,63 +187,38 @@
             opacity: 1.0,
             visible: true,
           });
-          let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].ids[i],
-            viewId: view.id,
-            sourceId: selectedItem.objects[view.id].maskSources[i],
-            type: "mask",
-            opacity: 1.0,
-            visible: true,
-          };
-          struct_categories[catName].labels.push(label);
         }
       }
-      struct_views_categories[view.id] = struct_categories;
-    }
-    for (let view in struct_views_categories) {
-      for (let cat_name in struct_views_categories[view]) {
-        annotations.push(struct_views_categories[view][cat_name]);
-      }
-    }
 
-    //unique classes from existing annotations
-    for (let category of annotations) {
-      if (!classes.some((cls) => cls.id === category.id)) {
-        classes.push({
-          id: category.id,
-          name: category.name,
-        });
-      }
-    }
+      // Embeddings
+      for (let view of selectedItem.views) {
+        let viewEmbedding = null;
+        const start = Date.now();
+        const viewEmbeddingArrayBytes = await api.getViewEmbedding(
+          selectedDataset.id,
+          selectedItem.id,
+          view.id
+        );
+        console.log(
+          "App.handleSelectItem - api.getViewEmbedding in",
+          Date.now() - start,
+          "ms"
+        );
 
-    // Embeddings
-    for (let view of selectedItem.views) {
-      let viewEmbedding = null;
-      const start = Date.now();
-      const viewEmbeddingArrayBytes = await api.getViewEmbedding(
-        selectedDataset.id,
-        selectedItem.id,
-        view.id
-      );
-      console.log(
-        "App.handleSelectItem - api.getViewEmbedding in",
-        Date.now() - start,
-        "ms"
-      );
-
-      if (viewEmbeddingArrayBytes) {
-        try {
-          const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
-          viewEmbedding = new ort.Tensor(
-            "float32",
-            viewEmbeddingArray.data,
-            viewEmbeddingArray.shape
-          );
-        } catch (e) {
-          console.log("App.handleSelectItem - Error loading embeddings", e);
+        if (viewEmbeddingArrayBytes) {
+          try {
+            const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
+            viewEmbedding = new ort.Tensor(
+              "float32",
+              viewEmbeddingArray.data,
+              viewEmbeddingArray.shape
+            );
+          } catch (e) {
+            console.log("App.handleSelectItem - Error loading embeddings", e);
+          }
         }
+        embeddings[view.id] = viewEmbedding;
       }
-      embeddings[view.id] = viewEmbedding;
     }
   }
 
@@ -226,13 +237,11 @@
 
   function unselectItem() {
     unselectItemModal = false;
-    selectedDataset = null;
     selectedItem = null;
     embeddings = {};
     masks = [];
-    annotations = [];
+    annotations = {};
     classes = [];
-    currentPage = 1;
   }
 
   function handleSaveAnns() {
@@ -240,19 +249,25 @@
     saveFlag = false;
     let anns = [];
 
-    for (let mask of masks) {
-      const maskCategory = annotations.find(
-        (cat) => cat.id === mask.catId && cat.viewId === mask.viewId
-      );
-      let ann = {
-        id: mask.id,
-        view_id: mask.viewId,
-        category_id: maskCategory.id,
-        category_name: maskCategory.name,
-        mask: mask.rle,
-        mask_source: "Pixano Annotator",
-      };
-      anns.push(ann);
+    for (const viewLabels of Object.values(annotations)) {
+      for (const sourceLabels of Object.values(viewLabels.sources)) {
+        for (const catLabels of Object.values(sourceLabels.categories)) {
+          for (const label of Object.values(catLabels.labels)) {
+            const mask = masks.find(
+              (m) => m.id === label.id && m.viewId === label.viewId
+            );
+            let ann = {
+              id: label.id,
+              view_id: label.viewId,
+              category_id: label.categoryId,
+              category_name: label.categoryName,
+              mask: mask.rle,
+              mask_source: label.sourceId,
+            };
+            anns.push(ann);
+          }
+        }
+      }
     }
 
     const start = Date.now();

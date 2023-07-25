@@ -20,69 +20,114 @@
   import { icons } from "@pixano/core";
 
   import type {
-    AnnotationLabel,
-    AnnotationCategory,
+    Label,
     Dataset,
     DatasetItem,
+    ViewLabels,
+    CategoryLabels,
+    SourceLabels,
+    ItemLabels,
   } from "@pixano/core";
 
   // Exports
   export let selectedDataset: Dataset;
-  export let annotations: Array<AnnotationCategory>;
+  export let annotations: ItemLabels;
   export let currentPage: number;
   export let categoryColor = null;
 
-  let view_list = []; //view that contains annotations for anns display (not real views list)
   let activeTab = "labels"; //"dataset";
-  const dispatch = createEventDispatcher();
+  let viewsEmpty = true;
 
-  // Set categories as closed by default
-  for (let category of annotations) {
-    category["opened"] = false;
-  }
+  const dispatch = createEventDispatcher();
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
     dispatch("selectItem", item);
   }
 
-  function handleDeleteLabel(label: AnnotationLabel) {
-    dispatch("deleteLabel", label);
+  function handleDeleteLabel(
+    viewId: string,
+    sourceId: string,
+    categoryName: string,
+    labelId: string
+  ) {
+    delete annotations[viewId].sources[sourceId].categories[categoryName]
+      .labels[labelId];
+    annotations[viewId].numLabels -= 1;
+    annotations[viewId].sources[sourceId].numLabels -= 1;
+    dispatch("deleteLabel", labelId);
   }
 
   function handleLabelVisibility(
-    view: any,
-    category: AnnotationCategory,
-    label: AnnotationLabel
+    view: ViewLabels,
+    source: SourceLabels,
+    category: CategoryLabels,
+    label: Label
   ) {
+    // Toggle visibility
     label.visible = !label.visible;
-    if (label.visible && !view.visible) {
-      view.visible = true;
-    }
+    // Toggle parents if needed
     if (label.visible && !category.visible) {
       category.visible = true;
     }
+    if (label.visible && !source.visible) {
+      source.visible = true;
+    }
+    if (label.visible && !view.visible) {
+      view.visible = true;
+    }
+    // Dispatch label visibility change
     dispatch("labelVisibility", label);
   }
 
-  function handleCategoryVisibility(view: any, category: AnnotationCategory) {
+  function handleCategoryVisibility(
+    view: ViewLabels,
+    source: SourceLabels,
+    category: CategoryLabels
+  ) {
+    // Toggle visibility
     category.visible = !category.visible;
+    // Toggle parents if needed
+    if (category.visible && !source.visible) {
+      source.visible = true;
+    }
     if (category.visible && !view.visible) {
       view.visible = true;
     }
-    for (let label of category.labels) {
+    // Dispatch label visibility change
+    for (let label of Object.values(category.labels)) {
       label.visible = category.visible;
       dispatch("labelVisibility", label);
     }
   }
 
-  function handleViewVisibility(view: any) {
+  function handleSourceVisibility(view: ViewLabels, source: SourceLabels) {
+    // Toggle visibility
+    source.visible = !source.visible;
+    // Toggle parents if needed
+    if (source.visible && !view.visible) {
+      view.visible = true;
+    }
+    // Dispatch label visibility change
+    for (let category of Object.values(source.categories)) {
+      category.visible = source.visible;
+      for (let label of Object.values(category.labels)) {
+        label.visible = source.visible;
+        dispatch("labelVisibility", label);
+      }
+    }
+  }
+
+  function handleViewVisibility(view: ViewLabels) {
+    // Toggle visibility
     view.visible = !view.visible;
-    for (let category of annotations) {
-      if (category.viewId === view.view_name) {
+    // Dispatch label visibility change
+    for (let source of Object.values(view.sources)) {
+      source.visible = view.visible;
+      for (let category of Object.values(source.categories)) {
         category.visible = view.visible;
-        for (let label of category.labels) {
-          label.visible = category.visible;
+        for (let label of Object.values(category.labels)) {
+          label.visible = view.visible;
           dispatch("labelVisibility", label);
         }
       }
@@ -102,35 +147,9 @@
 
   afterUpdate(() => {
     if (annotations) {
-      //build views list
-      let viewIds = new Set();
-      for (let ann of annotations) {
-        viewIds.add(ann.viewId);
-      }
-      for (let viewId of viewIds) {
-        let num_objs = 0;
-        for (let ann of annotations) {
-          if (ann.viewId === viewId) {
-            num_objs += ann.labels.length;
-          }
-        }
-        let vl = view_list.find((v) => v.view_name == viewId);
-        if (vl) {
-          vl.num_objs = num_objs;
-          //hack for svelte refresh
-          view_list = view_list;
-        } else {
-          view_list.push({
-            view_name: viewId,
-            opened: true,
-            visible: true,
-            num_objs: num_objs,
-          });
-          //view_list = view_list; 
-          // BUG: Issue with AnnotationWorkspace story with it, and with AnnotationPanel story without.
-          // In app it's not usefull, for AnnotationPanel story it allows to have labels at opening
-          // else we need a refresh (ex: change tab)
-        }
+      annotations = annotations;
+      for (const viewLabels of Object.values(annotations)) {
+        if (viewLabels.numLabels > 0) viewsEmpty = false;
       }
     }
   });
@@ -139,12 +158,13 @@
 <div
   class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
     bg-white dark:bg-zinc-800
-    border-zinc-300 dark:border-zinc-500"
+    border-zinc-300 dark:border-zinc-500
+    text-zinc-500 dark:text-zinc-300"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
     <button
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tl-lg
-      text-zinc-500 dark:text-zinc-300
+     D
       hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'labels'
         ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
@@ -157,7 +177,6 @@
     </button>
     <button
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tr-lg
-      text-zinc-500 dark:text-zinc-300
       hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'dataset'
         ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
@@ -171,13 +190,15 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
-      {#if annotations.length != 0}
-        {#each view_list as view}
-          {#if view_list.length > 1}
+      {#if viewsEmpty}
+        <p class="py-4 text-center font-bold italic">No annotations yet.</p>
+      {:else}
+        {#each Object.entries(annotations) as [viewId, view]}
+          {#if Object.keys(annotations).length > 1}
             <div
-              class="p-5 flex items-center space-x-1 select-none border-b-2
-            border-zinc-300 dark:border-zinc-500
-            {view['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+              class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
+              border-zinc-300 dark:border-zinc-500
+              {view['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
               <button on:click={() => handleViewVisibility(view)}>
                 <svg
@@ -185,7 +206,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                  class="h-6 w-6"
                 >
                   <title>{view["visible"] ? "Hide" : "Show"}</title>
                   <path
@@ -203,7 +224,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                  class="h-6 w-6"
                 >
                   <title>{view["opened"] ? "Close" : "Open"}</title>
                   <path
@@ -212,41 +233,89 @@
                   />
                 </svg>
 
-                <span
-                  class="grow ml-3 font-bold text-zinc-500 dark:text-zinc-300"
-                >
-                  {view.view_name}
+                <span class="grow ml-3 font-bold">
+                  {viewId}
                 </span>
                 <span
                   class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
-                  title="{view.num_objs} labels"
+                  title="{view.numLabels} labels"
                 >
-                  {view.num_objs}
+                  {view.numLabels}
                 </span>
               </button>
             </div>
           {/if}
-          {#each annotations as category}
-            {#if category.viewId === view.view_name}
+          {#each Object.entries(view.sources) as [sourceId, source]}
+            {#if source.numLabels}
               <div
-                class="{view['opened']
-                  ? 'flex'
-                  : 'hidden'} flex-col border-b-2 last:border-transparent
-                  border-zinc-300 dark:border-zinc-500"
+                class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
+              border-zinc-300 dark:border-zinc-500
+              {view['opened'] ? 'flex' : 'hidden'}
+              {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
+              {source['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
               >
+                <button on:click={() => handleSourceVisibility(view, source)}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="48"
+                    viewBox="0 -960 960 960"
+                    width="48"
+                    class="h-6 w-6"
+                  >
+                    <title>{source["visible"] ? "Hide" : "Show"}</title>
+                    <path
+                      d={source["visible"] ? icons.svg_hide : icons.svg_show}
+                      fill="currentcolor"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="flex items-center space-x-1 text-left"
+                  on:click={() => (source["opened"] = !source["opened"])}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="48"
+                    viewBox="0 -960 960 960"
+                    width="48"
+                    class="h-6 w-6"
+                  >
+                    <title>{source["opened"] ? "Close" : "Open"}</title>
+                    <path
+                      d={source["opened"] ? icons.svg_close : icons.svg_open}
+                      fill="currentcolor"
+                    />
+                  </svg>
+
+                  <span class="relative pl-3 grow truncate" title={sourceId}>
+                    {sourceId}
+                  </span>
+                  <span
+                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                    title="{source.numLabels} labels"
+                  >
+                    {source.numLabels}
+                  </span>
+                </button>
+              </div>
+              {#each Object.entries(source.categories) as [categoryName, category]}
                 <div
-                  class="p-5 flex items-center space-x-1 select-none
+                  class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
+                  border-zinc-300 dark:border-zinc-500
+                  {view['opened'] && source['opened'] ? 'flex' : 'hidden'}
+                  {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
                   {category['opened'] ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
                   <button
-                    on:click={() => handleCategoryVisibility(view, category)}
+                    on:click={() =>
+                      handleCategoryVisibility(view, source, category)}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                      class="h-6 w-6"
                     >
                       <title>{category["visible"] ? "Hide" : "Show"}</title>
                       <path
@@ -266,7 +335,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6 text-zinc-500 dark:text-zinc-300"
+                      class="h-6 w-6"
                     >
                       <title>{category["opened"] ? "Close" : "Open"}</title>
                       <path
@@ -286,29 +355,29 @@
                     </span>
                     <span
                       class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
-                      title="{category.labels.length} labels"
+                      title="{Object.keys(category.labels).length} labels"
                     >
-                      {category.labels.length}
+                      {Object.keys(category.labels).length}
                     </span>
                   </button>
                 </div>
                 <div class="{category['opened'] ? 'flex' : 'hidden'} flex-col">
-                  {#each category.labels as label, index}
+                  {#each Object.entries(category.labels) as [labelId, label]}
                     <div
-                      class="py-3 px-8 flex items-center space-x-1
-                      {index === 0 ? '' : 'border-t-2'}
+                      class="p-3 pl-12 flex items-center space-x-1 border-b-2
+                      {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
                       border-zinc-300 dark:border-zinc-500"
                     >
                       <button
                         on:click={() =>
-                          handleLabelVisibility(view, category, label)}
+                          handleLabelVisibility(view, source, category, label)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
                           viewBox="0 -960 960 960"
                           width="48"
-                          class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
+                          class="h-5 w-5"
                         >
                           <title>
                             {(category.visible && label.visible) ||
@@ -331,13 +400,21 @@
                       >
                         {label.id}
                       </span>
-                      <button on:click={() => handleDeleteLabel(label)}>
+                      <button
+                        on:click={() =>
+                          handleDeleteLabel(
+                            viewId,
+                            sourceId,
+                            categoryName,
+                            labelId
+                          )}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
                           viewBox="0 -960 960 960"
                           width="48"
-                          class="h-5 w-5 text-zinc-500 dark:text-zinc-300"
+                          class="h-5 w-5"
                         >
                           <title>Delete</title>
                           <path d={icons.svg_delete} fill="currentcolor" />
@@ -346,17 +423,10 @@
                     </div>
                   {/each}
                 </div>
-              </div>
+              {/each}
             {/if}
           {/each}
         {/each}
-      {:else}
-        <p
-          class="py-4 text-center font-bold italic
-          text-zinc-500 dark:text-zinc-300"
-        >
-          No annotations yet.
-        </p>
       {/if}
     </div>
     <div

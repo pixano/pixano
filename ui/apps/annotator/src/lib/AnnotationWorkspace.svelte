@@ -31,11 +31,10 @@
   import type {
     ItemData,
     Mask,
-    AnnotationCategory,
-    AnnotationLabel,
     ViewData,
     Dataset,
     DatasetItem,
+    ItemLabels,
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -45,12 +44,14 @@
   export let selectedItem: ItemData;
   export let embeddings = {};
   export let classes;
-  export let annotations: Array<AnnotationCategory>;
+  export let annotations: ItemLabels;
   export let masks: Array<Mask>;
   export let currentPage: number;
   export let saveFlag: boolean;
 
   const dispatch = createEventDispatcher();
+
+  const ANN_SOURCE = "Pixano Annotator";
 
   let currentAnnCategory = "";
   let categoryNameModal = false;
@@ -120,16 +121,6 @@
   }
 
   function addCurrentAnn() {
-    // Set a new label
-    const newLabel: AnnotationLabel = {
-      id: currentAnn.id,
-      viewId: currentAnn.viewId,
-      sourceId: "Pixano Annotator",
-      type: "mask",
-      opacity: 1.0,
-      visible: true,
-    };
-
     // Add the new label's category to the class list if it doesn't already exist.
     if (!classes.some((cls) => cls.name === currentAnnCategory)) {
       // Hack to force update
@@ -140,27 +131,36 @@
     }
 
     // Check if the new label's category already exists in the current annotations
-    const existingCategory = annotations.find(
-      (cat) =>
-        cat.name === currentAnnCategory && cat.viewId === currentAnn.viewId
-    );
-    if (existingCategory) {
-      existingCategory.labels.push(newLabel);
-      existingCategory.visible = true;
-      currentAnn.label = existingCategory.name;
-      currentAnn.catId = existingCategory.id;
-    } else {
-      const newCategory: AnnotationCategory = {
-        id: classes.find((obj) => obj.name === currentAnnCategory).id,
-        name: currentAnnCategory,
-        viewId: currentAnn.viewId,
-        labels: [newLabel],
+    if (!annotations[currentAnn.viewId].sources[ANN_SOURCE]) {
+      annotations[currentAnn.viewId].sources[ANN_SOURCE] = {
+        categories: {},
+        numLabels: 0,
+        opened: true,
         visible: true,
       };
-      annotations.push(newCategory);
-      currentAnn.label = newCategory.name;
-      currentAnn.catId = newCategory.id;
     }
+
+    if (
+      !annotations[currentAnn.viewId].sources[ANN_SOURCE].categories[
+        currentAnnCategory
+      ]
+    ) {
+      annotations[currentAnn.viewId].sources[ANN_SOURCE].categories[
+        currentAnnCategory
+      ].labels[currentAnn.id] = {
+        id: currentAnn.id,
+        categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
+        categoryName: currentAnnCategory,
+        sourceId: ANN_SOURCE,
+        viewId: currentAnn.viewId,
+        type: "mask",
+        opacity: 1.0,
+        visible: true,
+      };
+    }
+
+    annotations[currentAnn.viewId].numLabels += 1;
+    annotations[currentAnn.viewId].sources[ANN_SOURCE].numLabels += 1;
 
     // Validate current annotation
     currentAnn.validated = true;
@@ -205,22 +205,7 @@
 
   function handleDeleteLabel(event) {
     console.log("AnnotationWorkspace.handleDeleteLabel");
-    const labelId = event.detail.id;
-
-    // Find the category that contains the item
-    const labelCategory = annotations.find((cat) =>
-      cat.labels.some((label) => label.id === labelId)
-    );
-
-    if (labelCategory) {
-      // Filter out the item from the category
-      labelCategory.labels = labelCategory.labels.filter(
-        (label) => label.id !== labelId
-      );
-      if (labelCategory.labels.length === 0) {
-        annotations = annotations.filter((ann) => ann !== labelCategory);
-      }
-    }
+    const labelId = event.detail.labelId;
 
     // Find the label mask
     const labelMask = masks.find((mask) => mask.id === labelId);
@@ -254,7 +239,7 @@
   onMount(() => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
-      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
     }
   });
 
@@ -262,7 +247,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("AnnotationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(annotations.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
     if (classes) {

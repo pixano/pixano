@@ -69,21 +69,39 @@ export interface BBox {
   visible: boolean;
 }
 
-export interface AnnotationLabel {
-  id: string;
-  viewId: string;
-  sourceId: string;
-  type: string; //bbox, mask, ...
-  confidence?: number;
-  opacity: number;
+export type ItemLabels = Dictionary<ViewLabels>;
+
+export interface ViewLabels {
+  sources: Dictionary<SourceLabels>;
+  numLabels: number;
+  opened: boolean;
   visible: boolean;
 }
 
-export interface AnnotationCategory {
+export interface SourceLabels {
+  categories: Dictionary<CategoryLabels>;
+  numLabels: number;
+  opened: boolean;
+  visible: boolean;
+}
+
+export interface CategoryLabels {
+  labels: Dictionary<Label>;
   id: number;
   name: string;
+  opened: boolean;
+  visible: boolean;
+}
+
+export interface Label {
+  id: string;
+  categoryId: number;
+  categoryName: string;
+  sourceId: string;
   viewId: string;
-  labels: Array<AnnotationLabel>;
+  type: string; //bbox, mask, ...
+  confidence?: number;
+  opacity: number;
   visible: boolean;
 }
 
