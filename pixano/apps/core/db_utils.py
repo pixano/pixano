@@ -147,11 +147,15 @@ def get_item_details(
 
             # Sources
             mask_sources = [
-                obj["mask_source"] if obj["mask_source"] is not None else "gt"
+                obj["mask_source"]
+                if obj["mask_source"] is not None
+                else "Ground truths"
                 for obj in item["objects"]
             ]
             bbox_sources = [
-                obj["bbox_source"] if obj["bbox_source"] is not None else "gt"
+                obj["bbox_source"]
+                if obj["bbox_source"] is not None
+                else "Ground truths"
                 for obj in item["objects"]
             ]
 
