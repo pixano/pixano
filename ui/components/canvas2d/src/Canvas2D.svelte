@@ -48,10 +48,11 @@
   export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  const POINTER_RADIUS: number = 6;
-  const POINTER_STROKEWIDTH: number = 3;
-  const RECT_STROKEWIDTH: number = 1.5;
-  const MASK_STROKEWIDTH: number = 1.0;
+  const INPUTPOINT_RADIUS: number = 6;
+  const INPUTPOINT_STROKEWIDTH: number = 3;
+  const INPUTRECT_STROKEWIDTH: number = 1.5;
+  const BBOX_STROKEWIDTH: number = 2.0;
+  const MASK_STROKEWIDTH: number = 2.0;
   const short = shortid;
 
   let inferenceModelModal = false;
@@ -210,6 +211,54 @@
     }
   }
 
+  function scaleElements(viewId) {
+    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+
+    // Scale input points
+    const inputGroup = viewLayer.findOne("#input") as Konva.Group;
+    for (let point of inputGroup.children) {
+      if (point instanceof Konva.Circle) {
+        point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
+        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[viewId]);
+      }
+      if (point instanceof Konva.Rect) {
+        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[viewId]);
+      }
+    }
+
+    // Scale bboxes
+    const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+    for (let bbox of bboxGroup.children) {
+      if (bbox instanceof Konva.Group) {
+        for (let bboxElement of bbox.children) {
+          if (bboxElement instanceof Konva.Rect) {
+            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[viewId]);
+          }
+          if (bboxElement instanceof Konva.Label) {
+            bboxElement.scale({
+              x: 1 / zoomFactor[viewId],
+              y: 1 / zoomFactor[viewId],
+            });
+          }
+        }
+      }
+    }
+
+    // Scale masks
+    const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+    for (let mask of maskGroup.children) {
+      if (mask instanceof Konva.Shape) {
+        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
+      }
+    }
+    const currentMaskGroup = findOrCreateCurrentMask(viewId);
+    for (let mask of currentMaskGroup.children) {
+      if (mask instanceof Konva.Shape) {
+        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
+      }
+    }
+  }
+
   function findViewId(node) {
     let viewId;
     highlighted_point.getAncestors().forEach((node) => {
@@ -239,9 +288,10 @@
           if (!bbox) {
             addBBox(
               bboxes[i],
-              image,
               categoryColor(bboxes[i].catId),
-              bboxGroup
+              bboxGroup,
+              image,
+              viewId
             );
           } else {
             //apply visibility
@@ -256,9 +306,10 @@
 
   function addBBox(
     bbox: BBox,
-    image: Konva.Image,
     color: any,
-    bboxGroup: Konva.Group
+    bboxGroup: Konva.Group,
+    image: Konva.Image,
+    viewId: string
   ) {
     const img_w = (image.image() as HTMLImageElement).naturalWidth;
     const img_h = (image.image() as HTMLImageElement).naturalHeight;
@@ -279,15 +330,19 @@
       width: rect_width,
       height: rect_height,
       stroke: color,
-      strokeWidth: 1.0,
+      strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
       scale: image.scale(),
     });
     bboxKonva.add(bboxRect);
 
     // Create a tooltip for bounding box category and confidence
     const tooltip = new Konva.Label({
-      x: rect_x + 1,
-      y: rect_y + 1,
+      x: rect_x,
+      y: rect_y,
+      scale: {
+        x: 1 / zoomFactor[viewId],
+        y: 1 / zoomFactor[viewId],
+      },
     });
 
     // Add a tag
@@ -302,12 +357,12 @@
     tooltip.add(
       new Konva.Text({
         text: bbox.tooltip,
-        fontSize: 6,
+        fontSize: 18,
         fontStyle: "bold",
         fontFamily: "poppins",
         padding: 0,
-        x: rect_x + 1,
-        y: rect_y + 1,
+        x: rect_x,
+        y: rect_y,
       })
     );
 
@@ -331,7 +386,13 @@
           //don't add a mask that already exist
           let mask = maskGroup.findOne(`#${masks[i].id}`);
           if (!mask) {
-            addMask(masks[i], image, categoryColor(masks[i].catId), maskGroup);
+            addMask(
+              masks[i],
+              categoryColor(masks[i].catId),
+              maskGroup,
+              image,
+              viewId
+            );
           } else {
             //update visibility & opacity
             mask.visible(masks[i].visible);
@@ -356,9 +417,10 @@
 
   function addMask(
     mask: Mask,
-    image: Konva.Image,
     color: string,
-    maskGroup: Konva.Group
+    maskGroup: Konva.Group,
+    image: Konva.Image,
+    viewId: string
   ) {
     const x = image.x();
     const y = image.y();
@@ -407,7 +469,7 @@
       height: stage.height(),
       fill: fill,
       stroke: color,
-      strokeWidth: MASK_STROKEWIDTH,
+      strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
       scale: scale,
       visible: mask.visible,
       opacity: 1.0,
@@ -490,7 +552,7 @@
           visible: true,
           opacity: 1.0,
         };
-        addMask(currentMask, image, "green", currentMaskGroup);
+        addMask(currentMask, "green", currentMaskGroup, image, viewId);
       }
     }
   }
@@ -590,21 +652,6 @@
     }
   }
 
-  function scaleInputs(viewId) {
-    //keep points/box at constant scale
-    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
-    const inputGroup = viewLayer.findOne("#input") as Konva.Group;
-    for (let pt of inputGroup.children) {
-      if (pt instanceof Konva.Circle) {
-        pt.radius(POINTER_RADIUS / zoomFactor[viewId]);
-        pt.strokeWidth(POINTER_STROKEWIDTH / zoomFactor[viewId]);
-      }
-      if (pt instanceof Konva.Rect) {
-        pt.strokeWidth(RECT_STROKEWIDTH / zoomFactor[viewId]);
-      }
-    }
-  }
-
   function clearInputs(viewId) {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     const inputGroup = viewLayer.findOne("#input") as Konva.Group;
@@ -668,9 +715,9 @@
         id: id,
         x: 0,
         y: 0,
-        radius: POINTER_RADIUS / zoomF,
+        radius: INPUTPOINT_RADIUS / zoomF,
         fill: "white",
-        strokeWidth: POINTER_STROKEWIDTH / zoomF,
+        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomF,
         visible: false,
         listening: false,
         opacity: 0.5,
@@ -739,7 +786,7 @@
     let pointer = findOrCreateInputPointPointer(selectedTool.type, viewId);
     pointer.hide();
     highlighted_point = hl_point;
-    highlighted_point.radius((1.5 * POINTER_RADIUS) / zoomFactor[viewId]);
+    highlighted_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[viewId]);
     stage.container().style.cursor = "grab";
   }
 
@@ -752,7 +799,7 @@
     if (!viewId) {
       viewId = findViewId(hl_point);
     }
-    hl_point.radius(POINTER_RADIUS / zoomFactor[viewId]);
+    hl_point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
     highlighted_point = null;
     stage.container().style.cursor = selectedTool.cursor;
     stage.batchDraw();
@@ -981,10 +1028,10 @@
         name: `${(selectedTool as LabeledPointTool).label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
-        radius: POINTER_RADIUS / zoomFactor[viewId],
+        radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
         stroke: "white",
         fill: (selectedTool as LabeledPointTool).label === 1 ? "green" : "red",
-        strokeWidth: POINTER_STROKEWIDTH / zoomFactor[viewId],
+        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
         visible: true,
         listening: true,
         opacity: 0.75,
@@ -1026,7 +1073,7 @@
           stroke: "white",
           dash: [10, 5],
           fill: "rgba(255, 255, 255, 0.25)",
-          strokeWidth: RECT_STROKEWIDTH / zoomFactor[viewId],
+          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
           listening: false,
         });
         inputGroup.add(rect);
@@ -1076,7 +1123,7 @@
     // In that case lets revert direction.
     if (event.detail.evt.ctrlKey) direction = -direction;
     zoomFactor[viewId] = zoom(stage, direction, viewId);
-    scaleInputs(viewId);
+    scaleElements(viewId);
 
     //zoom reset highlighted point scaling
     if (highlighted_point) {
