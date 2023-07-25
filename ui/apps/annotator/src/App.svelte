@@ -40,14 +40,13 @@
   let currentPage = 1;
 
   let selectedItem: ItemData;
+  let annotations: ItemLabels = {};
+  let classes = [];
+  let masks: Array<Mask> = [];
   let embeddings = {};
 
   let saveFlag: boolean = false;
   let unselectItemModal = false;
-
-  let masks: Array<Mask> = [];
-  let annotations: ItemLabels = {};
-  let classes = [];
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";
   let inputModelName: string;
@@ -95,10 +94,10 @@
   }
 
   async function handleSelectItem(id: string) {
-    embeddings = {};
-    masks = [];
     annotations = {};
     classes = [];
+    masks = [];
+    embeddings = {};
 
     const start = Date.now();
     selectedItem = await api.getItemDetails(selectedDataset.id, id);
@@ -124,6 +123,7 @@
           visible: true,
         };
       }
+
       // Initalize classes
       classes = selectedDataset.categories;
 
@@ -134,8 +134,13 @@
         const catId = selectedItem.objects[view.id].categories[i].id;
         const catName = selectedItem.objects[view.id].categories[i].name;
 
-        // Annotations and classes (only masks are considered in Pixano Annotator)
+        // Masks
         if (maskRLE) {
+          const rle = maskRLE["counts"];
+          const size = maskRLE["size"];
+          const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
+          const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
+
           // Add class if new
           if (!classes.some((cls) => cls.id === catId)) {
             classes.push({
@@ -154,9 +159,9 @@
             };
           }
 
-          // Add label
+          // Add mask label
           annotations[view.id].sources[maskSourceId].categories[catName].labels[
-            labelId
+            `${labelId}_mask`
           ] = {
             id: labelId,
             categoryId: catId,
@@ -167,17 +172,8 @@
             opacity: 1.0,
             visible: true,
           };
-          annotations[view.id].numLabels += 1;
-          annotations[view.id].sources[maskSourceId].numLabels += 1;
-        }
 
-        // Masks
-        if (maskRLE) {
-          const rle = maskRLE["counts"];
-          const size = maskRLE["size"];
-          const maskPolygons = mask_utils.generatePolygonSegments(rle, size[0]);
-          const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
-
+          // Add mask
           masks.push({
             id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
@@ -187,6 +183,9 @@
             opacity: 1.0,
             visible: true,
           });
+
+          annotations[view.id].numLabels += 1;
+          annotations[view.id].sources[maskSourceId].numLabels += 1;
         }
       }
 
@@ -238,10 +237,10 @@
   function unselectItem() {
     unselectItemModal = false;
     selectedItem = null;
-    embeddings = {};
-    masks = [];
     annotations = {};
     classes = [];
+    masks = [];
+    embeddings = {};
   }
 
   function handleSaveAnns() {
@@ -353,10 +352,10 @@
       <AnnotationWorkspace
         {selectedDataset}
         {selectedItem}
-        {embeddings}
         bind:annotations
-        bind:masks
         {classes}
+        bind:masks
+        {embeddings}
         {currentPage}
         bind:saveFlag
         on:selectItem={(event) => handleSelectItem(event.detail.id)}

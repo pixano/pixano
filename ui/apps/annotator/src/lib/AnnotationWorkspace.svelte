@@ -42,10 +42,10 @@
   // Exports
   export let selectedDataset: Dataset;
   export let selectedItem: ItemData;
-  export let embeddings = {};
-  export let classes;
   export let annotations: ItemLabels;
+  export let classes;
   export let masks: Array<Mask>;
+  export let embeddings = {};
   export let currentPage: number;
   export let saveFlag: boolean;
 
@@ -222,11 +222,11 @@
 
   function handleLabelVisibility(event) {
     console.log("AnnotationWorkspace.handleLabelVisibility");
-    const maskToToggle = masks.find(
+    const mask = masks.find(
       (mask) =>
         mask.id === event.detail.id && mask.viewId === event.detail.viewId
     );
-    maskToToggle.visible = event.detail.visible;
+    mask.visible = event.detail.visible;
 
     // Update visibility
     masks = masks;
