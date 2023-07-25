@@ -117,13 +117,12 @@
     let struct_views_categories = {};
     for (let view of selectedItem.views) {
       let struct_categories: { [key: string]: AnnotationCategory } = {};
-      for (let i = 0; i < selectedItem.objects[view.id].id.length; ++i) {
+      for (let i = 0; i < selectedItem.objects[view.id].ids.length; ++i) {
         const maskRLE = selectedItem.objects[view.id].masks[i];
         const catName = selectedItem.objects[view.id].categories[i].name;
 
+        // Classes
         if (maskRLE) {
-          //separate in case we add bboxes or other annotation types later
-          // ensure all items goes in unique category (by name)
           if (!struct_categories[catName]) {
             let annotation: AnnotationCategory = {
               id: selectedItem.objects[view.id].categories[i].id,
@@ -136,6 +135,7 @@
           }
         }
 
+        // Masks
         if (maskRLE) {
           const rle = maskRLE["counts"];
           const size = maskRLE["size"];
@@ -143,8 +143,8 @@
           const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
-            id: selectedItem.objects[view.id].id[i],
             svg: masksSVG,
             rle: maskRLE,
             catId: selectedItem.objects[view.id].categories[i].id,
@@ -152,8 +152,9 @@
             visible: true,
           });
           let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].id[i],
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
+            sourceId: selectedItem.objects[view.id].maskSources[i],
             type: "mask",
             opacity: 1.0,
             visible: true,

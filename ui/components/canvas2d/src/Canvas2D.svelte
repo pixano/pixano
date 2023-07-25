@@ -607,8 +607,8 @@
         }
         currentMaskGroup.moveTo(maskGroup);
         masks.push({
-          viewId: viewId,
           id: currentAnn.id,
+          viewId: viewId,
           svg: currentAnn.output.masksImageSVG,
           rle: currentAnn.output.rle,
           catId: currentAnn.catId,

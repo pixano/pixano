@@ -145,13 +145,24 @@ def get_item_details(
                 and obj["category_name"] is not None
             ]
 
+            # Sources
+            mask_sources = [
+                obj["mask_source"] if obj["mask_source"] is not None else "gt"
+                for obj in item["objects"]
+            ]
+            bbox_sources = [
+                obj["bbox_source"] if obj["bbox_source"] is not None else "gt"
+                for obj in item["objects"]
+            ]
+
             # Add to features
             features["views"].append({"id": field.name, "url": image.url})
             features["objects"][field.name] = {
-                "id": ids,
-                "viewId": field.name,
+                "ids": ids,
                 "masks": masks,
                 "bboxes": boxes,
+                "maskSources": mask_sources,
+                "bboxSources": bbox_sources,
                 "categories": cats,
             }
 

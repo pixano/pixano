@@ -74,7 +74,14 @@ export const Base: Story = {
         },
       ],
       objects: {
-        view: { id: "245", masks: [], bboxes: [], categories: [] },
+        view: {
+          ids: ["245"],
+          masks: [],
+          bboxes: [],
+          categories: [],
+          maskSources: [],
+          bboxSources: [],
+        },
       },
       catStats: [
         {
@@ -87,7 +94,7 @@ export const Base: Story = {
 
     //sample for bear image "img-02.jpg"
     //bear left eye...
-    embeddings: {"view":[]}, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
+    embeddings: { view: [] }, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
     annotations: [
       {
         id: 1,

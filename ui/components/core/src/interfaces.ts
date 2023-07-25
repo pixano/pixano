@@ -36,9 +36,11 @@ export interface ViewData {
 }
 
 export interface ObjectsData {
-  id: string;
+  ids: Array<string>;
   masks: Array<MaskRLE>;
   bboxes: Array<BBoxXYWH>;
+  maskSources: Array<string>;
+  bboxSources: Array<string>;
   categories: Array<CategoryData>;
 }
 
@@ -49,8 +51,8 @@ export interface CategoryData {
 }
 
 export interface Mask {
-  viewId: string;
   id: string;
+  viewId: string;
   svg: MaskSVG;
   rle?: MaskRLE;
   catId: number;
@@ -59,8 +61,8 @@ export interface Mask {
 }
 
 export interface BBox {
-  viewId: string;
   id: string;
+  viewId: string;
   bbox: Array<number>;
   tooltip: string;
   catId: number;
@@ -70,6 +72,7 @@ export interface BBox {
 export interface AnnotationLabel {
   id: string;
   viewId: string;
+  sourceId: string;
   type: string; //bbox, mask, ...
   confidence?: number;
   opacity: number;

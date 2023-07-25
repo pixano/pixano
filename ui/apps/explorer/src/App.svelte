@@ -68,12 +68,12 @@
     //build annotations, masks, bboxes and classes
     let struct_categories: { [key: string]: AnnotationCategory } = {};
     for (let view of selectedItem.views) {
-      for (let i = 0; i < selectedItem.objects[view.id].id.length; ++i) {
+      for (let i = 0; i < selectedItem.objects[view.id].ids.length; ++i) {
         const maskRLE = selectedItem.objects[view.id].masks[i];
         const bboxXYWH = selectedItem.objects[view.id].bboxes[i];
         const catName = selectedItem.objects[view.id].categories[i].name;
 
-        // ensure all items goes in unique category (by name)
+        // Classes
         if (!struct_categories[catName]) {
           let annotation: AnnotationCategory = {
             id: selectedItem.objects[view.id].categories[i].id,
@@ -92,6 +92,7 @@
           continue;
         }
 
+        // Masks
         if (maskRLE) {
           const rle = maskRLE["counts"];
           const size = maskRLE["size"];
@@ -99,8 +100,8 @@
           const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
 
           masks.push({
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
-            id: selectedItem.objects[view.id].id[i],
             svg: masksSVG,
             rle: maskRLE,
             catId: selectedItem.objects[view.id].categories[i].id,
@@ -108,8 +109,9 @@
             opacity: 1.0,
           });
           let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].id[i],
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
+            sourceId: selectedItem.objects[view.id].maskSources[i],
             type: "mask",
             visible: true,
             opacity: 1.0,
@@ -119,10 +121,12 @@
           }
           struct_categories[catName].labels.push(label);
         }
+
+        // BBoxes
         if (bboxXYWH) {
           bboxes.push({
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
-            id: selectedItem.objects[view.id].id[i],
             bbox: [bboxXYWH.x, bboxXYWH.y, bboxXYWH.width, bboxXYWH.height], //still normalized
             tooltip:
               selectedItem.objects[view.id].categories[i].name +
@@ -131,8 +135,9 @@
             visible: true,
           });
           let label: AnnotationLabel = {
-            id: selectedItem.objects[view.id].id[i],
+            id: selectedItem.objects[view.id].ids[i],
             viewId: view.id,
+            sourceId: selectedItem.objects[view.id].bboxSources[i],
             type: "bbox",
             visible: true,
             opacity: 1.0,

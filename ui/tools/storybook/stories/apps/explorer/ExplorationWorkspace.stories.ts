@@ -40,7 +40,14 @@ export const Base: Story = {
         },
       ],
       objects: {
-        view: { id: "object0001", masks: [], bboxes: [], categories: [] },
+        view: {
+          ids: ["245"],
+          masks: [],
+          bboxes: [],
+          categories: [],
+          maskSources: [],
+          bboxSources: [],
+        },
       },
       catStats: [
         {

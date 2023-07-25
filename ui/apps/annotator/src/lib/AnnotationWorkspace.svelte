@@ -124,7 +124,8 @@
     const newLabel: AnnotationLabel = {
       id: currentAnn.id,
       viewId: currentAnn.viewId,
-      type: "??", //TODO put annotation type (bbox/mask)
+      sourceId: "Pixano Annotator",
+      type: "mask",
       opacity: 1.0,
       visible: true,
     };
