@@ -35,10 +35,10 @@
   export let currentPage: number;
   export let categoryColor = null;
 
+  const dispatch = createEventDispatcher();
+
   let activeTab = "labels"; //"dataset";
   let viewsEmpty = true;
-
-  const dispatch = createEventDispatcher();
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {

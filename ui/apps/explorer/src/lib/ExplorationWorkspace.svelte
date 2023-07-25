@@ -78,6 +78,9 @@
       categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
+    if (classes) {
+      classes = classes;
+    }
   });
 </script>
 
@@ -95,6 +98,7 @@
       <ExplorationPanel
         {selectedItem}
         {annotations}
+        {classes}
         on:labelVisibility={handleLabelVisibility}
       />
     {/if}
