@@ -35,7 +35,7 @@
     AnnotationLabel,
     ViewData,
     Dataset,
-    DatasetItemFeature,
+    DatasetItem,
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -188,7 +188,7 @@
     }
   }
 
-  function changeSelectedItem(newItemId: string, item: DatasetItemFeature[]) {
+  function changeSelectedItem(newItemId: string, item: DatasetItem) {
     const newItemViews: Array<ViewData> = [];
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {

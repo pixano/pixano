@@ -98,9 +98,11 @@ export interface Dataset {
 }
 
 export interface DatasetItems {
-  items: Array<Array<DatasetItemFeature>>;
+  items: Array<DatasetItem>;
   total: number;
 }
+
+export type DatasetItem = Array<DatasetItemFeature>;
 
 export interface DatasetItemFeature {
   name: string;

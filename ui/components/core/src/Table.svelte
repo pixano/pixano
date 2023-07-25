@@ -19,7 +19,7 @@
 
   import TableCell from "./TableCell.svelte";
 
-  import type { Dataset, DatasetItemFeature } from "./interfaces";
+  import type { Dataset, DatasetItem } from "./interfaces";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -30,7 +30,7 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectItem(item: DatasetItemFeature[]) {
+  function handleSelectItem(item: DatasetItem) {
     let itemId = item.find((feature) => {
       return feature.name === "id";
     }).value;

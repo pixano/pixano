@@ -23,7 +23,7 @@
     AnnotationLabel,
     AnnotationCategory,
     Dataset,
-    DatasetItemFeature,
+    DatasetItem,
   } from "@pixano/core";
 
   // Exports
@@ -42,7 +42,7 @@
   }
 
   // Change selected image
-  function handleSelectItem(item: DatasetItemFeature[]) {
+  function handleSelectItem(item: DatasetItem) {
     dispatch("selectItem", item);
   }
 
