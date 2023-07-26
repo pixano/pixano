@@ -49,7 +49,7 @@ def get_item_details(
     dataset: Dataset,
     item_id: str,
     media_dir: Path,
-    inf_datasets: list[ds.Dataset] = [],
+    inf_datasets: list[Dataset] = [],
 ) -> dict:
     """Get item details
 
@@ -57,7 +57,7 @@ def get_item_details(
         dataset (Dataset): Dataset
         item_id (str): Selected item ID
         media_dir (Path): Dataset media directory
-        inf_datasets (list[ds.Dataset], optional): List of inference datasets. Defaults to [].
+        inf_datasets (list[Dataset], optional): List of inference datasets. Defaults to [].
 
     Returns:
         dict: ImageDetails features for UI
@@ -65,10 +65,14 @@ def get_item_details(
 
     # Load dataset
     pa_ds = dataset.load()
+    object_sources = {}
+    item_objects = {}
 
     # Get item
     scanner = pa_ds.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
+    object_sources["Ground truth"] = item["objects"]
+    item_objects["Ground truth"] = {}
 
     # Get item inference objects
     for inf_ds in inf_datasets:
@@ -76,7 +80,8 @@ def get_item_details(
         inf_scanner = pa_inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
-            item["objects"].extend(inf_item["objects"])
+            object_sources[inf_ds.info.model_id] = inf_item["objects"]
+            item_objects[inf_ds.info.model_id] = {}
 
     # Create features
     features = {
@@ -86,89 +91,52 @@ def get_item_details(
         "height": None,
         "width": None,
         "views": [],
-        "objects": {},
+        "objects": item_objects,
         "catStats": [],
     }
 
-    # Category statistics
-    cat_ids = [
-        obj["category_id"] for obj in item["objects"] if obj["category_id"] is not None
-    ]
-    cat_names = [
-        obj["category_name"]
-        for obj in item["objects"]
-        if obj["category_id"] is not None
-    ]
-    cat, index, count = np.unique(cat_ids, return_index=True, return_counts=True)
-    # Add to features
-    features["catStats"] = [
-        {
-            "id": int(cat[i]),
-            "name": str(cat_names[index[i]]),
-            "count": int(count[i]),
-        }
-        for i in range(len(cat))
-        if cat[i] is not None
-    ]
-
-    # Views
     for field in pa_ds.schema:
         if arrow_types.is_image_type(field.type):
-            # Image
+            # Views
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
-
-            # Objects IDs
-            ids = [obj["id"] for obj in item["objects"] if obj["view_id"] == field.name]
-            # Masks
-            masks = [
-                transforms.rle_to_urle(obj["mask"])
-                for obj in item["objects"]
-                if obj["view_id"] == field.name and obj["mask"] is not None
-            ]
-            # Bounding boxes
-            boxes = [
-                transforms.format_bbox(
-                    obj["bbox"],
-                    obj["bbox_confidence"] is not None,
-                    obj["bbox_confidence"],
-                )
-                for obj in item["objects"]
-                if obj["view_id"] == field.name and obj["bbox"] is not None
-            ]
-            # Categories
-            cats = [
-                {"id": obj["category_id"], "name": obj["category_name"]}
-                for obj in item["objects"]
-                if obj["view_id"] == field.name
-                and obj["category_id"] is not None
-                and obj["category_name"] is not None
-            ]
-
-            # Sources
-            mask_sources = [
-                obj["mask_source"]
-                if obj["mask_source"] is not None
-                else "Ground truths"
-                for obj in item["objects"]
-            ]
-            bbox_sources = [
-                obj["bbox_source"]
-                if obj["bbox_source"] is not None
-                else "Ground truths"
-                for obj in item["objects"]
-            ]
-
-            # Add to features
             features["views"].append({"id": field.name, "url": image.url})
-            features["objects"][field.name] = {
-                "ids": ids,
-                "masks": masks,
-                "bboxes": boxes,
-                "maskSources": mask_sources,
-                "bboxSources": bbox_sources,
-                "categories": cats,
-            }
+
+            for source_id, objects in object_sources.items():
+                # Objects IDs
+                ids = [obj["id"] for obj in objects if obj["view_id"] == field.name]
+                # Masks
+                masks = [
+                    transforms.rle_to_urle(obj["mask"])
+                    for obj in objects
+                    if obj["view_id"] == field.name and obj["mask"] is not None
+                ]
+                # Bounding boxes
+                boxes = [
+                    transforms.format_bbox(
+                        obj["bbox"],
+                        obj["bbox_confidence"] is not None,
+                        obj["bbox_confidence"],
+                    )
+                    for obj in objects
+                    if obj["view_id"] == field.name and obj["bbox"] is not None
+                ]
+                # Categories
+                cats = [
+                    {"id": obj["category_id"], "name": obj["category_name"]}
+                    for obj in objects
+                    if obj["view_id"] == field.name
+                    and obj["category_id"] is not None
+                    and obj["category_name"] is not None
+                ]
+
+                # Add to features
+                features["objects"][source_id][field.name] = {
+                    "ids": ids,
+                    "masks": masks,
+                    "bboxes": boxes,
+                    "categories": cats,
+                }
 
     return features
 

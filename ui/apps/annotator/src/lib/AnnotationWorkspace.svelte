@@ -29,6 +29,7 @@
   import AnnotationPanel from "./AnnotationPanel.svelte";
 
   import type {
+    BBox,
     ItemData,
     Mask,
     ViewData,
@@ -45,6 +46,7 @@
   export let annotations: ItemLabels;
   export let classes;
   export let masks: Array<Mask>;
+  export let bboxes: Array<BBox>;
   export let embeddings = {};
   export let currentPage: number;
   export let saveFlag: boolean;
@@ -130,9 +132,21 @@
       classes = newClasses;
     }
 
-    // Check if the new label's category already exists in the current annotations
-    if (!annotations[currentAnn.viewId].sources[ANN_SOURCE]) {
-      annotations[currentAnn.viewId].sources[ANN_SOURCE] = {
+    // Check if the new label's view already exists in the current annotations
+    if (!annotations[ANN_SOURCE]) {
+      annotations[ANN_SOURCE] = {
+        id: ANN_SOURCE,
+        views: {},
+        numLabels: 0,
+        opened: true,
+        visible: true,
+      };
+    }
+
+    // Check if the new label's view already exists in the current annotations
+    if (!annotations[ANN_SOURCE].views[currentAnn.viewId]) {
+      annotations[ANN_SOURCE].views[currentAnn.viewId] = {
+        id: currentAnn.viewId,
         categories: {},
         numLabels: 0,
         opened: true,
@@ -140,12 +154,13 @@
       };
     }
 
+    // Check if the new label's category already exists in the current annotations
     if (
-      !annotations[currentAnn.viewId].sources[ANN_SOURCE].categories[
+      !annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
         currentAnnCategory
       ]
     ) {
-      annotations[currentAnn.viewId].sources[ANN_SOURCE].categories[
+      annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
         currentAnnCategory
       ].labels[currentAnn.id] = {
         id: currentAnn.id,
@@ -159,8 +174,8 @@
       };
     }
 
-    annotations[currentAnn.viewId].numLabels += 1;
-    annotations[currentAnn.viewId].sources[ANN_SOURCE].numLabels += 1;
+    annotations[ANN_SOURCE].numLabels += 1;
+    annotations[ANN_SOURCE].views[currentAnn.viewId].numLabels += 1;
 
     // Validate current annotation
     currentAnn.validated = true;
@@ -230,6 +245,7 @@
 
     // Update visibility
     masks = masks;
+    bboxes = bboxes;
   }
 
   async function handleLoadNextPage() {
@@ -264,6 +280,7 @@
       bind:selectedTool
       {categoryColor}
       bind:masks
+      bind:bboxes
       {embeddings}
       bind:currentAnn
     />

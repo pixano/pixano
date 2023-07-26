@@ -26,8 +26,7 @@ export interface ItemData {
   height?: number;
   width?: number;
   views: Array<ViewData>;
-  objects: Dictionary<ObjectsData>;
-  catStats: Array<CategoryData>;
+  objects: Dictionary<Dictionary<ObjectsData>>;
 }
 
 export interface ViewData {
@@ -39,8 +38,6 @@ export interface ObjectsData {
   ids: Array<string>;
   masks: Array<MaskRLE>;
   bboxes: Array<BBoxXYWH>;
-  maskSources: Array<string>;
-  bboxSources: Array<string>;
   categories: Array<CategoryData>;
 }
 
@@ -67,19 +64,22 @@ export interface BBox {
   tooltip: string;
   catId: number;
   visible: boolean;
+  opacity: number;
 }
 
-export type ItemLabels = Dictionary<ViewLabels>;
+export type ItemLabels = Dictionary<SourceLabels>;
 
-export interface ViewLabels {
-  sources: Dictionary<SourceLabels>;
+export interface SourceLabels {
+  views: Dictionary<ViewLabels>;
+  id: string;
   numLabels: number;
   opened: boolean;
   visible: boolean;
 }
 
-export interface SourceLabels {
+export interface ViewLabels {
   categories: Dictionary<CategoryLabels>;
+  id: string;
   numLabels: number;
   opened: boolean;
   visible: boolean;

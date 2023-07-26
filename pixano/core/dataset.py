@@ -42,6 +42,10 @@ class DatasetInfo(pydantic.BaseModel):
     preview: Optional[str]
     previews: Optional[list[str]]
     categories: Optional[list[dict]]
+    model_id: Optional[str]
+    model_name: Optional[str]
+    model_source: Optional[str]
+    model_info: Optional[str]
 
     class Config:
         arbitrary_types_allowed=True

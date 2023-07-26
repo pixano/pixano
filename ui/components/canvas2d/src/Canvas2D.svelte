@@ -294,8 +294,9 @@
               viewId
             );
           } else {
-            //apply visibility
+            //update visibility & opacity
             bbox.visible(bboxes[i].visible);
+            bbox.opacity(bboxes[i].opacity);
           }
         }
       }

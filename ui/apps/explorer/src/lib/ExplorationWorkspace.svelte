@@ -53,6 +53,7 @@
           bbox.id === event.detail.id && bbox.viewId === event.detail.viewId
       );
       bbox.visible = event.detail.visible;
+      bbox.opacity = event.detail.opacity;
     }
 
     // Update visibility
