@@ -37,7 +37,7 @@
 
   let activeTab = "labels";
   let categoryColor = null;
-  let viewsEmpty = true;
+  let noLabels = true;
 
   // Filters
   let maskOpacity: number = 1.0;
@@ -203,8 +203,8 @@
   afterUpdate(() => {
     if (annotations) {
       annotations = annotations;
-      for (const viewLabels of Object.values(annotations)) {
-        if (viewLabels.numLabels > 0) viewsEmpty = false;
+      for (const sourceLabels of Object.values(annotations)) {
+        if (sourceLabels.numLabels > 0) noLabels = false;
       }
       categoryColor = utils.getColor(classes.map((cat) => classes.id)); // Define a color map for each category id
       handleAllVisibility();
@@ -232,7 +232,7 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
-      {#if viewsEmpty}
+      {#if noLabels}
         <p class="py-4 text-center font-bold italic">No annotations yet.</p>
       {:else}
         <div

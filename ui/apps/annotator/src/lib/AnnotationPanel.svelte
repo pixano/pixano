@@ -38,7 +38,7 @@
   const dispatch = createEventDispatcher();
 
   let activeTab = "labels"; //"dataset";
-  let viewsEmpty = true;
+  let noLabels = true;
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
@@ -149,8 +149,8 @@
   afterUpdate(() => {
     if (annotations) {
       annotations = annotations;
-      for (const viewLabels of Object.values(annotations)) {
-        if (viewLabels.numLabels > 0) viewsEmpty = false;
+      for (const sourceLabels of Object.values(annotations)) {
+        if (sourceLabels.numLabels > 0) noLabels = false;
       }
     }
   });
@@ -191,7 +191,7 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
-      {#if viewsEmpty}
+      {#if noLabels}
         <p class="py-4 text-center font-bold italic">No annotations yet.</p>
       {:else}
         {#each Object.values(annotations) as source}
