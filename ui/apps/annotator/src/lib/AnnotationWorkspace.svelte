@@ -162,17 +162,27 @@
     ) {
       annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
         currentAnnCategory
-      ].labels[currentAnn.id] = {
-        id: currentAnn.id,
-        categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
-        categoryName: currentAnnCategory,
-        sourceId: ANN_SOURCE,
-        viewId: currentAnn.viewId,
-        type: "mask",
-        opacity: 1.0,
+      ] = {
+        labels: {},
+        id: classes.find((obj) => obj.name === currentAnnCategory).id,
+        name: currentAnnCategory,
+        opened: true,
         visible: true,
       };
     }
+
+    annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
+      currentAnnCategory
+    ].labels[`${currentAnn.id}_mask`] = {
+      id: `${currentAnn.id}_mask`,
+      categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
+      categoryName: currentAnnCategory,
+      sourceId: ANN_SOURCE,
+      viewId: currentAnn.viewId,
+      type: "mask",
+      opacity: 1.0,
+      visible: true,
+    };
 
     annotations[ANN_SOURCE].numLabels += 1;
     annotations[ANN_SOURCE].views[currentAnn.viewId].numLabels += 1;

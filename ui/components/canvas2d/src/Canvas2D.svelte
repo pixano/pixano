@@ -538,7 +538,7 @@
 
         const new_id = short.generate();
         currentAnn = {
-          id: new_id,
+          id: `${new_id}`,
           viewId: viewId,
           label: "",
           catId: -1,
@@ -549,7 +549,7 @@
         };
         let currentMask = <Mask>{
           viewId: viewId,
-          id: short.generate(),
+          id: `${new_id}_mask`,
           svg: results.masksImageSVG,
           catId: -1,
           visible: true,
