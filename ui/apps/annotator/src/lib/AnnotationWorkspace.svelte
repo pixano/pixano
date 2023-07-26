@@ -214,6 +214,7 @@
   }
 
   function changeSelectedItem(newItemId: string, item: DatasetItem) {
+    currentAnnCategory = "";
     const newItemViews: Array<ViewData> = [];
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {
