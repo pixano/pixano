@@ -119,7 +119,7 @@
         annotations[view.id].sources[sourceId] = {
           categories: {},
           numLabels: 0,
-          opened: true,
+          opened: false,
           visible: true,
         };
       }
