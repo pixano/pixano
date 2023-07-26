@@ -107,6 +107,11 @@
     if (event.key === "Enter" || event.keyCode === 13) handleAddCurrentAnn();
   }
 
+  function handleAddMask(event) {
+    masks.push(event.detail.mask);
+    masks = masks;
+  }
+
   function handleAddCurrentAnn() {
     console.log("AnnotationWorkspace.handleAddCurrentAnn");
     if (currentAnn) {
@@ -294,9 +299,9 @@
       categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
       annotations = annotations;
     }
-    if (classes) {
-      classes = classes;
-    }
+    classes = classes;
+    masks = masks;
+    bboxes = bboxes;
   });
 </script>
 
@@ -307,10 +312,11 @@
       views={selectedItem.views}
       bind:selectedTool
       {categoryColor}
-      bind:masks
-      bind:bboxes
+      {masks}
+      {bboxes}
       {embeddings}
       bind:currentAnn
+      on:addMask={handleAddMask}
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}

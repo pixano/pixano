@@ -17,7 +17,7 @@
   // Imports
   import Konva from "konva";
   import shortid from "shortid";
-  import { afterUpdate, onMount } from "svelte";
+  import { afterUpdate, onMount, createEventDispatcher } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal } from "@pixano/core";
@@ -47,6 +47,8 @@
   export let bboxes: Array<BBox>;
   export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+
+  const dispatch = createEventDispatcher();
 
   const INPUTPOINT_RADIUS: number = 6;
   const INPUTPOINT_STROKEWIDTH: number = 3;
@@ -609,7 +611,8 @@
           shape.stroke(pred.color);
         }
         currentMaskGroup.moveTo(maskGroup);
-        masks.push({
+
+        const mask = <Mask>{
           id: `${currentAnn.id}_mask`,
           viewId: viewId,
           svg: currentAnn.output.masksImageSVG,
@@ -617,13 +620,18 @@
           catId: currentAnn.catId,
           visible: true,
           opacity: 1.0,
-        });
+        };
+        handleAddMask(mask);
 
         if (highlighted_point) unhighlightInputPoint(highlighted_point);
         clearInputs(currentAnn.viewId);
         currentAnn = null;
       }
     }
+  }
+
+  function handleAddMask(mask: Mask) {
+    dispatch("addMask", { mask });
   }
 
   // ********** TOOLS ********** //
