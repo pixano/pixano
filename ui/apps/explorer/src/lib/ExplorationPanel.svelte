@@ -42,7 +42,7 @@
   // Filters
   let maskOpacity: number = 1.0;
   let bboxOpacity: number = 1.0;
-  let minConfidence: number = 0.5;
+  let minConfidence: number = 0.0;
 
   function handleConfidenceFilter() {
     for (let source of Object.values(annotations)) {
@@ -153,40 +153,13 @@
     }
   }
 
-  function handleAllVisibility() {
+  function handleOpacity(type: string, opacity: number) {
     for (let source of Object.values(annotations)) {
       for (let view of Object.values(source.views)) {
         for (let category of Object.values(view.categories)) {
           for (let label of Object.values(category.labels)) {
-            updateLabelVisibility(label, label.visible);
-          }
-        }
-      }
-    }
-  }
-
-  function handleMaskOpacity() {
-    for (let source of Object.values(annotations)) {
-      for (let view of Object.values(source.views)) {
-        for (let category of Object.values(view.categories)) {
-          for (let label of Object.values(category.labels)) {
-            if (label.type === "mask") {
-              label.opacity = maskOpacity;
-              dispatch("labelVisibility", label);
-            }
-          }
-        }
-      }
-    }
-  }
-
-  function handleBBoxOpacity() {
-    for (let source of Object.values(annotations)) {
-      for (let view of Object.values(source.views)) {
-        for (let category of Object.values(view.categories)) {
-          for (let label of Object.values(category.labels)) {
-            if (label.type === "bbox") {
-              label.opacity = bboxOpacity;
+            if (label.type === type) {
+              label.opacity = opacity;
               dispatch("labelVisibility", label);
             }
           }
@@ -197,7 +170,6 @@
 
   onMount(() => {
     handleConfidenceFilter();
-    handleAllVisibility();
   });
 
   afterUpdate(() => {
@@ -207,7 +179,6 @@
         if (sourceLabels.numLabels > 0) noLabels = false;
       }
       categoryColor = utils.getColor(classes.map((cat) => classes.id)); // Define a color map for each category id
-      handleAllVisibility();
     }
   });
 </script>
@@ -219,16 +190,15 @@
     text-zinc-500 dark:text-zinc-300"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
-    <span
+    <button
       class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-t-lg
-      text-zinc-500 dark:text-zinc-300
       hover:bg-zinc-100 dark:hover:bg-zinc-700
       {activeTab == 'labels'
         ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
         : 'border-zinc-300 dark:border-zinc-500'}"
     >
       Labels
-    </span>
+    </button>
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
@@ -237,7 +207,7 @@
       {:else}
         <div
           class="px-4 border-b-2
-    border-zinc-300 dark:border-zinc-500"
+        border-zinc-300 dark:border-zinc-500"
         >
           <!-- Details -->
           {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
@@ -270,7 +240,7 @@
               max="1"
               step="0.1"
               bind:value={maskOpacity}
-              on:input={handleMaskOpacity}
+              on:input={() => handleOpacity("mask", maskOpacity)}
             />
 
             <!-- BBox opacity slider -->
@@ -285,7 +255,7 @@
               max="1"
               step="0.1"
               bind:value={bboxOpacity}
-              on:input={handleBBoxOpacity}
+              on:input={() => handleOpacity("bbox", bboxOpacity)}
             />
 
             <!-- Confidence filter -->
@@ -304,7 +274,7 @@
             />
           </div>
         </div>
-        {#each Object.entries(annotations) as [sourceId, source]}
+        {#each Object.values(annotations) as source}
           {#if Object.keys(annotations).length > 1}
             <div
               class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
@@ -346,8 +316,8 @@
                   />
                 </svg>
 
-                <span class="grow ml-3 font-bold">
-                  {sourceId}
+                <span class="relative pl-3 grow truncate" title={source.id}>
+                  {source.id}
                 </span>
                 <span
                   class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
@@ -358,14 +328,14 @@
               </button>
             </div>
           {/if}
-          {#each Object.entries(source.views) as [viewId, view]}
-            {#if source.numLabels}
+          {#each Object.values(source.views) as view}
+            {#if Object.keys(source.views).length > 1}
               <div
                 class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-            border-zinc-300 dark:border-zinc-500
-            {source.opened ? 'flex' : 'hidden'}
-            {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
-            {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+                border-zinc-300 dark:border-zinc-500
+                {source.opened ? 'flex' : 'hidden'}
+                {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
+                {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
               >
                 <button
                   on:click={() =>
@@ -403,8 +373,8 @@
                     />
                   </svg>
 
-                  <span class="relative pl-3 grow truncate" title={viewId}>
-                    {viewId}
+                  <span class="relative pl-3 grow truncate" title={view.id}>
+                    {view.id}
                   </span>
                   <span
                     class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
@@ -414,124 +384,123 @@
                   </span>
                 </button>
               </div>
-              {#each Object.values(view.categories) as category}
-                <div
-                  class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
+            {/if}
+            {#each Object.values(view.categories) as category}
+              <div
+                class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
                 border-zinc-300 dark:border-zinc-500
                 {source.opened && view.opened ? 'flex' : 'hidden'}
                 {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
                 {category.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+              >
+                <button
+                  on:click={() =>
+                    handleCategoryVisibility(
+                      source,
+                      view,
+                      category,
+                      !category.visible
+                    )}
                 >
-                  <button
-                    on:click={() =>
-                      handleCategoryVisibility(
-                        source,
-                        view,
-                        category,
-                        !category.visible
-                      )}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="48"
+                    viewBox="0 -960 960 960"
+                    width="48"
+                    class="h-6 w-6"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="48"
-                      viewBox="0 -960 960 960"
-                      width="48"
-                      class="h-6 w-6"
-                    >
-                      <title>{category.visible ? "Hide" : "Show"}</title>
-                      <path
-                        d={category.visible ? icons.svg_hide : icons.svg_show}
-                        fill="currentcolor"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    class="flex grow items-center space-x-1 text-left"
-                    on:click={() => (category.opened = !category.opened)}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="48"
-                      viewBox="0 -960 960 960"
-                      width="48"
-                      class="h-6 w-6"
-                    >
-                      <title>{category.opened ? "Close" : "Open"}</title>
-                      <path
-                        d={category.opened ? icons.svg_close : icons.svg_open}
-                        fill="currentcolor"
-                      />
-                    </svg>
-                    <span class="grow ml-3 font-bold text-zinc-800">
-                      <button
-                        class="relative px-1 rounded-lg text-sm"
-                        style="background-color: {categoryColor(category.id)};"
-                      >
-                        {category.name}
-                      </button>
-                    </span>
-                    <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
-                      title="{Object.keys(category.labels).length} labels"
-                    >
-                      {Object.keys(category.labels).length}
-                    </span>
-                  </button>
-                </div>
-                <div
-                  class="{source.opened && view.opened && category.opened
-                    ? 'flex'
-                    : 'hidden'} flex-col"
+                    <title>{category.visible ? "Hide" : "Show"}</title>
+                    <path
+                      d={category.visible ? icons.svg_hide : icons.svg_show}
+                      fill="currentcolor"
+                    />
+                  </svg>
+                </button>
+                <button
+                  class="flex grow items-center space-x-1 text-left"
+                  on:click={() => (category.opened = !category.opened)}
                 >
-                  {#each Object.values(category.labels) as label}
-                    <div
-                      class="p-3 pl-12 flex items-center space-x-1 border-b-2
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="48"
+                    viewBox="0 -960 960 960"
+                    width="48"
+                    class="h-6 w-6"
+                  >
+                    <title>{category.opened ? "Close" : "Open"}</title>
+                    <path
+                      d={category.opened ? icons.svg_close : icons.svg_open}
+                      fill="currentcolor"
+                    />
+                  </svg>
+                  <span class="grow ml-3 font-bold text-zinc-800">
+                    <button
+                      class="relative px-1 rounded-lg text-sm"
+                      style="background-color: {categoryColor(category.id)};"
+                    >
+                      {category.name}
+                    </button>
+                  </span>
+                  <span
+                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                    title="{Object.keys(category.labels).length} labels"
+                  >
+                    {Object.keys(category.labels).length}
+                  </span>
+                </button>
+              </div>
+              <div
+                class="{source.opened && view.opened && category.opened
+                  ? 'flex'
+                  : 'hidden'} flex-col"
+              >
+                {#each Object.values(category.labels) as label}
+                  <div
+                    class="p-3 pl-12 flex items-center space-x-1 border-b-2
                     {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
                     border-zinc-300 dark:border-zinc-500"
+                  >
+                    <button
+                      on:click={() =>
+                        handleLabelVisibility(
+                          source,
+                          view,
+                          category,
+                          label,
+                          !label.visible
+                        )}
                     >
-                      <button
-                        on:click={() =>
-                          handleLabelVisibility(
-                            source,
-                            view,
-                            category,
-                            label,
-                            !label.visible
-                          )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="48"
+                        viewBox="0 -960 960 960"
+                        width="48"
+                        class="h-5 w-5"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          height="48"
-                          viewBox="0 -960 960 960"
-                          width="48"
-                          class="h-5 w-5"
-                        >
-                          <title>
-                            {(category.visible && label.visible) ||
-                            label.visible
-                              ? "Hide"
-                              : "Show"}
-                          </title>
-                          <path
-                            d={(category.visible && label.visible) ||
-                            label.visible
-                              ? icons.svg_hide
-                              : icons.svg_show}
-                            fill="currentcolor"
-                          />
-                        </svg>
-                      </button>
-                      <span
-                        class="relative pl-3 text-sm grow truncate"
-                        title={label.id}
-                      >
-                        {label.id}
-                      </span>
-                    </div>
-                  {/each}
-                </div>
-              {/each}
-            {/if}
+                        <title>
+                          {(category.visible && label.visible) || label.visible
+                            ? "Hide"
+                            : "Show"}
+                        </title>
+                        <path
+                          d={(category.visible && label.visible) ||
+                          label.visible
+                            ? icons.svg_hide
+                            : icons.svg_show}
+                          fill="currentcolor"
+                        />
+                      </svg>
+                    </button>
+                    <span
+                      class="relative pl-3 text-sm grow truncate"
+                      title={label.id}
+                    >
+                      {label.id}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            {/each}
           {/each}
         {/each}
       {/if}

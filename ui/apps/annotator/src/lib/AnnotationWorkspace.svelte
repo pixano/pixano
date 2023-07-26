@@ -220,14 +220,21 @@
 
   function handleDeleteLabel(event) {
     console.log("AnnotationWorkspace.handleDeleteLabel");
+    const sourceId = event.detail.sourceId;
+    const viewId = event.detail.viewId;
+    const categoryName = event.detail.categoryName;
     const labelId = event.detail.labelId;
 
-    // Find the label mask
-    const labelMask = masks.find((mask) => mask.id === labelId);
-    if (labelMask) {
-      //remove from list
-      masks = masks.filter((mask) => mask.id !== labelId);
-    }
+    // Remove from annotations
+    delete annotations[sourceId].views[viewId].categories[categoryName].labels[
+      labelId
+    ];
+    annotations[sourceId].numLabels -= 1;
+    annotations[sourceId].views[viewId].numLabels -= 1;
+
+    // Remove from masks / bboxes
+    masks = masks.filter((mask) => mask.id !== labelId);
+    bboxes = bboxes.filter((bbox) => bbox.id !== labelId);
 
     dispatch("enableSaveFlag");
 
@@ -237,11 +244,21 @@
 
   function handleLabelVisibility(event) {
     console.log("AnnotationWorkspace.handleLabelVisibility");
-    const mask = masks.find(
-      (mask) =>
-        mask.id === event.detail.id && mask.viewId === event.detail.viewId
-    );
-    mask.visible = event.detail.visible;
+    if (event.detail.type === "mask") {
+      const mask = masks.find(
+        (mask) =>
+          mask.id === event.detail.id && mask.viewId === event.detail.viewId
+      );
+      mask.visible = event.detail.visible;
+      mask.opacity = event.detail.opacity;
+    } else if (event.detail.type === "bbox") {
+      const bbox = bboxes.find(
+        (bbox) =>
+          bbox.id === event.detail.id && bbox.viewId === event.detail.viewId
+      );
+      bbox.visible = event.detail.visible;
+      bbox.opacity = event.detail.opacity;
+    }
 
     // Update visibility
     masks = masks;
@@ -287,8 +304,9 @@
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
       <AnnotationPanel
+        {selectedItem}
         {selectedDataset}
-        bind:annotations
+        {annotations}
         {currentPage}
         {categoryColor}
         on:selectItem={handleChangeSelectedItem}

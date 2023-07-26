@@ -44,7 +44,7 @@
   export let selectedTool: Tool | null;
   export let categoryColor = null;
   export let masks: Array<Mask>;
-  export let bboxes: Array<BBox> = [];
+  export let bboxes: Array<BBox>;
   export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
@@ -160,6 +160,7 @@
             scaleView(view);
             //hack to refresh view (display masks/bboxes)
             masks = masks;
+            bboxes = bboxes;
           });
         };
       }
@@ -1160,13 +1161,17 @@
     if (event.key == "i") {
       console.log("Canvas2D - Infos");
       console.log("masks", masks);
+      console.log("bboxes", bboxes);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
       for (let view of views) {
         const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+        const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
         console.log("masks Konva group:", maskGroup);
         console.log("masks children length:", maskGroup.children?.length);
+        console.log("bboxes Konva group:", bboxGroup);
+        console.log("bboxes children length:", bboxGroup.children?.length);
       }
     }
   }

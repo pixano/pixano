@@ -98,6 +98,7 @@
     annotations = {};
     classes = [];
     masks = [];
+    bboxes = [];
     embeddings = {};
 
     const start = Date.now();
@@ -115,7 +116,7 @@
         id: sourceId,
         views: {},
         numLabels: 0,
-        opened: true,
+        opened: Object.entries(selectedItem.objects).length > 1 ? false : true,
         visible: true,
       };
 
@@ -125,7 +126,7 @@
           id: viewId,
           categories: {},
           numLabels: 0,
-          opened: false,
+          opened: Object.entries(sourceObjects).length > 1 ? false : true,
           visible: true,
         };
 
