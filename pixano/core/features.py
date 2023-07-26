@@ -44,13 +44,13 @@ class Features:
         return Features(features_dict)
         
     def to_fields(self) -> list[pa.field]:
-        """Convert dict containing python type to arrow schema
+        """Convert dict containing python type to arrow fields
 
         Args:
             types (dict[str, type]): Dict containing type, key as field name, value as type
 
         Returns:
-            pa.schema: Schema in arrow format
+            List[pa.fields]: Fields in arrow format
         """
         fields = []
         for field_name, field_type in self.dict.items():
