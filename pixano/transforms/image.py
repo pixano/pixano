@@ -262,7 +262,7 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
     return res, has_holes
 
 
-def urle_to_rle(urle: dict, height: int, width: int) -> dict:
+def urle_to_rle(urle: list[int], height: int, width: int) -> dict:
     """Encode mask from uncompressed RLE to RLE
 
     Args:
