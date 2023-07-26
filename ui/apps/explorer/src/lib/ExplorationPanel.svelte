@@ -221,7 +221,8 @@
 <div
   class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
     bg-white dark:bg-zinc-800
-    border-zinc-300 dark:border-zinc-500"
+    border-zinc-300 dark:border-zinc-500
+    text-zinc-500 dark:text-zinc-300"
 >
   <div class="h-12 fixed w-full flex items-center justify-evenly">
     <span
@@ -237,92 +238,91 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
-      <div
-        class="px-4 border-b-2
-      border-zinc-300 dark:border-zinc-500"
-      >
-        <!-- Details -->
-        {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
-          <div class="flex flex-col py-4">
-            {#if selectedItem.filename}
-              <div>
-                <span class="font-bold"> Filename : </span>
-                <span> {selectedItem.filename} </span>
-              </div>
-            {/if}
-            {#if selectedItem.width && selectedItem.height}
-              <div>
-                <span class="font-bold"> Size : </span>
-                <span> {selectedItem.width}x{selectedItem.height}px</span>
-              </div>
-            {/if}
-          </div>
-        {/if}
-        <!-- Controls -->
-        <div class="flex flex-col py-4">
-          <div class="mb-2 flex items-center space-x-2">
-            <!-- Show all items checkbox -->
-            <input
-              class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
-              type="checkbox"
-              id="toggle-items"
-              checked
-              on:change={handleAllVisibility}
-            />
-            <label class="font-bold cursor-pointer" for="toggle-items">
-              Show all annotations
-            </label>
-          </div>
-
-          <div class="mb-2 flex items-center space-x-2">
-            <!-- Show boxes checkbox -->
-            <input
-              class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
-              type="checkbox"
-              id="toggle-boxes"
-              checked
-              on:change={handleBboxesVisibility}
-            />
-            <label class="font-bold cursor-pointer" for="toggle-boxes">
-              Show bounding boxes
-            </label>
-          </div>
-
-          <!-- Opacity slider -->
-          <label class="font-bold mt-2 mb-1" for="slider">
-            Mask opacity: {maskOpacity * 100}%
-          </label>
-          <input
-            class="cursor-pointer"
-            type="range"
-            id="slider"
-            min="0"
-            max="1"
-            step="0.1"
-            bind:value={maskOpacity}
-            on:input={handleMaskOpacity}
-          />
-
-          <!-- Confidence filter -->
-          <label class="font-bold mt-2 mb-1" for="slider">
-            Confidence threshold: {Math.round(minConfidence * 100)}%
-          </label>
-          <input
-            class="cursor-pointer"
-            type="range"
-            id="slider"
-            min="0"
-            max="1"
-            step="0.01"
-            bind:value={minConfidence}
-            on:input={handleConfidenceFilter}
-          />
-        </div>
-      </div>
-
       {#if viewsEmpty}
         <p class="py-4 text-center font-bold italic">No annotations yet.</p>
       {:else}
+        <div
+          class="px-4 border-b-2
+    border-zinc-300 dark:border-zinc-500"
+        >
+          <!-- Details -->
+          {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
+            <div class="flex flex-col py-4">
+              {#if selectedItem.filename}
+                <div>
+                  <span class="font-bold"> Filename : </span>
+                  <span> {selectedItem.filename} </span>
+                </div>
+              {/if}
+              {#if selectedItem.width && selectedItem.height}
+                <div>
+                  <span class="font-bold"> Size : </span>
+                  <span> {selectedItem.width}x{selectedItem.height}px</span>
+                </div>
+              {/if}
+            </div>
+          {/if}
+          <!-- Controls -->
+          <div class="flex flex-col py-4">
+            <div class="mb-2 flex items-center space-x-2">
+              <!-- Show all items checkbox -->
+              <input
+                class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
+                type="checkbox"
+                id="toggle-items"
+                checked
+                on:change={handleAllVisibility}
+              />
+              <label class="font-bold cursor-pointer" for="toggle-items">
+                Show all annotations
+              </label>
+            </div>
+
+            <div class="mb-2 flex items-center space-x-2">
+              <!-- Show boxes checkbox -->
+              <input
+                class="cursor-pointer checked:accent-rose-500 dark:checked:accent-rose-600"
+                type="checkbox"
+                id="toggle-boxes"
+                checked
+                on:change={handleBboxesVisibility}
+              />
+              <label class="font-bold cursor-pointer" for="toggle-boxes">
+                Show bounding boxes
+              </label>
+            </div>
+
+            <!-- Opacity slider -->
+            <label class="font-bold mt-2 mb-1" for="slider">
+              Mask opacity: {maskOpacity * 100}%
+            </label>
+            <input
+              class="cursor-pointer"
+              type="range"
+              id="slider"
+              min="0"
+              max="1"
+              step="0.1"
+              bind:value={maskOpacity}
+              on:input={handleMaskOpacity}
+            />
+
+            <!-- Confidence filter -->
+            <label class="font-bold mt-2 mb-1" for="slider">
+              Confidence threshold: {Math.round(minConfidence * 100)}%
+            </label>
+            <input
+              class="cursor-pointer"
+              type="range"
+              id="slider"
+              min="0"
+              max="1"
+              step="0.01"
+              bind:value={minConfidence}
+              on:input={handleConfidenceFilter}
+            />
+          </div>
+        </div>
         {#each Object.entries(annotations) as [viewId, view]}
           {#if Object.keys(annotations).length > 1}
             <div
