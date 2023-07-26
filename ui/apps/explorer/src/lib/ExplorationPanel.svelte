@@ -42,7 +42,7 @@
   // Filters
   let maskOpacity: number = 1.0;
   let bboxOpacity: number = 1.0;
-  let minConfidence: number = 0.0;
+  let minConfidence: number = 0.5;
 
   function handleConfidenceFilter() {
     for (let source of Object.values(annotations)) {
