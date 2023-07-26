@@ -548,10 +548,11 @@
           validated: false,
         };
         let currentMask = <Mask>{
+          id: `${currentAnn.id}_mask`,
           viewId: viewId,
-          id: `${new_id}_mask`,
-          svg: results.masksImageSVG,
-          catId: -1,
+          svg: currentAnn.output.masksImageSVG,
+          rle: currentAnn.output.rle,
+          catId: currentAnn.catId,
           visible: true,
           opacity: 1.0,
         };
@@ -609,7 +610,7 @@
         }
         currentMaskGroup.moveTo(maskGroup);
         masks.push({
-          id: currentAnn.id,
+          id: `${currentAnn.id}_mask`,
           viewId: viewId,
           svg: currentAnn.output.masksImageSVG,
           rle: currentAnn.output.rle,
