@@ -28,7 +28,7 @@
   const dispatch = createEventDispatcher();
 
   function handleSelectDataset(dataset: Dataset) {
-    dispatch("selectDataset", { dataset: dataset });
+    dispatch("selectDataset", dataset);
   }
 </script>
 

@@ -34,7 +34,7 @@
     let itemId = item.find((feature) => {
       return feature.name === "id";
     }).value;
-    dispatch("selectItem", { id: itemId });
+    dispatch("selectItem", itemId);
   }
 </script>
 

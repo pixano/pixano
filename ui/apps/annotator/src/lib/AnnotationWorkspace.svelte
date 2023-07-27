@@ -202,20 +202,20 @@
     annotations = annotations;
   }
 
-  async function handleChangeSelectedItem(event) {
+  async function handleChangeSelectedItem(item: DatasetItem) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId: string = event.detail.find((feature) => {
+    const newItemId: string = item.find((feature) => {
       return feature.name === "id";
     }).value;
 
     if (newItemId !== selectedItem.id) {
       if (!saveFlag) {
-        changeSelectedItem(newItemId, event.detail);
+        changeSelectedItem(newItemId, item);
       } else {
         selectItemModal = true;
         await until((_) => selectItemModal == false);
         if (!saveFlag) {
-          changeSelectedItem(newItemId, event.detail);
+          changeSelectedItem(newItemId, item);
         }
       }
     }
@@ -234,26 +234,22 @@
     }
     selectedItem.views = newItemViews;
     selectedItem = selectedItem;
-    dispatch("selectItem", { id: newItemId });
+    dispatch("selectItem", newItemId);
   }
 
-  function handleDeleteLabel(event) {
+  function handleDeleteLabel(label: Label) {
     console.log("AnnotationWorkspace.handleDeleteLabel");
-    const sourceId = event.detail.sourceId;
-    const viewId = event.detail.viewId;
-    const categoryName = event.detail.categoryName;
-    const labelId = event.detail.labelId;
 
     // Remove from annotations
-    delete annotations[sourceId].views[viewId].categories[categoryName].labels[
-      labelId
-    ];
-    annotations[sourceId].numLabels -= 1;
-    annotations[sourceId].views[viewId].numLabels -= 1;
+    delete annotations[label.sourceId].views[label.viewId].categories[
+      label.categoryName
+    ].labels[label.id];
+    annotations[label.sourceId].numLabels -= 1;
+    annotations[label.sourceId].views[label.viewId].numLabels -= 1;
 
     // Remove from masks / bboxes
-    masks = masks.filter((mask) => mask.id !== labelId);
-    bboxes = bboxes.filter((bbox) => bbox.id !== labelId);
+    masks = masks.filter((mask) => mask.id !== label.id);
+    bboxes = bboxes.filter((bbox) => bbox.id !== label.id);
 
     dispatch("enableSaveFlag");
 
@@ -261,22 +257,20 @@
     annotations = annotations;
   }
 
-  function handleLabelVisibility(event) {
+  function handleLabelVisibility(label: Label) {
     console.log("AnnotationWorkspace.handleLabelVisibility");
-    if (event.detail.type === "mask") {
+    if (label.type === "mask") {
       const mask = masks.find(
-        (mask) =>
-          mask.id === event.detail.id && mask.viewId === event.detail.viewId
+        (mask) => mask.id === label.id && mask.viewId === label.viewId
       );
-      mask.visible = event.detail.visible;
-      mask.opacity = event.detail.opacity;
-    } else if (event.detail.type === "bbox") {
+      mask.visible = label.visible;
+      mask.opacity = label.opacity;
+    } else if (label.type === "bbox") {
       const bbox = bboxes.find(
-        (bbox) =>
-          bbox.id === event.detail.id && bbox.viewId === event.detail.viewId
+        (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
       );
-      bbox.visible = event.detail.visible;
-      bbox.opacity = event.detail.opacity;
+      bbox.visible = label.visible;
+      bbox.opacity = label.opacity;
     }
 
     // Update visibility
@@ -329,9 +323,9 @@
         {annotations}
         {currentPage}
         {categoryColor}
-        on:selectItem={handleChangeSelectedItem}
-        on:deleteLabel={handleDeleteLabel}
-        on:labelVisibility={handleLabelVisibility}
+        on:selectItem={(event) => handleChangeSelectedItem(event.detail)}
+        on:deleteLabel={(event) => handleDeleteLabel(event.detail)}
+        on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}

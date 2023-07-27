@@ -424,7 +424,7 @@
         {embeddings}
         {currentPage}
         bind:saveFlag
-        on:selectItem={(event) => handleSelectItem(event.detail.id)}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}
         on:enableSaveFlag={() => (saveFlag = true)}
       />
@@ -432,7 +432,7 @@
       <Library
         {datasets}
         buttonLabel="Annotate"
-        on:selectDataset={(event) => handleSelectDataset(event.detail.dataset)}
+        on:selectDataset={(event) => handleSelectDataset(event.detail)}
       />
     {/if}
   {:else}

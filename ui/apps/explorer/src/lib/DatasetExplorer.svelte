@@ -31,8 +31,8 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectItem(event: CustomEvent) {
-    dispatch("selectItem", { id: event.detail.id });
+  function handleSelectItem(itemId: string) {
+    dispatch("selectItem", itemId);
   }
 
   async function loadPage() {
@@ -113,7 +113,10 @@
       {#if selectedDataset.page}
         <!-- Items list -->
         <div class=" h-[85vh] z-0 w-full max-w-7xl">
-          <Table {selectedDataset} on:selectItem={handleSelectItem} />
+          <Table
+            {selectedDataset}
+            on:selectItem={(event) => handleSelectItem(event.detail)}
+          />
         </div>
 
         <!-- Page navigation -->

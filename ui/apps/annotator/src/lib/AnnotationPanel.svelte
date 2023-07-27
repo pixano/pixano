@@ -52,13 +52,8 @@
     dispatch("selectItem", item);
   }
 
-  function handleDeleteLabel(
-    sourceId: string,
-    viewId: string,
-    categoryName: string,
-    labelId: string
-  ) {
-    dispatch("deleteLabel", { sourceId, viewId, categoryName, labelId });
+  function handleDeleteLabel(label: Label) {
+    dispatch("deleteLabel", label);
   }
 
   function handleConfidenceFilter() {
@@ -541,15 +536,7 @@
                       >
                         {label.id}
                       </span>
-                      <button
-                        on:click={() =>
-                          handleDeleteLabel(
-                            source.id,
-                            view.id,
-                            category.name,
-                            label.id
-                          )}
-                      >
+                      <button on:click={() => handleDeleteLabel(label)}>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"

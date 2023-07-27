@@ -22,7 +22,7 @@
 
   import ExplorationPanel from "./ExplorationPanel.svelte";
 
-  import type { ItemData, Mask, BBox, ItemLabels } from "@pixano/core";
+  import type { ItemData, Mask, BBox, ItemLabels, Label } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
@@ -38,22 +38,20 @@
 
   const dispatch = createEventDispatcher();
 
-  function handleLabelVisibility(event) {
+  function handleLabelVisibility(label: Label) {
     console.log("AnnotationWorkspace.handleLabelVisibility");
-    if (event.detail.type === "mask") {
+    if (label.type === "mask") {
       const mask = masks.find(
-        (mask) =>
-          mask.id === event.detail.id && mask.viewId === event.detail.viewId
+        (mask) => mask.id === label.id && mask.viewId === label.viewId
       );
-      mask.visible = event.detail.visible;
-      mask.opacity = event.detail.opacity;
-    } else if (event.detail.type === "bbox") {
+      mask.visible = label.visible;
+      mask.opacity = label.opacity;
+    } else if (label.type === "bbox") {
       const bbox = bboxes.find(
-        (bbox) =>
-          bbox.id === event.detail.id && bbox.viewId === event.detail.viewId
+        (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
       );
-      bbox.visible = event.detail.visible;
-      bbox.opacity = event.detail.opacity;
+      bbox.visible = label.visible;
+      bbox.opacity = label.opacity;
     }
 
     // Update visibility
@@ -100,7 +98,7 @@
         {selectedItem}
         {annotations}
         {classes}
-        on:labelVisibility={handleLabelVisibility}
+        on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
       />
     {/if}
   {/if}

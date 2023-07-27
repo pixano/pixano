@@ -49,7 +49,7 @@
     currentPage = 1;
   }
 
-  async function handleSelectItem(id: string) {
+  async function handleSelectItem(itemId: string) {
     annotations = {};
     classes = [];
     masks = [];
@@ -57,7 +57,7 @@
 
     console.log("App.handleSelectItem");
     const start = Date.now();
-    selectedItem = await api.getItemDetails(selectedDataset.id, id);
+    selectedItem = await api.getItemDetails(selectedDataset.id, itemId);
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
@@ -258,14 +258,14 @@
         <DatasetExplorer
           {selectedDataset}
           {currentPage}
-          on:selectItem={(event) => handleSelectItem(event.detail.id)}
+          on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {/if}
     {:else}
       <Library
         {datasets}
         buttonLabel="Explore"
-        on:selectDataset={(event) => handleSelectDataset(event.detail.dataset)}
+        on:selectDataset={(event) => handleSelectDataset(event.detail)}
       />
     {/if}
   {:else}
