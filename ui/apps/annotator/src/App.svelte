@@ -94,7 +94,7 @@
     }
   }
 
-  async function handleSelectItem(id: string) {
+  async function handleSelectItem(itemId: string) {
     annotations = {};
     classes = [];
     masks = [];
@@ -109,7 +109,7 @@
     let newEmbeddings = {};
 
     const start = Date.now();
-    selectedItem = await api.getItemDetails(selectedDataset.id, id);
+    selectedItem = await api.getItemDetails(selectedDataset.id, itemId);
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
@@ -186,7 +186,7 @@
                 type: "mask",
                 confidence:
                   bboxXYWH && bboxXYWH.predicted ? bboxXYWH.confidence : null,
-                opacity: bboxXYWH.predicted ? 0.0 : 1.0,
+                opacity: 1.0,
                 visible: true,
               };
 
@@ -198,7 +198,7 @@
                 rle: maskRLE,
                 catId: catId,
                 visible: true,
-                opacity: bboxXYWH.predicted ? 0.0 : 1.0,
+                opacity: 1.0,
               });
 
               // Update counters
@@ -228,7 +228,7 @@
                 viewId: viewId,
                 type: "bbox",
                 confidence: bboxXYWH.predicted ? bboxXYWH.confidence : null,
-                opacity: 0.0,
+                opacity: 1.0,
                 visible: true,
               };
 
@@ -244,7 +244,7 @@
                     : ""),
                 catId: catId,
                 visible: true,
-                opacity: 0.0,
+                opacity: 1.0,
               });
 
               // Update counters
