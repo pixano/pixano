@@ -595,28 +595,11 @@
 
   function validateCurrentAnn() {
     if (currentAnn.validated) {
-      const viewLayer = stage.findOne(`#${currentAnn.viewId}`) as Konva.Layer;
       let currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewId);
-      if (currentMaskGroup) {
-        //move currentMaskGroup to maskGroup
-        const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-        currentMaskGroup.id(currentAnn.id);
-        // change color
-        for (let s of currentMaskGroup.children) {
-          let shape = s as Konva.Shape;
-          var pred = new Option().style;
-          pred.color = labelColors(currentAnn.catId);
-          shape.fill(
-            `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
-          );
-          shape.stroke(pred.color);
-        }
-        currentMaskGroup.moveTo(maskGroup);
-
-        if (highlighted_point) unhighlightInputPoint(highlighted_point);
-        clearInputs(currentAnn.viewId);
-        currentAnn = null;
-      }
+      if (currentMaskGroup) currentMaskGroup.destroyChildren();
+      if (highlighted_point) unhighlightInputPoint(highlighted_point);
+      clearInputs(currentAnn.viewId);
+      currentAnn = null;
     }
   }
 
