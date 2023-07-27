@@ -254,13 +254,13 @@
     const maskGroup: Konva.Group = viewLayer.findOne("#masks");
     for (let mask of maskGroup.children) {
       if (mask instanceof Konva.Shape) {
-        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
+        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
-    const currentMaskGroup = findOrCreateCurrentMask(viewId);
+    const currentMaskGroup = findOrCreateCurrentMask(view.id);
     for (let mask of currentMaskGroup.children) {
       if (mask instanceof Konva.Shape) {
-        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
+        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
   }
@@ -290,8 +290,8 @@
           bboxIds.push(bboxes[i].id);
 
           //don't add a bbox that already exist
-          let bbox = bboxGroup.findOne(`#${bboxes[i].id}`);
-          if (!bbox) {
+          let bboxKonva = bboxGroup.findOne(`#${bboxes[i].id}`);
+          if (!bboxKonva) {
             addBBox(
               bboxes[i],
               categoryColor(bboxes[i].catId),
@@ -301,8 +301,8 @@
             );
           } else {
             //update visibility & opacity
-            bbox.visible(bboxes[i].visible);
-            bbox.opacity(bboxes[i].opacity);
+            bboxKonva.visible(bboxes[i].visible);
+            bboxKonva.opacity(bboxes[i].opacity);
           }
         }
       }
@@ -318,13 +318,10 @@
     image: Konva.Image,
     viewId: string
   ) {
-    const img_w = (image.image() as HTMLImageElement).naturalWidth;
-    const img_h = (image.image() as HTMLImageElement).naturalHeight;
-    const rect_x = image.x() + bbox.bbox[0] * img_w;
-    const rect_y = image.y() + bbox.bbox[1] * img_h;
-    const rect_width = bbox.bbox[2] * img_w;
-    const rect_height = bbox.bbox[3] * img_h;
-
+    const x = image.x() + bbox.bbox[0] * image.width();
+    const y = image.y() + bbox.bbox[1] * image.height();
+    const rect_width = bbox.bbox[2] * image.width();
+    const rect_height = bbox.bbox[3] * image.height();
     const bboxKonva = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
@@ -333,20 +330,19 @@
     });
 
     const bboxRect = new Konva.Rect({
-      x: rect_x,
-      y: rect_y,
+      x: x,
+      y: y,
       width: rect_width,
       height: rect_height,
       stroke: color,
       strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
-      scale: image.scale(),
     });
     bboxKonva.add(bboxRect);
 
     // Create a tooltip for bounding box category and confidence
     const tooltip = new Konva.Label({
-      x: rect_x,
-      y: rect_y,
+      x: x,
+      y: y,
       offsetY: 18,
       scale: {
         x: 1 / zoomFactor[viewId],
@@ -365,13 +361,13 @@
     // Add text
     tooltip.add(
       new Konva.Text({
+        x: x,
+        y: y,
         text: bbox.tooltip,
         fontSize: 18,
         fontStyle: "bold",
         fontFamily: "poppins",
         padding: 0,
-        x: rect_x,
-        y: rect_y,
       })
     );
 
@@ -1145,7 +1141,6 @@
     if (highlighted_point) {
       highlightInputPoint(highlighted_point, view.id);
     }
-    console.log("WHEEL ZOOM", zoomFactor);
   }
 
   // ********** KEY EVENTS ********** //

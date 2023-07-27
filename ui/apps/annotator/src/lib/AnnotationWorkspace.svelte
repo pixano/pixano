@@ -258,7 +258,6 @@
   }
 
   function handleLabelVisibility(label: Label) {
-    console.log("AnnotationWorkspace.handleLabelVisibility");
     if (label.type === "mask") {
       const mask = masks.find(
         (mask) => mask.id === label.id && mask.viewId === label.viewId
