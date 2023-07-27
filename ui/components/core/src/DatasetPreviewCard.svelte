@@ -61,7 +61,6 @@
   <!-- Actions -->
   <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
     <button
-      on:click={handleSelectDataset}
       class="py-2 px-3 border border-transparent font-heavy rounded-md transition-all
       text-zinc-50
       bg-rose-500 dark:bg-rose-600
