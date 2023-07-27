@@ -303,7 +303,7 @@
             bboxKonva.opacity(bboxes[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = labelColors(masks[i].catId);
+            style.color = labelColors(bboxes[i].catId);
             for (let bboxElement of bboxKonva.children) {
               if (bboxElement instanceof Konva.Rect) {
                 bboxElement.stroke(style.color);
