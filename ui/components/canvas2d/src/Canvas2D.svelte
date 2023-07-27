@@ -17,7 +17,7 @@
   // Imports
   import Konva from "konva";
   import shortid from "shortid";
-  import { afterUpdate, onMount, createEventDispatcher } from "svelte";
+  import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal } from "@pixano/core";
@@ -47,8 +47,6 @@
   export let bboxes: Array<BBox>;
   export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-
-  const dispatch = createEventDispatcher();
 
   const INPUTPOINT_RADIUS: number = 6;
   const INPUTPOINT_STROKEWIDTH: number = 3;
@@ -234,9 +232,9 @@
 
     // Scale bboxes
     const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-    for (let bbox of bboxGroup.children) {
-      if (bbox instanceof Konva.Group) {
-        for (let bboxElement of bbox.children) {
+    for (let bboxKonva of bboxGroup.children) {
+      if (bboxKonva instanceof Konva.Group) {
+        for (let bboxElement of bboxKonva.children) {
           if (bboxElement instanceof Konva.Rect) {
             bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[view.id]);
           }
@@ -252,15 +250,15 @@
 
     // Scale masks
     const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-    for (let mask of maskGroup.children) {
-      if (mask instanceof Konva.Shape) {
-        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
+    for (let maskKonva of maskGroup.children) {
+      if (maskKonva instanceof Konva.Shape) {
+        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
     const currentMaskGroup = findOrCreateCurrentMask(view.id);
-    for (let mask of currentMaskGroup.children) {
-      if (mask instanceof Konva.Shape) {
-        mask.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
+    for (let maskKonva of currentMaskGroup.children) {
+      if (maskKonva instanceof Konva.Shape) {
+        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
   }
@@ -290,7 +288,7 @@
           bboxIds.push(bboxes[i].id);
 
           //don't add a bbox that already exist
-          let bboxKonva = bboxGroup.findOne(`#${bboxes[i].id}`);
+          let bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bboxKonva) {
             addBBox(
               bboxes[i],
@@ -303,6 +301,18 @@
             //update visibility & opacity
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);
+            //update color
+            const style = new Option().style;
+            style.color = labelColors(masks[i].catId);
+            for (let bboxElement of bboxKonva.children) {
+              if (bboxElement instanceof Konva.Rect) {
+                bboxElement.stroke(style.color);
+              }
+              if (bboxElement instanceof Konva.Label) {
+                bboxElement.getTag().fill(style.color);
+                bboxElement.getTag().stroke();
+              }
+            }
           }
         }
       }
@@ -390,8 +400,8 @@
           maskIds.push(masks[i].id);
 
           //don't add a mask that already exist
-          let mask = maskGroup.findOne(`#${masks[i].id}`);
-          if (!mask) {
+          let maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
+          if (!maskKonva) {
             addMask(
               masks[i],
               labelColors(masks[i].catId),
@@ -401,18 +411,15 @@
             );
           } else {
             //update visibility & opacity
-            mask.visible(masks[i].visible);
-            mask.opacity(masks[i].opacity);
+            maskKonva.visible(masks[i].visible);
+            maskKonva.opacity(masks[i].opacity);
             //update color
-            let shape = mask as Konva.Shape;
-            if (typeof shape.fill === "function") {
-              var pred = new Option().style;
-              pred.color = labelColors(masks[i].catId);
-              shape.fill(
-                `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
-              );
-              shape.stroke(pred.color);
-            }
+            const style = new Option().style;
+            style.color = labelColors(masks[i].catId);
+            maskKonva.stroke(style.color);
+            maskKonva.fill(
+              `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`
+            );
           }
         }
       }
@@ -432,21 +439,9 @@
     const y = image.y();
     const scale = image.scale();
 
-    let fill: string;
-    switch (color) {
-      case "green":
-        fill = "rgba(0, 255, 0, 0.25)";
-        break;
-      default:
-        let s = new Option().style;
-        s.color = color;
-        if (s.color !== "") {
-          fill = `rgba(${s.color.replace("rgb(", "").replace(")", "")}, 0.35)`;
-        } else {
-          fill = "rgba(255, 255, 255, 0.35)";
-        }
-        break;
-    }
+    const style = new Option().style;
+    style.color = color;
+
     //utility functions to extract coords from SVG
     //works only with SVG format "Mx0 y0 Lx1 y1 ... xn yn"
     // --> format generated by convertSegmentsToSVG
@@ -473,8 +468,8 @@
       y: y,
       width: stage.width(),
       height: stage.height(),
-      fill: fill,
-      stroke: color,
+      fill: `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`,
+      stroke: style.color,
       strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
       scale: scale,
       visible: mask.visible,
@@ -559,7 +554,7 @@
           visible: true,
           opacity: 1.0,
         };
-        addMask(currentMask, "green", currentMaskGroup, image, viewId);
+        addMask(currentMask, "#008000", currentMaskGroup, image, viewId);
       }
     }
   }
@@ -1053,7 +1048,7 @@
           height: 0,
           stroke: "white",
           dash: [10, 5],
-          fill: "rgba(255, 255, 255, 0.25)",
+          fill: "rgba(255, 255, 255, 0.15)",
           strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
           listening: false,
         });
