@@ -260,6 +260,11 @@
         }
       }
 
+      annotations = newAnnotations;
+      classes = newClasses;
+      masks = newMasks;
+      bboxes = newBboxes;
+
       // Embeddings
       for (let view of selectedItem.views) {
         let viewEmbedding = null;
@@ -291,10 +296,6 @@
       }
     }
 
-    annotations = newAnnotations;
-    classes = newClasses;
-    masks = newMasks;
-    bboxes = newBboxes;
     embeddings = newEmbeddings;
   }
 
