@@ -116,14 +116,13 @@
 
   onMount(() => {
     loadItem();
-    // Calculate new grid size
-    gridSize.cols = Math.ceil(Math.sqrt(views.length));
-    gridSize.rows = Math.ceil(views.length / gridSize.cols);
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
   });
 
   afterUpdate(() => {
+    if (currentId !== itemId) loadItem();
+
     if (selectedTool) {
       handleChangeTool();
     } else {
@@ -133,42 +132,46 @@
     if (currentAnn && currentAnn.validated) {
       validateCurrentMask(currentAnn.viewId);
     }
+
     if (masks) {
       for (let view of views) updateMasks(view.id, itemId);
     }
     if (bboxes) {
       for (let view of views) updateBboxes(view.id, itemId);
     }
-    loadItem();
   });
 
   function loadItem() {
-    if (currentId !== itemId) {
-      // Clear annotations in case a previous item was already loaded
-      if (currentId) clearAnnotationAndInputs();
+    // Calculate new grid size
+    gridSize.cols = Math.ceil(Math.sqrt(views.length));
+    gridSize.rows = Math.ceil(views.length / gridSize.cols);
 
-      for (let view of views) {
-        zoomFactor[view.id] = 1;
-        const image = new Image();
-        image.src = view.url;
-        image.onload = (event) => {
-          onLoadViewImage(event, view.id).then(() => {
-            // Find existing Konva elements in case a previous item was already loaded
-            if (currentId) {
-              const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
-              const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
-              konvaImg.image(image);
-            }
-            scaleView(view);
-            //hack to refresh view (display masks/bboxes)
-            masks = masks;
-            bboxes = bboxes;
-          });
-        };
-      }
-      currentId = itemId;
+    // Clear annotations in case a previous item was already loaded
+    if (currentId) clearAnnotationAndInputs();
+
+    for (let view of views) {
+      zoomFactor[view.id] = 1;
+      const image = new Image();
+      image.src = view.url;
+      image.onload = (event) => {
+        onLoadViewImage(event, view.id).then(() => {
+          // Find existing Konva elements in case a previous item was already loaded
+          if (currentId) {
+            const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
+            const konvaImg = viewLayer.findOne(`#${itemId}`) as Konva.Image;
+            konvaImg.image(image);
+          }
+          scaleView(view);
+          scaleElements(view);
+          //hack to refresh view (display masks/bboxes)
+          masks = masks;
+          bboxes = bboxes;
+        });
+      };
     }
+    currentId = itemId;
   }
+
   async function onLoadViewImage(event, viewId: string) {
     images[viewId] = event.target;
   }
@@ -214,18 +217,18 @@
     }
   }
 
-  function scaleElements(viewId) {
-    const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
+  function scaleElements(view: ViewData) {
+    const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
 
     // Scale input points
     const inputGroup = viewLayer.findOne("#input") as Konva.Group;
     for (let point of inputGroup.children) {
       if (point instanceof Konva.Circle) {
-        point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
-        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[viewId]);
+        point.radius(INPUTPOINT_RADIUS / zoomFactor[view.id]);
+        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[view.id]);
       }
       if (point instanceof Konva.Rect) {
-        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[viewId]);
+        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
 
@@ -235,12 +238,12 @@
       if (bbox instanceof Konva.Group) {
         for (let bboxElement of bbox.children) {
           if (bboxElement instanceof Konva.Rect) {
-            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[viewId]);
+            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[view.id]);
           }
           if (bboxElement instanceof Konva.Label) {
             bboxElement.scale({
-              x: 1 / zoomFactor[viewId],
-              y: 1 / zoomFactor[viewId],
+              x: 1 / zoomFactor[view.id],
+              y: 1 / zoomFactor[view.id],
             });
           }
         }
@@ -1129,19 +1132,20 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event, viewId: string) {
+  function handleWheelOnImage(event, view: ViewData) {
     event.detail.evt.preventDefault(); // Prevent default scrolling
     let direction = event.detail.evt.deltaY < 0 ? 1 : -1; // Get zoom direction
     // When we zoom on trackpad, e.evt.ctrlKey is true
     // In that case lets revert direction.
     if (event.detail.evt.ctrlKey) direction = -direction;
-    zoomFactor[viewId] = zoom(stage, direction, viewId);
-    scaleElements(viewId);
+    zoomFactor[view.id] = zoom(stage, direction, view.id);
+    scaleElements(view);
 
     //zoom reset highlighted point scaling
     if (highlighted_point) {
-      highlightInputPoint(highlighted_point, viewId);
+      highlightInputPoint(highlighted_point, view.id);
     }
+    console.log("WHEEL ZOOM", zoomFactor);
   }
 
   // ********** KEY EVENTS ********** //
@@ -1202,7 +1206,7 @@
       {#if images[view.id]}
         <Layer
           config={{ id: view.id }}
-          on:wheel={(event) => handleWheelOnImage(event, view.id)}
+          on:wheel={(event) => handleWheelOnImage(event, view)}
         >
           <KonvaImage
             config={{ image: images[view.id], id: itemId }}
