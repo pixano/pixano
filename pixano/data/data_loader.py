@@ -88,6 +88,7 @@ class DataLoader(ABC):
             num_elements=0,
             preview=None,
             categories=[],
+            features={},
         )
         self.splits = splits
 

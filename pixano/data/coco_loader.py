@@ -130,7 +130,7 @@ class COCOLoader(DataLoader):
                         is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
-                    ).dict()
+                    ).to_dict()
                     for ann in im_anns
                 ],
                 "split": split,

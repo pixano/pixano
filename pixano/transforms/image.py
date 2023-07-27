@@ -32,6 +32,9 @@ def image_to_binary(image: Image.Image, format: str = "PNG") -> bytes:
         bytes: Image as binary
     """
 
+    if image is None:
+        return None
+
     with BytesIO() as output_bytes:
         image.save(output_bytes, format)
         im_bytes = output_bytes.getvalue()

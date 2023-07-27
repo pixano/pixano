@@ -30,6 +30,7 @@ site
 *.sln
 *.sw?
 *lock.yaml
+makefile
 
 # Environment
 .ipynb_checkpoints
