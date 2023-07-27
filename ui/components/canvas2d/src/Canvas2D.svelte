@@ -622,7 +622,7 @@
           visible: true,
           opacity: 1.0,
         };
-        handleAddMask(mask);
+        handleAddCurrentMask(mask);
 
         if (highlighted_point) unhighlightInputPoint(highlighted_point);
         clearInputs(currentAnn.viewId);
@@ -631,8 +631,8 @@
     }
   }
 
-  function handleAddMask(mask: Mask) {
-    dispatch("addMask", { mask });
+  function handleAddCurrentMask(mask: Mask) {
+    dispatch("addCurrentMask", mask);
   }
 
   // ********** TOOLS ********** //

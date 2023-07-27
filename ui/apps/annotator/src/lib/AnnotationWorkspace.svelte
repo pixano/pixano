@@ -36,6 +36,7 @@
     Dataset,
     DatasetItem,
     ItemLabels,
+    Label,
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -107,9 +108,10 @@
     if (event.key === "Enter" || event.keyCode === 13) handleAddCurrentAnn();
   }
 
-  function handleAddMask(event) {
-    masks.push(event.detail.mask);
+  function handleAddCurrentMask(mask: Mask) {
+    masks.push(mask);
     masks = masks;
+    annotations = annotations;
   }
 
   function handleAddCurrentAnn() {
@@ -176,9 +178,7 @@
       };
     }
 
-    annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
-      currentAnnCategory
-    ].labels[`${currentAnn.id}_mask`] = {
+    const currentLabel = <Label>{
       id: `${currentAnn.id}_mask`,
       categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
       categoryName: currentAnnCategory,
@@ -188,6 +188,9 @@
       opacity: 1.0,
       visible: true,
     };
+    annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
+      currentAnnCategory
+    ].labels[`${currentAnn.id}_mask`] = currentLabel;
 
     annotations[ANN_SOURCE].numLabels += 1;
     annotations[ANN_SOURCE].views[currentAnn.viewId].numLabels += 1;
@@ -316,7 +319,7 @@
       {bboxes}
       {embeddings}
       bind:currentAnn
-      on:addMask={handleAddMask}
+      on:addCurrentMask={(event) => handleAddCurrentMask(event.detail)}
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
