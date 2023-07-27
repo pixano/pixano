@@ -42,7 +42,7 @@
   export let itemId: string;
   export let views: Array<ViewData>;
   export let selectedTool: Tool | null;
-  export let categoryColor = null;
+  export let labelColors;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let embeddings = {};
@@ -294,7 +294,7 @@
           if (!bboxKonva) {
             addBBox(
               bboxes[i],
-              categoryColor(bboxes[i].catId),
+              labelColors(bboxes[i].catId),
               bboxGroup,
               image,
               viewId
@@ -394,7 +394,7 @@
           if (!mask) {
             addMask(
               masks[i],
-              categoryColor(masks[i].catId),
+              labelColors(masks[i].catId),
               maskGroup,
               image,
               viewId
@@ -407,7 +407,7 @@
             let shape = mask as Konva.Shape;
             if (typeof shape.fill === "function") {
               var pred = new Option().style;
-              pred.color = categoryColor(masks[i].catId);
+              pred.color = labelColors(masks[i].catId);
               shape.fill(
                 `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
               );
@@ -605,7 +605,7 @@
         for (let s of currentMaskGroup.children) {
           let shape = s as Konva.Shape;
           var pred = new Option().style;
-          pred.color = categoryColor(currentAnn.catId);
+          pred.color = labelColors(currentAnn.catId);
           shape.fill(
             `rgba(${pred.color.replace("rgb(", "").replace(")", "")}, 0.35)`
           );

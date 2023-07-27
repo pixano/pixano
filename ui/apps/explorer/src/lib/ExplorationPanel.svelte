@@ -31,7 +31,7 @@
   // Exports
   export let selectedItem: ItemData;
   export let annotations: ItemLabels;
-  export let categoryColor;
+  export let labelColors;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;
@@ -394,7 +394,7 @@
                     >
                       <button
                         class="relative px-1 rounded-lg text-sm"
-                        style="background-color: {categoryColor(category.id)};"
+                        style="background-color: {labelColors(category.id)};"
                       >
                         {category.name}
                       </button>

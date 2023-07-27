@@ -59,7 +59,8 @@
   let selectItemModal = false;
 
   // Category colors
-  let categoryColor = utils.getColor(classes);
+  let colorMode = "category";
+  let labelColors = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
@@ -311,6 +312,19 @@
     }
   }
 
+  function handleLabelColors() {
+    let range: Array<number>;
+    if (colorMode === "category") {
+      range = [
+        Math.min(...classes.map((cat) => cat.id)),
+        Math.max(...classes.map((cat) => cat.id)),
+      ];
+    } else if (colorMode === "source") {
+      range = [0, Object.keys(annotations).length];
+    }
+    return utils.colorLabel(range);
+  }
+
   async function handleLoadNextPage() {
     dispatch("loadNextPage");
   }
@@ -318,7 +332,7 @@
   onMount(() => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
-      categoryColor = utils.getColor(classes);
+      labelColors = handleLabelColors();
     }
   });
 
@@ -326,7 +340,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("AnnotationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(classes);
+      labelColors = handleLabelColors();
     }
     annotations = annotations;
     classes = classes;
@@ -342,7 +356,7 @@
       itemId={selectedItem.id}
       views={selectedItem.views}
       bind:selectedTool
-      {categoryColor}
+      {labelColors}
       {masks}
       {bboxes}
       {embeddings}
@@ -356,7 +370,7 @@
         {selectedDataset}
         {annotations}
         {currentPage}
-        {categoryColor}
+        {labelColors}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold

@@ -34,7 +34,8 @@
   const dispatch = createEventDispatcher();
 
   // Category colors
-  let categoryColor = utils.getColor(classes);
+  let colorMode = "category";
+  let labelColors = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
@@ -93,6 +94,19 @@
     }
   }
 
+  function handleLabelColors() {
+    let range: Array<number>;
+    if (colorMode === "category") {
+      range = [
+        Math.min(...classes.map((cat) => cat.id)),
+        Math.max(...classes.map((cat) => cat.id)),
+      ];
+    } else if (colorMode === "source") {
+      range = [0, Object.keys(annotations).length];
+    }
+    return utils.colorLabel(range);
+  }
+
   async function handleKeyPress(e) {
     if (e.keyCode == 27) dispatch("unselectItem"); // Escape key pressed
   }
@@ -100,7 +114,7 @@
   onMount(async () => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
-      categoryColor = utils.getColor(classes);
+      labelColors = handleLabelColors();
     }
   });
 
@@ -108,7 +122,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("ExplorationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(classes);
+      labelColors = handleLabelColors();
     }
     annotations = annotations;
     classes = classes;
@@ -124,7 +138,7 @@
       itemId={selectedItem.id}
       views={selectedItem.views}
       {selectedTool}
-      {categoryColor}
+      {labelColors}
       {masks}
       {bboxes}
     />
@@ -132,7 +146,7 @@
       <ExplorationPanel
         {selectedItem}
         {annotations}
-        {categoryColor}
+        {labelColors}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold
