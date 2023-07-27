@@ -14,19 +14,16 @@
 from typing import Optional
 
 import pyarrow as pa
+from pydantic import BaseModel, ConfigDict
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
-from .bbox import BBox, BBoxType
-from .compressedRLE import CompressedRLE, CompressedRLEType
-from .pose import Pose, PoseType
-
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
+from pixano.core.arrow_types.bbox import BBox, BBoxType
+from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
+from pixano.core.arrow_types.pose import Pose, PoseType
 
 
-class ObjectAnnotation(PixanoType):
+class ObjectAnnotation(PixanoType, BaseModel):
     """ObjectAnnotation type using all annotation data
 
     Attributes:
@@ -47,41 +44,25 @@ class ObjectAnnotation(PixanoType):
         identity (str, optional): Identity
     """
 
-    def __init__(
-        self,
-        id: str,
-        view_id: Optional[str] = None,
-        bbox: Optional[BBox] = BBox.from_xyxy([0, 0, 0, 0]),
-        bbox_source: Optional[str] = None,
-        bbox_confidence: Optional[float] = None,
-        is_group_of: Optional[bool] = None,
-        is_difficult: Optional[bool] = None,
-        is_truncated: Optional[bool] = None,
-        mask: Optional[CompressedRLE] = CompressedRLE.from_dict(
-            {"size": [0, 0], "counts": b""}
-        ),
-        mask_source: Optional[str] = None,
-        area: Optional[float] = None,
-        pose: Optional[Pose] = Pose([0.0] * 9, [0.0] * 3),
-        category_id: Optional[int] = None,
-        category_name: Optional[str] = None,
-        identity: Optional[str] = None,
-    ) -> None:
-        self.id = id
-        self.view_id = view_id
-        self.bbox = bbox
-        self.bbox_source = bbox_source
-        self.bbox_confidence = bbox_confidence
-        self.is_group_of = is_group_of
-        self.is_difficult = is_difficult
-        self.is_truncated = is_truncated
-        self.mask = mask
-        self.mask_source = mask_source
-        self.area = area
-        self.pose = pose
-        self.category_id = category_id
-        self.category_name = category_name
-        self.identity = identity
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    id: str
+    view_id: Optional[str] = None
+    bbox: Optional[BBox] = BBox.from_xywh([0, 0, 0, 0])
+    bbox_source: Optional[str] = None
+    bbox_confidence: Optional[float] = None
+    is_group_of: Optional[bool] = None
+    is_difficult: Optional[bool] = None
+    is_truncated: Optional[bool] = None
+    mask: Optional[CompressedRLE] = (
+        CompressedRLE.from_dict({"size": [0, 0], "counts": b""}),
+    )
+    mask_source: Optional[str] = None
+    area: Optional[float] = None
+    pose: Optional[Pose] = Pose([0.0] * 9, [0.0] * 3)
+    category_id: Optional[int] = None
+    category_name: Optional[str] = None
+    identity: Optional[str] = None
 
     @classmethod
     def to_struct(cls) -> pa.StructType:

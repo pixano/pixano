@@ -19,6 +19,7 @@ from PIL import Image
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import (
+    encode_rle,
     mask_to_rle,
     polygons_to_rle,
     rle_to_mask,
@@ -70,6 +71,10 @@ class CompressedRLE(PixanoType):
     ) -> "CompressedRLE":
         rle_dict = polygons_to_rle(polygons, height, width)
         return CompressedRLE.from_dict(rle_dict)
+    
+    @staticmethod
+    def encode(mask: list[list] | dict, height: int, width: int):
+        return CompressedRLE.from_dict(encode_rle(mask))
 
     @classmethod
     def to_struct(cls):
