@@ -325,6 +325,7 @@
     const bboxKonva = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
+      opacity: bbox.opacity,
       listening: false,
     });
 
@@ -477,7 +478,7 @@
       strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
       scale: scale,
       visible: mask.visible,
-      opacity: 1.0,
+      opacity: mask.opacity,
       listening: false,
       sceneFunc: (ctx, shape) => {
         ctx.beginPath();

@@ -179,7 +179,7 @@
                 type: "mask",
                 confidence:
                   bboxXYWH && bboxXYWH.predicted ? bboxXYWH.confidence : null,
-                opacity: 1.0,
+                opacity: bboxXYWH.predicted ? 0.0 : 1.0,
                 visible: true,
               };
 
@@ -191,7 +191,7 @@
                 rle: maskRLE,
                 catId: catId,
                 visible: true,
-                opacity: 1.0,
+                opacity: bboxXYWH.predicted ? 0.0 : 1.0,
               });
 
               // Update counters
@@ -221,7 +221,7 @@
                 viewId: viewId,
                 type: "bbox",
                 confidence: bboxXYWH.predicted ? bboxXYWH.confidence : null,
-                opacity: 1.0,
+                opacity: 0.0,
                 visible: true,
               };
 
@@ -237,7 +237,7 @@
                     : ""),
                 catId: catId,
                 visible: true,
-                opacity: 1.0,
+                opacity: 0.0,
               });
 
               // Update counters
