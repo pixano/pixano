@@ -31,15 +31,21 @@
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
 
+  const dispatch = createEventDispatcher();
+
+  // Category colors
+  let categoryColor;
+
+  // Filters
+  let maskOpacity = 1.0;
+  let bboxOpacity = 0.0;
+  let confidenceThreshold = 1.0;
+
+  // Tools
   let panTool = tools.createPanTool();
   let selectedTool: tools.Tool = panTool;
 
-  let categoryColor;
-
-  const dispatch = createEventDispatcher();
-
   function handleLabelVisibility(label: Label) {
-    console.log("AnnotationWorkspace.handleLabelVisibility");
     if (label.type === "mask") {
       const mask = masks.find(
         (mask) => mask.id === label.id && mask.viewId === label.viewId
@@ -59,6 +65,34 @@
     bboxes = bboxes;
   }
 
+  function handleLabelFilters() {
+    for (let source of Object.values(annotations)) {
+      for (let view of Object.values(source.views)) {
+        for (let category of Object.values(view.categories)) {
+          for (let label of Object.values(category.labels)) {
+            // Mask opacity filter
+            if (label.type === "mask") {
+              label.opacity = maskOpacity;
+            }
+            // BBox opacity filter
+            if (label.type == "bbox") {
+              label.opacity = bboxOpacity;
+            }
+            // Confidence threshold filter
+            if (label.confidence) {
+              label.visible =
+                label.confidence >= confidenceThreshold &&
+                category.visible &&
+                view.visible &&
+                source.visible;
+            }
+            handleLabelVisibility(label);
+          }
+        }
+      }
+    }
+  }
+
   async function handleKeyPress(e) {
     if (e.keyCode == 27) dispatch("unselectItem"); // Escape key pressed
   }
@@ -75,11 +109,12 @@
     if (annotations) {
       console.log("ExplorationWorkspace.afterUpdate");
       categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
-      annotations = annotations;
     }
-    if (classes) {
-      classes = classes;
-    }
+    annotations = annotations;
+    classes = classes;
+    masks = masks;
+    bboxes = bboxes;
+    handleLabelFilters();
   });
 </script>
 
@@ -98,7 +133,11 @@
         {selectedItem}
         {annotations}
         {classes}
+        bind:maskOpacity
+        bind:bboxOpacity
+        bind:confidenceThreshold
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
+        on:labelOpacity={handleLabelFilters}
       />
     {/if}
   {/if}

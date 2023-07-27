@@ -54,15 +54,24 @@
 
   const dispatch = createEventDispatcher();
 
-  const ANN_SOURCE = "Pixano Annotator";
-
-  let currentAnnCategory = "";
+  // Modals
   let categoryNameModal = false;
-
   let selectItemModal = false;
 
-  let currentAnn: InteractiveImageSegmenterOutput = null;
+  // Category colors
+  let categoryColor;
 
+  // Filters
+  let maskOpacity = 1.0;
+  let bboxOpacity = 0.0;
+  let confidenceThreshold = 1.0;
+
+  // Current annotations
+  let currentAnn: InteractiveImageSegmenterOutput = null;
+  let currentAnnCategory = "";
+  let currentAnnSource = "Pixano Annotator";
+
+  // Tools
   export let tools_lists: tools.Tool[][] = [];
   const imageTools: tools.Tool[] = [];
   const annotationTools: tools.Tool[] = [];
@@ -71,7 +80,6 @@
   let rectangleTool = tools.createRectangleTool();
   let deleteTool = tools.createDeleteTool();
   let panTool = tools.createPanTool();
-
   annotationTools.push(
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
@@ -83,9 +91,9 @@
   imageTools.push(panTool);
   tools_lists.push(imageTools);
   tools_lists.push(annotationTools);
-
   let selectedTool: tools.Tool = pointPlusTool;
 
+  // Segmentation model
   interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
       pointPlusTool.postProcessor = segmenter;
@@ -93,8 +101,6 @@
       rectangleTool.postProcessor = segmenter;
     }
   });
-
-  let categoryColor;
 
   function until(conditionFunction) {
     const poll = (resolve) => {
@@ -140,9 +146,9 @@
     }
 
     // Check if the new label's view already exists in the current annotations
-    if (!annotations[ANN_SOURCE]) {
-      annotations[ANN_SOURCE] = {
-        id: ANN_SOURCE,
+    if (!annotations[currentAnnSource]) {
+      annotations[currentAnnSource] = {
+        id: currentAnnSource,
         views: {},
         numLabels: 0,
         opened: true,
@@ -151,8 +157,8 @@
     }
 
     // Check if the new label's view already exists in the current annotations
-    if (!annotations[ANN_SOURCE].views[currentAnn.viewId]) {
-      annotations[ANN_SOURCE].views[currentAnn.viewId] = {
+    if (!annotations[currentAnnSource].views[currentAnn.viewId]) {
+      annotations[currentAnnSource].views[currentAnn.viewId] = {
         id: currentAnn.viewId,
         categories: {},
         numLabels: 0,
@@ -163,11 +169,11 @@
 
     // Check if the new label's category already exists in the current annotations
     if (
-      !annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
+      !annotations[currentAnnSource].views[currentAnn.viewId].categories[
         currentAnnCategory
       ]
     ) {
-      annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
+      annotations[currentAnnSource].views[currentAnn.viewId].categories[
         currentAnnCategory
       ] = {
         labels: {},
@@ -182,18 +188,18 @@
       id: `${currentAnn.id}_mask`,
       categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
       categoryName: currentAnnCategory,
-      sourceId: ANN_SOURCE,
+      sourceId: currentAnnSource,
       viewId: currentAnn.viewId,
       type: "mask",
       opacity: 1.0,
       visible: true,
     };
-    annotations[ANN_SOURCE].views[currentAnn.viewId].categories[
+    annotations[currentAnnSource].views[currentAnn.viewId].categories[
       currentAnnCategory
     ].labels[`${currentAnn.id}_mask`] = currentLabel;
 
-    annotations[ANN_SOURCE].numLabels += 1;
-    annotations[ANN_SOURCE].views[currentAnn.viewId].numLabels += 1;
+    annotations[currentAnnSource].numLabels += 1;
+    annotations[currentAnnSource].views[currentAnn.viewId].numLabels += 1;
 
     // Validate current annotation
     currentAnn.validated = true;
@@ -277,6 +283,34 @@
     bboxes = bboxes;
   }
 
+  function handleLabelFilters() {
+    for (let source of Object.values(annotations)) {
+      for (let view of Object.values(source.views)) {
+        for (let category of Object.values(view.categories)) {
+          for (let label of Object.values(category.labels)) {
+            // Mask opacity filter
+            if (label.type === "mask") {
+              label.opacity = maskOpacity;
+            }
+            // BBox opacity filter
+            if (label.type == "bbox") {
+              label.opacity = bboxOpacity;
+            }
+            // Confidence threshold filter
+            if (label.confidence) {
+              label.visible =
+                label.confidence >= confidenceThreshold &&
+                category.visible &&
+                view.visible &&
+                source.visible;
+            }
+            handleLabelVisibility(label);
+          }
+        }
+      }
+    }
+  }
+
   async function handleLoadNextPage() {
     dispatch("loadNextPage");
   }
@@ -293,11 +327,12 @@
     if (annotations) {
       console.log("AnnotationWorkspace.afterUpdate");
       categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
-      annotations = annotations;
     }
+    annotations = annotations;
     classes = classes;
     masks = masks;
     bboxes = bboxes;
+    handleLabelFilters();
   });
 </script>
 
@@ -322,9 +357,13 @@
         {annotations}
         {currentPage}
         {categoryColor}
+        bind:maskOpacity
+        bind:bboxOpacity
+        bind:confidenceThreshold
         on:selectItem={(event) => handleChangeSelectedItem(event.detail)}
         on:deleteLabel={(event) => handleDeleteLabel(event.detail)}
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
+        on:labelOpacity={handleLabelFilters}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}

@@ -36,16 +36,14 @@
   export let annotations: ItemLabels;
   export let currentPage: number;
   export let categoryColor = null;
+  export let maskOpacity: number;
+  export let bboxOpacity: number;
+  export let confidenceThreshold: number;
 
   const dispatch = createEventDispatcher();
 
   let activeTab = "labels"; //"dataset";
   let noLabels = true;
-
-  // Filters
-  let maskOpacity: number = 1.0;
-  let bboxOpacity: number = 0.0;
-  let minConfidence: number = 1.0;
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
@@ -56,38 +54,6 @@
     dispatch("deleteLabel", label);
   }
 
-  function handleConfidenceFilter() {
-    for (let source of Object.values(annotations)) {
-      if (source.visible) {
-        for (let view of Object.values(source.views)) {
-          if (view.visible) {
-            for (let category of Object.values(view.categories)) {
-              if (category.visible) {
-                for (let label of Object.values(category.labels)) {
-                  if (label.confidence) {
-                    updateLabelVisibility(
-                      label,
-                      label.confidence >= minConfidence
-                    );
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  function updateLabelVisibility(label: Label, visibility: boolean) {
-    if (label.confidence) {
-      label.visible = visibility && label.confidence >= minConfidence;
-    } else {
-      label.visible = visibility;
-    }
-    dispatch("labelVisibility", label);
-  }
-
   function handleLabelVisibility(
     source: SourceLabels,
     view: ViewLabels,
@@ -96,7 +62,8 @@
     visibility: boolean
   ) {
     // Toggle visibility
-    updateLabelVisibility(label, visibility);
+    label.visible = visibility;
+    dispatch("labelVisibility", label);
     // Toggle parents if needed
     if (label.visible && !category.visible) {
       category.visible = true;
@@ -126,7 +93,8 @@
     }
     // Toggle children
     for (let label of Object.values(category.labels)) {
-      updateLabelVisibility(label, category.visible);
+      label.visible = category.visible;
+      dispatch("labelVisibility", label);
     }
   }
 
@@ -145,7 +113,8 @@
     for (let category of Object.values(view.categories)) {
       category.visible = view.visible;
       for (let label of Object.values(category.labels)) {
-        updateLabelVisibility(label, view.visible);
+        label.visible = view.visible;
+        dispatch("labelVisibility", label);
       }
     }
   }
@@ -159,22 +128,8 @@
       for (let category of Object.values(view.categories)) {
         category.visible = source.visible;
         for (let label of Object.values(category.labels)) {
-          updateLabelVisibility(label, source.visible);
-        }
-      }
-    }
-  }
-
-  function handleOpacity(type: string, opacity: number) {
-    for (let source of Object.values(annotations)) {
-      for (let view of Object.values(source.views)) {
-        for (let category of Object.values(view.categories)) {
-          for (let label of Object.values(category.labels)) {
-            if (label.type === type) {
-              label.opacity = opacity;
-              dispatch("labelVisibility", label);
-            }
-          }
+          label.visible = source.visible;
+          dispatch("labelVisibility", label);
         }
       }
     }
@@ -192,9 +147,7 @@
   }
 
   onMount(() => {
-    handleConfidenceFilter();
-    handleOpacity("bbox", bboxOpacity);
-    handleOpacity("mask", maskOpacity);
+    dispatch("labelFilters");
   });
 
   afterUpdate(() => {
@@ -204,9 +157,7 @@
         if (sourceLabels.numLabels > 0) noLabels = false;
       }
     }
-    handleConfidenceFilter();
-    handleOpacity("bbox", bboxOpacity);
-    handleOpacity("mask", maskOpacity);
+    dispatch("labelFilters");
   });
 </script>
 
@@ -282,7 +233,7 @@
               max="1"
               step="0.1"
               bind:value={maskOpacity}
-              on:input={() => handleOpacity("mask", maskOpacity)}
+              on:input={() => dispatch("labelFilters")}
             />
 
             <!-- BBox opacity slider -->
@@ -297,12 +248,12 @@
               max="1"
               step="0.1"
               bind:value={bboxOpacity}
-              on:input={() => handleOpacity("bbox", bboxOpacity)}
+              on:input={() => dispatch("labelFilters")}
             />
 
             <!-- Confidence filter -->
             <label class="font-bold mt-2 mb-1" for="slider">
-              Confidence threshold: {Math.round(minConfidence * 100)}%
+              Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
               class="cursor-pointer"
@@ -311,8 +262,8 @@
               min="0"
               max="1"
               step="0.01"
-              bind:value={minConfidence}
-              on:input={handleConfidenceFilter}
+              bind:value={confidenceThreshold}
+              on:input={() => dispatch("labelFilters")}
             />
           </div>
         </div>

@@ -100,6 +100,13 @@
     masks = [];
     bboxes = [];
     embeddings = {};
+    // Add temp variables to prevent updating before everything is loaded
+    // Otherwise some bounding boxes are displayed incorrectly
+    let newAnnotations: ItemLabels = {};
+    let newClasses = [];
+    let newMasks: Array<Mask> = [];
+    let newBboxes: Array<BBox> = [];
+    let newEmbeddings = {};
 
     const start = Date.now();
     selectedItem = await api.getItemDetails(selectedDataset.id, id);
@@ -112,7 +119,7 @@
       selectedItem.objects
     )) {
       // Initialize annotations
-      annotations[sourceId] = {
+      newAnnotations[sourceId] = {
         id: sourceId,
         views: {},
         numLabels: 0,
@@ -122,7 +129,7 @@
 
       for (const [viewId, viewObjects] of Object.entries(sourceObjects)) {
         // Initialize annotations
-        annotations[sourceId].views[viewId] = {
+        newAnnotations[sourceId].views[viewId] = {
           id: viewId,
           categories: {},
           numLabels: 0,
@@ -131,7 +138,7 @@
         };
 
         // Initalize classes
-        classes = selectedDataset.categories;
+        newClasses = selectedDataset.categories;
 
         for (let i = 0; i < viewObjects.ids.length; ++i) {
           const labelId = viewObjects.ids[i];
@@ -143,8 +150,8 @@
           // Masks and bounding boxes
           if (maskRLE || bboxXYWH) {
             // Add class if new
-            if (!classes.some((cls) => cls.id === catId)) {
-              classes.push({
+            if (!newClasses.some((cls) => cls.id === catId)) {
+              newClasses.push({
                 id: catId,
                 name: catName,
               });
@@ -157,8 +164,8 @@
               const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
               // Add category if new
-              if (!annotations[sourceId].views[viewId].categories[catName]) {
-                annotations[sourceId].views[viewId].categories[catName] = {
+              if (!newAnnotations[sourceId].views[viewId].categories[catName]) {
+                newAnnotations[sourceId].views[viewId].categories[catName] = {
                   labels: {},
                   id: catId,
                   name: catName,
@@ -168,7 +175,7 @@
               }
 
               // Add mask label
-              annotations[sourceId].views[viewId].categories[catName].labels[
+              newAnnotations[sourceId].views[viewId].categories[catName].labels[
                 `${labelId}_mask`
               ] = {
                 id: `${labelId}_mask`,
@@ -184,7 +191,7 @@
               };
 
               // Add mask
-              masks.push({
+              newMasks.push({
                 id: `${labelId}_mask`,
                 viewId: viewId,
                 svg: masksSVG,
@@ -195,14 +202,14 @@
               });
 
               // Update counters
-              annotations[sourceId].numLabels += 1;
-              annotations[sourceId].views[viewId].numLabels += 1;
+              newAnnotations[sourceId].numLabels += 1;
+              newAnnotations[sourceId].views[viewId].numLabels += 1;
             }
 
             if (bboxXYWH) {
               // Add category if new
-              if (!annotations[sourceId].views[viewId].categories[catName]) {
-                annotations[sourceId].views[viewId].categories[catName] = {
+              if (!newAnnotations[sourceId].views[viewId].categories[catName]) {
+                newAnnotations[sourceId].views[viewId].categories[catName] = {
                   labels: {},
                   id: catId,
                   name: catName,
@@ -211,7 +218,7 @@
                 };
               }
               // Add bbox label
-              annotations[sourceId].views[viewId].categories[catName].labels[
+              newAnnotations[sourceId].views[viewId].categories[catName].labels[
                 `${labelId}_bbox`
               ] = {
                 id: `${labelId}_bbox`,
@@ -226,7 +233,7 @@
               };
 
               // Add bbox
-              bboxes.push({
+              newBboxes.push({
                 id: `${labelId}_bbox`,
                 viewId: viewId,
                 bbox: [bboxXYWH.x, bboxXYWH.y, bboxXYWH.width, bboxXYWH.height], //still normalized
@@ -241,8 +248,8 @@
               });
 
               // Update counters
-              annotations[sourceId].numLabels += 1;
-              annotations[sourceId].views[viewId].numLabels += 1;
+              newAnnotations[sourceId].numLabels += 1;
+              newAnnotations[sourceId].views[viewId].numLabels += 1;
             }
           } else {
             console.log(
@@ -280,9 +287,15 @@
             console.log("App.handleSelectItem - Error loading embeddings", e);
           }
         }
-        embeddings[view.id] = viewEmbedding;
+        newEmbeddings[view.id] = viewEmbedding;
       }
     }
+
+    annotations = newAnnotations;
+    classes = newClasses;
+    masks = newMasks;
+    bboxes = newBboxes;
+    embeddings = newEmbeddings;
   }
 
   async function handleUnselectItem() {

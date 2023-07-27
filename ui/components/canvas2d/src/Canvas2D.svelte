@@ -322,6 +322,7 @@
     const y = image.y() + bbox.bbox[1] * image.height();
     const rect_width = bbox.bbox[2] * image.width();
     const rect_height = bbox.bbox[3] * image.height();
+
     const bboxKonva = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
