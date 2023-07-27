@@ -193,6 +193,8 @@
 
   onMount(() => {
     handleConfidenceFilter();
+    handleOpacity("bbox", bboxOpacity);
+    handleOpacity("mask", maskOpacity);
   });
 
   afterUpdate(() => {
@@ -202,6 +204,9 @@
         if (sourceLabels.numLabels > 0) noLabels = false;
       }
     }
+    handleConfidenceFilter();
+    handleOpacity("bbox", bboxOpacity);
+    handleOpacity("mask", maskOpacity);
   });
 </script>
 
