@@ -115,12 +115,6 @@
     if (event.key === "Enter" || event.keyCode === 13) handleAddCurrentAnn();
   }
 
-  function handleAddCurrentMask(mask: Mask) {
-    masks.push(mask);
-    masks = masks;
-    annotations = annotations;
-  }
-
   function handleAddCurrentAnn() {
     console.log("AnnotationWorkspace.handleAddCurrentAnn");
     if (currentAnn) {
@@ -137,6 +131,18 @@
   }
 
   function addCurrentAnn() {
+    // Add current mask
+    const currentMask = <Mask>{
+      id: `${currentAnn.id}_mask`,
+      viewId: currentAnn.viewId,
+      svg: currentAnn.output.masksImageSVG,
+      rle: currentAnn.output.rle,
+      catId: currentAnn.catId,
+      visible: true,
+      opacity: 1.0,
+    };
+    masks.push(currentMask);
+
     // Add the new label's category to the class list if it doesn't already exist.
     if (!classes.some((cls) => cls.name === currentAnnCategory)) {
       // Hack to force update
@@ -206,6 +212,7 @@
     currentAnn.validated = true;
 
     // Update visibility
+    masks = masks;
     annotations = annotations;
   }
 
@@ -361,7 +368,6 @@
       {bboxes}
       {embeddings}
       bind:currentAnn
-      on:addCurrentMask={(event) => handleAddCurrentMask(event.detail)}
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
@@ -377,7 +383,7 @@
         on:selectItem={(event) => handleChangeSelectedItem(event.detail)}
         on:deleteLabel={(event) => handleDeleteLabel(event.detail)}
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
-        on:labelOpacity={handleLabelFilters}
+        on:labelFilters={handleLabelFilters}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}

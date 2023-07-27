@@ -130,7 +130,7 @@
       stage.container().style.cursor = "default";
     }
     if (currentAnn && currentAnn.validated) {
-      validateCurrentMask(currentAnn.viewId);
+      validateCurrentAnn();
     }
 
     if (masks) {
@@ -593,10 +593,10 @@
     if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
   }
 
-  function validateCurrentMask(viewId) {
+  function validateCurrentAnn() {
     if (currentAnn.validated) {
-      const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
-      let currentMaskGroup = findOrCreateCurrentMask(viewId);
+      const viewLayer = stage.findOne(`#${currentAnn.viewId}`) as Konva.Layer;
+      let currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewId);
       if (currentMaskGroup) {
         //move currentMaskGroup to maskGroup
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
@@ -613,26 +613,11 @@
         }
         currentMaskGroup.moveTo(maskGroup);
 
-        const mask = <Mask>{
-          id: `${currentAnn.id}_mask`,
-          viewId: viewId,
-          svg: currentAnn.output.masksImageSVG,
-          rle: currentAnn.output.rle,
-          catId: currentAnn.catId,
-          visible: true,
-          opacity: 1.0,
-        };
-        handleAddCurrentMask(mask);
-
         if (highlighted_point) unhighlightInputPoint(highlighted_point);
         clearInputs(currentAnn.viewId);
         currentAnn = null;
       }
     }
-  }
-
-  function handleAddCurrentMask(mask: Mask) {
-    dispatch("addCurrentMask", mask);
   }
 
   // ********** TOOLS ********** //
