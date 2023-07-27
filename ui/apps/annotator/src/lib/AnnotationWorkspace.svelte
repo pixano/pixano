@@ -137,7 +137,7 @@
       viewId: currentAnn.viewId,
       svg: currentAnn.output.masksImageSVG,
       rle: currentAnn.output.rle,
-      catId: currentAnn.catId,
+      catId: classes.find((obj) => obj.name === currentAnnCategory).id,
       visible: true,
       opacity: 1.0,
     };
