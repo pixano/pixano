@@ -17,7 +17,7 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { icons, utils } from "@pixano/core";
+  import { icons } from "@pixano/core";
 
   import type {
     CategoryLabels,
@@ -31,7 +31,7 @@
   // Exports
   export let selectedItem: ItemData;
   export let annotations: ItemLabels;
-  export let classes;
+  export let categoryColor;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;
@@ -39,7 +39,6 @@
   const dispatch = createEventDispatcher();
 
   let activeTab = "labels";
-  let categoryColor = null;
   let noLabels = true;
 
   function handleLabelVisibility(
@@ -133,7 +132,6 @@
       for (const sourceLabels of Object.values(annotations)) {
         if (sourceLabels.numLabels > 0) noLabels = false;
       }
-      categoryColor = utils.getColor(classes.map((cat) => classes.id)); // Define a color map for each category id
     }
     dispatch("labelFilters");
   });
@@ -272,7 +270,7 @@
                   />
                 </svg>
 
-                <span class="relative pl-3 grow truncate" title={source.id}>
+                <span class="relative pl-3 grow truncate w-5" title={source.id}>
                   {source.id}
                 </span>
                 <span
@@ -329,7 +327,7 @@
                     />
                   </svg>
 
-                  <span class="relative pl-3 grow truncate" title={view.id}>
+                  <span class="relative pl-3 grow truncate w-5" title={view.id}>
                     {view.id}
                   </span>
                   <span
@@ -390,7 +388,10 @@
                         fill="currentcolor"
                       />
                     </svg>
-                    <span class="grow ml-3 font-bold text-zinc-800">
+                    <span
+                      class="grow ml-3 font-bold text-zinc-800 truncate w-5"
+                      title={category.name}
+                    >
                       <button
                         class="relative px-1 rounded-lg text-sm"
                         style="background-color: {categoryColor(category.id)};"
@@ -450,7 +451,7 @@
                         </svg>
                       </button>
                       <span
-                        class="relative pl-3 text-sm grow truncate"
+                        class="relative pl-3 text-sm grow truncate w-5"
                         title={label.id}
                       >
                         {label.id}

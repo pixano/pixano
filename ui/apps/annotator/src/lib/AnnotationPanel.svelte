@@ -309,7 +309,7 @@
                   />
                 </svg>
 
-                <span class="relative pl-3 grow truncate" title={source.id}>
+                <span class="relative pl-3 grow truncate w-5" title={source.id}>
                   {source.id}
                 </span>
                 <span
@@ -366,7 +366,7 @@
                     />
                   </svg>
 
-                  <span class="relative pl-3 grow truncate" title={view.id}>
+                  <span class="relative pl-3 grow truncate w-5" title={view.id}>
                     {view.id}
                   </span>
                   <span
@@ -427,7 +427,10 @@
                         fill="currentcolor"
                       />
                     </svg>
-                    <span class="grow ml-3 font-bold text-zinc-800">
+                    <span
+                      class="grow ml-3 font-bold text-zinc-800 truncate w-5"
+                      title={category.name}
+                    >
                       <button
                         class="relative px-1 rounded-lg text-sm"
                         style="background-color: {categoryColor(category.id)};"
@@ -487,7 +490,7 @@
                         </svg>
                       </button>
                       <span
-                        class="relative pl-3 text-sm grow truncate"
+                        class="relative pl-3 text-sm grow truncate w-5"
                         title={label.id}
                       >
                         {label.id}

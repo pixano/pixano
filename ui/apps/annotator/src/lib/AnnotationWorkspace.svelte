@@ -59,7 +59,7 @@
   let selectItemModal = false;
 
   // Category colors
-  let categoryColor;
+  let categoryColor = utils.getColor(classes);
 
   // Filters
   let maskOpacity = 1.0;
@@ -318,7 +318,7 @@
   onMount(() => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
-      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes);
     }
   });
 
@@ -326,7 +326,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("AnnotationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes);
     }
     annotations = annotations;
     classes = classes;

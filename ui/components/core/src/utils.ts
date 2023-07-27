@@ -22,6 +22,10 @@ import { schemeSet3 } from "d3-scale-chromatic";
  * Generates an unique color based on a given id.
  * @param id the id
  */
-export function getColor(categories: Array<number>) {
-  return scaleOrdinal().domain(categories).range(schemeSet3);
+export function getColor(classes) {
+  let classes_range = [
+    Math.min(...classes.map((cat) => cat.id)),
+    Math.max(...classes.map((cat) => cat.id)),
+  ];
+  return scaleOrdinal(schemeSet3).domain(classes_range);
 }

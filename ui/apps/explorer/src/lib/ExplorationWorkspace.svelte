@@ -34,7 +34,7 @@
   const dispatch = createEventDispatcher();
 
   // Category colors
-  let categoryColor;
+  let categoryColor = utils.getColor(classes);
 
   // Filters
   let maskOpacity = 1.0;
@@ -100,7 +100,7 @@
   onMount(async () => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
-      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes);
     }
   });
 
@@ -108,7 +108,7 @@
     // needed for annotations update
     if (annotations) {
       console.log("ExplorationWorkspace.afterUpdate");
-      categoryColor = utils.getColor(classes.map((cat) => cat.id)); // Define a color map for each category id
+      categoryColor = utils.getColor(classes);
     }
     annotations = annotations;
     classes = classes;
@@ -132,7 +132,7 @@
       <ExplorationPanel
         {selectedItem}
         {annotations}
-        {classes}
+        {categoryColor}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold
