@@ -147,10 +147,12 @@
   }
 
   onMount(() => {
+    console.log("AnnotationPanel.onMount");
     dispatch("labelFilters");
   });
 
   afterUpdate(() => {
+    console.log("AnnotationPanel.afterUpdate");
     if (annotations) {
       annotations = annotations;
       for (const sourceLabels of Object.values(annotations)) {
@@ -429,7 +431,7 @@
                     </svg>
                     <span
                       class="grow ml-3 font-bold text-zinc-800 truncate w-5"
-                      title={category.name}
+                      title="{category.name} (id #{category.id})"
                     >
                       <button
                         class="relative px-1 rounded-lg text-sm"

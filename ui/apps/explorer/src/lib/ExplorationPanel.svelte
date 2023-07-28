@@ -396,7 +396,7 @@
                         class="relative px-1 rounded-lg text-sm"
                         style="background-color: {labelColors(category.id)};"
                       >
-                        {category.name}
+                        {category.id} - {category.name}
                       </button>
                     </span>
                     <span
