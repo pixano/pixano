@@ -113,12 +113,14 @@
   // ********** INIT ********** //
 
   onMount(() => {
+    console.log("Canvas2D.onMount");
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
   });
 
   afterUpdate(() => {
+    console.log("Canvas2D.afterUpdate");
     if (currentId !== itemId) loadItem();
 
     if (selectedTool) {
@@ -546,7 +548,7 @@
           validated: false,
         };
         let currentMask = <Mask>{
-          id: `${currentAnn.id}_mask`,
+          id: currentAnn.id,
           viewId: viewId,
           svg: currentAnn.output.masksImageSVG,
           rle: currentAnn.output.rle,

@@ -26,7 +26,7 @@ export interface ItemData {
   height?: number;
   width?: number;
   views: Array<ViewData>;
-  objects: Dictionary<Dictionary<ObjectsData>>;
+  objects: Dictionary<Dictionary<Array<ObjectData>>>;
 }
 
 export interface ViewData {
@@ -34,17 +34,16 @@ export interface ViewData {
   url: string;
 }
 
-export interface ObjectsData {
-  ids: Array<string>;
-  masks: Array<MaskRLE>;
-  bboxes: Array<BBoxXYWH>;
-  categories: Array<CategoryData>;
+export interface ObjectData {
+  id: string;
+  mask: MaskRLE;
+  bbox: BBoxXYWH;
+  category: CategoryData;
 }
 
 export interface CategoryData {
   id: number;
   name: string;
-  count: number;
 }
 
 export interface Mask {
@@ -99,9 +98,9 @@ export interface Label {
   categoryName: string;
   sourceId: string;
   viewId: string;
-  type: string; //bbox, mask, ...
   confidence?: number;
-  opacity: number;
+  bboxOpacity: number;
+  maskOpacity: number;
   visible: boolean;
 }
 

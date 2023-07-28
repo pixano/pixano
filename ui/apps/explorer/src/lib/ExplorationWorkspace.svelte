@@ -47,18 +47,22 @@
   let selectedTool: tools.Tool = panTool;
 
   function handleLabelVisibility(label: Label) {
-    if (label.type === "mask") {
-      const mask = masks.find(
-        (mask) => mask.id === label.id && mask.viewId === label.viewId
-      );
+    // Try and find a mask
+    const mask = masks.find(
+      (mask) => mask.id === label.id && mask.viewId === label.viewId
+    );
+    if (mask) {
       mask.visible = label.visible;
-      mask.opacity = label.opacity;
-    } else if (label.type === "bbox") {
-      const bbox = bboxes.find(
-        (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
-      );
+      mask.opacity = label.maskOpacity;
+    }
+
+    // Try and find a bbox
+    const bbox = bboxes.find(
+      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
+    );
+    if (bbox) {
       bbox.visible = label.visible;
-      bbox.opacity = label.opacity;
+      bbox.opacity = label.bboxOpacity;
     }
 
     // Update visibility
@@ -71,14 +75,9 @@
       for (let view of Object.values(source.views)) {
         for (let category of Object.values(view.categories)) {
           for (let label of Object.values(category.labels)) {
-            // Mask opacity filter
-            if (label.type === "mask") {
-              label.opacity = maskOpacity;
-            }
-            // BBox opacity filter
-            if (label.type == "bbox") {
-              label.opacity = bboxOpacity;
-            }
+            // Opacity filters
+            label.maskOpacity = maskOpacity;
+            label.bboxOpacity = bboxOpacity;
             // Confidence threshold filter
             if (label.confidence) {
               label.visible =

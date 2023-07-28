@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
@@ -24,7 +24,7 @@ from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
 from pixano import transforms
-from pixano.core import arrow_types, Dataset
+from pixano.core import Dataset, arrow_types
 from pixano.transforms import natural_key, urle_to_bbox, urle_to_rle
 
 
@@ -65,14 +65,11 @@ def get_item_details(
 
     # Load dataset
     pa_ds = dataset.load()
-    object_sources = {}
-    item_objects = {}
 
     # Get item
     scanner = pa_ds.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
-    object_sources["Ground truth"] = item["objects"]
-    item_objects["Ground truth"] = {}
+    objects = item["objects"]
 
     # Get item inference objects
     for inf_ds in inf_datasets:
@@ -80,8 +77,7 @@ def get_item_details(
         inf_scanner = pa_inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
-            object_sources[inf_ds.info.model_id] = inf_item["objects"]
-            item_objects[inf_ds.info.model_id] = {}
+            objects.extend(inf_item["objects"])
 
     # Create features
     features = {
@@ -91,8 +87,7 @@ def get_item_details(
         "height": None,
         "width": None,
         "views": [],
-        "objects": item_objects,
-        "catStats": [],
+        "objects": defaultdict(lambda: defaultdict(list)),
     }
 
     for field in pa_ds.schema:
@@ -102,41 +97,40 @@ def get_item_details(
             image.uri_prefix = media_dir.absolute().as_uri()
             features["views"].append({"id": field.name, "url": image.url})
 
-            for source_id, objects in object_sources.items():
-                # Objects IDs
-                ids = [obj["id"] for obj in objects if obj["view_id"] == field.name]
-                # Masks
-                masks = [
-                    transforms.rle_to_urle(obj["mask"])
-                    for obj in objects
-                    if obj["view_id"] == field.name and obj["mask"] is not None
-                ]
-                # Bounding boxes
-                boxes = [
-                    transforms.format_bbox(
-                        obj["bbox"],
-                        obj["bbox_confidence"] is not None,
-                        obj["bbox_confidence"],
+            for obj in objects:
+                if obj["view_id"] == field.name:
+                    id = obj["id"]
+                    mask = (
+                        transforms.rle_to_urle(obj["mask"])
+                        if obj["mask"] is not None
+                        else None
                     )
-                    for obj in objects
-                    if obj["view_id"] == field.name and obj["bbox"] is not None
-                ]
-                # Categories
-                cats = [
-                    {"id": obj["category_id"], "name": obj["category_name"]}
-                    for obj in objects
-                    if obj["view_id"] == field.name
-                    and obj["category_id"] is not None
-                    and obj["category_name"] is not None
-                ]
+                    bbox = (
+                        transforms.format_bbox(
+                            obj["bbox"],
+                            obj["bbox_confidence"] is not None,
+                            obj["bbox_confidence"],
+                        )
+                        if obj["bbox"] is not None
+                        else None
+                    )
+                    source = obj["mask_source"] or obj["bbox_source"] or "Ground truth"
+                    category = (
+                        {"id": obj["category_id"], "name": obj["category_name"]}
+                        if obj["category_id"] is not None
+                        and obj["category_name"] is not None
+                        else None
+                    )
 
-                # Add to features
-                features["objects"][source_id][field.name] = {
-                    "ids": ids,
-                    "masks": masks,
-                    "bboxes": boxes,
-                    "categories": cats,
-                }
+                    # Add object
+                    features["objects"][source][field.name].append(
+                        {
+                            "id": id,
+                            "mask": mask,
+                            "bbox": bbox,
+                            "category": category,
+                        }
+                    )
 
     return features
 
