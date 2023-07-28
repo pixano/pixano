@@ -23,7 +23,14 @@
   import DatasetExplorer from "./lib/DatasetExplorer.svelte";
   import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
 
-  import type { Dataset, ItemData, ItemLabels, Mask, BBox } from "@pixano/core";
+  import type {
+    Dataset,
+    ItemData,
+    ItemLabels,
+    ItemObjects,
+    Mask,
+    BBox,
+  } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -66,6 +73,7 @@
     classes = [];
     masks = [];
     bboxes = [];
+
     // Add temp variables to prevent updating before everything is loaded
     // Otherwise some bounding boxes are displayed incorrectly
     let newAnnotations: ItemLabels = {};
@@ -74,22 +82,23 @@
     let newBboxes: Array<BBox> = [];
 
     const start = Date.now();
-    selectedItem = await api.getItemDetails(selectedDataset.id, itemId);
+    let itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
+    selectedItem = <ItemData>itemDetails["itemData"];
+    let ItemObjects = <ItemObjects>itemDetails["itemObjects"];
+
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
       "ms"
     );
 
-    for (const [sourceId, sourceObjects] of Object.entries(
-      selectedItem.objects
-    )) {
+    for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
       newAnnotations[sourceId] = {
         id: sourceId,
         views: {},
         numLabels: 0,
-        opened: Object.entries(selectedItem.objects).length > 1 ? false : true,
+        opened: Object.entries(ItemObjects).length > 1 ? false : true,
         visible: true,
       };
 

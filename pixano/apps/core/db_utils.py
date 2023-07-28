@@ -45,6 +45,39 @@ class Feature(BaseModel):
 Features = list[Feature]
 
 
+def _create_features(item: list, schema: pa.schema) -> list[Feature]:
+    """Create features based on field types
+
+    Args:
+        row (list): Dataset item
+        schema (pa.schema): Dataset schema
+
+    Returns:
+        list[Feature]: Item as list of features
+    """
+
+    features = []
+
+    # Iterate on fields
+    for field in schema:
+        # Number fields
+        if arrow_types.is_number(field.type):
+            features.append(
+                Feature(name=field.name, dtype="number", value=item[field.name])
+            )
+        # Image fields
+        elif arrow_types.is_image_type(field.type):
+            thumbnail = item[field.name].preview_url
+            features.append(Feature(name=field.name, dtype="image", value=thumbnail))
+        # String fields
+        elif pa.types.is_string(field.type):
+            features.append(
+                Feature(name=field.name, dtype="text", value=item[field.name])
+            )
+
+    return features
+
+
 def get_item_details(
     dataset: Dataset,
     item_id: str,
@@ -80,14 +113,13 @@ def get_item_details(
             objects.extend(inf_item["objects"])
 
     # Create features
-    features = {
-        "id": item["id"],
-        "datasetId": dataset.info.id,
-        "filename": None,
-        "height": None,
-        "width": None,
-        "views": [],
-        "objects": defaultdict(lambda: defaultdict(list)),
+    item_details = {
+        "itemData": {
+            "id": item["id"],
+            "views": [],
+            "features": _create_features(item, pa_ds.schema),
+        },
+        "itemObjects": defaultdict(lambda: defaultdict(list)),
     }
 
     for field in pa_ds.schema:
@@ -95,7 +127,9 @@ def get_item_details(
             # Views
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
-            features["views"].append({"id": field.name, "url": image.url})
+            item_details["itemData"]["views"].append(
+                {"id": field.name, "url": image.url}
+            )
 
             for obj in objects:
                 if obj["view_id"] == field.name:
@@ -123,7 +157,7 @@ def get_item_details(
                     )
 
                     # Add object
-                    features["objects"][source][field.name].append(
+                    item_details["itemObjects"][source][field.name].append(
                         {
                             "id": id,
                             "mask": mask,
@@ -132,7 +166,7 @@ def get_item_details(
                         }
                     )
 
-    return features
+    return item_details
 
 
 def get_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
@@ -161,41 +195,8 @@ def get_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
         return None
     items_table = pa_ds.take(range(start, stop))
 
-    def _create_features(row: list) -> list[Feature]:
-        """Create features based on field types
-
-        Args:
-            row (list): Input row
-
-        Returns:
-            list[Feature]: Row as list of features
-        """
-
-        features = []
-
-        # Iterate on fields
-        for field in pa_ds.schema:
-            # Number fields
-            if arrow_types.is_number(field.type):
-                features.append(
-                    Feature(name=field.name, dtype="number", value=row[field.name])
-                )
-            # Image fields
-            elif arrow_types.is_image_type(field.type):
-                thumbnail = row[field.name].preview_url
-                features.append(
-                    Feature(name=field.name, dtype="image", value=thumbnail)
-                )
-            # String fields
-            elif pa.types.is_string(field.type):
-                features.append(
-                    Feature(name=field.name, dtype="text", value=row[field.name])
-                )
-
-        return features
-
     # Create items features
-    items = [_create_features(e) for e in items_table.to_pylist()]
+    items = [_create_features(item, pa_ds.schema) for item in items_table.to_pylist()]
 
     return create_page(items, total=total, params=params)
 

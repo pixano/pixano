@@ -21,18 +21,16 @@ export interface Dictionary<Type> {
 
 export interface ItemData {
   id: string;
-  datasetId: string;
-  filename?: string;
-  height?: number;
-  width?: number;
   views: Array<ViewData>;
-  objects: Dictionary<Dictionary<Array<ObjectData>>>;
+  features: DatasetItem;
 }
 
 export interface ViewData {
   id: string;
   url: string;
 }
+
+export type ItemObjects = Dictionary<Dictionary<Array<ObjectData>>>;
 
 export interface ObjectData {
   id: string;
@@ -69,25 +67,25 @@ export interface BBox {
 export type ItemLabels = Dictionary<SourceLabels>;
 
 export interface SourceLabels {
-  views: Dictionary<ViewLabels>;
   id: string;
+  views: Dictionary<ViewLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
 }
 
 export interface ViewLabels {
-  categories: Dictionary<CategoryLabels>;
   id: string;
+  categories: Dictionary<CategoryLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
 }
 
 export interface CategoryLabels {
-  labels: Dictionary<Label>;
   id: number;
   name: string;
+  labels: Dictionary<Label>;
   opened: boolean;
   visible: boolean;
 }

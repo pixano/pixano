@@ -197,6 +197,22 @@
   </div>
   <div class="pt-12 flex flex-col h-full">
     <div class="h-full overflow-auto {activeTab == 'labels' ? '' : 'hidden'}">
+      <!-- Details -->
+      <div
+        class="flex flex-col p-4 border-b-2
+          border-zinc-300 dark:border-zinc-500"
+      >
+        <span class="text-lg font-bold">Item info</span>
+        <ul class="list-disc ml-6">
+          {#each selectedItem.features as feature}
+            {#if feature.dtype !== "image"}
+              <li>
+                {feature.name}: {feature.value}
+              </li>
+            {/if}
+          {/each}
+        </ul>
+      </div>
       {#if noLabels}
         <p class="py-4 text-center font-bold italic">No annotations yet.</p>
       {:else}
@@ -204,25 +220,8 @@
           class="px-4 border-b-2
         border-zinc-300 dark:border-zinc-500"
         >
-          <!-- Details -->
-          {#if selectedItem.filename || (selectedItem.width && selectedItem.height)}
-            <div class="flex flex-col py-4">
-              {#if selectedItem.filename}
-                <div>
-                  <span class="font-bold"> Filename : </span>
-                  <span> {selectedItem.filename} </span>
-                </div>
-              {/if}
-              {#if selectedItem.width && selectedItem.height}
-                <div>
-                  <span class="font-bold"> Size : </span>
-                  <span> {selectedItem.width}x{selectedItem.height}px</span>
-                </div>
-              {/if}
-            </div>
-          {/if}
           <!-- Controls -->
-          <div class="flex flex-col py-4">
+          <div class="flex flex-col pt-2 pb-4">
             <!-- Mask opacity slider -->
             <label class="font-bold mt-2 mb-1" for="slider">
               Mask opacity: {maskOpacity * 100}%
