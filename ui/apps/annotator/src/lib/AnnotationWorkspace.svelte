@@ -131,6 +131,19 @@
   }
 
   function addCurrentAnn() {
+    // Add the new label's category to the class list if it doesn't already exist.
+    if (!classes.some((c) => c.name === currentAnnCategory)) {
+      let newClasses = classes;
+      let newClassId: number;
+      if (classes.length > 0) {
+        newClassId = Math.max(...newClasses.map((o) => o.id)) + 1;
+      } else {
+        newClassId = 1;
+      }
+      newClasses.push({ id: newClassId, name: currentAnnCategory });
+      classes = newClasses;
+    }
+
     // Add current mask
     const currentMask = <Mask>{
       id: `${currentAnn.id}_mask`,
@@ -142,15 +155,6 @@
       opacity: 1.0,
     };
     masks.push(currentMask);
-
-    // Add the new label's category to the class list if it doesn't already exist.
-    if (!classes.some((cls) => cls.name === currentAnnCategory)) {
-      // Hack to force update
-      let newClasses = classes;
-      let newClassId = Math.max(...newClasses.map((o) => o.id)) + 1;
-      newClasses.push({ id: newClassId, name: currentAnnCategory });
-      classes = newClasses;
-    }
 
     // Check if the new label's view already exists in the current annotations
     if (!annotations[currentAnnSource]) {
@@ -184,7 +188,7 @@
         currentAnnCategory
       ] = {
         labels: {},
-        id: classes.find((obj) => obj.name === currentAnnCategory).id,
+        id: classes.find((c) => c.name === currentAnnCategory).id,
         name: currentAnnCategory,
         opened: true,
         visible: true,
@@ -192,18 +196,18 @@
     }
 
     const currentLabel = <Label>{
-      id: `${currentAnn.id}_mask`,
-      categoryId: classes.find((obj) => obj.name === currentAnnCategory).id,
+      id: currentAnn.id,
+      categoryId: classes.find((c) => c.name === currentAnnCategory).id,
       categoryName: currentAnnCategory,
       sourceId: currentAnnSource,
       viewId: currentAnn.viewId,
-      type: "mask",
-      opacity: 1.0,
+      maskOpacity: 1.0,
+      bboxOpacity: 1.0,
       visible: true,
     };
     annotations[currentAnnSource].views[currentAnn.viewId].categories[
       currentAnnCategory
-    ].labels[`${currentAnn.id}_mask`] = currentLabel;
+    ].labels[currentAnn.id] = currentLabel;
 
     annotations[currentAnnSource].numLabels += 1;
     annotations[currentAnnSource].views[currentAnn.viewId].numLabels += 1;
