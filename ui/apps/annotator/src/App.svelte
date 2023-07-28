@@ -64,6 +64,17 @@
     return new Promise(poll);
   }
 
+  async function handleGetDatasets() {
+    console.log("App.handleGetDatasets");
+    const start = Date.now();
+    datasets = await api.getDatasetsList();
+    console.log(
+      "App.handleGetDatasets - api.getDatasetsList in",
+      Date.now() - start,
+      "ms"
+    );
+  }
+
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
@@ -86,11 +97,12 @@
   }
 
   async function handleUnselectDataset() {
-    await handleUnselectItem();
     console.log("App.handleUnselectDataset");
+    await handleUnselectItem();
     if (!saveFlag) {
       selectedDataset = null;
       currentPage = 1;
+      handleGetDatasets();
     }
   }
 
@@ -374,14 +386,7 @@
 
   onMount(async () => {
     console.log("App.onMount");
-    const start = Date.now();
-    datasets = await api.getDatasetsList();
-    console.log(
-      "App.onMount - api.getDatasetsList in",
-      Date.now() - start,
-      "ms"
-    );
-
+    handleGetDatasets();
     // Try loading default model
     try {
       await sam.init("/models/" + defaultModelName);

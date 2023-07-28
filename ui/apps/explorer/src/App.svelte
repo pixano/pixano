@@ -37,16 +37,28 @@
   let masks: Array<Mask> = [];
   let bboxes: Array<BBox> = [];
 
+  async function handleGetDatasets() {
+    console.log("App.handleGetDatasets");
+    const start = Date.now();
+    datasets = await api.getDatasetsList();
+    console.log(
+      "App.handleGetDatasets - api.getDatasetsList in",
+      Date.now() - start,
+      "ms"
+    );
+  }
+
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
   }
 
   function handleUnselectDataset() {
-    handleUnselectItem();
     console.log("App.handleUnselectDataset");
+    handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
+    handleGetDatasets();
   }
 
   async function handleSelectItem(itemId: string) {
@@ -200,13 +212,7 @@
 
   onMount(async () => {
     console.log("App.onMount");
-    const start = Date.now();
-    datasets = await api.getDatasetsList();
-    console.log(
-      "App.onMount - api.getDatasetsList in",
-      Date.now() - start,
-      "ms"
-    );
+    handleGetDatasets();
   });
 </script>
 
