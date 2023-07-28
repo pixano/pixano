@@ -27,6 +27,7 @@
   export let selectedTool;
   export let pointPlusTool;
   export let pointMinusTool;
+  export let labelColors;
 
   const dispatch = createEventDispatcher();
 
@@ -79,15 +80,16 @@
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
-        <button
-          class="py-1 px-2 text-sm
-          bg-white dark:bg-zinc-800
-          hover:bg-zinc-100 dark:hover:bg-zinc-700"
-          style="text-align:left"
-          on:click={() => (currentAnnCategory = cls.name)}
-        >
-          {cls.name}
-        </button>
+        <div class="py-1 px-2">
+          <button
+            class="relative px-1 rounded-lg text-sm flex"
+            style="background-color: {labelColors(cls.id)}; text-align:left"
+            title="{cls.name} (id #{cls.id})"
+            on:click={() => (currentAnnCategory = cls.name)}
+          >
+            {cls.name}
+          </button>
+        </div>
       {/each}
     </div>
   </div>

@@ -393,6 +393,7 @@
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
+        {labelColors}
         on:addCurrentAnn={handleAddCurrentAnn}
       />
     {/if}
