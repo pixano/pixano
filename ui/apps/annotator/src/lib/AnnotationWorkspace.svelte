@@ -348,11 +348,7 @@
   });
 
   afterUpdate(() => {
-    // needed for annotations update
-    if (annotations) {
-      console.log("AnnotationWorkspace.afterUpdate");
-      labelColors = handleLabelColors();
-    }
+    console.log("AnnotationWorkspace.afterUpdate");
     annotations = annotations;
     classes = classes;
     masks = masks;
