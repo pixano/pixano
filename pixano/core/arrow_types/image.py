@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import base64
 from pathlib import Path
 from typing import IO
 from urllib.parse import urlparse
@@ -23,10 +22,15 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 
-from pixano.transforms import binary_to_url
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+from pixano.transforms.image import binary_to_url
+
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
 
 
-class Image:
+class Image(PixanoType):
     """Image type using URI or bytes
 
     Attributes:
@@ -125,9 +129,7 @@ class Image:
                 return parsed_uri.geturl()
             # No URI prefix
             else:
-                raise Exception(
-                    "Cannot create URI from a relative path without a URI prefix."
-                )
+                return self._uri
         # Complete URI
         else:
             return self._uri
@@ -182,85 +184,14 @@ class Image:
         im_bytes = self._preview_bytes if preview else self.bytes
         return IPyImage(url=binary_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
-    def to_dict(self) -> dict:
-        """Return image attributes as dict
-
-        Returns:
-            dict: Image attributes
-        """
-
-        return {
-            "uri": self._uri,
-            "bytes": self._bytes,
-            "preview_bytes": self._preview_bytes,
-        }
-
-
-class ImageType(pa.ExtensionType):
-    """Externalized image type containing the URI string in UTF-8"""
-
-    def __init__(self):
-        super(ImageType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("uri", pa.utf8()),
-                    pa.field("bytes", pa.binary()),
-                    pa.field("preview_bytes", pa.binary()),
-                ]
-            ),
-            "Image",
-        )
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
     @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return ImageType()
-
-    def __arrow_ext_scalar_class__(self):
-        return ImageScalar
-
-
-class ImageScalar(pa.ExtensionScalar):
-    def as_py(self, uri_prefix: str = None) -> Image:
-        return Image(
-            self.value["uri"].as_py(),
-            self.value["bytes"].as_py(),
-            self.value["preview_bytes"].as_py(),
-            uri_prefix,
+    def to_struct(cls) -> pa.StructType:
+        return pa.struct(
+            [
+                pa.field("uri", pa.utf8()),
+                pa.field("bytes", pa.binary()),
+                pa.field("preview_bytes", pa.binary()),
+            ]
         )
 
-
-class CompressedRLEType(pa.ExtensionType):
-    """Segmentation mask type as PyArrow StructType"""
-
-    def __init__(self):
-        super(CompressedRLEType, self).__init__(
-            pa.struct(
-                [
-                    pa.field("size", pa.list_(pa.int32())),
-                    pa.field("counts", pa.binary()),
-                ]
-            ),
-            "mask[rle]",
-        )
-
-    @classmethod
-    def __arrow_ext_deserialize__(cls, storage_type, serialized):
-        return CompressedRLEType()
-
-    def __arrow_ext_serialize__(self):
-        return b""
-
-
-def is_image_type(t: pa.DataType) -> bool:
-    """Returns True if value is an instance of ImageType
-
-    Args:
-        t (pa.DataType): Value to check
-
-    Returns:
-        bool: Type checking response
-    """
-    return isinstance(t, ImageType)
+ImageType = createPaType(Image.to_struct(), "Image", Image)

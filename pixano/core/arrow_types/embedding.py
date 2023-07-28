@@ -11,13 +11,27 @@
 #
 # http://www.cecill.info
 
-from pixano.core.dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
-from pixano.core.features import Features
 
-__all__ = [
-    "Features",
-    "DatasetInfo",
-    "Dataset",
-    "InferenceDataset",
-    "EmbeddingDataset",
-]
+import pyarrow as pa
+
+from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+
+# ------------------------------------------------
+#             Python type
+# ------------------------------------------------
+
+
+class Embedding(PixanoType):
+    def __init__(self, bytes: bytes) -> None:
+        self._bytes = bytes
+
+    @property
+    def bytes(self):
+        return self._bytes
+
+    @classmethod
+    def to_struct(cls):
+        return pa.struct([pa.field("bytes", pa.binary())])
+
+
+EmbeddingType = createPaType(Embedding.to_struct(), "Embedding", Embedding)

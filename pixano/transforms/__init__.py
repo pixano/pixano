@@ -49,7 +49,6 @@ __all__ = [
     "xyxy_to_xywh",
     "image_to_binary",
     "image_to_thumbnail",
-    "binary_to_url",
     "depth_file_to_binary",
     "depth_array_to_gray",
     "encode_rle",
@@ -66,6 +65,7 @@ __all__ = [
     "dota_ids",
     "voc_names",
     "natural_key",
+    "binary_to_url"
 ]
 
 
