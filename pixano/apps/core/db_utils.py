@@ -238,9 +238,14 @@ def update_annotations(
     # TODO: Find a fix for image datasets
     item_anns = [o.dict() for o in annotations]
     for ann in item_anns:
-        ann["bbox"] = urle_to_bbox(ann["mask"])
-        ann["bbox_source"] = ann["mask_source"]
-        ann["mask"] = urle_to_rle(ann["mask"])
+        ann["bbox"] = (
+            ann["bbox"]
+            if ann["bbox"]
+            else urle_to_bbox(ann["mask"])
+            if ann["mask"]
+            else [0.0] * 4
+        )
+        ann["mask"] = urle_to_rle(ann["mask"]) if ann["mask"] else None
 
     # Dataset files
     files = (dataset_dir / "db").glob("**/*.parquet")

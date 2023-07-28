@@ -304,14 +304,13 @@
         for (const viewLabels of Object.values(sourceLabels.views)) {
           for (const catLabels of Object.values(viewLabels.categories)) {
             for (const label of Object.values(catLabels.labels)) {
-              let ann = {};
               const mask = masks.find(
                 (m) => m.id === label.id && m.viewId === label.viewId
               );
               const bbox = bboxes.find(
                 (b) => b.id === label.id && b.viewId === label.viewId
               );
-              ann = {
+              let ann = {
                 id: label.id,
                 mask: mask ? mask.rle : null,
                 mask_source: label.sourceId,

@@ -146,7 +146,7 @@
 
     // Add current mask
     const currentMask = <Mask>{
-      id: `${currentAnn.id}_mask`,
+      id: currentAnn.id,
       viewId: currentAnn.viewId,
       svg: currentAnn.output.masksImageSVG,
       rle: currentAnn.output.rle,
