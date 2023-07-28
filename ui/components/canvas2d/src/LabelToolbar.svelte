@@ -37,7 +37,7 @@
 
   function handleFilterCategories() {
     // Input filter
-    const input = <HTMLInputElement>document.getElementById("category_input");
+    const input = <HTMLInputElement>document.getElementById("categoryInput");
     const filter = input.value.toUpperCase();
     // Category list
     const list = document.getElementById("category_list");
@@ -54,7 +54,6 @@
 </script>
 
 <div
-  id="point-modal"
   class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10 shadow-xl
   bg-white dark:bg-zinc-800
   border-zinc-300 dark:border-zinc-500"
@@ -63,7 +62,7 @@
     <input
       type="text"
       placeholder="Category name"
-      id="category_input"
+      id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-700
       border-zinc-300 dark:border-zinc-500
@@ -75,7 +74,7 @@
 
     <div
       id="category_list"
-      class="absolute left-4 w-80 top-14 hidden rounded-lg group-focus-within:flex hover:flex flex-col
+      class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex hover:flex flex-col
       bg-white dark:bg-zinc-800"
       style="overflow-y:scroll; max-height: 500px;"
     >

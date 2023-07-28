@@ -182,13 +182,13 @@
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
             <!-- Mask opacity slider -->
-            <label class="font-bold mt-2 mb-1" for="slider">
+            <label class="font-bold mt-2 mb-1" for="maskSlider">
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
               class="cursor-pointer"
               type="range"
-              id="slider"
+              id="maskSlider"
               min="0"
               max="1"
               step="0.1"
@@ -197,13 +197,13 @@
             />
 
             <!-- BBox opacity slider -->
-            <label class="font-bold mt-2 mb-1" for="slider">
+            <label class="font-bold mt-2 mb-1" for="bboxSlider">
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
               class="cursor-pointer"
               type="range"
-              id="slider"
+              id="bboxSlider"
               min="0"
               max="1"
               step="0.1"
@@ -212,13 +212,13 @@
             />
 
             <!-- Confidence filter -->
-            <label class="font-bold mt-2 mb-1" for="slider">
+            <label class="font-bold mt-2 mb-1" for="confidenceSlider">
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
               class="cursor-pointer"
               type="range"
-              id="slider"
+              id="confidenceSlider"
               min="0"
               max="1"
               step="0.01"
