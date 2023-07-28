@@ -14,7 +14,7 @@
 from typing import Optional
 
 import pyarrow as pa
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
@@ -44,7 +44,6 @@ class ObjectAnnotation(PixanoType, BaseModel):
         identity (str, optional): Identity
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: str
     view_id: Optional[str] = None
@@ -63,6 +62,9 @@ class ObjectAnnotation(PixanoType, BaseModel):
     category_id: Optional[int] = None
     category_name: Optional[str] = None
     identity: Optional[str] = None
+
+    class Config:
+        arbitrary_types_allowed=True
 
     @classmethod
     def to_struct(cls) -> pa.StructType:

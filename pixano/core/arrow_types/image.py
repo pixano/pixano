@@ -194,5 +194,4 @@ class Image(PixanoType):
             ]
         )
 
-
 ImageType = createPaType(Image.to_struct(), "Image", Image)

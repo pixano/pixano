@@ -37,11 +37,14 @@ class DatasetInfo(pydantic.BaseModel):
     id: str
     name: str
     description: str
-    features: dict[str, str]
+    features: Optional[Features]
     num_elements: Optional[int]
     preview: Optional[str]
     previews: Optional[list[str]]
-    categories: Optional[list[dict]]        
+    categories: Optional[list[dict]]
+
+    class Config:
+        arbitrary_types_allowed=True
 
 
 class Dataset:

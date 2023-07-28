@@ -52,3 +52,6 @@ __all__ = [
     "fields",
     "is_number",
 ]
+
+def is_image_type(field_type):
+    return ImageType.equals(field_type)
