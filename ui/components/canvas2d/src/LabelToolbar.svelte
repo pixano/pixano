@@ -80,9 +80,9 @@
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
-        <div class="py-1 px-2">
+        <div>
           <button
-            class="relative px-1 rounded-lg text-sm flex"
+            class="relative my-1 mx-2 px-1 rounded-lg text-sm flex"
             style="background-color: {labelColors(cls.id)}; text-align:left"
             title="{cls.name} (id #{cls.id})"
             on:click={() => (currentAnnCategory = cls.name)}
