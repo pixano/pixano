@@ -31,34 +31,61 @@ type Story = StoryObj<typeof meta>;
 export const Base: Story = {
   args: {
     selectedItem: {
-      id: "id2684",
-      datasetId: "dataset0004",
+      id: "1",
       views: [
         {
           id: "view",
-          url: "img-01.jpg",
+          url: "img-02.jpg",
         },
       ],
-      objects: {
-        view: {
-          ids: ["245"],
-          masks: [],
-          bboxes: [],
-          categories: [],
-          maskSources: [],
-          bboxSources: [],
-        },
-      },
-      catStats: [
-        {
-          id: 11,
-          name: "eye",
-          count: 1,
-        },
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
       ],
     },
     //sample for bear image "img-02.jpg"
     //bear left eye...
+    annotations: {
+      "Ground truth": {
+        id: "Ground truth",
+        views: {
+          view1: {
+            id: "view",
+            categories: {
+              eye: {
+                id: 1,
+                name: "eye",
+                labels: {
+                  "245": {
+                    id: "245",
+                    categoryId: 1,
+                    categoryName: "eye",
+                    sourceId: "Ground truth",
+                    viewId: "view",
+                    bboxOpacity: 1.0,
+                    maskOpacity: 1.0,
+                    visible: true,
+                  },
+                },
+                opened: true,
+                visible: true,
+              },
+            },
+            numLabels: 2,
+            opened: true,
+            visible: true,
+          },
+        },
+        numLabels: 2,
+        opened: true,
+        visible: true,
+      },
+    },
+    classes: [
+      { id: 0, name: "Dog" },
+      { id: 1, name: "eye" },
+      { id: 2, name: "Cat" },
+    ],
     masks: [
       {
         viewId: "view",
@@ -72,22 +99,5 @@ export const Base: Story = {
       },
     ],
     bboxes: [],
-    annotations: [
-      {
-        id: 11,
-        name: "eye",
-        viewId: "view",
-        labels: [
-          {
-            id: "245",
-            viewId: "view",
-            type: "mask",
-            visible: true,
-            opacity: 1.0,
-          },
-        ],
-        visible: true,
-      },
-    ],
   },
 };

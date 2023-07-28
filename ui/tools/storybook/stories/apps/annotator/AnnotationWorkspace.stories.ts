@@ -66,51 +66,59 @@ export const Base: Story = {
     },
     selectedItem: {
       id: "1",
-      datasetId: "euHS4xM5SSvQKAhmv3sFcp",
       views: [
         {
           id: "view",
           url: "img-02.jpg",
         },
       ],
-      objects: {
-        view: {
-          ids: ["245"],
-          masks: [],
-          bboxes: [],
-          categories: [],
-          maskSources: [],
-          bboxSources: [],
-        },
-      },
-      catStats: [
-        {
-          id: 1,
-          name: "eye",
-          count: 1,
-        },
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
       ],
     },
-
     //sample for bear image "img-02.jpg"
     //bear left eye...
-    embeddings: { view: [] }, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
-    annotations: [
-      {
-        id: 1,
-        name: "eye",
-        viewId: "view",
-        labels: [
-          {
-            id: "245",
-            viewId: "view",
-            type: "mask",
+    annotations: {
+      "Ground truth": {
+        id: "Ground truth",
+        views: {
+          view1: {
+            id: "view",
+            categories: {
+              eye: {
+                id: 1,
+                name: "eye",
+                labels: {
+                  "245": {
+                    id: "245",
+                    categoryId: 1,
+                    categoryName: "eye",
+                    sourceId: "Ground truth",
+                    viewId: "view",
+                    bboxOpacity: 1.0,
+                    maskOpacity: 1.0,
+                    visible: true,
+                  },
+                },
+                opened: true,
+                visible: true,
+              },
+            },
+            numLabels: 2,
+            opened: true,
             visible: true,
-            opacity: 1,
           },
-        ],
+        },
+        numLabels: 2,
+        opened: true,
         visible: true,
       },
+    },
+    classes: [
+      { id: 0, name: "Dog" },
+      { id: 1, name: "eye" },
+      { id: 2, name: "Cat" },
     ],
     masks: [
       {
@@ -124,12 +132,8 @@ export const Base: Story = {
         opacity: 1.0,
       },
     ],
-    classes: [
-      { id: 0, name: "Dog" },
-      { id: 1, name: "eye" },
-      { id: 2, name: "Cat" },
-    ],
-
+    bboxes: [],
+    embeddings: { view: [] }, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
     currentPage: 1,
     saveFlag: false,
   },

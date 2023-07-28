@@ -29,10 +29,23 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-let catCol = utils.getColor([1, 2]); // Define a color map for each category id
+let catCol = utils.colorLabel([1, 2]); // Define a color map for each category id
 
 export const Base: Story = {
   args: {
+    selectedItem: {
+      id: "1",
+      views: [
+        {
+          id: "view",
+          url: "img-02.jpg",
+        },
+      ],
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
     selectedDataset: {
       id: "euHS4xM5SSvQKAhmv3sFcp",
       name: "Dataset",
@@ -44,83 +57,64 @@ export const Base: Story = {
         items: [
           [
             { name: "id", dtype: "text", value: "1" },
-            { name: "view1", dtype: "image", value: "img-01.jpg" },
-            { name: "view2", dtype: "image", value: "img-02.jpg" },
+            { name: "view", dtype: "image", value: "img-02.jpg" },
           ],
           [
             { name: "id", dtype: "text", value: "2" },
-            { name: "view1", dtype: "image", value: "img-03.jpg" },
-            { name: "view2", dtype: "image", value: "img-04.jpg" },
+            { name: "view", dtype: "image", value: "img-03.jpg" },
           ],
           [
             { name: "id", dtype: "text", value: "3" },
-            { name: "view1", dtype: "image", value: "img-05.jpg" },
-            { name: "view2", dtype: "image", value: "img-06.jpg" },
+            { name: "view", dtype: "image", value: "img-05.jpg" },
           ],
           [
             { name: "id", dtype: "text", value: "4" },
-            { name: "view1", dtype: "image", value: "img-07.jpg" },
-            { name: "view2", dtype: "image", value: "img-08.jpg" },
+            { name: "view", dtype: "image", value: "img-07.jpg" },
           ],
         ],
         total: 4,
       },
     },
-    categoryColor: catCol,
-    annotations: [
-      {
-        id: 1,
-        name: "Dog",
-        viewId: "view1",
-        labels: [
-          {
-            id: "0x123",
-            viewId: "view1",
-            type: "mask",
+    annotations: {
+      "Ground truth": {
+        id: "Ground truth",
+        views: {
+          view1: {
+            id: "view",
+            categories: {
+              eye: {
+                id: 1,
+                name: "eye",
+                labels: {
+                  "245": {
+                    id: "245",
+                    categoryId: 1,
+                    categoryName: "eye",
+                    sourceId: "Ground truth",
+                    viewId: "view",
+                    bboxOpacity: 1.0,
+                    maskOpacity: 1.0,
+                    visible: true,
+                  },
+                },
+                opened: true,
+                visible: true,
+              },
+            },
+            numLabels: 2,
+            opened: true,
             visible: true,
-            opacity: 1.0,
           },
-          {
-            id: "0x354",
-            viewId: "view1",
-            type: "mask",
-            visible: true,
-            opacity: 1.0,
-          },
-        ],
+        },
+        numLabels: 2,
+        opened: true,
         visible: true,
       },
-      {
-        id: 2,
-        name: "Cat",
-        viewId: "view1",
-        labels: [
-          {
-            id: "0x237",
-            viewId: "view1",
-            type: "mask",
-            visible: true,
-            opacity: 1.0,
-          },
-        ],
-        visible: true,
-      },
-      {
-        id: 2,
-        name: "Cat",
-        viewId: "view2",
-        labels: [
-          {
-            id: "0x487",
-            viewId: "view2",
-            type: "mask",
-            visible: true,
-            opacity: 1.0,
-          },
-        ],
-        visible: true,
-      },
-    ],
+    },
     currentPage: 1,
+    labelColors: catCol,
+    maskOpacity: 1.0,
+    bboxOpacity: 0.0,
+    confidenceThreshold: 0.0,
   },
 };
