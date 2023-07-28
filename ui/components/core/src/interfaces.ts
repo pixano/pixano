@@ -15,7 +15,11 @@
 
 // Exports
 
-export interface Dictionary<Type> {
+export interface StringDict<Type> {
+  [key: string]: Type;
+}
+
+export interface NumberDict<Type> {
   [key: string]: Type;
 }
 
@@ -30,7 +34,7 @@ export interface ViewData {
   url: string;
 }
 
-export type ItemObjects = Dictionary<Dictionary<Array<ObjectData>>>;
+export type ItemObjects = StringDict<StringDict<Array<ObjectData>>>;
 
 export interface ObjectData {
   id: string;
@@ -64,11 +68,11 @@ export interface BBox {
   opacity: number;
 }
 
-export type ItemLabels = Dictionary<SourceLabels>;
+export type ItemLabels = StringDict<SourceLabels>;
 
 export interface SourceLabels {
   id: string;
-  views: Dictionary<ViewLabels>;
+  views: StringDict<ViewLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -76,7 +80,7 @@ export interface SourceLabels {
 
 export interface ViewLabels {
   id: string;
-  categories: Dictionary<CategoryLabels>;
+  categories: NumberDict<CategoryLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -85,7 +89,7 @@ export interface ViewLabels {
 export interface CategoryLabels {
   id: number;
   name: string;
-  labels: Dictionary<Label>;
+  labels: StringDict<Label>;
   opened: boolean;
   visible: boolean;
 }

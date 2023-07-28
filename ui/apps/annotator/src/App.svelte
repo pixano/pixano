@@ -174,8 +174,8 @@
             }
 
             // Add category if new
-            if (!newAnnotations[sourceId].views[viewId].categories[catName]) {
-              newAnnotations[sourceId].views[viewId].categories[catName] = {
+            if (!newAnnotations[sourceId].views[viewId].categories[catId]) {
+              newAnnotations[sourceId].views[viewId].categories[catId] = {
                 labels: {},
                 id: catId,
                 name: catName,
@@ -185,7 +185,7 @@
             }
 
             // Add label
-            newAnnotations[sourceId].views[viewId].categories[catName].labels[
+            newAnnotations[sourceId].views[viewId].categories[catId].labels[
               obj.id
             ] = {
               id: obj.id,

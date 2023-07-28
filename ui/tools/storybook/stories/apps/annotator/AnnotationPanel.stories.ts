@@ -82,7 +82,7 @@ export const Base: Story = {
           view1: {
             id: "view",
             categories: {
-              eye: {
+              1: {
                 id: 1,
                 name: "eye",
                 labels: {

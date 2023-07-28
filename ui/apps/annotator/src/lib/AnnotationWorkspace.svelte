@@ -69,7 +69,7 @@
 
   // Current annotations
   let currentAnn: InteractiveImageSegmenterOutput = null;
-  let currentAnnCategory = "";
+  let currentAnnCatName = "";
   let currentAnnSource = "Pixano Annotator";
 
   // Tools
@@ -119,7 +119,7 @@
     console.log("AnnotationWorkspace.handleAddCurrentAnn");
     if (currentAnn) {
       // Check if category name provided
-      if (currentAnnCategory === "") {
+      if (currentAnnCatName === "") {
         categoryNameModal = true;
         return;
       }
@@ -132,16 +132,21 @@
 
   function addCurrentAnn() {
     // Add the new label's category to the class list if it doesn't already exist.
-    if (!classes.some((c) => c.name === currentAnnCategory)) {
+    let currentAnnCatId: number;
+
+    if (!classes.some((c) => c.name === currentAnnCatName)) {
       let newClasses = classes;
-      let newClassId: number;
       if (classes.length > 0) {
-        newClassId = Math.max(...newClasses.map((o) => o.id)) + 1;
+        currentAnnCatId = Math.max(...newClasses.map((o) => o.id)) + 1;
       } else {
-        newClassId = 1;
+        currentAnnCatId = 1;
       }
-      newClasses.push({ id: newClassId, name: currentAnnCategory });
+      newClasses.push({ id: currentAnnCatId, name: currentAnnCatName });
       classes = newClasses;
+    } else {
+      currentAnnCatId = classes.find(
+        (obj) => obj.name === currentAnnCatName
+      ).id;
     }
 
     // Add current mask
@@ -150,7 +155,7 @@
       viewId: currentAnn.viewId,
       svg: currentAnn.output.masksImageSVG,
       rle: currentAnn.output.rle,
-      catId: classes.find((obj) => obj.name === currentAnnCategory).id,
+      catId: currentAnnCatId,
       visible: true,
       opacity: 1.0,
     };
@@ -181,15 +186,15 @@
     // Check if the new label's category already exists in the current annotations
     if (
       !annotations[currentAnnSource].views[currentAnn.viewId].categories[
-        currentAnnCategory
+        currentAnnCatId
       ]
     ) {
       annotations[currentAnnSource].views[currentAnn.viewId].categories[
-        currentAnnCategory
+        currentAnnCatId
       ] = {
         labels: {},
-        id: classes.find((c) => c.name === currentAnnCategory).id,
-        name: currentAnnCategory,
+        id: currentAnnCatId,
+        name: currentAnnCatName,
         opened: true,
         visible: true,
       };
@@ -197,8 +202,8 @@
 
     const currentLabel = <Label>{
       id: currentAnn.id,
-      categoryId: classes.find((c) => c.name === currentAnnCategory).id,
-      categoryName: currentAnnCategory,
+      categoryId: currentAnnCatId,
+      categoryName: currentAnnCatName,
       sourceId: currentAnnSource,
       viewId: currentAnn.viewId,
       maskOpacity: 1.0,
@@ -206,7 +211,7 @@
       visible: true,
     };
     annotations[currentAnnSource].views[currentAnn.viewId].categories[
-      currentAnnCategory
+      currentAnnCatId
     ].labels[currentAnn.id] = currentLabel;
 
     annotations[currentAnnSource].numLabels += 1;
@@ -240,7 +245,7 @@
   }
 
   function changeSelectedItem(newItemId: string, item: DatasetItem) {
-    currentAnnCategory = "";
+    currentAnnCatName = "";
     const newItemViews: Array<ViewData> = [];
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {
@@ -260,7 +265,7 @@
 
     // Remove from annotations
     delete annotations[label.sourceId].views[label.viewId].categories[
-      label.categoryName
+      label.categoryId
     ].labels[label.id];
     annotations[label.sourceId].numLabels -= 1;
     annotations[label.sourceId].views[label.viewId].numLabels -= 1;
@@ -388,7 +393,7 @@
     {/if}
     {#if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
       <LabelToolbar
-        bind:currentAnnCategory
+        bind:currentAnnCatName
         bind:classes
         bind:selectedTool
         {pointPlusTool}

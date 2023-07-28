@@ -22,7 +22,7 @@
   import { ToolType } from "./tools";
 
   // Exports
-  export let currentAnnCategory;
+  export let currentAnnCatName;
   export let classes;
   export let selectedTool;
   export let pointPlusTool;
@@ -70,7 +70,7 @@
       focus:border-rose-500 dark:focus:border-rose-600
       "
       on:keyup={handleFilterCategories}
-      bind:value={currentAnnCategory}
+      bind:value={currentAnnCatName}
     />
 
     <div
@@ -85,7 +85,7 @@
             class="relative my-1 mx-2 px-1 rounded-lg text-sm flex"
             style="background-color: {labelColors(cls.id)}; text-align:left"
             title="{cls.name} (id #{cls.id})"
-            on:click={() => (currentAnnCategory = cls.name)}
+            on:click={() => (currentAnnCatName = cls.name)}
           >
             {cls.name}
           </button>
