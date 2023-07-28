@@ -253,7 +253,7 @@
                 </svg>
               </button>
               <button
-                class="flex grow items-center space-x-1 text-left"
+                class="flex grow items-center space-x-1 text-left w-full"
                 on:click={() => (source.opened = !source.opened)}
               >
                 <svg
@@ -270,7 +270,7 @@
                   />
                 </svg>
 
-                <span class="relative pl-3 grow truncate w-5" title={source.id}>
+                <span class="relative pl-1 grow truncate w-5" title={source.id}>
                   {source.id}
                 </span>
                 <span
@@ -310,7 +310,7 @@
                   </svg>
                 </button>
                 <button
-                  class="flex items-center space-x-1 text-left"
+                  class="flex items-center space-x-1 text-left w-full"
                   on:click={() => (view.opened = !view.opened)}
                 >
                   <svg
@@ -327,7 +327,7 @@
                     />
                   </svg>
 
-                  <span class="relative pl-3 grow truncate w-5" title={view.id}>
+                  <span class="relative pl-1 grow truncate w-5" title={view.id}>
                     {view.id}
                   </span>
                   <span
@@ -372,7 +372,7 @@
                     </svg>
                   </button>
                   <button
-                    class="flex grow items-center space-x-1 text-left"
+                    class="flex grow items-center space-x-1 text-left w-full"
                     on:click={() => (category.opened = !category.opened)}
                   >
                     <svg
@@ -389,14 +389,14 @@
                       />
                     </svg>
                     <span
-                      class="grow ml-3 font-bold text-zinc-800 truncate w-5"
-                      title={category.name}
+                      class="grow pl-1 font-bold text-zinc-800 truncate w-5"
+                      title="{category.name} (id #{category.id})"
                     >
                       <button
                         class="relative px-1 rounded-lg text-sm"
                         style="background-color: {labelColors(category.id)};"
                       >
-                        {category.id} - {category.name}
+                        {category.name}
                       </button>
                     </span>
                     <span
@@ -451,7 +451,7 @@
                         </svg>
                       </button>
                       <span
-                        class="relative pl-3 text-sm grow truncate w-5"
+                        class="relative pl-1 text-sm grow truncate w-5"
                         title={label.id}
                       >
                         {label.id}
