@@ -69,7 +69,7 @@
     // Add temp variables to prevent updating before everything is loaded
     // Otherwise some bounding boxes are displayed incorrectly
     let newAnnotations: ItemLabels = {};
-    let newClasses = [];
+    let newClasses = selectedDataset.categories;
     let newMasks: Array<Mask> = [];
     let newBboxes: Array<BBox> = [];
 
@@ -80,6 +80,7 @@
       Date.now() - start,
       "ms"
     );
+
     for (const [sourceId, sourceObjects] of Object.entries(
       selectedItem.objects
     )) {
@@ -101,9 +102,6 @@
           opened: Object.entries(sourceObjects).length > 1 ? false : true,
           visible: true,
         };
-
-        // Initalize classes
-        newClasses = selectedDataset.categories;
 
         for (let obj of viewObjects) {
           const catId = obj.category.id;
