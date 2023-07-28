@@ -24,7 +24,16 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano.core import DatasetInfo
-from pixano.core.arrow_types import *
+from pixano.core.arrow_types import (
+    ObjectAnnotation,
+    ObjectAnnotationType,
+    Image,
+    ImageType,
+    BBox,
+    BBoxType,
+    CompressedRLE,
+    CompressedRLEType,
+)
 from pixano.transforms import (
     coco_names_91,
     denormalize,
@@ -126,8 +135,12 @@ class COCOLoader(DataLoader):
                         id=str(ann["id"]),
                         view_id="image",
                         area=float(ann["area"]) if ann["area"] else None,
-                        bbox=BBox.from_xywh(ann["bbox"]).normalize(im["height"], im["width"]),
-                        mask=CompressedRLE.encode(ann["segmentation"], im["height"], im["width"]),
+                        bbox=BBox.from_xywh(ann["bbox"]).normalize(
+                            im["height"], im["width"]
+                        ),
+                        mask=CompressedRLE.encode(
+                            ann["segmentation"], im["height"], im["width"]
+                        ),
                         is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
