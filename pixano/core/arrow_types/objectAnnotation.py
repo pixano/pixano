@@ -52,8 +52,8 @@ class ObjectAnnotation(PixanoType, BaseModel):
     is_group_of: Optional[bool] = None
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
-    mask: Optional[CompressedRLE] = (
-        CompressedRLE.from_dict({"size": [0, 0], "counts": b""}),
+    mask: Optional[CompressedRLE] = CompressedRLE.from_dict(
+        {"size": [0, 0], "counts": b""}
     )
     mask_source: Optional[str] = None
     area: Optional[float] = None
