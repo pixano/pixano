@@ -279,7 +279,8 @@ class DataLoader(ABC):
                     total=dataset.count_rows(),
                 ):
                     # Open image
-                    im = row[field.name][0].as_py(uri_prefix)
+                    im = row[field.name][0].as_py()
+                    im.uri_prefix = uri_prefix
                     im_w, im_h = im.size
                     # Compute image features
                     aspect_ratio = round(im_w / im_h, 1)
