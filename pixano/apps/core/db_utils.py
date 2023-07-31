@@ -235,18 +235,9 @@ def update_annotations(
     """
 
     # Convert URLE to RLE and add bounding box
-    # TODO: Find a fix for image datasets
-    item_anns = [o.dict() for o in annotations]
-    for ann in item_anns:
-        ann["bbox"] = (
-            ann["bbox"]
-            if ann["bbox"]
-            else urle_to_bbox(ann["mask"])
-            if ann["mask"]
-            else [0.0] * 4
-        )
-        ann["mask"] = urle_to_rle(ann["mask"]) if ann["mask"] else None
-
+    for ann in annotations:
+        ann.mask = arrow_types.CompressedRLE.from_urle(ann.mask.to_dict())
+        ann.bbox = arrow_types.BBox.from_mask(ann.mask.to_mask())
     # Dataset files
     files = (dataset_dir / "db").glob("**/*.parquet")
     files = sorted(files, key=lambda x: natural_key(x.name))
@@ -264,7 +255,7 @@ def update_annotations(
             updated_table = table.filter(~pc.field("id").isin([item_id])).to_pydict()
 
             # Add item with updated annotations
-            item[0]["objects"] = item_anns
+            item[0]["objects"] = annotations
             for field in table.schema:
                 updated_table[field.name].append(item[0][field.name])
 
@@ -284,19 +275,24 @@ def update_annotations(
             # Convert ExtensionTypes
             arrays = []
             for field in table.schema:
-                # Convert image types to dict before PyArrow conversion
-                # TODO: BUG: FIX SAVING NEW PIXANO TYPES WITH CONVERT FIELD
-                if arrow_types.is_image_type(field.type):
-                    updated_table[field.name] = [
-                        i.to_dict() for i in updated_table[field.name]
-                    ]
-                arrays.append(
-                    arrow_types.convert_field(
-                        field_name=field.name,
-                        field_type=field.type,
-                        field_data=updated_table[field.name],
+                if arrow_types.is_list_of_object_annotation_type(field.type):
+                    arrays.append(
+                        arrow_types.ObjectAnnotationType.Array.from_lists(
+                            updated_table[field.name]
+                        )
                     )
-                )
+                elif arrow_types.is_image_type(field.type):
+                    arrays.append(
+                        arrow_types.ImageType.Array.from_list(updated_table[field.name])
+                    )
+                else:
+                    arrays.append(
+                        arrow_types.convert_field(
+                            field_name=field.name,
+                            field_type=field.type,
+                            field_data=updated_table[field.name],
+                        )
+                    )
 
             # Save updated table
             pq.write_table(
