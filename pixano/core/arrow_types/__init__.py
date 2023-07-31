@@ -56,5 +56,5 @@ def is_image_type(field_type):
     return ImageType.equals(field_type)
 
 
-def is_object_annotation_list_type(field_type):
+def is_list_of_object_annotation_type(field_type):
     return field_type == pa.list_(ObjectAnnotationType)

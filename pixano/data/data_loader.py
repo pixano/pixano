@@ -186,7 +186,7 @@ class DataLoader(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has objects
-            if arrow_types.is_object_annotation_list_type(field.type):
+            if arrow_types.is_list_of_object_annotation_type(field.type):
                 # Create dataframe
                 df = dataset.to_table(columns=["split", field.name]).to_pandas()
                 # Split objects in one object per row
@@ -394,7 +394,7 @@ class DataLoader(ABC):
                 # Append batch categories
                 for field in self.schema:
                     # If column has annotations
-                    if arrow_types.is_object_annotation_list_type(field.type):
+                    if arrow_types.is_list_of_object_annotation_type(field.type):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (
@@ -411,16 +411,26 @@ class DataLoader(ABC):
                                     seen_category_ids.append(ann["category_id"])
 
                 # Convert batch fields to PyArrow format
-                # TODO: BUG: FIX SAVING NEW PIXANO TYPES WITH CONVERT FIELD
                 arrays = []
                 for field in self.schema:
-                    arrays.append(
-                        arrow_types.convert_field(
-                            field_name=field.name,
-                            field_type=field.type,
-                            field_data=batch[field.name],
+                    if arrow_types.is_list_of_object_annotation_type(field.type):
+                        arrays.append(
+                            arrow_types.ObjectAnnotationType.Array.from_lists(
+                                batch[field.name]
+                            )
                         )
-                    )
+                    elif arrow_types.is_image_type(field.type):
+                        arrays.append(
+                            arrow_types.ImageType.Array.from_list(batch[field.name])
+                        )
+                    else:
+                        arrays.append(
+                            arrow_types.convert_field(
+                                field_name=field.name,
+                                field_type=field.type,
+                                field_data=batch[field.name],
+                            )
+                        )
                 # Save to file
                 ds.write_dataset(
                     data=pa.Table.from_arrays(arrays, schema=self.schema),
