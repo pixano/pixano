@@ -55,8 +55,11 @@ def convert_type(input_type: str) -> pa.DataType:
 
 
 class Features(BaseModel):
-    def __init__(self, dict: dict[str, str]) -> None:
-        self.dict = dict
+    features_dict: dict[str, str]
+
+    def __init__(self, features_dict: dict[str, str]) -> None:
+        # Define public attributes through Pydantic BaseModel
+        super().__init__(features_dict=features_dict)
 
     @staticmethod
     def from_string_dict(features_dict: dict[str, str]) -> "Features":

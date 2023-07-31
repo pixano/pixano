@@ -31,6 +31,7 @@ from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
 from pixano.core import DatasetInfo, arrow_types
+from pixano.core.features import Features
 
 
 def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
@@ -88,7 +89,7 @@ class DataLoader(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features={},
+            features=Features.from_string_dict({}),
         )
         self.splits = splits
 
