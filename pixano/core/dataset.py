@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -52,6 +52,17 @@ class DatasetInfo(BaseModel):
 
     class Config:
         arbitrary_types_allowed = True
+
+    def to_dict(self) -> dict[str, Any]:
+        def convert_value_as_dict(value):
+            if isinstance(value, Features):
+                return value.features_dict
+            else:
+                return value
+
+        return {
+            var: convert_value_as_dict(getattr(self, var)) for var in vars(self).keys()
+        }
 
 
 class Dataset:

@@ -89,7 +89,9 @@ class DataLoader(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features=Features.from_string_dict({}),
+            features=Features(
+                {"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"}
+            ),
         )
         self.splits = splits
 
@@ -126,7 +128,7 @@ class DataLoader(ABC):
 
             # Create spec.json
             with open(import_dir / "spec.json", "w") as f:
-                json.dump(vars(self.info), f)
+                json.dump(self.info.to_dict(), f)
             progress.update(1)
 
     def create_preview(self, import_dir: Path):
