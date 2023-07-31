@@ -543,7 +543,7 @@
       >
         {#each selectedDataset.page.items as item, i}
           <button
-            class="flex p-1 flex-col rounded
+            class="flex p-1 flex-col rounded h-min
             hover:bg-zinc-100 dark:hover:bg-zinc-700"
             on:click={() => handleSelectItem(item)}
           >
