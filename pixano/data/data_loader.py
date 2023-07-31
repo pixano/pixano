@@ -411,6 +411,7 @@ class DataLoader(ABC):
                                     seen_category_ids.append(ann["category_id"])
 
                 # Convert batch fields to PyArrow format
+                # TODO: BUG: FIX SAVING NEW PIXANO TYPES WITH CONVERT FIELD
                 arrays = []
                 for field in self.schema:
                     arrays.append(

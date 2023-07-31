@@ -286,7 +286,7 @@ def update_annotations(
             arrays = []
             for field in table.schema:
                 # Convert image types to dict before PyArrow conversion
-                # TODO: find a better way
+                # TODO: BUG: FIX SAVING NEW PIXANO TYPES WITH CONVERT FIELD
                 if arrow_types.is_image_type(field.type):
                     updated_table[field.name] = [
                         i.to_dict() for i in updated_table[field.name]
