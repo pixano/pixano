@@ -183,70 +183,71 @@ class DataLoader(ABC):
         # Read dataset
         dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
-        # Create stats if objects field exist
-        objects = pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
-        if objects in self.schema:
-            # Create dataframe
-            df = dataset.to_table(columns=["split", "objects"]).to_pandas()
-            # Split objects in one object per row
-            df = df.explode("objects")
-            # Remove empty objects
-            df = df[df["objects"].notnull()]
+        # Iterate over dataset columns
+        for field in dataset.schema:
+            # If column has objects
+            if arrow_types.is_object_annotation_list_type(field.type):
+                # Create dataframe
+                df = dataset.to_table(columns=["split", field.name]).to_pandas()
+                # Split objects in one object per row
+                df = df.explode(field.name)
+                # Remove empty objects
+                df = df[df[field.name].notnull()]
 
-            # Get features
-            features = []
-            for split, object in tqdm(
-                zip(df["split"], df["objects"]),
-                desc="Computing objects stats",
-                total=len(df.index),
-            ):
-                try:
-                    area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
-                except TypeError:
-                    area = None
-                features.append(
+                # Get features
+                features = []
+                for split, object in tqdm(
+                    zip(df["split"], df[field.name]),
+                    desc=f"Computing {field.name} stats",
+                    total=len(df.index),
+                ):
+                    try:
+                        area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
+                    except TypeError:
+                        area = None
+                    features.append(
+                        {
+                            "id": object["id"],
+                            "view id": object["view_id"],
+                            f"{field.name} - is group of": object["is_group_of"],
+                            f"{field.name} - area (%)": area,
+                            f"{field.name} - category": object["category_name"],
+                            "split": split,
+                        }
+                    )
+                features_df = pd.DataFrame.from_records(features).astype(
                     {
-                        "id": object["id"],
-                        "view id": object["view_id"],
-                        "objects - is group of": object["is_group_of"],
-                        "objects - area (%)": area,
-                        "objects - category": object["category_name"],
-                        "split": split,
+                        "id": "string",
+                        "view id": "string",
+                        f"{field.name} - is group of": bool,
+                        f"{field.name} - area (%)": float,
+                        f"{field.name} - category": "string",
+                        "split": "string",
                     }
                 )
-            features_df = pd.DataFrame.from_records(features).astype(
-                {
-                    "id": "string",
-                    "view id": "string",
-                    "objects - is group of": bool,
-                    "objects - area (%)": float,
-                    "objects - category": "string",
-                    "split": "string",
-                }
-            )
 
-            # Initialize stats
-            stats = [
-                {
-                    "name": "objects - category",
-                    "type": "categorical",
-                    "histogram": [],
-                },
-                {
-                    "name": "objects - is group of",
-                    "type": "categorical",
-                    "histogram": [],
-                },
-                {
-                    "name": "objects - area (%)",
-                    "type": "numerical",
-                    "range": [0.0, 100.0],
-                    "histogram": [],
-                },
-            ]
+                # Initialize stats
+                stats = [
+                    {
+                        "name": f"{field.name} - category",
+                        "type": "categorical",
+                        "histogram": [],
+                    },
+                    {
+                        "name": f"{field.name} - is group of",
+                        "type": "categorical",
+                        "histogram": [],
+                    },
+                    {
+                        "name": f"{field.name} - area (%)",
+                        "type": "numerical",
+                        "range": [0.0, 100.0],
+                        "histogram": [],
+                    },
+                ]
 
-            # Save stats
-            self.save_stats(import_dir, stats, features_df)
+                # Save stats
+                self.save_stats(import_dir, stats, features_df)
 
     def image_stats(self, import_dir: Path):
         """Create dataset image statistics
@@ -393,8 +394,7 @@ class DataLoader(ABC):
                 # Append batch categories
                 for field in self.schema:
                     # If column has annotations
-                    # TODO: Change to checking type when ObjectAnnotationType is rebuilt
-                    if field.name == "objects":
+                    if arrow_types.is_object_annotation_list_type(field.type):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (

@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+import pyarrow as pa
 
 from .all_pixano_types import PixanoType, createPaType
 from .bbox import BBox, BBoxType
@@ -50,5 +51,10 @@ __all__ = [
     "is_number",
 ]
 
+
 def is_image_type(field_type):
     return ImageType.equals(field_type)
+
+
+def is_object_annotation_list_type(field_type):
+    return field_type == pa.list_(ObjectAnnotationType)
