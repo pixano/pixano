@@ -133,15 +133,11 @@ def get_item_details(
 
             for obj in objects:
                 if obj.view_id == field.name:
-                    id = obj["id"]
-                    mask = (
-                        transforms.rle_to_urle(obj.mask)
-                        if obj.mask is not None
-                        else None
-                    )
+                    id = obj.id
+                    mask = obj.mask.to_urle() if obj.mask is not None else None
                     bbox = (
                         transforms.format_bbox(
-                            obj.bbox,
+                            obj.bbox.coords,
                             obj.bbox_confidence is not None,
                             obj.bbox_confidence,
                         )
