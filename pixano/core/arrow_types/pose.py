@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 import pyarrow as pa
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
@@ -20,13 +21,16 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 # ------------------------------------------------
 
 
-class Pose(PixanoType):
+class Pose(PixanoType, BaseModel):
     """Pose type using orientation and translation matrices
 
     Attributes:
         _cam_R_m2c (list[float]): 3*3 orientation matrix
         _cam_t_m2c (list[float]): 1*3 translation matrix
     """
+
+    _cam_R_m2c: list[float] = PrivateAttr()
+    _cam_t_m2c: list[float] = PrivateAttr()
 
     def __init__(self, cam_R_m2c: list[float], cam_t_m2c: list[float]):
         """Initialize pose from orientation and translation matrices
@@ -36,6 +40,10 @@ class Pose(PixanoType):
             cam_t_m2c (list[float]): 1*3 translation matrix
         """
 
+        # Define public attributes through Pydantic BaseModel
+        super().__init__()
+
+        # Define private attributes manually
         self._cam_R_m2c = cam_R_m2c
         self._cam_t_m2c = cam_t_m2c
 

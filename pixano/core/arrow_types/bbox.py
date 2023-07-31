@@ -14,6 +14,7 @@
 
 import pyarrow as pa
 from PIL import Image
+from pydantic import BaseModel
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.boxes import mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
@@ -23,14 +24,18 @@ from pixano.transforms.boxes import mask_to_bbox, normalize, xywh_to_xyxy, xyxy_
 # ------------------------------------------------
 
 
-class BBox(PixanoType):
+class BBox(PixanoType, BaseModel):
     """Bounding box type using coordinates in xyxy or xywh format
 
     Attributes:
         coords (list[float]): List of coordinates in given format
-        _format (str): Coordinates format, 'xyxy' or 'xywh'.
-        _is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
+        format (str): Coordinates format, 'xyxy' or 'xywh'.
+        is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
     """
+
+    coords: list[float]
+    format: str
+    is_normalized: bool
 
     def __init__(self, coords: list[float], format: str, is_normalized: bool = True):
         """Initialize bounding box from xyxy or xywh coordinates
@@ -41,9 +46,8 @@ class BBox(PixanoType):
             is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
         """
 
-        self.coords = coords
-        self.format = format
-        self.is_normalized = is_normalized
+        # Define public attributes through Pydantic BaseModel
+        super().__init__(coords=coords, format=format, is_normalized=is_normalized)
 
     @classmethod
     def from_xyxy(cls, xyxy: list[float]) -> "BBox":

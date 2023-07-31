@@ -16,6 +16,7 @@ from types import NoneType
 import pyarrow as pa
 from numpy import ndarray
 from PIL import Image
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import (
@@ -33,8 +34,15 @@ from pixano.transforms.image import (
 # ------------------------------------------------
 
 
-class CompressedRLE(PixanoType):
+class CompressedRLE(PixanoType, BaseModel):
+    _size: list[float] = PrivateAttr()
+    _counts: bytes | NoneType = PrivateAttr()
+
     def __init__(self, size: list[float], counts: bytes | NoneType):
+        # Define public attributes through Pydantic BaseModel
+        super().__init__()
+
+        # Define private attributes manually
         self._size = size
         self._counts = counts
 
@@ -71,7 +79,7 @@ class CompressedRLE(PixanoType):
     ) -> "CompressedRLE":
         rle_dict = polygons_to_rle(polygons, height, width)
         return CompressedRLE.from_dict(rle_dict)
-    
+
     @staticmethod
     def encode(mask: list[list] | dict, height: int, width: int):
         return CompressedRLE.from_dict(encode_rle(mask))

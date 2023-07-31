@@ -1,5 +1,21 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
 import pyarrow as pa
+from pydantic import BaseModel
+
 from pixano.core.arrow_types import *
+
 
 def convert_type(input_type: str) -> pa.DataType:
     """convert string type to pyarrow type
@@ -12,37 +28,40 @@ def convert_type(input_type: str) -> pa.DataType:
     """
 
     pa_type_mapping = {
-        'int': pa.int64(),
-        'float': pa.float32(),
-        'bool': pa.bool_(),
-        'str': pa.string(),
-        'bytes': pa.binary(),
-        'np.ndarray': pa.list_(pa.float32()),
-        'Image': ImageType,
-        'DepthImage': DepthImageType,
-        'Camera': CameraType,
-        'ObjectAnnotation': ObjectAnnotationType,
-        'CompressedRLE': CompressedRLEType,
-        'Pose': PoseType,
-        'BBox': BBoxType,
-        'GtInfo': GtInfoType,
-        'Embedding': EmbeddingType,
+        "int": pa.int64(),
+        "float": pa.float32(),
+        "bool": pa.bool_(),
+        "str": pa.string(),
+        "bytes": pa.binary(),
+        "np.ndarray": pa.list_(pa.float32()),
+        "Image": ImageType,
+        "DepthImage": DepthImageType,
+        "Camera": CameraType,
+        "ObjectAnnotation": ObjectAnnotationType,
+        "CompressedRLE": CompressedRLEType,
+        "Pose": PoseType,
+        "BBox": BBoxType,
+        "GtInfo": GtInfoType,
+        "Embedding": EmbeddingType,
     }
 
     # str
     if isinstance(input_type, str):
         if input_type.startswith("[") and input_type.endswith("]"):
-            return pa.list_(pa_type_mapping[input_type.removeprefix("[").removesuffix("]")])
+            return pa.list_(
+                pa_type_mapping[input_type.removeprefix("[").removesuffix("]")]
+            )
         return pa_type_mapping[input_type]
 
-class Features:
+
+class Features(BaseModel):
     def __init__(self, dict: dict[str, str]) -> None:
         self.dict = dict
-    
+
     @staticmethod
-    def from_string_dict(features_dict: dict[str,str]) -> 'Features':
+    def from_string_dict(features_dict: dict[str, str]) -> "Features":
         return Features(features_dict)
-        
+
     def to_fields(self) -> list[pa.field]:
         """Convert dict containing python type to arrow fields
 

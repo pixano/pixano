@@ -1,12 +1,26 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
 from abc import ABC, abstractmethod
 from typing import Type
 
 import pyarrow as pa
+from pydantic import BaseModel
 
 from pixano.core.arrow_types.utils import convert_field
 
 
-class PixanoType(ABC):
+class PixanoType(ABC, BaseModel):
     @abstractmethod
     def to_struct(cls) -> pa.StructType:
         """Abstract method who must return the pyarrow struct corresponding to pixano type
@@ -17,6 +31,7 @@ class PixanoType(ABC):
         Returns:
             pa.StructType: Struct corresponding to type
         """
+
         raise NotImplementedError
 
     def to_dict(self) -> dict[str, any]:
@@ -54,6 +69,7 @@ class PixanoType(ABC):
         Returns:
             PixanoType: New instance of type
         """
+
         return cls(**data)
 
 
@@ -80,7 +96,7 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
 
         class Scalar(pa.ExtensionScalar):
             def as_py(self):
-                def as_py_dict(pa_dict:dict) -> dict:
+                def as_py_dict(pa_dict: dict) -> dict:
                     """Recusively convert dict with py arrow object to py dict
 
                     Args:
@@ -89,6 +105,7 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
                     Returns:
                         dict: dict with only scalar python types
                     """
+
                     py_dict = {}
                     for key, value in pa_dict.items():
                         if hasattr(value, "as_py") and callable(
@@ -132,9 +149,9 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
                     )
                 sto = pa.StructArray.from_arrays(arrays, fields=Fields)
                 return pa.ExtensionArray.from_storage(new_type, sto)
-        
+
             @classmethod
-            def from_lists(cls, list:list[list[Type]]) -> pa.ListArray:
+            def from_lists(cls, list: list[list[Type]]) -> pa.ListArray:
                 """Return paListArray corresponding to list of list of type
 
                 Args:
@@ -143,14 +160,17 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
                 Returns:
                     pa.ListArray: List array with offset corresponding to list
                 """
+
                 offset = [0]
                 for sub_list in list:
                     offset.append(len(sub_list) + offset[-1])
-                
+
                 flat_list = [item for sublist in list for item in sublist]
                 flat_array = cls.from_list(flat_list)
 
-                return pa.ListArray.from_arrays(offset, flat_array, type=pa.list_(new_type))
+                return pa.ListArray.from_arrays(
+                    offset, flat_array, type=pa.list_(new_type)
+                )
 
     new_type = CustomExtensionType(struct_type, name)
     try:

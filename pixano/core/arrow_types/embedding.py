@@ -11,8 +11,8 @@
 #
 # http://www.cecill.info
 
-
 import pyarrow as pa
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
@@ -21,8 +21,14 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 # ------------------------------------------------
 
 
-class Embedding(PixanoType):
-    def __init__(self, bytes: bytes) -> None:
+class Embedding(PixanoType, BaseModel):
+    _bytes: bytes = PrivateAttr()
+
+    def __init__(self, bytes: bytes):
+        # Define public attributes through Pydantic BaseModel
+        super().__init__()
+
+        # Define private attributes manually
         self._bytes = bytes
 
     @property

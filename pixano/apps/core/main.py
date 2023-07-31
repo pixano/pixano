@@ -144,7 +144,7 @@ def create_app(settings: Settings) -> FastAPI:
     model_dir.mkdir(exist_ok=True)
     app.mount("/models", StaticFiles(directory=model_dir), name="models")
 
-    @app.get("/datasets", response_model=None)
+    @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_datasets_list():
         return load_library(settings)
 
@@ -204,7 +204,7 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/annotations",
-        response_model=None#list[arrow_types.ObjectAnnotation],
+        response_model=list[arrow_types.ObjectAnnotation],
     )
     async def post_dataset_item_annotations(
         ds_id: str,

@@ -44,7 +44,6 @@ class ObjectAnnotation(PixanoType, BaseModel):
         identity (str, optional): Identity
     """
 
-
     id: str
     view_id: Optional[str] = None
     bbox: Optional[BBox] = BBox.from_xywh([0, 0, 0, 0])
@@ -64,7 +63,7 @@ class ObjectAnnotation(PixanoType, BaseModel):
     identity: Optional[str] = None
 
     class Config:
-        arbitrary_types_allowed=True
+        arbitrary_types_allowed = True
 
     @classmethod
     def to_struct(cls) -> pa.StructType:

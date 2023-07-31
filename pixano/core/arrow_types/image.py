@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+from types import NoneType
 from typing import IO
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -21,6 +22,7 @@ import numpy as np
 import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import binary_to_url
@@ -30,7 +32,7 @@ from pixano.transforms.image import binary_to_url
 # ------------------------------------------------
 
 
-class Image(PixanoType):
+class Image(PixanoType, BaseModel):
     """Image type using URI or bytes
 
     Attributes:
@@ -39,6 +41,11 @@ class Image(PixanoType):
         _preview_bytes (bytes): Image preview bytes
         uri_prefix (str): URI prefix for relative URIs
     """
+
+    _uri: str = PrivateAttr()
+    _bytes: bytes | NoneType = PrivateAttr()
+    _preview_bytes: bytes | NoneType = PrivateAttr()
+    uri_prefix: str | NoneType
 
     def __init__(
         self,
@@ -56,10 +63,13 @@ class Image(PixanoType):
             uri_prefix (str, optional): URI prefix for relative URIs. Defaults to None.
         """
 
+        # Define public attributes through Pydantic BaseModel
+        super().__init__(uri_prefix=uri_prefix)
+
+        # Define private attributes manually
         self._uri = uri
         self._bytes = bytes
         self._preview_bytes = preview_bytes
-        self.uri_prefix = uri_prefix
 
     @property
     def bytes(self) -> bytes:
@@ -193,5 +203,6 @@ class Image(PixanoType):
                 pa.field("preview_bytes", pa.binary()),
             ]
         )
+
 
 ImageType = createPaType(Image.to_struct(), "Image", Image)

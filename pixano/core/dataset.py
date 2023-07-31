@@ -12,16 +12,16 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import pyarrow as pa
 import pyarrow.dataset as ds
-import pydantic
+from pydantic import BaseModel
 
 from pixano.core.features import Features
 
 
-class DatasetInfo(pydantic.BaseModel):
+class DatasetInfo(BaseModel):
     """DatasetInfo
 
     Attributes:
@@ -48,7 +48,7 @@ class DatasetInfo(pydantic.BaseModel):
     model_info: Optional[str]
 
     class Config:
-        arbitrary_types_allowed=True
+        arbitrary_types_allowed = True
 
 
 class Dataset:

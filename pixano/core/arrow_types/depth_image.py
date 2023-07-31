@@ -17,8 +17,8 @@ from typing import IO, Optional
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import pyarrow as pa
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
@@ -27,8 +27,12 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 # ------------------------------------------------
 
 
-class DepthImage(PixanoType):
+class DepthImage(PixanoType, BaseModel):
     """DepthImage stored as uint16 images"""
+
+    _bytes: Optional[np.ndarray] = PrivateAttr()
+    _depth_map: Optional[bytes] = PrivateAttr()
+    _shape: Optional[list[int]] = PrivateAttr()
 
     def __init__(
         self,
@@ -36,6 +40,10 @@ class DepthImage(PixanoType):
         bytes: bytes = None,
         shape: list[int] = None,
     ):
+        # Define public attributes through Pydantic BaseModel
+        super().__init__()
+
+        # Define private attributes manually
         self._bytes = bytes
         self._depth_map = depth_map
         self._shape = shape
