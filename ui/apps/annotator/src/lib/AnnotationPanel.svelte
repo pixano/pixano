@@ -541,13 +541,18 @@
               {/if}
             {/each}
           </div>
-          {#each item as itemFeature}
-            {#if itemFeature.name === "id"}
-              <span class="text-xs text-center font-semibold"
-                >{itemFeature.value}</span
-              >
-            {/if}
-          {/each}
+          <div class="flex">
+            {#each item as itemFeature}
+              {#if itemFeature.name === "id"}
+                <span
+                  class="text-xs text-center font-semibold w-5 truncate grow"
+                  title={itemFeature.value}
+                >
+                  {itemFeature.value}
+                </span>
+              {/if}
+            {/each}
+          </div>
         </button>
       {/each}
     </div>
