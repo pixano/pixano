@@ -273,19 +273,18 @@ class COCOLoader(DataLoader):
 
                     for field in media_fields:
                         # Open image
-                        images[field] = media_row[field][0].as_py(uri_prefix)
-                        im_uri = (
-                            media_row[field][0].as_py(export_uri_prefix).uri
-                            if portable
-                            else images[field].uri
-                        )
-                        im_filename = Path(urlparse(im_uri).path).name
+                        images[field] = media_row[field][0]
+                        if portable:
+                            images[field].uri_prefix = export_uri_prefix
+                        else:
+                            images[field].uri_prefix = uri_prefix
+                        im_filename = Path(urlparse(images[field].uri).path).name
                         im_w, im_h = images[field].size
                         # Append image info
                         coco_json["images"].append(
                             {
                                 "license": 1,
-                                "coco_url": im_uri,
+                                "coco_url": images[field].uri,
                                 "file_name": im_filename,
                                 "height": im_h,
                                 "width": im_w,
