@@ -69,8 +69,8 @@ class CompressedRLE(PixanoType, BaseModel):
         return CompressedRLE.from_dict(rle_dict)
 
     @staticmethod
-    def from_urle(urle: list[int], height: int, width: int) -> "CompressedRLE":
-        rle_dict = urle_to_rle(urle, height, width)
+    def from_urle(urle: list[int]) -> "CompressedRLE":
+        rle_dict = urle_to_rle(urle)
         return CompressedRLE.from_dict(rle_dict)
 
     @staticmethod
@@ -82,7 +82,7 @@ class CompressedRLE(PixanoType, BaseModel):
 
     @staticmethod
     def encode(mask: list[list] | dict, height: int, width: int):
-        return CompressedRLE.from_dict(encode_rle(mask))
+        return CompressedRLE.from_dict(encode_rle(mask, height, width))
 
     @classmethod
     def to_struct(cls):
