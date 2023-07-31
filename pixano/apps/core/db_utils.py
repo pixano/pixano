@@ -132,27 +132,26 @@ def get_item_details(
             )
 
             for obj in objects:
-                if obj["view_id"] == field.name:
+                if obj.view_id == field.name:
                     id = obj["id"]
                     mask = (
-                        transforms.rle_to_urle(obj["mask"])
-                        if obj["mask"] is not None
+                        transforms.rle_to_urle(obj.mask)
+                        if obj.mask is not None
                         else None
                     )
                     bbox = (
                         transforms.format_bbox(
-                            obj["bbox"],
-                            obj["bbox_confidence"] is not None,
-                            obj["bbox_confidence"],
+                            obj.bbox,
+                            obj.bbox_confidence is not None,
+                            obj.bbox_confidence,
                         )
-                        if obj["bbox"] is not None
+                        if obj.bbox is not None
                         else None
                     )
-                    source = obj["mask_source"] or obj["bbox_source"] or "Ground truth"
+                    source = obj.mask_source or obj.bbox_source or "Ground truth"
                     category = (
-                        {"id": obj["category_id"], "name": obj["category_name"]}
-                        if obj["category_id"] is not None
-                        and obj["category_name"] is not None
+                        {"id": obj.category_id, "name": obj.category_name}
+                        if obj.category_id is not None and obj.category_name is not None
                         else None
                     )
 
