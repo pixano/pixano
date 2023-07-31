@@ -12,20 +12,17 @@
 # http://www.cecill.info
 
 
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
-from pixano.core.arrow_types.bbox import BBox, BBoxType
-from pixano.core.arrow_types.camera import Camera, CameraType
-from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
-from pixano.core.arrow_types.depth_image import DepthImage, DepthImageType
-from pixano.core.arrow_types.embedding import Embedding, EmbeddingType
-from pixano.core.arrow_types.gt_info import GtInfo, GtInfoType
-from pixano.core.arrow_types.image import Image, ImageType
-from pixano.core.arrow_types.objectAnnotation import (
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
-from pixano.core.arrow_types.pose import Pose, PoseType
-from pixano.core.arrow_types.utils import convert_field, fields, is_number
+from .all_pixano_types import PixanoType, createPaType
+from .bbox import BBox, BBoxType
+from .camera import Camera, CameraType
+from .compressedRLE import CompressedRLE, CompressedRLEType
+from .depth_image import DepthImage, DepthImageType
+from .embedding import Embedding, EmbeddingType
+from .gt_info import GtInfo, GtInfoType
+from .image import Image, ImageType
+from .objectAnnotation import ObjectAnnotation, ObjectAnnotationType
+from .pose import Pose, PoseType
+from .utils import convert_field, fields, is_number
 
 __all__ = [
     "BBox",
