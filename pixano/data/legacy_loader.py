@@ -221,7 +221,7 @@ class LegacyLoader(DataLoader):
                             else None,
                             category_id=category_ids[ann["category"]],
                             category_name=ann["category"],
-                        ).dict()
+                        ).to_dict()
                     )
 
             # Return row

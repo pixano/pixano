@@ -134,7 +134,7 @@ class DOTALoader(DataLoader):
                             category_name=str(line.strip().split()[8]).replace(
                                 "-", " "
                             ),
-                        ).dict()
+                        ).to_dict()
                         for line in im_anns
                     ],
                     "split": split,

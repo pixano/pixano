@@ -107,7 +107,7 @@ class TemplateLoader(DataLoader):
                         is_group_of=False,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
-                    ).dict()
+                    ).to_dict()
                     for ann in im_anns
                 ],
                 "split": split,

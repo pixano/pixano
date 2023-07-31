@@ -99,7 +99,7 @@ class ImageLoader(DataLoader):
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),
                         category_id=0,
-                    ).dict()
+                    ).to_dict()
                 ],
                 "split": split,
             }
