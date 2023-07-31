@@ -93,13 +93,13 @@ class ImageLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": im_path.name,
-                "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
+                "image": arrow_types.Image(im_uri, None, im_thumb),
                 # TODO: find a way to return an empty list
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),
                         category_id=0,
-                    ).to_dict()
+                    )
                 ],
                 "split": split,
             }

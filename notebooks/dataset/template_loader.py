@@ -96,7 +96,7 @@ class TemplateLoader(DataLoader):
             ##### Fill row with ID, image, and list of annotations #####
             row = {
                 "id": im_path.stem,
-                "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
+                "image": arrow_types.Image(im_uri, None, im_thumb),
                 "objects": [
                     arrow_types.ObjectAnnotation(
                         id=shortuuid.uuid(),
@@ -107,7 +107,7 @@ class TemplateLoader(DataLoader):
                         is_group_of=False,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
-                    ).to_dict()
+                    )
                     for ann in im_anns
                 ],
                 "split": split,

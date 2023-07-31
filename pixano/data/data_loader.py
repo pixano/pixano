@@ -398,8 +398,8 @@ class DataLoader(ABC):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (
-                                    ann["category_id"] not in seen_category_ids
-                                    and ann["category_name"] is not None
+                                    ann.category_id not in seen_category_ids
+                                    and ann.category_name is not None
                                 ):
                                     categories.append(
                                         {

@@ -112,7 +112,7 @@ class DOTALoader(DataLoader):
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
-                    "image": arrow_types.Image(im_uri, None, im_thumb).to_dict(),
+                    "image": arrow_types.Image(im_uri, None, im_thumb),
                     "objects": [
                         arrow_types.ObjectAnnotation(
                             id=shortuuid.uuid(),
@@ -134,7 +134,7 @@ class DOTALoader(DataLoader):
                             category_name=str(line.strip().split()[8]).replace(
                                 "-", " "
                             ),
-                        ).to_dict()
+                        )
                         for line in im_anns
                     ],
                     "split": split,

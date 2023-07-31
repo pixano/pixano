@@ -129,7 +129,7 @@ class COCOLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": str(im["id"]),
-                "image": Image(im_uri, None, im_thumb).to_dict(),
+                "image": Image(im_uri, None, im_thumb),
                 "objects": [
                     ObjectAnnotation(
                         id=str(ann["id"]),
@@ -144,7 +144,7 @@ class COCOLoader(DataLoader):
                         is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
-                    ).to_dict()
+                    )
                     for ann in im_anns
                 ],
                 "split": split,

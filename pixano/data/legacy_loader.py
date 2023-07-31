@@ -137,9 +137,7 @@ class LegacyLoader(DataLoader):
                 "split": split,
             }
             for f in feats[timestamp]:
-                row[f["viewId"]] = arrow_types.Image(
-                    f["im_uri"], None, f["im_thumb"]
-                ).to_dict()
+                row[f["viewId"]] = arrow_types.Image(f["im_uri"], None, f["im_thumb"])
 
                 # Fill row with list of image annotations
                 for ann in f["anns"]:
@@ -221,7 +219,7 @@ class LegacyLoader(DataLoader):
                             else None,
                             category_id=category_ids[ann["category"]],
                             category_name=ann["category"],
-                        ).to_dict()
+                        )
                     )
 
             # Return row
