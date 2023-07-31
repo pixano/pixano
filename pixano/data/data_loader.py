@@ -96,7 +96,7 @@ class DataLoader(ABC):
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
-            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType)),
         ]
         fields.extend(views)
         self.schema = pa.schema(fields)

@@ -66,7 +66,7 @@ class LegacyLoader(DataLoader):
             name,
             description,
             splits,
-            [pa.field(view, arrow_types.ImageType()) for view in views],
+            [pa.field(view, arrow_types.ImageType) for view in views],
         )
 
     def import_row(

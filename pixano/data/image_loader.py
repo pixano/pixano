@@ -50,7 +50,7 @@ class ImageLoader(DataLoader):
         """
 
         # Dataset views
-        views = [pa.field("image", arrow_types.ImageType())]
+        views = [pa.field("image", arrow_types.ImageType)]
 
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
