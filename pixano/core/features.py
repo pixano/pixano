@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 import pyarrow as pa
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.arrow_types import *
 
@@ -55,15 +55,18 @@ def convert_type(input_type: str) -> pa.DataType:
 
 
 class Features(BaseModel):
-    features_dict: dict[str, str]
+    _feat_dict: dict[str, str] = PrivateAttr()
 
-    def __init__(self, features_dict: dict[str, str]) -> None:
+    def __init__(self, **data) -> None:
         # Define public attributes through Pydantic BaseModel
-        super().__init__(features_dict=features_dict)
+        super().__init__()
+
+        # Define private attributes manually
+        self._feat_dict = {a: data[a] for a in data}
 
     @staticmethod
-    def from_string_dict(features_dict: dict[str, str]) -> "Features":
-        return Features(features_dict)
+    def from_string_dict(feat_dict: dict[str, str]) -> "Features":
+        return Features(feat_dict)
 
     def to_fields(self) -> list[pa.field]:
         """Convert dict containing python type to arrow fields
@@ -75,7 +78,7 @@ class Features(BaseModel):
             List[pa.fields]: Fields in arrow format
         """
         fields = []
-        for field_name, field_type in self.dict.items():
+        for field_name, field_type in self._feat_dict.items():
             # Convert the field type to PyArrow type
             field = pa.field(field_name, convert_type(field_type), nullable=True)
             fields.append(field)
