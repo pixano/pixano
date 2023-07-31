@@ -14,17 +14,17 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { AnnotationPanel } from "@pixano/annotator";
+import { LabelPanel } from "@pixano/canvas2d";
 import { utils } from "@pixano/core";
 
 const meta = {
-  title: "Applications/Annotator/AnnotationPanel",
-  component: AnnotationPanel,
+  title: "Components/Canvas2D/LabelPanel",
+  component: LabelPanel,
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
   },
-} satisfies Meta<AnnotationPanel>;
+} satisfies Meta<LabelPanel>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

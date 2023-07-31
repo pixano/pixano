@@ -20,13 +20,13 @@
   import {
     AnnotationToolbar,
     Canvas2D,
-    LabelToolbar,
+    CategoryToolbar,
+    LabelPanel,
     tools,
   } from "@pixano/canvas2d";
   import { ConfirmModal, utils, WarningModal } from "@pixano/core";
 
-  import { interactiveSegmenterModel } from "../stores";
-  import AnnotationPanel from "./AnnotationPanel.svelte";
+  import { interactiveSegmenterModel } from "./stores";
 
   import type {
     BBox,
@@ -375,7 +375,7 @@
     />
     <AnnotationToolbar {tools_lists} bind:selectedTool />
     {#if annotations}
-      <AnnotationPanel
+      <LabelPanel
         {selectedItem}
         {selectedDataset}
         {annotations}
@@ -392,7 +392,7 @@
       />
     {/if}
     {#if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
-      <LabelToolbar
+      <CategoryToolbar
         bind:currentAnnCatName
         bind:classes
         bind:selectedTool

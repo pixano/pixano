@@ -29,7 +29,7 @@
   } from "@pixano/core";
   import { mask_utils, npy, SAM } from "@pixano/models";
 
-  import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
+  import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {

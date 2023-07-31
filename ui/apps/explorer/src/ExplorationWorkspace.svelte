@@ -17,10 +17,8 @@
   // Imports
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
-  import { Canvas2D, tools } from "@pixano/canvas2d";
+  import { Canvas2D, LabelPanel, tools } from "@pixano/canvas2d";
   import { utils } from "@pixano/core";
-
-  import ExplorationPanel from "./ExplorationPanel.svelte";
 
   import type { ItemData, Mask, BBox, ItemLabels, Label } from "@pixano/core";
 
@@ -138,7 +136,7 @@
       {bboxes}
     />
     {#if annotations}
-      <ExplorationPanel
+      <LabelPanel
         {selectedItem}
         {annotations}
         {labelColors}
@@ -146,7 +144,7 @@
         bind:bboxOpacity
         bind:confidenceThreshold
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
-        on:labelOpacity={handleLabelFilters}
+        on:labelFilters={handleLabelFilters}
       />
     {/if}
   {/if}

@@ -15,6 +15,5 @@
 
 // Exports
 export { default as App } from "./App.svelte";
-export { default as DatasetExplorer } from "./lib/DatasetExplorer.svelte";
-export { default as ExplorationPanel } from "./lib/ExplorationPanel.svelte";
-export { default as ExplorationWorkspace } from "./lib/ExplorationWorkspace.svelte";
+export { default as DatasetExplorer } from "./DatasetExplorer.svelte";
+export { default as ExplorationWorkspace } from "./ExplorationWorkspace.svelte";
