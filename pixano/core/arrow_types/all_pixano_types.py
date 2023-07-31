@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Any, Type
 
 import pyarrow as pa
 from pydantic import BaseModel
@@ -34,11 +34,11 @@ class PixanoType(ABC, BaseModel):
 
         raise NotImplementedError
 
-    def to_dict(self) -> dict[str, any]:
+    def to_dict(self) -> dict[str, Any]:
         """Transform type to dict based on pyarrow struct
 
         Returns:
-            dict[str, any]: Dict with fields corresponding to struct
+            dict[str, Any]: Dict with fields corresponding to struct
         """
 
         def convert_value_as_dict(value):
@@ -59,12 +59,12 @@ class PixanoType(ABC, BaseModel):
         }
 
     @classmethod
-    def from_dict(cls: Type["PixanoType"], data: dict[str, any]) -> "PixanoType":
+    def from_dict(cls: Type["PixanoType"], data: dict[str, Any]) -> "PixanoType":
         """Instance type from dict
 
         Args:
             cls (Type[PixanoType]): Type to instance
-            data (dict[str, any]): Dict wih args corresponding to constructor
+            data (dict[str, Any]): Dict wih args corresponding to constructor
 
         Returns:
             PixanoType: New instance of type
