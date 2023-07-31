@@ -12,8 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from types import NoneType
-from typing import IO
+from typing import IO, Optional
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -43,9 +42,9 @@ class Image(PixanoType, BaseModel):
     """
 
     _uri: str = PrivateAttr()
-    _bytes: bytes | NoneType = PrivateAttr()
-    _preview_bytes: bytes | NoneType = PrivateAttr()
-    uri_prefix: str | NoneType
+    _bytes: Optional[bytes] = PrivateAttr()
+    _preview_bytes: Optional[bytes] = PrivateAttr()
+    uri_prefix: Optional[str]
 
     def __init__(
         self,

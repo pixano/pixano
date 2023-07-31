@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from types import NoneType
+from typing import Optional
 
 import pyarrow as pa
 from numpy import ndarray
@@ -36,9 +36,9 @@ from pixano.transforms.image import (
 
 class CompressedRLE(PixanoType, BaseModel):
     _size: list[float] = PrivateAttr()
-    _counts: bytes | NoneType = PrivateAttr()
+    _counts: Optional[bytes] = PrivateAttr()
 
-    def __init__(self, size: list[float], counts: bytes | NoneType):
+    def __init__(self, size: list[float], counts: bytes):
         # Define public attributes through Pydantic BaseModel
         super().__init__()
 
