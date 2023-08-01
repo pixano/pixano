@@ -201,53 +201,55 @@ class DataImporter(ABC):
                     desc=f"Computing {field.name} stats",
                     total=len(df.index),
                 ):
-                    try:
-                        area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
-                    except TypeError:
-                        area = None
-                    features.append(
+                    if object:
+                        try:
+                            area = 100 * (object.area / np.prod(object["mask"]["size"]))
+                        except TypeError:
+                            area = None
+                        features.append(
+                            {
+                                "id": object["id"],
+                                "view id": object["view_id"],
+                                f"{field.name} - is group of": object["is_group_of"],
+                                f"{field.name} - area (%)": area,
+                                f"{field.name} - category": object["category_name"],
+                                "split": split,
+                            }
+                        )
+                if features:
+                    features_df = pd.DataFrame.from_records(features).astype(
                         {
-                            "id": object["id"],
-                            "view id": object["view_id"],
-                            f"{field.name} - is group of": object["is_group_of"],
-                            f"{field.name} - area (%)": area,
-                            f"{field.name} - category": object["category_name"],
-                            "split": split,
+                            "id": "string",
+                            "view id": "string",
+                            f"{field.name} - is group of": bool,
+                            f"{field.name} - area (%)": float,
+                            f"{field.name} - category": "string",
+                            "split": "string",
                         }
                     )
-                features_df = pd.DataFrame.from_records(features).astype(
-                    {
-                        "id": "string",
-                        "view id": "string",
-                        f"{field.name} - is group of": bool,
-                        f"{field.name} - area (%)": float,
-                        f"{field.name} - category": "string",
-                        "split": "string",
-                    }
-                )
 
-                # Initialize stats
-                stats = [
-                    {
-                        "name": f"{field.name} - category",
-                        "type": "categorical",
-                        "histogram": [],
-                    },
-                    {
-                        "name": f"{field.name} - is group of",
-                        "type": "categorical",
-                        "histogram": [],
-                    },
-                    {
-                        "name": f"{field.name} - area (%)",
-                        "type": "numerical",
-                        "range": [0.0, 100.0],
-                        "histogram": [],
-                    },
-                ]
+                    # Initialize stats
+                    stats = [
+                        {
+                            "name": f"{field.name} - category",
+                            "type": "categorical",
+                            "histogram": [],
+                        },
+                        {
+                            "name": f"{field.name} - is group of",
+                            "type": "categorical",
+                            "histogram": [],
+                        },
+                        {
+                            "name": f"{field.name} - area (%)",
+                            "type": "numerical",
+                            "range": [0.0, 100.0],
+                            "histogram": [],
+                        },
+                    ]
 
-                # Save stats
-                self.save_stats(import_dir, stats, features_df)
+                    # Save stats
+                    self.save_stats(import_dir, stats, features_df)
 
     def image_stats(self, import_dir: Path):
         """Create dataset image statistics
