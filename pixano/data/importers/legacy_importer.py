@@ -24,7 +24,7 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 from pixano import types
-from pixano.transforms import denormalize, image_to_thumbnail
+from pixano.transforms import denormalize_coords, image_to_thumbnail
 
 from .data_importer import DataImporter
 
@@ -157,7 +157,7 @@ class LegacyImporter(DataImporter):
                             # we have normalized coords, we must denorm before making RLE
                             if not isnan(ann["geometry"]["vertices"][0]):
                                 if len(ann["geometry"]["vertices"]) > 4:
-                                    denorm = denormalize(
+                                    denorm = denormalize_coords(
                                         ann["geometry"]["vertices"],
                                         f["height"],
                                         f["width"],
@@ -178,7 +178,7 @@ class LegacyImporter(DataImporter):
                             # MultiPolygon
                             if not isnan(ann["geometry"]["mvertices"][0][0]):
                                 denorm = [
-                                    denormalize(poly, f["height"], f["width"])
+                                    denormalize_coords(poly, f["height"], f["width"])
                                     for poly in ann["geometry"]["mvertices"]
                                 ]
                                 rles = mask_api.frPyObjects(
@@ -191,7 +191,7 @@ class LegacyImporter(DataImporter):
                             and ann["geometry"]["vertices"]
                         ):  # BBox
                             if not isnan(ann["geometry"]["vertices"][0]):
-                                denorm = denormalize(
+                                denorm = denormalize_coords(
                                     [ann["geometry"]["vertices"]],
                                     f["height"],
                                     f["width"],

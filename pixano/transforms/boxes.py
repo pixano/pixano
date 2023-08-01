@@ -12,12 +12,11 @@
 # http://www.cecill.info
 
 import numpy as np
-from PIL import Image
 
 from .image import rle_to_mask, urle_to_rle
 
 
-def denormalize(coord: list[float], height: int, width: int) -> list[float]:
+def denormalize_coords(coord: list[float], height: int, width: int) -> list[float]:
     """Denormalize coordinates
 
     Args:
@@ -40,7 +39,7 @@ def denormalize(coord: list[float], height: int, width: int) -> list[float]:
     return denorm
 
 
-def normalize(coord: list[float], height: int, width: int) -> list[float]:
+def normalize_coords(coord: list[float], height: int, width: int) -> list[float]:
     """Normalize coordinates
 
     Args:

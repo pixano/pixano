@@ -14,10 +14,10 @@
 import re
 
 from .boxes import (
-    denormalize,
+    denormalize_coords,
     format_bbox,
     mask_to_bbox,
-    normalize,
+    normalize_coords,
     urle_to_bbox,
     xywh_to_xyxy,
     xyxy_to_xywh,
@@ -40,8 +40,8 @@ from .image import (
 from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
 
 __all__ = [
-    "normalize",
-    "denormalize",
+    "normalize_coords",
+    "denormalize_coords",
     "mask_to_bbox",
     "urle_to_bbox",
     "format_bbox",
@@ -65,7 +65,7 @@ __all__ = [
     "dota_ids",
     "voc_names",
     "natural_key",
-    "binary_to_url"
+    "binary_to_url",
 ]
 
 

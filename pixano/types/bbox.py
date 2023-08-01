@@ -19,8 +19,8 @@ from pydantic import BaseModel
 from .pixano_type import PixanoType, createPaType
 from pixano.transforms.boxes import (
     mask_to_bbox,
-    denormalize,
-    normalize,
+    denormalize_coords,
+    normalize_coords,
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
@@ -129,7 +129,7 @@ class BBox(PixanoType, BaseModel):
             width (int): Image width
         """
 
-        self.coords = normalize(self.coords, height, width)
+        self.coords = normalize_coords(self.coords, height, width)
         self.is_normalized = True
 
     def denormalize(self, height: int, width: int):
@@ -140,7 +140,7 @@ class BBox(PixanoType, BaseModel):
             width (int): Image width
         """
 
-        self.coords = denormalize(self.coords, height, width)
+        self.coords = denormalize_coords(self.coords, height, width)
         self.is_normalized = False
 
     @classmethod
