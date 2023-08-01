@@ -14,7 +14,7 @@
 from typing import Any
 
 import pyarrow as pa
-from numpy import np
+import numpy as np
 from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 
