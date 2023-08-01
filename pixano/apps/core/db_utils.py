@@ -28,7 +28,7 @@ from pixano.data import Dataset
 from pixano.transforms import natural_key
 
 
-class Feature(BaseModel):
+class ItemFeature(BaseModel):
     """Feature
 
     Attributes:
@@ -42,10 +42,10 @@ class Feature(BaseModel):
     value: Any
 
 
-Features = list[Feature]
+ItemFeatures = list[ItemFeature]
 
 
-def _create_features(item: list, schema: pa.schema) -> list[Feature]:
+def _create_features(item: list, schema: pa.schema) -> list[ItemFeature]:
     """Create features based on field types
 
     Args:
@@ -53,7 +53,7 @@ def _create_features(item: list, schema: pa.schema) -> list[Feature]:
         schema (pa.schema): Dataset schema
 
     Returns:
-        list[Feature]: Item as list of features
+        list[ItemFeature]: Item as list of features
     """
 
     features = []
@@ -63,16 +63,18 @@ def _create_features(item: list, schema: pa.schema) -> list[Feature]:
         # Number fields
         if types.is_number(field.type):
             features.append(
-                Feature(name=field.name, dtype="number", value=item[field.name])
+                ItemFeature(name=field.name, dtype="number", value=item[field.name])
             )
         # Image fields
         elif types.is_image_type(field.type):
             thumbnail = item[field.name].preview_url
-            features.append(Feature(name=field.name, dtype="image", value=thumbnail))
+            features.append(
+                ItemFeature(name=field.name, dtype="image", value=thumbnail)
+            )
         # String fields
         elif pa.types.is_string(field.type):
             features.append(
-                Feature(name=field.name, dtype="text", value=item[field.name])
+                ItemFeature(name=field.name, dtype="text", value=item[field.name])
             )
 
     return features
