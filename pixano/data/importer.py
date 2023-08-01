@@ -12,7 +12,6 @@
 # http://www.cecill.info
 
 import json
-from msilib import Feature
 import random
 import shutil
 from abc import ABC, abstractmethod
@@ -33,7 +32,6 @@ from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
 from pixano.core import DatasetInfo, arrow_types, Features
-
 
 
 class Importer(ABC):
@@ -75,7 +73,6 @@ class Importer(ABC):
         # Dataset schema
         self.schema = pa.schema(self.info.features.to_fields())
 
-
     def create_json(self, import_dir: Path, categories: list[dict] = []):
         """Create dataset spec.json
 
@@ -85,11 +82,10 @@ class Importer(ABC):
         """
 
         with tqdm(desc="Creating dataset info file", total=1) as progress:
-
             # Read dataset
             dataset = lance.dataset(import_dir / "db.lance")
             # Check number of rows in the created dataset
-            self.info.num_elements += dataset.count_rows()
+            self.info.num_elements = dataset.count_rows()
 
             # Add categories
             if categories:
@@ -97,7 +93,10 @@ class Importer(ABC):
 
             # Create spec.json
             with open(import_dir / "spec.json", "w") as f:
-                json.dump(vars(self.info), f)
+                dict_info = vars(self.info)
+                dict_info["features"] = vars(dict_info["features"])["dict"]
+
+                json.dump(dict_info, f)
             progress.update(1)
 
     def create_preview(self, import_dir: Path):
@@ -310,7 +309,8 @@ class Importer(ABC):
     @abstractmethod
     def import_row(
         self,
-        input_dirs: str | Path
+        input_dirs: dict[str, Path],
+        portable: bool = False,
     ) -> Iterator:
         """Process dataset row for import
 
@@ -328,7 +328,7 @@ class Importer(ABC):
         input_dirs: dict[str, Path],
         import_dir: Path,
         portable: bool = False,
-    ):
+    ) -> lance.LanceDataset:
         """Import dataset to Pixano format
 
         Args:
@@ -345,16 +345,16 @@ class Importer(ABC):
             if not any(source_path.iterdir()):
                 raise Exception(f"{source_path} is empty.")
 
-
-        # Iterate on splits
-        reader = pa.RecordBatchReader.from_batches(self.schema(), self.import_row(input_dirs))
-        ds = lance.write_dataset(reader, import_dir / "db.lance", str="overwrite")
+        reader = pa.RecordBatchReader.from_batches(
+            self.schema, self.import_row(input_dirs)
+        )
+        ds = lance.write_dataset(reader, import_dir / "db.lance", mode="overwrite")
 
         # Create spec.json
         self.create_json(import_dir)
 
         # Create preview.png
-        self.create_preview(import_dir)
+        # self.create_preview(import_dir)
 
         # Move media directories if portable
         if portable:
@@ -367,4 +367,6 @@ class Importer(ABC):
                     )
 
         # Create stats
-        self.create_stats(import_dir)
+        # self.create_stats(import_dir)
+
+        return ds

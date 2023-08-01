@@ -1,13 +1,8 @@
 from typing import Iterator
 import lance
-
 import bop_toolkit_lib.dataset.bop_webdataset as btk
-
 import webdataset as wds
-
 import json
-import numpy as np
-import time
 from pathlib import Path
 from PIL import Image as pilImage
 import pyarrow as pa
@@ -27,9 +22,8 @@ class BopWDS_Importer(Importer):
         self,
         shard_split: dict[str, list[str]],
     ):
-        
         self.shard_split = shard_split
-        
+
         self.features_dict = {
             "id": "str",
             "rgb": "Image",
@@ -49,10 +43,7 @@ class BopWDS_Importer(Importer):
     def features(self) -> Features:
         return Features.from_string_dict(self.features_dict)
 
-    def import_row(
-        self,
-        input_dirs: str | Path
-    ) -> Iterator:
+    def import_row(self, input_dirs: str | Path) -> Iterator:
         # split dataset
         for split, shard_list in self.shard_split.items():
             _wds_pipeline = wds.DataPipeline(
@@ -87,6 +78,7 @@ class BopWDS_Importer(Importer):
                     im_pil = image_to_binary(im_pil, format="JPEG")
 
                     preview = image_to_thumbnail(im_pil)
+                    
                     rgb = Image(f"", im_pil, preview)
                     rgbs = ImageType.Array.from_list([rgb])
 
@@ -174,7 +166,7 @@ class BopWDS_Importer(Importer):
                             gt_infos_arr,
                             pa.array([split]),
                         ],
-                        fields=self.features.to_fields()
+                        fields=self.features.to_fields(),
                     )
 
                     yield pa.RecordBatch.from_struct_array(struct_arr)

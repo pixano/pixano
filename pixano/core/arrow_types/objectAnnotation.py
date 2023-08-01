@@ -44,7 +44,6 @@ class ObjectAnnotation(PixanoType, BaseModel):
         identity (str, optional): Identity
     """
 
-
     id: str
     view_id: Optional[str] = None
     bbox: Optional[BBox] = BBox.from_xywh([0, 0, 0, 0])
@@ -53,9 +52,7 @@ class ObjectAnnotation(PixanoType, BaseModel):
     is_group_of: Optional[bool] = None
     is_difficult: Optional[bool] = None
     is_truncated: Optional[bool] = None
-    mask: Optional[CompressedRLE] = (
-        CompressedRLE.from_dict({"size": [0, 0], "counts": b""}),
-    )
+    mask: Optional[CompressedRLE] = CompressedRLE([0, 0], b"")
     mask_source: Optional[str] = None
     area: Optional[float] = None
     pose: Optional[Pose] = Pose([0.0] * 9, [0.0] * 3)
@@ -64,7 +61,7 @@ class ObjectAnnotation(PixanoType, BaseModel):
     identity: Optional[str] = None
 
     class Config:
-        arbitrary_types_allowed=True
+        arbitrary_types_allowed = True
 
     @classmethod
     def to_struct(cls) -> pa.StructType:
