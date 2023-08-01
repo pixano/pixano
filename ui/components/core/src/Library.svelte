@@ -33,7 +33,7 @@
 </script>
 
 {#if datasets.length != 0}
-  <div class="mx-auto px-8">
+  <div class="mx-auto px-8 dark:bg-zinc-800">
     <div
       class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
     >
@@ -48,7 +48,7 @@
   </div>
 {:else}
   <div
-    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
+    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300 dark:bg-zinc-800"
   >
     <span style="text-align: center;">
       No datasets found... <br /> <br />
