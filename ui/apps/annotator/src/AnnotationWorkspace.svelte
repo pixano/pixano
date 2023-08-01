@@ -85,7 +85,7 @@
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
       pointMinusTool,
-    ])
+    ]),
   );
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
@@ -145,7 +145,7 @@
       classes = newClasses;
     } else {
       currentAnnCatId = classes.find(
-        (obj) => obj.name === currentAnnCatName
+        (obj) => obj.name === currentAnnCatName,
       ).id;
     }
 
@@ -283,7 +283,7 @@
   function handleLabelVisibility(label: Label) {
     // Try and find a mask
     const mask = masks.find(
-      (mask) => mask.id === label.id && mask.viewId === label.viewId
+      (mask) => mask.id === label.id && mask.viewId === label.viewId,
     );
     if (mask) {
       mask.visible = label.visible;
@@ -292,7 +292,7 @@
 
     // Try and find a bbox
     const bbox = bboxes.find(
-      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
+      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId,
     );
     if (bbox) {
       bbox.visible = label.visible;
@@ -377,17 +377,17 @@
     {#if annotations}
       <LabelPanel
         {selectedItem}
-        {selectedDataset}
         {annotations}
-        {currentPage}
         {labelColors}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold
-        on:selectItem={(event) => handleChangeSelectedItem(event.detail)}
-        on:deleteLabel={(event) => handleDeleteLabel(event.detail)}
+        {selectedDataset}
+        {currentPage}
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
         on:labelFilters={handleLabelFilters}
+        on:deleteLabel={(event) => handleDeleteLabel(event.detail)}
+        on:selectItem={(event) => handleChangeSelectedItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}

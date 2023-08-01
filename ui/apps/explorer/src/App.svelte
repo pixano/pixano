@@ -51,7 +51,7 @@
     console.log(
       "App.handleGetDatasets - api.getDatasetsList in",
       Date.now() - start,
-      "ms"
+      "ms",
     );
   }
 
@@ -89,7 +89,7 @@
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
-      "ms"
+      "ms",
     );
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
@@ -194,7 +194,7 @@
           } else {
             console.log(
               "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id
+              obj.id,
             );
             continue;
           }

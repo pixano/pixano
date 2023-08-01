@@ -20,7 +20,7 @@
   import { Canvas2D, LabelPanel, tools } from "@pixano/canvas2d";
   import { utils } from "@pixano/core";
 
-  import type { ItemData, Mask, BBox, ItemLabels, Label } from "@pixano/core";
+  import type { BBox, ItemData, Mask, ItemLabels, Label } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
@@ -47,7 +47,7 @@
   function handleLabelVisibility(label: Label) {
     // Try and find a mask
     const mask = masks.find(
-      (mask) => mask.id === label.id && mask.viewId === label.viewId
+      (mask) => mask.id === label.id && mask.viewId === label.viewId,
     );
     if (mask) {
       mask.visible = label.visible;
@@ -56,7 +56,7 @@
 
     // Try and find a bbox
     const bbox = bboxes.find(
-      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
+      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId,
     );
     if (bbox) {
       bbox.visible = label.visible;

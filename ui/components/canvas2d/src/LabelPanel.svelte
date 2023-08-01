@@ -32,13 +32,14 @@
 
   // Exports
   export let selectedItem: ItemData;
-  export let selectedDataset: Dataset = null;
   export let annotations: ItemLabels;
-  export let currentPage: number = null;
   export let labelColors;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;
+  // Optional dataset navigation
+  export let selectedDataset: Dataset = null;
+  export let currentPage: number = 1;
 
   const dispatch = createEventDispatcher();
 
@@ -59,7 +60,7 @@
     view: ViewLabels,
     category: CategoryLabels,
     label: Label,
-    visibility: boolean
+    visibility: boolean,
   ) {
     // Toggle visibility
     label.visible = visibility;
@@ -80,7 +81,7 @@
     source: SourceLabels,
     view: ViewLabels,
     category: CategoryLabels,
-    visibility: boolean
+    visibility: boolean,
   ) {
     // Toggle visibility
     category.visible = visibility;
@@ -101,7 +102,7 @@
   function handleViewVisibility(
     source: SourceLabels,
     view: ViewLabels,
-    visibility: boolean
+    visibility: boolean,
   ) {
     // Toggle visibility
     view.visible = visibility;
@@ -410,7 +411,7 @@
                         source,
                         view,
                         category,
-                        !category.visible
+                        !category.visible,
                       )}
                   >
                     <svg
@@ -481,7 +482,7 @@
                             view,
                             category,
                             label,
-                            !label.visible
+                            !label.visible,
                           )}
                       >
                         <svg
