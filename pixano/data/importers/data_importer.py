@@ -89,9 +89,7 @@ class DataImporter(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features=types.Features(
-                {"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"}
-            ),
+            features={"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"},
         )
         self.splits = splits
 
