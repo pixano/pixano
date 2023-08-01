@@ -1,28 +1,33 @@
-from typing import Iterator
-import lance
-import bop_toolkit_lib.dataset.bop_webdataset as btk
-import webdataset as wds
 import json
+import os
+import sys
 from pathlib import Path
-from PIL import Image as pilImage
+from typing import Iterator
+
+sys.path.append("/home/maximilien/work/lib/bop_toolkit")
+
+import bop_toolkit_lib.dataset.bop_webdataset as btk
+import lance
 import pyarrow as pa
+import webdataset as wds
+from lance import LanceDataset
+from PIL import Image as pilImage
 
 from pixano.core import *
-from pixano.data.importer import Importer
 from pixano.core.arrow_types import *
-
-
-from lance import LanceDataset
 from pixano.core.dataset import DatasetInfo
-from pixano.transforms.image import image_to_thumbnail, image_to_binary
+from pixano.data.importer import Importer
+from pixano.transforms.image import image_to_binary, image_to_thumbnail
 
 
 class BopWDS_Importer(Importer):
     def __init__(
         self,
-        shard_split: dict[str, list[str]],
+        name: str,
+        description: str,
+        split: list[str],
     ):
-        self.shard_split = shard_split
+        self._shard_split = split
 
         self.features_dict = {
             "id": "str",
@@ -30,22 +35,33 @@ class BopWDS_Importer(Importer):
             "depth": "DepthImage",
             "camera": "Camera",
             "category_id": "[int]",
-            "objects_id": "[str]",
-            "masks": "[CompressedRLE]",
+            #"objects_id": "[str]",
+            #"masks": "[CompressedRLE]",
             "gt": "[Pose]",
             "gt_info": "[GtInfo]",
             "split": "str",
         }
 
-        super().__init__("BopWDS", "Bop dataset as webdataset format", self.features)
+        super().__init__(name, description, self.features)
 
     @property
     def features(self) -> Features:
         return Features.from_string_dict(self.features_dict)
 
-    def import_row(self, input_dirs: str | Path) -> Iterator:
+    def shard_list(self, input_dir:Path) -> dict[str, list[str]]:
+        return {
+            split: [
+                os.path.join(input_dir, split, shard)
+                for shard in os.listdir(input_dir / split)
+                if shard.endswith(".tar")
+            ]
+            for split in self._shard_split
+        }
+
+    def import_row(self, input_dirs: dict) -> Iterator:
+        shard_split_dict = self.shard_list(input_dirs.values())
         # split dataset
-        for split, shard_list in self.shard_split.items():
+        for split, shard_list in shard_split_dict.items():
             _wds_pipeline = wds.DataPipeline(
                 wds.SimpleShardList(shard_list), wds.tarfile_to_samples()
             )
@@ -70,7 +86,7 @@ class BopWDS_Importer(Importer):
                     id = row["__key__"]
 
                     scene, image = id.split("_")
-                    coco_json_path = f"{input_dirs}/{split}/{scene}/scene_gt_coco.json"
+                    #coco_json_path = f"{input_dirs}/{split}/{scene}/scene_gt_coco.json"
 
                     # rgb
                     im_pil = pilImage.fromarray(sample["im_rgb"])
@@ -78,7 +94,7 @@ class BopWDS_Importer(Importer):
                     im_pil = image_to_binary(im_pil, format="JPEG")
 
                     preview = image_to_thumbnail(im_pil)
-                    
+
                     rgb = Image(f"", im_pil, preview)
                     rgbs = ImageType.Array.from_list([rgb])
 
@@ -130,7 +146,7 @@ class BopWDS_Importer(Importer):
                         for i in range(nb_object)
                     ]
                     gt_infos_arr = GtInfoType.Array.from_lists([gt_infos])
-
+                    """
                     # objects_ids and masks
                     with open(coco_json_path, "r") as f:
                         data = json.load(f)
@@ -151,6 +167,7 @@ class BopWDS_Importer(Importer):
 
                     masks_arr = CompressedRLEType.Array.from_lists([masks])
                     object_ids_arr = pa.array([object_ids])
+                    """
 
                     # Struct array
                     struct_arr = pa.StructArray.from_arrays(
@@ -160,8 +177,8 @@ class BopWDS_Importer(Importer):
                             depths,
                             cameras,
                             category_id_arr,
-                            object_ids_arr,
-                            masks_arr,
+                            #object_ids_arr,
+                            #masks_arr,
                             gt_arr,
                             gt_infos_arr,
                             pa.array([split]),
