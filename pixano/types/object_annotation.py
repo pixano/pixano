@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from .pixano_type import PixanoType, createPaType
 
 from .bbox import BBox, BBoxType
-from .compressedRLE import CompressedRLE, CompressedRLEType
+from .compressed_rle import CompressedRLE, CompressedRLEType
 from .pose import Pose, PoseType
 
 

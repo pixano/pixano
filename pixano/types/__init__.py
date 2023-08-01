@@ -13,7 +13,7 @@
 
 from .bbox import BBox, BBoxType
 from .camera import Camera, CameraType
-from .compressedRLE import CompressedRLE, CompressedRLEType
+from .compressed_rle import CompressedRLE, CompressedRLEType
 from .depth_image import DepthImage, DepthImageType
 from .embedding import Embedding, EmbeddingType
 from .gt_info import GtInfo, GtInfoType

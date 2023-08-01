@@ -19,7 +19,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from .bbox import BBox
-from .compressedRLE import CompressedRLE
+from .compressed_rle import CompressedRLE
 from .object_annotation import (
     ObjectAnnotation,
     ObjectAnnotationType,
