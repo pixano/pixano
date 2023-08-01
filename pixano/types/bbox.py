@@ -17,7 +17,13 @@ from PIL import Image
 from pydantic import BaseModel
 
 from .pixano_type import PixanoType, createPaType
-from pixano.transforms.boxes import mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
+from pixano.transforms.boxes import (
+    mask_to_bbox,
+    denormalize,
+    normalize,
+    xywh_to_xyxy,
+    xyxy_to_xywh,
+)
 
 # ------------------------------------------------
 #             Python type
@@ -124,6 +130,18 @@ class BBox(PixanoType, BaseModel):
         """
 
         self.coords = normalize(self.coords, height, width)
+        self.is_normalized = True
+
+    def denormalize(self, height: int, width: int):
+        """Normalize coordinates to image size
+
+        Args:
+            height (int): Image height
+            width (int): Image width
+        """
+
+        self.coords = denormalize(self.coords, height, width)
+        self.is_normalized = False
 
     @classmethod
     def to_struct(cls) -> pa.StructType:
