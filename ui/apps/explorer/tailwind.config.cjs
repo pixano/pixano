@@ -4,6 +4,7 @@ module.exports = {
     "./index.html",
     "./src/**/*.{svelte,js,ts}",
     "../../../ui/components/core/src/**/*.{svelte,js,ts}",
+    "../../../ui/components/canvas2d/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
   theme: {
