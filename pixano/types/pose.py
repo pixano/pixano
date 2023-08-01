@@ -16,17 +16,13 @@ from pydantic import BaseModel, PrivateAttr
 
 from .pixano_type import PixanoType, createPaType
 
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
-
 
 class Pose(PixanoType, BaseModel):
     """Pose type using orientation and translation matrices
 
     Attributes:
         _cam_R_m2c (list[float]): 3*3 orientation matrix
-        _cam_t_m2c (list[float]): 1*3 translation matrix
+        _cam_t_m2c (list[float]): 3*1 translation matrix
     """
 
     _cam_R_m2c: list[float] = PrivateAttr()
@@ -37,7 +33,7 @@ class Pose(PixanoType, BaseModel):
 
         Args:
             cam_R_m2c (list[float]): 3*3 orientation matrix
-            cam_t_m2c (list[float]): 1*3 translation matrix
+            cam_t_m2c (list[float]): 3*1 translation matrix
         """
 
         # Define public attributes through Pydantic BaseModel
@@ -49,7 +45,7 @@ class Pose(PixanoType, BaseModel):
 
     @property
     def cam_R_m2c(self) -> list[float]:
-        """Returns pose orientation matrix
+        """Return Pose orientation matrix
 
         Returns:
             list[float]: 3*3 orientation matrix
@@ -59,7 +55,7 @@ class Pose(PixanoType, BaseModel):
 
     @property
     def cam_t_m2c(self) -> list[float]:
-        """Returns pose translation matrix
+        """Return Pose translation matrix
 
         Returns:
             list[float]: 1*3 translation matrix
@@ -68,7 +64,13 @@ class Pose(PixanoType, BaseModel):
         return self._cam_t_m2c
 
     @classmethod
-    def to_struct(cls):
+    def to_struct(cls) -> pa.StructType:
+        """Return Pose type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),

@@ -63,7 +63,7 @@ def normalize_coords(coord: list[float], height: int, width: int) -> list[float]
 
 
 def mask_to_bbox(mask: np.ndarray) -> list[float]:
-    """Returns the smallest bounding box containing all the mask pixels
+    """Return the smallest bounding box containing all the mask pixels
 
     Args:
         mask (np.ndarray): Mask as NumPy Array
@@ -91,7 +91,7 @@ def mask_to_bbox(mask: np.ndarray) -> list[float]:
 
 
 def urle_to_bbox(urle: dict) -> list[float]:
-    """Returns the smallest bounding box containing all the mask pixels
+    """Return the smallest bounding box containing all the mask pixels
 
     Args:
         urle (dict): Mask as uncompressed RLE

@@ -19,6 +19,17 @@ from .bbox import BBox, BBoxType
 
 
 class GtInfo(PixanoType, BaseModel):
+    """GtInfo type
+
+    Attributes:
+        bbox_obj (BBox): bbox_obj
+        bbox_visib (BBox): bbox_visib
+        px_count_all (int): px_count_all
+        px_count_valid (int): px_count_valid
+        px_count_visib (int): px_count_visib
+        visib_fract (float): visib_fract
+    """
+
     bbox_obj: BBox
     bbox_visib: BBox
     px_count_all: int
@@ -30,11 +41,22 @@ class GtInfo(PixanoType, BaseModel):
         self,
         bbox_obj: BBox,
         bbox_visib: BBox,
-        px_count_all,
-        px_count_valid,
-        px_count_visib,
-        visib_fract,
+        px_count_all: int,
+        px_count_valid: int,
+        px_count_visib: int,
+        visib_fract: float,
     ):
+        """Initialize GtInfo
+
+        Args:
+            bbox_obj (BBox): bbox_obj
+            bbox_visib (BBox): bbox_visib
+            px_count_all (int): px_count_all
+            px_count_valid (int): px_count_valid
+            px_count_visib (int): px_count_visib
+            visib_fract (float): visib_fract
+        """
+
         # Define public attributes through Pydantic BaseModel
         super().__init__(
             bbox_obj=bbox_obj,
@@ -46,7 +68,13 @@ class GtInfo(PixanoType, BaseModel):
         )
 
     @staticmethod
-    def to_struct():
+    def to_struct() -> pa.StructType:
+        """Return GtInfo type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("bbox_obj", BBoxType),

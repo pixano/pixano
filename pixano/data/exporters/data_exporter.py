@@ -57,7 +57,7 @@ class DataExporter(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features={"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"},
+            fields={"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"},
         )
         self.splits = splits
 

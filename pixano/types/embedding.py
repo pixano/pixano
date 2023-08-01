@@ -16,15 +16,23 @@ from pydantic import BaseModel, PrivateAttr
 
 from .pixano_type import PixanoType, createPaType
 
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
-
 
 class Embedding(PixanoType, BaseModel):
+    """Embedding type
+
+    Attributes:
+        _bytes (bytes): Embedding as bytes
+    """
+
     _bytes: bytes = PrivateAttr()
 
     def __init__(self, bytes: bytes):
+        """Initialize Embedding
+
+        Args:
+            bytes (bytes): Embedding as bytes
+        """
+
         # Define public attributes through Pydantic BaseModel
         super().__init__()
 
@@ -32,11 +40,23 @@ class Embedding(PixanoType, BaseModel):
         self._bytes = bytes
 
     @property
-    def bytes(self):
+    def bytes(self) -> bytes:
+        """Return Embedding as bytes
+
+        Returns:
+            bytes: Embedding as bytes
+        """
+
         return self._bytes
 
     @classmethod
-    def to_struct(cls):
+    def to_struct(cls) -> pa.StructType:
+        """Return Embedding type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct([pa.field("bytes", pa.binary())])
 
 

@@ -22,16 +22,18 @@ from pydantic import BaseModel, PrivateAttr
 
 from .pixano_type import PixanoType, createPaType
 
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
-
 
 class DepthImage(PixanoType, BaseModel):
-    """DepthImage stored as uint16 images"""
+    """Depth image type
 
-    _bytes: Optional[np.ndarray] = PrivateAttr()
-    _depth_map: Optional[bytes] = PrivateAttr()
+    Attributes:
+        _depth_map (np.ndarray, optional): Depth image as NumPy array
+        _bytes (bytes, optional): Depth image as bytes
+        _shape (list[int], optional): Depth image shape
+    """
+
+    _depth_map: Optional[np.ndarray] = PrivateAttr()
+    _bytes: Optional[bytes] = PrivateAttr()
     _shape: Optional[list[int]] = PrivateAttr()
 
     def __init__(
@@ -40,101 +42,134 @@ class DepthImage(PixanoType, BaseModel):
         bytes: bytes = None,
         shape: list[int] = None,
     ):
+        """Initialize Depth image
+
+        Args:
+            depth_map (np.ndarray, optional): Depth image as NumPy array. Defaults to None.
+            bytes (bytes, optional): Depth image as bytes. Defaults to None.
+            shape (list[int], optional): Depth image shape. Defaults to None.
+        """
+
         # Define public attributes through Pydantic BaseModel
         super().__init__()
 
         # Define private attributes manually
-        self._bytes = bytes
         self._depth_map = depth_map
+        self._bytes = bytes
         self._shape = shape
 
     @property
-    def shape(self) -> list[int] | np.ndarray:
+    def shape(self) -> list[int]:
+        """Return Depth image shape
+
+        Returns:
+            list[int]: Depth image shape
+        """
+
         return self._shape
 
     @property
     def bytes(self) -> bytes:
+        """Return Depth image as bytes
+
+        Returns:
+            bytes: Depth image as bytes
+        """
+
         if self._bytes is not None:
             return self._bytes
         return self._depth_map.tobytes()
 
     @property
     def depth_map(self) -> np.ndarray:
+        """Returns Depth image as NumPy array
+
+        Returns:
+            np.ndarray: Depth image as NumPy array
+        """
+
         if self._depth_map is not None:
             return self._depth_map
         return np.frombuffer(self._bytes, dtype=np.float32).reshape(self._shape)
 
     @staticmethod
     def load_npy(path: str) -> "DepthImage":
-        """Load depth image from npy file
+        """Create depth image from .npy file
 
         Args:
-            path (str): path of file .npy. The file must contains an array of depth image.
+            path (str): Path to .npy file containing depth image as NumPy Array.
 
         Returns:
-            DepthImage: Instance of DepthImage
+            DepthImage: Depth image
         """
+
         map = np.load(path)
         return DepthImage(depth_map=map, shape=map.shape)
 
     @staticmethod
     def load(path: str) -> "DepthImage":
-        """Load depth image (16 bit) to instance DepthImage.
+        """Create depth image from 16-bit .png file
 
         Args:
-            path (str): path of the file to load. Work with .png
+            path (str): Path of .png file of depth image
 
         Returns:
-            DepthImage: instance of DepthImage
+            DepthImage: Depth image
         """
+
         map = imageio.imread(path).astype(np.uint16)
         return DepthImage(depth_map=map, shape=map.shape)
 
     def save(self, path):
-        """Save depth image in png format.
+        """Save depth image to .png file.
 
         Args:
-            path (str): name of file
+            path (str): Path to .png file to save
         """
+
         depth_image = self.depth_map.astype(np.uint16)
         imageio.imwrite(path, depth_image)
 
     def open(self) -> IO:
         return io.BytesIO(self.bytes)
 
-    def to_gray_levels(
+    def to_grayscale(
         self,
     ) -> "DepthImage":
-        """Transform image to gray levels in 8 bit.
+        """Transform Depth image to 8-bit grayscale depth image
 
         Returns:
-            DepthImage: new DepthImage in 8 bit
+            DepthImage: 8-bit grayscale depth image
         """
 
         depth = self.depth_map
-
         min, max = depth.min(), depth.max()
-
         depth_n: np.ndarray = ((depth - min) / (max - min)) * 255
-
         return DepthImage(depth_map=depth_n.astype(np.uint8), shape=depth.shape)
 
+    def display(self):
+        """Display Depth image with matplotlib"""
+
+        plt.imshow(self.depth_map.astype(np.int8), cmap="gray", vmin=0, vmax=255)
+        plt.axis("off")
+        if self._shape is not None:
+            plt.figure(figsize=self._shape)
+        plt.show()
+
     @classmethod
-    def to_struct(cls):
+    def to_struct(cls) -> pa.StructType:
+        """Return DepthImage type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("bytes", pa.binary()),
                 pa.field("shape", pa.list_(pa.int32(), list_size=2)),
             ]
         )
-
-    def display(self):
-        """display image as plt.figure object"""
-        plt.imshow(self.depth_map.astype(np.int8), cmap="gray", vmin=0, vmax=255)
-        plt.axis("off")
-        if self._shape is not None:
-            plt.figure(figsize=self._shape)
-        plt.show()
 
 
 DepthImageType = createPaType(DepthImage.to_struct(), "DepthImage", DepthImage)

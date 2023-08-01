@@ -21,7 +21,7 @@ from .dataset import Dataset
 TARGET_INFO = {
     "name": "My dataset",
     "description": "Dataset from a great AI project",
-    "features": [{"feat1": "int32"}, {"feat2": "image"}],
+    "fields": [{"field1": "int32"}, {"field2": "image"}],
 }
 
 

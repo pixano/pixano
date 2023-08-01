@@ -72,8 +72,8 @@ class DepthImageTestCase(unittest.TestCase):
             loaded_bytes = io_obj.read()
             self.assertEqual(loaded_bytes, self.bytes)
 
-    def test_to_gray_levels(self):
-        gray_image = self.depth_image.to_gray_levels()
+    def test_to_grayscale(self):
+        gray_image = self.depth_image.to_grayscale()
         self.assertIsInstance(gray_image, DepthImage)
         self.assertEqual(gray_image.depth_map.dtype, np.uint8)
         self.assertEqual(gray_image.depth_map.tolist(), [[0, 51, 102], [153, 204, 255]])

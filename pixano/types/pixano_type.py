@@ -21,59 +21,72 @@ from .utils import convert_field
 
 
 class PixanoType(ABC, BaseModel):
-    @abstractmethod
-    def to_struct(cls) -> pa.StructType:
-        """Abstract method who must return the pyarrow struct corresponding to pixano type
-
-        Raises:
-            NotImplementedError:
-
-        Returns:
-            pa.StructType: Struct corresponding to type
-        """
-
-        raise NotImplementedError
+    """Base class for all Pixano custom types"""
 
     def to_dict(self) -> dict[str, Any]:
-        """Transform type to dict based on pyarrow struct
+        """Return custom type as dict based on corresponding PyArrow Struct
 
         Returns:
-            dict[str, Any]: Dict with fields corresponding to struct
+            dict[str, Any]: Custom type as dict
         """
 
-        def convert_value_as_dict(value):
+        def _convert_value_as_dict(value):
             """Recursively convert value to dict if possible"""
+
             if isinstance(value, PixanoType):
                 return value.to_dict()
             elif isinstance(value, dict):
-                return {k: convert_value_as_dict(v) for k, v in value.items()}
+                return {k: _convert_value_as_dict(v) for k, v in value.items()}
             elif isinstance(value, (list, tuple)):
-                return [convert_value_as_dict(item) for item in value]
+                return [_convert_value_as_dict(item) for item in value]
             else:
                 return value
 
         struct_fields = self.to_struct()
         return {
-            field.name: convert_value_as_dict(getattr(self, field.name))
+            field.name: _convert_value_as_dict(getattr(self, field.name))
             for field in struct_fields
         }
 
     @classmethod
     def from_dict(cls: Type["PixanoType"], data: dict[str, Any]) -> "PixanoType":
-        """Instance type from dict
+        """Instance custom type from dict
 
         Args:
-            cls (Type[PixanoType]): Type to instance
-            data (dict[str, Any]): Dict wih args corresponding to constructor
+            cls (Type[PixanoType]): Pixano custom type to instance
+            data (dict[str, Any]): Data to instance from
 
         Returns:
-            PixanoType: New instance of type
+            PixanoType: New instance of Pixano custom type
         """
 
         return cls(**data)
 
+    @abstractmethod
+    def to_struct(cls) -> pa.StructType:
+        """Return custom type as PyArrow Struct
 
-def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.DataType:
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
+        pass
+
+
+def createPaType(
+    struct_type: pa.StructType, name: str, pyType: Type
+) -> pa.ExtensionType:
+    """Create PyArrow ExtensionType for Pixano custom type
+
+    Args:
+        struct_type (pa.StructType): Pixano custom type as PyArrow Struct
+        name (str): Pixano custom type name
+        pyType (Type): Pixano custom type Python type
+
+    Returns:
+        pa.ExtensionType: PyArrow ExtensionType
+    """
+
     class CustomExtensionType(pa.ExtensionType):
         def __init__(self, struct_type: pa.StructType, name: str):
             super().__init__(struct_type, name)
@@ -96,14 +109,14 @@ def createPaType(struct_type: pa.StructType, name: str, pyType: Type) -> pa.Data
 
         class Scalar(pa.ExtensionScalar):
             def as_py(self):
-                def as_py_dict(pa_dict: dict) -> dict:
-                    """Recusively convert dict with py arrow object to py dict
+                def as_py_dict(pa_dict: dict[str, Any]) -> dict[str, Any]:
+                    """Recusively convert dictionary of PyArrow objects to dictionary of Python objects
 
                     Args:
-                        pa_dict (dict): dict containing py arrow object
+                        pa_dict (dict[str, Any]): Dictionary of PyArrow objects
 
                     Returns:
-                        dict: dict with only scalar python types
+                        dict[str, Any]: Dictionary of Python objects
                     """
 
                     py_dict = {}

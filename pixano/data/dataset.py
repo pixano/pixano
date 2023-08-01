@@ -18,7 +18,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from pydantic import BaseModel
 
-from pixano.types import Features
+from pixano.types import Fields
 
 
 class DatasetInfo(BaseModel):
@@ -29,7 +29,7 @@ class DatasetInfo(BaseModel):
         name (str): Dataset name
         description (str): Dataset description
         num_elements (int): Number of elements in dataset
-        features (Features, optional): Features of dataset
+        fields (Fields, optional): Dataset fields
         preview (str, optional): Dataset preview
         categories (list[dict], optional): Dataset categories
         model_id (str, optional): Model ID
@@ -41,7 +41,7 @@ class DatasetInfo(BaseModel):
     id: str
     name: str
     description: str
-    features: Optional[Features]
+    fields: Optional[Fields]
     num_elements: Optional[int]
     preview: Optional[str]
     categories: Optional[list[dict]]
@@ -55,8 +55,8 @@ class DatasetInfo(BaseModel):
 
     def to_dict(self) -> dict[str, Any]:
         def convert_value_as_dict(value):
-            if isinstance(value, Features):
-                return value.features_dict
+            if isinstance(value, Fields):
+                return value._field_dict
             else:
                 return value
 

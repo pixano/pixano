@@ -50,6 +50,7 @@ def create_app(settings: Settings) -> FastAPI:
     Returns:
         FastAPI: Explorer app
     """
+
     app = FastAPI()
 
     app.add_middleware(

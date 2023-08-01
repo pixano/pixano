@@ -122,6 +122,16 @@ nav:
     - "labels": code/utils/labels.md
     - "python": code/utils/python.md
   
-  - "types": code/types.md
+  - "types":
+    - "PixanoType": code/types/PixanoType.md
+    - "BBox": code/types/BBox.md
+    - "Camera": code/types/Camera.md
+    - "CompressedRLE": code/types/CompressedRLE.md
+    - "DepthImage": code/types/DepthImage.md
+    - "Embedding": code/types/Embedding.md
+    - "Image": code/types/Image.md
+    - "ObjectAnnotation": code/types/ObjectAnnotation.md
+    - "Pose": code/types/Pose.md
+    - "utils": code/types/utils.md
 
 - "Pixano Inference": https://pixano.github.io/pixano-inference/

@@ -26,10 +26,6 @@ from pydantic import BaseModel, PrivateAttr
 from .pixano_type import PixanoType, createPaType
 from pixano.utils import binary_to_url
 
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
-
 
 class Image(PixanoType, BaseModel):
     """Image type using URI or bytes
@@ -53,7 +49,7 @@ class Image(PixanoType, BaseModel):
         preview_bytes: bytes = None,
         uri_prefix: str = None,
     ):
-        """Initialize image from URI or bytes
+        """Initialize Image
 
         Attributes:
             uri (str): Image URI
@@ -72,7 +68,7 @@ class Image(PixanoType, BaseModel):
 
     @property
     def bytes(self) -> bytes:
-        """Return image bytes
+        """Return Image bytes
 
         Returns:
             bytes: Image bytes
@@ -88,10 +84,10 @@ class Image(PixanoType, BaseModel):
 
     @property
     def preview_bytes(self) -> bytes:
-        """Return image preview bytes
+        """Return Image preview bytes
 
         Returns:
-            bytes: Image bytes
+            bytes: Image preview bytes
         """
 
         return self._preview_bytes
@@ -150,6 +146,7 @@ class Image(PixanoType, BaseModel):
         Returns:
             list[int]: Image size
         """
+
         return self.as_pillow().size
 
     def open(self) -> IO:
@@ -195,6 +192,12 @@ class Image(PixanoType, BaseModel):
 
     @classmethod
     def to_struct(cls) -> pa.StructType:
+        """Return Image type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("uri", pa.utf8()),

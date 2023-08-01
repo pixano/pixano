@@ -11,52 +11,50 @@
 #
 # http://www.cecill.info
 
-import pyarrow as pa
-
-from .pixano_type import PixanoType, createPaType
 from .bbox import BBox, BBoxType
 from .camera import Camera, CameraType
 from .compressedRLE import CompressedRLE, CompressedRLEType
 from .depth_image import DepthImage, DepthImageType
 from .embedding import Embedding, EmbeddingType
-from .features import Features
 from .gt_info import GtInfo, GtInfoType
 from .image import Image, ImageType
 from .object_annotation import ObjectAnnotation, ObjectAnnotationType
+from .pixano_type import PixanoType, createPaType
 from .pose import Pose, PoseType
-from .utils import convert_field, fields, is_number
+from .utils import (
+    Fields,
+    convert_field,
+    fields,
+    is_image_type,
+    is_list_of_object_annotation_type,
+    is_number,
+)
 
 __all__ = [
     "BBox",
     "BBoxType",
-    "ObjectAnnotation",
-    "ObjectAnnotationType",
+    "Camera",
+    "CameraType",
     "CompressedRLE",
     "CompressedRLEType",
-    "Image",
-    "ImageType",
-    "Pose",
-    "PoseType",
     "DepthImage",
     "DepthImageType",
     "Embedding",
     "EmbeddingType",
-    "Features",
-    "Camera",
-    "CameraType",
+    "Fields",
     "GtInfo",
     "GtInfoType",
+    "Image",
+    "ImageType",
+    "ObjectAnnotation",
+    "ObjectAnnotationType",
     "PixanoType",
     "createPaType",
+    "Pose",
+    "PoseType",
     "convert_field",
     "fields",
+    "is_image_type",
+    "is_list_of_object_annotation_type",
     "is_number",
 ]
-
-
-def is_image_type(field_type):
-    return ImageType.equals(field_type)
-
-
-def is_list_of_object_annotation_type(field_type):
-    return field_type == pa.list_(ObjectAnnotationType)

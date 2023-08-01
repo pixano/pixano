@@ -67,6 +67,12 @@ class ObjectAnnotation(PixanoType, BaseModel):
 
     @classmethod
     def to_struct(cls) -> pa.StructType:
+        """Return ObjectAnnotation type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("id", pa.string()),

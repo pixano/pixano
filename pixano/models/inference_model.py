@@ -17,6 +17,7 @@ from abc import ABC
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -262,7 +263,7 @@ class InferenceModel(ABC):
         self,
         output_dir: Path,
         filename: str,
-        spec_json: dict,
+        spec_json: dict[str, Any],
         num_elements: int,
     ):
         """Save output .json

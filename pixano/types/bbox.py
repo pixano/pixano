@@ -25,10 +25,6 @@ from pixano.utils import (
     xyxy_to_xywh,
 )
 
-# ------------------------------------------------
-#             Python type
-# ------------------------------------------------
-
 
 class BBox(PixanoType, BaseModel):
     """Bounding box type using coordinates in xyxy or xywh format
@@ -44,7 +40,7 @@ class BBox(PixanoType, BaseModel):
     is_normalized: bool
 
     def __init__(self, coords: list[float], format: str, is_normalized: bool = True):
-        """Initialize bounding box from xyxy or xywh coordinates
+        """Initialize Bounding box
 
         Args:
             coords (list[float]): List of coordinates in given format
@@ -145,6 +141,12 @@ class BBox(PixanoType, BaseModel):
 
     @classmethod
     def to_struct(cls) -> pa.StructType:
+        """Return BBox type as PyArrow Struct
+
+        Returns:
+            pa.StructType: Custom type corresponding PyArrow Struct
+        """
+
         return pa.struct(
             [
                 pa.field("coords", pa.list_(pa.float32(), list_size=4)),
