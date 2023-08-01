@@ -19,7 +19,7 @@ from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 
 from .pixano_type import PixanoType, createPaType
-from pixano.utils.image import (
+from pixano.utils import (
     encode_rle,
     mask_to_rle,
     polygons_to_rle,

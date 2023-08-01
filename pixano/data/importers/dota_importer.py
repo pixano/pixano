@@ -19,12 +19,8 @@ import pyarrow as pa
 import shortuuid
 from PIL import Image
 
-from pixano import types
-from pixano.utils import (
-    dota_ids,
-    image_to_thumbnail,
-    natural_key,
-)
+from pixano.types import BBox, ImageType, ObjectAnnotation
+from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
 from .data_importer import DataImporter
 
@@ -55,7 +51,7 @@ class DOTAImporter(DataImporter):
         """
 
         # Dataset views
-        views = [pa.field("image", types.ImageType)]
+        views = [pa.field("image", ImageType)]
 
         # Initialize Data Importer
         super().__init__(name, description, splits, views)
@@ -110,12 +106,12 @@ class DOTAImporter(DataImporter):
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
-                    "image": types.Image(im_uri, None, im_thumb),
+                    "image": Image(im_uri, None, im_thumb),
                     "objects": [
-                        types.ObjectAnnotation(
+                        ObjectAnnotation(
                             id=shortuuid.uuid(),
                             view_id="image",
-                            bbox=types.BBox.from_xyxy(
+                            bbox=BBox.from_xyxy(
                                 [
                                     float(line.strip().split()[0]),
                                     float(line.strip().split()[1]),

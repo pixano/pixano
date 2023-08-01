@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano import types
+from pixano.types import Image, ImageType
 from pixano.utils import image_to_thumbnail, natural_key
 
 from .data_importer import DataImporter
@@ -49,7 +49,7 @@ class ImageImporter(DataImporter):
         """
 
         # Dataset views
-        views = [pa.field("image", types.ImageType)]
+        views = [pa.field("image", ImageType)]
 
         # Initialize Data Importer
         super().__init__(name, description, splits, views)
@@ -92,7 +92,7 @@ class ImageImporter(DataImporter):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": im_path.name,
-                "image": types.Image(im_uri, None, im_thumb),
+                "image": Image(im_uri, None, im_thumb),
                 "objects": [],
                 "split": split,
             }

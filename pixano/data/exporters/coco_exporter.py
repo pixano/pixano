@@ -21,11 +21,9 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano import types
 from pixano.data import DatasetInfo
-from pixano.utils import (
-    natural_key,
-)
+from pixano.types import ImageType, ObjectAnnotation
+from pixano.utils import natural_key
 
 from .data_exporter import DataExporter
 
@@ -56,7 +54,7 @@ class COCOExporter(DataExporter):
         """
 
         # Dataset views
-        views = [pa.field("image", types.ImageType)]
+        views = [pa.field("image", ImageType)]
 
         # Initialize Data Importer
         super().__init__(name, description, splits, views)
@@ -161,7 +159,7 @@ class COCOExporter(DataExporter):
                 media_fields = [
                     field.name
                     for field in self.schema
-                    if isinstance(field.type, types.ImageType)
+                    if isinstance(field.type, ImageType)
                 ]
                 media_table = pq.read_table(file).select(["id"] + media_fields)
 
@@ -212,7 +210,7 @@ class COCOExporter(DataExporter):
                                         "coords": ann["bbox"],
                                         "format": "xywh",
                                     }
-                                ann = types.ObjectAnnotation.from_dict(ann)
+                                ann = ObjectAnnotation.from_dict(ann)
 
                             # Append annotation
                             im_w, im_h = images[ann.view_id].size

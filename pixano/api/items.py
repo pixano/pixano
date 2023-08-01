@@ -23,8 +23,18 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano import types
 from pixano.data import Dataset
+from pixano.types import (
+    BBox,
+    CompressedRLE,
+    ImageType,
+    ObjectAnnotation,
+    ObjectAnnotationType,
+    convert_field,
+    is_image_type,
+    is_list_of_object_annotation_type,
+    is_number,
+)
 from pixano.utils import format_bbox, natural_key
 
 
@@ -61,18 +71,18 @@ def _create_features(item: list, schema: pa.schema) -> list[ItemFeature]:
     # Iterate on fields
     for field in schema:
         # Number fields
-        if types.is_number(field.type):
+        if is_number(field.type):
             features.append(
                 ItemFeature(name=field.name, dtype="number", value=item[field.name])
             )
         # Image fields
-        elif types.is_image_type(field.type):
+        elif is_image_type(field.type):
             thumbnail = item[field.name].preview_url
             features.append(
                 ItemFeature(name=field.name, dtype="image", value=thumbnail)
             )
         # String fields
-        elif pa.types.is_string(field.type):
+        elif pa.is_string(field.type):
             features.append(
                 ItemFeature(name=field.name, dtype="text", value=item[field.name])
             )
@@ -158,7 +168,7 @@ def load_item_details(
 
     # Iterate on view
     for field in pa_ds.schema:
-        if types.is_image_type(field.type):
+        if is_image_type(field.type):
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
             item_details["itemData"]["views"].append(
@@ -171,7 +181,7 @@ def load_item_details(
                     # Support for previous BBox type
                     if isinstance(obj["bbox"], list):
                         obj["bbox"] = {"coords": obj["bbox"], "format": "xywh"}
-                    obj = types.ObjectAnnotation.from_dict(obj)
+                    obj = ObjectAnnotation.from_dict(obj)
                 # If object in view
                 if obj.view_id == field.name:
                     # Object ID
@@ -233,20 +243,20 @@ def load_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
 def save_item_annotations(
     dataset_dir: Path,
     item_id: str,
-    annotations: list[types.ObjectAnnotation],
+    annotations: list[ObjectAnnotation],
 ):
     """Update dataset annotations
 
     Args:
         dataset_dir (Path): Dataset directory
         item_id (str): Item ID
-        annotations (list[types.ObjectAnnotation]): Item annotations
+        annotations (list[ObjectAnnotation]): Item annotations
     """
 
     # Convert URLE to RLE and add bounding box
     for ann in annotations:
-        ann.mask = types.CompressedRLE.from_urle(ann.mask.to_dict())
-        ann.bbox = types.BBox.from_mask(ann.mask.to_mask())
+        ann.mask = CompressedRLE.from_urle(ann.mask.to_dict())
+        ann.bbox = BBox.from_mask(ann.mask.to_mask())
     # Dataset files
     files = (dataset_dir / "db").glob("**/*.parquet")
     files = sorted(files, key=lambda x: natural_key(x.name))
@@ -284,19 +294,15 @@ def save_item_annotations(
             # Convert ExtensionTypes
             arrays = []
             for field in table.schema:
-                if types.is_list_of_object_annotation_type(field.type):
+                if is_list_of_object_annotation_type(field.type):
                     arrays.append(
-                        types.ObjectAnnotationType.Array.from_lists(
-                            updated_table[field.name]
-                        )
+                        ObjectAnnotationType.Array.from_lists(updated_table[field.name])
                     )
-                elif types.is_image_type(field.type):
-                    arrays.append(
-                        types.ImageType.Array.from_list(updated_table[field.name])
-                    )
+                elif is_image_type(field.type):
+                    arrays.append(ImageType.Array.from_list(updated_table[field.name]))
                 else:
                     arrays.append(
-                        types.convert_field(
+                        convert_field(
                             field_name=field.name,
                             field_type=field.type,
                             field_data=updated_table[field.name],

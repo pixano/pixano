@@ -14,7 +14,17 @@
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano import types
+from pixano.types import (
+    BBoxType,
+    CameraType,
+    CompressedRLEType,
+    DepthImageType,
+    EmbeddingType,
+    GtInfoType,
+    ImageType,
+    ObjectAnnotationType,
+    PoseType,
+)
 
 
 def convert_type(input_type: str) -> pa.DataType:
@@ -34,15 +44,15 @@ def convert_type(input_type: str) -> pa.DataType:
         "str": pa.string(),
         "bytes": pa.binary(),
         "np.ndarray": pa.list_(pa.float32()),
-        "Image": types.ImageType,
-        "DepthImage": types.DepthImageType,
-        "Camera": types.CameraType,
-        "ObjectAnnotation": types.ObjectAnnotationType,
-        "CompressedRLE": types.CompressedRLEType,
-        "Pose": types.PoseType,
-        "BBox": types.BBoxType,
-        "GtInfo": types.GtInfoType,
-        "Embedding": types.EmbeddingType,
+        "Image": ImageType,
+        "DepthImage": DepthImageType,
+        "Camera": CameraType,
+        "ObjectAnnotation": ObjectAnnotationType,
+        "CompressedRLE": CompressedRLEType,
+        "Pose": PoseType,
+        "BBox": BBoxType,
+        "GtInfo": GtInfoType,
+        "Embedding": EmbeddingType,
     }
 
     # str

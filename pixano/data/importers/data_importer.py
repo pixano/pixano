@@ -29,9 +29,15 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano import types
 from pixano.analytics import compute_stats
 from pixano.data import DatasetInfo
+from pixano.types import (
+    ImageType,
+    ObjectAnnotationType,
+    convert_field,
+    is_image_type,
+    is_list_of_object_annotation_type,
+)
 
 
 def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
@@ -97,7 +103,7 @@ class DataImporter(ABC):
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
-            pa.field("objects", pa.list_(types.ObjectAnnotationType)),
+            pa.field("objects", pa.list_(ObjectAnnotationType)),
         ]
         fields.extend(views)
         self.schema = pa.schema(fields)
@@ -142,7 +148,7 @@ class DataImporter(ABC):
         # Get list of image fields
         image_fields = []
         for field in self.schema:
-            if types.is_image_type(field.type):
+            if is_image_type(field.type):
                 image_fields.append(field.name)
 
         if image_fields:
@@ -186,7 +192,7 @@ class DataImporter(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has objects
-            if types.is_list_of_object_annotation_type(field.type):
+            if is_list_of_object_annotation_type(field.type):
                 # Create dataframe
                 df = dataset.to_table(columns=["split", field.name]).to_pandas()
                 # Split objects in one object per row
@@ -268,7 +274,7 @@ class DataImporter(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has images
-            if types.is_image_type(field.type):
+            if is_image_type(field.type):
                 features = []
                 rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
 
@@ -397,7 +403,7 @@ class DataImporter(ABC):
                 # Append batch categories
                 for field in self.schema:
                     # If column has annotations
-                    if types.is_list_of_object_annotation_type(field.type):
+                    if is_list_of_object_annotation_type(field.type):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (
@@ -416,19 +422,15 @@ class DataImporter(ABC):
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
-                    if types.is_list_of_object_annotation_type(field.type):
+                    if is_list_of_object_annotation_type(field.type):
                         arrays.append(
-                            types.ObjectAnnotationType.Array.from_lists(
-                                batch[field.name]
-                            )
+                            ObjectAnnotationType.Array.from_lists(batch[field.name])
                         )
-                    elif types.is_image_type(field.type):
-                        arrays.append(
-                            types.ImageType.Array.from_list(batch[field.name])
-                        )
+                    elif is_image_type(field.type):
+                        arrays.append(ImageType.Array.from_list(batch[field.name]))
                     else:
                         arrays.append(
-                            types.convert_field(
+                            convert_field(
                                 field_name=field.name,
                                 field_type=field.type,
                                 field_data=batch[field.name],
@@ -456,7 +458,7 @@ class DataImporter(ABC):
         # Move media directories if portable
         if portable:
             for field in tqdm(self.schema, desc="Moving media directories"):
-                if types.is_image_type(field.type):
+                if is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
                     shutil.copytree(

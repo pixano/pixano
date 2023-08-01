@@ -25,7 +25,7 @@ from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
 
 from .image import Image, ImageType
-from pixano.utils.image import binary_to_url
+from pixano.utils import binary_to_url
 
 
 class ImageTestCase(unittest.TestCase):

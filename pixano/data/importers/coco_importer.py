@@ -19,12 +19,8 @@ from urllib.parse import urlparse
 
 import pyarrow as pa
 
-from pixano import types
-from pixano.utils import (
-    coco_names_91,
-    image_to_thumbnail,
-    natural_key,
-)
+from pixano.types import BBox, CompressedRLE, Image, ImageType, ObjectAnnotation
+from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 
 from .data_importer import DataImporter
 
@@ -55,7 +51,7 @@ class COCOImporter(DataImporter):
         """
 
         # Dataset views
-        views = [pa.field("image", types.ImageType)]
+        views = [pa.field("image", ImageType)]
 
         # Initialize Data Importer
         super().__init__(name, description, splits, views)
@@ -110,16 +106,16 @@ class COCOImporter(DataImporter):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": str(im["id"]),
-                "image": types.Image(im_uri, None, im_thumb),
+                "image": Image(im_uri, None, im_thumb),
                 "objects": [
-                    types.ObjectAnnotation(
+                    ObjectAnnotation(
                         id=str(ann["id"]),
                         view_id="image",
                         area=float(ann["area"]) if ann["area"] else None,
-                        bbox=types.BBox.from_xywh(ann["bbox"]).normalize(
+                        bbox=BBox.from_xywh(ann["bbox"]).normalize(
                             im["height"], im["width"]
                         ),
-                        mask=types.CompressedRLE.encode(
+                        mask=CompressedRLE.encode(
                             ann["segmentation"], im["height"], im["width"]
                         ),
                         is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,

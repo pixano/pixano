@@ -17,8 +17,8 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano import types
 from pixano.data.importers import DataImporter
+from pixano.types import BBox, CompressedRLE, Image, ImageType, ObjectAnnotation
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 
@@ -49,7 +49,7 @@ class TemplateImporter(DataImporter):
 
         ##### Add your dataset views here #####
         # One image field or multiple fields for multi-view datasets
-        views = [pa.field("image", types.ImageType)]
+        views = [pa.field("image", ImageType)]
 
         # Initialize Data Importer
         super().__init__(name, description, splits, views)
@@ -96,16 +96,14 @@ class TemplateImporter(DataImporter):
             ##### Fill row with ID, image, and list of annotations #####
             row = {
                 "id": im_path.stem,
-                "image": types.Image(im_uri, None, im_thumb),
+                "image": Image(im_uri, None, im_thumb),
                 "objects": [
-                    types.ObjectAnnotation(
+                    ObjectAnnotation(
                         id=shortuuid.uuid(),
                         view_id="image",
                         area=float(ann["area"]),
-                        bbox=types.BBox.from_xywh(ann["bbox"]).normalize(
-                            im_height, im_width
-                        ),
-                        mask=types.compressedRLE.from_mask(ann["segmentation"]),
+                        bbox=BBox.from_xywh(ann["bbox"]).normalize(im_height, im_width),
+                        mask=CompressedRLE.from_mask(ann["segmentation"]),
                         is_group_of=False,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),

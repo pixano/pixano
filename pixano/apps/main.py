@@ -19,7 +19,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import add_pagination
 
-from pixano import types
 from pixano.api import (
     ItemFeatures,
     Settings,
@@ -32,6 +31,7 @@ from pixano.api import (
     save_item_annotations,
 )
 from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.types import ObjectAnnotation
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -130,12 +130,12 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/annotations",
-        response_model=list[types.ObjectAnnotation],
+        response_model=list[ObjectAnnotation],
     )
     async def post_dataset_item_annotations(
         ds_id: str,
         item_id: str,
-        annotations: list[types.ObjectAnnotation],
+        annotations: list[ObjectAnnotation],
     ):
         # Load dataset
         ds = load_dataset(ds_id, settings)

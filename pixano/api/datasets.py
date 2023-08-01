@@ -16,8 +16,8 @@ from pathlib import Path
 
 from pydantic import BaseSettings
 
-from pixano import types
 from pixano.data import Dataset, DatasetInfo
+from pixano.types import Image
 
 
 class Settings(BaseSettings):
@@ -47,7 +47,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         # Load thumbnail
         preview_path = spec.parent / "preview.png"
         if preview_path.is_file():
-            im = types.Image(uri=preview_path.absolute().as_uri())
+            im = Image(uri=preview_path.absolute().as_uri())
             info.preview = im.url
 
         # Load categories

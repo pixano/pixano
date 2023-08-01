@@ -23,7 +23,7 @@ import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano import types
+from pixano.types import BBox, CompressedRLE, ImageType, ObjectAnnotation
 from pixano.utils import denormalize_coords, image_to_thumbnail
 
 from .data_importer import DataImporter
@@ -66,7 +66,7 @@ class LegacyImporter(DataImporter):
             name,
             description,
             splits,
-            [pa.field(view, types.ImageType) for view in views],
+            [pa.field(view, ImageType) for view in views],
         )
 
     def import_row(
@@ -137,7 +137,7 @@ class LegacyImporter(DataImporter):
                 "split": split,
             }
             for f in feats[timestamp]:
-                row[f["viewId"]] = types.Image(f["im_uri"], None, f["im_thumb"])
+                row[f["viewId"]] = Image(f["im_uri"], None, f["im_thumb"])
 
                 # Fill row with list of image annotations
                 for ann in f["anns"]:
@@ -185,7 +185,7 @@ class LegacyImporter(DataImporter):
                                     denorm, f["height"], f["width"]
                                 )
                                 mask = mask_api.merge(rles)
-                                mask = types.CompressedRLE.from_dict(mask)
+                                mask = CompressedRLE.from_dict(mask)
                         elif (
                             ann["geometry"]["type"] == "rectangle"
                             and ann["geometry"]["vertices"]
@@ -196,7 +196,7 @@ class LegacyImporter(DataImporter):
                                     f["height"],
                                     f["width"],
                                 )
-                                bbox = types.BBox.from_xyxy(denorm)
+                                bbox = BBox.from_xyxy(denorm)
                         elif (
                             ann["geometry"]["type"] == "graph"
                             and ann["geometry"]["vertices"]
@@ -210,7 +210,7 @@ class LegacyImporter(DataImporter):
                         print("No geometry?")
 
                     row["objects"].append(
-                        types.ObjectAnnotation(
+                        ObjectAnnotation(
                             id=str(ann["id"]),
                             view_id=f["viewId"],
                             bbox=bbox,

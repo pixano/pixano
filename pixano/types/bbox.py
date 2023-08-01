@@ -17,7 +17,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from .pixano_type import PixanoType, createPaType
-from pixano.utils.boxes import (
+from pixano.utils import (
     mask_to_bbox,
     denormalize_coords,
     normalize_coords,

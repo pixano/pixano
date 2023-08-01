@@ -18,8 +18,8 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 import shortuuid
 
-from pixano import types
 from pixano.data import DatasetInfo
+from pixano.types import ObjectAnnotationType
 
 
 class DataExporter(ABC):
@@ -65,7 +65,7 @@ class DataExporter(ABC):
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
-            pa.field("objects", pa.list_(types.ObjectAnnotationType)),
+            pa.field("objects", pa.list_(ObjectAnnotationType)),
         ]
         fields.extend(views)
         self.schema = pa.schema(fields)
