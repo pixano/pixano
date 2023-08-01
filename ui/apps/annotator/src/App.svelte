@@ -331,9 +331,15 @@
               );
               let ann = {
                 id: label.id,
-                mask: mask ? mask.rle : null,
+                mask: {
+                  size: mask.rle ? mask.rle.size : [0, 0],
+                  counts: mask.rle ? mask.rle.counts : "",
+                },
                 mask_source: label.sourceId,
-                bbox: bbox ? bbox.bbox : null,
+                bbox: {
+                  coords: bbox ? bbox.bbox : [0, 0, 0, 0],
+                  format: "xywh",
+                },
                 bbox_source: label.sourceId,
                 view_id: label.viewId,
                 category_id: label.categoryId,
