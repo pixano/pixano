@@ -107,6 +107,9 @@ nav:
       - "ImageImporter": code/data/importers/image_importer.md
       - "DOTAImporter": code/data/importers/dota_importer.md
       - "LegacyImporter": code/data/importers/legacy_importer.md
+    - "exporters":
+      - "DataExporter": code/data/exporters/data_exporter.md
+      - "CocoExporter": code/data/exporters/coco_exporter.md
     - "dataset": code/data/dataset.md
 
   - "models":

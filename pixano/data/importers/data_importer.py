@@ -463,13 +463,3 @@ class DataImporter(ABC):
 
         # Create stats
         self.create_stats(import_dir)
-
-    def export_dataset(self, input_dir: Path, export_dir: Path):
-        """Export dataset back to original format
-
-        Args:
-            input_dir (Path): Input directory
-            export_dir (Path): Export directory
-        """
-
-        pass
