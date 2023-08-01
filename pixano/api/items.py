@@ -88,7 +88,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
         params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
 
     Returns:
-        AbstractPage: List of Features for UI (DatasetExplorer)
+        AbstractPage: List of ItemFeatures for UI (DatasetExplorer)
     """
 
     # Load dataset
