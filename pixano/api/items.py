@@ -23,9 +23,9 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano import transforms, types
+from pixano import types
 from pixano.data import Dataset
-from pixano.transforms import natural_key
+from pixano.transforms import format_bbox, natural_key
 
 
 class ItemFeature(BaseModel):
@@ -180,7 +180,7 @@ def load_item_details(
                     mask = obj.mask.to_urle() if obj.mask is not None else None
                     # Object bounding box
                     bbox = (
-                        transforms.format_bbox(
+                        format_bbox(
                             obj.bbox.coords,
                             obj.bbox_confidence is not None,
                             obj.bbox_confidence,
