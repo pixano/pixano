@@ -18,7 +18,7 @@ from numpy import np
 from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 
-from .pixano_type import PixanoType, createPaType
+from .pixano_type import PixanoType, createPyArrowType
 from pixano.utils import (
     encode_rle,
     mask_to_rle,
@@ -185,6 +185,6 @@ class CompressedRLE(PixanoType, BaseModel):
         )
 
 
-CompressedRLEType = createPaType(
+CompressedRLEType = createPyArrowType(
     CompressedRLE.to_struct(), "CompressedRLE", CompressedRLE
 )

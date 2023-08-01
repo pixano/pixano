@@ -73,7 +73,7 @@ class PixanoType(ABC, BaseModel):
         pass
 
 
-def createPaType(
+def createPyArrowType(
     struct_type: pa.StructType, name: str, pyType: Type
 ) -> pa.ExtensionType:
     """Create PyArrow ExtensionType for Pixano custom type
@@ -185,10 +185,14 @@ def createPaType(
                     offset, flat_array, type=pa.list_(new_type)
                 )
 
-    new_type = CustomExtensionType(struct_type, name)
+    # Create ExtensionType
+    pyarrow_type = CustomExtensionType(struct_type, name)
+
+    # Try and register ExtensionType
     try:
-        pa.register_extension_type(new_type)
+        pa.register_extension_type(pyarrow_type)
     # If ExtensionType is already registered
     except pa.ArrowKeyError:
         pass
-    return new_type
+
+    return pyarrow_type

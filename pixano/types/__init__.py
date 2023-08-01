@@ -19,7 +19,7 @@ from .embedding import Embedding, EmbeddingType
 from .gt_info import GtInfo, GtInfoType
 from .image import Image, ImageType
 from .object_annotation import ObjectAnnotation, ObjectAnnotationType
-from .pixano_type import PixanoType, createPaType
+from .pixano_type import PixanoType, createPyArrowType
 from .pose import Pose, PoseType
 from .utils import (
     Fields,
@@ -49,7 +49,7 @@ __all__ = [
     "ObjectAnnotation",
     "ObjectAnnotationType",
     "PixanoType",
-    "createPaType",
+    "createPyArrowType",
     "Pose",
     "PoseType",
     "convert_field",

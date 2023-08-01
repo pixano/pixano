@@ -16,7 +16,7 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from .pixano_type import PixanoType, createPaType
+from .pixano_type import PixanoType, createPyArrowType
 
 from .bbox import BBox, BBoxType
 from .compressed_rle import CompressedRLE, CompressedRLEType
@@ -94,6 +94,6 @@ class ObjectAnnotation(PixanoType, BaseModel):
         )
 
 
-ObjectAnnotationType = createPaType(
+ObjectAnnotationType = createPyArrowType(
     ObjectAnnotation.to_struct(), "ObjectAnnotation", ObjectAnnotation
 )
