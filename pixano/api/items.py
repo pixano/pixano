@@ -82,7 +82,7 @@ def _create_features(item: list, schema: pa.schema) -> list[ItemFeature]:
                 ItemFeature(name=field.name, dtype="image", value=thumbnail)
             )
         # String fields
-        elif pa.is_string(field.type):
+        elif pa.types.is_string(field.type):
             features.append(
                 ItemFeature(name=field.name, dtype="text", value=item[field.name])
             )
