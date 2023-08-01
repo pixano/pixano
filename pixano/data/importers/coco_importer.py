@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 import pyarrow as pa
 
 from pixano import types
-from pixano.transforms import (
+from pixano.utils import (
     coco_names_91,
     image_to_thumbnail,
     natural_key,

@@ -25,7 +25,7 @@ from pydantic import BaseModel
 
 from pixano import types
 from pixano.data import Dataset
-from pixano.transforms import format_bbox, natural_key
+from pixano.utils import format_bbox, natural_key
 
 
 class ItemFeature(BaseModel):

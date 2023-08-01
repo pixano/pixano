@@ -11,8 +11,6 @@
 #
 # http://www.cecill.info
 
-import re
-
 from .boxes import (
     denormalize_coords,
     format_bbox,
@@ -38,6 +36,7 @@ from .image import (
     urle_to_rle,
 )
 from .labels import coco_ids_80to91, coco_names_80, coco_names_91, dota_ids, voc_names
+from .python import natural_key
 
 __all__ = [
     "normalize_coords",
@@ -67,15 +66,3 @@ __all__ = [
     "natural_key",
     "binary_to_url",
 ]
-
-
-def natural_key(string: str) -> list:
-    """Return key for string natural sort
-
-    Args:
-        string (str): Input string
-
-    Returns:
-        list: Sort key
-    """
-    return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]

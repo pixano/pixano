@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano import types
-from pixano.transforms import natural_key
+from pixano.utils import natural_key
 
 
 class InferenceModel(ABC):

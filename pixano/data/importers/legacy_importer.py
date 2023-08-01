@@ -24,7 +24,7 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 from pixano import types
-from pixano.transforms import denormalize_coords, image_to_thumbnail
+from pixano.utils import denormalize_coords, image_to_thumbnail
 
 from .data_importer import DataImporter
 

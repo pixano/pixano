@@ -7,5 +7,5 @@ Here you will find the documentation for all of our Python API.
 - The ***apps*** module contains the Pixano Explorer and Annotator *PixanoApps*.
 - The ***data*** module contains the Pixano *Datasets*, as well as the *DataImporters* and *DataExporters* for importing and exporting datasets.
 - The ***models*** module contains the Pixano *InferenceModel* for inference generation and embedding precomputing.
-- The ***transforms*** module contains many useful functions to work with images, bounding boxes, and labels.
 - The ***types*** module contains the Pixano custom data types.
+- The ***utils*** module contains many useful functions to work with images, bounding boxes, and labels.

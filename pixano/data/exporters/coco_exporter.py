@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 
 from pixano import types
 from pixano.data import DatasetInfo
-from pixano.transforms import (
+from pixano.utils import (
     natural_key,
 )
 

@@ -116,10 +116,11 @@ nav:
   - "models":
     - "InferenceModel": code/models/inference_model.md
 
-  - "transforms":
-    - "boxes": code/transforms/boxes.md
-    - "image": code/transforms/image.md
-    - "labels": code/transforms/labels.md
+  - "utils":
+    - "boxes": code/utils/boxes.md
+    - "image": code/utils/image.md
+    - "labels": code/utils/labels.md
+    - "python": code/utils/python.md
   
   - "types": code/types.md
 

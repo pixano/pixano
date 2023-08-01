@@ -20,7 +20,7 @@ import shortuuid
 from PIL import Image
 
 from pixano import types
-from pixano.transforms import (
+from pixano.utils import (
     dota_ids,
     image_to_thumbnail,
     natural_key,

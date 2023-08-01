@@ -19,7 +19,7 @@ import shortuuid
 
 from pixano import types
 from pixano.data.importers import DataImporter
-from pixano.transforms import coco_names_91, image_to_thumbnail
+from pixano.utils import coco_names_91, image_to_thumbnail
 
 
 class TemplateImporter(DataImporter):
