@@ -16,7 +16,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pyarrow as pa
-import shortuuid
 
 from pixano import types
 from pixano.transforms import image_to_thumbnail, natural_key
@@ -94,13 +93,7 @@ class ImageImporter(DataImporter):
             row = {
                 "id": im_path.name,
                 "image": types.Image(im_uri, None, im_thumb),
-                # TODO: find a way to return an empty list
-                "objects": [
-                    types.ObjectAnnotation(
-                        id=shortuuid.uuid(),
-                        category_id=0,
-                    )
-                ],
+                "objects": [],
                 "split": split,
             }
 
