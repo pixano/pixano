@@ -24,7 +24,7 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 from pixano import types
-from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
+from pixano.transforms import denormalize, image_to_thumbnail
 
 from .data_importer import DataImporter
 
@@ -185,6 +185,7 @@ class LegacyImporter(DataImporter):
                                     denorm, f["height"], f["width"]
                                 )
                                 mask = mask_api.merge(rles)
+                                mask = types.CompressedRLE.from_dict(mask)
                         elif (
                             ann["geometry"]["type"] == "rectangle"
                             and ann["geometry"]["vertices"]
@@ -195,7 +196,7 @@ class LegacyImporter(DataImporter):
                                     f["height"],
                                     f["width"],
                                 )
-                                bbox = xyxy_to_xywh(denorm)
+                                bbox = types.BBox.from_xyxy(denorm)
                         elif (
                             ann["geometry"]["type"] == "graph"
                             and ann["geometry"]["vertices"]
