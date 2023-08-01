@@ -60,7 +60,7 @@
     view: ViewLabels,
     category: CategoryLabels,
     label: Label,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     label.visible = visibility;
@@ -81,7 +81,7 @@
     source: SourceLabels,
     view: ViewLabels,
     category: CategoryLabels,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     category.visible = visibility;
@@ -102,7 +102,7 @@
   function handleViewVisibility(
     source: SourceLabels,
     view: ViewLabels,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     view.visible = visibility;
@@ -244,7 +244,7 @@
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
               type="range"
               id="maskSlider"
               min="0"
@@ -259,7 +259,7 @@
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
               type="range"
               id="bboxSlider"
               min="0"
@@ -274,7 +274,7 @@
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
               type="range"
               id="confidenceSlider"
               min="0"
@@ -411,7 +411,7 @@
                         source,
                         view,
                         category,
-                        !category.visible,
+                        !category.visible
                       )}
                   >
                     <svg
@@ -482,7 +482,7 @@
                             view,
                             category,
                             label,
-                            !label.visible,
+                            !label.visible
                           )}
                       >
                         <svg
