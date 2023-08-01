@@ -18,14 +18,14 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano.core import types
+from pixano import types
 from pixano.transforms import image_to_thumbnail, natural_key
 
-from .data_loader import DataLoader
+from .data_importer import DataImporter
 
 
-class ImageLoader(DataLoader):
-    """Data Loader class for demo datasets
+class ImageImporter(DataImporter):
+    """Data Importer class for demo datasets
 
     Attributes:
         name (str): Dataset name
@@ -41,7 +41,7 @@ class ImageLoader(DataLoader):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize COCO Importer
 
         Args:
             name (str): Dataset name
@@ -52,7 +52,7 @@ class ImageLoader(DataLoader):
         # Dataset views
         views = [pa.field("image", types.ImageType)]
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(name, description, splits, views)
 
     def import_row(

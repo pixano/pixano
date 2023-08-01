@@ -23,14 +23,14 @@ import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano.core import types
+from pixano import types
 from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
 
-from .data_loader import DataLoader
+from .data_importer import DataImporter
 
 
-class LegacyLoader(DataLoader):
-    """Data Loader class for Pixano legacy format datasets
+class LegacyImporter(DataImporter):
+    """Data Importer class for Pixano legacy format datasets
 
     Attributes:
         name (str): Dataset name
@@ -48,7 +48,7 @@ class LegacyLoader(DataLoader):
         views: list[str],
         json_files: dict[str, str],
     ):
-        """Initialize Pixano Legacy Loader
+        """Initialize Pixano Legacy Importer
 
         Args:
             name (str): Dataset name
@@ -61,7 +61,7 @@ class LegacyLoader(DataLoader):
         self.views = views
         self.json_files = json_files
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(
             name,
             description,

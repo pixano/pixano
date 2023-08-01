@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pixano.core import Dataset
+from .dataset import Dataset
 
 TARGET_INFO = {
     "name": "My dataset",

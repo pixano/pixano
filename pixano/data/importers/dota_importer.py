@@ -19,7 +19,7 @@ import pyarrow as pa
 import shortuuid
 from PIL import Image
 
-from pixano.core import types
+from pixano import types
 from pixano.transforms import (
     dota_ids,
     image_to_thumbnail,
@@ -28,11 +28,11 @@ from pixano.transforms import (
     xyxy_to_xywh,
 )
 
-from .data_loader import DataLoader
+from .data_importer import DataImporter
 
 
-class DOTALoader(DataLoader):
-    """Data Loader class for DOTA dataset
+class DOTAImporter(DataImporter):
+    """Data Importer class for DOTA dataset
 
     Attributes:
         name (str): Dataset name
@@ -48,7 +48,7 @@ class DOTALoader(DataLoader):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize COCO Importer
 
         Args:
             name (str): Dataset name
@@ -59,7 +59,7 @@ class DOTALoader(DataLoader):
         # Dataset views
         views = [pa.field("image", types.ImageType)]
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(name, description, splits, views)
 
     def import_row(

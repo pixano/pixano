@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano import types
-from pixano.core import DatasetInfo
+from pixano.data import DatasetInfo
 from pixano.transforms import (
     coco_names_91,
     denormalize,
@@ -36,11 +36,11 @@ from pixano.transforms import (
     urle_to_bbox,
 )
 
-from .data_loader import DataLoader
+from .data_importer import DataImporter
 
 
-class COCOLoader(DataLoader):
-    """Data Loader class for COCO instances dataset
+class COCOImporter(DataImporter):
+    """Data Importer class for COCO instances dataset
 
     Attributes:
         name (str): Dataset name
@@ -56,7 +56,7 @@ class COCOLoader(DataLoader):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize COCO Importer
 
         Args:
             name (str): Dataset name
@@ -67,7 +67,7 @@ class COCOLoader(DataLoader):
         # Dataset views
         views = [pa.field("image", types.ImageType)]
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(name, description, splits, views)
 
     def import_row(

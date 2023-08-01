@@ -100,15 +100,14 @@ nav:
     - "annotator": code/apps/annotator.md
     - "explorer": code/apps/explorer.md
 
-  - "core":
-    - "dataset": code/core/dataset.md
-
   - "data":
-    - "DataLoader": code/data/data_loader.md
-    - "CocoLoader": code/data/coco_loader.md
-    - "ImageLoader": code/data/image_loader.md
-    - "DOTALoader": code/data/dota_loader.md
-    - "LegacyLoader": code/data/legacy_loader.md
+    - "importers":
+      - "DataImporter": code/data/importers/data_importer.md
+      - "CocoImporter": code/data/importers/coco_importer.md
+      - "ImageImporter": code/data/importers/image_importer.md
+      - "DOTAImporter": code/data/importers/dota_importer.md
+      - "LegacyImporter": code/data/importers/legacy_importer.md
+    - "dataset": code/data/dataset.md
 
   - "models":
     - "InferenceModel": code/models/inference_model.md

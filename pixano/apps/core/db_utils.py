@@ -24,7 +24,7 @@ from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
 from pixano import types, transforms
-from pixano.core import Dataset
+from pixano.data import Dataset
 from pixano.transforms import natural_key
 
 

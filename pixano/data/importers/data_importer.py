@@ -31,8 +31,7 @@ from tqdm.auto import tqdm
 
 from pixano import types
 from pixano.analytics import compute_stats
-from pixano.core import DatasetInfo
-from pixano.core.features import Features
+from pixano.data import DatasetInfo
 
 
 def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
@@ -55,8 +54,8 @@ def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
         yield batch_dict
 
 
-class DataLoader(ABC):
-    """Abstract Data Loader class
+class DataImporter(ABC):
+    """Abstract Data Importer class
 
     Attributes:
         name (str): Dataset name
@@ -73,7 +72,7 @@ class DataLoader(ABC):
         splits: list[str],
         views: list[pa.field],
     ):
-        """Initialize Data Loader
+        """Initialize Data Importer
 
         Args:
             name (str): Dataset name
@@ -90,7 +89,7 @@ class DataLoader(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features=Features(
+            features=types.Features(
                 {"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"}
             ),
         )

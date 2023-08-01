@@ -11,6 +11,16 @@
 #
 # http://www.cecill.info
 
-from .features import Features
+from .coco_importer import COCOImporter
+from .data_importer import DataImporter
+from .dota_importer import DOTAImporter
+from .image_importer import ImageImporter
+from .legacy_importer import LegacyImporter
 
-__all__ = ["Features"]
+__all__ = [
+    "DataImporter",
+    "COCOImporter",
+    "DOTAImporter",
+    "ImageImporter",
+    "LegacyImporter",
+]

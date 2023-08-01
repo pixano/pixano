@@ -18,7 +18,7 @@ import pyarrow as pa
 import pyarrow.dataset as ds
 from pydantic import BaseModel
 
-from pixano.core.features import Features
+from pixano.types import Features
 
 
 class DatasetInfo(BaseModel):

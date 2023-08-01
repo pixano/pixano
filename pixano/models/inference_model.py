@@ -23,7 +23,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano.core import types
+from pixano import types
 from pixano.transforms import natural_key
 
 

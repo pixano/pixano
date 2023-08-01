@@ -23,7 +23,7 @@ from fastapi_pagination.api import add_pagination
 from pydantic import BaseSettings
 
 from pixano import types
-from pixano.core import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.data import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
 
 from . import db_utils
 

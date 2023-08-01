@@ -18,12 +18,12 @@ import pyarrow as pa
 import shortuuid
 
 from pixano import types
-from pixano.data.data_loader import DataLoader
+from pixano.data.importers import DataImporter
 from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
 
 
-class TemplateLoader(DataLoader):
-    """Data Loader class template
+class TemplateImporter(DataImporter):
+    """Data Importer class template
 
     Attributes:
         name (str): Dataset name
@@ -39,7 +39,7 @@ class TemplateLoader(DataLoader):
         description: str,
         splits: list[str],
     ):
-        """Initialize Template Loader
+        """Initialize Template Importer
 
         Args:
             name (str): Dataset name
@@ -51,7 +51,7 @@ class TemplateLoader(DataLoader):
         # One image field or multiple fields for multi-view datasets
         views = [pa.field("image", types.ImageType)]
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(name, description, splits, views)
 
     def import_row(
