@@ -55,7 +55,7 @@
       Please refer to
       <u>
         <a
-          href="https://github.com/pixano/pixano/tree/main/notebooks/dataset/import_dataset.ipynb"
+          href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
           target="_blank"
           class="text-rose-500 dark:text-rose-600
           hover:text-rose-600 dark:hover:text-rose-500"
