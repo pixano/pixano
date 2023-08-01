@@ -359,6 +359,9 @@
       Date.now() - start,
       "ms"
     );
+
+    // Reload annotations
+    handleSelectItem(selectedItem.id);
   }
 
   async function handleLoadNextPage() {
