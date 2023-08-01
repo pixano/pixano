@@ -17,8 +17,6 @@ from typing import Any, Type
 import pyarrow as pa
 from pydantic import BaseModel
 
-from .utils import convert_field
-
 
 class PixanoType(ABC, BaseModel):
     """Base class for all Pixano custom types"""
@@ -71,6 +69,58 @@ class PixanoType(ABC, BaseModel):
         """
 
         pass
+
+
+def convert_field(
+    field_name: str, field_type: pa.DataType, field_data: list
+) -> pa.Array:
+    """Convert PyArrow ExtensionTypes properly
+
+    Args:
+        field_name (str): Name
+        field_type (pa.DataType): Target PyArrow format
+        field_data (list): Data in Python format
+
+    Returns:
+        pa.Array: Data in target PyArrow format
+    """
+
+    # If target format is an ExtensionType
+    if isinstance(field_type, pa.ExtensionType):
+        storage = pa.array(field_data, type=field_type.storage_type)
+        return pa.ExtensionArray.from_storage(field_type, storage)
+
+    # If target format is an extension of ListType
+    elif pa.types.is_list(field_type):
+        native_arr = pa.array(field_data)
+        if isinstance(native_arr, pa.NullArray):
+            return pa.nulls(len(native_arr), field_type)
+        offsets = native_arr.offsets
+        values = native_arr.values.to_numpy(zero_copy_only=False)
+        return pa.ListArray.from_arrays(
+            offsets,
+            convert_field(f"{field_name}.elements", field_type.value_type, values),
+        )
+
+    # If target format is an extension of StructType
+    elif pa.types.is_struct(field_type):
+        native_arr = pa.array(field_data)
+        if isinstance(native_arr, pa.NullArray):
+            return pa.nulls(len(native_arr), field_type)
+        arrays = []
+        for subfield in field_type:
+            sub_arr = native_arr.field(subfield.name)
+            converted = convert_field(
+                f"{field_name}.{subfield.name}",
+                subfield.type,
+                sub_arr.to_numpy(zero_copy_only=False),
+            )
+            arrays.append(converted)
+        return pa.StructArray.from_arrays(arrays, fields=field_type)
+
+    # For other target formats
+    else:
+        return pa.array(field_data, type=field_type)
 
 
 def createPyArrowType(
@@ -161,7 +211,7 @@ def createPyArrowType(
                         )
                     )
                 sto = pa.StructArray.from_arrays(arrays, fields=Fields)
-                return pa.ExtensionArray.from_storage(new_type, sto)
+                return pa.ExtensionArray.from_storage(pyarrow_type, sto)
 
             @classmethod
             def from_lists(cls, list: list[list[Type]]) -> pa.ListArray:
@@ -182,7 +232,7 @@ def createPyArrowType(
                 flat_array = cls.from_list(flat_list)
 
                 return pa.ListArray.from_arrays(
-                    offset, flat_array, type=pa.list_(new_type)
+                    offset, flat_array, type=pa.list_(pyarrow_type)
                 )
 
     # Create ExtensionType
