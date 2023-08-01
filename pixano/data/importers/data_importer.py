@@ -405,11 +405,11 @@ class DataImporter(ABC):
                                     categories.append(
                                         {
                                             "supercategory": "N/A",
-                                            "id": ann["category_id"],
-                                            "name": ann["category_name"],
+                                            "id": ann.category_id,
+                                            "name": ann.category_name,
                                         },
                                     )
-                                    seen_category_ids.append(ann["category_id"])
+                                    seen_category_ids.append(ann.category_id)
 
                 # Convert batch fields to PyArrow format
                 arrays = []
