@@ -21,7 +21,7 @@ from .depth_image import DepthImage, DepthImageType
 from .embedding import Embedding, EmbeddingType
 from .gt_info import GtInfo, GtInfoType
 from .image import Image, ImageType
-from .objectAnnotation import ObjectAnnotation, ObjectAnnotationType
+from .object_annotation import ObjectAnnotation, ObjectAnnotationType
 from .pose import Pose, PoseType
 from .utils import convert_field, fields, is_number
 

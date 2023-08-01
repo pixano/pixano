@@ -23,17 +23,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
+from pixano import types
 from pixano.core import DatasetInfo
-from pixano.core.arrow_types import (
-    ObjectAnnotation,
-    ObjectAnnotationType,
-    Image,
-    ImageType,
-    BBox,
-    BBoxType,
-    CompressedRLE,
-    CompressedRLEType,
-)
 from pixano.transforms import (
     coco_names_91,
     denormalize,
@@ -74,7 +65,7 @@ class COCOLoader(DataLoader):
         """
 
         # Dataset views
-        views = [pa.field("image", ImageType)]
+        views = [pa.field("image", types.ImageType)]
 
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
@@ -129,16 +120,16 @@ class COCOLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": str(im["id"]),
-                "image": Image(im_uri, None, im_thumb),
+                "image": types.Image(im_uri, None, im_thumb),
                 "objects": [
-                    ObjectAnnotation(
+                    types.ObjectAnnotation(
                         id=str(ann["id"]),
                         view_id="image",
                         area=float(ann["area"]) if ann["area"] else None,
-                        bbox=BBox.from_xywh(ann["bbox"]).normalize(
+                        bbox=types.BBox.from_xywh(ann["bbox"]).normalize(
                             im["height"], im["width"]
                         ),
-                        mask=CompressedRLE.encode(
+                        mask=types.CompressedRLE.encode(
                             ann["segmentation"], im["height"], im["width"]
                         ),
                         is_group_of=bool(ann["iscrowd"]) if ann["iscrowd"] else None,
@@ -253,7 +244,7 @@ class COCOLoader(DataLoader):
                 media_fields = [
                     field.name
                     for field in self.schema
-                    if isinstance(field.type, ImageType)
+                    if isinstance(field.type, types.ImageType)
                 ]
                 media_table = pq.read_table(file).select(["id"] + media_fields)
 

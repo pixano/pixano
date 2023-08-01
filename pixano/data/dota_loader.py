@@ -19,7 +19,7 @@ import pyarrow as pa
 import shortuuid
 from PIL import Image
 
-from pixano.core import arrow_types
+from pixano.core import types
 from pixano.transforms import (
     dota_ids,
     image_to_thumbnail,
@@ -57,7 +57,7 @@ class DOTALoader(DataLoader):
         """
 
         # Dataset views
-        views = [pa.field("image", arrow_types.ImageType)]
+        views = [pa.field("image", types.ImageType)]
 
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
@@ -112,9 +112,9 @@ class DOTALoader(DataLoader):
             with open(im_anns_file) as im_anns:
                 row = {
                     "id": im_path.stem,
-                    "image": arrow_types.Image(im_uri, None, im_thumb),
+                    "image": types.Image(im_uri, None, im_thumb),
                     "objects": [
-                        arrow_types.ObjectAnnotation(
+                        types.ObjectAnnotation(
                             id=shortuuid.uuid(),
                             view_id="image",
                             bbox=normalize(

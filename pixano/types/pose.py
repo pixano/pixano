@@ -14,7 +14,7 @@
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+from .all_pixano_types import PixanoType, createPaType
 
 # ------------------------------------------------
 #             Python type

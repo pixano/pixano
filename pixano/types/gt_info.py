@@ -14,8 +14,8 @@
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
-from pixano.core.arrow_types.bbox import BBox, BBoxType
+from .all_pixano_types import PixanoType, createPaType
+from .bbox import BBox, BBoxType
 
 
 class GtInfo(PixanoType, BaseModel):

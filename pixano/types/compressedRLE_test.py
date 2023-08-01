@@ -18,7 +18,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
+from .compressedRLE import CompressedRLE, CompressedRLEType
 from pixano.transforms.image import (
     mask_to_rle,
     polygons_to_rle,

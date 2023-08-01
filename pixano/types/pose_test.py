@@ -17,7 +17,7 @@ import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.pose import Pose, PoseType
+from .pose import Pose, PoseType
 
 
 class PoseTestCase(unittest.TestCase):

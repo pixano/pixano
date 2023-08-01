@@ -29,8 +29,9 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
+from pixano import types
 from pixano.analytics import compute_stats
-from pixano.core import DatasetInfo, arrow_types
+from pixano.core import DatasetInfo
 from pixano.core.features import Features
 
 
@@ -99,7 +100,7 @@ class DataLoader(ABC):
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
-            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType)),
+            pa.field("objects", pa.list_(types.ObjectAnnotationType)),
         ]
         fields.extend(views)
         self.schema = pa.schema(fields)
@@ -144,7 +145,7 @@ class DataLoader(ABC):
         # Get list of image fields
         image_fields = []
         for field in self.schema:
-            if arrow_types.is_image_type(field.type):
+            if types.is_image_type(field.type):
                 image_fields.append(field.name)
 
         if image_fields:
@@ -188,7 +189,7 @@ class DataLoader(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has objects
-            if arrow_types.is_list_of_object_annotation_type(field.type):
+            if types.is_list_of_object_annotation_type(field.type):
                 # Create dataframe
                 df = dataset.to_table(columns=["split", field.name]).to_pandas()
                 # Split objects in one object per row
@@ -268,7 +269,7 @@ class DataLoader(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has images
-            if arrow_types.is_image_type(field.type):
+            if types.is_image_type(field.type):
                 features = []
                 rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
 
@@ -397,7 +398,7 @@ class DataLoader(ABC):
                 # Append batch categories
                 for field in self.schema:
                     # If column has annotations
-                    if arrow_types.is_list_of_object_annotation_type(field.type):
+                    if types.is_list_of_object_annotation_type(field.type):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (
@@ -416,19 +417,19 @@ class DataLoader(ABC):
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
-                    if arrow_types.is_list_of_object_annotation_type(field.type):
+                    if types.is_list_of_object_annotation_type(field.type):
                         arrays.append(
-                            arrow_types.ObjectAnnotationType.Array.from_lists(
+                            types.ObjectAnnotationType.Array.from_lists(
                                 batch[field.name]
                             )
                         )
-                    elif arrow_types.is_image_type(field.type):
+                    elif types.is_image_type(field.type):
                         arrays.append(
-                            arrow_types.ImageType.Array.from_list(batch[field.name])
+                            types.ImageType.Array.from_list(batch[field.name])
                         )
                     else:
                         arrays.append(
-                            arrow_types.convert_field(
+                            types.convert_field(
                                 field_name=field.name,
                                 field_type=field.type,
                                 field_data=batch[field.name],
@@ -456,7 +457,7 @@ class DataLoader(ABC):
         # Move media directories if portable
         if portable:
             for field in tqdm(self.schema, desc="Moving media directories"):
-                if arrow_types.is_image_type(field.type):
+                if types.is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
                     shutil.copytree(

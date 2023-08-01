@@ -22,13 +22,8 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.api import add_pagination
 from pydantic import BaseSettings
 
-from pixano.core import (
-    Dataset,
-    DatasetInfo,
-    EmbeddingDataset,
-    InferenceDataset,
-    arrow_types,
-)
+from pixano import types
+from pixano.core import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
 
 from . import db_utils
 
@@ -60,7 +55,7 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         # Load thumbnail
         preview_path = spec.parent / "preview.png"
         if preview_path.is_file():
-            im = arrow_types.Image(uri=preview_path.absolute().as_uri())
+            im = types.Image(uri=preview_path.absolute().as_uri())
             info.preview = im.url
 
         # Load categories
@@ -204,12 +199,12 @@ def create_app(settings: Settings) -> FastAPI:
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/annotations",
-        response_model=list[arrow_types.ObjectAnnotation],
+        response_model=list[types.ObjectAnnotation],
     )
     async def post_dataset_item_annotations(
         ds_id: str,
         item_id: str,
-        annotations: list[arrow_types.ObjectAnnotation],
+        annotations: list[types.ObjectAnnotation],
     ):
         # Load dataset
         ds = load_dataset(ds_id, settings)

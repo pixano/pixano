@@ -23,7 +23,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano.core import arrow_types
+from pixano.core import types
 from pixano.transforms import natural_key
 
 
@@ -71,7 +71,7 @@ class InferenceModel(ABC):
         view: str,
         uri_prefix: str,
         threshold: float = 0.0,
-    ) -> list[list[arrow_types.ObjectAnnotation]]:
+    ) -> list[list[types.ObjectAnnotation]]:
         """Inference preannotation for a batch
 
         Args:
@@ -81,7 +81,7 @@ class InferenceModel(ABC):
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
+            list[list[types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
         """
 
         pass
@@ -157,15 +157,12 @@ class InferenceModel(ABC):
         if process_type == "infer":
             fields.extend(
                 [
-                    pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+                    pa.field("objects", pa.list_(types.ObjectAnnotationType())),
                 ]
             )
         elif process_type == "embed":
             fields.extend(
-                [
-                    pa.field(f"{view}_embedding", arrow_types.EmbeddingType())
-                    for view in views
-                ]
+                [pa.field(f"{view}_embedding", types.EmbeddingType()) for view in views]
             )
         schema = pa.schema(fields)
 
@@ -233,7 +230,7 @@ class InferenceModel(ABC):
                     arrays = []
                     for field in schema:
                         arrays.append(
-                            arrow_types.convert_field(
+                            types.convert_field(
                                 field_name=field.name,
                                 field_type=field.type,
                                 field_data=data[field.name],

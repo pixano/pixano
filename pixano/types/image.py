@@ -23,7 +23,7 @@ from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+from .all_pixano_types import PixanoType, createPaType
 from pixano.transforms.image import binary_to_url
 
 # ------------------------------------------------

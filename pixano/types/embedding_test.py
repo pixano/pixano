@@ -17,7 +17,7 @@ import unittest
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.embedding import Embedding, EmbeddingType
+from .embedding import Embedding, EmbeddingType
 
 
 class EmbeddingTestCase(unittest.TestCase):

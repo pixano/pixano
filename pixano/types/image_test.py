@@ -24,7 +24,7 @@ import pyarrow.parquet as pq
 from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
 
-from pixano.core.arrow_types.image import Image, ImageType
+from .image import Image, ImageType
 from pixano.transforms.image import binary_to_url
 
 
@@ -61,7 +61,7 @@ class ImageTestCase(unittest.TestCase):
         )
         self.assertEqual(image.uri, expected_uri)
 
-    @unittest.skip('Have to remove exeption')
+    @unittest.skip("Have to remove exeption")
     def test_image_uri_relative_without_prefix(self):
         image = Image("relative_path.png")
         with self.assertRaises(Exception):

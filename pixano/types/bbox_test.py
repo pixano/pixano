@@ -19,7 +19,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.bbox import BBox, BBoxType
+from .bbox import BBox, BBoxType
 
 
 class BBoxTestCase(unittest.TestCase):

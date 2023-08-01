@@ -101,7 +101,6 @@ nav:
     - "explorer": code/apps/explorer.md
 
   - "core":
-    - "arrow_types": code/core/arrow_types.md
     - "dataset": code/core/dataset.md
 
   - "data":
@@ -118,5 +117,7 @@ nav:
     - "boxes": code/transforms/boxes.md
     - "image": code/transforms/image.md
     - "labels": code/transforms/labels.md
+  
+  - "types": code/types.md
 
 - "Pixano Inference": https://pixano.github.io/pixano-inference/

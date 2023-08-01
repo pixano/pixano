@@ -18,7 +18,7 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano.core import arrow_types
+from pixano.core import types
 from pixano.transforms import image_to_thumbnail, natural_key
 
 from .data_loader import DataLoader
@@ -50,7 +50,7 @@ class ImageLoader(DataLoader):
         """
 
         # Dataset views
-        views = [pa.field("image", arrow_types.ImageType)]
+        views = [pa.field("image", types.ImageType)]
 
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
@@ -93,10 +93,10 @@ class ImageLoader(DataLoader):
             # Fill row with ID, image, and list of image annotations
             row = {
                 "id": im_path.name,
-                "image": arrow_types.Image(im_uri, None, im_thumb),
+                "image": types.Image(im_uri, None, im_thumb),
                 # TODO: find a way to return an empty list
                 "objects": [
-                    arrow_types.ObjectAnnotation(
+                    types.ObjectAnnotation(
                         id=shortuuid.uuid(),
                         category_id=0,
                     )

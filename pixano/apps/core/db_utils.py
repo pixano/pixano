@@ -23,9 +23,9 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano import transforms
-from pixano.core import Dataset, arrow_types
-from pixano.transforms import natural_key, urle_to_bbox, urle_to_rle
+from pixano import types, transforms
+from pixano.core import Dataset
+from pixano.transforms import natural_key
 
 
 class Feature(BaseModel):
@@ -61,12 +61,12 @@ def _create_features(item: list, schema: pa.schema) -> list[Feature]:
     # Iterate on fields
     for field in schema:
         # Number fields
-        if arrow_types.is_number(field.type):
+        if types.is_number(field.type):
             features.append(
                 Feature(name=field.name, dtype="number", value=item[field.name])
             )
         # Image fields
-        elif arrow_types.is_image_type(field.type):
+        elif types.is_image_type(field.type):
             thumbnail = item[field.name].preview_url
             features.append(Feature(name=field.name, dtype="image", value=thumbnail))
         # String fields
@@ -124,7 +124,7 @@ def get_item_details(
 
     # Iterate on view
     for field in pa_ds.schema:
-        if arrow_types.is_image_type(field.type):
+        if types.is_image_type(field.type):
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
             item_details["itemData"]["views"].append(
@@ -137,7 +137,7 @@ def get_item_details(
                     # Support for previous BBox type
                     if isinstance(obj["bbox"], list):
                         obj["bbox"] = {"coords": obj["bbox"], "format": "xywh"}
-                    obj = arrow_types.ObjectAnnotation.from_dict(obj)
+                    obj = types.ObjectAnnotation.from_dict(obj)
                 # If object in view
                 if obj.view_id == field.name:
                     # Object ID
@@ -231,20 +231,20 @@ def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> byte
 def update_annotations(
     dataset_dir: Path,
     item_id: str,
-    annotations: list[arrow_types.ObjectAnnotation],
+    annotations: list[types.ObjectAnnotation],
 ):
     """Update dataset annotations
 
     Args:
         dataset_dir (Path): Dataset directory
         item_id (str): Item ID
-        annotations (list[arrow_types.ObjectAnnotation]): Item annotations
+        annotations (list[types.ObjectAnnotation]): Item annotations
     """
 
     # Convert URLE to RLE and add bounding box
     for ann in annotations:
-        ann.mask = arrow_types.CompressedRLE.from_urle(ann.mask.to_dict())
-        ann.bbox = arrow_types.BBox.from_mask(ann.mask.to_mask())
+        ann.mask = types.CompressedRLE.from_urle(ann.mask.to_dict())
+        ann.bbox = types.BBox.from_mask(ann.mask.to_mask())
     # Dataset files
     files = (dataset_dir / "db").glob("**/*.parquet")
     files = sorted(files, key=lambda x: natural_key(x.name))
@@ -282,19 +282,19 @@ def update_annotations(
             # Convert ExtensionTypes
             arrays = []
             for field in table.schema:
-                if arrow_types.is_list_of_object_annotation_type(field.type):
+                if types.is_list_of_object_annotation_type(field.type):
                     arrays.append(
-                        arrow_types.ObjectAnnotationType.Array.from_lists(
+                        types.ObjectAnnotationType.Array.from_lists(
                             updated_table[field.name]
                         )
                     )
-                elif arrow_types.is_image_type(field.type):
+                elif types.is_image_type(field.type):
                     arrays.append(
-                        arrow_types.ImageType.Array.from_list(updated_table[field.name])
+                        types.ImageType.Array.from_list(updated_table[field.name])
                     )
                 else:
                     arrays.append(
-                        arrow_types.convert_field(
+                        types.convert_field(
                             field_name=field.name,
                             field_type=field.type,
                             field_data=updated_table[field.name],

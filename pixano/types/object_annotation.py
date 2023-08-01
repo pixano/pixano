@@ -16,11 +16,11 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
+from .all_pixano_types import PixanoType, createPaType
 
-from pixano.core.arrow_types.bbox import BBox, BBoxType
-from pixano.core.arrow_types.compressedRLE import CompressedRLE, CompressedRLEType
-from pixano.core.arrow_types.pose import Pose, PoseType
+from .bbox import BBox, BBoxType
+from .compressedRLE import CompressedRLE, CompressedRLEType
+from .pose import Pose, PoseType
 
 
 class ObjectAnnotation(PixanoType, BaseModel):

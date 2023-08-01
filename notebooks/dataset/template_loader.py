@@ -17,7 +17,7 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano.core import arrow_types
+from pixano import types
 from pixano.data.data_loader import DataLoader
 from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
 
@@ -49,7 +49,7 @@ class TemplateLoader(DataLoader):
 
         ##### Add your dataset views here #####
         # One image field or multiple fields for multi-view datasets
-        views = [pa.field("image", arrow_types.ImageType())]
+        views = [pa.field("image", types.ImageType)]
 
         # Initialize Data Loader
         super().__init__(name, description, splits, views)
@@ -96,9 +96,9 @@ class TemplateLoader(DataLoader):
             ##### Fill row with ID, image, and list of annotations #####
             row = {
                 "id": im_path.stem,
-                "image": arrow_types.Image(im_uri, None, im_thumb),
+                "image": types.Image(im_uri, None, im_thumb),
                 "objects": [
-                    arrow_types.ObjectAnnotation(
+                    types.ObjectAnnotation(
                         id=shortuuid.uuid(),
                         view_id="image",
                         area=float(ann["area"]),

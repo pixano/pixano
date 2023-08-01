@@ -23,7 +23,7 @@ import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano.core import arrow_types
+from pixano.core import types
 from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
 
 from .data_loader import DataLoader
@@ -66,7 +66,7 @@ class LegacyLoader(DataLoader):
             name,
             description,
             splits,
-            [pa.field(view, arrow_types.ImageType) for view in views],
+            [pa.field(view, types.ImageType) for view in views],
         )
 
     def import_row(
@@ -137,7 +137,7 @@ class LegacyLoader(DataLoader):
                 "split": split,
             }
             for f in feats[timestamp]:
-                row[f["viewId"]] = arrow_types.Image(f["im_uri"], None, f["im_thumb"])
+                row[f["viewId"]] = types.Image(f["im_uri"], None, f["im_thumb"])
 
                 # Fill row with list of image annotations
                 for ann in f["anns"]:
@@ -209,7 +209,7 @@ class LegacyLoader(DataLoader):
                         print("No geometry?")
 
                     row["objects"].append(
-                        arrow_types.ObjectAnnotation(
+                        types.ObjectAnnotation(
                             id=str(ann["id"]),
                             view_id=f["viewId"],
                             bbox=bbox,

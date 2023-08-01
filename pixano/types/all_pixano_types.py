@@ -17,7 +17,7 @@ from typing import Any, Type
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core.arrow_types.utils import convert_field
+from .utils import convert_field
 
 
 class PixanoType(ABC, BaseModel):

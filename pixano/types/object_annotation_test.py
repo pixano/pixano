@@ -18,13 +18,13 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.arrow_types.bbox import BBox
-from pixano.core.arrow_types.compressedRLE import CompressedRLE
-from pixano.core.arrow_types.objectAnnotation import (
+from .bbox import BBox
+from .compressedRLE import CompressedRLE
+from .object_annotation import (
     ObjectAnnotation,
     ObjectAnnotationType,
 )
-from pixano.core.arrow_types.pose import Pose
+from .pose import Pose
 
 
 class ObjectAnnotationTestCase(unittest.TestCase):
@@ -88,5 +88,5 @@ class TestParquetObjectAnnotation(unittest.TestCase):
 
         self.assertEqual(re_table.column_names, ["ObjectAnn"])
 
-        objectAnnotation1 = re_table.to_pylist()[0]["ObjectAnn"]
-        self.assertTrue(isinstance(objectAnnotation1, ObjectAnnotation))
+        objectAnn_from_table = re_table.to_pylist()[0]["ObjectAnn"]
+        self.assertTrue(isinstance(objectAnn_from_table, ObjectAnnotation))
