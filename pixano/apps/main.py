@@ -12,95 +12,26 @@
 #
 # http://www.cecill.info
 
-import json
-from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import add_pagination
-from pydantic import BaseSettings
 
 from pixano import types
-from pixano.data import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
-
-from . import db_utils
-
-
-class Settings(BaseSettings):
-    """Dataset library settings
-
-    Attributes:
-        data_dir (Path): Dataset library directory
-    """
-
-    data_dir: Path = Path.cwd() / "library"
-
-
-def load_library(settings: Settings) -> list[DatasetInfo]:
-    """Load all dataset info files in library
-
-    Args:
-        settings (Settings): Dataset library settings
-
-    Returns:
-        list[DatasetInfo]: Dataset info files
-    """
-
-    infos = []
-    for spec in sorted(settings.data_dir.glob("*/spec.json")):
-        # Load dataset info
-        info = DatasetInfo.parse_file(spec)
-        # Load thumbnail
-        preview_path = spec.parent / "preview.png"
-        if preview_path.is_file():
-            im = types.Image(uri=preview_path.absolute().as_uri())
-            info.preview = im.url
-
-        # Load categories
-        info.categories = getattr(info, "categories", [])
-        if info.categories is None:
-            info.categories = []
-        # Save dataset info
-        infos.append(info)
-    return infos
-
-
-def load_dataset(ds_id: str, settings: Settings) -> Dataset:
-    """Load dataset based on its ID
-
-    Args:
-        ds_id (str): Dataset ID
-        settings (Settings): Dataset library
-
-    Returns:
-        Dataset: Dataset
-    """
-
-    for spec in settings.data_dir.glob("*/spec.json"):
-        info = DatasetInfo.parse_file(spec)
-        if ds_id == info.id:
-            return Dataset(spec.parent)
-
-
-def load_dataset_stats(ds_id: str, settings: Settings) -> dict:
-    """Load dataset stats based on its ID
-
-    Args:
-        ds_id (str): Dataset ID
-        settings (Settings): Dataset Library
-
-    Returns:
-        list[dict]: Dataset stats
-    """
-
-    ds = load_dataset(ds_id, settings)
-    if ds is not None:
-        stats_file = ds.path / "db_feature_statistics.json"
-        if stats_file.is_file():
-            with open(stats_file, "r") as f:
-                return json.load(f)
+from pixano.api import (
+    ItemFeatures,
+    Settings,
+    load_dataset,
+    load_dataset_stats,
+    load_item_details,
+    load_item_embedding,
+    load_items,
+    load_library,
+    save_item_annotations,
+)
+from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
 
 
 def create_app(settings: Settings) -> FastAPI:
@@ -143,14 +74,14 @@ def create_app(settings: Settings) -> FastAPI:
     async def get_datasets_list():
         return load_library(settings)
 
-    @app.get("/datasets/{ds_id}/items", response_model=Page[db_utils.ItemFeatures])
+    @app.get("/datasets/{ds_id}/items", response_model=Page[ItemFeatures])
     async def get_dataset_items(ds_id, params: Params = Depends()):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
         # Return dataset items
-        res = db_utils.get_items(ds, params)
+        res = load_items(ds, params)
         if res is None:
             raise HTTPException(status_code=404, detail="Data not found")
         else:
@@ -178,7 +109,7 @@ def create_app(settings: Settings) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent))
 
         # Return item details
-        return db_utils.get_item_details(ds, item_id, ds.media_dir, inf_datasets)
+        return load_item_details(ds, item_id, ds.media_dir, inf_datasets)
 
     @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
     async def get_dataset_item_view_embedding(ds_id: str, item_id: str, view: str):
@@ -195,7 +126,7 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Embedding dataset not found")
 
         # Return item embedding
-        return Response(content=db_utils.get_item_view_embedding(emb_ds, item_id, view))
+        return Response(content=load_item_embedding(emb_ds, item_id, view))
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/annotations",
@@ -212,7 +143,7 @@ def create_app(settings: Settings) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # Update dataset annotations
-        db_utils.update_annotations(ds.path, item_id, annotations)
+        save_item_annotations(ds.path, item_id, annotations)
 
         return Response()
 

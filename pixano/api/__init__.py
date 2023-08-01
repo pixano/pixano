@@ -11,8 +11,23 @@
 #
 # http://www.cecill.info
 
-from .main import app
+from .datasets import Settings, load_dataset, load_dataset_stats, load_library
+from .items import (
+    ItemFeatures,
+    load_item_details,
+    load_item_embedding,
+    load_items,
+    save_item_annotations,
+)
 
 __all__ = [
-    "app",
+    "Settings",
+    "load_dataset",
+    "load_dataset_stats",
+    "load_library",
+    "ItemFeatures",
+    "load_item_details",
+    "load_item_embedding",
+    "load_items",
+    "save_item_annotations",
 ]

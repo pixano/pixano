@@ -154,7 +154,7 @@ def display_cli(url: str, port: int, height: int):
 
 
 class PixanoApp:
-    """Pixano App
+    """Base class for Annotator and Explorer apps
 
     Attributes:
         config (uvicorn.Config): App config

@@ -92,13 +92,14 @@ nav:
   - "analytics":
     - "feature_statistics": code/analytics/feature_statistics.md
 
+  - "api":
+    - "datasets": code/api/datasets.md
+    - "items": code/api/items.md
+
   - "apps":
-    - "core":
-      - "db_utils": code/apps/core/db_utils.md
-      - "main": code/apps/core/main.md
-      - "serve": code/apps/core/serve.md
-    - "annotator": code/apps/annotator.md
-    - "explorer": code/apps/explorer.md
+    - "AnnotatorApp": code/apps/annotator_app.md
+    - "ExplorerApp": code/apps/explorer_app.md
+    - "PixanoApp": code/apps/pixano_app.md
 
   - "data":
     - "importers":

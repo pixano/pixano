@@ -23,7 +23,7 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano import types, transforms
+from pixano import transforms, types
 from pixano.data import Dataset
 from pixano.transforms import natural_key
 
@@ -80,7 +80,39 @@ def _create_features(item: list, schema: pa.schema) -> list[ItemFeature]:
     return features
 
 
-def get_item_details(
+def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
+    """Get items
+
+    Args:
+        dataset (Dataset): Dataset
+        params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
+
+    Returns:
+        AbstractPage: List of Features for UI (DatasetExplorer)
+    """
+
+    # Load dataset
+    pa_ds = dataset.load()
+
+    # Get page parameters
+    params = resolve_params(params)
+    raw_params = params.to_raw_params()
+    total = pa_ds.count_rows()
+
+    # Get page items
+    start = raw_params.offset
+    stop = min(raw_params.offset + raw_params.limit, total)
+    if start >= stop:
+        return None
+    items_table = pa_ds.take(range(start, stop))
+
+    # Create items features
+    items = [_create_features(item, pa_ds.schema) for item in items_table.to_pylist()]
+
+    return create_page(items, total=total, params=params)
+
+
+def load_item_details(
     dataset: Dataset,
     item_id: str,
     media_dir: Path,
@@ -177,39 +209,7 @@ def get_item_details(
     return item_details
 
 
-def get_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
-    """Get items
-
-    Args:
-        dataset (Dataset): Dataset
-        params (AbstractParams, optional): FastAPI params for pagination. Defaults to None.
-
-    Returns:
-        AbstractPage: List of Features for UI (DatasetExplorer)
-    """
-
-    # Load dataset
-    pa_ds = dataset.load()
-
-    # Get page parameters
-    params = resolve_params(params)
-    raw_params = params.to_raw_params()
-    total = pa_ds.count_rows()
-
-    # Get page items
-    start = raw_params.offset
-    stop = min(raw_params.offset + raw_params.limit, total)
-    if start >= stop:
-        return None
-    items_table = pa_ds.take(range(start, stop))
-
-    # Create items features
-    items = [_create_features(item, pa_ds.schema) for item in items_table.to_pylist()]
-
-    return create_page(items, total=total, params=params)
-
-
-def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
+def load_item_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> bytes:
     """Get item embedding for a view
 
     Args:
@@ -230,7 +230,7 @@ def get_item_view_embedding(emb_ds: ds.Dataset, item_id: str, view: str) -> byte
     return emb_item[f"{view}_embedding"]
 
 
-def update_annotations(
+def save_item_annotations(
     dataset_dir: Path,
     item_id: str,
     annotations: list[types.ObjectAnnotation],
