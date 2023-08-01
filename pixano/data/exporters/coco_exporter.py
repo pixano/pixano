@@ -14,8 +14,6 @@
 import datetime
 import json
 import os
-from collections import defaultdict
-from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -26,20 +24,16 @@ from tqdm.auto import tqdm
 from pixano import types
 from pixano.data import DatasetInfo
 from pixano.transforms import (
-    coco_names_91,
     denormalize,
-    encode_rle,
-    image_to_thumbnail,
     natural_key,
-    normalize,
     rle_to_urle,
     urle_to_bbox,
 )
 
-from .data_importer import DataImporter
+from .data_exporter import DataExporter
 
 
-class COCOExporter(DataImporter):
+class COCOExporter(DataExporter):
     """Data Importer class for COCO instances dataset
 
     Attributes:
@@ -213,39 +207,45 @@ class COCOExporter(DataImporter):
                         anns = ann_row["objects"][0].as_py()
 
                         for ann in anns:
+                            # Support for previous ObjectAnnotation type
+                            if isinstance(ann, dict):
+                                # Support for previous BBox type
+                                if isinstance(ann["bbox"], list):
+                                    ann["bbox"] = {
+                                        "coords": ann["bbox"],
+                                        "format": "xywh",
+                                    }
+                                ann = types.ObjectAnnotation.from_dict(ann)
+
                             # Append annotation
-                            im_w, im_h = images[ann["view_id"]].size
-                            urle = rle_to_urle(ann["mask"])
-                            bbox = (
-                                ann["bbox"]
-                                if ann["bbox"] != [0.0, 0.0, 0.0, 0.0]
-                                else urle_to_bbox(urle)
-                            )
+                            im_w, im_h = images[ann.view_id].size
+                            urle = ann.mask.to_urle()
+                            bbox = ann.bbox.coords
                             coco_json["annotations"].append(
                                 {
                                     "segmentation": urle,
-                                    "area": ann["area"],
+                                    "area": ann.area,
                                     "iscrowd": 0,
                                     "image_id": media_row["id"][0].as_py(),
                                     "bbox": denormalize(bbox, im_h, im_w),
-                                    "category_id": ann["category_id"],
-                                    "category_name": ann["category_name"],
-                                    "id": ann["id"],
+                                    "category_id": ann.category_id,
+                                    "category_name": ann.category_name,
+                                    "id": ann.id,
                                 }
                             )
                             # Append category if not seen yet
                             if (
-                                ann["category_id"] not in seen_category_ids
-                                and ann["category_name"] is not None
+                                ann.category_id not in seen_category_ids
+                                and ann.category_name is not None
                             ):
                                 coco_json["categories"].append(
                                     {
                                         "supercategory": "N/A",
-                                        "id": ann["category_id"],
-                                        "name": ann["category_name"],
+                                        "id": ann.category_id,
+                                        "name": ann.category_name,
                                     },
                                 )
-                                seen_category_ids.append(ann["category_id"])
+                                seen_category_ids.append(ann.category_id)
 
             # Sort categories
             coco_json["categories"] = sorted(
