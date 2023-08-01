@@ -122,9 +122,9 @@ def get_item_details(
         "itemObjects": defaultdict(lambda: defaultdict(list)),
     }
 
+    # Iterate on view
     for field in pa_ds.schema:
         if arrow_types.is_image_type(field.type):
-            # Views
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
             item_details["itemData"]["views"].append(
@@ -132,9 +132,19 @@ def get_item_details(
             )
 
             for obj in objects:
+                # Support for previous ObjectAnnotation type
+                if isinstance(obj, dict):
+                    # Support for previous BBox type
+                    if isinstance(obj["bbox"], list):
+                        obj["bbox"] = {"coords": obj["bbox"], "format": "xywh"}
+                    obj = arrow_types.ObjectAnnotation.from_dict(obj)
+                # If object in view
                 if obj.view_id == field.name:
+                    # Object ID
                     id = obj.id
+                    # Object mask
                     mask = obj.mask.to_urle() if obj.mask is not None else None
+                    # Object bounding box
                     bbox = (
                         transforms.format_bbox(
                             obj.bbox.coords,
@@ -144,13 +154,14 @@ def get_item_details(
                         if obj.bbox is not None
                         else None
                     )
+                    # Object source
                     source = obj.mask_source or obj.bbox_source or "Ground truth"
+                    # Object category
                     category = (
                         {"id": obj.category_id, "name": obj.category_name}
                         if obj.category_id is not None and obj.category_name is not None
                         else None
                     )
-
                     # Add object
                     item_details["itemObjects"][source][field.name].append(
                         {
