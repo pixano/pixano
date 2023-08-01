@@ -9,17 +9,18 @@ All notable changes to Pixano will be documented in this file.
 ### Added:
 - Add labels hierarchy (group by source, view, and category) in both Pixano apps
 - Add label category ID on hover in side panel and label toolbar in both Pixano apps
+- Scale item annotations with zoom inside Pixano apps
+- Add new better defined types for Pixano annotations
 
 ### Changed:
 - Replace JavaScript popup boxes by integrated windows in Pixano Apps to fix notebook integration
 - Update import dataset portable option from moving files to copying them 
-- Refactor all UI code
+- Refactor all UI code and merge common code for Explorer and Annotator apps
 
 ## Fixed:
 - Fix category colors
 - Fix saving annotations to file from Pixano Annotator
 - Fix displaying item information inside Pixano apps item view
-- Fix bounding box and segmentation mask scaling when zooming inside Pixano apps item view
 - Clear user inputs if either inference model or embedding directory is missing in Pixano Annotator 
 - Fix Pixano Annotator for multi-views datasets
 - Fix imports and dependency versions for Pixano apps and UI components
