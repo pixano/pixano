@@ -16,14 +16,15 @@ import pyarrow as pa
 from PIL import Image
 from pydantic import BaseModel
 
-from .pixano_type import PixanoType, createPyArrowType
 from pixano.utils import (
-    mask_to_bbox,
     denormalize_coords,
+    mask_to_bbox,
     normalize_coords,
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
+
+from .pixano_type import PixanoType, createPyArrowType
 
 
 class BBox(PixanoType, BaseModel):

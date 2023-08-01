@@ -16,10 +16,9 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from .pixano_type import PixanoType, createPyArrowType
-
 from .bbox import BBox, BBoxType
 from .compressed_rle import CompressedRLE, CompressedRLEType
+from .pixano_type import PixanoType, createPyArrowType
 from .pose import Pose, PoseType
 
 
