@@ -19,6 +19,7 @@ from .camera import Camera, CameraType
 from .compressedRLE import CompressedRLE, CompressedRLEType
 from .depth_image import DepthImage, DepthImageType
 from .embedding import Embedding, EmbeddingType
+from .features import Features
 from .gt_info import GtInfo, GtInfoType
 from .image import Image, ImageType
 from .object_annotation import ObjectAnnotation, ObjectAnnotationType
@@ -28,8 +29,6 @@ from .utils import convert_field, fields, is_number
 __all__ = [
     "BBox",
     "BBoxType",
-    "Embedding",
-    "EmbeddingType",
     "ObjectAnnotation",
     "ObjectAnnotationType",
     "CompressedRLE",
@@ -40,6 +39,9 @@ __all__ = [
     "PoseType",
     "DepthImage",
     "DepthImageType",
+    "Embedding",
+    "EmbeddingType",
+    "Features",
     "Camera",
     "CameraType",
     "GtInfo",

@@ -71,9 +71,6 @@ class Features(BaseModel):
     def to_fields(self) -> list[pa.field]:
         """Convert dict containing python type to arrow fields
 
-        Args:
-            types (dict[str, type]): Dict containing type, key as field name, value as type
-
         Returns:
             List[pa.fields]: Fields in arrow format
         """
