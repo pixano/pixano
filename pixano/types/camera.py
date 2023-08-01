@@ -70,8 +70,8 @@ class Camera(PixanoType, BaseModel):
             [
                 pa.field("depth_scale", pa.float64()),
                 pa.field("cam_K", pa.list_(pa.float64())),
-                # pa.field("cam_R_w2c", pa.list_(pa.float64())),
-                # pa.field("cam_t_w2c", pa.list_(pa.float64())),
+                pa.field("cam_R_w2c", pa.list_(pa.float64())),
+                pa.field("cam_t_w2c", pa.list_(pa.float64())),
             ]
         )
 
