@@ -16,7 +16,7 @@ import pyarrow as pa
 from PIL import Image
 from pydantic import BaseModel
 
-from .all_pixano_types import PixanoType, createPaType
+from .pixano_type import PixanoType, createPaType
 from pixano.transforms.boxes import mask_to_bbox, normalize, xywh_to_xyxy, xyxy_to_xywh
 
 # ------------------------------------------------

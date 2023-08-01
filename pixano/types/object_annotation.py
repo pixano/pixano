@@ -16,7 +16,7 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from .all_pixano_types import PixanoType, createPaType
+from .pixano_type import PixanoType, createPaType
 
 from .bbox import BBox, BBoxType
 from .compressedRLE import CompressedRLE, CompressedRLEType

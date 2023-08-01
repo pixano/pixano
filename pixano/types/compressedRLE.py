@@ -18,7 +18,7 @@ from numpy import ndarray
 from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 
-from .all_pixano_types import PixanoType, createPaType
+from .pixano_type import PixanoType, createPaType
 from pixano.transforms.image import (
     encode_rle,
     mask_to_rle,

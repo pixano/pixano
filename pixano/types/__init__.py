@@ -13,7 +13,7 @@
 
 import pyarrow as pa
 
-from .all_pixano_types import PixanoType, createPaType
+from .pixano_type import PixanoType, createPaType
 from .bbox import BBox, BBoxType
 from .camera import Camera, CameraType
 from .compressedRLE import CompressedRLE, CompressedRLEType
