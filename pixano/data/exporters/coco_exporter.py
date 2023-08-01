@@ -24,10 +24,7 @@ from tqdm.auto import tqdm
 from pixano import types
 from pixano.data import DatasetInfo
 from pixano.transforms import (
-    denormalize,
     natural_key,
-    rle_to_urle,
-    urle_to_bbox,
 )
 
 from .data_exporter import DataExporter
@@ -219,15 +216,13 @@ class COCOExporter(DataExporter):
 
                             # Append annotation
                             im_w, im_h = images[ann.view_id].size
-                            urle = ann.mask.to_urle()
-                            bbox = ann.bbox.coords
                             coco_json["annotations"].append(
                                 {
-                                    "segmentation": urle,
+                                    "segmentation": ann.mask.to_urle(),
                                     "area": ann.area,
                                     "iscrowd": 0,
                                     "image_id": media_row["id"][0].as_py(),
-                                    "bbox": denormalize(bbox, im_h, im_w),
+                                    "bbox": ann.bbox.denormalize(im_h, im_w).coords,
                                     "category_id": ann.category_id,
                                     "category_name": ann.category_name,
                                     "id": ann.id,

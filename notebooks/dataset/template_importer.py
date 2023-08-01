@@ -19,7 +19,7 @@ import shortuuid
 
 from pixano import types
 from pixano.data.importers import DataImporter
-from pixano.transforms import coco_names_91, encode_rle, image_to_thumbnail, normalize
+from pixano.transforms import coco_names_91, image_to_thumbnail
 
 
 class TemplateImporter(DataImporter):
@@ -102,8 +102,10 @@ class TemplateImporter(DataImporter):
                         id=shortuuid.uuid(),
                         view_id="image",
                         area=float(ann["area"]),
-                        bbox=normalize(ann["bbox"], im_height, im_width),
-                        mask=encode_rle(ann["segmentation"], im_height, im_width),
+                        bbox=types.BBox.from_xywh(ann["bbox"]).normalize(
+                            im_height, im_width
+                        ),
+                        mask=types.compressedRLE.from_mask(ann["segmentation"]),
                         is_group_of=False,
                         category_id=int(ann["category_id"]),
                         category_name=coco_names_91(ann["category_id"]),
