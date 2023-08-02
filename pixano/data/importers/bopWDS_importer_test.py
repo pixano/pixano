@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 import pandas as pd
-from pixano.data.bopWDS_importer import BopWDS_Importer
+from pixano.data.importers.bopWDS_importer import BopWDS_Importer
 
 
 class ImageImporterTestCase(unittest.TestCase):

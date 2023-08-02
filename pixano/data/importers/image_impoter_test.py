@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from pixano.data.image_importer import ImageImporter
+from pixano.data.importers.image_importer import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):

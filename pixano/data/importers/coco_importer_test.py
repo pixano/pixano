@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 import pandas as pd
-from pixano.data.coco_importer import COCO_Importer
+from pixano.data.importers.coco_importer import COCO_Importer
 
 
 class ImageImporterTestCase(unittest.TestCase):
