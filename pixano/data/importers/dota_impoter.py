@@ -20,6 +20,7 @@ import shortuuid
 from PIL import Image
 
 from pixano.core import arrow_types
+from pixano.core.arrow_types.bbox import BBox
 from pixano.core.arrow_types.image import ImageType
 from pixano.core.arrow_types.objectAnnotation import ObjectAnnotationType
 from pixano.core.features import Features
@@ -58,7 +59,7 @@ class DOTA_Importer(Importer):
             description (str): Dataset description
             splits (list[str]): Dataset splits
         """
-        
+
         self.feature_dict = {
             "id": "str",
             "image": "Image",
@@ -74,8 +75,6 @@ class DOTA_Importer(Importer):
     @property
     def features(self):
         return Features.from_string_dict(self.feature_dict)
-
-
 
     def import_row(
         self,
@@ -131,7 +130,7 @@ class DOTA_Importer(Importer):
                             arrow_types.ObjectAnnotation(
                                 id=shortuuid.uuid(),
                                 view_id="image",
-                                bbox=normalize(
+                                bbox=BBox.from_xywh(
                                     xyxy_to_xywh(
                                         [
                                             float(line.strip().split()[0]),
@@ -139,10 +138,8 @@ class DOTA_Importer(Importer):
                                             float(line.strip().split()[4]),
                                             float(line.strip().split()[5]),
                                         ]
-                                    ),
-                                    im_h,
-                                    im_w,
-                                ),
+                                    )
+                                ).normalize(im_h, im_w),
                                 is_difficult=bool(line.strip().split()[9]),
                                 category_id=dota_ids(str(line.strip().split()[8])),
                                 category_name=str(line.strip().split()[8]).replace(
@@ -165,4 +162,3 @@ class DOTA_Importer(Importer):
 
                     # Return row
                     yield pa.RecordBatch.from_struct_array(struct_arr)
-
