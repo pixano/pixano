@@ -29,7 +29,7 @@ class ImageImporterTestCase(unittest.TestCase):
                 db_lance_path = import_dir / "db.lance"
                 self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
     
-    def test_import_correct_data(self):
+    def test_import_data(self):
         with tempfile.TemporaryDirectory() as library_dir:
             import_dir = Path(library_dir) / "test_bop_wds"
             ds = self.importer.import_dataset(self.input_dirs, import_dir)
