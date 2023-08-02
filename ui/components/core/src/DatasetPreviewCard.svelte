@@ -51,12 +51,14 @@
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5">
-    <img
-      src={dataset.preview}
-      alt=""
-      class="h-full w-full object-cover object-center"
-    />
+  <div class="h-3/5 bg-zinc-100 dark:bg-zinc-700">
+    {#if dataset.preview}
+      <img
+        src={dataset.preview}
+        alt="{dataset.name} thumbnail"
+        class="h-full w-full object-cover object-center"
+      />
+    {/if}
   </div>
 
   <!-- Actions -->
