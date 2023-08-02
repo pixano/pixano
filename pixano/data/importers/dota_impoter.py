@@ -31,7 +31,7 @@ from pixano.transforms import (
     xyxy_to_xywh,
 )
 
-from ..exporters.importer import Importer
+from .importer import Importer
 
 
 class DOTA_Importer(Importer):

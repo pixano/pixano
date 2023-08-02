@@ -26,7 +26,7 @@ from PIL import Image as pilImage
 from pixano.core import *
 from pixano.core.arrow_types import *
 from pixano.core.dataset import DatasetInfo
-from pixano.data.exporters.importer import Importer
+from pixano.data.importers.importer import Importer
 from pixano.transforms.image import image_to_binary, image_to_thumbnail
 
 ###################################################

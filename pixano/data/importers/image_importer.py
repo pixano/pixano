@@ -20,7 +20,7 @@ import pyarrow as pa
 from pixano.core import arrow_types
 from pixano.core.arrow_types.image import ImageType
 from pixano.core.features import Features
-from pixano.data.exporters.importer import Importer
+from pixano.data.importers.importer import Importer
 from pixano.transforms import image_to_thumbnail, natural_key
 
 
