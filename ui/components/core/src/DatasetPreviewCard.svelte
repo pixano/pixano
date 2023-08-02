@@ -30,7 +30,7 @@
 
 <button
   class="w-64 h-80 m-4 flex flex-col rounded-md transition-all hover:scale-110 text-left
-  border border-zinc-300 dark:border-zinc-500"
+  border border-zinc-300 dark:border-zinc-600"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->

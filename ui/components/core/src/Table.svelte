@@ -42,12 +42,12 @@
   class="h-full overflow-y-auto overflow-x-auto border rounded-lg
   bg-white dark:bg-zinc-800
   text-zinc-500 dark:text-zinc-300
-  border-zinc-300 dark:border-zinc-500"
+  border-zinc-300 dark:border-zinc-600"
 >
   <table class="table-auto z-0 w-full text-sm text-left">
     <thead class="text-xs uppercase">
       <tr
-        class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-500 dark:bg-zinc-700"
+        class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-600 dark:bg-zinc-700"
       >
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
@@ -66,7 +66,7 @@
         >
           {#each item as itemFeature}
             {#if itemFeature.dtype != "hidden"}
-              <td class="border-b py-2 border-zinc-300 dark:border-zinc-500">
+              <td class="border-b py-2 border-zinc-300 dark:border-zinc-600">
                 <TableCell {itemFeature} />
               </td>
             {/if}

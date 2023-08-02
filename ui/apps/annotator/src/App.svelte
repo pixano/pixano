@@ -424,7 +424,9 @@
   on:saveAnns={handleSaveAnns}
 />
 <div
-  class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+  class="pt-20 h-screen w-screen
+  bg-white dark:bg-zinc-800
+  text-zinc-800 dark:text-zinc-300"
 >
   {#if datasets}
     {#if selectedItem}

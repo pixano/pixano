@@ -165,10 +165,10 @@
 </script>
 
 <div
-  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
-      bg-white dark:bg-zinc-800
-      border-zinc-300 dark:border-zinc-500
-      text-zinc-500 dark:text-zinc-300"
+  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow
+  bg-white dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-600
+  text-zinc-500 dark:text-zinc-300"
 >
   {#if selectedDataset}
     <div class="h-12 fixed w-full flex items-center justify-evenly">
@@ -177,7 +177,7 @@
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-500'}"
+          : 'border-zinc-300 dark:border-zinc-600'}"
         on:click={() => {
           activeTab = "labels";
         }}
@@ -190,7 +190,7 @@
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'dataset'
             ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-            : 'border-zinc-300 dark:border-zinc-500'}"
+            : 'border-zinc-300 dark:border-zinc-600'}"
           on:click={() => {
             activeTab = "dataset";
           }}
@@ -206,7 +206,7 @@
           hover:bg-zinc-100 dark:hover:bg-zinc-700
           {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-500'}"
+          : 'border-zinc-300 dark:border-zinc-600'}"
       >
         Labels
       </button>
@@ -217,7 +217,7 @@
       <!-- Details -->
       <div
         class="flex flex-col p-4 border-b-2
-            border-zinc-300 dark:border-zinc-500"
+            border-zinc-300 dark:border-zinc-600"
       >
         <span class="text-lg font-bold">Item info</span>
         <ul class="list-disc ml-6">
@@ -235,7 +235,7 @@
       {:else}
         <div
           class="px-4 border-b-2
-          border-zinc-300 dark:border-zinc-500"
+          border-zinc-300 dark:border-zinc-600"
         >
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
@@ -295,7 +295,7 @@
           {#if Object.keys(annotations).length > 1 && source.numLabels}
             <div
               class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                border-zinc-300 dark:border-zinc-500
+                border-zinc-300 dark:border-zinc-600
                 {source.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
               <button
@@ -349,7 +349,7 @@
             {#if Object.keys(source.views).length > 1 && view.numLabels}
               <div
                 class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-500
+                  border-zinc-300 dark:border-zinc-600
                   {source.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
                   {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
@@ -406,7 +406,7 @@
               {#if Object.keys(category.labels).length > 0}
                 <div
                   class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-500
+                  border-zinc-300 dark:border-zinc-600
                   {source.opened && view.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
                   {category.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
@@ -479,7 +479,7 @@
                     <div
                       class="p-3 pl-12 flex items-center space-x-1 border-b-2
                       {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
-                      border-zinc-300 dark:border-zinc-500"
+                      border-zinc-300 dark:border-zinc-600"
                     >
                       <button
                         on:click={() =>

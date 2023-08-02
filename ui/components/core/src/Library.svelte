@@ -32,38 +32,40 @@
   }
 </script>
 
-{#if datasets.length != 0}
-  <div class="mx-auto px-8 dark:bg-zinc-800">
-    <div
-      class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
-    >
-      {#each datasets as dataset}
-        <DatasetPreviewCard
-          {dataset}
-          {buttonLabel}
-          on:selectDataset={() => handleSelectDataset(dataset)}
-        />
-      {/each}
+<div class="flex h-full w-full bg-white dark:bg-zinc-800">
+  {#if datasets.length != 0}
+    <div class="mx-auto px-8">
+      <div
+        class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
+      >
+        {#each datasets as dataset}
+          <DatasetPreviewCard
+            {dataset}
+            {buttonLabel}
+            on:selectDataset={() => handleSelectDataset(dataset)}
+          />
+        {/each}
+      </div>
     </div>
-  </div>
-{:else}
-  <div
-    class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300 dark:bg-zinc-800"
-  >
-    <span style="text-align: center;">
-      No datasets found... <br /> <br />
-      Please refer to
-      <u>
-        <a
-          href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
-          target="_blank"
-          class="text-rose-500 dark:text-rose-600
+  {:else}
+    <div
+      class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
+    >
+      <span style="text-align: center;">
+        No datasets found... <br /> <br />
+        Please refer to
+        <u>
+          <a
+            href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
+            target="_blank"
+            class="text-rose-500 dark:text-rose-600
           hover:text-rose-600 dark:hover:text-rose-500"
-        >
-          this Jupyter notebook
-        </a>
-      </u>
-      for information on how to import your datasets.
-    </span>
-  </div>
-{/if}
+          >
+            this Jupyter notebook
+          </a>
+        </u>
+        for information on how to import your datasets.
+      </span>
+    </div>
+  {/if}
+</div>

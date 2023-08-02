@@ -21,7 +21,7 @@
   Loading datasets...
 </div>
 <div
-  class="mt-8 mx-auto border border-zinc-300 shadow rounded-md p-4 max-w-sm w-full dark:border-zinc-500"
+  class="mt-8 mx-auto border shadow rounded-md p-4 max-w-sm w-full border-zinc-300 dark:border-zinc-600"
 >
   <div class="animate-pulse flex space-x-4">
     <div class="rounded-full bg-slate-200 h-10 w-10" />

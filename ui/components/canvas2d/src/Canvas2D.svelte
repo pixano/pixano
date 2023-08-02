@@ -1153,7 +1153,7 @@
 </script>
 
 <div
-  class="h-full w-full relative bg-zinc-100 dark:bg-zinc-900"
+  class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900"
   bind:this={stageContainer}
 >
   <Stage
