@@ -232,7 +232,7 @@
   on:unselectItem={handleUnselectItem}
 />
 <div
-  class="pt-20 h-screen w-screen
+  class="pt-20 h-screen w-full
   bg-white dark:bg-zinc-800
   text-zinc-800 dark:text-zinc-300"
 >
