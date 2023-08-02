@@ -46,7 +46,7 @@ from pixano.transforms import (
     urle_to_bbox,
 )
 
-from ..importer import Importer
+from ..exporters.importer import Importer
 
 
 class COCO_Importer(Importer):
