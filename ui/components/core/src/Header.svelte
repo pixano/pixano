@@ -44,9 +44,9 @@
 </script>
 
 <!-- Header -->
-<header class="w-full fixed">
+<header class="w-full fixed z-40">
   <div
-    class="h-20 z-50 py-4 px-4 flex justify-start items-center shrink-0 border-b
+    class="h-20 py-4 px-4 flex justify-start items-center shrink-0 shadow border-b
     text-zinc-800 dark:text-zinc-300
     bg-white dark:bg-zinc-800
     border-zinc-300 dark:border-zinc-600"
