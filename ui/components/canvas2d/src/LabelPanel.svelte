@@ -244,7 +244,9 @@
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="maskSlider"
               min="0"
@@ -259,7 +261,9 @@
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="bboxSlider"
               min="0"
@@ -274,7 +278,9 @@
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
-              class="cursor-pointer accent-rose-400 dark:accent-rose-500"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="confidenceSlider"
               min="0"
