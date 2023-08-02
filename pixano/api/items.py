@@ -196,6 +196,7 @@ def load_item_details(
                             obj.bbox_confidence,
                         )
                         if obj.bbox is not None
+                        and obj.bbox.coords != [0.0, 0.0, 0.0, 0.0]
                         else None
                     )
                     # Object source
