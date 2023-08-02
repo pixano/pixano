@@ -21,7 +21,7 @@ import numpy as np
 import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 
 from pixano.utils import binary_to_url
 
@@ -32,15 +32,15 @@ class Image(PixanoType, BaseModel):
     """Image type using URI or bytes
 
     Attributes:
-        _uri (str): Image URI
-        _bytes (bytes): Image bytes
-        _preview_bytes (bytes): Image preview bytes
+        uri (str): Image URI
+        bytes (bytes): Image bytes
+        preview_bytes (bytes): Image preview bytes
         uri_prefix (str): URI prefix for relative URIs
     """
 
-    _uri: str = PrivateAttr()
-    _bytes: Optional[bytes] = PrivateAttr()
-    _preview_bytes: Optional[bytes] = PrivateAttr()
+    uri: str
+    bytes: Optional[bytes]
+    preview_bytes: Optional[bytes]
     uri_prefix: Optional[str]
 
     def __init__(
@@ -60,38 +60,12 @@ class Image(PixanoType, BaseModel):
         """
 
         # Define public attributes through Pydantic BaseModel
-        super().__init__(uri_prefix=uri_prefix)
-
-        # Define private attributes manually
-        self._uri = uri
-        self._bytes = bytes
-        self._preview_bytes = preview_bytes
-
-    @property
-    def bytes(self) -> bytes:
-        """Return Image bytes
-
-        Returns:
-            bytes: Image bytes
-        """
-
-        if self._bytes is not None:
-            return self._bytes
-        elif self._uri is not None:
-            with self.open() as f:
-                return f.read()
-        else:
-            return None
-
-    @property
-    def preview_bytes(self) -> bytes:
-        """Return Image preview bytes
-
-        Returns:
-            bytes: Image preview bytes
-        """
-
-        return self._preview_bytes
+        super().__init__(
+            uri=uri,
+            bytes=bytes,
+            preview_bytes=preview_bytes,
+            uri_prefix=uri_prefix,
+        )
 
     @property
     def url(self) -> str:
@@ -101,7 +75,7 @@ class Image(PixanoType, BaseModel):
             str: Image URL
         """
 
-        return binary_to_url(self.bytes)
+        return binary_to_url(self.get_bytes())
 
     @property
     def preview_url(self) -> str:
@@ -111,34 +85,7 @@ class Image(PixanoType, BaseModel):
             str: Image preview URL
         """
 
-        return binary_to_url(self._preview_bytes)
-
-    @property
-    def uri(self) -> str:
-        """Return image URI
-
-        Returns:
-            str: Image URI
-        """
-
-        # Relative URI
-        if urlparse(self._uri).scheme == "":
-            # If URI prefix exists
-            if self.uri_prefix is not None:
-                parsed_uri = urlparse(self.uri_prefix)
-                if parsed_uri.scheme == "":
-                    raise Exception(
-                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
-                    )
-                combined_path = Path(parsed_uri.path) / self._uri
-                parsed_uri = parsed_uri._replace(path=str(combined_path))
-                return parsed_uri.geturl()
-            # No URI prefix
-            else:
-                return self._uri
-        # Complete URI
-        else:
-            return self._uri
+        return binary_to_url(self.preview_bytes)
 
     @property
     def size(self) -> list[int]:
@@ -150,6 +97,47 @@ class Image(PixanoType, BaseModel):
 
         return self.as_pillow().size
 
+    def get_uri(self) -> str:
+        """Return complete image URI from URI and URI prefix
+
+        Returns:
+            str: Image URI
+        """
+
+        # Relative URI
+        if urlparse(self.uri).scheme == "":
+            # If URI prefix exists
+            if self.uri_prefix is not None:
+                parsed_uri = urlparse(self.uri_prefix)
+                if parsed_uri.scheme == "":
+                    raise Exception(
+                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
+                    )
+                combined_path = Path(parsed_uri.path) / self.uri
+                parsed_uri = parsed_uri._replace(path=str(combined_path))
+                return parsed_uri.geturl()
+            # No URI prefix
+            else:
+                return None
+        # Complete URI
+        else:
+            return self.uri
+
+    def get_bytes(self) -> bytes:
+        """Get image bytes from attribute or from reading file from URI
+
+        Returns:
+            bytes: Image bytes
+        """
+
+        if self.bytes is not None:
+            return self.bytes
+        elif self.uri is not None:
+            with self.open() as f:
+                return f.read()
+        else:
+            return None
+
     def open(self) -> IO:
         """Open image
 
@@ -157,7 +145,7 @@ class Image(PixanoType, BaseModel):
             IO: Opened image
         """
 
-        return urlopen(self.uri)
+        return urlopen(self.get_uri())
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow
@@ -188,7 +176,7 @@ class Image(PixanoType, BaseModel):
             IPython.core.display.Image: Image as IPython Display
         """
 
-        im_bytes = self._preview_bytes if preview else self.bytes
+        im_bytes = self.preview_bytes if preview else self.get_bytes()
         return IPyImage(url=binary_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
     @classmethod
