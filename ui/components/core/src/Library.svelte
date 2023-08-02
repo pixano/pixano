@@ -32,7 +32,7 @@
   }
 </script>
 
-<div class="flex h-full w-full bg-white dark:bg-zinc-800">
+<div class="flex min-h-screen w-screen bg-white dark:bg-zinc-800">
   {#if datasets.length != 0}
     <div class="mx-auto px-8">
       <div
