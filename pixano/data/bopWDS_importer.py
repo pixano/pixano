@@ -4,9 +4,6 @@ import sys
 from pathlib import Path
 from typing import Iterator, Optional
 
-sys.path.append("/home/maximilien/work/lib/bop_toolkit")
-
-import bop_toolkit_lib.dataset.bop_webdataset as btk
 import lance
 import pyarrow as pa
 import webdataset as wds
@@ -19,11 +16,17 @@ from pixano.core.dataset import DatasetInfo
 from pixano.data.importer import Importer
 from pixano.transforms.image import image_to_binary, image_to_thumbnail
 
+###################################################
+# Add the path to bop_toolkit
+sys.path.append("/home/maximilien/work/lib/bop_toolkit")
+###################################################
+
+import bop_toolkit_lib.dataset.bop_webdataset as btk
+
 
 def row_to_array(
     row, split: str, features: Features, coco_json_path: Optional[Path | str] = None
 ) -> pa.StructArray:
-    
     struct_arr = []
 
     sample = btk.decode_sample(
@@ -147,7 +150,7 @@ class BopWDS_Importer(Importer):
     ):
         self._shard_split = split
 
-        #Comment/uncomment to desactivate/activate a feature (need coco_json_path for object_id and mask)
+        # Comment/uncomment to desactivate/activate a feature (need coco_json_path for object_id and mask)
         self.features_dict = {
             "id": "str",
             "rgb": "Image",
