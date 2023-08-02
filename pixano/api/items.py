@@ -27,6 +27,7 @@ from pixano.data import Dataset
 from pixano.types import (
     BBox,
     CompressedRLE,
+    Image,
     ImageType,
     ObjectAnnotation,
     ObjectAnnotationType,
@@ -268,8 +269,30 @@ def save_item_annotations(
 
     # Iterate on dataset files
     for file in files:
-        # Look for updated item
+        # Read table
         table = pq.read_table(file)
+        schema = table.schema
+
+        # Support for previous Image and ObjectAnnotation type
+        fields_to_update = []
+        for field in schema:
+            if (
+                str(field.type)
+                == "list<item: struct<id: string, view_id: string, bbox: fixed_size_list<item: float>[4], bbox_source: string, bbox_confidence: float, is_group_of: bool, is_difficult: bool, is_truncated: bool, mask: struct<size: list<item: int32>, counts: binary>, mask_source: string, area: float, pose: struct<cam_R_m2c: fixed_size_list<item: double>[9], cam_t_m2c: fixed_size_list<item: double>[3]>, category_id: int32, category_name: string, identity: string>>"
+            ):
+                # Update schema with new type
+                schema = schema.remove(schema.get_field_index("objects"))
+                schema = schema.append(
+                    pa.field(field.name, pa.list_(ObjectAnnotationType))
+                )
+                fields_to_update.append(field.name)
+            if str(field.type) == "extension<Image<CustomExtensionType>>":
+                # Update schema with new type
+                schema = schema.remove(schema.get_field_index(field.name))
+                schema = schema.append(pa.field(field.name, ImageType))
+                fields_to_update.append(field.name)
+
+        # Look for updated item
         filter = table.filter(pc.field("id").isin([item_id]))
         item = filter.to_pylist()
 
@@ -280,11 +303,11 @@ def save_item_annotations(
 
             # Add item with updated annotations
             item[0]["objects"] = annotations
-            for field in table.schema:
+            for field in schema:
                 updated_table[field.name].append(item[0][field.name])
 
             # Sort table fields according to IDs
-            for field in table.schema:
+            for field in schema:
                 if field.name != "id":
                     updated_table[field.name] = [
                         x
@@ -296,9 +319,36 @@ def save_item_annotations(
             # Sort table IDs
             updated_table["id"] = sorted(updated_table["id"], key=natural_key)
 
+            # Support for previous Image and ObjectAnnotation type
+            for field in schema:
+                if is_image_type(field.type) and field.name in fields_to_update:
+                    for i, item_image in enumerate(updated_table[field.name]):
+                        new_image = Image.from_dict(item_image.to_dict())
+                        updated_table[field.name][i] = new_image
+                if (
+                    is_list_of_object_annotation_type(field.type)
+                    and field.name in fields_to_update
+                ):
+                    for i, item_objects in enumerate(updated_table[field.name]):
+                        new_item_objects = []
+                        for obj in item_objects:
+                            if not isinstance(obj, dict):
+                                obj = obj.to_dict()
+                            # Support for previous BBox type
+                            if isinstance(obj["bbox"], list):
+                                obj["bbox"] = {
+                                    "coords": obj["bbox"],
+                                    "format": "xywh",
+                                }
+                            obj["mask_source"] = ""
+                            obj["bbox_source"] = ""
+                            obj = ObjectAnnotation.from_dict(obj)
+                            new_item_objects.append(obj)
+                        updated_table[field.name][i] = new_item_objects
+
             # Convert ExtensionTypes
             arrays = []
-            for field in table.schema:
+            for field in schema:
                 if is_list_of_object_annotation_type(field.type):
                     arrays.append(
                         ObjectAnnotationType.Array.from_lists(updated_table[field.name])
@@ -316,7 +366,6 @@ def save_item_annotations(
 
             # Save updated table
             pq.write_table(
-                pa.Table.from_arrays(arrays, schema=table.schema),
+                pa.Table.from_arrays(arrays, schema=schema),
                 file,
             )
-            return
