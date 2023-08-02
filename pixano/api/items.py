@@ -257,7 +257,11 @@ def save_item_annotations(
     # Convert URLE to RLE and add bounding box
     for ann in annotations:
         ann.mask = CompressedRLE.from_urle(ann.mask.to_dict())
-        ann.bbox = BBox.from_mask(ann.mask.to_mask())
+        ann.bbox = (
+            ann.bbox
+            if ann.bbox.coords != [0.0, 0.0, 0.0, 0.0]
+            else BBox.from_mask(ann.mask.to_mask())
+        )
     # Dataset files
     files = (dataset_dir / "db").glob("**/*.parquet")
     files = sorted(files, key=lambda x: natural_key(x.name))
