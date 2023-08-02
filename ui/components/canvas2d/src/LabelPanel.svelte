@@ -165,7 +165,8 @@
 </script>
 
 <div
-  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow
+  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg
+  shadow dark:shadow-zinc-700
   bg-white dark:bg-zinc-800
   border-zinc-300 dark:border-zinc-600
   text-zinc-500 dark:text-zinc-300"
