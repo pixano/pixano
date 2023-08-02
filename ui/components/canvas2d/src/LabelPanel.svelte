@@ -555,7 +555,11 @@
             hover:bg-zinc-100 dark:hover:bg-zinc-700"
             on:click={() => handleSelectItem(item)}
           >
-            <div class="flex flex-row">
+            <div
+              class={item.filter((f) => f.dtype === "image").length > 1
+                ? "grid grid-cols-2"
+                : ""}
+            >
               {#each item as itemFeature}
                 {#if itemFeature.dtype === "image"}
                   <img
@@ -566,11 +570,14 @@
                 {/if}
               {/each}
             </div>
-            <div class="flex">
+            <div class="flex mx-auto">
               {#each item as itemFeature}
                 {#if itemFeature.name === "id"}
                   <span
-                    class="text-xs text-center font-semibold w-5 truncate grow"
+                    class="text-xs justify-center truncate grow
+                    {item.filter((f) => f.dtype === 'image').length > 1
+                      ? 'w-48'
+                      : 'w-24'}"
                     title={itemFeature.value}
                   >
                     {itemFeature.value}
