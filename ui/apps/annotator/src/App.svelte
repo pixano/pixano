@@ -333,7 +333,7 @@
                 id: label.id,
                 mask: {
                   size: mask.rle ? mask.rle.size : [0, 0],
-                  counts: mask.rle ? mask.rle.counts : "",
+                  counts: mask.rle ? mask.rle.counts : [],
                 },
                 mask_source: label.sourceId,
                 bbox: {
