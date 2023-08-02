@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from pixano.data.importers.image_importer import ImageImporter
+from pixano.data.importers.image_importer import Image_Importer
 
 
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {"image": Path("test_data/images")}
-        self.importer = ImageImporter(
+        self.importer = Image_Importer(
             name="Demo - Agriculture",
             description="LIST Days - Demo - Agriculture",
             splits=["demo", "train"],
