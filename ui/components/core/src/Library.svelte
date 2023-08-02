@@ -49,10 +49,10 @@
     </div>
   {:else}
     <div
-      class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-zinc-500 dark:text-zinc-300"
+      class="mt-4 py-8 flex w-full justify-center text-lg text-zinc-500 dark:text-zinc-300"
     >
       <span style="text-align: center;">
-        No datasets found... <br /> <br />
+        No datasets found in this directory. <br /> <br />
         Please refer to
         <u>
           <a
