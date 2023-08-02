@@ -22,7 +22,7 @@ import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
 from pixano.data import DatasetInfo
-from pixano.types import ImageType, ObjectAnnotation
+from pixano.types import ImageType, ObjectAnnotation, is_image_type
 from pixano.utils import natural_key
 
 from .data_exporter import DataExporter
@@ -157,9 +157,7 @@ class COCOExporter(DataExporter):
 
                 # Load media table
                 media_fields = [
-                    field.name
-                    for field in self.schema
-                    if isinstance(field.type, ImageType)
+                    field.name for field in self.schema if is_image_type(field.type)
                 ]
                 media_table = pq.read_table(file).select(["id"] + media_fields)
 
