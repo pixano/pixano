@@ -1,3 +1,16 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
 import json
 import os
 import sys
@@ -18,10 +31,12 @@ from pixano.transforms.image import image_to_binary, image_to_thumbnail
 
 ###################################################
 # Add the path to bop_toolkit
+
 sys.path.append("/home/maximilien/work/lib/bop_toolkit")
-###################################################
 
 import bop_toolkit_lib.dataset.bop_webdataset as btk
+
+###################################################
 
 
 def row_to_array(
@@ -135,7 +150,8 @@ def row_to_array(
         struct_arr.append(gt_infos_arr)
 
     # split
-    struct_arr.append(pa.array([split]))
+    if 'split' in features.dict.keys():
+        struct_arr.append(pa.array([split]))
 
     # Struct array
     return pa.StructArray.from_arrays(struct_arr, fields=features.to_fields())
