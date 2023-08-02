@@ -182,13 +182,13 @@ class COCOExporter(DataExporter):
                             images[field].uri_prefix = export_uri_prefix
                         else:
                             images[field].uri_prefix = uri_prefix
-                        im_filename = Path(urlparse(images[field].uri).path).name
+                        im_filename = Path(urlparse(images[field].get_uri()).path).name
                         im_w, im_h = images[field].size
                         # Append image info
                         coco_json["images"].append(
                             {
                                 "license": 1,
-                                "coco_url": images[field].uri,
+                                "coco_url": images[field].get_uri(),
                                 "file_name": im_filename,
                                 "height": im_h,
                                 "width": im_w,

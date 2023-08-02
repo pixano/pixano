@@ -160,7 +160,7 @@ class DataImporter(ABC):
                     field = image_fields[i % len(image_fields)]
                     row_number = random.randrange(dataset.count_rows())
                     row = dataset.take([row_number]).to_pylist()[0]
-                    with Image.open(BytesIO(row[field]._preview_bytes)) as im:
+                    with Image.open(BytesIO(row[field].preview_bytes)) as im:
                         preview.paste(im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
                 preview.save(import_dir / "preview.png")
                 progress.update(1)
