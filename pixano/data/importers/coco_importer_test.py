@@ -40,7 +40,7 @@ class ImageImporterTestCase(unittest.TestCase):
             spec_json_path = import_dir / "spec.json"
             self.assertTrue(spec_json_path.exists(), "spec.json file does not exist.")
 
-            # Verify that db.lance exists and is a valid JSON file
+            # Verify that db.lance exists
             db_lance_path = import_dir / "db.lance"
             self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
 
