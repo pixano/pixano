@@ -101,6 +101,17 @@ nav:
     - "ExplorerApp": code/apps/explorer_app.md
     - "PixanoApp": code/apps/pixano_app.md
 
+  - "core":
+    - "PixanoType": code/core/PixanoType.md
+    - "BBox": code/core/BBox.md
+    - "Camera": code/core/Camera.md
+    - "CompressedRLE": code/core/CompressedRLE.md
+    - "DepthImage": code/core/DepthImage.md
+    - "Embedding": code/core/Embedding.md
+    - "Image": code/core/Image.md
+    - "ObjectAnnotation": code/core/ObjectAnnotation.md
+    - "Pose": code/core/Pose.md
+
   - "data":
     - "importers":
       - "Importer": code/data/importers/importer.md
@@ -122,17 +133,5 @@ nav:
     - "image": code/utils/image.md
     - "labels": code/utils/labels.md
     - "python": code/utils/python.md
-  
-  - "types":
-    - "PixanoType": code/types/PixanoType.md
-    - "BBox": code/types/BBox.md
-    - "Camera": code/types/Camera.md
-    - "CompressedRLE": code/types/CompressedRLE.md
-    - "DepthImage": code/types/DepthImage.md
-    - "Embedding": code/types/Embedding.md
-    - "Image": code/types/Image.md
-    - "ObjectAnnotation": code/types/ObjectAnnotation.md
-    - "Pose": code/types/Pose.md
-    - "utils": code/types/utils.md
 
 - "Pixano Inference": https://pixano.github.io/pixano-inference/
