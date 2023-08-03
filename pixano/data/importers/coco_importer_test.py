@@ -20,7 +20,7 @@ import pandas as pd
 from .coco_importer import COCO_Importer
 
 
-class ImageImporterTestCase(unittest.TestCase):
+class COCOImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
             "objects": Path("unit_testing/Coco"),

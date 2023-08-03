@@ -66,7 +66,11 @@ class Features(BaseModel):
 
     @staticmethod
     def from_string_dict(feat_dict: dict[str, str]) -> "Features":
-        return Features(feat_dict)
+        return Features(**feat_dict)
+    
+    def to_json(self):
+        return self._feat_dict
+
 
     def to_fields(self) -> list[pa.field]:
         """Convert dict containing python type to arrow fields

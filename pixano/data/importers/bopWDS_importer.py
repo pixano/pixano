@@ -222,6 +222,7 @@ class BopWDS_Importer(Importer):
                     # extract row of each split
                     for n, row in enumerate(_wds_pipeline):
                         yield pa.RecordBatch.from_struct_array(
+                            #### Change Coco_json_path here
                             row_to_array(row, split, self.features, coco_json_path=None)
                         )
         except ImportError as e:

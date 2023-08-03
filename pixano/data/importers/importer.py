@@ -93,7 +93,7 @@ class Importer(ABC):
             # Create spec.json
             with open(import_dir / "spec.json", "w") as f:
                 dict_info = vars(self.info)
-                dict_info["features"] = vars(dict_info["features"])["dict"]
+                dict_info["features"] = dict_info["features"].to_json()
 
                 json.dump(dict_info, f)
             progress.update(1)

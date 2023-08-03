@@ -20,7 +20,7 @@ import pandas as pd
 from .bopWDS_importer import BopWDS_Importer
 
 
-class ImageImporterTestCase(unittest.TestCase):
+class BopWDSImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {"bop_wds": Path("unit_testing/bopWDS")}
         self.importer = BopWDS_Importer(
