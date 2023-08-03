@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .coco_importer import COCO_Importer
+from .coco_importer import COCOImporter
 
 
 class COCOImporterTestCase(unittest.TestCase):
@@ -27,7 +27,7 @@ class COCOImporterTestCase(unittest.TestCase):
             "image": Path("unit_testing/Coco/image"),
         }
 
-        self.importer = COCO_Importer(
+        self.importer = COCOImporter(
             name="coco test", description="LIST coco", splits=["val"]
         )
 

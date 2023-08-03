@@ -17,13 +17,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from .bopWDS_importer import BopWDS_Importer
+from .bop_wds_importer import BopWDSImporter
 
 
 class BopWDSImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {"bop_wds": Path("unit_testing/bopWDS")}
-        self.importer = BopWDS_Importer(
+        self.importer = BopWDSImporter(
             name="Bop_WDS_test",
             description="List - bop_WDS",
             splits=["test", "val"],

@@ -33,7 +33,7 @@ from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 from .importer import Importer
 
 
-class COCO_Importer(Importer):
+class COCOImporter(Importer):
     """Data Loader class for COCO instances dataset
 
     Attributes:

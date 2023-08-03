@@ -169,7 +169,7 @@ def row_to_array(
         raise ImportError(f"bop_toolkit_lib package missing: {e}")
 
 
-class BopWDS_Importer(Importer):
+class BopWDSImporter(Importer):
     def __init__(
         self,
         name: str,

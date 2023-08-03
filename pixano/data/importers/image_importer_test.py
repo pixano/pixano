@@ -17,13 +17,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from .image_importer import Image_Importer
+from .image_importer import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {"image": Path("unit_testing/images")}
-        self.importer = Image_Importer(
+        self.importer = ImageImporter(
             name="Demo - Agriculture",
             description="LIST Days - Demo - Agriculture",
             splits=["demo", "train"],

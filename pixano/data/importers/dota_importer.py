@@ -32,7 +32,7 @@ from pixano.utils import dota_ids, image_to_thumbnail, natural_key, xyxy_to_xywh
 from .importer import Importer
 
 
-class DOTA_Importer(Importer):
+class DOTAImporter(Importer):
     """Data Loader class for DOTA dataset
 
     Attributes:

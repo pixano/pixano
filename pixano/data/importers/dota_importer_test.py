@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .dota_importer import DOTA_Importer
+from .dota_importer import DOTAImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
@@ -27,7 +27,7 @@ class ImageImporterTestCase(unittest.TestCase):
             "image": Path("unit_testing/Dota/image"),
         }
 
-        self.importer = DOTA_Importer(
+        self.importer = DOTAImporter(
             name="Dota test", description="LIST Dota", splits=["train"]
         )
 
@@ -40,7 +40,7 @@ class ImageImporterTestCase(unittest.TestCase):
             spec_json_path = import_dir / "spec.json"
             self.assertTrue(spec_json_path.exists(), "spec.json file does not exist.")
 
-            # Verify that db.lance exists 
+            # Verify that db.lance exists
             db_lance_path = import_dir / "db.lance"
             self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
 

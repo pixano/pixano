@@ -23,7 +23,7 @@ from pixano.utils import image_to_thumbnail, natural_key
 from .importer import Importer
 
 
-class Image_Importer(Importer):
+class ImageImporter(Importer):
     """Data Loader class for demo datasets
 
     Attributes:
