@@ -19,15 +19,15 @@ import pyarrow as pa
 import shortuuid
 from PIL import Image as PILImage
 
-from pixano.core import Features
-from pixano.core.arrow_types import (
+from pixano.types import (
     BBox,
+    Fields,
     Image,
     ImageType,
     ObjectAnnotation,
     ObjectAnnotationType,
 )
-from pixano.transforms import dota_ids, image_to_thumbnail, natural_key, xyxy_to_xywh
+from pixano.utils import dota_ids, image_to_thumbnail, natural_key, xyxy_to_xywh
 
 from .importer import Importer
 
@@ -57,21 +57,19 @@ class DOTA_Importer(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.feature_dict = {
-            "id": "str",
-            "image": "Image",
-            "objects": "[ObjectAnnotation]",
-            "split": "str",
-        }
+        self.fields = Fields.from_dict(
+            {
+                "id": "str",
+                "image": "Image",
+                "objects": "[ObjectAnnotation]",
+                "split": "str",
+            }
+        )
 
         self.splits = splits
 
         # Initialize Data Loader
-        super().__init__(name, description, self.features)
-
-    @property
-    def features(self):
-        return Features.from_string_dict(self.feature_dict)
+        super().__init__(name, description, self.fields)
 
     def import_row(
         self,
@@ -154,7 +152,7 @@ class DOTA_Importer(Importer):
                             ObjectAnnotationType.Array.from_lists([row["objects"]]),
                             pa.array([row["split"]]),
                         ],
-                        fields=self.features.to_fields(),
+                        fields=self.fields.to_pyarrow(),
                     )
 
                     # Return row

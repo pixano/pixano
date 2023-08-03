@@ -49,7 +49,7 @@ class Fields(BaseModel):
         self._field_dict = {a: data[a] for a in data}
 
     @staticmethod
-    def from_string_dict(field_dict: dict[str, str]) -> "Fields":
+    def from_dict(field_dict: dict[str, str]) -> "Fields":
         """Create Fields from string dictionary
 
         Args:
@@ -61,7 +61,7 @@ class Fields(BaseModel):
 
         return Fields(**field_dict)
 
-    def to_json(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         """Return string dictionary for saving to .json
 
         Returns:
@@ -70,7 +70,7 @@ class Fields(BaseModel):
 
         return self._field_dict
 
-    def to_fields(self) -> list[pa.field]:
+    def to_pyarrow(self) -> list[pa.field]:
         """Convert Fields string dictionary to list of PyArrow fields
 
         Returns:

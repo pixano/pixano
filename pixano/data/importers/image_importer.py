@@ -17,9 +17,8 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import Features
-from pixano.core.arrow_types import Image, ImageType
-from pixano.transforms import image_to_thumbnail, natural_key
+from pixano.types import Image, ImageType, Fields
+from pixano.utils import image_to_thumbnail, natural_key
 
 from .importer import Importer
 
@@ -46,12 +45,16 @@ class Image_Importer(Importer):
 
         self.splits = splits
 
-        self.features = Features.from_string_dict(
-            {"id": "str", "image": "Image", "split": "str"}
+        self.fields = Fields.from_dict(
+            {
+                "id": "str",
+                "image": "Image",
+                "split": "str",
+            }
         )
 
         # Initialize Data Loader
-        super().__init__(name, description, self.features)
+        super().__init__(name, description, self.fields)
 
     def import_row(
         self,
@@ -100,7 +103,7 @@ class Image_Importer(Importer):
                         ImageType.Array.from_list([row["image"]]),
                         pa.array([row["split"]]),
                     ],
-                    fields=self.features.to_fields(),
+                    fields=self.fields.to_pyarrow(),
                 )
 
                 # Return row

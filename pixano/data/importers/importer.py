@@ -29,8 +29,8 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import DatasetInfo, Features
-from pixano.core.arrow_types import ObjectAnnotationType, is_image_type
+from pixano.data import DatasetInfo
+from pixano.types import Fields, ObjectAnnotationType, is_image_type
 
 
 class Importer(ABC):
@@ -48,14 +48,14 @@ class Importer(ABC):
         self,
         name: str,
         description: str,
-        features: Features,  # TODO change by spec and feature
+        fields: Fields,  # TODO change by spec and feature
     ):
         """Init importer
 
         Args:
-            name (str): name of dataset
-            description (str): description of dataset
-            features (Features): features of dataset as pixano features
+            name (str): Dataset name
+            description (str): Dataset description
+            fields (Fields): Dataset fields
         """
 
         # Dataset info
@@ -66,11 +66,11 @@ class Importer(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features=features,
+            fields=fields,
         )
 
         # Dataset schema
-        self.schema = pa.schema(self.info.features.to_fields())
+        self.schema = pa.schema(self.info.fields.to_pyarrow())
 
     def create_json(self, import_dir: Path, categories: list[dict] = []):
         """Create dataset spec.json
@@ -92,10 +92,7 @@ class Importer(ABC):
 
             # Create spec.json
             with open(import_dir / "spec.json", "w") as f:
-                dict_info = vars(self.info)
-                dict_info["features"] = dict_info["features"].to_json()
-
-                json.dump(dict_info, f)
+                json.dump(self.info.to_dict(), f)
             progress.update(1)
 
     def create_preview(self, import_dir: Path):

@@ -20,8 +20,7 @@ from typing import Iterator, Optional
 import pyarrow as pa
 from PIL import Image as PILImage
 
-from pixano.core import Features
-from pixano.core.arrow_types import (
+from pixano.types import (
     BBox,
     Camera,
     CameraType,
@@ -29,6 +28,7 @@ from pixano.core.arrow_types import (
     CompressedRLEType,
     DepthImage,
     DepthImageType,
+    Fields,
     GtInfo,
     GtInfoType,
     Image,
@@ -36,13 +36,13 @@ from pixano.core.arrow_types import (
     Pose,
     PoseType,
 )
-from pixano.transforms import image_to_binary, image_to_thumbnail
+from pixano.utils import image_to_binary, image_to_thumbnail
 
 from .importer import Importer
 
 
 def row_to_array(
-    row, split: str, features: Features, coco_json_path: Optional[Path | str] = None
+    row, split: str, fields: Fields, coco_json_path: Optional[Path | str] = None
 ) -> pa.StructArray:
     struct_arr = []
 
@@ -65,7 +65,7 @@ def row_to_array(
         )
 
         nb_object = len(sample["gt"])
-        keys = features.to_json().keys()
+        keys = fields.to_dict().keys()
 
         # id
         if "id" in keys:
@@ -164,7 +164,7 @@ def row_to_array(
             struct_arr.append(pa.array([split]))
 
         # Struct array
-        return pa.StructArray.from_arrays(struct_arr, fields=features.to_fields())
+        return pa.StructArray.from_arrays(struct_arr, fields=fields.to_pyarrow())
     except ImportError as e:
         raise ImportError(f"bop_toolkit_lib package missing: {e}")
 
@@ -179,24 +179,22 @@ class BopWDS_Importer(Importer):
         self._shard_splits = splits
 
         # Comment/uncomment to desactivate/activate a feature (need coco_json_path for object_id and mask)
-        self.features_dict = {
-            "id": "str",
-            "rgb": "Image",
-            "depth": "DepthImage",
-            "camera": "Camera",
-            "category_id": "[int]",
-            # "objects_id": "[str]",
-            # "masks": "[CompressedRLE]",
-            "gt": "[Pose]",
-            "gt_info": "[GtInfo]",
-            "split": "str",
-        }
+        self.fields = Fields.from_dict(
+            {
+                "id": "str",
+                "rgb": "Image",
+                "depth": "DepthImage",
+                "camera": "Camera",
+                "category_id": "[int]",
+                # "objects_id": "[str]",
+                # "masks": "[CompressedRLE]",
+                "gt": "[Pose]",
+                "gt_info": "[GtInfo]",
+                "split": "str",
+            }
+        )
 
-        super().__init__(name, description, self.features)
-
-    @property
-    def features(self) -> Features:
-        return Features.from_string_dict(self.features_dict)
+        super().__init__(name, description, self.fields)
 
     def shard_list(self, input_dir: str | Path) -> dict[str, list[str]]:
         return {
@@ -224,7 +222,7 @@ class BopWDS_Importer(Importer):
                     for n, row in enumerate(_wds_pipeline):
                         yield pa.RecordBatch.from_struct_array(
                             #### Change Coco_json_path here
-                            row_to_array(row, split, self.features, coco_json_path=None)
+                            row_to_array(row, split, self.fields, coco_json_path=None)
                         )
         except ImportError as e:
             raise ImportError(f"webdataset package missing: {e}")

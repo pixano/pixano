@@ -26,10 +26,10 @@ from pycocotools import mask as mask_api
 from pixano.types import BBox, CompressedRLE, ImageType, ObjectAnnotation
 from pixano.utils import denormalize_coords, image_to_thumbnail
 
-from .data_importer import DataImporter
+from .importer import Importer
 
 
-class LegacyImporter(DataImporter):
+class LegacyImporter(Importer):
     """Data Importer class for Pixano legacy format datasets
 
     Attributes:

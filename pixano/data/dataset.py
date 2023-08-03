@@ -53,6 +53,15 @@ class DatasetInfo(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+    def to_dict(self) -> dict[str, Any]:
+        def _value_as_dict(value):
+            if isinstance(value, Fields):
+                return value.to_dict()
+            else:
+                return value
+
+        return {attr: _value_as_dict(getattr(self, attr)) for attr in vars(self).keys()}
+
 
 class Dataset:
     """Dataset class

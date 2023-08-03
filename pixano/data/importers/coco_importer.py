@@ -19,20 +19,16 @@ from urllib.parse import urlparse
 
 import pyarrow as pa
 
-from pixano.core.arrow_types import (
+from pixano.types import (
     BBox,
     CompressedRLE,
+    Fields,
     Image,
     ImageType,
     ObjectAnnotation,
     ObjectAnnotationType,
 )
-from pixano.core.features import Features
-from pixano.transforms import (
-    coco_names_91,
-    image_to_thumbnail,
-    natural_key,
-)
+from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 
 from .importer import Importer
 
@@ -62,21 +58,19 @@ class COCO_Importer(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.feature_dict = {
-            "id": "str",
-            "image": "Image",
-            "objects": "[ObjectAnnotation]",
-            "split": "str",
-        }
+        self.fields = Fields.from_dict(
+            {
+                "id": "str",
+                "image": "Image",
+                "objects": "[ObjectAnnotation]",
+                "split": "str",
+            }
+        )
 
         self.splits = splits
 
         # Initialize Data Loader
-        super().__init__(name, description, self.features)
-
-    @property
-    def features(self):
-        return Features.from_string_dict(self.feature_dict)
+        super().__init__(name, description, self.fields)
 
     def import_row(
         self,
@@ -160,7 +154,7 @@ class COCO_Importer(Importer):
                         ObjectAnnotationType.Array.from_lists([row["objects"]]),
                         pa.array([row["split"]]),
                     ],
-                    fields=self.features.to_fields(),
+                    fields=self.fields.to_pyarrow(),
                 )
 
                 # Return row
