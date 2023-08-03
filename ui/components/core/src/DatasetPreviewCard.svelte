@@ -30,7 +30,8 @@
 
 <button
   class="w-64 h-80 m-4 flex flex-col rounded-md transition-all hover:scale-110 text-left
-  border border-zinc-300 dark:border-zinc-500"
+  shadow dark:shadow-zinc-700
+  border border-zinc-300 dark:border-zinc-600"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -50,12 +51,14 @@
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5">
-    <img
-      src={dataset.preview}
-      alt=""
-      class="h-full w-full object-cover object-center"
-    />
+  <div class="h-3/5 bg-zinc-100 dark:bg-zinc-700">
+    {#if dataset.preview}
+      <img
+        src={dataset.preview}
+        alt="{dataset.name} thumbnail"
+        class="h-full w-full object-cover object-center"
+      />
+    {/if}
   </div>
 
   <!-- Actions -->

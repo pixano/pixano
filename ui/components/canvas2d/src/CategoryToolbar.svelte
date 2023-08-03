@@ -54,9 +54,10 @@
 </script>
 
 <div
-  class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10 shadow-xl
+  class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10
+  shadow dark:shadow-zinc-700
   bg-white dark:bg-zinc-800
-  border-zinc-300 dark:border-zinc-500"
+  border-zinc-300 dark:border-zinc-600"
 >
   <div class="group">
     <input
@@ -64,8 +65,8 @@
       placeholder="Category name"
       id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
-      bg-zinc-100 dark:bg-zinc-700
-      border-zinc-300 dark:border-zinc-500
+      bg-zinc-100 dark:bg-zinc-900
+      border-zinc-300 dark:border-zinc-600
       focus:border-rose-500 dark:focus:border-rose-600
       "
       on:keyup={handleFilterCategories}
@@ -75,13 +76,14 @@
     <div
       id="category_list"
       class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex hover:flex flex-col
+      shadow dark:shadow-zinc-700
       bg-white dark:bg-zinc-800"
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
         <div>
           <button
-            class="relative my-1 mx-2 px-1 rounded-lg text-sm flex"
+            class="relative my-1 mx-2 px-1 rounded-lg text-sm flex text-zinc-800"
             style="background-color: {labelColors(cls.id)}; text-align:left"
             title="{cls.name} (id #{cls.id})"
             on:click={() => (currentAnnCatName = cls.name)}

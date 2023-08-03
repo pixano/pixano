@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from fractions import Fraction
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -107,7 +108,7 @@ def numerical_stats(
     ]
 
 
-def compute_stats(df: pd.DataFrame, split: str, feature: dict) -> list[dict]:
+def compute_stats(df: pd.DataFrame, split: str, feature: dict[str, Any]) -> list[dict]:
     """Compute feature statistics
 
     Args:

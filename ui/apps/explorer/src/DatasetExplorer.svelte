@@ -89,7 +89,7 @@
     <!-- Stats -->
     <div
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-      border-zinc-300 dark:border-zinc-500"
+      border-zinc-300 dark:border-zinc-600"
     >
       <span class="font-bold text-xl mt-3"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
@@ -134,7 +134,7 @@
               class="py-1 px-2 border rounded-lg text-sm font-medium
               bg-white dark:bg-zinc-800
               hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-500"
+              border-zinc-300 dark:border-zinc-600"
               on:click={handleGoToFirstPage}
             >
               FIRST
@@ -144,7 +144,7 @@
               class="py-1 px-2 border rounded-lg text-sm font-medium
               bg-white dark:bg-zinc-800
               hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-500"
+              border-zinc-300 dark:border-zinc-600"
               on:click={handleGoToPreviousPage}
             >
               PREV
@@ -154,7 +154,7 @@
               class="py-1 px-2 border rounded-lg text-sm font-medium
               bg-white dark:bg-zinc-800
               hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-500"
+              border-zinc-300 dark:border-zinc-600"
               on:click={handleGoToNextPage}
             >
               NEXT
@@ -164,7 +164,7 @@
               class="py-1 px-2 border rounded-lg text-sm font-medium
               bg-white dark:bg-zinc-800
               hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-500"
+              border-zinc-300 dark:border-zinc-600"
               on:click={handleGoToLastPage}
             >
               LAST

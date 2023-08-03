@@ -49,7 +49,7 @@
         class="rounded border mt-3 mx-1 py-1 px-3
         bg-white dark:bg-zinc-800
         hover:bg-zinc-100 dark:hover:bg-zinc-700
-        border-zinc-300 dark:border-zinc-500"
+        border-zinc-300 dark:border-zinc-600"
         on:click={handleCancel}
       >
         Cancel

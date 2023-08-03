@@ -85,7 +85,7 @@
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
       pointMinusTool,
-    ]),
+    ])
   );
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
@@ -145,7 +145,7 @@
       classes = newClasses;
     } else {
       currentAnnCatId = classes.find(
-        (obj) => obj.name === currentAnnCatName,
+        (obj) => obj.name === currentAnnCatName
       ).id;
     }
 
@@ -283,7 +283,7 @@
   function handleLabelVisibility(label: Label) {
     // Try and find a mask
     const mask = masks.find(
-      (mask) => mask.id === label.id && mask.viewId === label.viewId,
+      (mask) => mask.id === label.id && mask.viewId === label.viewId
     );
     if (mask) {
       mask.visible = label.visible;
@@ -292,7 +292,7 @@
 
     // Try and find a bbox
     const bbox = bboxes.find(
-      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId,
+      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
     );
     if (bbox) {
       bbox.visible = label.visible;
@@ -423,8 +423,8 @@
 <div
   class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
   text-zinc-500 dark:text-zinc-300
-  bg-zinc-50 dark:bg-zinc-800
-  border-zinc-300 dark:border-zinc-500"
+  bg-white dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-600"
 >
   Pixano Annotator
 </div>
