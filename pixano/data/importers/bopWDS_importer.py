@@ -65,14 +65,15 @@ def row_to_array(
         )
 
         nb_object = len(sample["gt"])
+        keys = features.to_json().keys()
 
         # id
-        if "id" in features.dict.keys():
+        if "id" in keys:
             id = row["__key__"]
             struct_arr.append(pa.array([id]))
 
         # rgb
-        if "rgb" in features.dict.keys():
+        if "rgb" in keys:
             im_pil = PILImage.fromarray(sample["im_rgb"])
             im_pil = image_to_binary(im_pil, format="JPEG")
             preview = image_to_thumbnail(im_pil)
@@ -82,7 +83,7 @@ def row_to_array(
             struct_arr.append(rgbs)
 
         # depth
-        if "depth" in features.dict.keys():
+        if "depth" in keys:
             depths = DepthImageType.Array.from_list(
                 [
                     DepthImage(
@@ -94,12 +95,12 @@ def row_to_array(
             struct_arr.append(depths)
 
         # camera
-        if "camera" in features.dict.keys():
+        if "camera" in keys:
             cameras = CameraType.Array.from_list([Camera.from_dict(sample["camera"])])
             struct_arr.append(cameras)
 
         # category
-        if "category_id" in features.dict.keys():
+        if "category_id" in keys:
             category_id = [sample["gt"][i]["object_id"] for i in range(nb_object)]
             category_id_arr = pa.array([category_id])
             struct_arr.append(category_id_arr)
@@ -130,7 +131,7 @@ def row_to_array(
             struct_arr.append(masks_arr)
 
         # pose
-        if "gt" in features.dict.keys():
+        if "gt" in keys:
             gt = [
                 Pose(
                     sample["gt"][i]["cam_R_m2c"].flatten(),
@@ -142,7 +143,7 @@ def row_to_array(
             struct_arr.append(gt_arr)
 
         # gt_info
-        if "gt_info" in features.dict.keys():
+        if "gt_info" in keys:
             gt_infos = [
                 GtInfo.from_dict(
                     {
@@ -159,7 +160,7 @@ def row_to_array(
             struct_arr.append(gt_infos_arr)
 
         # split
-        if "split" in features.dict.keys():
+        if "split" in keys:
             struct_arr.append(pa.array([split]))
 
         # Struct array
@@ -173,9 +174,9 @@ class BopWDS_Importer(Importer):
         self,
         name: str,
         description: str,
-        split: list[str],
+        splits: list[str],
     ):
-        self._shard_split = split
+        self._shard_splits = splits
 
         # Comment/uncomment to desactivate/activate a feature (need coco_json_path for object_id and mask)
         self.features_dict = {
@@ -204,7 +205,7 @@ class BopWDS_Importer(Importer):
                 for shard in os.listdir(input_dir / split)
                 if shard.endswith(".tar")
             ]
-            for split in self._shard_split
+            for split in self._shard_splits
         }
 
     def import_row(self, input_dirs: dict[str, str | Path]) -> Iterator:

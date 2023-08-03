@@ -26,7 +26,7 @@ class BopWDSImporterTestCase(unittest.TestCase):
         self.importer = BopWDS_Importer(
             name="Bop_WDS_test",
             description="List - bop_WDS",
-            split=["test", "val"],
+            splits=["test", "val"],
         )
 
     def test_import_existing_file(self):
@@ -46,7 +46,6 @@ class BopWDSImporterTestCase(unittest.TestCase):
         with tempfile.TemporaryDirectory() as library_dir:
             import_dir = Path(library_dir) / "test_bop_wds"
             ds = self.importer.import_dataset(self.input_dirs, import_dir)
-
             for r in ds.to_batches():
                 db: pd.DataFrame = r.to_pandas()
 

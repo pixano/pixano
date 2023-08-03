@@ -20,7 +20,7 @@ from pixano.core.arrow_types.all_pixano_types import PixanoType, createPaType
 
 
 class Camera(PixanoType, BaseModel):
-    depth_scale: list[float]
+    depth_scale: float
     cam_K: list[float]
     cam_R_w2c: Optional[list[float]]
     cam_t_w2c: Optional[list[float]]
@@ -40,8 +40,8 @@ class Camera(PixanoType, BaseModel):
             [
                 pa.field("depth_scale", pa.float64()),
                 pa.field("cam_K", pa.list_(pa.float64())),
-                # pa.field("cam_R_w2c", pa.list_(pa.float64())),
-                # pa.field("cam_t_w2c", pa.list_(pa.float64())),
+                #pa.field("cam_R_w2c", pa.list_(pa.float64())),
+                #pa.field("cam_t_w2c", pa.list_(pa.float64())),
             ]
         )
 
