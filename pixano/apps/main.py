@@ -30,8 +30,8 @@ from pixano.api import (
     load_library,
     save_item_annotations,
 )
-from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
-from pixano.types import ObjectAnnotation
+from pixano.datasets import DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.data_types import ObjectAnnotation
 
 
 def create_app(settings: Settings) -> FastAPI:

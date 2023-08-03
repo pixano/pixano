@@ -24,7 +24,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano.types import (
+from pixano.data_types import (
     EmbeddingType,
     ObjectAnnotation,
     ObjectAnnotationType,

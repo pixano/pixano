@@ -16,8 +16,8 @@ from pathlib import Path
 
 from pydantic import BaseSettings
 
-from pixano.data import Dataset, DatasetInfo
-from pixano.types import Image
+from pixano.datasets import Dataset, DatasetInfo
+from pixano.data_types import Image
 
 
 class Settings(BaseSettings):
