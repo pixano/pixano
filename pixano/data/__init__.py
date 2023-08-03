@@ -12,11 +12,18 @@
 # http://www.cecill.info
 
 
-from pixano.data.dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.data.dataset import (
+    Dataset,
+    DatasetInfo,
+    EmbeddingDataset,
+    InferenceDataset,
+    Fields,
+)
 
 __all__ = [
     "Dataset",
     "DatasetInfo",
     "EmbeddingDataset",
     "InferenceDataset",
+    "Fields",
 ]

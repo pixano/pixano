@@ -29,8 +29,8 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import Fields, ObjectAnnotationType
-from pixano.data import DatasetInfo
+from pixano.core import ObjectAnnotationType
+from pixano.data import DatasetInfo, Fields
 from pixano.utils import is_image_type
 
 

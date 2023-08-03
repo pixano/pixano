@@ -28,7 +28,6 @@ from pixano.core import (
     CompressedRLEType,
     DepthImage,
     DepthImageType,
-    Fields,
     GtInfo,
     GtInfoType,
     Image,
@@ -36,6 +35,7 @@ from pixano.core import (
     Pose,
     PoseType,
 )
+from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_binary, image_to_thumbnail
 

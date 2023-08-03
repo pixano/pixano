@@ -22,12 +22,12 @@ import pyarrow as pa
 from pixano.core import (
     BBox,
     CompressedRLE,
-    Fields,
     Image,
     ImageType,
     ObjectAnnotation,
     ObjectAnnotationType,
 )
+from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 

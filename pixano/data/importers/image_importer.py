@@ -17,7 +17,8 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import Fields, Image, ImageType
+from pixano.core import Image, ImageType
+from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 

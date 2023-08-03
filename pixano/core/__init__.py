@@ -21,9 +21,6 @@ from pixano.core.image import Image, ImageType
 from pixano.core.object_annotation import ObjectAnnotation, ObjectAnnotationType
 from pixano.core.pixano_type import PixanoType, convert_field, createPyArrowType
 from pixano.core.pose import Pose, PoseType
-from pixano.core.utils import (
-    Fields,
-)
 
 __all__ = [
     "BBox",
@@ -47,5 +44,4 @@ __all__ = [
     "createPyArrowType",
     "Pose",
     "PoseType",
-    "Fields",
 ]

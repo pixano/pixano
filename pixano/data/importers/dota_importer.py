@@ -19,14 +19,8 @@ import pyarrow as pa
 import shortuuid
 from PIL import Image as PILImage
 
-from pixano.core import (
-    BBox,
-    Fields,
-    Image,
-    ImageType,
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
+from pixano.core import BBox, Image, ImageType, ObjectAnnotation, ObjectAnnotationType
+from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
