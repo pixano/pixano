@@ -17,8 +17,8 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano.datasets.importers import Importer
-from pixano.data_types import BBox, CompressedRLE, Image, ImageType, ObjectAnnotation
+from pixano.core import BBox, CompressedRLE, Image, ImageType, ObjectAnnotation
+from pixano.data.importers import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 

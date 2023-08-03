@@ -23,8 +23,7 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano.datasets import Dataset
-from pixano.data_types import (
+from pixano.core import (
     BBox,
     CompressedRLE,
     Image,
@@ -36,6 +35,7 @@ from pixano.data_types import (
     is_list_of_object_annotation_type,
     is_number,
 )
+from pixano.data import Dataset
 from pixano.utils import format_bbox, natural_key
 
 
