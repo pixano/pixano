@@ -15,10 +15,8 @@ import json
 import random
 import shutil
 from abc import ABC, abstractmethod
-from collections import defaultdict
 from collections.abc import Iterator
 from io import BytesIO
-from itertools import islice
 from pathlib import Path
 
 import lance
@@ -31,7 +29,8 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import DatasetInfo, arrow_types, Features
+from pixano.core import DatasetInfo, Features
+from pixano.core.arrow_types import ObjectAnnotationType, is_image_type
 
 
 class Importer(ABC):
@@ -112,7 +111,7 @@ class Importer(ABC):
         # Get list of image fields
         image_fields = []
         for field in self.schema:
-            if arrow_types.is_image_type(field.type):
+            if is_image_type(field.type):
                 image_fields.append(field.name)
 
         if image_fields:
@@ -154,7 +153,7 @@ class Importer(ABC):
         dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
 
         # Create stats if objects field exist
-        objects = pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType()))
+        objects = pa.field("objects", pa.list_(ObjectAnnotationType()))
         if objects in self.schema:
             # Create dataframe
             df = dataset.to_table(columns=["split", "objects"]).to_pandas()
@@ -235,7 +234,7 @@ class Importer(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has images
-            if arrow_types.is_image_type(field.type):
+            if is_image_type(field.type):
                 features = []
                 rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
 
@@ -359,7 +358,7 @@ class Importer(ABC):
         # Move media directories if portable
         if portable:
             for field in tqdm(self.schema, desc="Moving media directories"):
-                if arrow_types.is_image_type(field.type):
+                if is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
                     shutil.copytree(

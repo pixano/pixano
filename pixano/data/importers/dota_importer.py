@@ -17,20 +17,17 @@ from pathlib import Path
 
 import pyarrow as pa
 import shortuuid
-from PIL import Image
+from PIL import Image as PILImage
 
-from pixano.core import arrow_types
-from pixano.core.arrow_types.bbox import BBox
-from pixano.core.arrow_types.image import ImageType
-from pixano.core.arrow_types.objectAnnotation import ObjectAnnotationType
-from pixano.core.features import Features
-from pixano.transforms import (
-    dota_ids,
-    image_to_thumbnail,
-    natural_key,
-    normalize,
-    xyxy_to_xywh,
+from pixano.core import Features
+from pixano.core.arrow_types import (
+    BBox,
+    Image,
+    ImageType,
+    ObjectAnnotation,
+    ObjectAnnotationType,
 )
+from pixano.transforms import dota_ids, image_to_thumbnail, natural_key, xyxy_to_xywh
 
 from .importer import Importer
 
@@ -107,10 +104,10 @@ class DOTA_Importer(Importer):
                 )
 
                 # Allow DOTA largest images
-                Image.MAX_IMAGE_PIXELS = 806504000
+                PILImage.MAX_IMAGE_PIXELS = 806504000
 
                 # Get image dimensions and thumbnail
-                with Image.open(im_path) as im:
+                with PILImage.open(im_path) as im:
                     im_w, im_h = im.size
                     im_thumb = image_to_thumbnail(im)
 
@@ -125,9 +122,9 @@ class DOTA_Importer(Importer):
                 with open(im_anns_file) as im_anns:
                     row = {
                         "id": im_path.stem,
-                        "image": arrow_types.Image(im_uri, None, im_thumb),
+                        "image": Image(im_uri, None, im_thumb),
                         "objects": [
-                            arrow_types.ObjectAnnotation(
+                            ObjectAnnotation(
                                 id=shortuuid.uuid(),
                                 view_id="image",
                                 bbox=BBox.from_xywh(

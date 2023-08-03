@@ -18,12 +18,27 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 import pyarrow as pa
-from PIL import Image as pilImage
+from PIL import Image as PILImage
 
-from pixano.core import *
-from pixano.core.arrow_types import *
-from pixano.data.importers.importer import Importer
-from pixano.transforms.image import image_to_binary, image_to_thumbnail
+from pixano.core import Features
+from pixano.core.arrow_types import (
+    BBox,
+    Camera,
+    CameraType,
+    CompressedRLE,
+    CompressedRLEType,
+    DepthImage,
+    DepthImageType,
+    GtInfo,
+    GtInfoType,
+    Image,
+    ImageType,
+    Pose,
+    PoseType,
+)
+from pixano.transforms import image_to_binary, image_to_thumbnail
+
+from .importer import Importer
 
 
 def row_to_array(
@@ -58,7 +73,7 @@ def row_to_array(
 
         # rgb
         if "rgb" in features.dict.keys():
-            im_pil = pilImage.fromarray(sample["im_rgb"])
+            im_pil = PILImage.fromarray(sample["im_rgb"])
             im_pil = image_to_binary(im_pil, format="JPEG")
             preview = image_to_thumbnail(im_pil)
 

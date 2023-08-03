@@ -17,11 +17,11 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import arrow_types
-from pixano.core.arrow_types.image import ImageType
-from pixano.core.features import Features
-from pixano.data.importers.importer import Importer
+from pixano.core import Features
+from pixano.core.arrow_types import Image, ImageType
 from pixano.transforms import image_to_thumbnail, natural_key
+
+from .importer import Importer
 
 
 class Image_Importer(Importer):
@@ -35,12 +35,7 @@ class Image_Importer(Importer):
         partitioning (ds.partitioning): Dataset partitioning
     """
 
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        splits: list[str]
-    ):
+    def __init__(self, name: str, description: str, splits: list[str]):
         """Initialize COCO Loader
 
         Args:
@@ -74,13 +69,11 @@ class Image_Importer(Importer):
             Iterator: Processed rows
         """
         for split in self.splits:
-            
             # Get images paths
             image_paths = []
             for type in ["*.png", "*.jpg", "*.jpeg"]:
                 image_paths.extend(glob.glob(str(input_dirs["image"] / split / type)))
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
-
 
             # Process rows
             for im_path in image_paths:
@@ -97,19 +90,18 @@ class Image_Importer(Importer):
                 # Fill row with ID, image, and split
                 row = {
                     "id": im_path.name,
-                    "image": arrow_types.Image(im_uri, None, im_thumb),
+                    "image": Image(im_uri, None, im_thumb),
                     "split": split,
                 }
 
                 struct_arr = pa.StructArray.from_arrays(
                     [
-                        pa.array([row['id']]),
-                        ImageType.Array.from_list([row['image']]),
-                        pa.array([row['split']])
+                        pa.array([row["id"]]),
+                        ImageType.Array.from_list([row["image"]]),
+                        pa.array([row["split"]]),
                     ],
                     fields=self.features.to_fields(),
                 )
-
 
                 # Return row
                 yield pa.RecordBatch.from_struct_array(struct_arr)

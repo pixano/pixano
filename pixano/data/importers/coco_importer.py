@@ -11,24 +11,17 @@
 #
 # http://www.cecill.info
 
-import datetime
 import json
-import os
 from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
 import pyarrow as pa
-import pyarrow.parquet as pq
-from tqdm.auto import tqdm
 
-from pixano.core import DatasetInfo
 from pixano.core.arrow_types import (
     BBox,
-    BBoxType,
     CompressedRLE,
-    CompressedRLEType,
     Image,
     ImageType,
     ObjectAnnotation,
@@ -37,13 +30,8 @@ from pixano.core.arrow_types import (
 from pixano.core.features import Features
 from pixano.transforms import (
     coco_names_91,
-    denormalize,
-    encode_rle,
     image_to_thumbnail,
     natural_key,
-    normalize,
-    rle_to_urle,
-    urle_to_bbox,
 )
 
 from .importer import Importer

@@ -1,22 +1,32 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
 import datetime
 import json
 import os
 from pathlib import Path
-from typing import Self
 from urllib.parse import urlparse
 
 import pyarrow.parquet as pq
 import tqdm
 
-from pixano.core.arrow_types.image import ImageType
-from pixano.core.dataset import DatasetInfo
-from pixano.transforms import natural_key
-from pixano.transforms.boxes import denormalize, urle_to_bbox
-from pixano.transforms.image import rle_to_urle
+from pixano.core import DatasetInfo
+from pixano.core.arrow_types import ImageType
+from pixano.transforms import denormalize, natural_key, rle_to_urle, urle_to_bbox
 
 
 def export_dataset(
-    self:Self,
+    self,
     input_dir: Path,
     export_dir: Path,
     input_dbs: list = [],
