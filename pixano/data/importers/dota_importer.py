@@ -27,7 +27,7 @@ from pixano.types import (
     ObjectAnnotation,
     ObjectAnnotationType,
 )
-from pixano.utils import dota_ids, image_to_thumbnail, natural_key, xyxy_to_xywh
+from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
 from .importer import Importer
 
@@ -125,15 +125,13 @@ class DOTAImporter(Importer):
                             ObjectAnnotation(
                                 id=shortuuid.uuid(),
                                 view_id="image",
-                                bbox=BBox.from_xywh(
-                                    xyxy_to_xywh(
-                                        [
-                                            float(line.strip().split()[0]),
-                                            float(line.strip().split()[1]),
-                                            float(line.strip().split()[4]),
-                                            float(line.strip().split()[5]),
-                                        ]
-                                    )
+                                bbox=BBox.from_xyxy(
+                                    [
+                                        float(line.strip().split()[0]),
+                                        float(line.strip().split()[1]),
+                                        float(line.strip().split()[4]),
+                                        float(line.strip().split()[5]),
+                                    ]
                                 ).normalize(im_h, im_w),
                                 is_difficult=bool(line.strip().split()[9]),
                                 category_id=dota_ids(str(line.strip().split()[8])),
