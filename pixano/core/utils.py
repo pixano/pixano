@@ -131,19 +131,3 @@ def register_extension_types(pa_types: list[pa.ExtensionType]):
         # If ExtensionType is already registered
         except pa.ArrowKeyError:
             pass
-
-
-def fields(struct: pa.StructType) -> list[pa.field]:
-    """Return fields of a PyArrow Struct
-
-    Args:
-        struct (pa.DataType): PyArrow Struct
-
-    Returns:
-        list[pa.field]: List of fields
-    """
-
-    fields = []
-    for f in range(struct.storage_type.num_fields):
-        fields.append(struct.storage_type.field(f))
-    return fields

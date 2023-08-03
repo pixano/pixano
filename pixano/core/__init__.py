@@ -23,7 +23,6 @@ from pixano.core.pixano_type import PixanoType, convert_field, createPyArrowType
 from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
     Fields,
-    fields,
 )
 
 __all__ = [
@@ -37,7 +36,6 @@ __all__ = [
     "DepthImageType",
     "Embedding",
     "EmbeddingType",
-    "Fields",
     "GtInfo",
     "GtInfoType",
     "Image",
@@ -45,9 +43,9 @@ __all__ = [
     "ObjectAnnotation",
     "ObjectAnnotationType",
     "PixanoType",
+    "convert_field",
     "createPyArrowType",
     "Pose",
     "PoseType",
-    "convert_field",
-    "fields",
+    "Fields",
 ]
