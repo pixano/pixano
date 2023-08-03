@@ -16,6 +16,7 @@ from .coco_importer import COCOImporter
 from .dota_importer_test import DOTAImporter
 from .image_importer import ImageImporter
 from .importer import Importer
+from .legacy_importer import LegacyImporter
 
 __all__ = [
     "Importer",
@@ -23,4 +24,5 @@ __all__ = [
     "BopWDSImporter",
     "DOTAImporter",
     "COCOImporter",
+    "LegacyImporter",
 ]
