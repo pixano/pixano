@@ -30,8 +30,14 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import DatasetInfo, arrow_types
-from pixano.core.features import Features
+from pixano.data import DatasetInfo
+from pixano.types import (
+    ImageType,
+    ObjectAnnotationType,
+    convert_field,
+    is_image_type,
+    is_list_of_object_annotation_type,
+)
 
 
 def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
@@ -55,7 +61,7 @@ def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:
 
 
 class DataLoader(ABC):
-    """Abstract Data Loader class
+    """Abstract Data Importer class
 
     Attributes:
         name (str): Dataset name
@@ -72,7 +78,7 @@ class DataLoader(ABC):
         splits: list[str],
         views: list[pa.field],
     ):
-        """Initialize Data Loader
+        """Initialize Data Importer
 
         Args:
             name (str): Dataset name
@@ -89,9 +95,7 @@ class DataLoader(ABC):
             num_elements=0,
             preview=None,
             categories=[],
-            features=Features(
-                {"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"}
-            ),
+            features={"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"},
         )
         self.splits = splits
 
@@ -99,7 +103,7 @@ class DataLoader(ABC):
         fields = [
             pa.field("split", pa.string()),
             pa.field("id", pa.string()),
-            pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType)),
+            pa.field("objects", pa.list_(ObjectAnnotationType)),
         ]
         fields.extend(views)
         self.schema = pa.schema(fields)
@@ -144,7 +148,7 @@ class DataLoader(ABC):
         # Get list of image fields
         image_fields = []
         for field in self.schema:
-            if arrow_types.is_image_type(field.type):
+            if is_image_type(field.type):
                 image_fields.append(field.name)
 
         if image_fields:
@@ -156,7 +160,7 @@ class DataLoader(ABC):
                     field = image_fields[i % len(image_fields)]
                     row_number = random.randrange(dataset.count_rows())
                     row = dataset.take([row_number]).to_pylist()[0]
-                    with Image.open(BytesIO(row[field]._preview_bytes)) as im:
+                    with Image.open(BytesIO(row[field].preview_bytes)) as im:
                         preview.paste(im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
                 preview.save(import_dir / "preview.png")
                 progress.update(1)
@@ -188,7 +192,7 @@ class DataLoader(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has objects
-            if arrow_types.is_list_of_object_annotation_type(field.type):
+            if is_list_of_object_annotation_type(field.type):
                 # Create dataframe
                 df = dataset.to_table(columns=["split", field.name]).to_pandas()
                 # Split objects in one object per row
@@ -203,53 +207,55 @@ class DataLoader(ABC):
                     desc=f"Computing {field.name} stats",
                     total=len(df.index),
                 ):
-                    try:
-                        area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
-                    except TypeError:
-                        area = None
-                    features.append(
+                    if object:
+                        try:
+                            area = 100 * (object.area / np.prod(object["mask"]["size"]))
+                        except TypeError:
+                            area = None
+                        features.append(
+                            {
+                                "id": object["id"],
+                                "view id": object["view_id"],
+                                f"{field.name} - is group of": object["is_group_of"],
+                                f"{field.name} - area (%)": area,
+                                f"{field.name} - category": object["category_name"],
+                                "split": split,
+                            }
+                        )
+                if features:
+                    features_df = pd.DataFrame.from_records(features).astype(
                         {
-                            "id": object["id"],
-                            "view id": object["view_id"],
-                            f"{field.name} - is group of": object["is_group_of"],
-                            f"{field.name} - area (%)": area,
-                            f"{field.name} - category": object["category_name"],
-                            "split": split,
+                            "id": "string",
+                            "view id": "string",
+                            f"{field.name} - is group of": bool,
+                            f"{field.name} - area (%)": float,
+                            f"{field.name} - category": "string",
+                            "split": "string",
                         }
                     )
-                features_df = pd.DataFrame.from_records(features).astype(
-                    {
-                        "id": "string",
-                        "view id": "string",
-                        f"{field.name} - is group of": bool,
-                        f"{field.name} - area (%)": float,
-                        f"{field.name} - category": "string",
-                        "split": "string",
-                    }
-                )
 
-                # Initialize stats
-                stats = [
-                    {
-                        "name": f"{field.name} - category",
-                        "type": "categorical",
-                        "histogram": [],
-                    },
-                    {
-                        "name": f"{field.name} - is group of",
-                        "type": "categorical",
-                        "histogram": [],
-                    },
-                    {
-                        "name": f"{field.name} - area (%)",
-                        "type": "numerical",
-                        "range": [0.0, 100.0],
-                        "histogram": [],
-                    },
-                ]
+                    # Initialize stats
+                    stats = [
+                        {
+                            "name": f"{field.name} - category",
+                            "type": "categorical",
+                            "histogram": [],
+                        },
+                        {
+                            "name": f"{field.name} - is group of",
+                            "type": "categorical",
+                            "histogram": [],
+                        },
+                        {
+                            "name": f"{field.name} - area (%)",
+                            "type": "numerical",
+                            "range": [0.0, 100.0],
+                            "histogram": [],
+                        },
+                    ]
 
-                # Save stats
-                self.save_stats(import_dir, stats, features_df)
+                    # Save stats
+                    self.save_stats(import_dir, stats, features_df)
 
     def image_stats(self, import_dir: Path):
         """Create dataset image statistics
@@ -268,7 +274,7 @@ class DataLoader(ABC):
         # Iterate over dataset columns
         for field in dataset.schema:
             # If column has images
-            if arrow_types.is_image_type(field.type):
+            if is_image_type(field.type):
                 features = []
                 rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
 
@@ -397,7 +403,7 @@ class DataLoader(ABC):
                 # Append batch categories
                 for field in self.schema:
                     # If column has annotations
-                    if arrow_types.is_list_of_object_annotation_type(field.type):
+                    if is_list_of_object_annotation_type(field.type):
                         for row in batch[field.name]:
                             for ann in row:
                                 if (
@@ -407,28 +413,24 @@ class DataLoader(ABC):
                                     categories.append(
                                         {
                                             "supercategory": "N/A",
-                                            "id": ann["category_id"],
-                                            "name": ann["category_name"],
+                                            "id": ann.category_id,
+                                            "name": ann.category_name,
                                         },
                                     )
-                                    seen_category_ids.append(ann["category_id"])
+                                    seen_category_ids.append(ann.category_id)
 
                 # Convert batch fields to PyArrow format
                 arrays = []
                 for field in self.schema:
-                    if arrow_types.is_list_of_object_annotation_type(field.type):
+                    if is_list_of_object_annotation_type(field.type):
                         arrays.append(
-                            arrow_types.ObjectAnnotationType.Array.from_lists(
-                                batch[field.name]
-                            )
+                            ObjectAnnotationType.Array.from_lists(batch[field.name])
                         )
-                    elif arrow_types.is_image_type(field.type):
-                        arrays.append(
-                            arrow_types.ImageType.Array.from_list(batch[field.name])
-                        )
+                    elif is_image_type(field.type):
+                        arrays.append(ImageType.Array.from_list(batch[field.name]))
                     else:
                         arrays.append(
-                            arrow_types.convert_field(
+                            convert_field(
                                 field_name=field.name,
                                 field_type=field.type,
                                 field_data=batch[field.name],
@@ -456,7 +458,7 @@ class DataLoader(ABC):
         # Move media directories if portable
         if portable:
             for field in tqdm(self.schema, desc="Moving media directories"):
-                if arrow_types.is_image_type(field.type):
+                if is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
                     shutil.copytree(
@@ -465,13 +467,3 @@ class DataLoader(ABC):
 
         # Create stats
         self.create_stats(import_dir)
-
-    def export_dataset(self, input_dir: Path, export_dir: Path):
-        """Export dataset back to original format
-
-        Args:
-            input_dir (Path): Input directory
-            export_dir (Path): Export directory
-        """
-
-        pass

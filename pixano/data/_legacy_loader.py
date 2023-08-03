@@ -23,14 +23,14 @@ import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano.core import arrow_types
-from pixano.transforms import denormalize, image_to_thumbnail, xyxy_to_xywh
+from pixano.types import BBox, CompressedRLE, ImageType, ObjectAnnotation
+from pixano.utils import denormalize_coords, image_to_thumbnail
 
 from ._data_loader import DataLoader
 
 
 class LegacyLoader(DataLoader):
-    """Data Loader class for Pixano legacy format datasets
+    """Data Importer class for Pixano legacy format datasets
 
     Attributes:
         name (str): Dataset name
@@ -48,7 +48,7 @@ class LegacyLoader(DataLoader):
         views: list[str],
         json_files: dict[str, str],
     ):
-        """Initialize Pixano Legacy Loader
+        """Initialize Pixano Legacy Importer
 
         Args:
             name (str): Dataset name
@@ -61,12 +61,12 @@ class LegacyLoader(DataLoader):
         self.views = views
         self.json_files = json_files
 
-        # Initialize Data Loader
+        # Initialize Data Importer
         super().__init__(
             name,
             description,
             splits,
-            [pa.field(view, arrow_types.ImageType) for view in views],
+            [pa.field(view, ImageType) for view in views],
         )
 
     def import_row(
@@ -137,7 +137,7 @@ class LegacyLoader(DataLoader):
                 "split": split,
             }
             for f in feats[timestamp]:
-                row[f["viewId"]] = arrow_types.Image(f["im_uri"], None, f["im_thumb"])
+                row[f["viewId"]] = Image(f["im_uri"], None, f["im_thumb"])
 
                 # Fill row with list of image annotations
                 for ann in f["anns"]:
@@ -157,7 +157,7 @@ class LegacyLoader(DataLoader):
                             # we have normalized coords, we must denorm before making RLE
                             if not isnan(ann["geometry"]["vertices"][0]):
                                 if len(ann["geometry"]["vertices"]) > 4:
-                                    denorm = denormalize(
+                                    denorm = denormalize_coords(
                                         ann["geometry"]["vertices"],
                                         f["height"],
                                         f["width"],
@@ -178,24 +178,25 @@ class LegacyLoader(DataLoader):
                             # MultiPolygon
                             if not isnan(ann["geometry"]["mvertices"][0][0]):
                                 denorm = [
-                                    denormalize(poly, f["height"], f["width"])
+                                    denormalize_coords(poly, f["height"], f["width"])
                                     for poly in ann["geometry"]["mvertices"]
                                 ]
                                 rles = mask_api.frPyObjects(
                                     denorm, f["height"], f["width"]
                                 )
                                 mask = mask_api.merge(rles)
+                                mask = CompressedRLE.from_dict(mask)
                         elif (
                             ann["geometry"]["type"] == "rectangle"
                             and ann["geometry"]["vertices"]
                         ):  # BBox
                             if not isnan(ann["geometry"]["vertices"][0]):
-                                denorm = denormalize(
+                                denorm = denormalize_coords(
                                     [ann["geometry"]["vertices"]],
                                     f["height"],
                                     f["width"],
                                 )
-                                bbox = xyxy_to_xywh(denorm)
+                                bbox = BBox.from_xyxy(denorm)
                         elif (
                             ann["geometry"]["type"] == "graph"
                             and ann["geometry"]["vertices"]
@@ -209,7 +210,7 @@ class LegacyLoader(DataLoader):
                         print("No geometry?")
 
                     row["objects"].append(
-                        arrow_types.ObjectAnnotation(
+                        ObjectAnnotation(
                             id=str(ann["id"]),
                             view_id=f["viewId"],
                             bbox=bbox,
