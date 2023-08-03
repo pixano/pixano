@@ -38,8 +38,8 @@ class Camera(PixanoType, BaseModel):
         self,
         depth_scale: list[float],
         cam_K: list[float],
-        cam_R_w2c: list[float] = None,
-        cam_t_w2c: list[float] = None,
+        cam_R_w2c: list[float] = [0.0] * 9,
+        cam_t_w2c: list[float] = [0.0] * 3,
     ):
         """Initialize Camera
 
