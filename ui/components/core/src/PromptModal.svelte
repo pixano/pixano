@@ -46,7 +46,7 @@
         {placeholder}
         class="py-1 px-2 border rounded focus:outline-none
         bg-zinc-100 dark:bg-zinc-700
-        border-zinc-300 dark:border-zinc-500
+        border-zinc-300 dark:border-zinc-600
         focus:border-rose-600 dark:focus:border-rose-500
         "
         bind:value={input}

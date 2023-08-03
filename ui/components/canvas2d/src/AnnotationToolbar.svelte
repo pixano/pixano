@@ -30,9 +30,10 @@
 <div class="absolute top-1/2 -translate-y-1/2 left-6">
   {#each tools_lists as tools}
     <div
-      class="m-4 flex flex-col border rounded-lg shadow-xl
+      class="m-4 flex flex-col border rounded-lg
+      shadow dark:shadow-zinc-700
       bg-white dark:bg-zinc-800
-      border-zinc-300 dark:border-zinc-500"
+      border-zinc-300 dark:border-zinc-600"
     >
       <div class="flex flex-col items-center">
         {#each tools as tool}
@@ -57,9 +58,10 @@
               </button>
 
               <div
-                class="absolute inset-y-0 left-16 border rounded-lg shadow-xl z-10 hidden group-hover:flex
+                class="absolute inset-y-0 left-16 border rounded-lg z-10 hidden group-hover:flex
+                shadow dark:shadow-zinc-700
                 bg-white dark:bg-zinc-800
-                border-zinc-300 dark:border-zinc-500"
+                border-zinc-300 dark:border-zinc-600"
               >
                 {#each tool["modes"] as mode}
                   <button class="w-full p-4" on:click={() => selectTool(mode)}>

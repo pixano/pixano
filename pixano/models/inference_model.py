@@ -17,14 +17,20 @@ from abc import ABC
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano.core import arrow_types
-from pixano.transforms import natural_key
+from pixano.types import (
+    EmbeddingType,
+    ObjectAnnotation,
+    ObjectAnnotationType,
+    convert_field,
+)
+from pixano.utils import natural_key
 
 
 class InferenceModel(ABC):
@@ -71,7 +77,7 @@ class InferenceModel(ABC):
         view: str,
         uri_prefix: str,
         threshold: float = 0.0,
-    ) -> list[list[arrow_types.ObjectAnnotation]]:
+    ) -> list[list[ObjectAnnotation]]:
         """Inference preannotation for a batch
 
         Args:
@@ -81,7 +87,7 @@ class InferenceModel(ABC):
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            list[list[arrow_types.ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
+            list[list[ObjectAnnotation]]: Model inferences as lists of ObjectAnnotation
         """
 
         pass
@@ -157,15 +163,12 @@ class InferenceModel(ABC):
         if process_type == "infer":
             fields.extend(
                 [
-                    pa.field("objects", pa.list_(arrow_types.ObjectAnnotationType())),
+                    pa.field("objects", pa.list_(ObjectAnnotationType())),
                 ]
             )
         elif process_type == "embed":
             fields.extend(
-                [
-                    pa.field(f"{view}_embedding", arrow_types.EmbeddingType())
-                    for view in views
-                ]
+                [pa.field(f"{view}_embedding", EmbeddingType()) for view in views]
             )
         schema = pa.schema(fields)
 
@@ -233,7 +236,7 @@ class InferenceModel(ABC):
                     arrays = []
                     for field in schema:
                         arrays.append(
-                            arrow_types.convert_field(
+                            convert_field(
                                 field_name=field.name,
                                 field_type=field.type,
                                 field_data=data[field.name],
@@ -260,7 +263,7 @@ class InferenceModel(ABC):
         self,
         output_dir: Path,
         filename: str,
-        spec_json: dict,
+        spec_json: dict[str, Any],
         num_elements: int,
     ):
         """Save output .json

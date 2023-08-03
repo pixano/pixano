@@ -78,7 +78,7 @@
     console.log(
       "App.handleGetDatasets - api.getDatasetsList in",
       Date.now() - start,
-      "ms",
+      "ms"
     );
   }
 
@@ -88,12 +88,12 @@
     const start = Date.now();
     selectedDataset.page = await api.getDatasetItems(
       selectedDataset.id,
-      currentPage,
+      currentPage
     );
     console.log(
       "App.handleSelectDataset - api.getDatasetItems in",
       Date.now() - start,
-      "ms",
+      "ms"
     );
 
     // Select first item
@@ -136,7 +136,7 @@
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
       Date.now() - start,
-      "ms",
+      "ms"
     );
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
@@ -241,7 +241,7 @@
           } else {
             console.log(
               "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id,
+              obj.id
             );
             continue;
           }
@@ -261,12 +261,12 @@
       const viewEmbeddingArrayBytes = await api.getViewEmbedding(
         selectedDataset.id,
         selectedItem.id,
-        view.id,
+        view.id
       );
       console.log(
         "App.handleSelectItem - api.getViewEmbedding in",
         Date.now() - start,
-        "ms",
+        "ms"
       );
 
       if (viewEmbeddingArrayBytes) {
@@ -275,7 +275,7 @@
           viewEmbedding = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
-            viewEmbeddingArray.shape,
+            viewEmbeddingArray.shape
           );
         } catch (e) {
           console.log("App.handleSelectItem - Error loading embeddings", e);
@@ -324,16 +324,16 @@
           for (const catLabels of Object.values(viewLabels.categories)) {
             for (const label of Object.values(catLabels.labels)) {
               const mask = masks.find(
-                (m) => m.id === label.id && m.viewId === label.viewId,
+                (m) => m.id === label.id && m.viewId === label.viewId
               );
               const bbox = bboxes.find(
-                (b) => b.id === label.id && b.viewId === label.viewId,
+                (b) => b.id === label.id && b.viewId === label.viewId
               );
               let ann = {
                 id: label.id,
                 mask: {
                   size: mask.rle ? mask.rle.size : [0, 0],
-                  counts: mask.rle ? mask.rle.counts : "",
+                  counts: mask.rle ? mask.rle.counts : [],
                 },
                 mask_source: label.sourceId,
                 bbox: {
@@ -357,8 +357,11 @@
     console.log(
       "App.handleSaveAnns - api.postAnnotations in",
       Date.now() - start,
-      "ms",
+      "ms"
     );
+
+    // Reload annotations
+    handleSelectItem(selectedItem.id);
   }
 
   async function handleLoadNextPage() {
@@ -368,17 +371,17 @@
     const start = Date.now();
     let new_dbImages = await api.getDatasetItems(
       selectedDataset.id,
-      currentPage,
+      currentPage
     );
     console.log(
       "App.handleLoadNextPage - api.getDatasetItems in",
       Date.now() - start,
-      "ms",
+      "ms"
     );
 
     if (new_dbImages) {
       selectedDataset.page.items = selectedDataset.page.items.concat(
-        new_dbImages.items,
+        new_dbImages.items
       );
     } else {
       // End of dataset: reset last page
@@ -421,7 +424,9 @@
   on:saveAnns={handleSaveAnns}
 />
 <div
-  class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+  class="pt-20 h-screen w-full
+  bg-white dark:bg-zinc-800
+  text-zinc-800 dark:text-zinc-300"
 >
   {#if datasets}
     {#if selectedItem}

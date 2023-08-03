@@ -60,7 +60,7 @@
     view: ViewLabels,
     category: CategoryLabels,
     label: Label,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     label.visible = visibility;
@@ -81,7 +81,7 @@
     source: SourceLabels,
     view: ViewLabels,
     category: CategoryLabels,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     category.visible = visibility;
@@ -102,7 +102,7 @@
   function handleViewVisibility(
     source: SourceLabels,
     view: ViewLabels,
-    visibility: boolean,
+    visibility: boolean
   ) {
     // Toggle visibility
     view.visible = visibility;
@@ -165,10 +165,11 @@
 </script>
 
 <div
-  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg shadow-xl
-      bg-white dark:bg-zinc-800
-      border-zinc-300 dark:border-zinc-500
-      text-zinc-500 dark:text-zinc-300"
+  class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg
+  shadow dark:shadow-zinc-700
+  bg-white dark:bg-zinc-800
+  border-zinc-300 dark:border-zinc-600
+  text-zinc-500 dark:text-zinc-300"
 >
   {#if selectedDataset}
     <div class="h-12 fixed w-full flex items-center justify-evenly">
@@ -177,7 +178,7 @@
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-500'}"
+          : 'border-zinc-300 dark:border-zinc-600'}"
         on:click={() => {
           activeTab = "labels";
         }}
@@ -190,7 +191,7 @@
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'dataset'
             ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-            : 'border-zinc-300 dark:border-zinc-500'}"
+            : 'border-zinc-300 dark:border-zinc-600'}"
           on:click={() => {
             activeTab = "dataset";
           }}
@@ -206,7 +207,7 @@
           hover:bg-zinc-100 dark:hover:bg-zinc-700
           {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-500'}"
+          : 'border-zinc-300 dark:border-zinc-600'}"
       >
         Labels
       </button>
@@ -217,7 +218,7 @@
       <!-- Details -->
       <div
         class="flex flex-col p-4 border-b-2
-            border-zinc-300 dark:border-zinc-500"
+            border-zinc-300 dark:border-zinc-600"
       >
         <span class="text-lg font-bold">Item info</span>
         <ul class="list-disc ml-6">
@@ -235,7 +236,7 @@
       {:else}
         <div
           class="px-4 border-b-2
-          border-zinc-300 dark:border-zinc-500"
+          border-zinc-300 dark:border-zinc-600"
         >
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
@@ -244,7 +245,9 @@
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="maskSlider"
               min="0"
@@ -259,7 +262,9 @@
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="bboxSlider"
               min="0"
@@ -274,7 +279,9 @@
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
-              class="cursor-pointer"
+              class="cursor-pointer
+              accent-rose-500 dark:accent-rose-600
+              hover:accent-rose-600 hover:dark:accent-rose-500"
               type="range"
               id="confidenceSlider"
               min="0"
@@ -289,7 +296,7 @@
           {#if Object.keys(annotations).length > 1 && source.numLabels}
             <div
               class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                border-zinc-300 dark:border-zinc-500
+                border-zinc-300 dark:border-zinc-600
                 {source.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
               <button
@@ -343,7 +350,7 @@
             {#if Object.keys(source.views).length > 1 && view.numLabels}
               <div
                 class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-500
+                  border-zinc-300 dark:border-zinc-600
                   {source.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
                   {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
@@ -400,7 +407,7 @@
               {#if Object.keys(category.labels).length > 0}
                 <div
                   class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-500
+                  border-zinc-300 dark:border-zinc-600
                   {source.opened && view.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
                   {category.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
@@ -411,7 +418,7 @@
                         source,
                         view,
                         category,
-                        !category.visible,
+                        !category.visible
                       )}
                   >
                     <svg
@@ -473,7 +480,7 @@
                     <div
                       class="p-3 pl-12 flex items-center space-x-1 border-b-2
                       {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
-                      border-zinc-300 dark:border-zinc-500"
+                      border-zinc-300 dark:border-zinc-600"
                     >
                       <button
                         on:click={() =>
@@ -482,7 +489,7 @@
                             view,
                             category,
                             label,
-                            !label.visible,
+                            !label.visible
                           )}
                       >
                         <svg
@@ -548,7 +555,11 @@
             hover:bg-zinc-100 dark:hover:bg-zinc-700"
             on:click={() => handleSelectItem(item)}
           >
-            <div class="flex flex-row">
+            <div
+              class={item.filter((f) => f.dtype === "image").length > 1
+                ? "grid grid-cols-2"
+                : ""}
+            >
               {#each item as itemFeature}
                 {#if itemFeature.dtype === "image"}
                   <img
@@ -559,11 +570,14 @@
                 {/if}
               {/each}
             </div>
-            <div class="flex">
+            <div class="flex mx-auto">
               {#each item as itemFeature}
                 {#if itemFeature.name === "id"}
                   <span
-                    class="text-xs text-center font-semibold w-5 truncate grow"
+                    class="text-xs justify-center truncate grow
+                    {item.filter((f) => f.dtype === 'image').length > 1
+                      ? 'w-48'
+                      : 'w-24'}"
                     title={itemFeature.value}
                   >
                     {itemFeature.value}
