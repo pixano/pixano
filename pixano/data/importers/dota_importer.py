@@ -33,7 +33,7 @@ from .importer import Importer
 
 
 class DOTAImporter(Importer):
-    """Data Loader class for DOTA dataset
+    """Importer class for DOTA dataset
 
     Attributes:
         name (str): Dataset name
@@ -49,7 +49,7 @@ class DOTAImporter(Importer):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize DOTAImporter
 
         Args:
             name (str): Dataset name
@@ -68,7 +68,7 @@ class DOTAImporter(Importer):
 
         self.splits = splits
 
-        # Initialize Data Loader
+        # Initialize Importer
         super().__init__(name, description, self.fields)
 
     def import_row(
@@ -80,7 +80,6 @@ class DOTAImporter(Importer):
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:

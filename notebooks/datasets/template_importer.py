@@ -17,13 +17,13 @@ from pathlib import Path
 import pyarrow as pa
 import shortuuid
 
-from pixano.data.importers import DataImporter
+from pixano.data.importers import Importer
 from pixano.types import BBox, CompressedRLE, Image, ImageType, ObjectAnnotation
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 
-class TemplateImporter(DataImporter):
-    """Data Importer class template
+class TemplateImporter(Importer):
+    """Template Dataset Importer class template
 
     Attributes:
         name (str): Dataset name
@@ -51,7 +51,7 @@ class TemplateImporter(DataImporter):
         # One image field or multiple fields for multi-view datasets
         views = [pa.field("image", ImageType)]
 
-        # Initialize Data Importer
+        # Initialize Importer
         super().__init__(name, description, splits, views)
 
     def import_row(

@@ -30,7 +30,7 @@ from .importer import Importer
 
 
 class LegacyImporter(Importer):
-    """Data Importer class for Pixano legacy format datasets
+    """Importer class for Pixano legacy format datasets
 
     Attributes:
         name (str): Dataset name

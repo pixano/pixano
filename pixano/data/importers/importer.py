@@ -34,7 +34,7 @@ from pixano.types import Fields, ObjectAnnotationType, is_image_type
 
 
 class Importer(ABC):
-    """Abstract Data Importer class
+    """Dataset Importer class
 
     Attributes:
         name (str): Dataset name
@@ -50,7 +50,7 @@ class Importer(ABC):
         description: str,
         fields: Fields,  # TODO change by spec and feature
     ):
-        """Init importer
+        """Initialize Importer
 
         Args:
             name (str): Dataset name
@@ -331,7 +331,6 @@ class Importer(ABC):
             input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
             portable (int, optional): True to move or download files inside import directory. Defaults to False.
-            batch_size (int, optional): Number of rows per file. Defaults to 2048.
         """
 
         # Check input directories

@@ -103,13 +103,14 @@ nav:
 
   - "data":
     - "importers":
-      - "DataImporter": code/data/importers/data_importer.md
+      - "Importer": code/data/importers/importer.md
       - "CocoImporter": code/data/importers/coco_importer.md
       - "ImageImporter": code/data/importers/image_importer.md
+      - "BopWDSImporter": code/data/importers/bop_wds_importer.md
       - "DOTAImporter": code/data/importers/dota_importer.md
       - "LegacyImporter": code/data/importers/legacy_importer.md
     - "exporters":
-      - "DataExporter": code/data/exporters/data_exporter.md
+      - "Exporter": code/data/exporters/exporter.md
       - "CocoExporter": code/data/exporters/coco_exporter.md
     - "dataset": code/data/dataset.md
 

@@ -12,9 +12,9 @@
 # http://www.cecill.info
 
 from .coco_exporter import COCOExporter
-from .data_exporter import DataExporter
+from .exporter import Exporter
 
 __all__ = [
-    "DataExporter",
+    "Exporter",
     "COCOExporter",
 ]

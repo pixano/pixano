@@ -34,7 +34,7 @@ from .importer import Importer
 
 
 class COCOImporter(Importer):
-    """Data Loader class for COCO instances dataset
+    """Importer class for COCO instances dataset
 
     Attributes:
         name (str): Dataset name
@@ -50,7 +50,7 @@ class COCOImporter(Importer):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCO Loader
+        """Initialize COCOImporter
 
         Args:
             name (str): Dataset name
@@ -69,7 +69,7 @@ class COCOImporter(Importer):
 
         self.splits = splits
 
-        # Initialize Data Loader
+        # Initialize Importer
         super().__init__(name, description, self.fields)
 
     def import_row(

@@ -25,11 +25,11 @@ from pixano.data import DatasetInfo
 from pixano.types import ImageType, ObjectAnnotation, is_image_type
 from pixano.utils import natural_key
 
-from .data_exporter import DataExporter
+from .exporter import Exporter
 
 
-class COCOExporter(DataExporter):
-    """Data Importer class for COCO instances dataset
+class COCOExporter(Exporter):
+    """Exporter class for COCO instances dataset
 
     Attributes:
         name (str): Dataset name

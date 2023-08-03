@@ -24,7 +24,7 @@ from .importer import Importer
 
 
 class ImageImporter(Importer):
-    """Data Loader class for demo datasets
+    """Importer class for image datasets
 
     Attributes:
         name (str): Dataset name
@@ -35,7 +35,7 @@ class ImageImporter(Importer):
     """
 
     def __init__(self, name: str, description: str, splits: list[str]):
-        """Initialize COCO Loader
+        """Initialize ImageImporter
 
         Args:
             name (str): Dataset name
@@ -53,7 +53,7 @@ class ImageImporter(Importer):
             }
         )
 
-        # Initialize Data Loader
+        # Initialize Importer
         super().__init__(name, description, self.fields)
 
     def import_row(
@@ -65,7 +65,6 @@ class ImageImporter(Importer):
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:

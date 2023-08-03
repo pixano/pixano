@@ -22,7 +22,7 @@ from pixano.data import DatasetInfo
 from pixano.types import ObjectAnnotationType
 
 
-class DataExporter(ABC):
+class Exporter(ABC):
     """Abstract Data Importer class
 
     Attributes:
