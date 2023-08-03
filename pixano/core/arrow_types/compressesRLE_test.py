@@ -72,9 +72,8 @@ class CompressedRLETestCase(unittest.TestCase):
 
     def test_from_urle(self):
         urle = {"counts": [1, 2, 3, 2, 4, 1], "size": [10, 10]}
-        height, width = 10, 10
-        rle = CompressedRLE.from_urle(urle, height, width)
-        expected_rle_dict = urle_to_rle(urle, height, width)
+        rle = CompressedRLE.from_urle(urle)
+        expected_rle_dict = urle_to_rle(urle)
         expected_rle = CompressedRLE.from_dict(expected_rle_dict)
         self.assertEqual(rle.size, expected_rle.size)
         self.assertEqual(rle.counts, expected_rle.counts)

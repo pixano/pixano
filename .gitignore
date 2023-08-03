@@ -39,7 +39,6 @@ __pycache__
 .env
 
 # Inference
-*.npy
 *.pt
 *.pth
 *.onnx
