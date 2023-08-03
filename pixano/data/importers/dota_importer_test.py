@@ -10,8 +10,8 @@ from pixano.data.importers.dota_impoter import DOTA_Importer
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "objects": Path("test_data/Dota/objects"),
-            "image": Path("test_data/Dota/image"),
+            "objects": Path("unit_testing/Dota/objects"),
+            "image": Path("unit_testing/Dota/image"),
         }
 
         self.importer = DOTA_Importer(

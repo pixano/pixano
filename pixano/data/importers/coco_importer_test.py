@@ -10,8 +10,8 @@ from pixano.data.importers.coco_importer import COCO_Importer
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "objects": Path("test_data/Coco"),
-            "image": Path("test_data/Coco/image"),
+            "objects": Path("unit_testing/Coco"),
+            "image": Path("unit_testing/Coco/image"),
         }
 
         self.importer = COCO_Importer(
