@@ -22,7 +22,7 @@ from .image_importer import ImageImporter
 
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {"image": Path("unit_testing/images")}
+        self.input_dirs = {"image": Path("unit_testing/assets/image_dataset")}
         self.importer = ImageImporter(
             name="Demo - Agriculture",
             description="LIST Days - Demo - Agriculture",

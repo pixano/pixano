@@ -23,8 +23,8 @@ from .coco_importer import COCOImporter
 class COCOImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "objects": Path("unit_testing/Coco"),
-            "image": Path("unit_testing/Coco/image"),
+            "objects": Path("unit_testing/assets/coco_dataset"),
+            "image": Path("unit_testing/assets/coco_dataset/image"),
         }
 
         self.importer = COCOImporter(

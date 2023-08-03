@@ -22,7 +22,7 @@ from .bop_wds_importer import BopWDSImporter
 
 class BopWDSImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {"bop_wds": Path("unit_testing/bopWDS")}
+        self.input_dirs = {"bop_wds": Path("unit_testing/assets/bop_wds_dataset")}
         self.importer = BopWDSImporter(
             name="Bop_WDS_test",
             description="List - bop_WDS",

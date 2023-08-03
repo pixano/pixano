@@ -23,8 +23,8 @@ from .dota_importer import DOTAImporter
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "objects": Path("unit_testing/Dota/objects"),
-            "image": Path("unit_testing/Dota/image"),
+            "objects": Path("unit_testing/assets/dota_dataset/objects"),
+            "image": Path("unit_testing/assets/dota_dataset/image"),
         }
 
         self.importer = DOTAImporter(

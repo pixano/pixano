@@ -81,9 +81,9 @@ class DepthImageTestCase(unittest.TestCase):
 
 class TestParquetDepthImage(unittest.TestCase):
     def setUp(self) -> None:
-        uri1 = "unit_testing/depthImages/000067.png"
-        uri2 = "unit_testing/depthImages/000934.png"
-        uri3 = "unit_testing/depthImages/20170320_144339_cam_0_00011901.npy"
+        uri1 = "unit_testing/assets/depth_images/000067.png"
+        uri2 = "unit_testing/assets/depth_images/000934.png"
+        uri3 = "unit_testing/assets/depth_images/20170320_144339_cam_0_00011901.npy"
 
         self.depth_image1 = DepthImage.load(uri1)
         self.depth_image2 = DepthImage.load(uri2)
