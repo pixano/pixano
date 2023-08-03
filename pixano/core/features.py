@@ -68,7 +68,7 @@ class Features(BaseModel):
     def from_string_dict(feat_dict: dict[str, str]) -> "Features":
         return Features(**feat_dict)
     
-    def to_json(self):
+    def to_json(self) -> dict[str, str]:
         return self._feat_dict
 
 
