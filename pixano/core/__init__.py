@@ -24,9 +24,6 @@ from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
     Fields,
     fields,
-    is_image_type,
-    is_list_of_object_annotation_type,
-    is_number,
 )
 
 __all__ = [
@@ -53,7 +50,4 @@ __all__ = [
     "PoseType",
     "convert_field",
     "fields",
-    "is_image_type",
-    "is_list_of_object_annotation_type",
-    "is_number",
 ]

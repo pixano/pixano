@@ -21,10 +21,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from tqdm.auto import tqdm
 
-from pixano.core import ImageType, ObjectAnnotation, is_image_type
+from pixano.core import ImageType, ObjectAnnotation
 from pixano.data import DatasetInfo
 from pixano.data.exporters.exporter import Exporter
-from pixano.utils import natural_key
+from pixano.utils import is_image_type, natural_key
 
 
 class COCOExporter(Exporter):

@@ -31,12 +31,15 @@ from pixano.core import (
     ObjectAnnotation,
     ObjectAnnotationType,
     convert_field,
+)
+from pixano.data import Dataset
+from pixano.utils import (
+    format_bbox,
+    natural_key,
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
 )
-from pixano.data import Dataset
-from pixano.utils import format_bbox, natural_key
 
 
 class ItemFeature(BaseModel):
