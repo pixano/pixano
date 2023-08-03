@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .coco_importer import COCOImporter
+from pixano.data.importers.coco_importer import COCOImporter
 
 
 class COCOImporterTestCase(unittest.TestCase):

@@ -11,12 +11,12 @@
 #
 # http://www.cecill.info
 
-from .bop_wds_importer import BopWDSImporter
-from .coco_importer import COCOImporter
-from .dota_importer_test import DOTAImporter
-from .image_importer import ImageImporter
-from .importer import Importer
-from .legacy_importer import LegacyImporter
+from pixano.data.importers.bop_wds_importer import BopWDSImporter
+from pixano.data.importers.coco_importer import COCOImporter
+from pixano.data.importers.dota_importer_test import DOTAImporter
+from pixano.data.importers.image_importer import ImageImporter
+from pixano.data.importers.importer import Importer
+from pixano.data.importers.legacy_importer import LegacyImporter
 
 __all__ = [
     "Importer",

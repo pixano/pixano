@@ -11,8 +11,8 @@
 #
 # http://www.cecill.info
 
-from .datasets import Settings, load_dataset, load_dataset_stats, load_library
-from .items import (
+from pixano.api.datasets import Settings, load_dataset, load_dataset_stats, load_library
+from pixano.api.items import (
     ItemFeatures,
     load_item_details,
     load_item_embedding,

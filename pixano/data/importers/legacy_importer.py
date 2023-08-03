@@ -24,9 +24,8 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 from pixano.core import BBox, CompressedRLE, ImageType, ObjectAnnotation
+from pixano.data.importers.importer import Importer
 from pixano.utils import denormalize_coords, image_to_thumbnail
-
-from .importer import Importer
 
 
 class LegacyImporter(Importer):

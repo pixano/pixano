@@ -14,19 +14,15 @@
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core import (
-    BBoxType,
-    CameraType,
-    CompressedRLEType,
-    DepthImageType,
-    EmbeddingType,
-    GtInfoType,
-    ImageType,
-    ObjectAnnotationType,
-    PoseType,
-)
+from pixano.core.bbox import BBoxType
+from pixano.core.camera import CameraType
+from pixano.core.compressed_rle import CompressedRLEType
+from pixano.core.depth_image import DepthImageType
+from pixano.core.embedding import EmbeddingType
+from pixano.core.gt_info import GtInfoType
 from pixano.core.image import ImageType
 from pixano.core.object_annotation import ObjectAnnotationType
+from pixano.core.pose import PoseType
 
 
 class Fields(BaseModel):

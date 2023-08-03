@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 
-from .dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.data.dataset import Dataset, DatasetInfo, EmbeddingDataset, InferenceDataset
 
 __all__ = [
     "Dataset",

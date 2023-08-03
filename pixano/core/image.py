@@ -23,9 +23,8 @@ from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 from pydantic import BaseModel
 
-from pixano.utils import binary_to_url
-
 from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.utils import binary_to_url
 
 
 class Image(PixanoType, BaseModel):

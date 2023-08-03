@@ -26,7 +26,7 @@ from pycocotools import mask as mask_api
 from pixano.core import BBox, CompressedRLE, ImageType, ObjectAnnotation
 from pixano.utils import denormalize_coords, image_to_thumbnail
 
-from ._data_loader import DataLoader
+from pixano.data._data_loader import DataLoader
 
 
 class LegacyLoader(DataLoader):

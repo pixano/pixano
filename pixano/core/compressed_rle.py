@@ -13,8 +13,8 @@
 
 from typing import Any
 
-import pyarrow as pa
 import numpy as np
+import pyarrow as pa
 from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 

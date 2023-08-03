@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pixano.core import Fields
 
-from .dataset import Dataset, DatasetInfo
+from pixano.data.dataset import Dataset, DatasetInfo
 
 
 class TestDataset(unittest.TestCase):

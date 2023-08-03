@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .bop_wds_importer import BopWDSImporter
+from pixano.data.importers.bop_wds_importer import BopWDSImporter
 
 
 class BopWDSImporterTestCase(unittest.TestCase):

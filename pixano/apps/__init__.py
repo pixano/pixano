@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-from .main import app
-from .serve import PixanoApp
-from .annotator.serve import AnnotatorApp
-from .explorer.serve import ExplorerApp
+from pixano.apps.main import app
+from pixano.apps.serve import PixanoApp
+from pixano.apps.annotator.serve import AnnotatorApp
+from pixano.apps.explorer.serve import ExplorerApp
 
 __all__ = [
     "app",

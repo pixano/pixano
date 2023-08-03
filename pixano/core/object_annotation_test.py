@@ -20,10 +20,7 @@ import pyarrow.parquet as pq
 
 from pixano.core.bbox import BBox
 from pixano.core.compressed_rle import CompressedRLE
-from pixano.core.object_annotation import (
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
+from pixano.core.object_annotation import ObjectAnnotation, ObjectAnnotationType
 from pixano.core.pose import Pose
 
 

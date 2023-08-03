@@ -36,9 +36,8 @@ from pixano.core import (
     Pose,
     PoseType,
 )
+from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_binary, image_to_thumbnail
-
-from .importer import Importer
 
 
 def row_to_array(

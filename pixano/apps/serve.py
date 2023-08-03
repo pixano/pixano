@@ -24,7 +24,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .main import Settings, create_app
+from pixano.apps.main import Settings, create_app
 
 
 def get_env() -> str:

@@ -28,9 +28,8 @@ from pixano.core import (
     ObjectAnnotation,
     ObjectAnnotationType,
 )
+from pixano.data.importers.importer import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
-
-from .importer import Importer
 
 
 class COCOImporter(Importer):

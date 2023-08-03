@@ -13,7 +13,7 @@
 
 import numpy as np
 
-from .image import rle_to_mask, urle_to_rle
+from pixano.utils.image import rle_to_mask, urle_to_rle
 
 
 def denormalize_coords(coord: list[float], height: int, width: int) -> list[float]:

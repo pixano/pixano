@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from .dota_importer import DOTAImporter
+from pixano.data.importers.dota_importer import DOTAImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):

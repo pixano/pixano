@@ -23,9 +23,8 @@ from tqdm.auto import tqdm
 
 from pixano.core import ImageType, ObjectAnnotation, is_image_type
 from pixano.data import DatasetInfo
+from pixano.data.exporters.exporter import Exporter
 from pixano.utils import natural_key
-
-from .exporter import Exporter
 
 
 class COCOExporter(Exporter):
