@@ -1,10 +1,9 @@
-from tempfile import tempdir
 import tempfile
-from typing import Self
 import unittest
 from pathlib import Path
 
 import pandas as pd
+
 from pixano.data.importers.coco_importer import COCO_Importer
 
 
