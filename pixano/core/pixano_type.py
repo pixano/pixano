@@ -187,10 +187,10 @@ def createPyArrowType(
 
             @classmethod
             def from_list(cls, lst: list):
-                Fields = struct_type
+                fields = struct_type
                 arrays = []
 
-                for field in Fields:
+                for field in fields:
                     data = []
                     for obj in lst:
                         if obj is not None:
@@ -210,7 +210,7 @@ def createPyArrowType(
                             data,
                         )
                     )
-                sto = pa.StructArray.from_arrays(arrays, fields=Fields)
+                sto = pa.StructArray.from_arrays(arrays, fields=fields)
                 return pa.ExtensionArray.from_storage(pyarrow_type, sto)
 
             @classmethod
