@@ -16,13 +16,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from .dataset import Dataset
+from pixano.types import Fields
 
-TARGET_INFO = {
-    "name": "My dataset",
-    "description": "Dataset from a great AI project",
-    "fields": [{"field1": "int32"}, {"field2": "image"}],
-}
+from .dataset import Dataset, DatasetInfo
 
 
 class TestDataset(unittest.TestCase):
@@ -30,10 +26,18 @@ class TestDataset(unittest.TestCase):
         self.tmpdir = Path(tempfile.mkdtemp())
 
     def test_from_spec(self):
-        with open(self.tmpdir / "info.json", "w") as f:
-            json.dump(TARGET_INFO, f)
+        info = DatasetInfo(
+            id="datasetid001",
+            name="My dataset",
+            description="Dataset from a great AI project",
+            fields=Fields.from_dict({"field1": "int32", "field2": "image"}),
+        )
+        with open(self.tmpdir / "spec.json", "w") as f:
+            json.dump(info.to_dict(), f)
 
         dataset = Dataset(self.tmpdir)
 
-        self.assertEqual(TARGET_INFO["name"], dataset.info.name)
-        self.assertEqual(TARGET_INFO["description"], dataset.info.description)
+        self.assertEqual(info.id, dataset.info.id)
+        self.assertEqual(info.name, dataset.info.name)
+        self.assertEqual(info.description, dataset.info.description)
+        self.assertEqual(info.fields, dataset.info.fields)
