@@ -146,7 +146,7 @@ class COCOImporter(Importer):
                     ],
                     "split": split,
                 }
-
+                # Create struct arrays
                 struct_arr = pa.StructArray.from_arrays(
                     [
                         pa.array([row["id"]]),

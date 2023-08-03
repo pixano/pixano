@@ -51,6 +51,7 @@ def row_to_array(
         sys.path.append("/home/maximilien/work/lib/bop_toolkit")
         import bop_toolkit_lib.dataset.bop_webdataset as btk
 
+        #decoding
         sample = btk.decode_sample(
             row,
             decode_camera=True,
@@ -197,6 +198,14 @@ class BopWDSImporter(Importer):
         super().__init__(name, description, self.fields)
 
     def shard_list(self, input_dir: str | Path) -> dict[str, list[str]]:
+        """Create a dict containing split as key and list of shard path as value
+
+        Args:
+            input_dir (str | Path): Path to shard file
+
+        Returns:
+            dict[str, list[str]]: key = split , value = list of shard path
+        """
         return {
             split: [
                 os.path.join(input_dir, split, shard)
