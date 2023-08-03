@@ -94,7 +94,7 @@ class DepthImage(PixanoType, BaseModel):
 
     @staticmethod
     def load_npy(path: str) -> "DepthImage":
-        """Create depth image from pixano.types.npy file
+        """Create depth image from .npy file
 
         Args:
             path (str): Path to .npy file containing depth image as NumPy Array.
