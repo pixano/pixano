@@ -333,7 +333,7 @@ class Importer(ABC):
         Args:
             input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
-            portable (int, optional): True to move or download files inside import directory. Defaults to False.
+            portable (int, optional): True to copy or download files inside import directory. Defaults to False.
         """
 
         # Check input directories
@@ -354,7 +354,7 @@ class Importer(ABC):
         # Create preview.png
         # self.create_preview(import_dir)
 
-        # Move media directories if portable
+        # Copy media directories if portable
         if portable:
             for field in tqdm(self.schema, desc="Moving media directories"):
                 if is_image_type(field.type):
