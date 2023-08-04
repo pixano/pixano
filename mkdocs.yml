@@ -48,6 +48,11 @@ extra:
 plugins:
 - search
 - autorefs
+- gen-files:
+    scripts:
+    - docs/gen_ref_pages.py
+- literate-nav:
+    nav_file: SUMMARY.md
 - mkdocstrings:
     handlers:
       python:
@@ -88,59 +93,6 @@ nav:
   - "Using Pixano Explorer": user/explorer.md
   - "Using Pixano Annotator": user/annotator.md
   
-- "API reference": 
-  - code/index.md
-
-  - "analytics":
-    - "feature_statistics": code/analytics/feature_statistics.md
-
-  - "api":
-    - "datasets": code/api/datasets.md
-    - "items": code/api/items.md
-
-  - "apps":
-    - "annotator":
-      - "serve": code/apps/annotator/serve.md
-    - "explorer":
-      - "serve": code/apps/explorer/serve.md
-    - "main": code/apps/main.md
-    - "serve": code/apps/serve.md
-
-  - "core":
-    - "bbox": code/core/bbox.md
-    - "camera": code/core/camera.md
-    - "compressed_rle": code/core/compressed_rle.md
-    - "depth_image": code/core/depth_image.md
-    - "embedding": code/core/embedding.md
-    - "gt_info": code/core/gt_info.md
-    - "image": code/core/image.md
-    - "object_annotation": code/core/object_annotation.md
-    - "pixano_type": code/core/pixano_type.md
-    - "pose": code/core/pose.md
-    - "utils": code/core/utils.md
-
-  - "data":
-    - "importers":
-      - "bop_wds_importer": code/data/importers/bop_wds_importer.md
-      - "coco_importer": code/data/importers/coco_importer.md
-      - "dota_importer": code/data/importers/dota_importer.md
-      - "image_importer": code/data/importers/image_importer.md
-      - "importer": code/data/importers/importer.md
-      - "legacy_importer": code/data/importers/legacy_importer.md
-    - "exporters":
-      - "exporter": code/data/exporters/exporter.md
-      - "coco_exporter": code/data/exporters/coco_exporter.md
-    - "dataset_info": code/data/dataset_info.md
-    - "dataset": code/data/dataset.md
-    - "fields": code/data/fields.md
-
-  - "models":
-    - "inference_model": code/models/inference_model.md
-
-  - "utils":
-    - "boxes": code/utils/boxes.md
-    - "image": code/utils/image.md
-    - "labels": code/utils/labels.md
-    - "python": code/utils/python.md
+- "API reference": code/
 
 - "Pixano Inference": https://pixano.github.io/pixano-inference/

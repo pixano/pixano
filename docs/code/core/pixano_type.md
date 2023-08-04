@@ -1,1 +1,0 @@
-::: core.pixano_type

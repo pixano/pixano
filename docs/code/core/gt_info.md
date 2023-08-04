@@ -1,1 +1,0 @@
-::: core.gt_info

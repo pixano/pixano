@@ -1,1 +1,0 @@
-::: core.depth_image
