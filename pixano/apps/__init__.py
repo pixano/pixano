@@ -14,11 +14,9 @@
 from pixano.apps.annotator import Annotator
 from pixano.apps.explorer import Explorer
 from pixano.apps.main import create_app
-from pixano.apps.serve import App
 
 __all__ = [
     "Annotator",
     "Explorer",
-    "App",
     "create_app",
 ]
