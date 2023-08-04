@@ -43,11 +43,6 @@ from pixano.utils.labels import (
     voc_names,
 )
 from pixano.utils.python import natural_key
-from pixano.utils.types import (
-    is_image_type,
-    is_list_of_object_annotation_type,
-    is_number,
-)
 
 __all__ = [
     "normalize_coords",
@@ -76,7 +71,4 @@ __all__ = [
     "voc_names",
     "natural_key",
     "binary_to_url",
-    "is_image_type",
-    "is_list_of_object_annotation_type",
-    "is_number",
 ]

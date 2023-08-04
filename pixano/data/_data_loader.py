@@ -30,9 +30,14 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import ImageType, ObjectAnnotationType, convert_field
+from pixano.core import (
+    ImageType,
+    ObjectAnnotationType,
+    convert_field,
+    is_image_type,
+    is_list_of_object_annotation_type,
+)
 from pixano.data import DatasetInfo
-from pixano.utils import is_image_type, is_list_of_object_annotation_type
 
 
 def _batch_dict(iterator: Iterator, batch_size: int) -> Iterator:

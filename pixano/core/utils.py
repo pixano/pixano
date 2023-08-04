@@ -13,7 +13,8 @@
 
 import pyarrow as pa
 
-from pixano.core import ImageType, ObjectAnnotationType
+from pixano.core.image import ImageType
+from pixano.core.object_annotation import ObjectAnnotationType
 
 
 def is_number(t: pa.DataType) -> bool:
