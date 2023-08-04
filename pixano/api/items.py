@@ -147,7 +147,10 @@ def load_item_details(
     # Get item
     scanner = pa_ds.scanner(filter=ds.field("id").isin([item_id]))
     item = scanner.to_table().to_pylist()[0]
-    objects = item["objects"]
+    objects = []
+    for field in pa_ds.schema:
+        if field.name == "objects" or is_list_of_object_annotation_type(field.type):
+            objects.extend(item[field.name])
 
     # Get item inference objects
     for inf_ds in inf_datasets:
@@ -155,7 +158,11 @@ def load_item_details(
         inf_scanner = pa_inf_ds.scanner(filter=ds.field("id").isin([item_id]))
         inf_item = inf_scanner.to_table().to_pylist()[0]
         if inf_item is not None:
-            objects.extend(inf_item["objects"])
+            for field in pa_inf_ds.schema:
+                if field.name == "objects" or is_list_of_object_annotation_type(
+                    field.type
+                ):
+                    objects.extend(inf_item[field.name])
 
     # Create features
     item_details = {
