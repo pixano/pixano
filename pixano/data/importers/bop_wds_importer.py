@@ -169,16 +169,30 @@ def row_to_array(
 
 
 class BopWDSImporter(Importer):
+    """Importer class for BOP WDS dataset
+
+    Attributes:
+        info (DatasetInfo): Dataset information
+        schema (pa.schema): Dataset schema
+        splits (list[str]): Dataset splits
+    """
+
     def __init__(
         self,
         name: str,
         description: str,
         splits: list[str],
     ):
-        self._shard_splits = splits
+        """Initialize BOP WDS Importer
+
+        Args:
+            name (str): Dataset name
+            description (str): Dataset description
+            splits (list[str]): Dataset splits
+        """
 
         # Comment/uncomment to desactivate/activate a feature (need coco_json_path for object_id and mask)
-        self.fields = Fields.from_dict(
+        fields = Fields.from_dict(
             {
                 "id": "str",
                 "rgb": "Image",
@@ -193,7 +207,7 @@ class BopWDSImporter(Importer):
             }
         )
 
-        super().__init__(name, description, self.fields)
+        super().__init__(name, description, fields, splits)
 
     def shard_list(self, input_dir: str | Path) -> dict[str, list[str]]:
         return {
@@ -202,7 +216,7 @@ class BopWDSImporter(Importer):
                 for shard in os.listdir(input_dir / split)
                 if shard.endswith(".tar")
             ]
-            for split in self._shard_splits
+            for split in self.splits
         }
 
     def import_row(self, input_dirs: dict[str, str | Path]) -> Iterator:
@@ -221,7 +235,9 @@ class BopWDSImporter(Importer):
                     for row in _wds_pipeline:
                         yield pa.RecordBatch.from_struct_array(
                             #### Change Coco_json_path here
-                            row_to_array(row, split, self.fields, coco_json_path=None)
+                            row_to_array(
+                                row, split, self.info.fields, coco_json_path=None
+                            )
                         )
 
         except ImportError as e:

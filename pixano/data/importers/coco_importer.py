@@ -33,14 +33,12 @@ from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 
 
 class COCOImporter(Importer):
-    """Importer class for COCO instances dataset
+    """Importer class for COCO instances format datasets
 
     Attributes:
-        name (str): Dataset name
-        description (str): Dataset description
-        splits (list[str]): Dataset splits
+        info (DatasetInfo): Dataset information
         schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
+        splits (list[str]): Dataset splits
     """
 
     def __init__(
@@ -49,7 +47,7 @@ class COCOImporter(Importer):
         description: str,
         splits: list[str],
     ):
-        """Initialize COCOImporter
+        """Initialize COCO Importer
 
         Args:
             name (str): Dataset name
@@ -57,7 +55,7 @@ class COCOImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.fields = Fields.from_dict(
+        fields = Fields.from_dict(
             {
                 "id": "str",
                 "image": "Image",
@@ -66,10 +64,8 @@ class COCOImporter(Importer):
             }
         )
 
-        self.splits = splits
-
         # Initialize Importer
-        super().__init__(name, description, self.fields)
+        super().__init__(name, description, fields, splits)
 
     def import_row(
         self,
@@ -153,7 +149,7 @@ class COCOImporter(Importer):
                         ObjectAnnotationType.Array.from_lists([row["objects"]]),
                         pa.array([row["split"]]),
                     ],
-                    fields=self.fields.to_pyarrow(),
+                    fields=self.info.fields.to_pyarrow(),
                 )
 
                 # Return row

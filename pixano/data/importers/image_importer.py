@@ -27,15 +27,13 @@ class ImageImporter(Importer):
     """Importer class for image datasets
 
     Attributes:
-        name (str): Dataset name
-        description (str): Dataset description
-        splits (list[str]): Dataset splits
+        info (DatasetInfo): Dataset information
         schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
+        splits (list[str]): Dataset splits
     """
 
     def __init__(self, name: str, description: str, splits: list[str]):
-        """Initialize ImageImporter
+        """Initialize Image Importer
 
         Args:
             name (str): Dataset name
@@ -43,9 +41,7 @@ class ImageImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.splits = splits
-
-        self.fields = Fields.from_dict(
+        fields = Fields.from_dict(
             {
                 "id": "str",
                 "image": "Image",
@@ -54,7 +50,7 @@ class ImageImporter(Importer):
         )
 
         # Initialize Importer
-        super().__init__(name, description, self.fields)
+        super().__init__(name, description, fields, splits)
 
     def import_row(
         self,
@@ -102,7 +98,7 @@ class ImageImporter(Importer):
                         ImageType.Array.from_list([row["image"]]),
                         pa.array([row["split"]]),
                     ],
-                    fields=self.fields.to_pyarrow(),
+                    fields=self.info.fields.to_pyarrow(),
                 )
 
                 # Return row

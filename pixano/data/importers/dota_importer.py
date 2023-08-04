@@ -29,11 +29,9 @@ class DOTAImporter(Importer):
     """Importer class for DOTA dataset
 
     Attributes:
-        name (str): Dataset name
-        description (str): Dataset description
-        splits (list[str]): Dataset splits
+        info (DatasetInfo): Dataset information
         schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
+        splits (list[str]): Dataset splits
     """
 
     def __init__(
@@ -42,7 +40,7 @@ class DOTAImporter(Importer):
         description: str,
         splits: list[str],
     ):
-        """Initialize DOTAImporter
+        """Initialize DOTA Importer
 
         Args:
             name (str): Dataset name
@@ -50,7 +48,7 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.fields = Fields.from_dict(
+        fields = Fields.from_dict(
             {
                 "id": "str",
                 "image": "Image",
@@ -59,10 +57,8 @@ class DOTAImporter(Importer):
             }
         )
 
-        self.splits = splits
-
         # Initialize Importer
-        super().__init__(name, description, self.fields)
+        super().__init__(name, description, self.fields, splits)
 
     def import_row(
         self,
@@ -142,7 +138,7 @@ class DOTAImporter(Importer):
                             ObjectAnnotationType.Array.from_lists([row["objects"]]),
                             pa.array([row["split"]]),
                         ],
-                        fields=self.fields.to_pyarrow(),
+                        fields=self.info.fields.to_pyarrow(),
                     )
 
                     # Return row

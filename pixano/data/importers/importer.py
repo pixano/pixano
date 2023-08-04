@@ -37,11 +37,9 @@ class Importer(ABC):
     """Dataset Importer class
 
     Attributes:
-        name (str): Dataset name
-        description (str): Dataset description
-        splits (list[str]): Dataset splits
+        info (DatasetInfo): Dataset information
         schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
+        splits (list[str]): Dataset splits
     """
 
     def __init__(
@@ -49,6 +47,7 @@ class Importer(ABC):
         name: str,
         description: str,
         fields: Fields,  # TODO change by spec and feature
+        splits: list[str],
     ):
         """Initialize Importer
 
@@ -56,6 +55,7 @@ class Importer(ABC):
             name (str): Dataset name
             description (str): Dataset description
             fields (Fields): Dataset fields
+            splits (list[str]): Dataset splits
         """
 
         # Dataset info
@@ -63,14 +63,17 @@ class Importer(ABC):
             id=shortuuid.uuid(),
             name=name,
             description=description,
+            fields=fields,
             num_elements=0,
             preview=None,
             categories=[],
-            fields=fields,
         )
 
         # Dataset schema
         self.schema = pa.schema(self.info.fields.to_pyarrow())
+
+        # Dataset splits
+        self.splits = splits
 
     def create_json(self, import_dir: Path, categories: list[dict] = []):
         """Create dataset spec.json
