@@ -10,3 +10,9 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from pixano.apps.explorer.serve import ExplorerApp
+
+__all__ = [
+    "ExplorerApp",
+]

@@ -14,12 +14,29 @@
 
 from pixano.data.dataset import Dataset, EmbeddingDataset, InferenceDataset
 from pixano.data.dataset_info import DatasetInfo
+from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields
+from pixano.data.importers import (
+    BopWDSImporter,
+    COCOImporter,
+    DOTAImporter,
+    ImageImporter,
+    Importer,
+    LegacyImporter,
+)
 
 __all__ = [
     "Dataset",
-    "DatasetInfo",
     "EmbeddingDataset",
     "InferenceDataset",
+    "DatasetInfo",
     "Fields",
+    "Exporter",
+    "COCOExporter",
+    "Importer",
+    "ImageImporter",
+    "BopWDSImporter",
+    "DOTAImporter",
+    "COCOImporter",
+    "LegacyImporter",
 ]

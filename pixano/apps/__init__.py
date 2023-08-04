@@ -11,14 +11,14 @@
 #
 # http://www.cecill.info
 
+from pixano.apps.annotator import AnnotatorApp
+from pixano.apps.explorer import ExplorerApp
 from pixano.apps.main import app
 from pixano.apps.serve import PixanoApp
-from pixano.apps.annotator.serve import AnnotatorApp
-from pixano.apps.explorer.serve import ExplorerApp
 
 __all__ = [
-    "app",
-    "PixanoApp",
     "AnnotatorApp",
     "ExplorerApp",
+    "PixanoApp",
+    "app",
 ]
