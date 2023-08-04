@@ -24,6 +24,7 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 from pixano.data_types import BBox, CompressedRLE, ImageType, ObjectAnnotation
+from pixano.data_types.object_annotation import ObjectAnnotationType
 from pixano.data_types.utils import Fields
 from pixano.utils import denormalize_coords, image_to_thumbnail
 
@@ -70,7 +71,7 @@ class LegacyImporter(Importer):
 
         for view in views:
             self.fields[view] = "Image"
-        
+
         self.json_files = json_files
 
         # Initialize Data Importer
@@ -190,7 +191,9 @@ class LegacyImporter(Importer):
                                 # MultiPolygon
                                 if not isnan(ann["geometry"]["mvertices"][0][0]):
                                     denorm = [
-                                        denormalize_coords(poly, f["height"], f["width"])
+                                        denormalize_coords(
+                                            poly, f["height"], f["width"]
+                                        )
                                         for poly in ann["geometry"]["mvertices"]
                                     ]
                                     rles = mask_api.frPyObjects(
@@ -235,5 +238,18 @@ class LegacyImporter(Importer):
                             )
                         )
 
+                # On met toute les view sur la même ligne
+                Im_arr = [ImageType.Array.from_list([row(view)]) for view in self.views]
+
+                struct_arr = pa.StructArray.from_arrays(
+                    # Fields de base
+                    [
+                        pa.array([row["id"]]),
+                        ObjectAnnotationType.Array.from_lists([row["objects"]]),
+                        pa.array([row["split"]]),
+                    ].extend(Im_arr), # + Images
+                    fields=self.fields.to_pyarrow(),
+                )
+
                 # Return row
-                yield row
+                yield pa.RecordBatch.from_struct_array(struct_arr)
