@@ -29,7 +29,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import ObjectAnnotationType, is_image_type, ImageType
+from pixano.core import ObjectAnnotationType, is_image_type
 from pixano.data import DatasetInfo, Fields
 
 
