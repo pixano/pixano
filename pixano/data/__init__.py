@@ -12,13 +12,9 @@
 # http://www.cecill.info
 
 
-from pixano.data.dataset import (
-    Dataset,
-    DatasetInfo,
-    EmbeddingDataset,
-    InferenceDataset,
-    Fields,
-)
+from pixano.data.dataset import Dataset, EmbeddingDataset, InferenceDataset
+from pixano.data.dataset_info import DatasetInfo
+from pixano.data.fields import Fields
 
 __all__ = [
     "Dataset",
