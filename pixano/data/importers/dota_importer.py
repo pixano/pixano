@@ -48,7 +48,7 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        self.fields = Fields.from_dict(
+        fields = Fields.from_dict(
             {
                 "id": "str",
                 "image": "Image",
@@ -58,7 +58,7 @@ class DOTAImporter(Importer):
         )
 
         # Initialize Importer
-        super().__init__(name, description, self.fields, splits)
+        super().__init__(name, description, fields, splits)
 
     def import_row(
         self,
