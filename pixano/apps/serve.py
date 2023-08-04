@@ -153,7 +153,7 @@ def display_cli(url: str, port: int, height: int):
     print(f"Please visit {url}:{port} in a web browser.")
 
 
-class PixanoApp:
+class App:
     """Base class for Annotator and Explorer apps
 
     Attributes:

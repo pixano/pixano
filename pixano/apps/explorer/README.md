@@ -31,8 +31,8 @@ You will then be provided with a URL to open in your browser to use the app.
 If you are in a Jupyter or Google Colab notebook, you can start the Explorer app by running a cell with:
 
 ```python
-from pixano.apps import ExplorerApp
-explorer = ExplorerApp(<path/to/your/datasets>)
+from pixano.apps import Explorer
+explorer = Explorer(<path/to/your/datasets>)
 ```
 
 You can then use the app directly from the notebook in another cell with:

@@ -11,8 +11,8 @@
 #
 # http://www.cecill.info
 
-from pixano.apps.annotator.serve import AnnotatorApp
+from pixano.apps.annotator.serve import Annotator
 
 __all__ = [
-    "AnnotatorApp",
+    "Annotator",
 ]

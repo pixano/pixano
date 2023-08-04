@@ -14,7 +14,7 @@
 import click
 import pkg_resources
 
-from pixano.apps.serve import PixanoApp
+from pixano.apps.serve import App
 
 LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
@@ -33,7 +33,7 @@ ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist/ass
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/annotator/dist")
 
 
-class AnnotatorApp(PixanoApp):
+class Annotator(App):
     """Pixano Annotator App
 
     Attributes:
@@ -84,4 +84,4 @@ def main(library_dir: str, host: str, port: int):
 
     LIBRARY_DIR: Dataset library directory
     """
-    AnnotatorApp(library_dir, host, port)
+    Annotator(library_dir, host, port)
