@@ -38,7 +38,11 @@ __pycache__
 *.pyc
 .env
 
-# Inference
+# Dataset files
+*.parquet
+*.lance
+
+# Inference files
 *.pt
 *.pth
 *.onnx
