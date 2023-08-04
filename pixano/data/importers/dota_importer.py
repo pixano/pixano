@@ -48,7 +48,7 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        fields = Fields.from_dict(
+        self.fields = Fields.from_dict(
             {
                 "id": "str",
                 "image": "Image",
