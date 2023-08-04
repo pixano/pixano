@@ -1,1 +1,1 @@
-::: models.InferenceModel
+::: models.inference_model

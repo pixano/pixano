@@ -1,1 +1,1 @@
-::: data.importers.DOTAImporter
+::: data.importers.dota_importer

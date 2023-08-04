@@ -1,1 +1,1 @@
-:::data.importers.LegacyImporter
+:::data.importers.legacy_importer

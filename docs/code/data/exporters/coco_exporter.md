@@ -1,1 +1,1 @@
-::: data.exporters.COCOExporter
+::: data.exporters.coco_exporter

@@ -1,1 +1,1 @@
-::: data.importers.BopWDSImporter
+::: data.importers.bop_wds_importer

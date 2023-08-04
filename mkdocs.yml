@@ -64,13 +64,15 @@ plugins:
           docstring_style: google
           docstring_options:
             ignore_init_summary: yes
-          show_submodules: no
+          show_submodules: true
           docstring_section_style: table
           members_order: alphabetical
           merge_init_into_class: yes
           show_root_heading: true
           show_source: true
           heading_level: 1
+          preload_modules:
+            - pydantic
 
           
 nav:
@@ -97,36 +99,43 @@ nav:
     - "items": code/api/items.md
 
   - "apps":
-    - "AnnotatorApp": code/apps/annotator_app.md
-    - "ExplorerApp": code/apps/explorer_app.md
-    - "PixanoApp": code/apps/pixano_app.md
+    - "annotator":
+      - "serve": code/apps/annotator/serve.md
+    - "explorer":
+      - "serve": code/apps/explorer/serve.md
+    - "main": code/apps/main.md
+    - "serve": code/apps/serve.md
 
   - "core":
-    - "PixanoType": code/core/PixanoType.md
-    - "BBox": code/core/BBox.md
-    - "Camera": code/core/Camera.md
-    - "CompressedRLE": code/core/CompressedRLE.md
-    - "DepthImage": code/core/DepthImage.md
-    - "Embedding": code/core/Embedding.md
-    - "Image": code/core/Image.md
-    - "ObjectAnnotation": code/core/ObjectAnnotation.md
-    - "Pose": code/core/Pose.md
+    - "bbox": code/core/bbox.md
+    - "camera": code/core/camera.md
+    - "compressed_rle": code/core/compressed_rle.md
+    - "depth_image": code/core/depth_image.md
+    - "embedding": code/core/embedding.md
+    - "gt_info": code/core/gt_info.md
+    - "image": code/core/image.md
+    - "object_annotation": code/core/object_annotation.md
+    - "pixano_type": code/core/pixano_type.md
+    - "pose": code/core/pose.md
+    - "utils": code/core/utils.md
 
   - "data":
     - "importers":
-      - "Importer": code/data/importers/importer.md
-      - "CocoImporter": code/data/importers/coco_importer.md
-      - "ImageImporter": code/data/importers/image_importer.md
-      - "BopWDSImporter": code/data/importers/bop_wds_importer.md
-      - "DOTAImporter": code/data/importers/dota_importer.md
-      - "LegacyImporter": code/data/importers/legacy_importer.md
+      - "bop_wds_importer": code/data/importers/bop_wds_importer.md
+      - "coco_importer": code/data/importers/coco_importer.md
+      - "dota_importer": code/data/importers/dota_importer.md
+      - "image_importer": code/data/importers/image_importer.md
+      - "importer": code/data/importers/importer.md
+      - "legacy_importer": code/data/importers/legacy_importer.md
     - "exporters":
-      - "Exporter": code/data/exporters/exporter.md
-      - "CocoExporter": code/data/exporters/coco_exporter.md
+      - "exporter": code/data/exporters/exporter.md
+      - "coco_exporter": code/data/exporters/coco_exporter.md
+    - "dataset_info": code/data/dataset_info.md
     - "dataset": code/data/dataset.md
+    - "fields": code/data/fields.md
 
   - "models":
-    - "InferenceModel": code/models/inference_model.md
+    - "inference_model": code/models/inference_model.md
 
   - "utils":
     - "boxes": code/utils/boxes.md

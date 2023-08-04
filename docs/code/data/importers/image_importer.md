@@ -1,1 +1,1 @@
-::: data.importers.ImageImporter
+::: data.importers.image_importer

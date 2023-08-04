@@ -1,1 +1,1 @@
-::: data.importers.COCOImporter
+::: data.importers.coco_importer
