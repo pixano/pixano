@@ -68,11 +68,11 @@ class Fields(BaseModel):
 
         return self._field_dict
 
-    def to_pyarrow(self) -> list[pa.field]:
+    def to_pyarrow(self) -> list[pa.Field]:
         """Convert Fields string dictionary to list of PyArrow fields
 
         Returns:
-            list[pa.fields]: List of PyArrow fields
+            list[pa.Field]: List of PyArrow fields
         """
 
         def _pyarrow_mapping(input_type: str) -> pa.DataType:

@@ -76,7 +76,7 @@ class DataLoader(ABC):
         name: str,
         description: str,
         splits: list[str],
-        views: list[pa.field],
+        views: list[pa.Field],
     ):
         """Initialize Data Importer
 
@@ -84,7 +84,7 @@ class DataLoader(ABC):
             name (str): Dataset name
             description (str): Dataset description
             splits (list[str]): Dataset splits
-            views (list[pa.field]): Dataset views
+            views (list[pa.Field]): Dataset views
         """
 
         # Dataset info
