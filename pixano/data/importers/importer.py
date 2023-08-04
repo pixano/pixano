@@ -29,7 +29,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import ObjectAnnotationType, is_image_type
+from pixano.core import ObjectAnnotationType, is_image_type, ImageType
 from pixano.data import DatasetInfo, Fields
 
 
@@ -70,7 +70,9 @@ class Importer(ABC):
         )
 
         # Dataset schema
-        self.schema = pa.schema(self.info.fields.to_pyarrow())
+        self.schema = lance.json_to_schema(
+            lance.schema_to_json(pa.schema(self.info.fields.to_pyarrow()))
+        )
 
         # Dataset splits
         self.splits = splits
