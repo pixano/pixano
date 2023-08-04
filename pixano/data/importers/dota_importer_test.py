@@ -20,7 +20,7 @@ import pandas as pd
 from pixano.data.importers.dota_importer import DOTAImporter
 
 
-class ImageImporterTestCase(unittest.TestCase):
+class DOTAImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
             "objects": Path("unit_testing/assets/dota_dataset/objects"),
