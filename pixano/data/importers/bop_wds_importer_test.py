@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,6 +19,16 @@ from pathlib import Path
 import pandas as pd
 
 from pixano.data.importers.bop_wds_importer import BopWDSImporter
+
+try:
+    # Add the path to bop_toolkit
+    sys.path.append("/home/maximilien/work/lib/bop_toolkit")
+    import bop_toolkit_lib.dataset.bop_webdataset as btk
+    import webdataset as wds
+
+    missing_deps = False
+except ImportError:
+    missing_deps = True
 
 
 class BopWDSImporterTestCase(unittest.TestCase):
@@ -29,6 +40,7 @@ class BopWDSImporterTestCase(unittest.TestCase):
             splits=["test", "val"],
         )
 
+    @unittest.skipIf(missing_deps, "Missing btk and wds dependencies")
     def test_import_existing_file(self):
         with tempfile.TemporaryDirectory() as library_dir:
             import_dir = Path(library_dir) / "test_bop_wds"
@@ -42,6 +54,7 @@ class BopWDSImporterTestCase(unittest.TestCase):
             db_lance_path = import_dir / "db.lance"
             self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
 
+    @unittest.skipIf(missing_deps, "Missing btk and wds dependencies")
     def test_import_data(self):
         with tempfile.TemporaryDirectory() as library_dir:
             import_dir = Path(library_dir) / "test_bop_wds"
