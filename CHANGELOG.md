@@ -10,12 +10,15 @@ All notable changes to Pixano will be documented in this file.
 - Add labels hierarchy (group by source, view, and category) in both Pixano apps
 - Add label category ID on hover in side panel and label toolbar in both Pixano apps
 - Scale item annotations with zoom inside Pixano apps
-- Add new better defined types for Pixano annotations
+- Add new better defined Pixano types and their corresponding PyArrow types
+- Add notebook for creating a custom Pixano type and its corresponding PyArrow type
 
 ### Changed:
+- Refactor Python code and add unit tests
+- Refactor UI code and merge common code for Explorer and Annotator apps
 - Replace JavaScript popup boxes by integrated windows in Pixano Apps to fix notebook integration
-- Update import dataset portable option from moving files to copying them 
-- Refactor all UI code and merge common code for Explorer and Annotator apps
+- Update import dataset portable option from moving files to copying them
+- Generate API reference automatically on the Pixano documentation website using mkdocs plugins
 
 ## Fixed:
 - Fix category colors
