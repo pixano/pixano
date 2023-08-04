@@ -13,12 +13,12 @@
 
 from pixano.apps.annotator import Annotator
 from pixano.apps.explorer import Explorer
-from pixano.apps.main import app
+from pixano.apps.main import create_app
 from pixano.apps.serve import App
 
 __all__ = [
     "Annotator",
     "Explorer",
     "App",
-    "app",
+    "create_app",
 ]

@@ -34,7 +34,7 @@ from pixano.core import ObjectAnnotation
 from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings = Settings()) -> FastAPI:
     """Run Pixano app
 
     Args:
@@ -151,8 +151,3 @@ def create_app(settings: Settings) -> FastAPI:
     add_pagination(app)
 
     return app
-
-
-def app():
-    settings = Settings()
-    return create_app(settings)
