@@ -15,6 +15,9 @@ dist-ssr
 .vite
 .cache
 
+# Coverage
+.coverage
+
 # Docs
 site
 
