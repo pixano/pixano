@@ -52,7 +52,7 @@ class DepthImageTestCase(unittest.TestCase):
 
     def test_load(self):
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp_file:
-            imageio.imwrite(tmp_file.name, self.depth_map.astype(np.uint16))
+            imageio.v3.imwrite(tmp_file.name, self.depth_map.astype(np.uint16))
             depth_image = DepthImage.load(tmp_file.name)
             self.assertIsInstance(depth_image, DepthImage)
             self.assertEqual(depth_image.depth_map.tolist(), self.depth_map.tolist())
@@ -60,7 +60,7 @@ class DepthImageTestCase(unittest.TestCase):
     def test_save(self):
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp_file:
             self.depth_image.save(tmp_file.name)
-            loaded_image = imageio.imread(tmp_file.name)
+            loaded_image = imageio.v3.imread(tmp_file.name)
             self.assertIsInstance(loaded_image, np.ndarray)
             self.assertEqual(loaded_image.tolist(), self.depth_map.tolist())
 

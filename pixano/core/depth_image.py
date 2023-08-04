@@ -117,7 +117,7 @@ class DepthImage(PixanoType, BaseModel):
             DepthImage: Depth image
         """
 
-        map = imageio.imread(path).astype(np.uint16)
+        map = imageio.v3.imread(path).astype(np.uint16)
         return DepthImage(depth_map=map, shape=map.shape)
 
     def save(self, path):
@@ -128,7 +128,7 @@ class DepthImage(PixanoType, BaseModel):
         """
 
         depth_image = self.depth_map.astype(np.uint16)
-        imageio.imwrite(path, depth_image)
+        imageio.v3.imwrite(path, depth_image)
 
     def open(self) -> IO:
         return io.BytesIO(self.bytes)
