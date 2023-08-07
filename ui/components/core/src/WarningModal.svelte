@@ -27,6 +27,10 @@
   function handleConfirm() {
     dispatch("confirm");
   }
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === "Enter" || event.key === "Escape") handleConfirm();
+  }
 </script>
 
 <div class="fixed inset-0 z-50 overflow-y-auto">
@@ -56,3 +60,5 @@
     </div>
   </div>
 </div>
+
+<svelte:window on:keydown={handleKeyDown} />

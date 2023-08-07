@@ -27,8 +27,9 @@
   function handleConfirm() {
     dispatch("confirm");
   }
-  function handleKeyPress(event) {
-    if (event.key === "Enter" || event.keyCode === 13) handleConfirm();
+
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === "Enter") handleConfirm();
   }
 </script>
 
@@ -64,4 +65,4 @@
   </div>
 </div>
 
-<svelte:window on:keydown={handleKeyPress} />
+<svelte:window on:keydown={handleKeyDown} />
