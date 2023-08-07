@@ -137,7 +137,6 @@
       const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
       if (viewLayer) {
         const konvaImg = viewLayer.findOne("#image") as Konva.Image;
-        console.log("Canvas2D.afterUpdate", konvaImg.height());
         if (image_heights[view.id] !== konvaImg.height()) {
           image_heights[view.id] = konvaImg.height();
           const bboxesToDestroy = []; // need to build a list to not destroy while looping children
@@ -343,7 +342,6 @@
     image: Konva.Image,
     viewId: string
   ) {
-    console.log("new bbox", image.height(), image.width());
     const x = image.x() + bbox.bbox[0] * image.width();
     const y = image.y() + bbox.bbox[1] * image.height();
     const rect_width = bbox.bbox[2] * image.width();
