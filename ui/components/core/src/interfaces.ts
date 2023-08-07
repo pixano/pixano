@@ -32,8 +32,8 @@ export interface ItemData {
 export interface ViewData {
   id: string;
   url: string;
-  height: number;
-  width: number;
+  height?: number;
+  width?: number;
 }
 
 export type ItemObjects = StringDict<StringDict<Array<ObjectData>>>;

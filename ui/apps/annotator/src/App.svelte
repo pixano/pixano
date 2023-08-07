@@ -34,6 +34,7 @@
 
   import type {
     BBox,
+    CategoryData,
     Dataset,
     ItemData,
     ItemLabels,
@@ -47,13 +48,13 @@
   let currentPage = 1;
 
   let selectedItem: ItemData;
-  let annotations: ItemLabels = {};
-  let classes = [];
-  let masks: Array<Mask> = [];
-  let bboxes: Array<BBox> = [];
+  let annotations: ItemLabels;
+  let classes: Array<CategoryData>;
+  let masks: Array<Mask>;
+  let bboxes: Array<BBox>;
   let embeddings = {};
 
-  let saveFlag: boolean = false;
+  let saveFlag = false;
   let unselectItemModal = false;
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";

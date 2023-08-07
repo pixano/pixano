@@ -30,13 +30,13 @@
 
   import type {
     BBox,
-    ItemData,
-    Mask,
-    ViewData,
+    CategoryData,
     Dataset,
     DatasetItem,
+    ItemData,
     ItemLabels,
     Label,
+    Mask,
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -45,7 +45,7 @@
   export let selectedDataset: Dataset;
   export let selectedItem: ItemData;
   export let annotations: ItemLabels;
-  export let classes;
+  export let classes: Array<CategoryData>;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let embeddings = {};
@@ -73,9 +73,9 @@
   let currentAnnSource = "Pixano Annotator";
 
   // Tools
-  let tools_lists: tools.Tool[][] = [];
-  const imageTools: tools.Tool[] = [];
-  const annotationTools: tools.Tool[] = [];
+  const tools_lists: Array<Array<tools.Tool>> = [];
+  const imageTools: Array<tools.Tool> = [];
+  const annotationTools: Array<tools.Tool> = [];
   let pointPlusTool = tools.createLabeledPointTool(1);
   let pointMinusTool = tools.createLabeledPointTool(0);
   let rectangleTool = tools.createRectangleTool();
@@ -244,16 +244,14 @@
 
   function changeSelectedItem(newItemId: string, item: DatasetItem) {
     currentAnnCatName = "";
-    const newItemViews: Array<ViewData> = [];
     for (let itemFeature of item) {
       if (itemFeature.dtype === "image") {
-        newItemViews.push({
+        selectedItem.views[itemFeature.name] = {
           id: itemFeature.name,
           url: itemFeature.value,
-        });
+        };
       }
     }
-    selectedItem.views = newItemViews;
     selectedItem = selectedItem;
     dispatch("selectItem", newItemId);
   }

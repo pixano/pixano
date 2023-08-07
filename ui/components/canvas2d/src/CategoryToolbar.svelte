@@ -20,11 +20,13 @@
   import { icons } from "@pixano/core";
 
   import { ToolType } from "./tools";
+
+  import type { CategoryData } from "@pixano/core";
   import type { Tool } from "./tools";
 
   // Exports
   export let currentAnnCatName: string;
-  export let classes;
+  export let classes: Array<CategoryData>;
   export let selectedTool: Tool;
   export let pointPlusTool: Tool;
   export let pointMinusTool: Tool;

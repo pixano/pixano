@@ -24,12 +24,13 @@
   import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
   import type {
+    BBox,
+    CategoryData,
     Dataset,
     ItemData,
     ItemLabels,
     ItemObjects,
     Mask,
-    BBox,
   } from "@pixano/core";
 
   // Dataset navigation
@@ -39,10 +40,10 @@
 
   let selectedItem: ItemData;
 
-  let annotations: ItemLabels = {};
-  let classes = [];
-  let masks: Array<Mask> = [];
-  let bboxes: Array<BBox> = [];
+  let annotations: ItemLabels;
+  let classes: Array<CategoryData>;
+  let masks: Array<Mask>;
+  let bboxes: Array<BBox>;
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");

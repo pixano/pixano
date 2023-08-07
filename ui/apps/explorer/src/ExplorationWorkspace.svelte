@@ -20,12 +20,19 @@
   import { Canvas2D, LabelPanel, tools } from "@pixano/canvas2d";
   import { utils } from "@pixano/core";
 
-  import type { BBox, ItemData, Mask, ItemLabels, Label } from "@pixano/core";
+  import type {
+    BBox,
+    CategoryData,
+    ItemData,
+    Mask,
+    ItemLabels,
+    Label,
+  } from "@pixano/core";
 
   // Exports
   export let selectedItem: ItemData;
   export let annotations: ItemLabels;
-  export let classes;
+  export let classes: Array<CategoryData>;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
 

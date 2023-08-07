@@ -57,12 +57,12 @@
   let inferenceModelModal = false;
   let embeddingDirectoryModal = false;
 
-  let zoomFactor = {}; //dict of zoomFactors by viewId {viewId: zoomFactor}
+  let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
   let timerId;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
-  let images: Record<string, HTMLImageElement> = {}; //dict {viewId: HTMLImageElement}
+  let images: Record<string, HTMLImageElement> = {}; // {viewId: HTMLImageElement}
 
   // References to Konva Elements
   let stage: Konva.Stage;
