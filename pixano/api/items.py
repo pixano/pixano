@@ -168,7 +168,7 @@ def load_item_details(
     item_details = {
         "itemData": {
             "id": item["id"],
-            "views": [],
+            "views": defaultdict(dict),
             "features": _create_features(item, pa_ds.schema),
         },
         "itemObjects": defaultdict(lambda: defaultdict(list)),
@@ -179,9 +179,12 @@ def load_item_details(
         if is_image_type(field.type):
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
-            item_details["itemData"]["views"].append(
-                {"id": field.name, "url": image.url}
-            )
+            item_details["itemData"]["views"][field.name] = {
+                "id": field.name,
+                "url": image.url,
+                "height": image.size[1],
+                "width": image.size[0],
+            }
 
             for obj in objects:
                 # Support for previous ObjectAnnotation type

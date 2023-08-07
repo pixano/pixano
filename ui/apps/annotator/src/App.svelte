@@ -42,8 +42,8 @@
   } from "@pixano/core";
 
   // Dataset navigation
-  let datasets = null;
-  let selectedDataset = null;
+  let datasets: Array<Dataset>;
+  let selectedDataset: Dataset;
   let currentPage = 1;
 
   let selectedItem: ItemData;
@@ -120,14 +120,6 @@
     bboxes = [];
     embeddings = {};
 
-    // Add temp variables to prevent updating before everything is loaded
-    // Otherwise some bounding boxes are displayed incorrectly
-    let newAnnotations: ItemLabels = {};
-    let newClasses = selectedDataset.categories;
-    let newMasks: Array<Mask> = [];
-    let newBboxes: Array<BBox> = [];
-    let newEmbeddings = {};
-
     const start = Date.now();
     let itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
     selectedItem = itemDetails["itemData"] as ItemData;
@@ -141,7 +133,7 @@
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
-      newAnnotations[sourceId] = {
+      annotations[sourceId] = {
         id: sourceId,
         views: {},
         numLabels: 0,
@@ -151,7 +143,7 @@
 
       for (const [viewId, viewObjects] of Object.entries(sourceObjects)) {
         // Initialize annotations
-        newAnnotations[sourceId].views[viewId] = {
+        annotations[sourceId].views[viewId] = {
           id: viewId,
           categories: {},
           numLabels: 0,
@@ -166,16 +158,16 @@
           // Masks and bounding boxes
           if (obj.mask || obj.bbox) {
             // Add class if new
-            if (!newClasses.some((cls) => cls.id === catId)) {
-              newClasses.push({
+            if (!classes.some((cls) => cls.id === catId)) {
+              classes.push({
                 id: catId,
                 name: catName,
               });
             }
 
             // Add category if new
-            if (!newAnnotations[sourceId].views[viewId].categories[catId]) {
-              newAnnotations[sourceId].views[viewId].categories[catId] = {
+            if (!annotations[sourceId].views[viewId].categories[catId]) {
+              annotations[sourceId].views[viewId].categories[catId] = {
                 labels: {},
                 id: catId,
                 name: catName,
@@ -185,7 +177,7 @@
             }
 
             // Add label
-            newAnnotations[sourceId].views[viewId].categories[catId].labels[
+            annotations[sourceId].views[viewId].categories[catId].labels[
               obj.id
             ] = {
               id: obj.id,
@@ -201,8 +193,8 @@
             };
 
             // Update counters
-            newAnnotations[sourceId].numLabels += 1;
-            newAnnotations[sourceId].views[viewId].numLabels += 1;
+            annotations[sourceId].numLabels += 1;
+            annotations[sourceId].views[viewId].numLabels += 1;
 
             if (obj.mask) {
               const rle = obj.mask["counts"];
@@ -211,7 +203,7 @@
               const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
               // Add mask
-              newMasks.push({
+              masks.push({
                 id: obj.id,
                 viewId: viewId,
                 svg: masksSVG,
@@ -224,10 +216,15 @@
 
             if (obj.bbox) {
               // Add bbox
-              newBboxes.push({
+              bboxes.push({
                 id: obj.id,
                 viewId: viewId,
-                bbox: [obj.bbox.x, obj.bbox.y, obj.bbox.width, obj.bbox.height], //still normalized
+                bbox: [
+                  obj.bbox.x * selectedItem.views[viewId].width,
+                  obj.bbox.y * selectedItem.views[viewId].height,
+                  obj.bbox.width * selectedItem.views[viewId].width,
+                  obj.bbox.height * selectedItem.views[viewId].height,
+                ], // denormalized
                 tooltip:
                   catName +
                   (obj.bbox.predicted
@@ -249,19 +246,14 @@
       }
     }
 
-    annotations = newAnnotations;
-    classes = newClasses;
-    masks = newMasks;
-    bboxes = newBboxes;
-
     // Embeddings
-    for (let view of selectedItem.views) {
+    for (let viewId of Object.keys(selectedItem.views)) {
       let viewEmbedding = null;
       const start = Date.now();
       const viewEmbeddingArrayBytes = await api.getViewEmbedding(
         selectedDataset.id,
         selectedItem.id,
-        view.id
+        viewId
       );
       console.log(
         "App.handleSelectItem - api.getViewEmbedding in",
@@ -281,10 +273,8 @@
           console.log("App.handleSelectItem - Error loading embeddings", e);
         }
       }
-      newEmbeddings[view.id] = viewEmbedding;
+      embeddings[viewId] = viewEmbedding;
     }
-
-    embeddings = newEmbeddings;
   }
 
   async function handleUnselectItem() {

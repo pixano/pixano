@@ -63,7 +63,6 @@
   // References to HTML Elements
   let stageContainer: HTMLElement;
   let images: Record<string, HTMLImageElement> = {}; //dict {viewId: HTMLImageElement}
-  let image_heights: Record<string, number> = {}; //dict {viewId: HTMLImageElement}
 
   // References to Konva Elements
   let stage: Konva.Stage;
@@ -132,21 +131,7 @@
       validateCurrentAnn();
     }
 
-    // HACK: Check if image dimensions have changed, in which case we need to reset bounding boxes
-    for (let view of selectedItem.views) {
-      const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
-      if (viewLayer) {
-        const konvaImg = viewLayer.findOne("#image") as Konva.Image;
-        if (image_heights[view.id] !== konvaImg.height()) {
-          image_heights[view.id] = konvaImg.height();
-          const bboxesToDestroy = []; // need to build a list to not destroy while looping children
-          const bboxGroup = viewLayer.findOne("#bboxes") as Konva.Group;
-          if (bboxGroup) {
-            for (let bbox of bboxGroup.children) bboxesToDestroy.push(bbox);
-            for (let object of bboxesToDestroy) object.destroy();
-          }
-        }
-      }
+    for (let view of Object.values(selectedItem.views)) {
       if (masks) updateMasks(view.id);
       if (bboxes) updateBboxes(view.id);
     }
@@ -154,13 +139,17 @@
 
   function loadItem() {
     // Calculate new grid size
-    gridSize.cols = Math.ceil(Math.sqrt(selectedItem.views.length));
-    gridSize.rows = Math.ceil(selectedItem.views.length / gridSize.cols);
+    gridSize.cols = Math.ceil(
+      Math.sqrt(Object.keys(selectedItem.views).length)
+    );
+    gridSize.rows = Math.ceil(
+      Object.keys(selectedItem.views).length / gridSize.cols
+    );
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
 
-    for (let view of selectedItem.views) {
+    for (let view of Object.values(selectedItem.views)) {
       zoomFactor[view.id] = 1;
       const image = new Image();
       image.src = view.url;
@@ -172,7 +161,6 @@
             const konvaImg = viewLayer.findOne("#image") as Konva.Image;
             konvaImg.image(image);
           }
-          image_heights[view.id] = image.height;
           scaleView(view);
           scaleElements(view);
           //hack to refresh view (display masks/bboxes)
@@ -198,8 +186,8 @@
       //calculate view pos in grid
       let i = 0;
       //get view index
-      for (let v of selectedItem.views) {
-        if (v.id === view.id) break;
+      for (let viewId of Object.keys(selectedItem.views)) {
+        if (viewId === view.id) break;
         i++;
       }
       let grid_pos = {
@@ -342,10 +330,10 @@
     image: Konva.Image,
     viewId: string
   ) {
-    const x = image.x() + bbox.bbox[0] * image.width();
-    const y = image.y() + bbox.bbox[1] * image.height();
-    const rect_width = bbox.bbox[2] * image.width();
-    const rect_height = bbox.bbox[3] * image.height();
+    const x = image.x() + bbox.bbox[0];
+    const y = image.y() + bbox.bbox[1];
+    const rect_width = bbox.bbox[2];
+    const rect_height = bbox.bbox[3];
 
     const bboxKonva = new Konva.Group({
       id: bbox.id,
@@ -945,9 +933,9 @@
   }
 
   function clearAnnotationAndInputs() {
-    for (let view of selectedItem.views) {
-      clearInputs(view.id);
-      clearCurrentAnn(view.id);
+    for (let viewId of Object.keys(selectedItem.views)) {
+      clearInputs(viewId);
+      clearCurrentAnn(viewId);
     }
     stage.container().style.cursor = selectedTool.cursor;
     currentAnn = null;
@@ -1158,8 +1146,8 @@
       console.log("bboxes", bboxes);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
-      for (let view of selectedItem.views) {
-        const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
+      for (let viewId of Object.keys(selectedItem.views)) {
+        const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
         const maskGroup = viewLayer.findOne("#masks") as Konva.Group;
         const bboxGroup = viewLayer.findOne("#bboxes") as Konva.Group;
         console.log("masks Konva group:", maskGroup);
@@ -1182,7 +1170,7 @@
     on:mouseenter={handleMouseEnterStage}
     on:mouseleave={handleMouseLeaveStage}
   >
-    {#each selectedItem.views as view}
+    {#each Object.values(selectedItem.views) as view}
       {#if images[view.id]}
         <Layer
           config={{ id: view.id }}
