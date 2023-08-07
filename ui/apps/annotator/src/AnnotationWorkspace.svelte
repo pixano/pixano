@@ -70,17 +70,17 @@
   // Current annotations
   let currentAnn: InteractiveImageSegmenterOutput = null;
   let currentAnnCatName = "";
-  let currentAnnSource = "Pixano Annotator";
+  const currentAnnSource = "Pixano Annotator";
 
   // Tools
   const tools_lists: Array<Array<tools.Tool>> = [];
   const imageTools: Array<tools.Tool> = [];
   const annotationTools: Array<tools.Tool> = [];
-  let pointPlusTool = tools.createLabeledPointTool(1);
-  let pointMinusTool = tools.createLabeledPointTool(0);
-  let rectangleTool = tools.createRectangleTool();
-  let deleteTool = tools.createDeleteTool();
-  let panTool = tools.createPanTool();
+  const pointPlusTool = tools.createLabeledPointTool(1);
+  const pointMinusTool = tools.createLabeledPointTool(0);
+  const rectangleTool = tools.createRectangleTool();
+  const deleteTool = tools.createDeleteTool();
+  const panTool = tools.createPanTool();
   annotationTools.push(
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
@@ -133,14 +133,12 @@
     let currentAnnCatId: number;
 
     if (!classes.some((c) => c.name === currentAnnCatName)) {
-      let newClasses = classes;
       if (classes.length > 0) {
-        currentAnnCatId = Math.max(...newClasses.map((o) => o.id)) + 1;
+        currentAnnCatId = Math.max(...classes.map((o) => o.id)) + 1;
       } else {
         currentAnnCatId = 1;
       }
-      newClasses.push({ id: currentAnnCatId, name: currentAnnCatName });
-      classes = newClasses;
+      classes.push({ id: currentAnnCatId, name: currentAnnCatName });
     } else {
       currentAnnCatId = classes.find(
         (obj) => obj.name === currentAnnCatName
@@ -244,7 +242,7 @@
 
   function changeSelectedItem(newItemId: string, item: DatasetItem) {
     currentAnnCatName = "";
-    for (let itemFeature of item) {
+    for (const itemFeature of item) {
       if (itemFeature.dtype === "image") {
         selectedItem.views[itemFeature.name] = {
           id: itemFeature.name,
@@ -301,10 +299,10 @@
   }
 
   function handleLabelFilters() {
-    for (let source of Object.values(annotations)) {
-      for (let view of Object.values(source.views)) {
-        for (let category of Object.values(view.categories)) {
-          for (let label of Object.values(category.labels)) {
+    for (const source of Object.values(annotations)) {
+      for (const view of Object.values(source.views)) {
+        for (const category of Object.values(view.categories)) {
+          for (const label of Object.values(category.labels)) {
             // Opacity filters
             label.maskOpacity = maskOpacity;
             label.bboxOpacity = bboxOpacity;

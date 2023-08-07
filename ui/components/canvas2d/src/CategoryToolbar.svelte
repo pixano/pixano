@@ -46,7 +46,7 @@
     const list = document.getElementById("category_list");
     const a = list.getElementsByTagName("button");
     for (let i = 0; i < a.length; i++) {
-      let txtValue = a[i].textContent || a[i].innerText;
+      const txtValue = a[i].textContent || a[i].innerText;
       if (txtValue.toUpperCase().indexOf(filter) > -1) {
         a[i].style.display = "";
       } else {

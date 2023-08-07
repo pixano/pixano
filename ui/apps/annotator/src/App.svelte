@@ -62,7 +62,7 @@
   let modelPromptModal = false;
   let modelNotFoundModal = false;
 
-  let sam = new SAM();
+  const sam = new SAM();
 
   function until(conditionFunction: Function): Promise<Function> {
     const poll = (resolve) => {
@@ -122,9 +122,9 @@
     embeddings = {};
 
     const start = Date.now();
-    let itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
+    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
     selectedItem = itemDetails["itemData"] as ItemData;
-    let ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
@@ -152,7 +152,7 @@
           visible: true,
         };
 
-        for (let obj of viewObjects) {
+        for (const obj of viewObjects) {
           const catId = obj.category.id;
           const catName = obj.category.name;
 
@@ -248,7 +248,7 @@
     }
 
     // Embeddings
-    for (let viewId of Object.keys(selectedItem.views)) {
+    for (const viewId of Object.keys(selectedItem.views)) {
       let viewEmbedding = null;
       const start = Date.now();
       const viewEmbeddingArrayBytes = await api.getViewEmbedding(
@@ -304,7 +304,7 @@
   function handleSaveAnns() {
     console.log("App.handleSaveAnns");
     saveFlag = false;
-    let anns = [];
+    const anns = [];
 
     for (const sourceLabels of Object.values(annotations)) {
       if (
@@ -320,7 +320,7 @@
               const bbox = bboxes.find(
                 (b) => b.id === label.id && b.viewId === label.viewId
               );
-              let ann = {
+              anns.push({
                 id: label.id,
                 mask: {
                   size: mask.rle ? mask.rle.size : [0, 0],
@@ -335,8 +335,7 @@
                 view_id: label.viewId,
                 category_id: label.categoryId,
                 category_name: label.categoryName,
-              };
-              anns.push(ann);
+              });
             }
           }
         }
@@ -360,7 +359,7 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    let new_dbImages = await api.getDatasetItems(
+    const new_dbImages = await api.getDatasetItems(
       selectedDataset.id,
       currentPage
     );

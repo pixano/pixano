@@ -25,7 +25,7 @@
   h = h < 175 ? 175 : h;
 
   // Vega-Lite spec (default type : categorical)
-  let spec: VisualizationSpec = {
+  const spec: VisualizationSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     config: {
       style: {
@@ -92,7 +92,7 @@
   if (hist.type == "numerical") {
     // Set bin ranges
     for (let i = 0; i < hist.histogram.length; ++i) {
-      let value = hist.histogram[i];
+      const value = hist.histogram[i];
       value.bin_range = value.bin_start + "-" + value.bin_end;
     }
 

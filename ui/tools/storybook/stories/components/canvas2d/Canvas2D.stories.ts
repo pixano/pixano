@@ -85,7 +85,7 @@ export const CanvasWithLabeledPointTool: Story = {
   },
 };
 
-let rectangleCreator = tools.createRectangleTool();
+const rectangleCreator = tools.createRectangleTool();
 rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {

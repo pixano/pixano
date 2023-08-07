@@ -48,8 +48,8 @@
   let confidenceThreshold = 0.5;
 
   // Tools
-  let panTool = tools.createPanTool();
-  let selectedTool: tools.Tool = panTool;
+  const panTool = tools.createPanTool();
+  const selectedTool: tools.Tool = panTool;
 
   function handleLabelVisibility(label: Label) {
     // Try and find a mask
@@ -76,10 +76,10 @@
   }
 
   function handleLabelFilters() {
-    for (let source of Object.values(annotations)) {
-      for (let view of Object.values(source.views)) {
-        for (let category of Object.values(view.categories)) {
-          for (let label of Object.values(category.labels)) {
+    for (const source of Object.values(annotations)) {
+      for (const view of Object.values(source.views)) {
+        for (const category of Object.values(view.categories)) {
+          for (const label of Object.values(category.labels)) {
             // Opacity filters
             label.maskOpacity = maskOpacity;
             label.bboxOpacity = bboxOpacity;

@@ -30,7 +30,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-let mock = new MockInteractiveImageSegmenter();
+const mock = new MockInteractiveImageSegmenter();
 stores.interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {

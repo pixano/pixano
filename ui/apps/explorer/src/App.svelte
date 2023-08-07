@@ -76,9 +76,9 @@
     bboxes = [];
 
     const start = Date.now();
-    let itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
+    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
     selectedItem = itemDetails["itemData"] as ItemData;
-    let ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
     console.log(
       "App.handleSelectItem - api.getItemDetails in",
@@ -106,7 +106,7 @@
           visible: true,
         };
 
-        for (let obj of viewObjects) {
+        for (const obj of viewObjects) {
           const catId = obj.category.id;
           const catName = obj.category.name;
 

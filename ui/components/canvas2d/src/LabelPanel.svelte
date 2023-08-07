@@ -93,7 +93,7 @@
       source.visible = true;
     }
     // Toggle children
-    for (let label of Object.values(category.labels)) {
+    for (const label of Object.values(category.labels)) {
       label.visible = category.visible;
       dispatch("labelVisibility", label);
     }
@@ -111,9 +111,9 @@
       source.visible = true;
     }
     // Toggle children
-    for (let category of Object.values(view.categories)) {
+    for (const category of Object.values(view.categories)) {
       category.visible = view.visible;
-      for (let label of Object.values(category.labels)) {
+      for (const label of Object.values(category.labels)) {
         label.visible = view.visible;
         dispatch("labelVisibility", label);
       }
@@ -124,11 +124,11 @@
     // Toggle visibility
     source.visible = visibility;
     // Toggle children
-    for (let view of Object.values(source.views)) {
+    for (const view of Object.values(source.views)) {
       view.visible = source.visible;
-      for (let category of Object.values(view.categories)) {
+      for (const category of Object.values(view.categories)) {
         category.visible = source.visible;
-        for (let label of Object.values(category.labels)) {
+        for (const label of Object.values(category.labels)) {
           label.visible = source.visible;
           dispatch("labelVisibility", label);
         }
@@ -221,7 +221,7 @@
         class="flex flex-col p-4 border-b-2
             border-zinc-300 dark:border-zinc-600"
       >
-        <span class="text-lg font-bold">Item info</span>
+        <span class="font-bold">Item information</span>
         <ul class="list-disc ml-6">
           {#each selectedItem.features as feature}
             {#if feature.dtype !== "image"}

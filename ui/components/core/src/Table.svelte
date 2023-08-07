@@ -24,14 +24,14 @@
   // Exports
   export let selectedDataset: Dataset;
 
-  let featureNames = selectedDataset.page.items[0].map((feature) => {
+  const featureNames = selectedDataset.page.items[0].map((feature) => {
     return { name: feature.name, type: feature.dtype };
   });
 
   const dispatch = createEventDispatcher();
 
   function handleSelectItem(item: DatasetItem) {
-    let itemId = item.find((feature) => {
+    const itemId = item.find((feature) => {
       return feature.name === "id";
     }).value;
     dispatch("selectItem", itemId);

@@ -25,9 +25,10 @@
   export let selectedDataset: Dataset;
   export let currentPage: number;
 
-  // Page navigation
-  let itemsPerPage = 100;
   let datasetStats: any;
+
+  // Page navigation
+  const itemsPerPage = 100;
 
   const dispatch = createEventDispatcher();
 
