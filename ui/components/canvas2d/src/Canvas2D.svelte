@@ -171,8 +171,8 @@
     currentId = selectedItem.id;
   }
 
-  async function onLoadViewImage(event, viewId: string) {
-    images[viewId] = event.target;
+  async function onLoadViewImage(event: Event, viewId: string) {
+    images[viewId] = event.target as HTMLImageElement;
   }
 
   function scaleView(view: ViewData) {
@@ -264,9 +264,9 @@
     }
   }
 
-  function findViewId(node) {
-    let viewId;
-    highlighted_point.getAncestors().forEach((node) => {
+  function findViewId(shape: Konva.Shape): string {
+    let viewId: string;
+    shape.getAncestors().forEach((node) => {
       if (node instanceof Konva.Layer) {
         viewId = node.id();
       }
@@ -276,7 +276,7 @@
 
   // ********** BOUNDING BOXES AND MASKS ********** //
 
-  function updateBboxes(viewId) {
+  function updateBboxes(viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     if (viewLayer) {
@@ -388,7 +388,7 @@
     bboxGroup.add(bboxKonva);
   }
 
-  function updateMasks(viewId) {
+  function updateMasks(viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     if (viewLayer) {
@@ -506,7 +506,7 @@
 
   // ********** CURRENT ANNOTATION ********** //
 
-  async function updateCurrentMask(viewId) {
+  async function updateCurrentMask(viewId: string) {
     const points = getInputPoints(viewId);
     const box = getInputRect(viewId);
     const input = {
@@ -560,7 +560,7 @@
     }
   }
 
-  function findOrCreateCurrentMask(viewId): Konva.Group {
+  function findOrCreateCurrentMask(viewId: string): Konva.Group {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
 
     let currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
@@ -579,7 +579,7 @@
     return currentMaskGroup;
   }
 
-  function clearCurrentAnn(viewId) {
+  function clearCurrentAnn(viewId: string) {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     let currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
     let currentMaskGroup = currentAnnGroup.findOne(
@@ -629,7 +629,7 @@
     }
   }
 
-  function clearInputs(viewId) {
+  function clearInputs(viewId: string) {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     const inputGroup = viewLayer.findOne("#input") as Konva.Group;
     inputGroup.destroyChildren();
@@ -683,7 +683,10 @@
     pointer.y(mousePos.y + 1);
   }
 
-  function findOrCreateInputPointPointer(id: string, viewId: string = null) {
+  function findOrCreateInputPointPointer(
+    id: string,
+    viewId: string = null
+  ): Konva.Circle {
     let pointer: Konva.Circle = stage.findOne(`#${id}`);
     if (!pointer) {
       let zoomF = 1.0; //in some cases we aren't in a view, so we use default scaling
@@ -704,7 +707,7 @@
     return pointer;
   }
 
-  function getInputPoints(viewId): Array<LabeledClick> {
+  function getInputPoints(viewId: string): Array<LabeledClick> {
     //get points as Array<LabeledClick>
     let points: Array<LabeledClick> = [];
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
@@ -733,11 +736,11 @@
     }
   }
 
-  function dragInputPointEnd(drag_point: Konva.Circle, viewId) {
+  function dragInputPointEnd(drag_point: Konva.Circle, viewId: string) {
     stage.container().style.cursor = "grab";
   }
 
-  function dragInputPointMove(drag_point: Konva.Circle, viewId) {
+  function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
     stage.container().style.cursor = "grabbing";
 
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
@@ -762,8 +765,8 @@
   function highlightInputPoint(hl_point: Konva.Circle, viewId: string) {
     let pointer = findOrCreateInputPointPointer(selectedTool.type, viewId);
     pointer.hide();
+    hl_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[viewId]);
     highlighted_point = hl_point;
-    highlighted_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[viewId]);
     stage.container().style.cursor = "grab";
   }
 
@@ -803,7 +806,7 @@
     const scale = stage.scaleX();
     const lineScale = Math.max(1, 1 / scale);
 
-    let { xLimit, yLimit } = findOrCreateInputRectPointer();
+    let [xLimit, yLimit] = findOrCreateInputRectPointer();
     const stageHeight = stage.height();
     xLimit.scaleY(lineScale);
     xLimit.points([mousePos.x, 0, mousePos.x, stageHeight]);
@@ -812,7 +815,7 @@
     yLimit.points([0, mousePos.y, stageWidth, mousePos.y]);
   }
 
-  function findOrCreateInputRectPointer() {
+  function findOrCreateInputRectPointer(): Konva.Line[] {
     const stageHeight = stage.height();
     const stageWidth = stage.width();
     let crossLineGroup: Konva.Group = toolsLayer.findOne("#crossline");
@@ -843,10 +846,10 @@
       crossLineGroup.add(yLimit);
       toolsLayer.add(crossLineGroup);
     }
-    return { xLimit, yLimit };
+    return [xLimit, yLimit];
   }
 
-  function getInputRect(viewId): Box {
+  function getInputRect(viewId: string): Box {
     //get box as Box
     let box: Box = null;
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
@@ -948,13 +951,13 @@
     }
   }
 
-  function handleMouseEnterStage(event) {
+  function handleMouseEnterStage() {
     for (let tool of toolsLayer.children) {
       tool.show();
     }
   }
 
-  function handleMouseLeaveStage(event) {
+  function handleMouseLeaveStage() {
     for (let tool of toolsLayer.children) {
       tool.hide();
     }
@@ -989,7 +992,7 @@
     toolsLayer.moveToTop();
   }
 
-  async function handleClickOnImage(event, viewId: string) {
+  async function handleClickOnImage(event: CustomEvent, viewId: string) {
     const viewLayer = stage.findOne(`#${viewId}`) as Konva.Layer;
     // Perfome tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
@@ -1060,7 +1063,7 @@
     }
   }
 
-  function zoom(stage: Konva.Stage, direction, viewId): number {
+  function zoom(stage: Konva.Stage, direction: number, viewId: string): number {
     // Defines zoom speed
     const zoomScale = 1.05;
 
@@ -1093,7 +1096,7 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event, view: ViewData) {
+  function handleWheelOnImage(event: CustomEvent, view: ViewData) {
     event.detail.evt.preventDefault(); // Prevent default scrolling
     let direction = event.detail.evt.deltaY < 0 ? 1 : -1; // Get zoom direction
     // When we zoom on trackpad, e.evt.ctrlKey is true
@@ -1110,7 +1113,7 @@
 
   // ********** KEY EVENTS ********** //
 
-  function handleKeyDown(event) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key == "Delete" && highlighted_point != null) {
       //get viewId of highlighted_point
       const viewId = findViewId(highlighted_point);
