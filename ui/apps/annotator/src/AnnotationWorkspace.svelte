@@ -364,8 +364,7 @@
 <div class="flex h-full w-full bg-zinc-100 dark:bg-zinc-900">
   {#if selectedItem}
     <Canvas2D
-      itemId={selectedItem.id}
-      views={selectedItem.views}
+      {selectedItem}
       bind:selectedTool
       {labelColors}
       {masks}

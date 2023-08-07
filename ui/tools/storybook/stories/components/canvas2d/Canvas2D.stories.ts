@@ -35,15 +35,21 @@ type Story = StoryObj<typeof meta>;
 
 export const CanvasWithoutSelectedTool: Story = {
   args: {
-    itemId: "image_moyenne",
-    views: [
-      {
-        id: "view",
-        url: "image_moyenne.jpg",
-      },
-    ],
+    selectedItem: {
+      id: "1",
+      views: [
+        {
+          id: "view",
+          url: "img-02.jpg",
+        },
+      ],
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
     selectedTool: null,
-    categoryColor: null,
+    labelColors: null,
     masks: [],
     bboxes: [],
     embeddings: {},
@@ -57,19 +63,25 @@ labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    embeddings: { view: [] },
-    itemId: "image_moyenne",
-    views: [
-      {
-        id: "view",
-        url: "image_moyenne.jpg",
-      },
-    ],
+    selectedItem: {
+      id: "1",
+      views: [
+        {
+          id: "view",
+          url: "img-02.jpg",
+        },
+      ],
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
+    selectedTool: labeledPointCreator,
+    labelColors: null,
     masks: [],
     bboxes: [],
-    selectedTool: labeledPointCreator,
+    embeddings: { view: [] },
     currentAnn: null,
-    categoryColor: null,
   },
 };
 
@@ -78,18 +90,24 @@ rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    embeddings: { view: [] },
-    itemId: "image_moyenne",
-    views: [
-      {
-        id: "view",
-        url: "image_moyenne.jpg",
-      },
-    ],
+    selectedItem: {
+      id: "1",
+      views: [
+        {
+          id: "view",
+          url: "img-02.jpg",
+        },
+      ],
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
+    selectedTool: rectangleCreator,
+    labelColors: null,
     masks: [],
     bboxes: [],
-    selectedTool: rectangleCreator,
+    embeddings: { view: [] },
     currentAnn: null,
-    categoryColor: null,
   },
 };
