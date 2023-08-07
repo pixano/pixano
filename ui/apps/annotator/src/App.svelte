@@ -63,7 +63,7 @@
 
   let sam = new SAM();
 
-  function until(conditionFunction) {
+  function until(conditionFunction: Function): Promise<Function> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout((_) => poll(resolve), 400);

@@ -103,7 +103,7 @@
     }
   });
 
-  function until(conditionFunction) {
+  function until(conditionFunction: Function): Promise<Function> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout((_) => poll(resolve), 400);
@@ -111,8 +111,8 @@
     return new Promise(poll);
   }
 
-  function handleKeyPress(event) {
-    if (event.key === "Enter" || event.keyCode === 13) handleAddCurrentAnn();
+  function handleKeyDown(event: KeyboardEvent) {
+    if (event.key === "Enter") handleAddCurrentAnn();
   }
 
   function handleAddCurrentAnn() {
@@ -121,12 +121,10 @@
       // Check if category name provided
       if (currentAnnCatName === "") {
         categoryNameModal = true;
-        return;
+      } else {
+        addCurrentAnn();
+        dispatch("enableSaveFlag");
       }
-
-      // Add current annotation
-      addCurrentAnn();
-      dispatch("enableSaveFlag");
     }
   }
 
@@ -327,7 +325,7 @@
     }
   }
 
-  function handleLabelColors() {
+  function handleLabelColors(): Function {
     let range: Array<number>;
     if (colorMode === "category") {
       range = [
@@ -428,4 +426,4 @@
   Pixano Annotator
 </div>
 
-<svelte:window on:keydown={handleKeyPress} />
+<svelte:window on:keydown={handleKeyDown} />

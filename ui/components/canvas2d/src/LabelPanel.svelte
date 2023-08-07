@@ -136,12 +136,13 @@
     }
   }
 
-  async function handleDatasetScroll(event) {
+  async function handleDatasetScroll(event: Event) {
+    const datasetTab = event.currentTarget as Element;
     if (currentPage * 100 < selectedDataset.page.total) {
       const totalContentHeight =
-        event.target.scrollHeight - event.target.clientHeight;
+        datasetTab.scrollHeight - datasetTab.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
-      if (event.target.scrollTop > totalContentHeight - offset10percent) {
+      if (datasetTab.scrollTop > totalContentHeight - offset10percent) {
         dispatch("loadNextPage");
       }
     }

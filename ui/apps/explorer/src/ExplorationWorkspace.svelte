@@ -91,7 +91,7 @@
     }
   }
 
-  function handleLabelColors() {
+  function handleLabelColors(): Function {
     let range: Array<number>;
     if (colorMode === "category") {
       range = [
@@ -104,8 +104,8 @@
     return utils.colorLabel(range);
   }
 
-  async function handleKeyPress(e) {
-    if (e.keyCode == 27) dispatch("unselectItem"); // Escape key pressed
+  async function handleKeyDown(event: KeyboardEvent) {
+    if (event.key == "Escape") dispatch("unselectItem");
   }
 
   onMount(async () => {
@@ -153,4 +153,4 @@
   Pixano Explorer
 </div>
 
-<svelte:window on:keydown={handleKeyPress} />
+<svelte:window on:keydown={handleKeyDown} />
