@@ -130,8 +130,8 @@
 
     const start = Date.now();
     let itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = <ItemData>itemDetails["itemData"];
-    let ItemObjects = <ItemObjects>itemDetails["itemObjects"];
+    selectedItem = itemDetails["itemData"] as ItemData;
+    let ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
     console.log(
       "App.handleSelectItem - api.getItemDetails in",

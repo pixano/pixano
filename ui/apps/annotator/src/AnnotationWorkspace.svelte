@@ -73,7 +73,7 @@
   let currentAnnSource = "Pixano Annotator";
 
   // Tools
-  export let tools_lists: tools.Tool[][] = [];
+  let tools_lists: tools.Tool[][] = [];
   const imageTools: tools.Tool[] = [];
   const annotationTools: tools.Tool[] = [];
   let pointPlusTool = tools.createLabeledPointTool(1);
@@ -225,7 +225,7 @@
 
   async function handleChangeSelectedItem(item: DatasetItem) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId: string = item.find((feature) => {
+    const newItemId = item.find((feature) => {
       return feature.name === "id";
     }).value;
 

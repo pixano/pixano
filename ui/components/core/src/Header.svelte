@@ -20,11 +20,11 @@
   import pixanoLogo from "./assets/pixano.png";
   import { svg_open, svg_quit, svg_save } from "./icons";
 
-  import type { ItemData } from "./interfaces";
+  import type { Dataset, ItemData } from "./interfaces";
 
   // Exports
-  export let app = "";
-  export let selectedDataset = null;
+  export let app: string = "";
+  export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
 

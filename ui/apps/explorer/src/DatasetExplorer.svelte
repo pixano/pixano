@@ -26,7 +26,7 @@
   export let currentPage: number;
 
   // Page navigation
-  let itemsPerPage: number = 100;
+  let itemsPerPage = 100;
   let datasetStats: any;
 
   const dispatch = createEventDispatcher();

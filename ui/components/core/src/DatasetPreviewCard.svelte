@@ -17,8 +17,10 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
+  import type { Dataset } from "./interfaces";
+
   // Exports
-  export let dataset: any;
+  export let dataset: Dataset;
   export let buttonLabel: string;
 
   const dispatch = createEventDispatcher();

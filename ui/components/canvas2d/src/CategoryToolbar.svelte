@@ -20,14 +20,15 @@
   import { icons } from "@pixano/core";
 
   import { ToolType } from "./tools";
+  import type { Tool } from "./tools";
 
   // Exports
-  export let currentAnnCatName;
+  export let currentAnnCatName: string;
   export let classes;
-  export let selectedTool;
-  export let pointPlusTool;
-  export let pointMinusTool;
-  export let labelColors;
+  export let selectedTool: Tool;
+  export let pointPlusTool: Tool;
+  export let pointMinusTool: Tool;
+  export let labelColors: Function;
 
   const dispatch = createEventDispatcher();
 
@@ -37,7 +38,7 @@
 
   function handleFilterCategories() {
     // Input filter
-    const input = <HTMLInputElement>document.getElementById("categoryInput");
+    const input = document.getElementById("categoryInput") as HTMLInputElement;
     const filter = input.value.toUpperCase();
     // Category list
     const list = document.getElementById("category_list");
