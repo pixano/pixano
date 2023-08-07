@@ -114,7 +114,7 @@ export interface Dataset {
   description: string;
   num_elements: number;
   preview: string;
-  categories: any;
+  categories: Array<CategoryData>;
   page: DatasetItems;
 }
 

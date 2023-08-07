@@ -15,6 +15,7 @@
 
 import type { Meta, StoryObj } from "@storybook/svelte";
 import { Canvas2D, tools } from "@pixano/canvas2d";
+import { utils } from "@pixano/core";
 
 import * as mocks from "./mocks";
 
@@ -33,23 +34,25 @@ type Story = StoryObj<typeof meta>;
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 
+let catCol = utils.colorLabel([1, 2]);
+
 export const CanvasWithoutSelectedTool: Story = {
   args: {
     selectedItem: {
       id: "1",
-      views: [
-        {
+      views: {
+        view: {
           id: "view",
           url: "img-02.jpg",
         },
-      ],
+      },
       features: [
         { name: "id", dtype: "text", value: "1" },
         { name: "view", dtype: "image", value: "img-02.jpg" },
       ],
     },
     selectedTool: null,
-    labelColors: null,
+    labelColors: catCol,
     masks: [],
     bboxes: [],
     embeddings: {},
@@ -65,19 +68,19 @@ export const CanvasWithLabeledPointTool: Story = {
   args: {
     selectedItem: {
       id: "1",
-      views: [
-        {
+      views: {
+        view: {
           id: "view",
           url: "img-02.jpg",
         },
-      ],
+      },
       features: [
         { name: "id", dtype: "text", value: "1" },
         { name: "view", dtype: "image", value: "img-02.jpg" },
       ],
     },
     selectedTool: labeledPointCreator,
-    labelColors: null,
+    labelColors: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },
@@ -92,19 +95,19 @@ export const CanvasWithRectangleTool: Story = {
   args: {
     selectedItem: {
       id: "1",
-      views: [
-        {
+      views: {
+        view: {
           id: "view",
           url: "img-02.jpg",
         },
-      ],
+      },
       features: [
         { name: "id", dtype: "text", value: "1" },
         { name: "view", dtype: "image", value: "img-02.jpg" },
       ],
     },
     selectedTool: rectangleCreator,
-    labelColors: null,
+    labelColors: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },

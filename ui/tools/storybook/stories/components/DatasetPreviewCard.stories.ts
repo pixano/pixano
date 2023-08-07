@@ -33,10 +33,14 @@ type Story = StoryObj<typeof meta>;
 export const Base: Story = {
   args: {
     dataset: {
+      id: "fake_dataset_id_001",
       name: "fake_dataset",
+      description: "Fake dataset",
       num_elements: 1000,
       preview:
         "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
+      categories: [],
+      page: { items: [], total: 100 },
     },
     buttonLabel: "Explore",
   },

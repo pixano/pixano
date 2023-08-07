@@ -32,12 +32,12 @@ export const Base: Story = {
   args: {
     selectedItem: {
       id: "1",
-      views: [
-        {
+      views: {
+        view: {
           id: "view",
           url: "img-02.jpg",
         },
-      ],
+      },
       features: [
         { name: "id", dtype: "text", value: "1" },
         { name: "view", dtype: "image", value: "img-02.jpg" },
@@ -49,7 +49,7 @@ export const Base: Story = {
       "Ground truth": {
         id: "Ground truth",
         views: {
-          view1: {
+          view: {
             id: "view",
             categories: {
               1: {
