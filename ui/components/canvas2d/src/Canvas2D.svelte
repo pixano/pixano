@@ -327,7 +327,7 @@
 
   function addBBox(
     bbox: BBox,
-    color: any,
+    color: string,
     bboxGroup: Konva.Group,
     image: Konva.Image,
     viewId: string

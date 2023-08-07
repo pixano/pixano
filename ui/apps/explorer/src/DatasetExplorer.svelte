@@ -25,7 +25,7 @@
   export let selectedDataset: Dataset;
   export let currentPage: number;
 
-  let datasetStats: any;
+  let datasetStats = null;
 
   // Page navigation
   const itemsPerPage = 100;

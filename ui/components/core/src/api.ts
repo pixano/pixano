@@ -143,7 +143,7 @@ export async function getViewEmbedding(
 }
 
 export async function postAnnotations(
-  anns: any,
+  anns: Array<Object>,
   datasetId: String,
   itemId: string
 ) {
