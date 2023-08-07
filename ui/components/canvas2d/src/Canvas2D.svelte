@@ -37,6 +37,7 @@
     InteractiveImageSegmenterOutput,
   } from "@pixano/models";
   import type { Mask, BBox, ItemData, ViewData } from "@pixano/core";
+  import { KonvaNodeEvent } from "konva/lib/types";
 
   // Exports
   export let selectedItem: ItemData;
@@ -63,11 +64,11 @@
   // References to HTML Elements
   let stageContainer: HTMLElement;
   let images: Record<string, HTMLImageElement> = {}; //dict {viewId: HTMLImageElement}
+  let image_heights: Record<string, number> = {}; //dict {viewId: HTMLImageElement}
 
   // References to Konva Elements
   let stage: Konva.Stage;
   let toolsLayer: Konva.Layer;
-  // let imageKonva: Konva.Image;
   let highlighted_point: Konva.Circle = null;
 
   // Main konva stage configuration
@@ -132,11 +133,24 @@
       validateCurrentAnn();
     }
 
-    if (masks) {
-      for (let view of selectedItem.views) updateMasks(view.id);
-    }
-    if (bboxes) {
-      for (let view of selectedItem.views) updateBboxes(view.id);
+    // HACK: Check if image dimensions have changed, in which case we need to reset bounding boxes
+    for (let view of selectedItem.views) {
+      const viewLayer = stage.findOne(`#${view.id}`) as Konva.Layer;
+      if (viewLayer) {
+        const konvaImg = viewLayer.findOne("#image") as Konva.Image;
+        console.log("Canvas2D.afterUpdate", konvaImg.height());
+        if (image_heights[view.id] !== konvaImg.height()) {
+          image_heights[view.id] = konvaImg.height();
+          const bboxesToDestroy = []; // need to build a list to not destroy while looping children
+          const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+          if (bboxGroup) {
+            for (let bbox of bboxGroup.children) bboxesToDestroy.push(bbox);
+            for (let object of bboxesToDestroy) object.destroy();
+          }
+        }
+      }
+      if (masks) updateMasks(view.id);
+      if (bboxes) updateBboxes(view.id);
     }
   });
 
@@ -160,6 +174,7 @@
             const konvaImg = viewLayer.findOne("#image") as Konva.Image;
             konvaImg.image(image);
           }
+          image_heights[view.id] = image.height;
           scaleView(view);
           scaleElements(view);
           //hack to refresh view (display masks/bboxes)
@@ -329,6 +344,7 @@
     image: Konva.Image,
     viewId: string
   ) {
+    console.log("new bbox", image.height(), image.width());
     const x = image.x() + bbox.bbox[0] * image.width();
     const y = image.y() + bbox.bbox[1] * image.height();
     const rect_width = bbox.bbox[2] * image.width();
@@ -497,7 +513,7 @@
     objectsGroup: Konva.Group
   ) {
     // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-    const objectsToDestroy = []; //need to build a list to not destroy while looping children
+    const objectsToDestroy = []; // need to build a list to not destroy while looping children
     for (let object of objectsGroup.children) {
       if (!objectsIds.includes(object.id())) objectsToDestroy.push(object);
     }
