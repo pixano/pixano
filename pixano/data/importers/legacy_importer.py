@@ -23,9 +23,17 @@ import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano.core import BBox, CompressedRLE, ImageType, ObjectAnnotation
-from pixano.data.importers.importer import Importer
+from pixano.core import (
+    BBox,
+    CompressedRLE,
+    ImageType,
+    ObjectAnnotation,
+    ObjectAnnotationType,
+)
+from pixano.data import Fields
 from pixano.utils import denormalize_coords, image_to_thumbnail
+
+from .importer import Importer
 
 
 class LegacyImporter(Importer):
@@ -57,7 +65,17 @@ class LegacyImporter(Importer):
             json_files (dict[str, str]): json file paths relative to workspace
         """
 
-        self.views = views
+        fields = Fields.from_dict(
+            {
+                "id": "str",
+                "objects": "[ObjectAnnotation]",
+                "split": "str",
+            }
+        )
+
+        for view in views:
+            fields[view] = "image"
+
         self.json_files = json_files
 
         # Initialize Data Importer
@@ -65,13 +83,12 @@ class LegacyImporter(Importer):
             name,
             description,
             splits,
-            [pa.field(view, ImageType) for view in views],
+            fields,
         )
 
     def import_row(
         self,
         input_dirs: dict[str, Path],
-        split: str,
         portable: bool = False,
     ) -> Iterator:
         """Process dataset row for import
@@ -85,142 +102,160 @@ class LegacyImporter(Importer):
             Iterator: Processed rows
         """
 
-        category_ids = {}
-        feats = defaultdict(list)
-        for view in self.views:
-            # Open annotation files
-            with open(input_dirs["workspace"] / self.json_files[view], "r") as f:
-                pix_json = json.load(f)
+        for split in self.splits:
+            category_ids = {}
+            feats = defaultdict(list)
+            for view in self.views:
+                # Open annotation files
+                with open(input_dirs["workspace"] / self.json_files[view], "r") as f:
+                    pix_json = json.load(f)
 
-                # Group annotations by image ID (timestamp)
-                annotations = defaultdict(list)
-                for ann in pix_json["annotations"]:
-                    annotations[str(ann["timestamp"])].append(ann)
+                    # Group annotations by image ID (timestamp)
+                    annotations = defaultdict(list)
+                    for ann in pix_json["annotations"]:
+                        annotations[str(ann["timestamp"])].append(ann)
 
-                # Process rows
-                for im in sorted(
-                    pix_json["data"]["children"], key=lambda x: x["timestamp"]
-                ):
-                    # Load image
-                    file_name_uri = urlparse(im["path"])
-                    if file_name_uri.scheme == "":
-                        im_path = input_dirs["workspace"] / im["path"]
-                    else:
-                        im_path = Path(file_name_uri.path)
+                    # Process rows
+                    for im in sorted(
+                        pix_json["data"]["children"], key=lambda x: x["timestamp"]
+                    ):
+                        # Load image
+                        file_name_uri = urlparse(im["path"])
+                        if file_name_uri.scheme == "":
+                            im_path = input_dirs["workspace"] / im["path"]
+                        else:
+                            im_path = Path(file_name_uri.path)
 
-                    image = Image.open(BytesIO(im_path.read_bytes()))
-                    im_w = image.width
-                    im_h = image.height
-                    im_thumb = image_to_thumbnail(image)
+                        image = Image.open(BytesIO(im_path.read_bytes()))
+                        im_w = image.width
+                        im_h = image.height
+                        im_thumb = image_to_thumbnail(image)
 
-                    feats[str(im["timestamp"])].append(
-                        {
-                            "viewId": view,
-                            "width": im_w,
-                            "height": im_h,
-                            "im_thumb": im_thumb,
-                            "im_uri": (
-                                f"{view}/{split}/{im_path.name}"
-                                if portable
-                                else im_path.absolute().as_uri()
-                            ),
-                            "anns": annotations[str(im["timestamp"])],
-                        }
-                    )
+                        feats[str(im["timestamp"])].append(
+                            {
+                                "viewId": view,
+                                "width": im_w,
+                                "height": im_h,
+                                "im_thumb": im_thumb,
+                                "im_uri": (
+                                    f"{view}/{split}/{im_path.name}"
+                                    if portable
+                                    else im_path.absolute().as_uri()
+                                ),
+                                "anns": annotations[str(im["timestamp"])],
+                            }
+                        )
 
-        for timestamp in feats:
-            # Fill row with ID, image
-            row = {
-                "id": timestamp,
-                "objects": [],
-                "split": split,
-            }
-            for f in feats[timestamp]:
-                row[f["viewId"]] = Image(f["im_uri"], None, f["im_thumb"])
+            for timestamp in feats:
+                # Fill row with ID, image
+                row = {
+                    "id": timestamp,
+                    "objects": [],
+                    "split": split,
+                }
+                for f in feats[timestamp]:
+                    row[f["viewId"]] = Image(f["im_uri"], None, f["im_thumb"])
 
-                # Fill row with list of image annotations
-                for ann in f["anns"]:
-                    # collect categories to build category ids
-                    if ann["category"] not in category_ids:
-                        category_ids[ann["category"]] = len(category_ids)
+                    # Fill row with list of image annotations
+                    for ann in f["anns"]:
+                        # collect categories to build category ids
+                        if ann["category"] not in category_ids:
+                            category_ids[ann["category"]] = len(category_ids)
 
-                    bbox = [0.0, 0.0, 0.0, 0.0]
-                    mask = None
+                        bbox = [0.0, 0.0, 0.0, 0.0]
+                        mask = None
 
-                    if "geometry" in ann:
-                        if (
-                            ann["geometry"]["type"] == "polygon"
-                            and ann["geometry"]["vertices"]
-                        ):
-                            # Polygon
-                            # we have normalized coords, we must denorm before making RLE
-                            if not isnan(ann["geometry"]["vertices"][0]):
-                                if len(ann["geometry"]["vertices"]) > 4:
+                        if "geometry" in ann:
+                            if (
+                                ann["geometry"]["type"] == "polygon"
+                                and ann["geometry"]["vertices"]
+                            ):
+                                # Polygon
+                                # we have normalized coords, we must denorm before making RLE
+                                if not isnan(ann["geometry"]["vertices"][0]):
+                                    if len(ann["geometry"]["vertices"]) > 4:
+                                        denorm = denormalize_coords(
+                                            ann["geometry"]["vertices"],
+                                            f["height"],
+                                            f["width"],
+                                        )
+                                        rles = mask_api.frPyObjects(
+                                            [denorm], f["height"], f["width"]
+                                        )
+                                        mask = mask_api.merge(rles)
+                                    else:
+                                        print(
+                                            "Polygon with 2 or less points. Discarded\n",
+                                            ann["geometry"],
+                                        )
+                            elif (
+                                ann["geometry"]["type"] == "mpolygon"
+                                and ann["geometry"]["mvertices"]
+                            ):
+                                # MultiPolygon
+                                if not isnan(ann["geometry"]["mvertices"][0][0]):
+                                    denorm = [
+                                        denormalize_coords(
+                                            poly, f["height"], f["width"]
+                                        )
+                                        for poly in ann["geometry"]["mvertices"]
+                                    ]
+                                    rles = mask_api.frPyObjects(
+                                        denorm, f["height"], f["width"]
+                                    )
+                                    mask = mask_api.merge(rles)
+                                    mask = CompressedRLE.from_dict(mask)
+                            elif (
+                                ann["geometry"]["type"] == "rectangle"
+                                and ann["geometry"]["vertices"]
+                            ):  # BBox
+                                if not isnan(ann["geometry"]["vertices"][0]):
                                     denorm = denormalize_coords(
-                                        ann["geometry"]["vertices"],
+                                        [ann["geometry"]["vertices"]],
                                         f["height"],
                                         f["width"],
                                     )
-                                    rles = mask_api.frPyObjects(
-                                        [denorm], f["height"], f["width"]
-                                    )
-                                    mask = mask_api.merge(rles)
-                                else:
-                                    print(
-                                        "Polygon with 2 or less points. Discarded\n",
-                                        ann["geometry"],
-                                    )
-                        elif (
-                            ann["geometry"]["type"] == "mpolygon"
-                            and ann["geometry"]["mvertices"]
-                        ):
-                            # MultiPolygon
-                            if not isnan(ann["geometry"]["mvertices"][0][0]):
-                                denorm = [
-                                    denormalize_coords(poly, f["height"], f["width"])
-                                    for poly in ann["geometry"]["mvertices"]
-                                ]
-                                rles = mask_api.frPyObjects(
-                                    denorm, f["height"], f["width"]
-                                )
-                                mask = mask_api.merge(rles)
-                                mask = CompressedRLE.from_dict(mask)
-                        elif (
-                            ann["geometry"]["type"] == "rectangle"
-                            and ann["geometry"]["vertices"]
-                        ):  # BBox
-                            if not isnan(ann["geometry"]["vertices"][0]):
-                                denorm = denormalize_coords(
-                                    [ann["geometry"]["vertices"]],
-                                    f["height"],
-                                    f["width"],
-                                )
-                                bbox = BBox.from_xyxy(denorm)
-                        elif (
-                            ann["geometry"]["type"] == "graph"
-                            and ann["geometry"]["vertices"]
-                        ):  # Keypoints
-                            print("Keypoints are not implemented yet")
+                                    bbox = BBox.from_xyxy(denorm)
+                            elif (
+                                ann["geometry"]["type"] == "graph"
+                                and ann["geometry"]["vertices"]
+                            ):  # Keypoints
+                                print("Keypoints are not implemented yet")
+                            else:
+                                # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
+                                pass
                         else:
-                            # print('Unknown geometry', ann['geometry']['type'])  # log can be annoying if many...
-                            pass
-                    else:
-                        # Ca peut etre un mask, ou 3d, trackink... etc.
-                        print("No geometry?")
+                            # Ca peut etre un mask, ou 3d, trackink... etc.
+                            print("No geometry?")
 
-                    row["objects"].append(
-                        ObjectAnnotation(
-                            id=str(ann["id"]),
-                            view_id=f["viewId"],
-                            bbox=bbox,
-                            mask=mask,
-                            is_group_of=bool(ann["iscrowd"])
-                            if "iscrowd" in ann
-                            else None,
-                            category_id=category_ids[ann["category"]],
-                            category_name=ann["category"],
+                        row["objects"].append(
+                            ObjectAnnotation(
+                                id=str(ann["id"]),
+                                view_id=f["viewId"],
+                                bbox=bbox,
+                                mask=mask,
+                                is_group_of=bool(ann["iscrowd"])
+                                if "iscrowd" in ann
+                                else None,
+                                category_id=category_ids[ann["category"]],
+                                category_name=ann["category"],
+                            )
                         )
-                    )
 
-            # Return row
-            yield row
+                # On met toute les view sur la même ligne
+                Im_arr = [ImageType.Array.from_list([row(view)]) for view in self.views]
+
+                struct_arr = pa.StructArray.from_arrays(
+                    # Fields de base
+                    [
+                        pa.array([row["id"]]),
+                        ObjectAnnotationType.Array.from_lists([row["objects"]]),
+                        pa.array([row["split"]]),
+                    ].extend(
+                        Im_arr
+                    ),  # + Images
+                    fields=self.fields.to_pyarrow(),
+                )
+
+                # Return row
+                yield pa.RecordBatch.from_struct_array(struct_arr)
