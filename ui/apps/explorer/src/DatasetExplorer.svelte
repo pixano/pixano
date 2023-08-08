@@ -49,6 +49,11 @@
       Date.now() - start,
       "ms"
     );
+
+    // If no dataset page, return error message
+    if (selectedDataset.page == null) {
+      dispatch("datasetError");
+    }
   }
 
   async function handleGoToFirstPage() {

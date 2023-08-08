@@ -56,6 +56,7 @@
 
   let saveFlag = false;
   let unselectItemModal = false;
+  let datasetErrorModal = false;
 
   const defaultModelName = "sam_vit_h_4b8939.onnx";
   let inputModelName: string;
@@ -97,11 +98,17 @@
       "ms"
     );
 
-    // Select first item
-    const firstItemId = selectedDataset.page.items[0].find((feature) => {
-      return feature.name === "id";
-    }).value;
-    handleSelectItem(firstItemId);
+    if (selectedDataset.page) {
+      // If selected dataset successfully, select first item
+      const firstItemId = selectedDataset.page.items[0].find((feature) => {
+        return feature.name === "id";
+      }).value;
+      handleSelectItem(firstItemId);
+    } else {
+      // Otherwise display error message
+      handleUnselectDataset();
+      datasetErrorModal = true;
+    }
   }
 
   async function handleUnselectDataset() {
@@ -466,6 +473,13 @@
       confirm="Close without saving"
       on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
       on:cancel={() => (unselectItemModal = false)}
+    />
+  {/if}
+  {#if datasetErrorModal}
+    <WarningModal
+      message="Error while retrieving dataset items."
+      details="Please look at the application logs for more info."
+      on:confirm={() => (datasetErrorModal = false)}
     />
   {/if}
 </div>

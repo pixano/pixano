@@ -17,7 +17,13 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, Header, Library, LoadingLibrary } from "@pixano/core";
+  import {
+    api,
+    Header,
+    Library,
+    LoadingLibrary,
+    WarningModal,
+  } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import DatasetExplorer from "./DatasetExplorer.svelte";
@@ -44,6 +50,8 @@
   let classes: Array<CategoryData>;
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
+
+  let datasetErrorModal = false;
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
@@ -246,6 +254,9 @@
           {selectedDataset}
           {currentPage}
           on:selectItem={(event) => handleSelectItem(event.detail)}
+          on:datasetError={() => (
+            handleUnselectDataset(), (datasetErrorModal = true)
+          )}
         />
       {/if}
     {:else}
@@ -257,5 +268,12 @@
     {/if}
   {:else}
     <LoadingLibrary />
+  {/if}
+  {#if datasetErrorModal}
+    <WarningModal
+      message="Error while retrieving dataset items."
+      details="Please look at the application logs for more info."
+      on:confirm={() => (datasetErrorModal = false)}
+    />
   {/if}
 </div>
