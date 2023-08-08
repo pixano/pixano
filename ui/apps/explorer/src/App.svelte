@@ -71,7 +71,7 @@
 
   async function handleSelectItem(itemId: string) {
     annotations = {};
-    classes = [];
+    classes = selectedDataset.categories;
     masks = [];
     bboxes = [];
 
