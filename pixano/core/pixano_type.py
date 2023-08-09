@@ -185,55 +185,74 @@ def createPyArrowType(
             def __repr__(self):
                 return f"<{name}Array object at {hex(id(self))}>\n{self}"
 
-            @classmethod
-            def from_list(cls, lst: list):
-                fields = struct_type
-                arrays = []
+            @staticmethod
+            def from_pylist(lst: list | list[list]):
 
-                for field in fields:
-                    data = []
-                    for obj in lst:
-                        if obj is not None:
-                            if hasattr(obj, "to_dict") and callable(
-                                getattr(obj, "to_dict")
-                            ):
-                                data.append(obj.to_dict().get(field.name))
+                def from_list(lst: list):
+                    fields = struct_type
+                    arrays = []
+
+                    for field in fields:
+                        data = []
+                        for obj in lst:
+                            if obj is not None:
+                                if hasattr(obj, "to_dict") and callable(
+                                    getattr(obj, "to_dict")
+                                ):
+                                    data.append(obj.to_dict().get(field.name))
+                                else:
+                                    data.append(obj)
                             else:
-                                data.append(obj)
-                        else:
-                            data.append(None)
+                                data.append(None)
 
-                    arrays.append(
-                        convert_field(
-                            field.name,
-                            field.type,
-                            data,
+                        arrays.append(
+                            convert_field(
+                                field.name,
+                                field.type,
+                                data,
+                            )
                         )
+                    sto = pa.StructArray.from_arrays(arrays, fields=fields)
+                    return pa.ExtensionArray.from_storage(pyarrow_type, sto)
+
+                def from_lists(list: list[list[Type]]) -> pa.ListArray:
+                    """Return paListArray corresponding to list of list of type
+
+                    Args:
+                        list (list[list[Type]]): list of list of type
+
+                    Returns:
+                        pa.ListArray: List array with offset corresponding to list
+                    """
+
+                    offset = [0]
+                    for sub_list in list:
+                        offset.append(len(sub_list) + offset[-1])
+
+                    flat_list = [item for sublist in list for item in sublist]
+                    flat_array = from_list(flat_list)
+
+                    return pa.ListArray.from_arrays(
+                        offset, flat_array, type=pa.list_(pyarrow_type)
                     )
-                sto = pa.StructArray.from_arrays(arrays, fields=fields)
-                return pa.ExtensionArray.from_storage(pyarrow_type, sto)
+                
+                def is_nested(lst: list) -> bool:
+                    """Check if list contains only sublists"""
+                    return all(isinstance(item, list) for item in lst)
 
-            @classmethod
-            def from_lists(cls, list: list[list[Type]]) -> pa.ListArray:
-                """Return paListArray corresponding to list of list of type
+                def is_flat(lst: list) -> bool:
+                    """Check if list does not contain sublists"""
+                    return all(not isinstance(item, list) for item in lst)
 
-                Args:
-                    list (list[list[Type]]): list of list of type
+                if is_nested(lst):
+                    return from_lists(lst)
+                elif is_flat(lst):
+                    return from_list(lst)
+                else:
+                    raise ValueError("Input list must be either a nested list or a flat list")
 
-                Returns:
-                    pa.ListArray: List array with offset corresponding to list
-                """
 
-                offset = [0]
-                for sub_list in list:
-                    offset.append(len(sub_list) + offset[-1])
 
-                flat_list = [item for sublist in list for item in sublist]
-                flat_array = cls.from_list(flat_list)
-
-                return pa.ListArray.from_arrays(
-                    offset, flat_array, type=pa.list_(pyarrow_type)
-                )
 
     # Create ExtensionType
     pyarrow_type = CustomExtensionType(struct_type, name)
