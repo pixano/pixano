@@ -36,7 +36,11 @@ export const Base: Story = {
       description: "Dataset description",
       num_elements: 4,
       preview: "",
-      categories: [],
+      categories: [
+        { id: 0, name: "Dog" },
+        { id: 1, name: "eye" },
+        { id: 2, name: "Cat" },
+      ],
       page: {
         items: [
           [
