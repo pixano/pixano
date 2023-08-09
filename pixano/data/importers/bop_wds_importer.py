@@ -40,10 +40,10 @@ from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_binary, image_to_thumbnail
 
 
-def row_to_array(
+def row_to_dict(
     row, split: str, fields: Fields, coco_json_path: Optional[Path | str] = None
-) -> pa.StructArray:
-    struct_arr = []
+) -> dict:
+    row = {}  # Rename result_dict to row
 
     try:
         # Add the path to bop_toolkit
@@ -69,41 +69,31 @@ def row_to_array(
 
         # id
         if "id" in keys:
-            id = row["__key__"]
-            struct_arr.append(pa.array([id]))
+            row["id"] = row["__key__"]
 
         # rgb
         if "rgb" in keys:
             im_pil = PILImage.fromarray(sample["im_rgb"])
             im_pil = image_to_binary(im_pil, format="JPEG")
             preview = image_to_thumbnail(im_pil)
-
-            rgb = Image(f"", im_pil, preview)
-            rgbs = ImageType.Array.from_pylist([rgb])
-            struct_arr.append(rgbs)
+            row["rgb"] = Image(f"", im_pil, preview)
 
         # depth
         if "depth" in keys:
-            depths = DepthImageType.Array.from_pylist(
-                [
-                    DepthImage(
-                        depth_map=sample["im_depth"],
-                        shape=sample["im_depth"].shape,
-                    )
-                ]
+            row["depth"] = DepthImage(
+                depth_map=sample["im_depth"],
+                shape=sample["im_depth"].shape,
             )
-            struct_arr.append(depths)
 
         # camera
         if "camera" in keys:
-            cameras = CameraType.Array.from_pylist([Camera.from_dict(sample["camera"])])
-            struct_arr.append(cameras)
+            row["camera"] = Camera.from_dict(sample["camera"])
 
         # category
         if "category_id" in keys:
-            category_id = [sample["gt"][i]["object_id"] for i in range(nb_object)]
-            category_id_arr = pa.array([category_id])
-            struct_arr.append(category_id_arr)
+            row["category_id"] = [
+                sample["gt"][i]["object_id"] for i in range(nb_object)
+            ]
 
         # objects_ids and masks
         if coco_json_path is not None:
@@ -124,27 +114,22 @@ def row_to_array(
                         )
                     )
 
-            masks_arr = CompressedRLEType.Array.from_pylist([masks])
-            object_ids_arr = pa.array([object_ids])
-
-            struct_arr.append(object_ids_arr)
-            struct_arr.append(masks_arr)
+            row["object_ids"] = object_ids
+            row["masks"] = masks
 
         # pose
         if "gt" in keys:
-            gt = [
+            row["gt"] = [
                 Pose(
                     sample["gt"][i]["cam_R_m2c"].flatten(),
                     sample["gt"][i]["cam_t_m2c"].flatten(),
                 )
                 for i in range(nb_object)
             ]
-            gt_arr = PoseType.Array.from_pylist([gt])
-            struct_arr.append(gt_arr)
 
         # gt_info
         if "gt_info" in keys:
-            gt_infos = [
+            row["gt_info"] = [
                 GtInfo.from_dict(
                     {
                         **sample["gt_info"][i],
@@ -156,17 +141,16 @@ def row_to_array(
                 )
                 for i in range(nb_object)
             ]
-            gt_infos_arr = GtInfoType.Array.from_pylist([gt_infos])
-            struct_arr.append(gt_infos_arr)
 
         # split
         if "split" in keys:
-            struct_arr.append(pa.array([split]))
+            row["split"] = split
 
-        # Struct array
-        return pa.StructArray.from_arrays(struct_arr, fields=fields.to_pyarrow())
+        return row
+
     except ImportError as e:
         raise ImportError(f"bop_toolkit_lib package missing: {e}")
+
 
 
 class BopWDSImporter(Importer):
@@ -242,9 +226,9 @@ class BopWDSImporter(Importer):
 
                     # extract row of each split
                     for row in _wds_pipeline:
-                        yield pa.RecordBatch.from_struct_array(
+                        yield super().row_to_batches(
                             #### Change Coco_json_path here
-                            row_to_array(
+                            row_to_dict(
                                 row, split, self.info.fields, coco_json_path=None
                             )
                         )
