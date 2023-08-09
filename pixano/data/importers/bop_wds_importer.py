@@ -50,7 +50,7 @@ def row_to_array(
         sys.path.append("/home/maximilien/work/lib/bop_toolkit")
         import bop_toolkit_lib.dataset.bop_webdataset as btk
 
-        #decoding
+        # decoding
         sample = btk.decode_sample(
             row,
             decode_camera=True,
@@ -79,12 +79,12 @@ def row_to_array(
             preview = image_to_thumbnail(im_pil)
 
             rgb = Image(f"", im_pil, preview)
-            rgbs = ImageType.Array.from_list([rgb])
+            rgbs = ImageType.Array.from_pylist([rgb])
             struct_arr.append(rgbs)
 
         # depth
         if "depth" in keys:
-            depths = DepthImageType.Array.from_list(
+            depths = DepthImageType.Array.from_pylist(
                 [
                     DepthImage(
                         depth_map=sample["im_depth"],
@@ -96,7 +96,7 @@ def row_to_array(
 
         # camera
         if "camera" in keys:
-            cameras = CameraType.Array.from_list([Camera.from_dict(sample["camera"])])
+            cameras = CameraType.Array.from_pylist([Camera.from_dict(sample["camera"])])
             struct_arr.append(cameras)
 
         # category
@@ -124,7 +124,7 @@ def row_to_array(
                         )
                     )
 
-            masks_arr = CompressedRLEType.Array.from_lists([masks])
+            masks_arr = CompressedRLEType.Array.from_pylist([masks])
             object_ids_arr = pa.array([object_ids])
 
             struct_arr.append(object_ids_arr)
@@ -139,7 +139,7 @@ def row_to_array(
                 )
                 for i in range(nb_object)
             ]
-            gt_arr = PoseType.Array.from_lists([gt])
+            gt_arr = PoseType.Array.from_pylist([gt])
             struct_arr.append(gt_arr)
 
         # gt_info
@@ -156,7 +156,7 @@ def row_to_array(
                 )
                 for i in range(nb_object)
             ]
-            gt_infos_arr = GtInfoType.Array.from_lists([gt_infos])
+            gt_infos_arr = GtInfoType.Array.from_pylist([gt_infos])
             struct_arr.append(gt_infos_arr)
 
         # split

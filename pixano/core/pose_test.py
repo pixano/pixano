@@ -32,7 +32,7 @@ class TestParquetPose(unittest.TestCase):
         self.pose_list = [Pose(cam_R_m2c0, cam_t_m2c0), Pose(cam_R_m2c1, cam_t_m2c1)]
 
     def test_pose_table(self):
-        pose_array = PoseType.Array.from_list(self.pose_list)
+        pose_array = PoseType.Array.from_pylist(self.pose_list)
 
         schema = pa.schema(
             [

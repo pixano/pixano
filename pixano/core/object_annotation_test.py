@@ -72,7 +72,9 @@ class TestParquetObjectAnnotation(unittest.TestCase):
         ]
 
     def test_object_annotation_table(self):
-        objAnn_arr = ObjectAnnotationType.Array.from_list(self.object_annotations_list)
+        objAnn_arr = ObjectAnnotationType.Array.from_pylist(
+            self.object_annotations_list
+        )
 
         schema = pa.schema([pa.field("ObjectAnn", ObjectAnnotationType, nullable=True)])
 

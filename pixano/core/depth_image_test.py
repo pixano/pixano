@@ -97,7 +97,7 @@ class TestParquetDepthImage(unittest.TestCase):
         ]
 
     def test_depth_image_table(self):
-        depth_image_array = DepthImageType.Array.from_list(self.depth_image_list)
+        depth_image_array = DepthImageType.Array.from_pylist(self.depth_image_list)
 
         schema = pa.schema(
             [

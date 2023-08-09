@@ -72,7 +72,7 @@ class TestParquetBBox(unittest.TestCase):
         ]
 
     def test_bbox_table(self):
-        bbox_arr = BBoxType.Array.from_list(self.bbox_list)
+        bbox_arr = BBoxType.Array.from_pylist(self.bbox_list)
 
         table = pa.Table.from_arrays(
             [bbox_arr], schema=pa.schema([pa.field("bbox", BBoxType)])
