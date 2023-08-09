@@ -424,10 +424,10 @@ class DataLoader(ABC):
                 for field in self.schema:
                     if is_list_of_object_annotation_type(field.type):
                         arrays.append(
-                            ObjectAnnotationType.Array.from_lists(batch[field.name])
+                            ObjectAnnotationType.Array.from_pylist(batch[field.name])
                         )
                     elif is_image_type(field.type):
-                        arrays.append(ImageType.Array.from_list(batch[field.name]))
+                        arrays.append(ImageType.Array.from_pylist(batch[field.name]))
                     else:
                         arrays.append(
                             convert_field(

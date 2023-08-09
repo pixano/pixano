@@ -97,7 +97,9 @@ class TestParquetCompressedRLE(unittest.TestCase):
         ]
 
     def test_compressedRLE_table(self):
-        compressedRLE_array = CompressedRLEType.Array.from_list(self.compressedRLE_list)
+        compressedRLE_array = CompressedRLEType.Array.from_pylist(
+            self.compressedRLE_list
+        )
 
         schema = pa.schema(
             [

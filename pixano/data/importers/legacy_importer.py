@@ -242,20 +242,6 @@ class LegacyImporter(Importer):
                             )
                         )
 
-                # On met toute les view sur la même ligne
-                Im_arr = [ImageType.Array.from_list([row(view)]) for view in self.views]
+                        yield super().row_to_batches(row) #TODO test because we have image on same row so we can have some problem with name of key in row 
 
-                struct_arr = pa.StructArray.from_arrays(
-                    # Fields de base
-                    [
-                        pa.array([row["id"]]),
-                        ObjectAnnotationType.Array.from_lists([row["objects"]]),
-                        pa.array([row["split"]]),
-                    ].extend(
-                        Im_arr
-                    ),  # + Images
-                    fields=self.fields.to_pyarrow(),
-                )
 
-                # Return row
-                yield pa.RecordBatch.from_struct_array(struct_arr)

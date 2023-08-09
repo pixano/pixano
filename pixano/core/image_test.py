@@ -118,7 +118,7 @@ class TestParquetImage(unittest.TestCase):
         ]
 
     def test_image_table(self):
-        image_array = ImageType.Array.from_list(self.image_list)
+        image_array = ImageType.Array.from_pylist(self.image_list)
 
         schema = pa.schema(
             [

@@ -11,10 +11,12 @@
 #
 # http://www.cecill.info
 
+
 import pyarrow as pa
 
 from pixano.core.image import ImageType
 from pixano.core.object_annotation import ObjectAnnotationType
+from pixano.core.pixano_type import convert_field
 
 
 def is_number(t: pa.DataType) -> bool:
@@ -54,3 +56,27 @@ def is_list_of_object_annotation_type(t: pa.DataType) -> bool:
     """
 
     return t == pa.list_(ObjectAnnotationType)
+
+def paArray_from_list(list_data:list | list[list], type: pa.ExtensionType | pa.DataType) -> pa.Array:
+    """Convert data or data list as pixano or base python type to array 
+
+    Args:
+        data (list | list[list]): list of object or list of list of object
+        type (pa.ExtensionType | pa.DataType): pyarrow base type or custom extension type
+
+    Raises:
+        ValueError: Unknow type
+
+    Returns:
+        pa.Array: Array as pyArrow
+    """
+    if pa.types.is_list(type):
+        type = type.value_type
+
+    if isinstance(type, pa.ExtensionType):
+        return type.Array.from_pylist(list_data)
+    elif isinstance(type, pa.DataType) and not isinstance(type, pa.ExtensionType):
+        return pa.array(list_data)
+    else:
+        raise ValueError("Unknow type")
+

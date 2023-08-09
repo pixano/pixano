@@ -361,10 +361,14 @@ def save_item_annotations(
             for field in schema:
                 if is_list_of_object_annotation_type(field.type):
                     arrays.append(
-                        ObjectAnnotationType.Array.from_lists(updated_table[field.name])
+                        ObjectAnnotationType.Array.from_pylist(
+                            updated_table[field.name]
+                        )
                     )
                 elif is_image_type(field.type):
-                    arrays.append(ImageType.Array.from_list(updated_table[field.name]))
+                    arrays.append(
+                        ImageType.Array.from_pylist(updated_table[field.name])
+                    )
                 else:
                     arrays.append(
                         convert_field(

@@ -92,14 +92,4 @@ class ImageImporter(Importer):
                     "split": split,
                 }
 
-                struct_arr = pa.StructArray.from_arrays(
-                    [
-                        pa.array([row["id"]]),
-                        ImageType.Array.from_list([row["image"]]),
-                        pa.array([row["split"]]),
-                    ],
-                    fields=self.info.fields.to_pyarrow(),
-                )
-
-                # Return row
-                yield pa.RecordBatch.from_struct_array(struct_arr)
+                yield super().row_to_batches(row)

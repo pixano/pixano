@@ -30,7 +30,7 @@ class TestParquetEmbedding(unittest.TestCase):
         self.embedding_list = [Embedding(b"test_bytes1"), Embedding(b"test_bytes2")]
 
     def test_embeddin_table(self):
-        embeddin_array = EmbeddingType.Array.from_list(self.embedding_list)
+        embeddin_array = EmbeddingType.Array.from_pylist(self.embedding_list)
 
         schema = pa.schema(
             [

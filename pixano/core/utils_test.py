@@ -15,12 +15,14 @@ import unittest
 
 import pyarrow as pa
 
-from pixano.core.image import ImageType
-from pixano.core.object_annotation import ObjectAnnotationType
+from pixano.core.image import Image, ImageType
+from pixano.core.object_annotation import ObjectAnnotation, ObjectAnnotationType
+from pixano.core.pose import Pose
 from pixano.core.utils import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
+    paArray_from_list,
 )
 
 
@@ -45,3 +47,29 @@ class IsListOfObjectAnnotationTypeTestCase(unittest.TestCase):
             "some lists of ObjectAnnotation", pa.list_(ObjectAnnotationType)
         )
         self.assertTrue(is_list_of_object_annotation_type(pa_obj_field.type))
+
+
+class TestPaArrayConversion(unittest.TestCase):
+    def test_extension_type_conversion(self):
+        data = [Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]
+
+        result_array = paArray_from_list(data, ImageType)
+
+        self.assertIsInstance(result_array, pa.Array)
+
+    def test_list_extension_type_conversion(self):
+        data = [[Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]]
+
+        result_array = paArray_from_list(data, ImageType)
+
+        self.assertIsInstance(result_array, pa.Array)
+
+        self.assertIsInstance(result_array.to_pylist()[0][0], Image)
+
+    def test_data_type_conversion(self):
+        data_type = pa.int32()
+        data = [1, 2, 3]
+
+        result_array = paArray_from_list(data, data_type)
+
+        self.assertIsInstance(result_array, pa.Array)
