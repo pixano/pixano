@@ -243,13 +243,15 @@ class LegacyImporter(Importer):
                         )
 
                 # On met toute les view sur la même ligne
-                Im_arr = [ImageType.Array.from_list([row(view)]) for view in self.views]
+                Im_arr = [
+                    ImageType.Array.from_pylist([row(view)]) for view in self.views
+                ]
 
                 struct_arr = pa.StructArray.from_arrays(
                     # Fields de base
                     [
                         pa.array([row["id"]]),
-                        ObjectAnnotationType.Array.from_lists([row["objects"]]),
+                        ObjectAnnotationType.Array.from_pylist([row["objects"]]),
                         pa.array([row["split"]]),
                     ].extend(
                         Im_arr
