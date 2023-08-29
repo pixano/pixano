@@ -78,8 +78,6 @@ class Importer(ABC):
         # Dataset splits
         self.splits = splits
 
-
-
     def create_json(self, import_dir: Path, categories: list[dict] = []):
         """Create dataset spec.json
 
@@ -326,31 +324,31 @@ class Importer(ABC):
         """
 
         pass
-    
-    def row_to_batches(self, row: dict[str, list[Any] | list[list[Any]]]) -> pa.StructArray:
-        """Convert a row dictionary to a PyArrow StructArray based on the fields
+
+    def row_to_batches(
+        self, row: dict[str, list[Any] | list[list[Any]]]
+    ) -> pa.StructArray:
+        """Convert a dataset row from a Python dict to a PyArrow StructArray
 
         Args:
-            row (dict): Row containing data. Keys must match field names.
+            row (dict): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
 
         Returns:
             pa.StructArray: PyArrow StructArray
         """
+
+        # Compare dict keys to field names
         if set(row.keys()) != set(self.info.fields.to_dict().keys()):
-            raise ValueError("Keys in 'row' do not match field names")
+            raise ValueError("Dict keys do not match the names of the dataset fields")
 
+        # Convert the dict to a list of PyArrow arrays
         fields = self.info.fields.to_pyarrow()
-        array_data = []
+        arrays = [paArray_from_list([row[field.name]], field.type) for field in fields]
 
-        #convert data to pyArray
-        for field in fields:
-            arr = paArray_from_list([row[field.name]], field.type)
-            array_data.append(arr)
-        # Construct the StructArray from the array data
-        struct_array = pa.StructArray.from_arrays(array_data, fields=fields)
-                
+        # Create the StructArray from Pyarrow arrays
+        struct_array = pa.StructArray.from_arrays(arrays, fields=fields)
         return pa.RecordBatch.from_struct_array(struct_array)
-    
+
     def import_dataset(
         self,
         input_dirs: dict[str, Path],
