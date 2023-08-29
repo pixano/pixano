@@ -11,8 +11,10 @@
 #
 # http://www.cecill.info
 
+import json
 from pathlib import Path
 
+import lance
 import pyarrow as pa
 import pyarrow.dataset as ds
 
@@ -43,19 +45,68 @@ class Dataset:
         self._info = DatasetInfo.parse_file(self._path / "spec.json")
 
     @property
-    def info(self):
+    def info(self) -> DatasetInfo:
+        """Return Dataset info
+
+        Returns:
+            DatasetInfo: Dataset info
+        """
+
         return self._info
 
     @property
-    def path(self):
+    def path(self) -> Path:
+        """Return Dataset path
+
+        Returns:
+            Path: Dataset path
+        """
+
         return self._path
 
     @property
-    def media_dir(self):
+    def media_dir(self) -> Path:
+        """Return Dataset media directory
+
+        Returns:
+            Path: Dataset media directory
+        """
+
         return self._path / "media"
 
-    def load(self):
+    @property
+    def is_lance(self) -> bool:
+        """Check if dataset is saved in Lance format
+
+        Returns:
+            bool: True if dataset is saved in Lance format
+        """
+
+        return (self._path / "db.lance").exists()
+
+    def load(self) -> lance.LanceDataset:
+        """Load dataset as Lance dataset
+
+        Returns:
+            lance.LanceDataset: Dataset as Lance dataset
+        """
+
+        return lance.dataset(self._path / "db.lance")
+
+    def load_pyarrow(self) -> ds.Dataset:
+        """Load dataset as PyArrow dataset
+
+        Returns:
+            ds.Dataset: Dataset as PyArrow dataset
+        """
+
         return ds.dataset(self._path / "db", partitioning=self._partitioning)
+
+    def save_info(self):
+        """Save dataset info to file"""
+
+        with open(self.path / "spec.json", "w") as f:
+            json.dump(self.info.to_dict(), f)
 
 
 class InferenceDataset(Dataset):
@@ -68,10 +119,22 @@ class InferenceDataset(Dataset):
     """
 
     def __init__(self, path: Path):
+        """Initialize inference dataset
+
+        Args:
+            path (Path): Inference dataset path
+        """
+
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "infer.json")
 
-    def load(self):
+    def load(self) -> ds.Dataset:
+        """Load inference dataset as PyArrow dataset
+
+        Returns:
+            ds.Dataset: Dataset as PyArrow dataset
+        """
+
         return ds.dataset(
             self._path, partitioning=self._partitioning, ignore_prefixes=["infer.json"]
         )
@@ -87,10 +150,22 @@ class EmbeddingDataset(Dataset):
     """
 
     def __init__(self, path: Path):
+        """Initialize embedding dataset
+
+        Args:
+            path (Path): Embedding dataset path
+        """
+
         self._path = path
         self._info = DatasetInfo.parse_file(self._path / "embed.json")
 
-    def load(self):
+    def load(self) -> ds.Dataset:
+        """Load embedding dataset as PyArrow dataset
+
+        Returns:
+            ds.Dataset: Dataset as PyArrow dataset
+        """
+
         return ds.dataset(
             self._path, partitioning=self._partitioning, ignore_prefixes=["embed.json"]
         )

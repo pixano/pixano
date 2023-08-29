@@ -144,7 +144,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # Update dataset annotations
-        save_item_annotations(ds.path, item_id, annotations)
+        save_item_annotations(ds, item_id, annotations)
 
         return Response()
 
