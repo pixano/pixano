@@ -152,7 +152,6 @@ def row_to_dict(
         raise ImportError(f"bop_toolkit_lib package missing: {e}")
 
 
-
 class BopWDSImporter(Importer):
     """Importer class for BOP WDS dataset
 
@@ -226,7 +225,7 @@ class BopWDSImporter(Importer):
 
                     # extract row of each split
                     for row in _wds_pipeline:
-                        yield super().dict_to_structarray(
+                        yield super().dict_to_recordbatch(
                             #### Change Coco_json_path here
                             row_to_dict(
                                 row, split, self.info.fields, coco_json_path=None

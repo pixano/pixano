@@ -325,16 +325,16 @@ class Importer(ABC):
 
         pass
 
-    def dict_to_structarray(
+    def dict_to_recordbatch(
         self, row: dict[str, list[Any] | list[list[Any]]]
-    ) -> pa.StructArray:
-        """Convert a dataset row from a Python dict to a PyArrow StructArray
+    ) -> pa.RecordBatch:
+        """Convert a dataset row from a Python dict to a PyArrow RecordBatch
 
         Args:
             row (dict): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
 
         Returns:
-            pa.StructArray: PyArrow StructArray
+            pa.RecordBatch: PyArrow RecordBatch
         """
 
         # Compare dict keys to field names
@@ -343,11 +343,14 @@ class Importer(ABC):
 
         # Convert the dict to a list of PyArrow arrays
         fields = self.info.fields.to_pyarrow()
-        arrays = [pyarrow_array_from_list([row[field.name]], field.type) for field in fields]
+        arrays = [
+            pyarrow_array_from_list([row[field.name]], field.type) for field in fields
+        ]
 
-        # Create the StructArray from Pyarrow arrays
-        struct_array = pa.StructArray.from_arrays(arrays, fields=fields)
-        return pa.RecordBatch.from_struct_array(struct_array)
+        # Create the RecordBatch from PyArrow arrays
+        return pa.RecordBatch.from_struct_array(
+            pa.StructArray.from_arrays(arrays, fields=fields)
+        )
 
     def import_dataset(
         self,

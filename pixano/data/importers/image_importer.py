@@ -92,4 +92,4 @@ class ImageImporter(Importer):
                     "split": split,
                 }
 
-                yield super().dict_to_structarray(row)
+                yield super().dict_to_recordbatch(row)
