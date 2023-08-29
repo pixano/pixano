@@ -92,24 +92,26 @@ class Fields(BaseModel):
                 "str": pa.string(),
                 "bytes": pa.binary(),
                 "np.ndarray": pa.list_(pa.float32()),
-                "Image": ImageType,
-                "DepthImage": DepthImageType,
-                "Camera": CameraType,
-                "ObjectAnnotation": ObjectAnnotationType,
-                "CompressedRLE": CompressedRLEType,
-                "Pose": PoseType,
-                "BBox": BBoxType,
-                "GtInfo": GtInfoType,
-                "Embedding": EmbeddingType,
+                "image": ImageType,
+                "depthimage": DepthImageType,
+                "camera": CameraType,
+                "objectannotation": ObjectAnnotationType,
+                "compressedrle": CompressedRLEType,
+                "pose": PoseType,
+                "bbox": BBoxType,
+                "gtinfo": GtInfoType,
+                "embedding": EmbeddingType,
             }
 
             # str
             if isinstance(input_type, str):
                 if input_type.startswith("[") and input_type.endswith("]"):
                     return pa.list_(
-                        pa_type_mapping[input_type.removeprefix("[").removesuffix("]")]
+                        pa_type_mapping[
+                            input_type.removeprefix("[").removesuffix("]").lower()
+                        ]
                     )
-                return pa_type_mapping[input_type]
+                return pa_type_mapping[input_type.lower()]
 
         fields = []
         for field_name, field_type in self._field_dict.items():

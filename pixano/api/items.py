@@ -35,8 +35,9 @@ from pixano.core import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
+    pyarrow_array_from_list,
 )
-from pixano.data import Dataset, InferenceDataset, EmbeddingDataset, Fields
+from pixano.data import Dataset, EmbeddingDataset, Fields, InferenceDataset
 from pixano.utils import format_bbox, natural_key
 
 
@@ -337,10 +338,8 @@ def save_item_annotations(
         # Merge updated item annotations
         item_table = pa.Table.from_arrays(
             [
-                pa.array([item["id"]]),
-                ImageType.Array.from_list([Image.from_dict(item["image"])]),
-                ObjectAnnotationType.Array.from_lists([item["objects"]]),
-                pa.array([item["split"]]),
+                pyarrow_array_from_list([item[field.name]], field.type)
+                for field in dataset.info.fields.to_pyarrow()
             ],
             schema=schema,
         )
