@@ -17,16 +17,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
-import pyarrow as pa
-
-from pixano.core import (
-    BBox,
-    CompressedRLE,
-    Image,
-    ImageType,
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
+from pixano.core import BBox, CompressedRLE, Image, ObjectAnnotation
 from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail, natural_key

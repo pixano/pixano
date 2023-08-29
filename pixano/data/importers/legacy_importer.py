@@ -19,17 +19,10 @@ from math import isnan
 from pathlib import Path
 from urllib.parse import urlparse
 
-import pyarrow as pa
 from PIL import Image
 from pycocotools import mask as mask_api
 
-from pixano.core import (
-    BBox,
-    CompressedRLE,
-    ImageType,
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
+from pixano.core import BBox, CompressedRLE, ObjectAnnotation
 from pixano.data import Fields
 from pixano.utils import denormalize_coords, image_to_thumbnail
 

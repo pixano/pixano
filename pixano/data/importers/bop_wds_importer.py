@@ -17,24 +17,9 @@ import sys
 from pathlib import Path
 from typing import Iterator, Optional
 
-import pyarrow as pa
 from PIL import Image as PILImage
 
-from pixano.core import (
-    BBox,
-    Camera,
-    CameraType,
-    CompressedRLE,
-    CompressedRLEType,
-    DepthImage,
-    DepthImageType,
-    GtInfo,
-    GtInfoType,
-    Image,
-    ImageType,
-    Pose,
-    PoseType,
-)
+from pixano.core import BBox, Camera, CompressedRLE, DepthImage, GtInfo, Image, Pose
 from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_binary, image_to_thumbnail

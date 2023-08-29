@@ -15,11 +15,10 @@ import glob
 from collections.abc import Iterator
 from pathlib import Path
 
-import pyarrow as pa
 import shortuuid
 from PIL import Image as PILImage
 
-from pixano.core import BBox, Image, ImageType, ObjectAnnotation, ObjectAnnotationType
+from pixano.core import BBox, Image, ObjectAnnotation
 from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import dota_ids, image_to_thumbnail, natural_key
