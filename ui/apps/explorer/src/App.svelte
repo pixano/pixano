@@ -272,7 +272,7 @@
   {#if datasetErrorModal}
     <WarningModal
       message="Error while retrieving dataset items."
-      details="Please look at the application logs for more info."
+      details="Please look at the application logs for more information, and report this issue if the error persists."
       on:confirm={() => (datasetErrorModal = false)}
     />
   {/if}
