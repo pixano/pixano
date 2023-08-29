@@ -18,7 +18,7 @@ import pyarrow as pa
 from PIL import Image
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import (
     encode_rle,
     mask_to_rle,
@@ -185,6 +185,6 @@ class CompressedRLE(PixanoType, BaseModel):
         )
 
 
-CompressedRLEType = createPyArrowType(
+CompressedRLEType = create_pyarrow_type(
     CompressedRLE.to_struct(), "CompressedRLE", CompressedRLE
 )

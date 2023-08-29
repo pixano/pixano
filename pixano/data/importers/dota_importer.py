@@ -132,4 +132,4 @@ class DOTAImporter(Importer):
                         "split": split,
                     }
 
-                    yield super().row_to_batches(row)
+                    yield super().dict_to_structarray(row)

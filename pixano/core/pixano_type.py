@@ -123,7 +123,7 @@ def convert_field(
         return pa.array(field_data, type=field_type)
 
 
-def createPyArrowType(
+def create_pyarrow_type(
     struct_type: pa.StructType, name: str, pyType: Type
 ) -> pa.ExtensionType:
     """Create PyArrow ExtensionType for Pixano custom type
@@ -187,7 +187,6 @@ def createPyArrowType(
 
             @staticmethod
             def from_pylist(lst: list | list[list]):
-
                 def from_list(lst: list):
                     fields = struct_type
                     arrays = []
@@ -235,7 +234,7 @@ def createPyArrowType(
                     return pa.ListArray.from_arrays(
                         offset, flat_array, type=pa.list_(pyarrow_type)
                     )
-                
+
                 def is_nested(lst: list) -> bool:
                     """Check if list contains only sublists"""
                     return all(isinstance(item, list) for item in lst)
@@ -249,10 +248,9 @@ def createPyArrowType(
                 elif is_flat(lst):
                     return from_list(lst)
                 else:
-                    raise ValueError("Input list must be either a nested list or a flat list")
-
-
-
+                    raise ValueError(
+                        "Input list must be either a nested list or a flat list"
+                    )
 
     # Create ExtensionType
     pyarrow_type = CustomExtensionType(struct_type, name)

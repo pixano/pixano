@@ -226,7 +226,7 @@ class BopWDSImporter(Importer):
 
                     # extract row of each split
                     for row in _wds_pipeline:
-                        yield super().row_to_batches(
+                        yield super().dict_to_structarray(
                             #### Change Coco_json_path here
                             row_to_dict(
                                 row, split, self.info.fields, coco_json_path=None

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from pixano.core.bbox import BBox, BBoxType
 from pixano.core.compressed_rle import CompressedRLE, CompressedRLEType
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.core.pose import Pose, PoseType
 
 
@@ -91,6 +91,6 @@ class ObjectAnnotation(PixanoType, BaseModel):
         )
 
 
-ObjectAnnotationType = createPyArrowType(
+ObjectAnnotationType = create_pyarrow_type(
     ObjectAnnotation.to_struct(), "ObjectAnnotation", ObjectAnnotation
 )

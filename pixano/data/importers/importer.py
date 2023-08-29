@@ -30,7 +30,7 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from pixano.analytics import compute_stats
-from pixano.core import ObjectAnnotationType, is_image_type, paArray_from_list
+from pixano.core import ObjectAnnotationType, is_image_type, pyarrow_array_from_list
 from pixano.data import DatasetInfo, Fields
 
 
@@ -325,7 +325,7 @@ class Importer(ABC):
 
         pass
 
-    def row_to_batches(
+    def dict_to_structarray(
         self, row: dict[str, list[Any] | list[list[Any]]]
     ) -> pa.StructArray:
         """Convert a dataset row from a Python dict to a PyArrow StructArray
@@ -343,7 +343,7 @@ class Importer(ABC):
 
         # Convert the dict to a list of PyArrow arrays
         fields = self.info.fields.to_pyarrow()
-        arrays = [paArray_from_list([row[field.name]], field.type) for field in fields]
+        arrays = [pyarrow_array_from_list([row[field.name]], field.type) for field in fields]
 
         # Create the StructArray from Pyarrow arrays
         struct_array = pa.StructArray.from_arrays(arrays, fields=fields)

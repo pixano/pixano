@@ -57,19 +57,23 @@ def is_list_of_object_annotation_type(t: pa.DataType) -> bool:
 
     return t == pa.list_(ObjectAnnotationType)
 
-def paArray_from_list(list_data:list | list[list], type: pa.ExtensionType | pa.DataType) -> pa.Array:
-    """Convert data or data list as pixano or base python type to array 
+
+def pyarrow_array_from_list(
+    list_data: list, type: pa.ExtensionType | pa.DataType
+) -> pa.Array:
+    """Convert data from Python list to PyArrow array
 
     Args:
-        data (list | list[list]): list of object or list of list of object
-        type (pa.ExtensionType | pa.DataType): pyarrow base type or custom extension type
+        data (list): Data as Python list
+        type (pa.ExtensionType | pa.DataType): PyArrow base or custom extension type
 
     Raises:
         ValueError: Unknow type
 
     Returns:
-        pa.Array: Array as pyArrow
+        pa.Array: Data as PyArrow array
     """
+
     if pa.types.is_list(type):
         type = type.value_type
 
@@ -79,4 +83,3 @@ def paArray_from_list(list_data:list | list[list], type: pa.ExtensionType | pa.D
         return pa.array(list_data)
     else:
         raise ValueError("Unknow type")
-

@@ -14,7 +14,7 @@
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class Pose(PixanoType, BaseModel):
@@ -79,4 +79,4 @@ class Pose(PixanoType, BaseModel):
         )
 
 
-PoseType = createPyArrowType(Pose.to_struct(), "Pose", Pose)
+PoseType = create_pyarrow_type(Pose.to_struct(), "Pose", Pose)

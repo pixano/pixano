@@ -242,6 +242,6 @@ class LegacyImporter(Importer):
                             )
                         )
 
-                        yield super().row_to_batches(row) #TODO test because we have image on same row so we can have some problem with name of key in row 
-
-
+                        yield super().dict_to_structarray(
+                            row
+                        )  # TODO test because we have image on same row so we can have some problem with name of key in row

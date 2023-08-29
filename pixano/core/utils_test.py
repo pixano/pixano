@@ -22,7 +22,7 @@ from pixano.core.utils import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
-    paArray_from_list,
+    pyarrow_array_from_list,
 )
 
 
@@ -53,14 +53,14 @@ class TestPaArrayConversion(unittest.TestCase):
     def test_extension_type_conversion(self):
         data = [Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]
 
-        result_array = paArray_from_list(data, ImageType)
+        result_array = pyarrow_array_from_list(data, ImageType)
 
         self.assertIsInstance(result_array, pa.Array)
 
     def test_list_extension_type_conversion(self):
         data = [[Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]]
 
-        result_array = paArray_from_list(data, ImageType)
+        result_array = pyarrow_array_from_list(data, ImageType)
 
         self.assertIsInstance(result_array, pa.Array)
 
@@ -70,6 +70,6 @@ class TestPaArrayConversion(unittest.TestCase):
         data_type = pa.int32()
         data = [1, 2, 3]
 
-        result_array = paArray_from_list(data, data_type)
+        result_array = pyarrow_array_from_list(data, data_type)
 
         self.assertIsInstance(result_array, pa.Array)

@@ -20,7 +20,7 @@ import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class DepthImage(PixanoType, BaseModel):
@@ -172,4 +172,4 @@ class DepthImage(PixanoType, BaseModel):
         )
 
 
-DepthImageType = createPyArrowType(DepthImage.to_struct(), "DepthImage", DepthImage)
+DepthImageType = create_pyarrow_type(DepthImage.to_struct(), "DepthImage", DepthImage)

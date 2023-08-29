@@ -16,7 +16,7 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class Camera(PixanoType, BaseModel):
@@ -76,4 +76,4 @@ class Camera(PixanoType, BaseModel):
         )
 
 
-CameraType = createPyArrowType(Camera.to_struct(), "Camera", Camera)
+CameraType = create_pyarrow_type(Camera.to_struct(), "Camera", Camera)

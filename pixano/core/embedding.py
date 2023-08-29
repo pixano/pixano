@@ -14,7 +14,7 @@
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
-from pixano.core.pixano_type import PixanoType, createPyArrowType
+from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class Embedding(PixanoType, BaseModel):
@@ -60,4 +60,4 @@ class Embedding(PixanoType, BaseModel):
         return pa.struct([pa.field("bytes", pa.binary())])
 
 
-EmbeddingType = createPyArrowType(Embedding.to_struct(), "Embedding", Embedding)
+EmbeddingType = create_pyarrow_type(Embedding.to_struct(), "Embedding", Embedding)

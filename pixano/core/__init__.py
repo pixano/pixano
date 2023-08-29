@@ -19,13 +19,13 @@ from pixano.core.embedding import Embedding, EmbeddingType
 from pixano.core.gt_info import GtInfo, GtInfoType
 from pixano.core.image import Image, ImageType
 from pixano.core.object_annotation import ObjectAnnotation, ObjectAnnotationType
-from pixano.core.pixano_type import PixanoType, convert_field, createPyArrowType
+from pixano.core.pixano_type import PixanoType, convert_field, create_pyarrow_type
 from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
-    paArray_from_list,
+    pyarrow_array_from_list,
 )
 
 __all__ = [
@@ -47,11 +47,11 @@ __all__ = [
     "ObjectAnnotationType",
     "PixanoType",
     "convert_field",
-    "createPyArrowType",
+    "create_pyarrow_type",
     "Pose",
     "PoseType",
     "is_image_type",
     "is_list_of_object_annotation_type",
     "is_number",
-    "paArray_from_list",
+    "pyarrow_array_from_list",
 ]
