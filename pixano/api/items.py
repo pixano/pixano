@@ -323,7 +323,6 @@ def save_item_annotations(
 
         for field_name, field_type in fields.items():
             if field_type == "[ObjectAnnotation]" and no_objects_field:
-                print(annotations)
                 item[field_name] = annotations
 
                 no_objects_field = False
@@ -347,8 +346,6 @@ def save_item_annotations(
             ],
             schema=schema,
         )
-
-        print(item_table)
 
         selected_ds.delete(f"id in ('{item_id}')")
         lance.write_dataset(item_table, selected_ds.uri, schema, mode="append")
