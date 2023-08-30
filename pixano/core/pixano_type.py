@@ -199,6 +199,8 @@ def create_pyarrow_type(
                                     getattr(obj, "to_dict")
                                 ):
                                     data.append(obj.to_dict().get(field.name))
+                                elif isinstance(obj, dict):
+                                    data.append(obj.get(field.name))
                                 else:
                                     data.append(obj)
                             else:

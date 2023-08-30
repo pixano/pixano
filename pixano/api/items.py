@@ -123,7 +123,11 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     stop = min(raw_params.offset + raw_params.limit, total)
     if start >= stop:
         return None
-    items_table = selected_ds.take(range(start, stop))
+    items_table = (
+        selected_ds.to_table(limit=raw_params.limit, offset=raw_params.offset)
+        if dataset.is_lance
+        else selected_ds.take(range(start, stop))
+    )
 
     # Create items features
     items = [
@@ -346,8 +350,8 @@ def save_item_annotations(
 
         print(item_table)
 
-        # selected_ds.delete(f"id in ('{item_id}')")
-        # lance.write_dataset(item_table, selected_ds.uri, schema, mode="append")
+        selected_ds.delete(f"id in ('{item_id}')")
+        lance.write_dataset(item_table, selected_ds.uri, schema, mode="append")
 
     else:
         # Dataset files
