@@ -382,7 +382,7 @@ class Importer(ABC):
         self.create_json(import_dir)
 
         # Create preview.png
-        # self.create_preview(import_dir)
+        self.create_preview(import_dir)
 
         # Copy media directories if portable
         if portable:
