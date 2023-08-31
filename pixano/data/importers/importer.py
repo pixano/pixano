@@ -391,9 +391,10 @@ class Importer(ABC):
                 if is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
-                    shutil.copytree(
-                        input_dirs[field.name], field_dir, dirs_exist_ok=True
-                    )
+                    if input_dirs[field.name] != field_dir:
+                        shutil.copytree(
+                            input_dirs[field.name], field_dir, dirs_exist_ok=True
+                        )
 
         # Create stats
         # self.create_stats(import_dir)
