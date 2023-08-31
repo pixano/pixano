@@ -42,7 +42,10 @@ def is_image_type(t: pa.DataType) -> bool:
         bool: True if DataType is an Image
     """
 
-    return ImageType.equals(t)
+    return (
+        ImageType.equals(t)
+        or str(t) == "struct<uri: string, bytes: binary, preview_bytes: binary>"
+    )
 
 
 def is_list_of_object_annotation_type(t: pa.DataType) -> bool:
