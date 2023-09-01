@@ -387,7 +387,7 @@ class Importer(ABC):
 
         # Copy media directories if portable
         if portable:
-            for field in tqdm(self.schema, desc="Moving media directories"):
+            for field in tqdm(self.schema, desc="Copying media directories"):
                 if is_image_type(field.type):
                     field_dir = import_dir / "media" / field.name
                     field_dir.mkdir(parents=True, exist_ok=True)
