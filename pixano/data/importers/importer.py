@@ -110,7 +110,6 @@ class Importer(ABC):
 
         # Read dataset
         dataset = lance.dataset(import_dir / "db.lance")
-        print("preview")
 
         # Get list of image fields
         image_fields = []
@@ -375,7 +374,7 @@ class Importer(ABC):
                 raise Exception(f"{source_path} is empty.")
 
         reader = pa.RecordBatchReader.from_batches(
-            self.schema, self.import_row(input_dirs)
+            self.schema, tqdm(self.import_row(input_dirs), desc="Importing dataset")
         )
         ds = lance.write_dataset(reader, import_dir / "db.lance", mode="overwrite")
 
