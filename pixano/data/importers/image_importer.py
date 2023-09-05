@@ -43,6 +43,7 @@ class ImageImporter(Importer):
             {
                 "id": "str",
                 "image": "Image",
+                "objects": "[ObjectAnnotation]",
                 "split": "str",
             }
         )
@@ -88,6 +89,7 @@ class ImageImporter(Importer):
                     "id": im_path.name,
                     "image": Image(im_uri, None, im_thumb),
                     "split": split,
+                    "objects": [],
                 }
 
                 yield super().dict_to_recordbatch(row)
