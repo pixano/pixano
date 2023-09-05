@@ -312,43 +312,74 @@ def save_item_annotations(
         # Load dataset
         selected_ds = dataset.load()
         fields = dataset.info.fields.to_dict()
-        schema = selected_ds.schema
+        schema = pa.schema(dataset.info.fields.to_pyarrow())
 
         # Get item
         scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
         item = scanner.to_table().to_pylist()[0]
+        objects_field_name = ""
 
-        # Update item annotations
-        no_objects_field = True
-
+        # Check if ObjectAnnotation field exists
         for field_name, field_type in fields.items():
-            if field_type == "[ObjectAnnotation]" and no_objects_field:
-                item[field_name] = annotations
+            if field_type == "[ObjectAnnotation]" and objects_field_name == "":
+                # ObjectAnnotation field exists
+                objects_field_name = field_name
+                # Add new annotations to item
+                item[objects_field_name] = annotations
 
-                no_objects_field = False
-
-        # If no ObjectAnnotation column exist
-        if no_objects_field:
-            item["objects"] = annotations
-
+        # If ObjectAnnotation field not in fields
+        if objects_field_name == "":
+            objects_field_name = "objects"
+            # Add new annotations to item
+            item[objects_field_name] = annotations
             # Update fields
-            fields["objects"] = "[ObjectAnnotation]"
+            fields[objects_field_name] = "[ObjectAnnotation]"
             dataset.info.fields = Fields.from_dict(fields)
             dataset.save_info()
-            schema.append(pa.field("objects", pa.list_(ObjectAnnotationType)))
-            schema = lance.json_to_schema(lance.schema_to_json(schema))
 
-        # Merge updated item annotations
-        item_table = pa.Table.from_arrays(
+        # If ObjectAnnotation field not in schema
+        if objects_field_name not in selected_ds.schema.names:
+            raise Exception("Missing ObjectAnnotation field in dataset schema")
+
+            # TODO: Add ObjectAnnotation field to schema if missing
+            # # Update schema
+            # schema = pa.schema(dataset.info.fields.to_pyarrow())
+            # lance_schema = lance.json_to_schema(lance.schema_to_json(schema))
+
+            # # Update dataset
+            # objects_array = pyarrow_array_from_list(
+            #     [[]] * selected_ds.count_rows(),
+            #     schema.field(objects_field_name).type,
+            # )
+            # objects_table = selected_ds.to_table(["id"])
+            # objects_table = objects_table.append_column(
+            #     schema.field(objects_field_name), objects_array
+            # )
+            # objects = pa.RecordBatchReader.from_batches(
+            #     lance_schema, objects_table.to_batches()
+            # )
+            # print(objects.schema)
+            # selected_ds.merge(objects_table, "id", schema=lance_schema)
+
+        # Create updated item
+        updated_item_arrays = [
+            pyarrow_array_from_list([item[field.name]], field.type) for field in schema
+        ]
+        updated_item = pa.RecordBatchReader.from_batches(
+            selected_ds.schema,
             [
-                pyarrow_array_from_list([item[field.name]], field.type)
-                for field in dataset.info.fields.to_pyarrow()
+                pa.RecordBatch.from_struct_array(
+                    pa.StructArray.from_arrays(
+                        updated_item_arrays,
+                        fields=schema,
+                    )
+                )
             ],
-            schema=schema,
         )
 
+        # Replace old item
         selected_ds.delete(f"id in ('{item_id}')")
-        lance.write_dataset(item_table, selected_ds.uri, schema, mode="append")
+        lance.write_dataset(updated_item, selected_ds.uri, mode="append")
 
     else:
         # Dataset files
