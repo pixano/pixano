@@ -30,6 +30,7 @@ from pixano.core import (
     ObjectAnnotationType,
     convert_field,
 )
+from pixano.data import DatasetInfo
 from pixano.utils import natural_key
 
 
@@ -136,9 +137,8 @@ class InferenceModel(ABC):
 
         output_dir = input_dir / f"db_{process_type}_{self.id}"
 
-        # Load spec.json
-        with open(input_dir / "spec.json", "r") as f:
-            spec_json = json.load(f)
+        # Load dataset info
+        dataset_info = DatasetInfo.parse_file(input_dir / "spec.json")
 
         # Create URI prefix
         media_dir = input_dir / "media"
@@ -253,7 +253,7 @@ class InferenceModel(ABC):
                     self.create_json(
                         output_dir=output_dir,
                         filename=process_type,
-                        spec_json=spec_json,
+                        dataset_info=dataset_info,
                         num_elements=pq.read_metadata(split_dir / file.name).num_rows,
                     )
 
@@ -263,7 +263,7 @@ class InferenceModel(ABC):
         self,
         output_dir: Path,
         filename: str,
-        spec_json: dict[str, Any],
+        dataset_info: DatasetInfo,
         num_elements: int,
     ):
         """Save output .json
@@ -271,7 +271,7 @@ class InferenceModel(ABC):
         Args:
             output_dir (Path): Output dataset directory
             filename (str): Output .json filename
-            spec_json (dict): Input dataset .json
+            dataset_info (DatasetInfo): Dataset info
             num_elements (int): Number of processed rows
         """
 
@@ -284,9 +284,9 @@ class InferenceModel(ABC):
         # Or create .json from scratch
         else:
             output_json = {
-                "id": spec_json["id"],
-                "name": spec_json["name"],
-                "description": spec_json["description"],
+                "id": dataset_info.id,
+                "name": dataset_info.name,
+                "description": dataset_info.description,
                 "num_elements": num_elements,
                 "model_id": self.id,
                 "model_name": self.name,
