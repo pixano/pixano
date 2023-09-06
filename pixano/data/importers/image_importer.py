@@ -88,8 +88,8 @@ class ImageImporter(Importer):
                 row = {
                     "id": im_path.name,
                     "image": Image(im_uri, None, im_thumb),
-                    "split": split,
                     "objects": [],
+                    "split": split,
                 }
 
                 yield super().dict_to_recordbatch(row)
