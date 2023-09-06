@@ -339,27 +339,8 @@ def save_item_annotations(
 
         # If ObjectAnnotation field not in schema
         if objects_field_name not in selected_ds.schema.names:
-            raise Exception("Missing ObjectAnnotation field in dataset schema")
-
             # TODO: Add ObjectAnnotation field to schema if missing
-            # # Update schema
-            # schema = pa.schema(dataset.info.fields.to_pyarrow())
-            # lance_schema = lance.json_to_schema(lance.schema_to_json(schema))
-
-            # # Update dataset
-            # objects_array = pyarrow_array_from_list(
-            #     [[]] * selected_ds.count_rows(),
-            #     schema.field(objects_field_name).type,
-            # )
-            # objects_table = selected_ds.to_table(["id"])
-            # objects_table = objects_table.append_column(
-            #     schema.field(objects_field_name), objects_array
-            # )
-            # objects = pa.RecordBatchReader.from_batches(
-            #     lance_schema, objects_table.to_batches()
-            # )
-            # print(objects.schema)
-            # selected_ds.merge(objects_table, "id", schema=lance_schema)
+            raise Exception("Missing ObjectAnnotation field in dataset schema")
 
         # Create updated item
         updated_item_arrays = [
