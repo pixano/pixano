@@ -138,11 +138,11 @@ class InferenceModel(ABC):
         schema = pa.schema([pa.field("id", pa.string())])
         if process_type == "infer":
             schema.append(
-                pa.field("objects", pa.list_(ObjectAnnotationType())),
+                pa.field("objects", pa.list_(ObjectAnnotationType)),
             )
         elif process_type == "embed":
             for view in views:
-                schema.append(pa.field(f"{view}_embedding", EmbeddingType()))
+                schema.append(pa.field(f"{view}_embedding", EmbeddingType))
 
         # Load dataset
         input_ds = dataset.load()
