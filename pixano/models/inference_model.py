@@ -163,12 +163,12 @@ class InferenceModel(ABC):
         if process_type == "infer":
             fields.extend(
                 [
-                    pa.field("objects", pa.list_(ObjectAnnotationType())),
+                    pa.field("objects", pa.list_(ObjectAnnotationType)),
                 ]
             )
         elif process_type == "embed":
             fields.extend(
-                [pa.field(f"{view}_embedding", EmbeddingType()) for view in views]
+                [pa.field(f"{view}_embedding", EmbeddingType) for view in views]
             )
         schema = pa.schema(fields)
 
