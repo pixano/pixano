@@ -67,7 +67,7 @@ def pyarrow_array_from_list(
     """Convert data from Python list to PyArrow array
 
     Args:
-        data (list): Data as Python list
+        list_data (list): Data as Python list
         type (pa.ExtensionType | pa.DataType): PyArrow base or custom extension type
 
     Raises:

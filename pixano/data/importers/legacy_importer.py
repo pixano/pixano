@@ -88,7 +88,6 @@ class LegacyImporter(Importer):
 
         Args:
             input_dirs (dict[str, Path]): Input directory workspace for json files and images
-            split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
