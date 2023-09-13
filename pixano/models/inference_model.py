@@ -151,7 +151,7 @@ class InferenceModel(ABC):
 
         # Process dataset
         reader = pa.RecordBatchReader.from_batches(
-            self.schema,
+            schema,
             tqdm(
                 [
                     self.inference_batch(batch, views, uri_prefix, threshold)
