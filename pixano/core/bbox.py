@@ -12,8 +12,8 @@
 # http://www.cecill.info
 
 
+import numpy as np
 import pyarrow as pa
-from PIL import Image
 from pydantic import BaseModel
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
@@ -51,8 +51,72 @@ class BBox(PixanoType, BaseModel):
         # Define public attributes through Pydantic BaseModel
         super().__init__(coords=coords, format=format, is_normalized=is_normalized)
 
-    @classmethod
-    def from_xyxy(cls, xyxy: list[float]) -> "BBox":
+    @property
+    def xyxy_coords(self) -> list[float]:
+        """Get bounding box xyxy coordinates
+
+        Returns:
+            list[float]: Coordinates in xyxy format
+        """
+
+        return self.coords if self.format == "xyxy" else xywh_to_xyxy(self.coords)
+
+    @property
+    def xywh_coords(self) -> list[float]:
+        """Get bounding box xywh coordinates
+
+        Returns:
+            list[float]: Coordinates in xywh format
+        """
+
+        return self.coords if self.format == "xywh" else xyxy_to_xywh(self.coords)
+
+    def to_xyxy(self) -> "BBox":
+        """Return bounding box in xyxy format
+
+        Returns:
+            BBox: Bounding box in xyxy format
+        """
+
+        return BBox(self.xyxy_coords, "xyxy", self.is_normalized)
+
+    def to_xywh(self) -> "BBox":
+        """Return bounding box in xywh format
+
+        Returns:
+            BBox: Bounding box in xyxy format
+        """
+
+        return BBox(self.xywh_coords, "xywh", self.is_normalized)
+
+    def normalize(self, height: int, width: int) -> "BBox":
+        """Return bounding box with coordinates normalized to image size
+
+        Args:
+            height (int): Image height
+            width (int): Image width
+
+        Returns:
+            BBox: Bounding box with coordinates normalized to image size
+        """
+
+        return BBox(normalize_coords(self.coords, height, width), self.format, True)
+
+    def denormalize(self, height: int, width: int) -> "BBox":
+        """Return bounding box with coordinates denormalized from image size
+
+        Args:
+            height (int): Image height
+            width (int): Image width
+
+        Returns:
+            BBox: Bounding box with coordinates denormalized from image size
+        """
+
+        return BBox(denormalize_coords(self.coords, height, width), self.format, False)
+
+    @staticmethod
+    def from_xyxy(xyxy: list[float]) -> "BBox":
         """Create bounding box using normalized xyxy coordinates
 
         Args:
@@ -64,8 +128,8 @@ class BBox(PixanoType, BaseModel):
 
         return BBox(xyxy, "xyxy")
 
-    @classmethod
-    def from_xywh(cls, xywh: list[float]) -> "BBox":
+    @staticmethod
+    def from_xywh(xywh: list[float]) -> "BBox":
         """Create bounding box using normalized xywh coordinates
 
         Args:
@@ -78,66 +142,17 @@ class BBox(PixanoType, BaseModel):
         return BBox(xywh, "xywh")
 
     @staticmethod
-    def from_mask(mask: Image.Image):
+    def from_mask(mask: np.ndarray) -> "BBox":
+        """Create bounding box using a NumPy array mask
+
+        Args:
+            mask (np.ndarray): NumPy array mask
+
+        Returns:
+            Bbox: Bounding box
+        """
+
         return BBox.from_xywh(mask_to_bbox(mask))
-
-    def to_xyxy(self) -> list[float]:
-        """Get bounding box xyxy coordinates
-
-        Returns:
-            list[float]: Coordinates in xyxy format
-        """
-
-        if self.format == "xywh":
-            return xywh_to_xyxy(self.coords)
-        return self.coords
-
-    def to_xywh(self) -> list[float]:
-        """Get bounding box xywh coordinates
-
-        Returns:
-            list[float]: Coordinates in xywh format
-        """
-
-        if self.format == "xyxy":
-            return xyxy_to_xywh(self.coords)
-        return self.coords
-
-    def format_xyxy(self):
-        """Transform bounding box to xyxy format"""
-
-        if self.format == "xywh":
-            self.coords = xywh_to_xyxy(self.coords)
-            self.format = "xyxy"
-
-    def format_xywh(self):
-        """Transform bounding box to xywh format"""
-
-        if self.format == "xyxy":
-            self.coords = xyxy_to_xywh(self.coords)
-            self.format = "xywh"
-
-    def normalize(self, height: int, width: int):
-        """Normalize coordinates to image size
-
-        Args:
-            height (int): Image height
-            width (int): Image width
-        """
-
-        self.coords = normalize_coords(self.coords, height, width)
-        self.is_normalized = True
-
-    def denormalize(self, height: int, width: int):
-        """Normalize coordinates to image size
-
-        Args:
-            height (int): Image height
-            width (int): Image width
-        """
-
-        self.coords = denormalize_coords(self.coords, height, width)
-        self.is_normalized = False
 
     @staticmethod
     def to_struct() -> pa.StructType:

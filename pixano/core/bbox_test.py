@@ -24,10 +24,14 @@ from pixano.core.bbox import BBox, BBoxType
 
 class BBoxTestCase(unittest.TestCase):
     def setUp(self):
-        self.xyxy_coords = [0.1, 0.2, 0.3, 0.4]
-        self.xywh_coords = [0.1, 0.2, 0.3, 0.4]
-        self.bbox_xyxy = BBox.from_xyxy(self.xyxy_coords)
-        self.bbox_xywh = BBox.from_xywh(self.xywh_coords)
+        self.height = 4
+        self.width = 6
+        self.xyxy = [1, 1, 3, 3]
+        self.xywh = [1, 1, 2, 2]
+        self.normalized_xyxy = [1 / 6, 1 / 4, 3 / 6, 3 / 4]
+        self.normalized_xywh = [1 / 6, 1 / 4, 2 / 6, 2 / 4]
+        self.bbox_xyxy = BBox.from_xyxy(self.xyxy)
+        self.bbox_xywh = BBox.from_xywh(self.xywh)
 
     def test_format_property(self):
         self.assertEqual(self.bbox_xyxy.format, "xyxy")
@@ -37,31 +41,29 @@ class BBoxTestCase(unittest.TestCase):
         self.assertTrue(self.bbox_xyxy.is_normalized)
         self.assertTrue(self.bbox_xywh.is_normalized)
 
-    def test_to_xyxy(self):
-        converted_coords = self.bbox_xyxy.to_xyxy()
-        self.assertTrue(np.allclose(converted_coords, self.xyxy_coords))
+    def test_xyxy_coords(self):
+        converted_coords = self.bbox_xywh.xyxy_coords
+        self.assertTrue(np.allclose(converted_coords, self.xyxy))
 
-    def test_to_xywh(self):
-        converted_coords = self.bbox_xywh.to_xywh()
-        self.assertTrue(np.allclose(converted_coords, self.xywh_coords))
+    def test_xywh_coords(self):
+        converted_coords = self.bbox_xyxy.xywh_coords
+        self.assertTrue(np.allclose(converted_coords, self.xywh))
 
     def test_format_conversion(self):
-        self.bbox_xyxy.format_xywh()
-        self.assertEqual(self.bbox_xyxy.format, "xywh")
-        self.assertTrue(np.allclose(self.bbox_xyxy.to_xywh(), [0.1, 0.2, 0.2, 0.2]))
+        converted_xywh_bbox = self.bbox_xyxy.to_xywh()
+        self.assertEqual(converted_xywh_bbox.format, "xywh")
+        self.assertTrue(np.allclose(converted_xywh_bbox.xywh_coords, self.xywh))
 
-        self.bbox_xywh.format_xyxy()
-        self.assertEqual(self.bbox_xywh.format, "xyxy")
-        self.assertTrue(np.allclose(self.bbox_xywh.to_xyxy(), [0.1, 0.2, 0.4, 0.6]))
+        converted_xyxy_bbox = self.bbox_xywh.to_xyxy()
+        self.assertEqual(converted_xyxy_bbox.format, "xyxy")
+        self.assertTrue(np.allclose(converted_xyxy_bbox.xyxy_coords, self.xyxy))
 
-    def test_normalize(self):
-        self.bbox_to_normalize = BBox.from_xyxy([10, 10, 20, 20])
-        height = 100
-        width = 200
-        self.bbox_to_normalize.normalize(height, width)
-        self.assertTrue(
-            np.allclose(self.bbox_to_normalize.to_xyxy(), [0.05, 0.1, 0.1, 0.2])
-        )
+    def test_normalization(self):
+        normalized_bbox = self.bbox_xyxy.normalize(self.height, self.width)
+        self.assertTrue(np.allclose(normalized_bbox.xyxy_coords, self.normalized_xyxy))
+
+        denormalized_bbox = normalized_bbox.denormalize(self.height, self.width)
+        self.assertTrue(np.allclose(denormalized_bbox.xyxy_coords, self.xyxy))
 
 
 class TestParquetBBox(unittest.TestCase):
@@ -85,4 +87,4 @@ class TestParquetBBox(unittest.TestCase):
         self.assertEqual(re_table.column_names, ["bbox"])
         Bbox0 = re_table.to_pylist()[0]["bbox"]
         self.assertTrue(isinstance(Bbox0, BBox))
-        self.assertTrue(np.allclose(self.bbox_list[0].to_xyxy(), Bbox0.to_xyxy()))
+        self.assertTrue(np.allclose(self.bbox_list[0].xyxy_coords, Bbox0.xyxy_coords))
