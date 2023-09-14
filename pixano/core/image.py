@@ -178,8 +178,8 @@ class Image(PixanoType, BaseModel):
         im_bytes = self.preview_bytes if preview else self.get_bytes()
         return IPyImage(url=binary_to_url(im_bytes), format=IPyImage(im_bytes).format)
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return Image type as PyArrow Struct
 
         Returns:

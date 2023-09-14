@@ -62,8 +62,8 @@ class ObjectAnnotation(PixanoType, BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return ObjectAnnotation type as PyArrow Struct
 
         Returns:

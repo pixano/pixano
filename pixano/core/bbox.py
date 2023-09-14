@@ -139,8 +139,8 @@ class BBox(PixanoType, BaseModel):
         self.coords = denormalize_coords(self.coords, height, width)
         self.is_normalized = False
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return BBox type as PyArrow Struct
 
         Returns:

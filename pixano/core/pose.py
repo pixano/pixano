@@ -63,8 +63,8 @@ class Pose(PixanoType, BaseModel):
 
         return self._cam_t_m2c
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return Pose type as PyArrow Struct
 
         Returns:

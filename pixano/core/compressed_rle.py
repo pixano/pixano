@@ -114,8 +114,7 @@ class CompressedRLE(PixanoType, BaseModel):
             CompressedRLE: Compressed RLE mask
         """
 
-        rle_dict = mask_to_rle(mask)
-        return CompressedRLE.from_dict(rle_dict)
+        return CompressedRLE.from_dict(mask_to_rle(mask))
 
     @staticmethod
     def from_urle(urle: dict[str, Any]) -> "CompressedRLE":
@@ -128,8 +127,7 @@ class CompressedRLE(PixanoType, BaseModel):
             CompressedRLE: Compressed RLE mask
         """
 
-        rle_dict = urle_to_rle(urle)
-        return CompressedRLE.from_dict(rle_dict)
+        return CompressedRLE.from_dict(urle_to_rle(urle))
 
     @staticmethod
     def from_polygons(
@@ -148,8 +146,7 @@ class CompressedRLE(PixanoType, BaseModel):
             CompressedRLE: Compressed RLE mask
         """
 
-        rle_dict = polygons_to_rle(polygons, height, width)
-        return CompressedRLE.from_dict(rle_dict)
+        return CompressedRLE.from_dict(polygons_to_rle(polygons, height, width))
 
     @staticmethod
     def encode(
@@ -166,11 +163,10 @@ class CompressedRLE(PixanoType, BaseModel):
             CompressedRLE: Compressed RLE mask
         """
 
-        rle_dict = encode_rle(mask, height, width)
-        return CompressedRLE.from_dict(rle_dict)
+        return CompressedRLE.from_dict(encode_rle(mask, height, width))
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return CompressedRLE type as PyArrow Struct
 
         Returns:

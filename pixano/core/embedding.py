@@ -49,8 +49,8 @@ class Embedding(PixanoType, BaseModel):
 
         return self._bytes
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return Embedding type as PyArrow Struct
 
         Returns:

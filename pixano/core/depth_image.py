@@ -156,8 +156,8 @@ class DepthImage(PixanoType, BaseModel):
             plt.figure(figsize=self._shape)
         plt.show()
 
-    @classmethod
-    def to_struct(cls) -> pa.StructType:
+    @staticmethod
+    def to_struct() -> pa.StructType:
         """Return DepthImage type as PyArrow Struct
 
         Returns:
