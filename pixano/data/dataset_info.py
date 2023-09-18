@@ -31,8 +31,7 @@ class DatasetInfo(BaseModel):
         categories (list[dict], optional): Dataset categories
         model_id (str, optional): Model ID
         model_name (str, optional): Model name
-        model_source (str, optional): Model source
-        model_info (str, optional): Model info
+        model_description (str, optional): Model description
     """
 
     id: str
@@ -44,8 +43,7 @@ class DatasetInfo(BaseModel):
     categories: Optional[list[dict]]
     model_id: Optional[str]
     model_name: Optional[str]
-    model_source: Optional[str]
-    model_info: Optional[str]
+    model_description: Optional[str]
 
     class Config:
         arbitrary_types_allowed = True

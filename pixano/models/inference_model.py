@@ -29,10 +29,9 @@ class InferenceModel(ABC):
 
     Attributes:
         name (str): Model name
-        id (str, optional): Model ID
-        device (str, optional): Model GPU or CPU device
-        source (str, optional): Model source
-        info (str, optional): Additional model info
+        id (str): Model ID
+        device (str): Model GPU or CPU device
+        description (str): Model description
     """
 
     def __init__(
@@ -40,8 +39,7 @@ class InferenceModel(ABC):
         name: str,
         id: str = "",
         device: str = "",
-        source: str = "",
-        info: str = "",
+        description: str = "",
     ) -> None:
         """Initialize model name and ID
 
@@ -49,8 +47,7 @@ class InferenceModel(ABC):
             name (str): Model name
             id (str, optional): Model ID. Defaults to "".
             device (str, optional): Model GPU or CPU device. Defaults to "".
-            source (str, optional): Model source. Defaults to "".
-            info (str, optional): Additional model info. Defaults to "".
+            description (str, optional): Model description. Defaults to "".
         """
 
         self.name = name
@@ -59,8 +56,7 @@ class InferenceModel(ABC):
         else:
             self.id = id
         self.device = device
-        self.source = source
-        self.info = info
+        self.description = description
 
     def inference_batch(
         self,
@@ -212,8 +208,7 @@ class InferenceModel(ABC):
                 "num_elements": num_elements,
                 "model_id": self.id,
                 "model_name": self.name,
-                "model_source": self.source,
-                "model_info": self.info,
+                "model_description": self.description,
             }
 
         # Save .json
