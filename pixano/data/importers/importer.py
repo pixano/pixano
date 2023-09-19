@@ -18,7 +18,6 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from io import BytesIO
 from pathlib import Path
-from typing import Any
 
 import lance
 import numpy as np
@@ -325,13 +324,11 @@ class Importer(ABC):
 
         pass
 
-    def dict_to_recordbatch(
-        self, row: dict[str, list[Any] | list[list[Any]]]
-    ) -> pa.RecordBatch:
+    def dict_to_recordbatch(self, row: dict[str, list]) -> pa.RecordBatch:
         """Convert a dataset row from a Python dict to a PyArrow RecordBatch
 
         Args:
-            row (dict): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
+            row (dict[str, list]): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
 
         Returns:
             pa.RecordBatch: PyArrow RecordBatch
