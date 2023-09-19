@@ -20,8 +20,8 @@ import lance
 import pyarrow as pa
 from tqdm.auto import tqdm
 
-from pixano.core import EmbeddingType, ObjectAnnotationType
-from pixano.data import Dataset, DatasetInfo
+from pixano.core import EmbeddingType, ObjectAnnotationType, pyarrow_array_from_list
+from pixano.data import Dataset, DatasetInfo, Fields
 
 
 class InferenceModel(ABC):
@@ -100,7 +100,7 @@ class InferenceModel(ABC):
 
     def process_dataset(
         self,
-        input_dir: Path,
+        dataset_dir: Path,
         process_type: str,
         views: list[str],
         splits: list[str] = [],
@@ -110,7 +110,7 @@ class InferenceModel(ABC):
         """Process dataset for inference preannotation or embedding precomputing
 
         Args:
-            input_dir (Path): Input dataset directory
+            dataset_dir (Path): Input dataset directory
             process_type (str): Process type ('infer' for inference preannotation or 'embed' for embedding precomputing)
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if []. Defaults to [].
@@ -121,24 +121,38 @@ class InferenceModel(ABC):
             Path: Output dataset directory
         """
 
-        output_dir = input_dir / f"db_{process_type}_{self.id}"
+        output_filename = f"db_{process_type}_{self.id}"
 
         # Input dataset
-        dataset = Dataset(input_dir)
+        dataset = Dataset(dataset_dir)
 
         # Create URI prefix
-        media_dir = input_dir / "media"
+        media_dir = dataset_dir / "media"
         uri_prefix = media_dir.absolute().as_uri()
 
         # Create inference schema
-        schema = pa.schema([pa.field("id", pa.string())])
+        self.schema = pa.schema(
+            [pa.field("id", pa.string()), pa.field("split", pa.string())]
+        )
+        fields_dict = {"id": "str", "split": "str"}
+
+        # Inference generation schema
         if process_type == "infer":
-            schema.append(
+            self.schema = self.schema.append(
                 pa.field("objects", pa.list_(ObjectAnnotationType)),
             )
+            fields_dict["objects"] = "[objectannotation]"
+
+        # Embedding precomputing schema
         elif process_type == "embed":
             for view in views:
-                schema.append(pa.field(f"{view}_embedding", EmbeddingType))
+                self.schema = self.schema.append(
+                    pa.field(f"{view}_embedding", EmbeddingType)
+                )
+                fields_dict[f"{view}_embedding"] = "embedding"
+
+        # Create fields
+        self.fields = Fields.from_dict(fields_dict)
 
         # Load dataset
         input_ds = dataset.load()
@@ -147,55 +161,73 @@ class InferenceModel(ABC):
 
         # Process dataset
         reader = pa.RecordBatchReader.from_batches(
-            schema,
-            tqdm(
-                [
-                    self.inference_batch(batch, views, uri_prefix, threshold)
-                    if process_type == "infer"
-                    else self.embedding_batch(batch, views, uri_prefix)
-                    if process_type == "embed"
-                    else None
-                    for batch in batches
-                ],
-                desc="Importing dataset",
-            ),
-            desc="Importing dataset",
+            self.schema,
+            [
+                self.inference_batch(batch, views, uri_prefix, threshold)
+                if process_type == "infer"
+                else self.embedding_batch(batch, views, uri_prefix)
+                if process_type == "embed"
+                else None
+                for batch in batches
+            ],
         )
 
         # Save inference dataset
         inference_ds = lance.write_dataset(
-            reader, dataset.path / "db.lance", mode="overwrite"
+            reader,
+            dataset_dir / f"{output_filename}.lance",
+            mode="overwrite",
         )
 
         # Save.json
         self.create_json(
-            output_dir=output_dir,
-            filename=process_type,
+            output_filename=output_filename,
             dataset_info=dataset.info,
             num_elements=inference_ds.count_rows(),
         )
 
-        return output_dir
+        return Path(dataset_dir / f"{output_filename}.lance")
+
+    def dicts_to_recordbatch(self, rows: list[dict[str, list]]) -> pa.RecordBatch:
+        """Convert a dataset row from a Python dict to a PyArrow RecordBatch
+
+        Args:
+            rows (list[dict[str, list]]): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
+
+        Returns:
+            pa.RecordBatch: PyArrow RecordBatch
+        """
+
+        # Compare dict keys to field names
+        if set(rows[0].keys()) != set(self.fields.to_dict().keys()):
+            raise ValueError("Dict keys do not match the names of the dataset fields")
+
+        # Convert the dict to a list of PyArrow arrays
+        arrays = [
+            pyarrow_array_from_list([row[field.name] for row in rows], field.type)
+            for field in self.schema
+        ]
+
+        # Create the RecordBatch from PyArrow arrays
+        return pa.RecordBatch.from_struct_array(pa.StructArray.from_arrays(arrays))
 
     def create_json(
         self,
-        output_dir: Path,
-        filename: str,
+        output_filename: str,
         dataset_info: DatasetInfo,
         num_elements: int,
     ):
         """Save output .json
 
         Args:
-            output_dir (Path): Output dataset directory
-            filename (str): Output .json filename
+            output_filename (str): Output filename
             dataset_info (DatasetInfo): Dataset info
             num_elements (int): Number of processed rows
         """
 
         # Load existing .json
-        if (output_dir / f"{filename}.json").is_file():
-            with open(output_dir / f"{filename}.json", "r") as f:
+        if (f"{output_filename}.json").is_file():
+            with open(f"{output_filename}.json", "r") as f:
                 output_json = json.load(f)
             output_json["num_elements"] += num_elements
 
@@ -212,7 +244,7 @@ class InferenceModel(ABC):
             }
 
         # Save .json
-        with open(output_dir / f"{filename}.json", "w") as f:
+        with open(f"{output_filename}.json", "w") as f:
             json.dump(output_json, f)
 
     def export_to_onnx(self, library_dir: Path):
