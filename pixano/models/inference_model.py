@@ -64,7 +64,7 @@ class InferenceModel(ABC):
         views: list[str],
         uri_prefix: str,
         threshold: float = 0.0,
-    ) -> list[dict]:
+    ) -> pa.RecordBatch:
         """Inference preannotation for a batch
 
         Args:
@@ -74,7 +74,7 @@ class InferenceModel(ABC):
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            list[dict]: Inference rows
+            pa.RecordBatch: Inference rows
         """
 
         pass
@@ -84,7 +84,7 @@ class InferenceModel(ABC):
         batch: pa.RecordBatch,
         views: list[str],
         uri_prefix: str,
-    ) -> list[dict]:
+    ) -> pa.RecordBatch:
         """Embedding precomputing for a batch
 
         Args:
@@ -93,7 +93,7 @@ class InferenceModel(ABC):
             uri_prefix (str): URI prefix for media files
 
         Returns:
-            list[dict]: Inference rows
+            pa.RecordBatch: Embedding rows
         """
 
         pass
