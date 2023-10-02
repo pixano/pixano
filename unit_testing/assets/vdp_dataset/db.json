@@ -1,0 +1,7 @@
+{
+  "id": "vdp_dataset",
+  "name": "VDP Dataset",
+  "description": "Sample VDP dataset for unit testing",
+  "num_elements": 40,
+  "preview": null
+}

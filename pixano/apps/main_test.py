@@ -41,7 +41,7 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("preview", ds)
 
     def test_get_dataset(self):
-        response = self.client.get("/datasets/MnjtXpkLYyJjGo4VhW3wAn")
+        response = self.client.get("/datasets/vdp_dataset")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -52,7 +52,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("preview", output)
 
     def test_get_dataset_items(self):
-        response = self.client.get("/datasets/MnjtXpkLYyJjGo4VhW3wAn/items")
+        response = self.client.get("/datasets/vdp_dataset/items")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -63,7 +63,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("pages", output)
 
     def test_get_dataset_stats(self):
-        response = self.client.get("/datasets/MnjtXpkLYyJjGo4VhW3wAn/stats")
+        response = self.client.get("/datasets/vdp_dataset/stats")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)

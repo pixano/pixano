@@ -89,7 +89,7 @@ def load_dataset_stats(ds_id: str, settings: Settings) -> dict:
 
     ds = load_dataset(ds_id, settings)
     if ds is not None:
-        stats_file = ds.path / "db_feature_statistics.json"
+        stats_file = ds.path / "stats.json"
         if stats_file.is_file():
             with open(stats_file, "r") as f:
                 return json.load(f)
