@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 

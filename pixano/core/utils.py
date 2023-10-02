@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-
 import pyarrow as pa
 
 from pixano.core.image import ImageType

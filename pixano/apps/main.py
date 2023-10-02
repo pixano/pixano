@@ -12,7 +12,6 @@
 #
 # http://www.cecill.info
 
-
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

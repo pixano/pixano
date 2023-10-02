@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-
 from pixano.data.dataset import Dataset, EmbeddingDataset, InferenceDataset
 from pixano.data.dataset_info import DatasetInfo
 from pixano.data.exporters import COCOExporter, Exporter

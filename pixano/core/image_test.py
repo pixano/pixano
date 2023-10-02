@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-
 import tempfile
 import unittest
 from io import BytesIO
