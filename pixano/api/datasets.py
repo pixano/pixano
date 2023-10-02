@@ -41,11 +41,11 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
     """
 
     infos = []
-    for spec in sorted(settings.data_dir.glob("*/spec.json")):
+    for json_file in sorted(settings.data_dir.glob("*/db.json")):
         # Load dataset info
-        info = DatasetInfo.parse_file(spec)
+        info = DatasetInfo.parse_file(json_file)
         # Load thumbnail
-        preview_path = spec.parent / "preview.png"
+        preview_path = json_file.parent / "preview.png"
         if preview_path.is_file():
             im = Image(uri=preview_path.absolute().as_uri())
             info.preview = im.url
@@ -70,10 +70,10 @@ def load_dataset(ds_id: str, settings: Settings) -> Dataset:
         Dataset: Dataset
     """
 
-    for spec in settings.data_dir.glob("*/spec.json"):
-        info = DatasetInfo.parse_file(spec)
+    for json_file in settings.data_dir.glob("*/db.json"):
+        info = DatasetInfo.parse_file(json_file)
         if ds_id == info.id:
-            return Dataset(spec.parent)
+            return Dataset(json_file.parent)
 
 
 def load_dataset_stats(ds_id: str, settings: Settings) -> dict:

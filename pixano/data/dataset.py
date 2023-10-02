@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 
 import lance
+import lancedb
 import pyarrow as pa
 import pyarrow.dataset as ds
 
@@ -74,33 +75,14 @@ class Dataset:
 
         return self._path / "media"
 
-    @property
-    def is_lance(self) -> bool:
-        """Check if dataset is saved in Lance format
+    def connect(self) -> lancedb.DBConnection:
+        """Connect to dataset with LanceDB
 
         Returns:
-            bool: True if dataset is saved in Lance format
+            lancedb.DBConnection: Dataset LanceDB connection
         """
 
-        return (self._path / "db.lance").exists()
-
-    def load(self) -> lance.LanceDataset:
-        """Load dataset as Lance dataset
-
-        Returns:
-            lance.LanceDataset: Dataset as Lance dataset
-        """
-
-        return lance.dataset(self._path / "db.lance")
-
-    def load_pyarrow(self) -> ds.Dataset:
-        """Load dataset as PyArrow dataset
-
-        Returns:
-            ds.Dataset: Dataset as PyArrow dataset
-        """
-
-        return ds.dataset(self._path / "db", partitioning=self._partitioning)
+        return lancedb.connect(self._path)
 
     def save_info(self):
         """Save dataset info to file"""

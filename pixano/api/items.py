@@ -17,9 +17,7 @@ from typing import Any
 
 import lance
 import pyarrow as pa
-import pyarrow.compute as pc
 import pyarrow.dataset as ds
-import pyarrow.parquet as pq
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
@@ -28,17 +26,14 @@ from pixano.core import (
     BBox,
     CompressedRLE,
     Image,
-    ImageType,
     ObjectAnnotation,
-    ObjectAnnotationType,
-    convert_field,
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
     pyarrow_array_from_list,
 )
 from pixano.data import Dataset, EmbeddingDataset, Fields, InferenceDataset
-from pixano.utils import format_bbox, natural_key
+from pixano.utils import format_bbox
 
 
 class ItemFeature(BaseModel):
@@ -110,35 +105,32 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     """
 
     # Load dataset
-    selected_ds = dataset.load() if dataset.is_lance else dataset.load_pyarrow()
+    ds = dataset.connect()
+    main_table: lance.LanceDataset = ds.open_table("db").to_lance()
     fields = dataset.info.fields.to_dict() if dataset.info.fields else defaultdict(str)
 
     # Get page parameters
     params = resolve_params(params)
     raw_params = params.to_raw_params()
-    total = selected_ds.count_rows()
+    total = main_table.count_rows()
 
     # Get page items
     start = raw_params.offset
     stop = min(raw_params.offset + raw_params.limit, total)
     if start >= stop:
         return None
-    items_table = (
-        selected_ds.to_table(limit=raw_params.limit, offset=raw_params.offset)
-        if dataset.is_lance
-        else selected_ds.take(range(start, stop))
-    )
+    items_table = main_table.to_table(limit=raw_params.limit, offset=raw_params.offset)
 
     # Create items features
     items = [
-        _create_features(item, selected_ds.schema, fields)
+        _create_features(item, main_table.schema, fields)
         for item in items_table.to_pylist()
     ]
 
     return create_page(items, total=total, params=params)
 
 
-def load_item_details(
+def load_item_objects(
     dataset: Dataset,
     item_id: str,
     media_dir: Path,
@@ -158,33 +150,18 @@ def load_item_details(
 
     fields = dataset.info.fields.to_dict() if dataset.info.fields else defaultdict(str)
 
-    if dataset.is_lance:
-        # Load dataset
-        selected_ds = dataset.load()
+    # Load dataset
+    selected_ds = dataset.load()
 
-        # Get item
-        scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
-        item = scanner.to_table().to_pylist()[0]
+    # Get item
+    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
+    item = scanner.to_table().to_pylist()[0]
 
-        # Get objects
-        objects = []
-        for field_name, field_type in fields.items():
-            if field_type == "[ObjectAnnotation]" and field_name in item:
-                objects.extend(item[field_name])
-
-    else:
-        # Load dataset
-        selected_ds = dataset.load_pyarrow()
-
-        # Get item
-        scanner = selected_ds.scanner(filter=ds.field("id").isin([item_id]))
-        item = scanner.to_table().to_pylist()[0]
-
-        # Get objects
-        objects = []
-        for field in selected_ds.schema:
-            if field.name == "objects" or is_list_of_object_annotation_type(field.type):
-                objects.extend(item[field.name])
+    # Get objects
+    objects = []
+    for field_name, field_type in fields.items():
+        if field_type == "[ObjectAnnotation]" and field_name in item:
+            objects.extend(item[field_name])
 
     # Get item inference objects
     for inf_ds in inf_datasets:
@@ -265,7 +242,7 @@ def load_item_details(
     return item_details
 
 
-def load_item_embedding(emb_ds: EmbeddingDataset, item_id: str, view: str) -> bytes:
+def load_item_embeddings(emb_ds: EmbeddingDataset, item_id: str, view: str) -> bytes:
     """Get item embedding for a view
 
     Args:
@@ -286,7 +263,7 @@ def load_item_embedding(emb_ds: EmbeddingDataset, item_id: str, view: str) -> by
     return emb_item[f"{view}_embedding"]
 
 
-def save_item_annotations(
+def save_item_objects(
     dataset: Dataset,
     item_id: str,
     annotations: list[ObjectAnnotation],
@@ -308,170 +285,55 @@ def save_item_annotations(
             else BBox.from_mask(ann.mask.to_mask())
         )
 
-    if dataset.is_lance:
-        # Load dataset
-        selected_ds = dataset.load()
-        fields = dataset.info.fields.to_dict()
-        schema = pa.schema(dataset.info.fields.to_pyarrow())
+    # Load dataset
+    selected_ds = dataset.load()
+    fields = dataset.info.fields.to_dict()
+    schema = pa.schema(dataset.info.fields.to_pyarrow())
 
-        # Get item
-        scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
-        item = scanner.to_table().to_pylist()[0]
-        objects_field_name = ""
+    # Get item
+    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
+    item = scanner.to_table().to_pylist()[0]
+    objects_field_name = ""
 
-        # Check if ObjectAnnotation field exists
-        for field_name, field_type in fields.items():
-            if field_type == "[ObjectAnnotation]" and objects_field_name == "":
-                # ObjectAnnotation field exists
-                objects_field_name = field_name
-                # Add new annotations to item
-                item[objects_field_name] = annotations
-
-        # If ObjectAnnotation field not in fields
-        if objects_field_name == "":
-            objects_field_name = "objects"
+    # Check if ObjectAnnotation field exists
+    for field_name, field_type in fields.items():
+        if field_type == "[ObjectAnnotation]" and objects_field_name == "":
+            # ObjectAnnotation field exists
+            objects_field_name = field_name
             # Add new annotations to item
             item[objects_field_name] = annotations
-            # Update fields
-            fields[objects_field_name] = "[ObjectAnnotation]"
-            dataset.info.fields = Fields.from_dict(fields)
-            dataset.save_info()
 
-        # If ObjectAnnotation field not in schema
-        if objects_field_name not in selected_ds.schema.names:
-            # TODO: Add ObjectAnnotation field to schema if missing
-            raise Exception("Missing ObjectAnnotation field in dataset schema")
+    # If ObjectAnnotation field not in fields
+    if objects_field_name == "":
+        objects_field_name = "objects"
+        # Add new annotations to item
+        item[objects_field_name] = annotations
+        # Update fields
+        fields[objects_field_name] = "[ObjectAnnotation]"
+        dataset.info.fields = Fields.from_dict(fields)
+        dataset.save_info()
 
-        # Create updated item
-        updated_item_arrays = [
-            pyarrow_array_from_list([item[field.name]], field.type) for field in schema
-        ]
-        updated_item = pa.RecordBatchReader.from_batches(
-            selected_ds.schema,
-            [
-                pa.RecordBatch.from_struct_array(
-                    pa.StructArray.from_arrays(
-                        updated_item_arrays,
-                        fields=schema,
-                    )
+    # If ObjectAnnotation field not in schema
+    if objects_field_name not in selected_ds.schema.names:
+        # TODO: Add ObjectAnnotation field to schema if missing
+        raise Exception("Missing ObjectAnnotation field in dataset schema")
+
+    # Create updated item
+    updated_item_arrays = [
+        pyarrow_array_from_list([item[field.name]], field.type) for field in schema
+    ]
+    updated_item = pa.RecordBatchReader.from_batches(
+        selected_ds.schema,
+        [
+            pa.RecordBatch.from_struct_array(
+                pa.StructArray.from_arrays(
+                    updated_item_arrays,
+                    fields=schema,
                 )
-            ],
-        )
+            )
+        ],
+    )
 
-        # Replace old item
-        selected_ds.delete(f"id in ('{item_id}')")
-        lance.write_dataset(updated_item, selected_ds.uri, mode="append")
-
-    else:
-        # Dataset files
-        files = (dataset.path / "db").glob("**/*.parquet")
-        files = sorted(files, key=lambda x: natural_key(x.name))
-
-        # Iterate on dataset files
-        for file in files:
-            # Read table
-            table = pq.read_table(file)
-            schema = table.schema
-
-            # Support for previous Image and ObjectAnnotation type
-            fields_to_update = []
-            for field in schema:
-                if (
-                    str(field.type)
-                    == "list<item: struct<id: string, view_id: string, bbox: fixed_size_list<item: float>[4], bbox_source: string, bbox_confidence: float, is_group_of: bool, is_difficult: bool, is_truncated: bool, mask: struct<size: list<item: int32>, counts: binary>, mask_source: string, area: float, pose: struct<cam_R_m2c: fixed_size_list<item: double>[9], cam_t_m2c: fixed_size_list<item: double>[3]>, category_id: int32, category_name: string, identity: string>>"
-                ):
-                    # Update schema with new type
-                    schema = schema.remove(schema.get_field_index("objects"))
-                    schema = schema.append(
-                        pa.field(field.name, pa.list_(ObjectAnnotationType))
-                    )
-                    fields_to_update.append(field.name)
-                if str(field.type) == "extension<Image<CustomExtensionType>>":
-                    # Update schema with new type
-                    schema = schema.remove(schema.get_field_index(field.name))
-                    schema = schema.append(pa.field(field.name, ImageType))
-                    fields_to_update.append(field.name)
-
-            # Look for updated item
-            filter = table.filter(pc.field("id").isin([item_id]))
-            item = filter.to_pylist()
-
-            # If item found
-            if item != []:
-                # Read table without item
-                updated_table = table.filter(
-                    ~pc.field("id").isin([item_id])
-                ).to_pydict()
-
-                # Add item with updated annotations
-                item[0]["objects"] = annotations
-                for field in schema:
-                    updated_table[field.name].append(item[0][field.name])
-
-                # Sort table fields according to IDs
-                for field in schema:
-                    if field.name != "id":
-                        updated_table[field.name] = [
-                            x
-                            for _, x in sorted(
-                                zip(updated_table["id"], updated_table[field.name]),
-                                key=lambda pair: natural_key(pair[0]),
-                            )
-                        ]
-                # Sort table IDs
-                updated_table["id"] = sorted(updated_table["id"], key=natural_key)
-
-                # Support for previous Image and ObjectAnnotation type
-                for field in schema:
-                    if is_image_type(field.type) and field.name in fields_to_update:
-                        for i, item_image in enumerate(updated_table[field.name]):
-                            new_image = Image.from_dict(item_image.to_dict())
-                            updated_table[field.name][i] = new_image
-                    if (
-                        is_list_of_object_annotation_type(field.type)
-                        and field.name in fields_to_update
-                    ):
-                        for i, item_objects in enumerate(updated_table[field.name]):
-                            new_item_objects = []
-                            for obj in item_objects:
-                                if not isinstance(obj, dict):
-                                    obj = obj.to_dict()
-                                # Support for previous BBox type
-                                if isinstance(obj["bbox"], list):
-                                    obj["bbox"] = {
-                                        "coords": obj["bbox"],
-                                        "format": "xywh",
-                                    }
-                                obj["mask_source"] = ""
-                                obj["bbox_source"] = ""
-                                obj = ObjectAnnotation.from_dict(obj)
-                                new_item_objects.append(obj)
-                            updated_table[field.name][i] = new_item_objects
-
-                # Convert ExtensionTypes
-                arrays = []
-                for field in schema:
-                    if is_list_of_object_annotation_type(field.type):
-                        arrays.append(
-                            ObjectAnnotationType.Array.from_pylist(
-                                updated_table[field.name]
-                            )
-                        )
-                    elif is_image_type(field.type):
-                        arrays.append(
-                            ImageType.Array.from_pylist(updated_table[field.name])
-                        )
-                    else:
-                        arrays.append(
-                            convert_field(
-                                field_name=field.name,
-                                field_type=field.type,
-                                field_data=updated_table[field.name],
-                            )
-                        )
-
-                # Save updated table
-                pq.write_table(
-                    pa.Table.from_arrays(arrays, schema=schema),
-                    file,
-                )
+    # Replace old item
+    selected_ds.delete(f"id in ('{item_id}')")
+    lance.write_dataset(updated_item, selected_ds.uri, mode="append")
