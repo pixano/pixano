@@ -74,8 +74,14 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     async def get_datasets_list():
         return load_library(settings)
 
+    @app.get("/datasets/{ds_id}", response_model=DatasetInfo)
+    async def get_dataset(ds_id: str):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        return ds.info
+
     @app.get("/datasets/{ds_id}/items", response_model=Page[ItemFeatures])
-    async def get_dataset_items(ds_id, params: Params = Depends()):
+    async def get_dataset_items(ds_id: str, params: Params = Depends()):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
@@ -88,7 +94,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             return res
 
     @app.get("/datasets/{ds_id}/stats")
-    async def get_dataset_stats(ds_id):
+    async def get_dataset_stats(ds_id: str):
         # Load dataset stats
         stats = load_dataset_stats(ds_id, settings)
         if stats is None:
