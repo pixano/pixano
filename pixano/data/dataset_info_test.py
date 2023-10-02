@@ -32,10 +32,10 @@ class DatasetInfoTestCase(unittest.TestCase):
         )
 
     def test_parse_file(self):
-        with open(self.tmpdir / "spec.json", "w") as f:
+        with open(self.tmpdir / "db.json", "w") as f:
             json.dump(self.info.to_dict(), f)
 
-        info_read = DatasetInfo.parse_file(self.tmpdir / "spec.json")
+        info_read = DatasetInfo.parse_file(self.tmpdir / "db.json")
 
         self.assertTrue(isinstance(info_read, DatasetInfo))
         self.assertEqual(self.info.id, info_read.id)

@@ -43,7 +43,7 @@ class Dataset:
         """
 
         self._path = path
-        self._info = DatasetInfo.parse_file(self._path / "spec.json")
+        self._info = DatasetInfo.parse_file(self._path / "db.json")
 
     @property
     def info(self) -> DatasetInfo:
@@ -87,7 +87,7 @@ class Dataset:
     def save_info(self):
         """Save dataset info to file"""
 
-        with open(self.path / "spec.json", "w") as f:
+        with open(self.path / "db.json", "w") as f:
             json.dump(self.info.to_dict(), f)
 
 
