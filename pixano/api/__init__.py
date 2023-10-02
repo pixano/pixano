@@ -14,10 +14,10 @@
 from pixano.api.datasets import Settings, load_dataset, load_dataset_stats, load_library
 from pixano.api.items import (
     ItemFeatures,
-    load_item_details,
-    load_item_embedding,
+    load_item_embeddings,
+    load_item_objects,
     load_items,
-    save_item_annotations,
+    save_item_objects,
 )
 
 __all__ = [
@@ -26,8 +26,8 @@ __all__ = [
     "load_dataset_stats",
     "load_library",
     "ItemFeatures",
-    "load_item_details",
-    "load_item_embedding",
+    "load_item_embeddings",
+    "load_item_objects",
     "load_items",
-    "save_item_annotations",
+    "save_item_objects",
 ]

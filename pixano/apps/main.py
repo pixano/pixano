@@ -24,11 +24,11 @@ from pixano.api import (
     Settings,
     load_dataset,
     load_dataset_stats,
-    load_item_details,
-    load_item_embedding,
+    load_item_embeddings,
+    load_item_objects,
     load_items,
     load_library,
-    save_item_annotations,
+    save_item_objects,
 )
 from pixano.core import ObjectAnnotation
 from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
@@ -97,8 +97,8 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         # Return dataset stats
         return stats
 
-    @app.get("/datasets/{ds_id}/items/{item_id}")
-    async def get_dataset_item_details(ds_id: str, item_id: str):
+    @app.get("/datasets/{ds_id}/items/{item_id}/objects")
+    async def get_item_objects(ds_id: str, item_id: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
@@ -110,10 +110,10 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             inf_datasets.append(InferenceDataset(inf_json.parent))
 
         # Return item details
-        return load_item_details(ds, item_id, ds.media_dir, inf_datasets)
+        return load_item_objects(ds, item_id, ds.media_dir, inf_datasets)
 
-    @app.post("/datasets/{ds_id}/items/{item_id}/{view}/embedding")
-    async def get_dataset_item_view_embedding(ds_id: str, item_id: str, view: str):
+    @app.post("/datasets/{ds_id}/items/{item_id}/embeddings")
+    async def get_item_embeddings(ds_id: str, item_id: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
@@ -127,13 +127,13 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Embedding dataset not found")
 
         # Return item embedding
-        return Response(content=load_item_embedding(emb_ds, item_id, view))
+        return Response(content=load_item_embeddings(emb_ds, item_id))
 
     @app.post(
-        "/datasets/{ds_id}/items/{item_id}/annotations",
+        "/datasets/{ds_id}/items/{item_id}/objects",
         response_model=list[ObjectAnnotation],
     )
-    async def post_dataset_item_annotations(
+    async def post_item_objects(
         ds_id: str,
         item_id: str,
         annotations: list[ObjectAnnotation],
@@ -144,7 +144,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
 
         # Update dataset annotations
-        save_item_annotations(ds, item_id, annotations)
+        save_item_objects(ds, item_id, annotations)
 
         return Response()
 

@@ -242,17 +242,19 @@ def load_item_objects(
     return item_details
 
 
-def load_item_embeddings(emb_ds: EmbeddingDataset, item_id: str, view: str) -> bytes:
+def load_item_embeddings(emb_ds: EmbeddingDataset, item_id: str) -> bytes:
     """Get item embedding for a view
 
     Args:
         emb_ds (EmbeddingDataset): Embedding dataset
         item_id (str): Item ID
-        view (str): Item embedding view
 
     Returns:
         bytes: Embedding in base 64
     """
+
+    # TODO: load embeddings for all views
+    view = "image"
 
     # Load dataset
     pa_emb_ds = emb_ds.load()
