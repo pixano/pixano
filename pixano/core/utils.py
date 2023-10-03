@@ -15,11 +15,10 @@ import pyarrow as pa
 
 from pixano.core.image import ImageType
 from pixano.core.object_annotation import ObjectAnnotationType
-from pixano.core.pixano_type import convert_field
 
 
 def is_number(t: pa.DataType) -> bool:
-    """Check if DataType is a a number (integer or float)
+    """Check if DataType is a number (integer or float)
 
     Args:
         t (pa.DataType): DataType to check
@@ -29,6 +28,19 @@ def is_number(t: pa.DataType) -> bool:
     """
 
     return pa.types.is_integer(t) or pa.types.is_floating(t)
+
+
+def is_string(t: pa.DataType) -> bool:
+    """Check if DataType is a string
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is a string
+    """
+
+    return pa.types.is_string(t) or pa.types.is_large_string(t)
 
 
 def is_image_type(t: pa.DataType) -> bool:

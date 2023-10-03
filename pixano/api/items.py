@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 import lance
+import duckdb
 import pyarrow as pa
 import pyarrow.dataset as ds
 from fastapi_pagination.api import create_page, resolve_params
@@ -30,6 +31,7 @@ from pixano.core import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
+    is_string,
     pyarrow_array_from_list,
 )
 from pixano.data import Dataset, EmbeddingDataset, Fields, InferenceDataset
@@ -53,15 +55,12 @@ class ItemFeature(BaseModel):
 ItemFeatures = list[ItemFeature]
 
 
-def _create_features(
-    item: list, schema: pa.schema, fields: dict[str, str]
-) -> list[ItemFeature]:
+def _create_features(item: dict, schema: pa.schema) -> list[ItemFeature]:
     """Create features based on field types
 
     Args:
-        row (list): Dataset item
+        item (dict): Dataset item
         schema (pa.schema): Dataset schema
-        fields (dict[str, str]): Dataset fields
 
     Returns:
         list[ItemFeature]: Item as list of features
@@ -77,7 +76,7 @@ def _create_features(
                 ItemFeature(name=field.name, dtype="number", value=item[field.name])
             )
         # Image fields
-        elif is_image_type(field.type) or fields[field.name] == "image":
+        elif field.name in item["views"]:
             if isinstance(item[field.name], dict):
                 item[field.name] = Image.from_dict(item[field.name])
             thumbnail = item[field.name].preview_url
@@ -85,7 +84,7 @@ def _create_features(
                 ItemFeature(name=field.name, dtype="image", value=thumbnail)
             )
         # String fields
-        elif pa.types.is_string(field.type):
+        elif is_string(field.type):
             features.append(
                 ItemFeature(name=field.name, dtype="text", value=item[field.name])
             )
@@ -107,7 +106,10 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     # Load dataset
     ds = dataset.connect()
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
-    fields = dataset.info.fields.to_dict() if dataset.info.fields else defaultdict(str)
+
+    media_tables: list[lance.LanceDataset] = []
+    for media_type in dataset.info.tables["media"]:
+        media_tables.append(ds.open_table(media_type["name"]).to_lance())
 
     # Get page parameters
     params = resolve_params(params)
@@ -119,12 +121,22 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     stop = min(raw_params.offset + raw_params.limit, total)
     if start >= stop:
         return None
-    items_table = main_table.to_table(limit=raw_params.limit, offset=raw_params.offset)
+    pyarrow_table = main_table.to_table(
+        limit=raw_params.limit, offset=raw_params.offset
+    )
+    for media_table in media_tables:
+        pyarrow_media_table = media_table.to_table(
+            limit=raw_params.limit, offset=raw_params.offset
+        )
+        pyarrow_table = duckdb.query(
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table ON pyarrow_table.id = pyarrow_media_table.item_id"
+        ).to_arrow_table()
 
     # Create items features
+    print(pyarrow_table.schema)
     items = [
-        _create_features(item, main_table.schema, fields)
-        for item in items_table.to_pylist()
+        _create_features(item, pyarrow_table.schema)
+        for item in pyarrow_table.to_pylist()
     ]
 
     return create_page(items, total=total, params=params)
@@ -180,7 +192,7 @@ def load_item_objects(
         "itemData": {
             "id": item["id"],
             "views": defaultdict(dict),
-            "features": _create_features(item, selected_ds.schema, fields),
+            "features": _create_features(item, selected_ds.schema),
         },
         "itemObjects": defaultdict(lambda: defaultdict(list)),
     }

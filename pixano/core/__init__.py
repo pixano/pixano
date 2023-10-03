@@ -25,6 +25,7 @@ from pixano.core.utils import (
     is_image_type,
     is_list_of_object_annotation_type,
     is_number,
+    is_string,
     pyarrow_array_from_list,
 )
 
@@ -53,5 +54,6 @@ __all__ = [
     "is_image_type",
     "is_list_of_object_annotation_type",
     "is_number",
+    "is_string",
     "pyarrow_array_from_list",
 ]
