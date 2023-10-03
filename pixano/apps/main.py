@@ -22,11 +22,11 @@ from pixano.api import (
     ItemFeatures,
     Settings,
     load_dataset,
+    load_dataset_list,
     load_dataset_stats,
     load_item_embeddings,
     load_item_objects,
     load_items,
-    load_library,
     save_item_objects,
 )
 from pixano.core import ObjectAnnotation
@@ -71,14 +71,18 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.mount("/models", StaticFiles(directory=model_dir), name="models")
 
     @app.get("/datasets", response_model=list[DatasetInfo])
-    async def get_datasets_list():
-        return load_library(settings)
+    async def get_dataset_list():
+        # Load dataset list
+        return load_dataset_list(settings)
 
     @app.get("/datasets/{ds_id}", response_model=DatasetInfo)
     async def get_dataset(ds_id: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
-        return ds.info
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        else:
+            return ds.info
 
     @app.get("/datasets/{ds_id}/items", response_model=Page[ItemFeatures])
     async def get_dataset_items(ds_id: str, params: Params = Depends()):
@@ -86,21 +90,27 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
-        # Return dataset items
-        res = load_items(ds, params)
-        if res is None:
-            raise HTTPException(status_code=404, detail="Data not found")
         else:
-            return res
+            # Load dataset items
+            res = load_items(ds, params)
+            if res is None:
+                raise HTTPException(status_code=404, detail="Dataset items not found")
+            else:
+                return res
 
     @app.get("/datasets/{ds_id}/stats")
     async def get_dataset_stats(ds_id: str):
-        # Load dataset stats
-        stats = load_dataset_stats(ds_id, settings)
-        if stats is None:
-            raise HTTPException(status_code=404, detail="Stats not found")
-        # Return dataset stats
-        return stats
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+        else:
+            # Load dataset stats
+            stats = load_dataset_stats(ds, settings)
+            if stats is None:
+                raise HTTPException(status_code=404, detail="Dataset stats not found")
+            else:
+                return stats
 
     @app.get("/datasets/{ds_id}/items/{item_id}/objects")
     async def get_item_objects(ds_id: str, item_id: str):

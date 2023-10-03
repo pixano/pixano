@@ -16,7 +16,6 @@ import unittest
 from pathlib import Path
 
 from fastapi.testclient import TestClient
-from fastapi_pagination import Page
 
 from pixano.api import Settings
 from pixano.apps.main import create_app

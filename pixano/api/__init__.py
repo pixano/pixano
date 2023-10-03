@@ -11,7 +11,12 @@
 #
 # http://www.cecill.info
 
-from pixano.api.datasets import Settings, load_dataset, load_dataset_stats, load_library
+from pixano.api.datasets import (
+    Settings,
+    load_dataset,
+    load_dataset_list,
+    load_dataset_stats,
+)
 from pixano.api.items import (
     ItemFeatures,
     load_item_embeddings,
@@ -23,8 +28,8 @@ from pixano.api.items import (
 __all__ = [
     "Settings",
     "load_dataset",
+    "load_dataset_list",
     "load_dataset_stats",
-    "load_library",
     "ItemFeatures",
     "load_item_embeddings",
     "load_item_objects",

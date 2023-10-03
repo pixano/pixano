@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path.cwd() / "library"
 
 
-def load_library(settings: Settings) -> list[DatasetInfo]:
+def load_dataset_list(settings: Settings) -> list[DatasetInfo]:
     """Load all dataset info files in library
 
     Args:
@@ -49,7 +49,6 @@ def load_library(settings: Settings) -> list[DatasetInfo]:
         if preview_path.is_file():
             im = Image(uri=preview_path.absolute().as_uri())
             info.preview = im.url
-
         # Load categories
         info.categories = getattr(info, "categories", [])
         if info.categories is None:
@@ -76,20 +75,18 @@ def load_dataset(ds_id: str, settings: Settings) -> Dataset:
             return Dataset(json_file.parent)
 
 
-def load_dataset_stats(ds_id: str, settings: Settings) -> dict:
+def load_dataset_stats(ds: Dataset, settings: Settings) -> dict:
     """Load dataset stats based on its ID
 
     Args:
-        ds_id (str): Dataset ID
+        ds (Dataset): Dataset
         settings (Settings): Dataset Library
 
     Returns:
         list[dict]: Dataset stats
     """
 
-    ds = load_dataset(ds_id, settings)
-    if ds is not None:
-        stats_file = ds.path / "stats.json"
-        if stats_file.is_file():
-            with open(stats_file, "r") as f:
-                return json.load(f)
+    stats_file = ds.path / "stats.json"
+    if stats_file.is_file():
+        with open(stats_file, "r") as f:
+            return json.load(f)
