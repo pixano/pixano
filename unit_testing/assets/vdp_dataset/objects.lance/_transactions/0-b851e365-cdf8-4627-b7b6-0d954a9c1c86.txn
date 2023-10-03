@@ -1,2 +1,0 @@
-$b851e365-cdf8-4627-b7b6-0d954a9c1c86²Ïid ÿÿÿÿÿÿÿÿÿ*string08"item_id ÿÿÿÿÿÿÿÿÿ*string08$	view_name ÿÿÿÿÿÿÿÿÿ*string08bbox ÿÿÿÿÿÿÿÿÿ*list08item *float08&bbox_source ÿÿÿÿÿÿÿÿÿ*string08)bbox_confidence ÿÿÿÿÿÿÿÿÿ*float08mask ÿÿÿÿÿÿÿÿÿ*struct0counts *binary08size	 *list08item
- 	*int3208&mask_source ÿÿÿÿÿÿÿÿÿ*string08%category_id ÿÿÿÿÿÿÿÿÿ*int3208(category_name ÿÿÿÿÿÿÿÿÿ*string08
