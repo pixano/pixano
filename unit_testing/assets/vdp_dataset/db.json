@@ -3,5 +3,18 @@
   "name": "VDP Dataset",
   "description": "Sample VDP dataset for unit testing",
   "num_elements": 40,
-  "preview": null
+  "preview": null,
+  "tables": {
+    "media": [
+      {
+        "name": "image"
+      }
+    ],
+    "objects": [
+      {
+        "name": "objects",
+        "source": "ground truth"
+      }
+    ]
+  }
 }
