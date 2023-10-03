@@ -112,20 +112,15 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             else:
                 return stats
 
-    @app.get("/datasets/{ds_id}/items/{item_id}/objects")
+    @app.get("/datasets/{ds_id}/items/{item_id}")
     async def get_item_objects(ds_id: str, item_id: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
-
-        # Load inference datasets
-        inf_datasets = []
-        for inf_json in sorted(list(ds.path.glob("db_infer_*/infer.json"))):
-            inf_datasets.append(InferenceDataset(inf_json.parent))
-
-        # Return item details
-        return load_item_objects(ds, item_id, ds.media_dir, inf_datasets)
+        else:
+            # Load item objects
+            return load_item_objects(ds, item_id, ds.media_dir)
 
     @app.post("/datasets/{ds_id}/items/{item_id}/embeddings")
     async def get_item_embeddings(ds_id: str, item_id: str):

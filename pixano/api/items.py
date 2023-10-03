@@ -108,8 +108,8 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
     media_tables: list[lance.LanceDataset] = []
-    for media_type in dataset.info.tables["media"]:
-        media_tables.append(ds.open_table(media_type["name"]).to_lance())
+    for media_source in dataset.info.tables["media"]:
+        media_tables.append(ds.open_table(media_source["name"]).to_lance())
 
     # Get page parameters
     params = resolve_params(params)
@@ -146,7 +146,6 @@ def load_item_objects(
     dataset: Dataset,
     item_id: str,
     media_dir: Path,
-    inf_datasets: list[InferenceDataset] = [],
 ) -> dict:
     """Get item details
 
@@ -154,52 +153,54 @@ def load_item_objects(
         dataset (Dataset): Dataset
         item_id (str): Selected item ID
         media_dir (Path): Dataset media directory
-        inf_datasets (list[InferenceDataset], optional): List of inference datasets. Defaults to [].
 
     Returns:
         dict: ImageDetails features for UI
     """
 
-    fields = dataset.info.fields.to_dict() if dataset.info.fields else defaultdict(str)
-
     # Load dataset
-    selected_ds = dataset.load()
+    ds = dataset.connect()
+    main_table: lance.LanceDataset = ds.open_table("db").to_lance()
+
+    media_tables: list[lance.LanceDataset] = []
+    for media_source in dataset.info.tables["media"]:
+        media_tables.append(ds.open_table(media_source["name"]).to_lance())
+
+    objects_tables: list[lance.LanceDataset] = []
+    for object_source in dataset.info.tables["objects"]:
+        objects_tables.append(ds.open_table(object_source["name"]).to_lance())
 
     # Get item
-    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
-    item = scanner.to_table().to_pylist()[0]
+    main_scanner = main_table.scanner(filter=f"id in ('{item_id}')")
+    item = main_scanner.to_table()
 
-    # Get objects
+    for media_table in media_tables:
+        media_scanner = media_table.scanner(filter=f"item_id in ('{item_id}')")
+        media_item = media_scanner.to_table()
+        item = duckdb.query(
+            "SELECT * FROM item LEFT JOIN media_item ON item.id = media_item.item_id"
+        ).to_arrow_table()
+
     objects = []
-    for field_name, field_type in fields.items():
-        if field_type == "[ObjectAnnotation]" and field_name in item:
-            objects.extend(item[field_name])
-
-    # Get item inference objects
-    for inf_ds in inf_datasets:
-        pa_inf_ds = inf_ds.load()
-        inf_scanner = pa_inf_ds.scanner(filter=ds.field("id").isin([item_id]))
-        inf_item = inf_scanner.to_table().to_pylist()[0]
-        if inf_item is not None:
-            for field in pa_inf_ds.schema:
-                if field.name == "objects" or is_list_of_object_annotation_type(
-                    field.type
-                ):
-                    objects.extend(inf_item[field.name])
+    for objects_table in objects_tables:
+        media_scanner = objects_table.scanner(filter=f"item_id in ('{item_id}')")
+        objects.append(media_scanner.to_table().to_pylist())
 
     # Create features
     item_details = {
         "itemData": {
             "id": item["id"],
             "views": defaultdict(dict),
-            "features": _create_features(item, selected_ds.schema),
+            "features": _create_features(item, item.schema),
         },
         "itemObjects": defaultdict(lambda: defaultdict(list)),
     }
 
     # Iterate on view
-    for field in selected_ds.schema:
-        if is_image_type(field.type) or fields[field.name] == "image":
+    for field in item.schema:
+        if field.name in item["views"]:
+            if isinstance(item[field.name], dict):
+                item[field.name] = Image.from_dict(item[field.name])
             image = item[field.name]
             image.uri_prefix = media_dir.absolute().as_uri()
             item_details["itemData"]["views"][field.name] = {
@@ -210,12 +211,6 @@ def load_item_objects(
             }
 
             for obj in objects:
-                # Support for previous ObjectAnnotation type
-                if isinstance(obj, dict):
-                    # Support for previous BBox type
-                    if isinstance(obj["bbox"], list):
-                        obj["bbox"] = {"coords": obj["bbox"], "format": "xywh"}
-                    obj = ObjectAnnotation.from_dict(obj)
                 # If object in view
                 if obj.view_id == field.name:
                     # Object ID
