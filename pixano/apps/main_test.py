@@ -26,7 +26,7 @@ class AppTestCase(unittest.TestCase):
         self.settings = Settings(data_dir=Path("unit_testing/assets/"))
         self.client = TestClient(create_app(self.settings))
 
-    def test_get_datasets_list(self):
+    def test_get_dataset_list(self):
         response = self.client.get("/datasets")
         output = response.json()
 
