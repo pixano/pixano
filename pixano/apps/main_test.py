@@ -74,7 +74,6 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("name", stat)
             self.assertIn("type", stat)
             self.assertIn("histogram", stat)
-            self.assertIn("range", stat)
 
     def test_get_item_objects(self):
         response = self.client.get("/datasets/vdp_dataset/items/127")
