@@ -292,7 +292,7 @@ def rle_to_urle(rle: dict[str, Any]) -> dict[str, Any]:
         dict[str, Any]: Mask as uncompressed RLE
     """
 
-    if rle is not None:
+    if rle is not None and rle["counts"] is not None:
         mask = rle_to_mask(rle)
         urle = {"counts": [], "size": list(mask.shape)}
         counts = urle.get("counts")
