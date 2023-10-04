@@ -225,12 +225,9 @@ def load_item_objects(
                         bbox = (
                             format_bbox(
                                 obj["bbox"].coords,
-                                obj["bbox_confidence"]
-                                if "bbox_confidence" in obj
-                                else None,
+                                obj["bbox"].confidence,
                             )
                             if "bbox" in obj
-                            and obj["bbox"].coords != [0.0, 0.0, 0.0, 0.0]
                             else None
                         )
                         # Object category

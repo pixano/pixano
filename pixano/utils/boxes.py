@@ -114,14 +114,15 @@ def format_bbox(bbox: list[float], confidence: float = None) -> dict:
         dict: Bounding box in frontend format
     """
 
-    return {
-        "x": float(bbox[0]),
-        "y": float(bbox[1]),
-        "width": float(bbox[2]),
-        "height": float(bbox[3]),
-        "predicted": confidence is not None,
-        "confidence": confidence,
-    }
+    if bbox != [0.0, 0.0, 0.0, 0.0]:
+        return {
+            "x": float(bbox[0]),
+            "y": float(bbox[1]),
+            "width": float(bbox[2]),
+            "height": float(bbox[3]),
+            "predicted": confidence is not None,
+            "confidence": confidence,
+        }
 
 
 def xywh_to_xyxy(xywh: list[float]) -> list[float]:

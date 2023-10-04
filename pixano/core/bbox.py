@@ -32,25 +32,39 @@ class BBox(PixanoType, BaseModel):
 
     Attributes:
         coords (list[float]): List of coordinates in given format
-        format (str): Coordinates format, 'xyxy' or 'xywh'.
-        is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
+        format (str): Coordinates format, 'xyxy' or 'xywh'
+        is_normalized (bool, optional): True if coordinates are normalized to image size
+        confidence (float, optional): Bounding box confidence if predicted
     """
 
     coords: list[float]
     format: str
     is_normalized: Optional[bool]
+    confidence: Optional[float]
 
-    def __init__(self, coords: list[float], format: str, is_normalized: bool = True):
+    def __init__(
+        self,
+        coords: list[float],
+        format: str,
+        is_normalized: bool = True,
+        confidence: float = None,
+    ):
         """Initialize Bounding box
 
         Args:
             coords (list[float]): List of coordinates in given format
-            format (str): Coordinates format, 'xyxy' or 'xywh'.
+            format (str): Coordinates format, 'xyxy' or 'xywh'
             is_normalized (bool, optional): True if coordinates are normalized to image size. Defaults to True.
+            confidence (float, optional): Bounding box confidence if predicted. Defaults to None.
         """
 
         # Define public attributes through Pydantic BaseModel
-        super().__init__(coords=coords, format=format, is_normalized=is_normalized)
+        super().__init__(
+            coords=coords,
+            format=format,
+            is_normalized=is_normalized,
+            confidence=confidence,
+        )
 
     @property
     def xyxy_coords(self) -> list[float]:
@@ -71,6 +85,16 @@ class BBox(PixanoType, BaseModel):
         """
 
         return self.coords if self.format == "xywh" else xyxy_to_xywh(self.coords)
+
+    @property
+    def is_predicted(self) -> bool:
+        """Return True if bounding box is predicted and has a confidence value
+
+        Returns:
+            bool: True if bounding box is predicted and has a confidence value
+        """
+
+        return self.confidence is not None
 
     def to_xyxy(self) -> "BBox":
         """Return bounding box in xyxy format
