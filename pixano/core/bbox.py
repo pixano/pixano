@@ -11,6 +11,8 @@
 #
 # http://www.cecill.info
 
+from typing import Optional
+
 import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel
@@ -36,7 +38,7 @@ class BBox(PixanoType, BaseModel):
 
     coords: list[float]
     format: str
-    is_normalized: bool
+    is_normalized: Optional[bool]
 
     def __init__(self, coords: list[float], format: str, is_normalized: bool = True):
         """Initialize Bounding box
