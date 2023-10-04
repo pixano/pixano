@@ -1,8 +1,55 @@
 [
   {
-    "name": "empty statistics",
+    "name": "Some numerical statistics",
     "type": "numerical",
-    "histogram": [],
-    "range": []
+    "histogram": [
+      { "bin_start": 0.0, "bin_end": 1.0, "counts": 2, "split": "train" },
+      { "bin_start": 1.0, "bin_end": 2.0, "counts": 4, "split": "train" },
+      { "bin_start": 2.0, "bin_end": 3.0, "counts": 6, "split": "train" },
+      { "bin_start": 3.0, "bin_end": 4.0, "counts": 8, "split": "train" },
+      { "bin_start": 4.0, "bin_end": 5.0, "counts": 10, "split": "train" },
+      { "bin_start": 5.0, "bin_end": 6.0, "counts": 10, "split": "train" },
+      { "bin_start": 6.0, "bin_end": 7.0, "counts": 8, "split": "train" },
+      { "bin_start": 7.0, "bin_end": 8.0, "counts": 6, "split": "train" },
+      { "bin_start": 8.0, "bin_end": 9.0, "counts": 4, "split": "train" },
+      { "bin_start": 9.0, "bin_end": 10.0, "counts": 2, "split": "train" },
+      { "bin_start": 0.0, "bin_end": 1.0, "counts": 1, "split": "test" },
+      { "bin_start": 1.0, "bin_end": 2.0, "counts": 2, "split": "test" },
+      { "bin_start": 2.0, "bin_end": 3.0, "counts": 3, "split": "test" },
+      { "bin_start": 3.0, "bin_end": 4.0, "counts": 4, "split": "test" },
+      { "bin_start": 4.0, "bin_end": 5.0, "counts": 5, "split": "test" },
+      { "bin_start": 5.0, "bin_end": 6.0, "counts": 5, "split": "test" },
+      { "bin_start": 6.0, "bin_end": 7.0, "counts": 4, "split": "test" },
+      { "bin_start": 7.0, "bin_end": 8.0, "counts": 3, "split": "test" },
+      { "bin_start": 8.0, "bin_end": 9.0, "counts": 2, "split": "test" },
+      { "bin_start": 9.0, "bin_end": 10.0, "counts": 1, "split": "test" }
+    ],
+    "range": [0.0, 10.0]
+  },
+  {
+    "name": "Some categorical statistics",
+    "type": "categorical",
+    "histogram": [
+      { "Some categorical statistics": "a", "counts": 2, "split": "train" },
+      { "Some categorical statistics": "b", "counts": 4, "split": "train" },
+      { "Some categorical statistics": "c", "counts": 6, "split": "train" },
+      { "Some categorical statistics": "d", "counts": 8, "split": "train" },
+      { "Some categorical statistics": "e", "counts": 10, "split": "train" },
+      { "Some categorical statistics": "f", "counts": 12, "split": "train" },
+      { "Some categorical statistics": "g", "counts": 14, "split": "train" },
+      { "Some categorical statistics": "h", "counts": 16, "split": "train" },
+      { "Some categorical statistics": "i", "counts": 18, "split": "train" },
+      { "Some categorical statistics": "j", "counts": 20, "split": "train" },
+      { "Some categorical statistics": "a", "counts": 1, "split": "test" },
+      { "Some categorical statistics": "b", "counts": 2, "split": "test" },
+      { "Some categorical statistics": "c", "counts": 3, "split": "test" },
+      { "Some categorical statistics": "d", "counts": 4, "split": "test" },
+      { "Some categorical statistics": "e", "counts": 5, "split": "test" },
+      { "Some categorical statistics": "f", "counts": 6, "split": "test" },
+      { "Some categorical statistics": "g", "counts": 7, "split": "test" },
+      { "Some categorical statistics": "h", "counts": 8, "split": "test" },
+      { "Some categorical statistics": "i", "counts": 9, "split": "test" },
+      { "Some categorical statistics": "j", "counts": 10, "split": "test" }
+    ]
   }
 ]
