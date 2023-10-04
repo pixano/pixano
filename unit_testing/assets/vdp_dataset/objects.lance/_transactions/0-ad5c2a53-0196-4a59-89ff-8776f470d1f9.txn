@@ -1,0 +1,7 @@
+$ad5c2a53-0196-4a59-89ff-8776f470d1f9²Êid ÿÿÿÿÿÿÿÿÿ*string08"item_id ÿÿÿÿÿÿÿÿÿ*string08"view_id ÿÿÿÿÿÿÿÿÿ*string08]bbox ÿÿÿÿÿÿÿÿÿ*struct0JBboxR
+ARROW:extension:metadataR
+ARROW:extension:nameBbox)coords *fixed_size_list:float:408is_normalized *bool08format *string08
+confidence *float08omask ÿÿÿÿÿÿÿÿÿ*struct0JCompressedRLER%
+ARROW:extension:nameCompressedRLER
+ARROW:extension:metadata'size	 *fixed_size_list:int32:208counts
+ *binary08%category_id ÿÿÿÿÿÿÿÿÿ*int6408(category_name ÿÿÿÿÿÿÿÿÿ*string08
