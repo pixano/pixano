@@ -107,9 +107,15 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     ds = dataset.connect()
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    media_tables: list[lance.LanceDataset] = []
-    for media_source in dataset.info.tables["media"]:
-        media_tables.append(ds.open_table(media_source["name"]).to_lance())
+    media_tables: dict[str, list[lance.LanceDataset]] = {}
+    if "media" in dataset.info.tables:
+        for md_info in dataset.info.tables["media"]:
+            media_tables[md_info["name"]] = ds.open_table(md_info["name"]).to_lance()
+
+    al_tables: dict[str, list[lance.LanceDataset]] = {}
+    if "active_learning" in dataset.info.tables:
+        for al_info in dataset.info.tables["active_learning"]:
+            al_tables[al_info["source"]] = ds.open_table(al_info["name"]).to_lance()
 
     # Get page parameters
     params = resolve_params(params)
@@ -121,15 +127,25 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     stop = min(raw_params.offset + raw_params.limit, total)
     if start >= stop:
         return None
+
     pyarrow_table = main_table.to_table(
         limit=raw_params.limit, offset=raw_params.offset
     )
-    for media_table in media_tables:
+
+    for media_table in media_tables.values():
         pyarrow_media_table = media_table.to_table(
             limit=raw_params.limit, offset=raw_params.offset
         )
         pyarrow_table = duckdb.query(
             "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table ON pyarrow_table.id = pyarrow_media_table.item_id"
+        ).to_arrow_table()
+
+    for al_table in al_tables.values():
+        pyarrow_al_table = al_table.to_table(
+            limit=raw_params.limit, offset=raw_params.offset
+        )
+        pyarrow_table = duckdb.query(
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id)"
         ).to_arrow_table()
 
     # Create items features
@@ -161,33 +177,47 @@ def load_item_objects(
     ds = dataset.connect()
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    media_tables: list[lance.LanceDataset] = []
-    for media_source in dataset.info.tables["media"]:
-        media_tables.append(ds.open_table(media_source["name"]).to_lance())
+    media_tables: dict[str, list[lance.LanceDataset]] = {}
+    if "media" in dataset.info.tables:
+        for md_info in dataset.info.tables["media"]:
+            media_tables[md_info["name"]] = ds.open_table(md_info["name"]).to_lance()
 
-    objects_tables: dict[str, list[lance.LanceDataset]] = {}
-    for object_source in dataset.info.tables["objects"]:
-        objects_tables[object_source["source"]] = ds.open_table(
-            object_source["name"]
-        ).to_lance()
+    obj_tables: dict[str, list[lance.LanceDataset]] = {}
+    if "objects" in dataset.info.tables:
+        for obj_info in dataset.info.tables["objects"]:
+            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"]).to_lance()
+
+    al_tables: dict[str, list[lance.LanceDataset]] = {}
+    if "active_learning" in dataset.info.tables:
+        for al_info in dataset.info.tables["active_learning"]:
+            al_tables[al_info["source"]] = ds.open_table(al_info["name"]).to_lance()
 
     # Get item
     main_scanner = main_table.scanner(filter=f"id in ('{item_id}')")
     pyarrow_item = main_scanner.to_table()
 
-    for media_table in media_tables:
+    for media_table in media_tables.values():
         media_scanner = media_table.scanner(filter=f"item_id in ('{item_id}')")
         media_pyarrow_item = media_scanner.to_table()
         pyarrow_item = duckdb.query(
             "SELECT * FROM pyarrow_item LEFT JOIN media_pyarrow_item ON pyarrow_item.id = media_pyarrow_item.item_id"
         ).to_arrow_table()
 
-    item = pyarrow_item.to_pylist()[0]
+    for al_table in al_tables.values():
+        al_scanner = al_table.scanner(filter=f"id in ('{item_id}')")
+        al_pyarrow_item = al_scanner.to_table()
+        pyarrow_item = duckdb.query(
+            "SELECT * FROM pyarrow_item LEFT JOIN al_pyarrow_item ON pyarrow_item.id = al_pyarrow_item.id"
+        ).to_arrow_table()
 
+    item = pyarrow_item.to_pylist()[0]
+    print(item)
+
+    # Get item objects
     objects = {}
-    for objects_source, objects_table in objects_tables.items():
-        media_scanner = objects_table.scanner(filter=f"item_id in ('{item_id}')")
-        objects[objects_source] = media_scanner.to_table().to_pylist()
+    for obj_source, obj_table in obj_tables.items():
+        media_scanner = obj_table.scanner(filter=f"item_id in ('{item_id}')")
+        objects[obj_source] = media_scanner.to_table().to_pylist()
 
     # Create features
     item_details = {
