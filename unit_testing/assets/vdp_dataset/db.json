@@ -15,6 +15,12 @@
         "name": "objects",
         "source": "ground truth"
       }
+    ],
+    "active_learning": [
+      {
+        "name": "active_learning",
+        "source": "random sampler"
+      }
     ]
   }
 }
