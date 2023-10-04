@@ -29,8 +29,8 @@ class BBoxTestCase(unittest.TestCase):
         self.xywh = [1, 1, 2, 2]
         self.normalized_xyxy = [1 / 6, 1 / 4, 3 / 6, 3 / 4]
         self.normalized_xywh = [1 / 6, 1 / 4, 2 / 6, 2 / 4]
-        self.bbox_xyxy = BBox.from_xyxy(self.xyxy)
-        self.bbox_xywh = BBox.from_xywh(self.xywh)
+        self.bbox_xyxy = BBox.from_xyxy(self.xyxy, confidence=0.5)
+        self.bbox_xywh = BBox.from_xywh(self.xywh, confidence=None)
 
     def test_format_property(self):
         self.assertEqual(self.bbox_xyxy.format, "xyxy")
@@ -39,6 +39,10 @@ class BBoxTestCase(unittest.TestCase):
     def test_is_normalized_property(self):
         self.assertTrue(self.bbox_xyxy.is_normalized)
         self.assertTrue(self.bbox_xywh.is_normalized)
+
+    def test_is_predicted_property(self):
+        self.assertTrue(self.bbox_xyxy.is_predicted)
+        self.assertFalse(self.bbox_xywh.is_predicted)
 
     def test_xyxy_coords(self):
         converted_coords = self.bbox_xywh.xyxy_coords
@@ -68,8 +72,8 @@ class BBoxTestCase(unittest.TestCase):
 class TestParquetBBox(unittest.TestCase):
     def setUp(self) -> None:
         self.bbox_list = [
-            BBox.from_xywh([0.1, 0.2, 0.3, 0.4]),
-            BBox.from_xyxy([0.1, 0.2, 0.2, 0.2]),
+            BBox.from_xywh([0.1, 0.2, 0.3, 0.4], confidence=0.3),
+            BBox.from_xyxy([0.1, 0.2, 0.2, 0.2], confidence=0.4),
         ]
 
     def test_bbox_table(self):

@@ -103,7 +103,7 @@ class BBox(PixanoType, BaseModel):
             BBox: Bounding box in xyxy format
         """
 
-        return BBox(self.xyxy_coords, "xyxy", self.is_normalized)
+        return BBox(self.xyxy_coords, "xyxy", self.is_normalized, self.confidence)
 
     def to_xywh(self) -> "BBox":
         """Return bounding box in xywh format
@@ -112,7 +112,7 @@ class BBox(PixanoType, BaseModel):
             BBox: Bounding box in xyxy format
         """
 
-        return BBox(self.xywh_coords, "xywh", self.is_normalized)
+        return BBox(self.xywh_coords, "xywh", self.is_normalized, self.confidence)
 
     def normalize(self, height: int, width: int) -> "BBox":
         """Return bounding box with coordinates normalized to image size
@@ -125,7 +125,12 @@ class BBox(PixanoType, BaseModel):
             BBox: Bounding box with coordinates normalized to image size
         """
 
-        return BBox(normalize_coords(self.coords, height, width), self.format, True)
+        return BBox(
+            normalize_coords(self.coords, height, width),
+            self.format,
+            True,
+            self.confidence,
+        )
 
     def denormalize(self, height: int, width: int) -> "BBox":
         """Return bounding box with coordinates denormalized from image size
@@ -138,33 +143,40 @@ class BBox(PixanoType, BaseModel):
             BBox: Bounding box with coordinates denormalized from image size
         """
 
-        return BBox(denormalize_coords(self.coords, height, width), self.format, False)
+        return BBox(
+            denormalize_coords(self.coords, height, width),
+            self.format,
+            False,
+            self.confidence,
+        )
 
     @staticmethod
-    def from_xyxy(xyxy: list[float]) -> "BBox":
+    def from_xyxy(xyxy: list[float], confidence: float = None) -> "BBox":
         """Create bounding box using normalized xyxy coordinates
 
         Args:
             xyxy (list[float]): List of coordinates in xyxy format
+            confidence (float, optional): Bounding box confidence if predicted. Defaults to None.
 
         Returns:
             Bbox: Bounding box
         """
 
-        return BBox(xyxy, "xyxy")
+        return BBox(xyxy, "xyxy", confidence=confidence)
 
     @staticmethod
-    def from_xywh(xywh: list[float]) -> "BBox":
+    def from_xywh(xywh: list[float], confidence: float = None) -> "BBox":
         """Create bounding box using normalized xywh coordinates
 
         Args:
             xywh (list[float]): List of coordinates in xywh format
+            confidence (float, optional): Bounding box confidence if predicted. Defaults to None.
 
         Returns:
             Bbox: Bounding box
         """
 
-        return BBox(xywh, "xywh")
+        return BBox(xywh, "xywh", confidence=confidence)
 
     @staticmethod
     def from_mask(mask: np.ndarray) -> "BBox":
@@ -192,6 +204,7 @@ class BBox(PixanoType, BaseModel):
                 pa.field("coords", pa.list_(pa.float32(), list_size=4)),
                 pa.field("is_normalized", pa.bool_()),
                 pa.field("format", pa.string()),
+                pa.field("confidence", pa.float32()),
             ]
         )
 
