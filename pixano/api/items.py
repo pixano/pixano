@@ -133,7 +133,6 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
         ).to_arrow_table()
 
     # Create items features
-    print(pyarrow_table.schema)
     items = [
         _create_features(item, pyarrow_table.schema)
         for item in pyarrow_table.to_pylist()
@@ -166,38 +165,42 @@ def load_item_objects(
     for media_source in dataset.info.tables["media"]:
         media_tables.append(ds.open_table(media_source["name"]).to_lance())
 
-    objects_tables: list[lance.LanceDataset] = []
+    objects_tables: dict[str, list[lance.LanceDataset]] = {}
     for object_source in dataset.info.tables["objects"]:
-        objects_tables.append(ds.open_table(object_source["name"]).to_lance())
+        objects_tables[object_source["source"]] = ds.open_table(
+            object_source["name"]
+        ).to_lance()
 
     # Get item
     main_scanner = main_table.scanner(filter=f"id in ('{item_id}')")
-    item = main_scanner.to_table()
+    pyarrow_item = main_scanner.to_table()
 
     for media_table in media_tables:
         media_scanner = media_table.scanner(filter=f"item_id in ('{item_id}')")
-        media_item = media_scanner.to_table()
-        item = duckdb.query(
-            "SELECT * FROM item LEFT JOIN media_item ON item.id = media_item.item_id"
+        media_pyarrow_item = media_scanner.to_table()
+        pyarrow_item = duckdb.query(
+            "SELECT * FROM pyarrow_item LEFT JOIN media_pyarrow_item ON pyarrow_item.id = media_pyarrow_item.item_id"
         ).to_arrow_table()
 
-    objects = []
-    for objects_table in objects_tables:
+    item = pyarrow_item.to_pylist()[0]
+
+    objects = {}
+    for objects_source, objects_table in objects_tables.items():
         media_scanner = objects_table.scanner(filter=f"item_id in ('{item_id}')")
-        objects.append(media_scanner.to_table().to_pylist())
+        objects[objects_source] = media_scanner.to_table().to_pylist()
 
     # Create features
     item_details = {
         "itemData": {
             "id": item["id"],
             "views": defaultdict(dict),
-            "features": _create_features(item, item.schema),
+            "features": _create_features(item, pyarrow_item.schema),
         },
         "itemObjects": defaultdict(lambda: defaultdict(list)),
     }
 
     # Iterate on view
-    for field in item.schema:
+    for field in pyarrow_item.schema:
         if field.name in item["views"]:
             if isinstance(item[field.name], dict):
                 item[field.name] = Image.from_dict(item[field.name])
@@ -210,41 +213,41 @@ def load_item_objects(
                 "width": image.size[0],
             }
 
-            for obj in objects:
-                # If object in view
-                if obj.view_id == field.name:
-                    # Object ID
-                    id = obj.id
-                    # Object mask
-                    mask = obj.mask.to_urle() if obj.mask is not None else None
-                    # Object bounding box
-                    bbox = (
-                        format_bbox(
-                            obj.bbox.coords,
-                            obj.bbox_confidence is not None,
-                            obj.bbox_confidence,
+            for obj_source, obj_list in objects.items():
+                for obj in obj_list:
+                    # If object in view
+                    if obj["view_id"] == field.name:
+                        # Object ID
+                        id = obj["id"]
+                        # Object mask
+                        mask = obj["mask"].to_urle() if "mask" in obj else None
+                        # Object bounding box
+                        bbox = (
+                            format_bbox(
+                                obj["bbox"].coords,
+                                obj["bbox_confidence"]
+                                if "bbox_confidence" in obj
+                                else None,
+                            )
+                            if "bbox" in obj
+                            and obj["bbox"].coords != [0.0, 0.0, 0.0, 0.0]
+                            else None
                         )
-                        if obj.bbox is not None
-                        and obj.bbox.coords != [0.0, 0.0, 0.0, 0.0]
-                        else None
-                    )
-                    # Object source
-                    source = obj.mask_source or obj.bbox_source or "Ground truth"
-                    # Object category
-                    category = (
-                        {"id": obj.category_id, "name": obj.category_name}
-                        if obj.category_id is not None and obj.category_name is not None
-                        else None
-                    )
-                    # Add object
-                    item_details["itemObjects"][source][field.name].append(
-                        {
-                            "id": id,
-                            "mask": mask,
-                            "bbox": bbox,
-                            "category": category,
-                        }
-                    )
+                        # Object category
+                        category = (
+                            {"id": obj["category_id"], "name": obj["category_name"]}
+                            if "category_id" in obj and "category_name" in obj
+                            else None
+                        )
+                        # Add object
+                        item_details["itemObjects"][obj_source][field.name].append(
+                            {
+                                "id": id,
+                                "mask": mask,
+                                "bbox": bbox,
+                                "category": category,
+                            }
+                        )
 
     return item_details
 
