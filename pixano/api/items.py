@@ -137,7 +137,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
             limit=raw_params.limit, offset=raw_params.offset
         )
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table ON pyarrow_table.id = pyarrow_media_table.item_id"
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id)"
         ).to_arrow_table()
 
     for al_table in al_tables.values():
@@ -197,21 +197,20 @@ def load_item_objects(
     pyarrow_item = main_scanner.to_table()
 
     for media_table in media_tables.values():
-        media_scanner = media_table.scanner(filter=f"item_id in ('{item_id}')")
+        media_scanner = media_table.scanner(filter=f"id in ('{item_id}')")
         media_pyarrow_item = media_scanner.to_table()
         pyarrow_item = duckdb.query(
-            "SELECT * FROM pyarrow_item LEFT JOIN media_pyarrow_item ON pyarrow_item.id = media_pyarrow_item.item_id"
+            "SELECT * FROM pyarrow_item LEFT JOIN media_pyarrow_item USING (id)"
         ).to_arrow_table()
 
     for al_table in al_tables.values():
         al_scanner = al_table.scanner(filter=f"id in ('{item_id}')")
         al_pyarrow_item = al_scanner.to_table()
         pyarrow_item = duckdb.query(
-            "SELECT * FROM pyarrow_item LEFT JOIN al_pyarrow_item ON pyarrow_item.id = al_pyarrow_item.id"
+            "SELECT * FROM pyarrow_item LEFT JOIN al_pyarrow_item USING (id)"
         ).to_arrow_table()
 
     item = pyarrow_item.to_pylist()[0]
-    print(item)
 
     # Get item objects
     objects = {}
