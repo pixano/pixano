@@ -37,17 +37,14 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     """Run Pixano app
 
     Args:
-        settings (Settings): Dataset Library
+        settings (Settings, optional): Settings containing dataset library path. Defaults to empty Settings().
 
     Raises:
-        HTTPException: 404, Dataset is not found
-        HTTPException: 404, Dataset stats are not found
-        HTTPException: 404, Dataset is not found
-        HTTPException: 404, Dataset is not found
-        HTTPException: 404, Embedding dataset is not found
+        FileNotFoundError: Dataset library not found
+        HTTPException: Dataset / dataset stats / dataset items not found
 
     Returns:
-        FastAPI: Explorer app
+        FastAPI: Pixano App
     """
 
     app = FastAPI()
