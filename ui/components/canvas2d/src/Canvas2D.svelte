@@ -30,6 +30,7 @@
     RectangleTool,
     DeleteTool,
     PanTool,
+    ClassificationTool
   } from "./tools";
   import type {
     LabeledClick,
@@ -630,6 +631,10 @@
         displayPanTool(selectedTool as PanTool);
         // Enable box creation or change cursor style
         break;
+      case ToolType.Classification:
+        displayClassificationTool(selectedTool as ClassificationTool);
+        break;
+
       default:
         // Reset or disable any specific behavior
         break;
@@ -661,6 +666,27 @@
       toggleInputPointDrag(false);
     }
   }
+
+  // ********** CLASSIFICATION TOOL ********** //
+
+  function displayClassificationTool(tool: ClassificationTool) {
+    if (toolsLayer) {
+      //clean other tools
+      //TODO: etre générique sur l'ensemble des outils != Pan
+      const pointer = stage.findOne(
+        `#${ToolType.LabeledPoint}`
+      ) as Konva.Circle;
+      if (pointer) pointer.destroy();
+      const crossline = stage.findOne("#crossline");
+      if (crossline) crossline.destroy();
+      if (!highlighted_point) {
+        stage.container().style.cursor = tool.cursor;
+      }
+      // deactivate drag on input points
+      toggleInputPointDrag(false);
+    }
+  }
+ 
 
   // ********** INPUT POINTS TOOL ********** //
 

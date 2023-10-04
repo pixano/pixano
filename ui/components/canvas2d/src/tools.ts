@@ -22,6 +22,7 @@ export enum ToolType {
   Rectangle = "RECTANGLE",
   Delete = "DELETE",
   Pan = "PAN",
+  Classification = "CLASSIFICATION"
 }
 
 interface Tool {
@@ -53,6 +54,10 @@ interface PanTool extends Tool {
   type: ToolType.Pan;
 }
 
+interface ClassificationTool extends Tool {
+  type: ToolType.Classification;
+}
+
 function getIcon(type: ToolType, label?: number): string {
   switch (type) {
     case ToolType.LabeledPoint:
@@ -70,6 +75,8 @@ function getIcon(type: ToolType, label?: number): string {
       return icons.svg_delete;
     case ToolType.Pan:
       return icons.svg_pan;
+    case ToolType.Classification:
+      return icons.svg_classify;
   }
 }
 
@@ -123,4 +130,14 @@ export function createPanTool(): PanTool {
   } as PanTool;
 }
 
-export type { Tool, LabeledPointTool, RectangleTool, DeleteTool, PanTool };
+export function createClassifTool(): ClassificationTool {
+  return {
+    name: "Classify",
+    type: ToolType.Classification,
+    icon: getIcon(ToolType.Classification),
+    cursor: "default",
+  } as ClassificationTool;
+}
+
+
+export type { Tool, LabeledPointTool, RectangleTool, DeleteTool, PanTool, ClassificationTool };

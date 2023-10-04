@@ -43,3 +43,6 @@ export const svg_rectangle =
 export const svg_point_plus =
   "M450-200v-250H200v-60h250v-250h60v250h250v60H510v250h-60Z";
 export const svg_point_minus = "M200-450v-60h560v60H200Z";
+
+export const svg_classify = "M200-450v-60h560v60H200Z";  //TODO change icon
+

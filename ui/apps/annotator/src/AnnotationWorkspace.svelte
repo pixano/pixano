@@ -75,12 +75,14 @@
   // Tools
   const tools_lists: Array<Array<tools.Tool>> = [];
   const imageTools: Array<tools.Tool> = [];
+  const classificationTools: Array<tools.Tool> = [];
   const annotationTools: Array<tools.Tool> = [];
   const pointPlusTool = tools.createLabeledPointTool(1);
   const pointMinusTool = tools.createLabeledPointTool(0);
   const rectangleTool = tools.createRectangleTool();
   const deleteTool = tools.createDeleteTool();
   const panTool = tools.createPanTool();
+  const classifTool = tools.createClassifTool();
   annotationTools.push(
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
@@ -89,8 +91,10 @@
   );
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
+  classificationTools.push(classifTool);
   imageTools.push(panTool);
   tools_lists.push(imageTools);
+  tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
   let selectedTool: tools.Tool = pointPlusTool;
 
@@ -113,6 +117,16 @@
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter") handleAddCurrentAnn();
+  }
+  
+  function handleAddClassification() {
+    console.log("AnnotationWorkspace.handleAddClassification");
+    if (currentAnnCatName !== "") {
+      console.log("label", currentAnnCatName);
+      // Check if category name provided
+      //TODO : addCurrentAnn();
+      dispatch("enableSaveFlag");
+    }
   }
 
   function handleAddCurrentAnn() {
@@ -384,7 +398,18 @@
         on:loadNextPage={handleLoadNextPage}
       />
     {/if}
-    {#if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
+    {#if selectedTool && selectedTool.type == tools.ToolType.Classification}
+      <!-- TODO WIP -->
+      <CategoryToolbar
+        bind:currentAnnCatName
+        bind:classes
+        bind:selectedTool
+        {pointPlusTool}
+        {pointMinusTool}
+        {labelColors}
+        on:addCurrentAnn={handleAddClassification}
+      />
+    {:else if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
       <CategoryToolbar
         bind:currentAnnCatName
         bind:classes
