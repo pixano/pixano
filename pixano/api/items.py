@@ -137,7 +137,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
             limit=raw_params.limit, offset=raw_params.offset
         )
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id)"
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY (id)"
         ).to_arrow_table()
 
     for al_table in al_tables.values():
@@ -145,7 +145,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
             limit=raw_params.limit, offset=raw_params.offset
         )
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id)"
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id)  ORDER BY (id)"
         ).to_arrow_table()
 
     # Create items features
