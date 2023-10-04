@@ -31,6 +31,7 @@ class AppTestCase(unittest.TestCase):
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
+
         self.assertGreaterEqual(len(output), 1)
 
         for ds in output:
@@ -66,6 +67,7 @@ class AppTestCase(unittest.TestCase):
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
+
         self.assertGreaterEqual(len(output), 1)
 
         for stat in output:
@@ -73,3 +75,17 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("type", stat)
             self.assertIn("histogram", stat)
             self.assertIn("range", stat)
+
+    def test_get_item_objects(self):
+        response = self.client.get("/datasets/vdp_dataset/items/127")
+        output = response.json()
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertIn("itemData", output)
+        self.assertIn("itemObjects", output)
+
+        self.assertIn("id", output["itemData"])
+        self.assertIn("views", output["itemData"])
+        self.assertIn("features", output["itemData"])
+        self.assertIn("ground truth", output["itemObjects"])
