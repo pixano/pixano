@@ -331,12 +331,12 @@ def save_item_details(
             else:
                 for al_table in al_tables.values():
                     if "label" in al_table.schema.names:
-                        scanner = main_table.to_lance().scanner(
+                        scanner = al_table.to_lance().scanner(
                             filter=f"id in ('{item_id}')"
                         )
                         item = scanner.to_table().to_pylist()[0]
                         item["label"] = feature["value"]
-                        main_table.update(f"id in ('{item_id}')", item)
+                        al_table.update(f"id in ('{item_id}')", item)
 
     ### Save item objects
 
