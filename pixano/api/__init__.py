@@ -20,7 +20,7 @@ from pixano.api.datasets import (
 from pixano.api.items import (
     ItemFeatures,
     load_item_embeddings,
-    load_item_objects,
+    load_item_details,
     load_items,
     save_item_objects,
     save_item_features,
@@ -33,7 +33,7 @@ __all__ = [
     "load_dataset_stats",
     "ItemFeatures",
     "load_item_embeddings",
-    "load_item_objects",
+    "load_item_details",
     "load_items",
     "save_item_objects",
     "save_item_features",

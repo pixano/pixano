@@ -16,6 +16,7 @@ from typing import Any
 
 import duckdb
 import lance
+import lancedb
 import pyarrow as pa
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
@@ -28,10 +29,9 @@ from pixano.core import (
     ObjectAnnotation,
     is_number,
     is_string,
-    pyarrow_array_from_list,
 )
-from pixano.data import Dataset, Fields
-from pixano.utils import format_bbox
+from pixano.data import Dataset
+from pixano.utils import format_bbox, rle_to_mask
 
 
 class ItemFeature(BaseModel):
@@ -89,7 +89,7 @@ def _create_features(item: dict, schema: pa.schema) -> list[ItemFeature]:
 
 
 def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
-    """Get items
+    """Load dataset items
 
     Args:
         dataset (Dataset): Dataset
@@ -103,12 +103,12 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     ds = dataset.connect()
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    media_tables: dict[str, list[lance.LanceDataset]] = {}
+    media_tables: dict[str, lance.LanceDataset] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"]).to_lance()
 
-    al_tables: dict[str, list[lance.LanceDataset]] = {}
+    al_tables: dict[str, lance.LanceDataset] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
             al_tables[al_info["source"]] = ds.open_table(al_info["name"]).to_lance()
@@ -153,8 +153,8 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     return create_page(items, total=total, params=params)
 
 
-def load_item_objects(dataset: Dataset, item_id: str) -> dict:
-    """Get item details
+def load_item_details(dataset: Dataset, item_id: str) -> dict:
+    """Load dataset item details
 
     Args:
         dataset (Dataset): Dataset
@@ -168,17 +168,17 @@ def load_item_objects(dataset: Dataset, item_id: str) -> dict:
     ds = dataset.connect()
     main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    media_tables: dict[str, list[lance.LanceDataset]] = {}
+    media_tables: dict[str, lance.LanceDataset] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"]).to_lance()
 
-    obj_tables: dict[str, list[lance.LanceDataset]] = {}
+    obj_tables: dict[str, lance.LanceDataset] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
             obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"]).to_lance()
 
-    al_tables: dict[str, list[lance.LanceDataset]] = {}
+    al_tables: dict[str, lance.LanceDataset] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
             al_tables[al_info["source"]] = ds.open_table(al_info["name"]).to_lance()
@@ -270,7 +270,7 @@ def load_item_objects(dataset: Dataset, item_id: str) -> dict:
 
 
 def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
-    """Get item embedding for a view
+    """Load dataset item embeddings
 
     Args:
         dataset (Dataset): Dataset
@@ -290,77 +290,77 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
 def save_item_objects(
     dataset: Dataset,
     item_id: str,
-    annotations: list[ObjectAnnotation],
+    objects: list[dict],
 ):
-    """Update dataset annotations
+    """Save dataset item objects
 
     Args:
         dataset (Dataset): Dataset
         item_id (str): Selected item ID
-        annotations (list[ObjectAnnotation]): Item annotations
+        objects (list[dict]): Item objects
     """
 
-    # Convert URLE to RLE and add bounding box
-    for ann in annotations:
-        ann.mask = CompressedRLE.from_urle(ann.mask.to_dict())
-        ann.bbox = (
-            ann.bbox
-            if ann.bbox.coords != [0.0, 0.0, 0.0, 0.0]
-            else BBox.from_mask(ann.mask.to_mask())
-        )
+    # Convert objects
+    for obj in objects:
+        # Convert mask from URLE to RLE
+        if "mask" in obj:
+            obj["mask"] = CompressedRLE.from_urle(obj["mask"]).to_dict()
+            # If empty bounding box, convert from mask
+            if "bbox" in obj and obj["bbox"]["coords"] == [0.0, 0.0, 0.0, 0.0]:
+                obj["bbox"] = BBox.from_mask(rle_to_mask(obj["mask"])).to_dict()
 
     # Load dataset
-    selected_ds = dataset.load()
-    fields = dataset.info.fields.to_dict()
-    schema = pa.schema(dataset.info.fields.to_pyarrow())
+    ds = dataset.connect()
 
-    # Get item
-    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
-    item = scanner.to_table().to_pylist()[0]
-    objects_field_name = ""
+    obj_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "objects" in dataset.info.tables:
+        for obj_info in dataset.info.tables["objects"]:
+            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
 
-    # Check if ObjectAnnotation field exists
-    for field_name, field_type in fields.items():
-        if field_type == "[ObjectAnnotation]" and objects_field_name == "":
-            # ObjectAnnotation field exists
-            objects_field_name = field_name
-            # Add new annotations to item
-            item[objects_field_name] = annotations
+    # Get current item objects
+    current_objects = {}
+    for obj_source, obj_table in obj_tables.items():
+        media_scanner = obj_table.to_lance().scanner(filter=f"item_id in ('{item_id}')")
+        current_objects[obj_source] = media_scanner.to_table().to_pylist()
 
-    # If ObjectAnnotation field not in fields
-    if objects_field_name == "":
-        objects_field_name = "objects"
-        # Add new annotations to item
-        item[objects_field_name] = annotations
-        # Update fields
-        fields[objects_field_name] = "[ObjectAnnotation]"
-        dataset.info.fields = Fields.from_dict(fields)
-        dataset.save_info()
-
-    # If ObjectAnnotation field not in schema
-    if objects_field_name not in selected_ds.schema.names:
-        # TODO: Add ObjectAnnotation field to schema if missing
-        raise Exception("Missing ObjectAnnotation field in dataset schema")
-
-    # Create updated item
-    updated_item_arrays = [
-        pyarrow_array_from_list([item[field.name]], field.type) for field in schema
-    ]
-    updated_item = pa.RecordBatchReader.from_batches(
-        selected_ds.schema,
-        [
-            pa.RecordBatch.from_struct_array(
-                pa.StructArray.from_arrays(
-                    updated_item_arrays,
-                    fields=schema,
-                )
+    # Save or update new item objects
+    for obj in objects:
+        source = obj["source_id"]
+        # If objects table exists
+        if source in obj_tables:
+            # Remove keys not in schema (mostly for removing source_id for now)
+            for key in list(obj):
+                if key not in obj_tables[source].schema.names:
+                    obj.pop(key)
+            # Look for existing object
+            scanner = (
+                obj_tables[source].to_lance().scanner(filter=f"id in ('{obj['id']}')")
             )
-        ],
-    )
+            pyarrow_obj = scanner.to_table()
+            # If object exists
+            if pyarrow_obj.num_rows > 0:
+                obj_tables[source].update(f"id in ('{obj['id']}')", obj)
+                pass
+            # If object does not exists
+            else:
+                obj_tables[source].add(obj)
 
-    # Replace old item
-    selected_ds.delete(f"id in ('{item_id}')")
-    lance.write_dataset(updated_item, selected_ds.uri, mode="append")
+        # If objects table does not exist
+        else:
+            # TODO: create objects table for new source
+            pass
+
+        # Clear change history to prevent dataset from becoming too large
+        obj_tables[source].to_lance().cleanup_old_versions()
+
+    # Delete removed item objects
+    for obj_source, cur_objects in current_objects.items():
+        for cur_obj in cur_objects:
+            print(cur_obj)
+            # If object has been deleted
+            if not any(obj["id"] == cur_obj["id"] for obj in objects):
+                # Remove object from table
+                obj_tables[obj_source].delete(f"id in ('{cur_obj['id']}')")
 
 
 def save_item_features(

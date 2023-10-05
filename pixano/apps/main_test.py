@@ -75,7 +75,7 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("type", stat)
             self.assertIn("histogram", stat)
 
-    def test_get_item_objects(self):
+    def test_get_item_details(self):
         response = self.client.get("/datasets/vdp_dataset/items/127")
         output = response.json()
 
