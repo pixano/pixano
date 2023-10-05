@@ -24,6 +24,21 @@
   // Exports
   export let selectedDataset: Dataset;
 
+  // Function to sort items based on ids
+  function sortItemsById(a: DatasetItem, b: DatasetItem) {
+    const idA = parseInt(a[0].value, 10); // Convert to integer
+    const idB = parseInt(b[0].value, 10); // Convert to integer
+
+    if (idA < idB) {
+      return -1;
+    } else if (idA > idB) {
+      return 1;
+    } else return 0;
+  }
+
+  // Sort the items
+  selectedDataset.page.items.sort(sortItemsById);
+
   const featureNames = selectedDataset.page.items[0].map((feature) => {
     return { name: feature.name, type: feature.dtype };
   });
@@ -46,9 +61,7 @@
 >
   <table class="table-auto z-0 w-full text-sm text-left">
     <thead class="text-xs uppercase">
-      <tr
-        class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-600 dark:bg-zinc-700"
-      >
+      <tr class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-600 dark:bg-zinc-700">
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
             <th class="pl-2 py-1">{name}</th>
