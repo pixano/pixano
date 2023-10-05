@@ -45,6 +45,14 @@
 
   let activeTab = "labels"; //"dataset";
   let noLabels = true;
+  
+  // Function to sort items based on ids
+  function sortItemsById(a: DatasetItem, b: DatasetItem) {
+    return a[0].value.localeCompare(b[0].value, undefined, { numeric: true, sensitivity: "base" });
+  }
+
+  // Sort the items
+  selectedDataset.page.items.sort(sortItemsById);
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
@@ -147,7 +155,7 @@
       }
     }
   }
-
+  
   onMount(() => {
     console.log("LabelPanel.onMount");
     dispatch("labelFilters");
