@@ -12,13 +12,11 @@
 # http://www.cecill.info
 
 from collections import defaultdict
-from pathlib import Path
 from typing import Any
 
-import lance
 import duckdb
+import lance
 import pyarrow as pa
-import pyarrow.dataset as ds
 from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
@@ -28,13 +26,11 @@ from pixano.core import (
     CompressedRLE,
     Image,
     ObjectAnnotation,
-    is_image_type,
-    is_list_of_object_annotation_type,
     is_number,
     is_string,
     pyarrow_array_from_list,
 )
-from pixano.data import Dataset, EmbeddingDataset, Fields, InferenceDataset
+from pixano.data import Dataset, Fields
 from pixano.utils import format_bbox
 
 
@@ -157,17 +153,12 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     return create_page(items, total=total, params=params)
 
 
-def load_item_objects(
-    dataset: Dataset,
-    item_id: str,
-    media_dir: Path,
-) -> dict:
+def load_item_objects(dataset: Dataset, item_id: str) -> dict:
     """Get item details
 
     Args:
         dataset (Dataset): Dataset
         item_id (str): Selected item ID
-        media_dir (Path): Dataset media directory
 
     Returns:
         dict: ImageDetails features for UI
@@ -234,7 +225,7 @@ def load_item_objects(
             if isinstance(item[field.name], dict):
                 item[field.name] = Image.from_dict(item[field.name])
             image = item[field.name]
-            image.uri_prefix = media_dir.absolute().as_uri()
+            image.uri_prefix = dataset.media_dir.absolute().as_uri()
             item_details["itemData"]["views"][field.name] = {
                 "id": field.name,
                 "url": image.url,
@@ -278,27 +269,22 @@ def load_item_objects(
     return item_details
 
 
-def load_item_embeddings(emb_ds: EmbeddingDataset, item_id: str) -> bytes:
+def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     """Get item embedding for a view
 
     Args:
-        emb_ds (EmbeddingDataset): Embedding dataset
-        item_id (str): Item ID
+        dataset (Dataset): Dataset
+        item_id (str): Selected item ID
 
     Returns:
-        bytes: Embedding in base 64
+        dict: Item embeddings
     """
 
-    # TODO: load embeddings for all views
-    view = "image"
-
     # Load dataset
-    pa_emb_ds = emb_ds.load()
+    ds = dataset.connect()
+    main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    # Get item
-    emb_scanner = pa_emb_ds.scanner(filter=ds.field("id").isin([item_id]))
-    emb_item = emb_scanner.to_table().to_pylist()[0]
-    return emb_item[f"{view}_embedding"]
+    # TODO: load item embeddings for all views
 
 
 def save_item_objects(
@@ -310,7 +296,7 @@ def save_item_objects(
 
     Args:
         dataset (Dataset): Dataset
-        item_id (str): Item ID
+        item_id (str): Selected item ID
         annotations (list[ObjectAnnotation]): Item annotations
     """
 

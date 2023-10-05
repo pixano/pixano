@@ -30,7 +30,7 @@ from pixano.api import (
     save_item_objects,
 )
 from pixano.core import ObjectAnnotation
-from pixano.data import DatasetInfo, EmbeddingDataset, InferenceDataset
+from pixano.data import DatasetInfo
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
@@ -117,7 +117,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
         else:
             # Load item objects
-            return load_item_objects(ds, item_id, ds.media_dir)
+            return load_item_objects(ds, item_id)
 
     @app.post("/datasets/{ds_id}/items/{item_id}/embeddings")
     async def get_item_embeddings(ds_id: str, item_id: str):
@@ -125,16 +125,9 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
-
-        # Load embedding dataset (currently selecting latest one)
-        emb_ds = None
-        for emb_json in sorted(list(ds.path.glob("db_embed_*/embed.json"))):
-            emb_ds = EmbeddingDataset(emb_json.parent)
-        if emb_ds is None:
-            raise HTTPException(status_code=404, detail="Embedding dataset not found")
-
-        # Return item embedding
-        return Response(content=load_item_embeddings(emb_ds, item_id))
+        else:
+            # TODO: Load item embeddings
+            return Response(content=load_item_embeddings(ds, item_id))
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/objects",
@@ -149,12 +142,10 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
-
-        # Update dataset annotations
-        save_item_objects(ds, item_id, annotations)
-
-        return Response()
+        else:
+            # TODO: Save new annotations
+            save_item_objects(ds, item_id, annotations)
+            return Response()
 
     add_pagination(app)
-
     return app
