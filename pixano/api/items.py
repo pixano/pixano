@@ -299,6 +299,47 @@ def save_item_details(
         item_details (dict[str, list]): Item details
     """
 
+    # Load dataset
+    ds = dataset.connect()
+
+    main_table: lancedb.db.LanceTable = ds.open_table("db")
+
+    obj_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "objects" in dataset.info.tables:
+        for obj_info in dataset.info.tables["objects"]:
+            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
+
+    al_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "active_learning" in dataset.info.tables:
+        for al_info in dataset.info.tables["active_learning"]:
+            al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+
+    ### Save item features (classification)
+
+    features = item_details["itemData"]
+
+    # Classification
+    for feature in features:
+        if feature["name"] == "label":
+            # If classification label in main table
+            if "label" in main_table.schema.names:
+                scanner = main_table.to_lance().scanner(filter=f"id in ('{item_id}')")
+                item = scanner.to_table().to_pylist()[0]
+                item["label"] = feature["value"]
+                main_table.update(f"id in ('{item_id}')", item)
+            # If classification label in active learning table
+            else:
+                for al_table in al_tables.values():
+                    if "label" in al_table.schema.names:
+                        scanner = main_table.to_lance().scanner(
+                            filter=f"id in ('{item_id}')"
+                        )
+                        item = scanner.to_table().to_pylist()[0]
+                        item["label"] = feature["value"]
+                        main_table.update(f"id in ('{item_id}')", item)
+
+    ### Save item objects
+
     # Convert objects
     for obj in item_details["itemObjects"]:
         # Convert mask from URLE to RLE
@@ -307,14 +348,6 @@ def save_item_details(
             # If empty bounding box, convert from mask
             if "bbox" in obj and obj["bbox"]["coords"] == [0.0, 0.0, 0.0, 0.0]:
                 obj["bbox"] = BBox.from_mask(rle_to_mask(obj["mask"])).to_dict()
-
-    # Load dataset
-    ds = dataset.connect()
-
-    obj_tables: dict[str, lancedb.db.LanceTable] = {}
-    if "objects" in dataset.info.tables:
-        for obj_info in dataset.info.tables["objects"]:
-            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
 
     # Get current item objects
     current_objects = {}
