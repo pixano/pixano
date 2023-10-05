@@ -308,10 +308,15 @@
     embeddings = {};
   }
 
-  function handleSaveObjects() {
-    console.log("App.handleSaveObjects");
+  function handleSaveItemDetails() {
+    console.log("App.handleSaveItemDetails");
+
     saveFlag = false;
-    const objects = [];
+
+    const itemDetails = {
+      itemData: selectedItem.features,
+      itemObjects: [],
+    };
 
     for (const sourceLabels of Object.values(annotations)) {
       for (const viewLabels of Object.values(sourceLabels.views)) {
@@ -323,7 +328,7 @@
             const bbox = bboxes.find(
               (b) => b.id === label.id && b.viewId === label.viewId
             );
-            objects.push({
+            itemDetails["itemObjects"].push({
               id: label.id,
               item_id: selectedItem.id,
               source_id: label.sourceId,
@@ -335,7 +340,14 @@
                   }
                 : { size: [0, 0], counts: [] },
               bbox: {
-                coords: bbox ? bbox.bbox : [0, 0, 0, 0],
+                coords: bbox
+                  ? [
+                      bbox.bbox[0] / selectedItem.views[label.viewId].width,
+                      bbox.bbox[1] / selectedItem.views[label.viewId].height,
+                      bbox.bbox[2] / selectedItem.views[label.viewId].width,
+                      bbox.bbox[3] / selectedItem.views[label.viewId].height,
+                    ] // normalized
+                  : [0, 0, 0, 0],
                 format: "xywh",
                 confidence: label.confidence,
               },
@@ -347,28 +359,15 @@
       }
     }
 
-    //also save classification data (e.g selectedItem.features)
     let start = Date.now();
-    api.postFeatures(
-      selectedItem.features,
-      selectedDataset.id,
-      selectedItem.id
-    );
+    api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
     console.log(
-      "App.handleSaveAnns - api.postFeatures in",
+      "App.handleSaveItemDetails - api.postItemDetails in",
       Date.now() - start,
       "ms"
     );
 
-    start = Date.now();
-    api.postItemObjects(objects, selectedDataset.id, selectedItem.id);
-    console.log(
-      "App.handleSaveObjects - api.postItemObjects in",
-      Date.now() - start,
-      "ms"
-    );
-
-    // Reload annotations
+    // Reload item details
     handleSelectItem(selectedItem.id);
   }
 
@@ -429,7 +428,7 @@
   {saveFlag}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
-  on:saveObjects={handleSaveObjects}
+  on:saveItemDetails={handleSaveItemDetails}
 />
 <div
   class="pt-20 h-screen w-full

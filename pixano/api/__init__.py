@@ -22,8 +22,7 @@ from pixano.api.items import (
     load_item_embeddings,
     load_item_details,
     load_items,
-    save_item_objects,
-    save_item_features,
+    save_item_details,
 )
 
 __all__ = [
@@ -35,6 +34,5 @@ __all__ = [
     "load_item_embeddings",
     "load_item_details",
     "load_items",
-    "save_item_objects",
-    "save_item_features",
+    "save_item_details",
 ]

@@ -38,8 +38,8 @@
     dispatch("unselectItem");
   }
 
-  function handleSaveObjects() {
-    dispatch("saveObjects");
+  function handleSaveItemDetails() {
+    dispatch("saveItemDetails");
   }
 </script>
 
@@ -102,7 +102,7 @@
       {#if selectedItem && app === "Annotator"}
         <button
           class="w-30 h pr-4 flex justify-end"
-          on:click={handleSaveObjects}
+          on:click={handleSaveItemDetails}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

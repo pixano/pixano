@@ -287,21 +287,21 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     # TODO: load item embeddings for all views
 
 
-def save_item_objects(
+def save_item_details(
     dataset: Dataset,
     item_id: str,
-    objects: list[dict],
+    item_details: dict[str, list],
 ):
     """Save dataset item objects
 
     Args:
         dataset (Dataset): Dataset
         item_id (str): Selected item ID
-        objects (list[dict]): Item objects
+        item_details (dict[str, list]): Item details
     """
 
     # Convert objects
-    for obj in objects:
+    for obj in item_details["itemObjects"]:
         # Convert mask from URLE to RLE
         if "mask" in obj:
             obj["mask"] = CompressedRLE.from_urle(obj["mask"]).to_dict()
@@ -324,7 +324,7 @@ def save_item_objects(
         current_objects[obj_source] = media_scanner.to_table().to_pylist()
 
     # Save or update new item objects
-    for obj in objects:
+    for obj in item_details["itemObjects"]:
         source = obj["source_id"]
         # If objects table exists
         if source in obj_tables:
@@ -340,7 +340,6 @@ def save_item_objects(
             # If object exists
             if pyarrow_obj.num_rows > 0:
                 obj_tables[source].update(f"id in ('{obj['id']}')", obj)
-                pass
             # If object does not exists
             else:
                 obj_tables[source].add(obj)
@@ -356,58 +355,9 @@ def save_item_objects(
     # Delete removed item objects
     for obj_source, cur_objects in current_objects.items():
         for cur_obj in cur_objects:
-            print(cur_obj)
             # If object has been deleted
-            if not any(obj["id"] == cur_obj["id"] for obj in objects):
+            if not any(
+                obj["id"] == cur_obj["id"] for obj in item_details["itemObjects"]
+            ):
                 # Remove object from table
                 obj_tables[obj_source].delete(f"id in ('{cur_obj['id']}')")
-
-
-def save_item_features(
-    dataset: Dataset,
-    item_id: str,
-    features: ItemFeatures,
-):
-    """Update dataset annotations
-
-    Args:
-        dataset (Dataset): Dataset
-        item_id (str): Item ID
-        annotations (list[ObjectAnnotation]): Item annotations
-    """
-
-    print("WIP Save:", features)
-
-    """
-    # Load dataset
-    selected_ds = dataset.load()
-    fields = dataset.info.fields.to_dict()
-    schema = pa.schema(dataset.info.fields.to_pyarrow())
-
-    # Get item
-    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
-    item = scanner.to_table().to_pylist()[0]
-
-    print("AAA", fields)
-    print("BBB", item)
-
-    # Create updated item
-    updated_item_arrays = [
-        pyarrow_array_from_list([item[field.name]], field.type) for field in schema
-    ]
-    updated_item = pa.RecordBatchReader.from_batches(
-        selected_ds.schema,
-        [
-            pa.RecordBatch.from_struct_array(
-                pa.StructArray.from_arrays(
-                    updated_item_arrays,
-                    fields=schema,
-                )
-            )
-        ],
-    )
-
-    # Replace old item
-    selected_ds.delete(f"id in ('{item_id}')")
-    lance.write_dataset(updated_item, selected_ds.uri, mode="append")
-    """

@@ -27,8 +27,7 @@ from pixano.api import (
     load_item_embeddings,
     load_item_details,
     load_items,
-    save_item_objects,
-    save_item_features,
+    save_item_details,
 )
 from pixano.core import ObjectAnnotation
 from pixano.data import DatasetInfo
@@ -131,13 +130,13 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             return Response(content=load_item_embeddings(ds, item_id))
 
     @app.post(
-        "/datasets/{ds_id}/items/{item_id}/objects",
-        response_model=list[dict],
+        "/datasets/{ds_id}/items/{item_id}/details",
+        response_model=dict[str, list],
     )
-    async def post_item_objects(
+    async def post_item_details(
         ds_id: str,
         item_id: str,
-        objects: list[dict],
+        item_details: dict[str, list],
     ):
         # Load dataset
         ds = load_dataset(ds_id, settings)
@@ -145,27 +144,8 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
         else:
             # Save item objects
-            save_item_objects(ds, item_id, objects)
+            save_item_details(ds, item_id, item_details)
             return Response()
-
-    @app.post(
-        "/datasets/{ds_id}/items/{item_id}/features",
-        response_model=list[ObjectAnnotation],
-    )
-    async def post_item_features(
-        ds_id: str,
-        item_id: str,
-        feats: ItemFeatures,
-    ):
-        # Load dataset
-        ds = load_dataset(ds_id, settings)
-        if ds is None:
-            raise HTTPException(status_code=404, detail="Dataset not found")
-
-        # Update dataset annotations
-        save_item_features(ds, item_id, feats)
-
-        return Response()
 
     add_pagination(app)
     return app

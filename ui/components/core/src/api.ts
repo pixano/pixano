@@ -142,64 +142,32 @@ export async function getViewEmbedding(
   return embedding;
 }
 
-export async function postItemObjects(
-  objects: Array<Object>,
+export async function postItemDetails(
+  itemDetails: Object,
   datasetId: String,
   itemId: string
 ) {
   try {
     const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/objects`,
+      `/datasets/${datasetId}/items/${itemId}/details`,
       {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(objects),
+        body: JSON.stringify(itemDetails),
         method: "POST",
       }
     );
     if (!response.ok) {
       console.log(
-        "api.postItemObjects -",
+        "api.postItemDetails -",
         response.status,
         response.statusText,
         await response.text()
       );
     }
   } catch (e) {
-    console.log("api.postItemObjects -", e);
+    console.log("api.postItemDetails -", e);
   }
 }
-
-
-export async function postFeatures(
-  features: Array<Object>,
-  datasetId: String,
-  itemId: string
-) {
-  try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/features`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(features),
-        method: "POST",
-      }
-    );
-    if (!response.ok) {
-      console.log(
-        "api.postFeatures -",
-        response.status,
-        response.statusText,
-        await response.text()
-      );
-    }
-  } catch (e) {
-    console.log("api.postFeatures -", e);
-  }
-}
-

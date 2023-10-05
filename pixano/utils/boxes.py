@@ -103,7 +103,7 @@ def urle_to_bbox(urle: dict) -> list[float]:
     return mask_to_bbox(rle_to_mask(urle_to_rle(urle)))
 
 
-def format_bbox(bbox: list[float], confidence: float = None) -> dict:
+def format_bbox(bbox: list[float], confidence: float = 0.0) -> dict:
     """Convert bounding box to frontend format
 
     Args:
@@ -120,7 +120,7 @@ def format_bbox(bbox: list[float], confidence: float = None) -> dict:
             "y": float(bbox[1]),
             "width": float(bbox[2]),
             "height": float(bbox[3]),
-            "predicted": confidence is not None,
+            "predicted": confidence != 0.0,
             "confidence": confidence,
         }
 
