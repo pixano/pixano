@@ -88,3 +88,23 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("views", output["itemData"])
         self.assertIn("features", output["itemData"])
         self.assertIn("ground truth", output["itemObjects"])
+
+    def test_post_item_details(self):
+        response = self.client.post(
+            "/datasets/vdp_dataset/items/127/details",
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json={
+                "itemData": [
+                    {"name": "feature", "dtype": "text", "value": "a text feature"}
+                ],
+                "itemObjects": [
+                    {"id": "object1", "source_id": "unit test"},
+                    {"id": "object2", "source_id": "unit test"},
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
