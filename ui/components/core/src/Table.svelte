@@ -26,14 +26,7 @@
 
   // Function to sort items based on ids
   function sortItemsById(a: DatasetItem, b: DatasetItem) {
-    const idA = parseInt(a[0].value, 10); // Convert to integer
-    const idB = parseInt(b[0].value, 10); // Convert to integer
-
-    if (idA < idB) {
-      return -1;
-    } else if (idA > idB) {
-      return 1;
-    } else return 0;
+    return a[0].value.localeCompare(b[0].value, undefined, { numeric: true, sensitivity: "base" });
   }
 
   // Sort the items
