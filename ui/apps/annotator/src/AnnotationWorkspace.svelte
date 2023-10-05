@@ -118,7 +118,7 @@
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter") handleAddCurrentAnn();
   }
-  
+
   function handleAddClassification() {
     console.log("AnnotationWorkspace.handleAddClassification");
     if (currentAnnCatName !== "") {
@@ -409,7 +409,7 @@
         {labelColors}
         on:addCurrentAnn={handleAddClassification}
       />
-    {:else if selectedTool && selectedTool.type != tools.ToolType.Pan && selectedTool.type != tools.ToolType.Delete}
+    {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}
       <CategoryToolbar
         bind:currentAnnCatName
         bind:classes
