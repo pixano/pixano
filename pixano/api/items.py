@@ -376,13 +376,13 @@ def save_item_details(
             else:
                 obj_tables[source].add(obj)
 
+            # Clear change history to prevent dataset from becoming too large
+            obj_tables[source].to_lance().cleanup_old_versions()
+
         # If objects table does not exist
         else:
             # TODO: create objects table for new source
             pass
-
-        # Clear change history to prevent dataset from becoming too large
-        obj_tables[source].to_lance().cleanup_old_versions()
 
     # Delete removed item objects
     for obj_source, cur_objects in current_objects.items():
