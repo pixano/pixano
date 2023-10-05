@@ -56,9 +56,9 @@
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
     const start = Date.now();
-    datasets = await api.getDatasetsList();
+    datasets = await api.getDatasetList();
     console.log(
-      "App.handleGetDatasets - api.getDatasetsList in",
+      "App.handleGetDatasets - api.getDatasetList in",
       Date.now() - start,
       "ms"
     );

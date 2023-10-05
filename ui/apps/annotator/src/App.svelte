@@ -76,9 +76,9 @@
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
     const start = Date.now();
-    datasets = await api.getDatasetsList();
+    datasets = await api.getDatasetList();
     console.log(
-      "App.handleGetDatasets - api.getDatasetsList in",
+      "App.handleGetDatasets - api.getDatasetList in",
       Date.now() - start,
       "ms"
     );
@@ -308,42 +308,40 @@
     embeddings = {};
   }
 
-  function handleSaveAnns() {
-    console.log("App.handleSaveAnns");
+  function handleSaveObjects() {
+    console.log("App.handleSaveObjects");
     saveFlag = false;
-    const anns = [];
+    const objects = [];
 
     for (const sourceLabels of Object.values(annotations)) {
-      if (
-        sourceLabels.id === "Ground truth" ||
-        sourceLabels.id === "Pixano Annotator"
-      ) {
-        for (const viewLabels of Object.values(sourceLabels.views)) {
-          for (const catLabels of Object.values(viewLabels.categories)) {
-            for (const label of Object.values(catLabels.labels)) {
-              const mask = masks.find(
-                (m) => m.id === label.id && m.viewId === label.viewId
-              );
-              const bbox = bboxes.find(
-                (b) => b.id === label.id && b.viewId === label.viewId
-              );
-              anns.push({
-                id: label.id,
-                mask: {
-                  size: mask.rle ? mask.rle.size : [0, 0],
-                  counts: mask.rle ? mask.rle.counts : [],
-                },
-                mask_source: label.sourceId,
-                bbox: {
-                  coords: bbox ? bbox.bbox : [0, 0, 0, 0],
-                  format: "xywh",
-                },
-                bbox_source: label.sourceId,
-                view_id: label.viewId,
-                category_id: label.categoryId,
-                category_name: label.categoryName,
-              });
-            }
+      for (const viewLabels of Object.values(sourceLabels.views)) {
+        for (const catLabels of Object.values(viewLabels.categories)) {
+          for (const label of Object.values(catLabels.labels)) {
+            const mask = masks.find(
+              (m) => m.id === label.id && m.viewId === label.viewId
+            );
+            const bbox = bboxes.find(
+              (b) => b.id === label.id && b.viewId === label.viewId
+            );
+            objects.push({
+              id: label.id,
+              item_id: selectedItem.id,
+              source_id: label.sourceId,
+              view_id: label.viewId,
+              mask: mask
+                ? {
+                    size: mask.rle ? mask.rle.size : [0, 0],
+                    counts: mask.rle ? mask.rle.counts : [],
+                  }
+                : { size: [0, 0], counts: [] },
+              bbox: {
+                coords: bbox ? bbox.bbox : [0, 0, 0, 0],
+                format: "xywh",
+                confidence: label.confidence,
+              },
+              category_id: label.categoryId,
+              category_name: label.categoryName,
+            });
           }
         }
       }
@@ -351,7 +349,11 @@
 
     //also save classification data (e.g selectedItem.features)
     let start = Date.now();
-    api.postFeatures(selectedItem.features, selectedDataset.id, selectedItem.id);
+    api.postFeatures(
+      selectedItem.features,
+      selectedDataset.id,
+      selectedItem.id
+    );
     console.log(
       "App.handleSaveAnns - api.postFeatures in",
       Date.now() - start,
@@ -359,9 +361,9 @@
     );
 
     start = Date.now();
-    api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
+    api.postItemObjects(objects, selectedDataset.id, selectedItem.id);
     console.log(
-      "App.handleSaveAnns - api.postAnnotations in",
+      "App.handleSaveObjects - api.postItemObjects in",
       Date.now() - start,
       "ms"
     );
@@ -427,7 +429,7 @@
   {saveFlag}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
-  on:saveAnns={handleSaveAnns}
+  on:saveObjects={handleSaveObjects}
 />
 <div
   class="pt-20 h-screen w-full

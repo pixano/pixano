@@ -38,8 +38,8 @@
     dispatch("unselectItem");
   }
 
-  function handleSaveAnns() {
-    dispatch("saveAnns");
+  function handleSaveObjects() {
+    dispatch("saveObjects");
   }
 </script>
 
@@ -100,7 +100,10 @@
     <!-- Navigation -->
     {#if selectedDataset}
       {#if selectedItem && app === "Annotator"}
-        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveAnns}>
+        <button
+          class="w-30 h pr-4 flex justify-end"
+          on:click={handleSaveObjects}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"

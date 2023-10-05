@@ -15,7 +15,7 @@
 
 // Exports
 
-export async function getDatasetsList() {
+export async function getDatasetList() {
   let datasets = null;
 
   try {
@@ -24,14 +24,14 @@ export async function getDatasetsList() {
       datasets = await response.json();
     } else {
       console.log(
-        "api.getDatasetsList -",
+        "api.getDatasetList -",
         response.status,
         response.statusText,
         await response.text()
       );
     }
   } catch (e) {
-    console.log("api.getDatasetsList -", e);
+    console.log("api.getDatasetList -", e);
   }
 
   return datasets;
@@ -142,8 +142,8 @@ export async function getViewEmbedding(
   return embedding;
 }
 
-export async function postAnnotations(
-  anns: Array<Object>,
+export async function postItemObjects(
+  objects: Array<Object>,
   datasetId: String,
   itemId: string
 ) {
@@ -155,20 +155,20 @@ export async function postAnnotations(
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(anns),
+        body: JSON.stringify(objects),
         method: "POST",
       }
     );
     if (!response.ok) {
       console.log(
-        "api.postAnnotations -",
+        "api.postItemObjects -",
         response.status,
         response.statusText,
         await response.text()
       );
     }
   } catch (e) {
-    console.log("api.postAnnotations -", e);
+    console.log("api.postItemObjects -", e);
   }
 }
 
