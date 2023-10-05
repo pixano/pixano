@@ -122,11 +122,20 @@
   function handleAddClassification() {
     console.log("AnnotationWorkspace.handleAddClassification");
     if (currentAnnCatName !== "") {
-      console.log("label", currentAnnCatName);
-      // Check if category name provided
-      //TODO : addCurrentAnn();
+      addCurrentFeatures();
       dispatch("enableSaveFlag");
     }
+  }
+
+  function addCurrentFeatures() {
+    for (let feat of selectedItem.features) {
+        if (feat["name"] === "label") {  //TODO get label from "editables"(? - to define)
+          feat["value"] = currentAnnCatName
+          // Update visibility
+          selectedItem = selectedItem
+          break;
+        }
+      }
   }
 
   function handleAddCurrentAnn() {

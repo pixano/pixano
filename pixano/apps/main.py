@@ -28,6 +28,7 @@ from pixano.api import (
     load_item_objects,
     load_items,
     save_item_objects,
+    save_item_features,
 )
 from pixano.core import ObjectAnnotation
 from pixano.data import DatasetInfo
@@ -146,6 +147,25 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             # TODO: Save new annotations
             save_item_objects(ds, item_id, annotations)
             return Response()
+
+    @app.post(
+        "/datasets/{ds_id}/items/{item_id}/features",
+        response_model=list[ObjectAnnotation],
+    )
+    async def post_item_features(
+        ds_id: str,
+        item_id: str,
+        feats: ItemFeatures,
+    ):
+        # Load dataset
+        ds = load_dataset(ds_id, settings)
+        if ds is None:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+
+        # Update dataset annotations
+        save_item_features(ds, item_id, feats)
+
+        return Response()
 
     add_pagination(app)
     return app

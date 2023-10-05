@@ -349,7 +349,16 @@
       }
     }
 
-    const start = Date.now();
+    //also save classification data (e.g selectedItem.features)
+    let start = Date.now();
+    api.postFeatures(selectedItem.features, selectedDataset.id, selectedItem.id);
+    console.log(
+      "App.handleSaveAnns - api.postFeatures in",
+      Date.now() - start,
+      "ms"
+    );
+
+    start = Date.now();
     api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
     console.log(
       "App.handleSaveAnns - api.postAnnotations in",

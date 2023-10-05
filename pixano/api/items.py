@@ -361,3 +361,53 @@ def save_item_objects(
     # Replace old item
     selected_ds.delete(f"id in ('{item_id}')")
     lance.write_dataset(updated_item, selected_ds.uri, mode="append")
+
+
+def save_item_features(
+    dataset: Dataset,
+    item_id: str,
+    features: ItemFeatures,
+):
+    """Update dataset annotations
+
+    Args:
+        dataset (Dataset): Dataset
+        item_id (str): Item ID
+        annotations (list[ObjectAnnotation]): Item annotations
+    """
+
+    print("WIP Save:", features)
+
+    """
+    # Load dataset
+    selected_ds = dataset.load()
+    fields = dataset.info.fields.to_dict()
+    schema = pa.schema(dataset.info.fields.to_pyarrow())
+
+    # Get item
+    scanner = selected_ds.scanner(filter=f"id in ('{item_id}')")
+    item = scanner.to_table().to_pylist()[0]
+
+    print("AAA", fields)
+    print("BBB", item)
+
+    # Create updated item
+    updated_item_arrays = [
+        pyarrow_array_from_list([item[field.name]], field.type) for field in schema
+    ]
+    updated_item = pa.RecordBatchReader.from_batches(
+        selected_ds.schema,
+        [
+            pa.RecordBatch.from_struct_array(
+                pa.StructArray.from_arrays(
+                    updated_item_arrays,
+                    fields=schema,
+                )
+            )
+        ],
+    )
+
+    # Replace old item
+    selected_ds.delete(f"id in ('{item_id}')")
+    lance.write_dataset(updated_item, selected_ds.uri, mode="append")
+    """
