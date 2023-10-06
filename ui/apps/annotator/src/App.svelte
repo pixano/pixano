@@ -18,13 +18,29 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import { api, ConfirmModal, Header, Library, LoadingLibrary, PromptModal, WarningModal } from "@pixano/core";
+  import {
+    api,
+    ConfirmModal,
+    Header,
+    Library,
+    LoadingLibrary,
+    PromptModal,
+    WarningModal,
+  } from "@pixano/core";
   import { mask_utils, npy, SAM } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
-  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, ItemObjects, Mask } from "@pixano/core";
+  import type {
+    BBox,
+    CategoryData,
+    Dataset,
+    ItemData,
+    ItemLabels,
+    ItemObjects,
+    Mask,
+  } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -62,32 +78,45 @@
     console.log("App.handleGetDatasets");
     const start = Date.now();
     datasets = await api.getDatasetList();
-    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
+    console.log(
+      "App.handleGetDatasets - api.getDatasetList in",
+      Date.now() - start,
+      "ms"
+    );
   }
 
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
     const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage);
-    console.log("App.handleSelectDataset - api.getDatasetItems in", Date.now() - start, "ms");
+    selectedDataset.page = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
+    console.log(
+      "App.handleSelectDataset - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      let firstItem;
+      const firstItemId = selectedDataset.page.items[0].find(
+        (feature) => feature.name === "id"
+      ).value;
 
-      if (activeLearningFlag) {
-        firstItem = selectedDataset.page.items.find((item) => {
-          const roundObj = item.find((obj) => obj.name === "round");
-          const labelObj = item.find((obj) => obj.name === "label");
-          return roundObj && roundObj.value !== null && labelObj && labelObj.value === null;
-        });
-      } else firstItem = selectedDataset.page.items[0];
-
-      if (firstItem) {
-        let firstItemId = firstItem.find((feature) => feature.name === "id").value;
-        handleSelectItem(firstItemId);
+      // Toggle active learning filtering if "round" found
+      if (
+        !!selectedDataset.page.items[0].find(
+          (feature) => feature.name === "round"
+        )
+      ) {
+        activeLearningFlag = true;
+      } else {
+        activeLearningFlag = false;
       }
+
+      handleSelectItem(firstItemId);
     } else {
       // Otherwise display error message
       handleUnselectDataset();
@@ -117,7 +146,11 @@
     selectedItem = itemDetails["itemData"] as ItemData;
     const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
-    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
+    console.log(
+      "App.handleSelectItem - api.getItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
@@ -165,13 +198,16 @@
             }
 
             // Add label
-            annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
+            annotations[sourceId].views[viewId].categories[catId].labels[
+              obj.id
+            ] = {
               id: obj.id,
               categoryId: catId,
               categoryName: catName,
               sourceId: sourceId,
               viewId: viewId,
-              confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              confidence:
+                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
               bboxOpacity: 1.0,
               maskOpacity: 1.0,
               visible: true,
@@ -210,14 +246,21 @@
                   obj.bbox.width * selectedItem.views[viewId].width,
                   obj.bbox.height * selectedItem.views[viewId].height,
                 ], // denormalized
-                tooltip: catName + (obj.bbox.predicted ? " " + obj.bbox.confidence.toFixed(2) : ""),
+                tooltip:
+                  catName +
+                  (obj.bbox.predicted
+                    ? " " + obj.bbox.confidence.toFixed(2)
+                    : ""),
                 catId: catId,
                 visible: true,
                 opacity: 1.0,
               });
             }
           } else {
-            console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
+            console.log(
+              "App.handleSelectItem - Warning: no mask nor bounding box for item",
+              obj.id
+            );
             continue;
           }
         }
@@ -228,13 +271,25 @@
     for (const viewId of Object.keys(selectedItem.views)) {
       let viewEmbedding = null;
       const start = Date.now();
-      const viewEmbeddingArrayBytes = await api.getViewEmbedding(selectedDataset.id, selectedItem.id, viewId);
-      console.log("App.handleSelectItem - api.getViewEmbedding in", Date.now() - start, "ms");
+      const viewEmbeddingArrayBytes = await api.getViewEmbedding(
+        selectedDataset.id,
+        selectedItem.id,
+        viewId
+      );
+      console.log(
+        "App.handleSelectItem - api.getViewEmbedding in",
+        Date.now() - start,
+        "ms"
+      );
 
       if (viewEmbeddingArrayBytes) {
         try {
           const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
-          viewEmbedding = new ort.Tensor("float32", viewEmbeddingArray.data, viewEmbeddingArray.shape);
+          viewEmbedding = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape
+          );
         } catch (e) {
           console.log("App.handleSelectItem - Error loading embeddings", e);
         }
@@ -280,8 +335,12 @@
       for (const viewLabels of Object.values(sourceLabels.views)) {
         for (const catLabels of Object.values(viewLabels.categories)) {
           for (const label of Object.values(catLabels.labels)) {
-            const mask = masks.find((m) => m.id === label.id && m.viewId === label.viewId);
-            const bbox = bboxes.find((b) => b.id === label.id && b.viewId === label.viewId);
+            const mask = masks.find(
+              (m) => m.id === label.id && m.viewId === label.viewId
+            );
+            const bbox = bboxes.find(
+              (b) => b.id === label.id && b.viewId === label.viewId
+            );
             itemDetails["itemObjects"].push({
               id: label.id,
               item_id: selectedItem.id,
@@ -315,7 +374,11 @@
 
     let start = Date.now();
     api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
-    console.log("App.handleSaveItemDetails - api.postItemDetails in", Date.now() - start, "ms");
+    console.log(
+      "App.handleSaveItemDetails - api.postItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
 
     // Reload item details
     handleSelectItem(selectedItem.id);
@@ -326,11 +389,20 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
-    console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
+    const new_dbImages = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
+    console.log(
+      "App.handleLoadNextPage - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
 
     if (new_dbImages) {
-      selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
+      selectedDataset.page.items = selectedDataset.page.items.concat(
+        new_dbImages.items
+      );
     } else {
       // End of dataset: reset last page
       currentPage = currentPage - 1;
@@ -395,7 +467,11 @@
         on:enableSaveFlag={() => (saveFlag = true)}
       />
     {:else}
-      <Library {datasets} buttonLabel="Annotate" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
+      <Library
+        {datasets}
+        buttonLabel="Annotate"
+        on:selectDataset={(event) => handleSelectDataset(event.detail)}
+      />
     {/if}
   {:else}
     <LoadingLibrary />

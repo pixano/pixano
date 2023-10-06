@@ -107,10 +107,10 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
-    al_tables: dict[str, lancedb.db.LanceTable] = {}
+    al_tables: list[lancedb.db.LanceTable] = []
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
-            al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+            al_tables.append(ds.open_table(al_info["name"]))
 
     # Get page parameters
     params = resolve_params(params)
@@ -123,25 +123,57 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     if start >= stop:
         return None
 
-    pyarrow_table = main_table.to_lance().to_table(
-        limit=raw_params.limit, offset=raw_params.offset
-    )
+    ## For Active Learning
+    if len(al_tables) > 0:
+        # Selecting first active learning table
+        al_table = al_tables[0].to_lance()
+        pyarrow_table = duckdb.query(
+            f"SELECT * FROM al_table ORDER BY round DESC LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+        ).to_arrow_table()
+        table_id_list = pyarrow_table["id"].to_pylist()
+        table_ids = ", ".join(table_id_list)
 
-    for media_table in media_tables.values():
-        pyarrow_media_table = media_table.to_lance().to_table(
-            limit=raw_params.limit, offset=raw_params.offset
+        # Main table
+        pyarrow_main_table = (
+            main_table.to_lance().scanner(filter=f"id in ({table_ids})").to_table()
         )
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY (id)"
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_main_table USING (id) ORDER BY round DESC"
         ).to_arrow_table()
 
-    for al_table in al_tables.values():
-        pyarrow_al_table = al_table.to_lance().to_table(
+        # Media tables
+        for media_table in media_tables.values():
+            pyarrow_media_table = (
+                media_table.to_lance().scanner(filter=f"id in ({table_ids})").to_table()
+            )
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY round DESC"
+            ).to_arrow_table()
+
+    ## Else
+    else:
+        # Main table
+        pyarrow_table = main_table.to_lance().to_table(
             limit=raw_params.limit, offset=raw_params.offset
         )
-        pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id)  ORDER BY (id)"
-        ).to_arrow_table()
+
+        # Media tables
+        for media_table in media_tables.values():
+            pyarrow_media_table = media_table.to_lance().to_table(
+                limit=raw_params.limit, offset=raw_params.offset
+            )
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY id"
+            ).to_arrow_table()
+
+        # Active Learning tables
+        for al_table in al_tables:
+            pyarrow_al_table = al_table.to_lance().to_table(
+                limit=raw_params.limit, offset=raw_params.offset
+            )
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id) ORDER BY id"
+            ).to_arrow_table()
 
     # Create items features
     items = [
