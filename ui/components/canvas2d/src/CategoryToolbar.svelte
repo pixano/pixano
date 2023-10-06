@@ -54,6 +54,17 @@
       }
     }
   }
+
+  function handleKeyPress(event) {
+    if (event.key === "Enter") {
+      dispatch("addCurrentAnn");
+    }
+  }
+
+  function focusInput() {
+    const input = document.getElementById("categoryInput");
+    input.focus();
+  }
 </script>
 
 <div
@@ -73,6 +84,7 @@
       focus:border-rose-500 dark:focus:border-rose-600
       "
       on:keyup={handleFilterCategories}
+      on:keydown={handleKeyPress}
       bind:value={currentAnnCatName}
     />
 
@@ -84,16 +96,22 @@
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
-        <div>
-          <button
-            class="relative my-1 mx-2 px-1 rounded-lg text-sm flex text-zinc-800"
-            style="background-color: {labelColors(cls.id)}; text-align:left"
-            title="{cls.name} (id #{cls.id})"
-            on:click={() => (currentAnnCatName = cls.name)}
-          >
-            {cls.name}
-          </button>
-        </div>
+        <button
+          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-zinc-800 font-semibold hover:brightness-110"
+          style="background-color: {labelColors(cls.id)}; text-align:left"
+          title="{cls.name} (id #{cls.id})"
+          on:click={() => {
+            currentAnnCatName = cls.name;
+            focusInput();
+
+            // Bad code that works for now but needs to be updated later
+            setTimeout(() => {
+              handleFilterCategories();
+            }, 1);
+          }}
+        >
+          {cls.name}
+        </button>
       {/each}
     </div>
   </div>
@@ -112,9 +130,7 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointPlusTool
-          ? 'border-rose-500 dark:border-rose-600'
-          : 'border-transparent'}"
+        {selectedTool === pointPlusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
       >
         <title>Positive point</title>
         <path d={icons.svg_point_plus} fill="currentcolor" />
@@ -133,9 +149,7 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointMinusTool
-          ? 'border-rose-500 dark:border-rose-600'
-          : 'border-transparent'}"
+        {selectedTool === pointMinusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
       >
         <title>Negative point</title>
         <path d={icons.svg_point_minus} fill="currentcolor" />
