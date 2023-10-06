@@ -438,7 +438,6 @@
   app="Annotator"
   bind:selectedDataset
   bind:selectedItem
-  bind:activeLearningFlag
   {saveFlag}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}

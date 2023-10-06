@@ -562,47 +562,62 @@
       {/if}
     </div>
     {#if selectedDataset}
-      <div
-        class="w-full h-full py-4 flex flex-wrap justify-center overflow-auto {activeTab ==
-        'dataset'
-          ? ''
-          : 'hidden'}"
-        on:scroll={handleDatasetScroll}
-      >
-        {#each filterItems(selectedDataset.page.items) as item, i}
-          <button
-            class="flex p-1 flex-col rounded h-min
-            hover:bg-zinc-100 dark:hover:bg-zinc-700"
-            on:click={() => handleSelectItem(item)}
-          >
-            <div
-              class={item.filter((f) => f.dtype === "image").length > 1
-                ? "grid grid-cols-2"
-                : ""}
+      <div class="w-full h-full {activeTab == 'dataset' ? '' : 'hidden'}">
+        <!-- Details -->
+        <div
+          class="flex flex-col p-4 border-b-2
+            border-zinc-300 dark:border-zinc-600"
+        >
+          <span class="font-bold">Active learning</span>
+          <label class="flex items-center select-none cursor-pointer">
+            <input
+              type="checkbox"
+              class="cursor-pointer mx-2"
+              bind:checked={activeLearningFlag}
+            />
+            Show remaining items only
+          </label>
+        </div>
+
+        <div
+          class="p-4 flex flex-wrap justify-center overflow-auto"
+          on:scroll={handleDatasetScroll}
+        >
+          {#each filterItems(selectedDataset.page.items) as item, i}
+            <button
+              class="flex p-1 flex-col rounded h-min
+          hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              on:click={() => handleSelectItem(item)}
             >
-              {#each item as itemFeature}
-                {#if itemFeature.dtype === "image"}
-                  <img
-                    src={itemFeature.value}
-                    alt="#{itemFeature.name}-#{i}"
-                    class="w-24 h-24 p-1 object-cover rounded"
-                  />
-                {/if}
-              {/each}
-            </div>
-            <div class="flex mx-auto">
-              <span
-                class="text-xs justify-center truncate grow
-                    {item.filter((f) => f.dtype === 'image').length > 1
-                  ? 'w-48'
-                  : 'w-24'}"
-                title={item.find((f) => f.name === "id").value}
+              <div
+                class={item.filter((f) => f.dtype === "image").length > 1
+                  ? "grid grid-cols-2"
+                  : ""}
               >
-                {item.find((f) => f.name === "id").value}
-              </span>
-            </div>
-          </button>
-        {/each}
+                {#each item as itemFeature}
+                  {#if itemFeature.dtype === "image"}
+                    <img
+                      src={itemFeature.value}
+                      alt="#{itemFeature.name}-#{i}"
+                      class="w-24 h-24 p-1 object-cover rounded"
+                    />
+                  {/if}
+                {/each}
+              </div>
+              <div class="flex mx-auto">
+                <span
+                  class="text-xs justify-center truncate grow
+                  {item.filter((f) => f.dtype === 'image').length > 1
+                    ? 'w-48'
+                    : 'w-24'}"
+                  title={item.find((f) => f.name === "id").value}
+                >
+                  {item.find((f) => f.name === "id").value}
+                </span>
+              </div>
+            </button>
+          {/each}
+        </div>
       </div>
     {/if}
   </div>

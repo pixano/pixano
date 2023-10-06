@@ -27,7 +27,6 @@
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
-  export let activeLearningFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
@@ -101,15 +100,6 @@
     <!-- Navigation -->
     {#if selectedDataset}
       {#if selectedItem && app === "Annotator"}
-        <label
-          class="mr-16 flex items-center font-semibold select-none cursor-pointer"
-        >
-          Active Learning: filter remaining <input
-            type="checkbox"
-            class="h-6 w-6 ml-4 cursor-pointer"
-            bind:checked={activeLearningFlag}
-          />
-        </label>
         <button
           class="w-30 h pr-4 flex justify-end"
           on:click={handleSaveItemDetails}
@@ -120,7 +110,9 @@
             viewBox="0 -960 960 960"
             width="48"
             class="h-8 w-8
-              {saveFlag ? 'hover:text-rose-600' : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
+              {saveFlag
+              ? 'hover:text-rose-600'
+              : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
           >
             <title>Save</title>
             <path d={svg_save} fill="currentcolor" />
