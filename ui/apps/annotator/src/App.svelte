@@ -38,6 +38,7 @@
   let bboxes: Array<BBox>;
   let embeddings = {};
 
+  let activeLearningFlag = false;
   let saveFlag = false;
   let unselectItemModal = false;
   let datasetErrorModal = false;
@@ -73,14 +74,18 @@
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      let firstItem = selectedDataset.page.items.find(item => {
-        const roundObj = item.find(obj => obj.name === 'round');
-        const labelObj = item.find(obj => obj.name === 'label');
-        return roundObj && roundObj.value !== null && labelObj && labelObj.value === null;
-      });
+      let firstItem;
+
+      if (activeLearningFlag) {
+        firstItem = selectedDataset.page.items.find((item) => {
+          const roundObj = item.find((obj) => obj.name === "round");
+          const labelObj = item.find((obj) => obj.name === "label");
+          return roundObj && roundObj.value !== null && labelObj && labelObj.value === null;
+        });
+      } else firstItem = selectedDataset.page.items[0];
 
       if (firstItem) {
-        let firstItemId = firstItem.find(feature => feature.name === "id").value;
+        let firstItemId = firstItem.find((feature) => feature.name === "id").value;
         handleSelectItem(firstItemId);
       }
     } else {
@@ -361,6 +366,7 @@
   app="Annotator"
   bind:selectedDataset
   bind:selectedItem
+  bind:activeLearningFlag
   {saveFlag}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
@@ -382,6 +388,7 @@
         bind:bboxes
         {embeddings}
         {currentPage}
+        bind:activeLearningFlag
         bind:saveFlag
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:loadNextPage={handleLoadNextPage}

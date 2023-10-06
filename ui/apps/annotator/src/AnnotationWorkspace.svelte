@@ -51,6 +51,7 @@
   export let embeddings = {};
   export let currentPage: number;
   export let saveFlag: boolean;
+  export let activeLearningFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
@@ -400,6 +401,7 @@
         bind:confidenceThreshold
         {selectedDataset}
         {currentPage}
+        bind:activeLearningFlag
         on:labelVisibility={(event) => handleLabelVisibility(event.detail)}
         on:labelFilters={handleLabelFilters}
         on:deleteLabel={(event) => handleDeleteLabel(event.detail)}

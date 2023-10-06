@@ -40,6 +40,7 @@
   // Optional dataset navigation
   export let selectedDataset: Dataset = null;
   export let currentPage: number = 1;
+  export let activeLearningFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
@@ -55,8 +56,8 @@
   selectedDataset.page.items.sort(sortItemsById);
 
   function filterItems(items) {
-    // Only filter if round column exists
-    if (items[0].find((obj) => obj.name === "round")) {
+    // Only filter if round column exists and active learning is on
+    if (items[0].find((obj) => obj.name === "round") && activeLearningFlag) {
       return items.filter((subArray) => {
         const roundObj = subArray.find((obj) => obj.name === "round");
         const labelObj = subArray.find((obj) => obj.name === "label");
@@ -176,6 +177,8 @@
       }
     }
     dispatch("labelFilters");
+
+    selectedDataset.page.items = selectedDataset.page.items; // Force update
   });
 </script>
 

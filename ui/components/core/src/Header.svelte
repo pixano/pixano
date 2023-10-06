@@ -27,6 +27,7 @@
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
+  export let activeLearningFlag: boolean;
 
   const dispatch = createEventDispatcher();
 
@@ -63,31 +64,16 @@
         <span class="transition-colors"> Pixano {app} </span>
       </button>
       {#if selectedDataset}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          height="48"
-          viewBox="0 -960 960 960"
-          width="48"
-          class="h-6 w-6"
-        >
+        <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
           <path d={svg_open} fill="currentcolor" />
         </svg>
-        <button
-          class="hover:text-rose-600 dark:hover:text-rose-500"
-          on:click={handleUnselectItem}
-        >
+        <button class="hover:text-rose-600 dark:hover:text-rose-500" on:click={handleUnselectItem}>
           <span class="transition-colors">
             {selectedDataset.name}
           </span>
         </button>
         {#if selectedItem}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-6 w-6"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
             <path d={svg_open} fill="currentcolor" />
           </svg>
           <span>
@@ -100,10 +86,10 @@
     <!-- Navigation -->
     {#if selectedDataset}
       {#if selectedItem && app === "Annotator"}
-        <button
-          class="w-30 h pr-4 flex justify-end"
-          on:click={handleSaveItemDetails}
-        >
+        <label class="mr-16 flex items-center font-semibold select-none cursor-pointer">
+          Active Learning <input type="checkbox" class="h-6 w-6 ml-4 cursor-pointer" bind:checked={activeLearningFlag} />
+        </label>
+        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveItemDetails}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"
@@ -117,10 +103,7 @@
           </svg>
         </button>
       {/if}
-      <button
-        class="w-30 pr-4 flex justify-end"
-        on:click={selectedItem ? handleUnselectItem : handleUnselectDataset}
-      >
+      <button class="w-30 pr-4 flex justify-end" on:click={selectedItem ? handleUnselectItem : handleUnselectDataset}>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="48"
