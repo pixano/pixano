@@ -562,7 +562,11 @@
       {/if}
     </div>
     {#if selectedDataset}
-      <div class="w-full h-full {activeTab == 'dataset' ? '' : 'hidden'}">
+      <div
+        class="w-full h-full overflow-y-scroll {activeTab == 'dataset'
+          ? ''
+          : 'hidden'}"
+      >
         <!-- Details -->
         <div
           class="flex flex-col p-4 border-b-2
@@ -580,7 +584,7 @@
         </div>
 
         <div
-          class="p-4 flex flex-wrap justify-center overflow-auto"
+          class="p-4 flex flex-wrap justify-center"
           on:scroll={handleDatasetScroll}
         >
           {#each filterItems(selectedDataset.page.items) as item, i}
