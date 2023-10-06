@@ -119,8 +119,8 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="hover:text-rose-600 dark:hover:text-rose-500 h-8 w-8
-            {saveFlag ? 'text-rose-500 dark:text-rose-600' : ''}"
+            class="h-8 w-8
+              {saveFlag ? 'hover:text-rose-600' : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
           >
             <title>Save</title>
             <path d={svg_save} fill="currentcolor" />
