@@ -53,12 +53,7 @@
       return items.filter((subArray) => {
         const roundObj = subArray.find((obj) => obj.name === "round");
         const labelObj = subArray.find((obj) => obj.name === "label");
-        return (
-          roundObj &&
-          roundObj.value !== null &&
-          labelObj &&
-          labelObj.value === null
-        );
+        return roundObj.value >= 0 && labelObj.value === null;
       });
     } else return items;
   }
