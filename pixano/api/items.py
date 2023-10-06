@@ -131,7 +131,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
             f"SELECT * FROM al_table ORDER BY round DESC LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
         ).to_arrow_table()
         table_id_list = pyarrow_table["id"].to_pylist()
-        table_ids = ", ".join(table_id_list)
+        table_ids = "'" + "', '".join(table_id_list) + "'"
 
         # Main table
         pyarrow_main_table = (
