@@ -62,7 +62,6 @@
   }
 
   function focusInput() {
-    handleFilterCategories();
     const input = document.getElementById("categoryInput");
     input.focus();
   }
@@ -102,8 +101,8 @@
           style="background-color: {labelColors(cls.id)}; text-align:left"
           title="{cls.name} (id #{cls.id})"
           on:click={() => {
-            currentAnnCatName = cls.name;
             focusInput();
+            currentAnnCatName = cls.name;
           }}
         >
           {cls.name}
