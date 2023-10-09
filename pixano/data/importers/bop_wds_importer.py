@@ -61,7 +61,7 @@ def row_to_dict(
             im_pil = PILImage.fromarray(sample["im_rgb"])
             im_pil = image_to_binary(im_pil, format="JPEG")
             preview = image_to_thumbnail(im_pil)
-            row["rgb"] = Image(f"", im_pil, preview)
+            row["rgb"] = Image("", im_pil, preview)
 
         # depth
         if "depth" in keys:
@@ -82,7 +82,7 @@ def row_to_dict(
 
         # objects_ids and masks
         if coco_json_path is not None:
-            with open(coco_json_path, "r") as f:
+            with open(coco_json_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
             object_ids = []
@@ -93,9 +93,13 @@ def row_to_dict(
                     object_ids.append(ann["id"])
                     masks.append(
                         CompressedRLE.from_urle(
-                            ann["segmentation"],
-                            ann["segmentation"]["size"][0],
-                            ann["segmentation"]["size"][1],
+                            {
+                                "counts": ann["segmentation"],
+                                "size": [
+                                    ann["segmentation"]["size"][0],
+                                    ann["segmentation"]["size"][1],
+                                ],
+                            }
                         )
                     )
 
@@ -134,7 +138,7 @@ def row_to_dict(
         return row
 
     except ImportError as e:
-        raise ImportError(f"bop_toolkit_lib package missing: {e}")
+        raise ImportError(f"bop_toolkit_lib package missing: {e}") from e
 
 
 class BopWDSImporter(Importer):
@@ -196,7 +200,11 @@ class BopWDSImporter(Importer):
             for split in self.splits
         }
 
-    def import_row(self, input_dirs: dict[str, str | Path]) -> Iterator:
+    def import_row(
+        self,
+        input_dirs: dict[str, str | Path],
+        portable: bool = True,
+    ) -> Iterator:
         try:
             import webdataset as wds
 
@@ -218,4 +226,4 @@ class BopWDSImporter(Importer):
                         )
 
         except ImportError as e:
-            raise ImportError(f"webdataset package missing: {e}")
+            raise ImportError(f"webdataset package missing: {e}") from e

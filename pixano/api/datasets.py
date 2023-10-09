@@ -88,5 +88,5 @@ def load_dataset_stats(ds: Dataset, settings: Settings) -> dict:
 
     stats_file = ds.path / "stats.json"
     if stats_file.is_file():
-        with open(stats_file, "r") as f:
+        with open(stats_file, "r", encoding="utf-8") as f:
             return json.load(f)

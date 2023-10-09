@@ -22,7 +22,7 @@ from pixano.data.fields import Fields
 class FieldsTestCase(unittest.TestCase):
     def setUp(self):
         self.dict = {"field1": "int", "field2": "Image"}
-        self.fields = Fields(**self.dict)
+        self.fields = Fields.from_dict(self.dict)
         self.pyarrow_list = [
             pa.field("field1", pa.int64()),
             pa.field("field2", ImageType),
@@ -32,7 +32,7 @@ class FieldsTestCase(unittest.TestCase):
         fields_to_dict = self.fields.to_dict()
 
         self.assertTrue(isinstance(fields_to_dict, dict))
-        self.assertEqual(self.fields._field_dict, fields_to_dict)
+        self.assertEqual(self.fields.to_dict(), fields_to_dict)
 
         fields_convert = Fields(**fields_to_dict)
 

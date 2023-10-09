@@ -32,7 +32,7 @@ class DatasetInfoTestCase(unittest.TestCase):
         )
 
     def test_parse_file(self):
-        with open(self.tmpdir / "db.json", "w") as f:
+        with open(self.tmpdir / "db.json", "w", encoding="utf-8") as f:
             json.dump(self.info.to_dict(), f)
 
         info_read = DatasetInfo.parse_file(self.tmpdir / "db.json")

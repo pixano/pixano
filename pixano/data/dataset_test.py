@@ -31,7 +31,7 @@ class DatasetTestCase(unittest.TestCase):
             description="Dataset from a great AI project",
             fields=Fields.from_dict({"field1": "int", "field2": "Image"}),
         )
-        with open(self.tmpdir / "db.json", "w") as f:
+        with open(self.tmpdir / "db.json", "w", encoding="utf-8") as f:
             json.dump(self.info.to_dict(), f)
 
         self.dataset = Dataset(self.tmpdir)

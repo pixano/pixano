@@ -268,8 +268,6 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                 for obj in obj_list:
                     # If object in view
                     if obj["view_id"] == field.name:
-                        # Object ID
-                        id = obj["id"]
                         # Object mask
                         mask = obj["mask"].to_urle() if "mask" in obj else None
                         # Object bounding box
@@ -290,7 +288,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                         # Add object
                         item_details["itemObjects"][obj_source][field.name].append(
                             {
-                                "id": id,
+                                "id": obj["id"],
                                 "mask": mask,
                                 "bbox": bbox,
                                 "category": category,

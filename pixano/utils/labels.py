@@ -12,11 +12,11 @@
 # http://www.cecill.info
 
 
-def coco_ids_80to91(id: int) -> int:
+def coco_ids_80to91(cat_id: int) -> int:
     """Return COCO category ID (80 to 91 classes)
 
     Args:
-        id (int): Category ID (80 classes)
+        cat_id (int): Category ID (80 classes)
 
     Returns:
         int: Category ID (91 classes)
@@ -105,14 +105,14 @@ def coco_ids_80to91(id: int) -> int:
         80: 90,
     }
 
-    return coco_dict[int(id)]
+    return coco_dict[int(cat_id)]
 
 
-def coco_names_80(id: int) -> str:
+def coco_names_80(cat_id: int) -> str:
     """Return COCO category name (80 classes)
 
     Args:
-        id (int): Category ID
+        cat_id (int): Category ID
 
     Returns:
         str: Category name
@@ -201,14 +201,14 @@ def coco_names_80(id: int) -> str:
         80: "toothbrush",
     }
 
-    return coco_dict[int(id)]
+    return coco_dict[int(cat_id)]
 
 
-def coco_names_91(id: int) -> str:
+def coco_names_91(cat_id: int) -> str:
     """Return COCO category name (91 classes)
 
     Args:
-        id (int): Category ID
+        cat_id (int): Category ID
 
     Returns:
         str: Category name
@@ -308,7 +308,7 @@ def coco_names_91(id: int) -> str:
         91: "hair brush",
     }
 
-    return coco_dict[int(id)]
+    return coco_dict[int(cat_id)]
 
 
 def dota_ids(name: str) -> int:
@@ -345,11 +345,11 @@ def dota_ids(name: str) -> int:
     return dota_dict[str(name).replace("-", " ")]
 
 
-def voc_names(id: int) -> str:
+def voc_names(cat_id: int) -> str:
     """Return VOC category name (20 classes)
 
     Args:
-        id (int): Category ID
+        cat_id (int): Category ID
 
     Returns:
         str: Category name
@@ -378,4 +378,4 @@ def voc_names(id: int) -> str:
         20: "tv / monitor",
     }
 
-    return voc_dict[int(id)]
+    return voc_dict[int(cat_id)]

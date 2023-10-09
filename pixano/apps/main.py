@@ -29,7 +29,6 @@ from pixano.api import (
     load_items,
     save_item_details,
 )
-from pixano.core import ObjectAnnotation
 from pixano.data import DatasetInfo
 
 

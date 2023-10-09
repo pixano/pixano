@@ -14,7 +14,6 @@
 import json
 from pathlib import Path
 
-import lance
 import lancedb
 import pyarrow as pa
 import pyarrow.dataset as ds
@@ -87,7 +86,7 @@ class Dataset:
     def save_info(self):
         """Save dataset info to file"""
 
-        with open(self.path / "db.json", "w") as f:
+        with open(self.path / "db.json", "w", encoding="utf-8") as f:
             json.dump(self.info.to_dict(), f)
 
 
