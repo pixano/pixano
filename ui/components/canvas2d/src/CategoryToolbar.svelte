@@ -103,11 +103,6 @@
           on:click={() => {
             currentAnnCatName = cls.name;
             focusInput();
-
-            // Bad code that works for now but needs to be updated later
-            setTimeout(() => {
-              handleFilterCategories();
-            }, 1);
           }}
         >
           {cls.name}
