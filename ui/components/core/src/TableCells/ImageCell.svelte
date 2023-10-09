@@ -18,4 +18,4 @@
   export let value: string;
 </script>
 
-<img class="px-2 h-24 object-contain" src={value} alt={value} />
+<img class="mx-2 h-20 w-20 min-w-[5rem] min-h-[5rem] object-cover" src={value} alt={value} />

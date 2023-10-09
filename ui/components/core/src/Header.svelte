@@ -53,7 +53,7 @@
     border-zinc-300 dark:border-zinc-600"
   >
     <!-- Logo & app name -->
-    <div class="flex items-center grow space-x-2 font-bold text-3xl">
+    <div class="flex items-center grow space-x-2 font-semibold text-3xl">
       <button
         class="flex items-center space-x-2
         hover:text-rose-600 dark:hover:text-rose-500"

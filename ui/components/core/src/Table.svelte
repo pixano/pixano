@@ -40,18 +40,18 @@
 
 <div
   class="h-full overflow-y-auto overflow-x-auto border rounded-lg
-  bg-white dark:bg-zinc-800
+  bg-white dark:bg-zinc-800 shadow
   text-zinc-500 dark:text-zinc-300
   border-zinc-300 dark:border-zinc-600"
 >
   <table class="table-auto z-0 w-full text-sm text-left">
-    <thead class="text-xs uppercase">
+    <thead class="uppercase">
       <tr
-        class="sticky p-2 top-0 border-b-2 bg-zinc-100 border-zinc-300 dark:border-zinc-600 dark:bg-zinc-700"
+        class="sticky top-0 bg-white dark:bg-zinc-700 shadow-md"
       >
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
-            <th class="pl-2 py-1">{name}</th>
+            <th class="pl-2 py-3 text-rose-400 font-semibold">{name}</th>
           {/if}
         {/each}
       </tr>

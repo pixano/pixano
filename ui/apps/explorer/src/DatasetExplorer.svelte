@@ -90,14 +90,14 @@
   });
 </script>
 
-<div class="mt-4 px-2">
+<div class="pt-2 px-2 bg-zinc-100">
   <div class="flex">
     <!-- Stats -->
     <div
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-      border-zinc-300 dark:border-zinc-600"
+      bg-white shadow border-zinc-300 dark:border-zinc-600"
     >
-      <span class="font-bold text-xl mt-3"> Stats </span>
+      <span class="font-semibold tracking-tight text-xl mt-3 uppercase"> Stats </span>
       {#if datasetStats != null && datasetStats.length != 0}
         <div class="grid grid-cols-1 2xl:grid-cols-2 w-full gap-4 p-4">
           <!-- If charts are ready to be displayed, display them -->
@@ -127,7 +127,7 @@
 
         <!-- Page navigation -->
         <div
-          class="flex justify-end items-center w-full max-w-7xl space-x-2 p-4"
+          class="flex justify-end items-center w-full max-w-7xl space-x-2 py-2"
         >
           <span class="mr-2">
             {1 + itemsPerPage * (currentPage - 1)} - {Math.min(

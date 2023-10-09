@@ -189,7 +189,7 @@
   {#if selectedDataset}
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
-        class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tl-lg
+        class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tl-lg
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
@@ -202,7 +202,7 @@
       </button>
       {#if selectedDataset}
         <button
-          class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-tr-lg
+          class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tr-lg
         hover:bg-zinc-100 dark:hover:bg-zinc-700
         {activeTab == 'dataset'
             ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
@@ -218,7 +218,7 @@
   {:else}
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
-        class="w-full h-full flex justify-center items-center border-b-2 font-bold uppercase rounded-t-lg
+        class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-t-lg
           hover:bg-zinc-100 dark:hover:bg-zinc-700
           {activeTab == 'labels'
           ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
@@ -235,7 +235,7 @@
         class="flex flex-col p-4 border-b-2
             border-zinc-300 dark:border-zinc-600"
       >
-        <span class="font-bold">Item information</span>
+        <span class="font-semibold"> Item information : </span>
         <ul class="list-disc ml-6">
           {#each selectedItem.features as feature}
             {#if feature.dtype !== "image"}
@@ -247,7 +247,7 @@
         </ul>
       </div>
       {#if noLabels}
-        <p class="py-4 text-center font-bold italic">No annotations yet.</p>
+        <p class="py-4 text-center font-semibold italic">No annotations yet.</p>
       {:else}
         <div
           class="px-4 border-b-2
@@ -256,7 +256,7 @@
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
             <!-- Mask opacity slider -->
-            <label class="font-bold mt-2 mb-1" for="maskSlider">
+            <label class="font-semibold mt-2 mb-1" for="maskSlider">
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
@@ -273,7 +273,7 @@
             />
 
             <!-- BBox opacity slider -->
-            <label class="font-bold mt-2 mb-1" for="bboxSlider">
+            <label class="font-semibold mt-2 mb-1" for="bboxSlider">
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
@@ -290,7 +290,7 @@
             />
 
             <!-- Confidence filter -->
-            <label class="font-bold mt-2 mb-1" for="confidenceSlider">
+            <label class="font-semibold mt-2 mb-1" for="confidenceSlider">
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
@@ -353,7 +353,7 @@
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -410,7 +410,7 @@
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -468,7 +468,7 @@
                       />
                     </svg>
                     <span
-                      class="grow pl-1 font-bold text-zinc-800 truncate w-5"
+                      class="grow pl-1 font-semibold text-zinc-800 truncate w-5"
                       title="{category.name} (id #{category.id})"
                     >
                       <button
@@ -479,7 +479,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-bold"
+                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}
@@ -567,8 +567,8 @@
           class="flex flex-col p-4 border-b-2
             border-zinc-300 dark:border-zinc-600"
         >
-          <span class="font-bold">Active learning</span>
-          <label class="flex items-center select-none cursor-pointer">
+          <span class="font-semibold"> Active learning : </span>
+          <label class="pt-1 flex items-center select-none cursor-pointer">
             <input
               type="checkbox"
               class="cursor-pointer mx-2"
