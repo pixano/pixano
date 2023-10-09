@@ -62,6 +62,7 @@
   }
 
   function focusInput() {
+    handleFilterCategories();
     const input = document.getElementById("categoryInput");
     input.focus();
   }
