@@ -128,7 +128,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
         # Selecting first active learning table
         al_table = al_tables[0].to_lance()
         pyarrow_table = duckdb.query(
-            f"SELECT * FROM al_table ORDER BY round DESC, id LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+            f"SELECT * FROM al_table ORDER BY round DESC, len(id), id LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
         ).to_arrow_table()
         table_id_list = pyarrow_table["id"].to_pylist()
         table_ids = "'" + "', '".join(table_id_list) + "'"
@@ -138,7 +138,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
             main_table.to_lance().scanner(filter=f"id in ({table_ids})").to_table()
         )
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_main_table USING (id) ORDER BY round DESC, id"
+            "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_main_table USING (id) ORDER BY round DESC, len(id), id"
         ).to_arrow_table()
 
         # Media tables
@@ -147,7 +147,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
                 media_table.to_lance().scanner(filter=f"id in ({table_ids})").to_table()
             )
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY round DESC, id"
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY round DESC, len(id), id"
             ).to_arrow_table()
 
     ## Else
@@ -163,7 +163,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
                 limit=raw_params.limit, offset=raw_params.offset
             )
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY id"
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY len(id), id"
             ).to_arrow_table()
 
         # Active Learning tables
@@ -172,7 +172,7 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
                 limit=raw_params.limit, offset=raw_params.offset
             )
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id) ORDER BY id"
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id) ORDER BY len(id), id"
             ).to_arrow_table()
 
     # Create items features
