@@ -22,7 +22,7 @@ export enum ToolType {
   Rectangle = "RECTANGLE",
   Delete = "DELETE",
   Pan = "PAN",
-  Classification = "CLASSIFICATION"
+  Classification = "CLASSIFICATION",
 }
 
 interface Tool {
@@ -132,12 +132,18 @@ export function createPanTool(): PanTool {
 
 export function createClassifTool(): ClassificationTool {
   return {
-    name: "Classify",
+    name: "Classification",
     type: ToolType.Classification,
     icon: getIcon(ToolType.Classification),
     cursor: "default",
   } as ClassificationTool;
 }
 
-
-export type { Tool, LabeledPointTool, RectangleTool, DeleteTool, PanTool, ClassificationTool };
+export type {
+  Tool,
+  LabeledPointTool,
+  RectangleTool,
+  DeleteTool,
+  PanTool,
+  ClassificationTool,
+};

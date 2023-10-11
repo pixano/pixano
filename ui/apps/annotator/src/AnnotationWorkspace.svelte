@@ -40,6 +40,7 @@
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import PromptModal from "@pixano/core/src/PromptModal.svelte";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -97,7 +98,9 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = pointPlusTool;
+  let selectedTool: tools.Tool = activeLearningFlag
+    ? classifTool
+    : pointPlusTool;
 
   // Segmentation model
   interactiveSegmenterModel.subscribe((segmenter) => {
@@ -130,13 +133,14 @@
 
   function addCurrentFeatures() {
     for (let feat of selectedItem.features) {
-        if (feat["name"] === "label") {  //TODO get label from "editables"(? - to define)
-          feat["value"] = currentAnnCatName
-          // Update visibility
-          selectedItem = selectedItem
-          break;
-        }
+      if (feat["name"] === "label") {
+        //TODO get label from "editables"(? - to define)
+        feat["value"] = currentAnnCatName;
+        // Update visibility
+        selectedItem = selectedItem;
+        break;
       }
+    }
   }
 
   function handleAddCurrentAnn() {
@@ -418,6 +422,7 @@
         {pointPlusTool}
         {pointMinusTool}
         {labelColors}
+        placeholder="Label name"
         on:addCurrentAnn={handleAddClassification}
       />
     {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}

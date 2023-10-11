@@ -31,6 +31,7 @@
   export let pointPlusTool: Tool;
   export let pointMinusTool: Tool;
   export let labelColors: Function;
+  export let placeholder: string = "Category name";
 
   const dispatch = createEventDispatcher();
 
@@ -76,7 +77,7 @@
   <div class="group">
     <input
       type="text"
-      placeholder="Category name"
+      {placeholder}
       id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
       bg-zinc-100 dark:bg-zinc-900
@@ -125,7 +126,9 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointPlusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
+        {selectedTool === pointPlusTool
+          ? 'border-rose-500 dark:border-rose-600'
+          : 'border-transparent'}"
       >
         <title>Positive point</title>
         <path d={icons.svg_point_plus} fill="currentcolor" />
@@ -144,7 +147,9 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointMinusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
+        {selectedTool === pointMinusTool
+          ? 'border-rose-500 dark:border-rose-600'
+          : 'border-transparent'}"
       >
         <title>Negative point</title>
         <path d={icons.svg_point_minus} fill="currentcolor" />
