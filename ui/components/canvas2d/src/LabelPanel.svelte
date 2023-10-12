@@ -234,7 +234,7 @@
         <ul class="list-disc ml-6">
           {#each selectedItem.features as feature}
             {#if feature.dtype !== "image"}
-              <li>
+              <li class="break-words">
                 {feature.name}: {feature.value}
               </li>
             {/if}
