@@ -30,5 +30,3 @@ export { default as PromptModal } from "./PromptModal.svelte";
 export { default as WarningModal } from "./WarningModal.svelte";
 // Exploration
 export { default as Histogram } from "./Histogram.svelte";
-export { default as Table } from "./Table.svelte";
-export { default as TableCell } from "./TableCell.svelte";

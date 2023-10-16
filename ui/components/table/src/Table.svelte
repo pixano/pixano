@@ -19,7 +19,7 @@
 
   import TableCell from "./TableCell.svelte";
 
-  import type { Dataset, DatasetItem } from "./interfaces";
+  import type { Dataset, DatasetItem } from "@pixano/core";
 
   // Exports
   export let selectedDataset: Dataset;

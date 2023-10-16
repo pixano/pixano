@@ -15,11 +15,26 @@
    */
 
   // Imports
-  import Histogram from "../Histogram.svelte";
+  import HistogramCell from "./TableCells/HistogramCell.svelte";
+  import ImageCell from "./TableCells/ImageCell.svelte";
+  import NumberCell from "./TableCells/NumberCell.svelte";
+  import TextCell from "./TableCells/TextCell.svelte";
+
+  import type { DatasetItemFeature } from "@pixano/core";
 
   // Exports
-  // Represents an histogram (name, type, values)
-  export let value: any;
+  export let itemFeature: DatasetItemFeature;
+
+  // Map types to cell components
+  const componentsMap = {
+    number: NumberCell,
+    text: TextCell,
+    image: ImageCell,
+    histogram: HistogramCell,
+  };
 </script>
 
-<Histogram hist={value} />
+<svelte:component
+  this={componentsMap[itemFeature.dtype]}
+  value={itemFeature.value}
+/>

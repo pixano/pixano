@@ -1,22 +1,17 @@
 {
-  "name": "@pixano/explorer",
+  "name": "@pixano/table",
   "private": true,
   "version": "0.3.0",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
-    "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
     "@tsconfig/svelte": "^5.0.0",
-    "autoprefixer": "^10.4.13",
-    "postcss": "^8.4.21",
     "svelte": "^3.57.0",
     "svelte-check": "^3.0.0",
     "tailwindcss": "^3.2.4",
@@ -25,13 +20,9 @@
     "vite": "^4.3.0"
   },
   "dependencies": {
-    "@pixano/canvas2d": "workspace:^0.3.0",
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/models": "workspace:^0.3.0",
-    "@pixano/table": "workspace:^0.3.0",
-    "svelte-vega": "^1.2.0",
-    "vega": "^5.22.1",
-    "vega-lite": "^5.6.0",
+    "shortid": "^2.2.16",
     "vite-plugin-externals": "^0.6.2"
   }
 }
