@@ -26,9 +26,10 @@ class DatasetInfo(BaseModel):
         name (str): Dataset name
         description (str): Dataset description
         num_elements (int): Number of elements in dataset
-        fields (Fields, optional): Dataset fields
-        tables (dict, optional): Dataset tables
         preview (str, optional): Dataset preview
+        splits (list[str]): Dataset splits
+        fields (Fields, optional): Dataset fields
+        tables (dict[str, list], optional): Dataset tables
         categories (list[dict], optional): Dataset categories
         model_id (str, optional): Model ID
         model_name (str, optional): Model name
@@ -38,10 +39,11 @@ class DatasetInfo(BaseModel):
     id: str
     name: str
     description: str
-    fields: Optional[Fields]
-    tables: Optional[dict]
     num_elements: Optional[int]
     preview: Optional[str]
+    splits: Optional[list[str]]
+    fields: Optional[Fields]
+    tables: Optional[dict[str, list]]
     categories: Optional[list[dict]]
     model_id: Optional[str]
     model_name: Optional[str]
