@@ -17,6 +17,7 @@
   // Imports
   import HistogramCell from "./TableCells/HistogramCell.svelte";
   import ImageCell from "./TableCells/ImageCell.svelte";
+  import VideoCell from "./TableCells/VideoCell.svelte";
   import NumberCell from "./TableCells/NumberCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
 
@@ -30,6 +31,7 @@
     number: NumberCell,
     text: TextCell,
     image: ImageCell,
+    video: VideoCell,
     histogram: HistogramCell,
   };
 </script>

@@ -57,6 +57,16 @@ export const Image: Story = {
   },
 };
 
+export const Video: Story = {
+  args: {
+    itemFeature: {
+      name: "video cell",
+      dtype: "video",
+      value: "https://www.w3schools.com/html/mov_bbb.mp4",
+    },
+  },
+};
+
 export const Histogram: Story = {
   args: {
     itemFeature: {
