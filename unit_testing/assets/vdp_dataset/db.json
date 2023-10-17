@@ -5,6 +5,7 @@
   "num_elements": 3,
   "preview": null,
   "tables": {
+    "db": [{ "name": "db" }],
     "media": [
       {
         "name": "image"
