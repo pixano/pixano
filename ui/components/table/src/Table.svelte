@@ -39,7 +39,7 @@
 </script>
 
 <div
-  class="h-full overflow-y-auto overflow-x-auto border rounded-lg
+  class="h-full w-full overflow-y-auto overflow-x-auto border rounded-lg
   bg-white dark:bg-zinc-800 shadow
   text-zinc-500 dark:text-zinc-300
   border-zinc-300 dark:border-zinc-600"

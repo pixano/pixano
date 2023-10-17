@@ -17,7 +17,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import { Library } from "@pixano/core";
 
 const meta = {
-  title: "Components/Library",
+  title: "Components/Core/Library",
   component: Library,
   tags: ["autodocs"],
   parameters: {

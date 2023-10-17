@@ -109,7 +109,7 @@
 
 <!-- Histogram -->
 <div
-  class="h-full w-full flex flex-col justify-center items-center border rounded-lg
+  class="flex flex-col justify-center items-center border rounded-lg
   bg-zinc-100 dark:bg-zinc-700
   border-zinc-300 dark:border-zinc-600"
 >

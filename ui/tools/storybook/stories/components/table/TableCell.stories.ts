@@ -14,11 +14,11 @@
  */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { TableCell } from "@pixano/core";
+import { TableCell } from "@pixano/table";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/TableCell",
+  title: "Components/Table/TableCell",
   component: TableCell,
   tags: ["autodocs"],
 } satisfies Meta<TableCell>;

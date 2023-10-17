@@ -17,7 +17,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import { LoadingLibrary } from "@pixano/core";
 
 const meta = {
-  title: "Components/LoadingLibrary",
+  title: "Components/Core/LoadingLibrary",
   component: LoadingLibrary,
   // This component will have an automatically generated Autodocs entry: https://storybook.js.org/docs/7.0/react/writing-docs/docs-page
   tags: ["autodocs"],

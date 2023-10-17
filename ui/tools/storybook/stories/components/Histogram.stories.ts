@@ -18,7 +18,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import { Histogram } from "@pixano/core";
 
 const meta = {
-  title: "Components/Histogram",
+  title: "Components/Core/Histogram",
   component: Histogram,
   tags: ["autodocs"],
 } satisfies Meta<Histogram>;
