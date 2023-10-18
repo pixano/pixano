@@ -15,49 +15,49 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import pandas as pd
+import pyarrow as pa
 
 from pixano.data.importers.image_importer import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {"image": Path("unit_testing/assets/image_dataset")}
+        self.input_dirs = {
+            "image": Path("unit_testing/assets/vdp_dataset/media/test/20180306_101220")
+        }
         self.importer = ImageImporter(
-            name="Demo - Agriculture",
-            description="LIST Days - Demo - Agriculture",
-            splits=["demo", "train"],
+            name="VDP",
+            description="Image dataset using VDP",
+            splits=["cam_0"],
         )
 
-    def test_import_existing_file(self):
-        with tempfile.TemporaryDirectory() as library_dir:
-            import_dir = Path(library_dir) / "demo_agriculture"
-            ds = self.importer.import_dataset(
-                self.input_dirs, import_dir, portable=False
+    def test_import_dataset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Set import directory
+            import_dir = Path(temp_dir) / "vdp"
+
+            # Import dataset
+            dataset = self.importer.import_dataset(
+                self.input_dirs,
+                import_dir,
+                portable=False,
             )
 
-            # Verify that spec.json exists in import_dir
-            spec_json_path = import_dir / "spec.json"
-            self.assertTrue(spec_json_path.exists(), "spec.json file does not exist.")
+            # Check that db.json exists
+            spec_json_path = import_dir / "db.json"
+            self.assertTrue(spec_json_path.exists())
 
-            # Verify that db.lance exists
+            # Check db.json content
+            self.assertEqual("VDP", dataset.info.name)
+            self.assertEqual(3, dataset.info.num_elements)
+
+            # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"
-            self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
+            self.assertTrue(db_lance_path.exists())
 
-    def test_import_data(self):
-        with tempfile.TemporaryDirectory() as library_dir:
-            import_dir = Path(library_dir) / "demo_agriculture"
-            ds = self.importer.import_dataset(self.input_dirs, import_dir)
-
-            for r in ds.to_batches():
-                db: pd.DataFrame = r.to_pandas()
-
-                # Assertions to check for data correctness
-                self.assertIsInstance(db, pd.DataFrame, "db is not a pandas DataFrame.")
-                self.assertFalse(db.empty, "db DataFrame is empty.")
-                self.assertGreaterEqual(
-                    len(db), 4, "Dataframe should have at least 10 rows."
-                )
-                self.assertIn(
-                    "split", db.columns, "Column 'split' not found in DataFrame."
-                )
+            # Check db.lance content
+            ds = dataset.connect()
+            table = ds.open_table("db")
+            self.assertEqual(len(table), 3)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("split", pa.string()), table.schema)

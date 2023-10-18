@@ -16,7 +16,6 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from pixano.core import Image
-from pixano.data import Fields
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -39,19 +38,15 @@ class ImageImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        fields = Fields.from_dict(
-            {
-                "id": "str",
-                "image": "Image",
-                "objects": "[ObjectAnnotation]",
-                "split": "str",
-            }
-        )
+        tables = {
+            "main": [{"name": "db"}],
+            "media": [{"name": "image"}],
+        }
 
         # Initialize Importer
-        super().__init__(name, description, fields, splits)
+        super().__init__(name, description, tables, splits)
 
-    def import_row(
+    def import_rows(
         self,
         input_dirs: dict[str, Path],
         portable: bool = False,
@@ -65,11 +60,12 @@ class ImageImporter(Importer):
         Yields:
             Iterator: Processed rows
         """
-        for split in self.splits:
+
+        for split in self.info.splits:
             # Get images paths
             image_paths = []
-            for type in ["*.png", "*.jpg", "*.jpeg"]:
-                image_paths.extend(glob.glob(str(input_dirs["image"] / split / type)))
+            for ftype in ["*.png", "*.jpg", "*.jpeg"]:
+                image_paths.extend(glob.glob(str(input_dirs["image"] / split / ftype)))
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
             # Process rows
@@ -84,12 +80,20 @@ class ImageImporter(Importer):
                     else im_path.absolute().as_uri()
                 )
 
-                # Fill row with ID, image, and split
-                row = {
-                    "id": im_path.name,
-                    "image": Image(im_uri, None, im_thumb),
-                    "objects": [],
-                    "split": split,
+                # Return rows
+                rows = {
+                    "main": {
+                        "db": {
+                            "id": [im_path.name],
+                            "views": [["image"]],
+                            "split": [split],
+                        }
+                    },
+                    "media": {
+                        "image": {
+                            "id": [im_path.name],
+                            "image": [Image(im_uri, None, im_thumb).to_dict()],
+                        }
+                    },
                 }
-
-                yield super().dict_to_recordbatch(row)
+                yield rows
