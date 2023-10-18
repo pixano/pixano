@@ -44,7 +44,7 @@ class DatasetInfoTestCase(unittest.TestCase):
         self.assertEqual(self.info.name, info_to_dict["name"])
         self.assertEqual(self.info.description, info_to_dict["description"])
 
-        info_from_dict = DatasetInfo(**info_from_dict)
+        info_from_dict = DatasetInfo(**info_to_dict)
 
         self.assertTrue(isinstance(info_from_dict, DatasetInfo))
         self.assertEqual(self.info.id, info_from_dict.id)
