@@ -19,6 +19,7 @@
 
   // Exports
   export let hist;
+  export let maxHeight = 48;
 
   // Calculate histogram height
   let h = 10 * hist.histogram.length;
@@ -109,14 +110,14 @@
 
 <!-- Histogram -->
 <div
-  class="flex flex-col justify-center items-center border rounded-lg
+  class="max-h-{maxHeight} w-80 flex flex-col justify-center items-center border rounded-lg
   bg-zinc-100 dark:bg-zinc-700
   border-zinc-300 dark:border-zinc-600"
 >
   <span class="py-1 text-sm font-bold">
     {hist.name}
   </span>
-  <div class="max-h-48 w-full place-items-center overflow-y-scroll">
+  <div class="place-items-center overflow-y-scroll">
     <VegaLite {spec} {options} />
   </div>
 </div>
