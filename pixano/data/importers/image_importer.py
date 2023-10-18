@@ -51,7 +51,7 @@ class ImageImporter(Importer):
         input_dirs: dict[str, Path],
         portable: bool = False,
     ) -> Iterator:
-        """Process dataset row for import
+        """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
