@@ -12,7 +12,7 @@
 # http://www.cecill.info
 
 import pyarrow as pa
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 
 from pixano.core import (
     BBoxType,
@@ -31,47 +31,26 @@ class Fields(BaseModel):
     """Dataset PyArrow fields as string dictionary
 
     Attributes:
-        _field_dict: PyArrow fields as string dictionary
+        field_dict: PyArrow fields as string dictionary
     """
 
-    _field_dict: dict[str, str] = PrivateAttr()
+    field_dict: dict[str, str]
 
-    def __init__(self, **data) -> None:
-        """Initialize Fields"""
-
-        # Define public attributes through Pydantic BaseModel
-        super().__init__()
-
-        # Define private attributes manually
-        self._field_dict = {a: data[a] for a in data}
-
-    @staticmethod
-    def from_dict(field_dict: dict[str, str]) -> "Fields":
+    def __init__(self, field_dict: dict[str, str]) -> None:
         """Create Fields from string dictionary
 
         Args:
             field_dict (dict[str, str]): PyArrow fields as string dictionary
-
-        Returns:
-            Fields: Fields
         """
 
-        return Fields(**field_dict)
+        # Define public attributes through Pydantic BaseModel
+        super().__init__(field_dict=field_dict)
 
-    def to_dict(self) -> dict[str, str]:
-        """Return string dictionary for saving to .json
-
-        Returns:
-            dict[str, str]: String dictionary
-        """
-
-        return self._field_dict
-
-    def to_pyarrow(self) -> list[pa.Field]:
-        """Convert Fields string dictionary to list of PyArrow fields
+    def to_schema(self) -> pa.schema:
+        """Convert Fields string dictionary to PyArrow schema
 
         Returns:
-            list[pa.Field]: List of PyArrow fields
+            pa.schema: Fields as PyArrow schema
         """
 
         def _pyarrow_mapping(input_type: str) -> pa.DataType:
@@ -113,8 +92,8 @@ class Fields(BaseModel):
                 return pa_type_mapping[input_type.lower()]
 
         fields = []
-        for field_name, field_type in self._field_dict.items():
+        for field_name, field_type in self.field_dict.items():
             # Convert the field type to PyArrow type
             field = pa.field(field_name, _pyarrow_mapping(field_type), nullable=True)
             fields.append(field)
-        return fields
+        return pa.schema(fields)

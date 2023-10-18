@@ -22,33 +22,25 @@ from pixano.data.fields import Fields
 class FieldsTestCase(unittest.TestCase):
     def setUp(self):
         self.dict = {"field1": "int", "field2": "Image"}
-        self.fields = Fields.from_dict(self.dict)
+        self.fields = Fields(self.dict)
         self.pyarrow_list = [
             pa.field("field1", pa.int64()),
             pa.field("field2", ImageType),
         ]
 
-    def test_to_dict(self):
-        fields_to_dict = self.fields.to_dict()
+    def test_init(self):
+        fields_from_base_dict = Fields(self.dict)
+        fields_from_attr_dict = Fields(self.fields.field_dict)
 
-        self.assertTrue(isinstance(fields_to_dict, dict))
-        self.assertEqual(self.fields.to_dict(), fields_to_dict)
+        self.assertTrue(isinstance(fields_from_base_dict, Fields))
+        self.assertTrue(isinstance(fields_from_attr_dict, Fields))
+        self.assertEqual(self.fields, fields_from_base_dict)
+        self.assertEqual(self.fields, fields_from_attr_dict)
 
-        fields_convert = Fields(**fields_to_dict)
+    def test_to_schema(self):
+        schema = self.fields.to_schema()
 
-        self.assertTrue(isinstance(fields_convert, Fields))
-        self.assertEqual(self.fields, fields_convert)
-
-    def test_from_dict(self):
-        fields_from_dict = Fields.from_dict(self.dict)
-
-        self.assertTrue(isinstance(fields_from_dict, Fields))
-        self.assertEqual(self.fields, fields_from_dict)
-
-    def test_to_pyarrow(self):
-        to_pyarrow_list = self.fields.to_pyarrow()
-
-        self.assertTrue(isinstance(to_pyarrow_list, list))
-        for pyarrow_field in to_pyarrow_list:
+        self.assertTrue(isinstance(schema, pa.Schema))
+        for pyarrow_field in schema:
             self.assertTrue(isinstance(pyarrow_field, pa.Field))
-        self.assertEqual(self.pyarrow_list, to_pyarrow_list)
+        self.assertEqual(schema, pa.schema(self.pyarrow_list))
