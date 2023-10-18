@@ -21,7 +21,6 @@ from pixano.data.importers import (
     DOTAImporter,
     ImageImporter,
     Importer,
-    LegacyImporter,
 )
 
 __all__ = [
@@ -37,5 +36,4 @@ __all__ = [
     "BopWDSImporter",
     "DOTAImporter",
     "COCOImporter",
-    "LegacyImporter",
 ]

@@ -16,7 +16,6 @@ from pixano.data.importers.coco_importer import COCOImporter
 from pixano.data.importers.dota_importer_test import DOTAImporter
 from pixano.data.importers.image_importer import ImageImporter
 from pixano.data.importers.importer import Importer
-from pixano.data.importers.legacy_importer import LegacyImporter
 
 __all__ = [
     "Importer",
@@ -24,5 +23,4 @@ __all__ = [
     "BopWDSImporter",
     "DOTAImporter",
     "COCOImporter",
-    "LegacyImporter",
 ]
