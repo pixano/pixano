@@ -11,7 +11,9 @@
 #
 # http://www.cecill.info
 
+import os
 import re
+from pathlib import Path
 
 
 def natural_key(string: str) -> list:
@@ -27,20 +29,32 @@ def natural_key(string: str) -> list:
     return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]
 
 
-def format_size(nbytes: int) -> str:
-    """Format byte size to a readable format
+def estimate_size(folder_path: Path) -> str:
+    """Estimate folder size and return it as a human-readable string
 
     Args:
-        nbytes (int): Number of bytes as an integer
+        folder_path (Path): Folder path
 
     Returns:
-        str: Byte size in a readable format
+        str: Folder size as a human-readable string
     """
 
+    # Estimate size
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(folder_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            # skip if it is symbolic link
+            if not os.path.islink(fp):
+                total_size += os.path.getsize(fp)
+
+    # Format size
     i = 0
     suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
-    while nbytes >= 1024 and i < len(suffixes) - 1:
-        nbytes /= 1024.0
+    while total_size >= 1024 and i < len(suffixes) - 1:
+        total_size /= 1024.0
         i += 1
-    f = ("%.2f" % nbytes).rstrip("0").rstrip(".")
-    return "%s %s" % (f, suffixes[i])
+    f = ("%.2f" % total_size).rstrip("0").rstrip(".")
+    readable_size = "%s %s" % (f, suffixes[i])
+
+    return readable_size

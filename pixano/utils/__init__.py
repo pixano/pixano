@@ -42,7 +42,7 @@ from pixano.utils.labels import (
     dota_ids,
     voc_names,
 )
-from pixano.utils.python import format_size, natural_key
+from pixano.utils.python import estimate_size, natural_key
 
 __all__ = [
     "normalize_coords",
@@ -70,6 +70,6 @@ __all__ = [
     "coco_names_91",
     "dota_ids",
     "voc_names",
-    "format_size",
+    "estimate_size",
     "natural_key",
 ]
