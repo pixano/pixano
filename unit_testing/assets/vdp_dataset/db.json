@@ -2,10 +2,17 @@
   "id": "vdp_dataset",
   "name": "VDP Dataset",
   "description": "Sample VDP dataset for unit testing",
+  "estimated_size": "263.14 KB",
   "num_elements": 3,
   "preview": null,
+  "splits": ["test"],
+  "fields": null,
   "tables": {
-    "db": [{ "name": "db" }],
+    "main": [
+      {
+        "name": "db"
+      }
+    ],
     "media": [
       {
         "name": "image"
@@ -23,5 +30,9 @@
         "source": "random sampler"
       }
     ]
-  }
+  },
+  "categories": [],
+  "model_id": null,
+  "model_name": null,
+  "model_description": null
 }
