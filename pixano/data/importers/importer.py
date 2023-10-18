@@ -203,6 +203,11 @@ class Importer(ABC):
             for table in tables.values():
                 table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
+        # Refresh tables
+        for table_group, tables in self.info.tables.items():
+            for table in tables:
+                ds_tables[table_group][table["name"]] = ds.open_table(table["name"])
+
         # Copy media directories if portable
         if portable and "media" in ds_tables:
             for table in tqdm(
