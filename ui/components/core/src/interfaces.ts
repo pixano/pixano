@@ -113,6 +113,7 @@ export interface Dataset {
   name: string;
   description: string;
   num_elements: number;
+  estimated_size: string;
   preview: string;
   categories: Array<CategoryData>;
   page: DatasetItems;

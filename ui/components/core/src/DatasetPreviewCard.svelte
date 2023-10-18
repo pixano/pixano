@@ -48,7 +48,7 @@
     </div>
 
     <p class="text-sm text-zinc-600 dark:text-zinc-400">
-      {dataset.num_elements} elements
+      {dataset.num_elements} elements - {dataset.estimated_size}
     </p>
   </div>
 
