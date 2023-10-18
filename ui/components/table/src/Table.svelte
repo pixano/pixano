@@ -45,7 +45,7 @@
 >
   <table class="table-auto z-0 w-full text-center text-base">
     <thead>
-      <tr class="sticky top-0 bg-white capitalize shadow-sm shadow-slate-200">
+      <tr class="sticky top-0 bg-white shadow-sm shadow-slate-200">
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
             <th class="py-4 font-semibold">{name}</th>
