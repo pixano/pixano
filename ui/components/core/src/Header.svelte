@@ -119,11 +119,11 @@
     </div>
   </header>
 {:else}
-  <header class="w-full h-60 px-60 fixed flex flex-col justify-evenly bg-[#771E5F] z-10">
+  <header class="w-full h-56 px-60 fixed flex flex-col justify-evenly bg-[#771E5F] z-10">
     <!-- Logo & app name -->
-    <button class="flex space-x-6" on:click={handleUnselectDataset}>
+    <button class="flex w-max space-x-6" on:click={handleUnselectDataset}>
       <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-      <span class="text-3xl font-bold text-white uppercase text-[Montserrat]"> Pixano {app} </span>
+      <span class="text-3xl font-bold text-white uppercase font-[Montserrat]"> Pixano {app} </span>
     </button>
     <!-- Infos -->
     <div class="flex flex-row text-white">
@@ -134,7 +134,7 @@
         <span class="text-5xl"> {nbItems} </span> <span class="ml-2 text-2xl"> items </span>
       </div>
       <div class="grow flex flex-row justify-end items-end">
-        <input type="text" placeholder="Search" class="h-8 px-4 rounded border-2 border-[#872E6F]" />
+        <input type="text" placeholder="Search" class="h-10 px-4 rounded border-2 border-[#872E6F] text-black font-medium" />
       </div>
     </div>
   </header>

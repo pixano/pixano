@@ -32,25 +32,20 @@
   }
 </script>
 
-<div class="flex min-h-screen w-full bg-white dark:bg-zinc-800">
+<div class="h-full w-full pt-64 flex bg-slate-50">
   {#if datasets.length != 0}
-    <div class="mx-auto px-8">
-      <div
-        class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"
-      >
+    <div class="w-full mx-60">
+      <div class="grid grid-cols-3 gap-6">
         {#each datasets as dataset}
-          <DatasetPreviewCard
-            {dataset}
-            {buttonLabel}
-            on:selectDataset={() => handleSelectDataset(dataset)}
-          />
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
         {/each}
       </div>
     </div>
   {:else}
-    <div
-      class="mt-4 py-8 flex w-full justify-center text-lg text-zinc-500 dark:text-zinc-300"
-    >
+    <div class="mt-4 py-8 flex w-full justify-center text-lg text-zinc-500 dark:text-zinc-300">
       <span style="text-align: center;">
         No datasets found in this directory. <br /> <br />
         Please refer to
