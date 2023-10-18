@@ -113,7 +113,7 @@ class COCOImporter(Importer):
 
             # Process rows
             for im in sorted(
-                coco_instances["images"], key=lambda x: natural_key(x["id"])
+                coco_instances["images"], key=lambda x: natural_key(str(x["id"]))
             ):
                 # Load image annotations
                 im_anns = annotations[im["id"]]
