@@ -22,13 +22,7 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano.core import (
-    BBox,
-    CompressedRLE,
-    Image,
-    is_number,
-    is_string,
-)
+from pixano.core import BBox, CompressedRLE, Image, is_number, is_string
 from pixano.data import Dataset
 from pixano.utils import format_bbox, rle_to_mask
 
