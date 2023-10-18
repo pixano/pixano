@@ -30,7 +30,7 @@
     RectangleTool,
     DeleteTool,
     PanTool,
-    ClassificationTool
+    ClassificationTool,
   } from "./tools";
   import type {
     LabeledClick,
@@ -381,8 +381,7 @@
         y: y,
         text: bbox.tooltip,
         fontSize: 18,
-        fontStyle: "bold",
-        fontFamily: "poppins",
+        fontFamily: "DM Sans",
         padding: 0,
       })
     );
@@ -686,7 +685,6 @@
       toggleInputPointDrag(false);
     }
   }
- 
 
   // ********** INPUT POINTS TOOL ********** //
 
