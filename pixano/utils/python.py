@@ -25,3 +25,22 @@ def natural_key(string: str) -> list:
     """
 
     return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]
+
+
+def format_size(nbytes: int) -> str:
+    """Format byte size to a readable format
+
+    Args:
+        nbytes (int): Number of bytes as an integer
+
+    Returns:
+        str: Byte size in a readable format
+    """
+
+    i = 0
+    suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.0
+        i += 1
+    f = ("%.2f" % nbytes).rstrip("0").rstrip(".")
+    return "%s %s" % (f, suffixes[i])

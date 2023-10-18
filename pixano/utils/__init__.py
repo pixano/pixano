@@ -42,7 +42,7 @@ from pixano.utils.labels import (
     dota_ids,
     voc_names,
 )
-from pixano.utils.python import natural_key
+from pixano.utils.python import format_size, natural_key
 
 __all__ = [
     "normalize_coords",
@@ -54,8 +54,9 @@ __all__ = [
     "xyxy_to_xywh",
     "image_to_binary",
     "image_to_thumbnail",
-    "depth_file_to_binary",
+    "binary_to_url",
     "depth_array_to_gray",
+    "depth_file_to_binary",
     "encode_rle",
     "mask_to_rle",
     "rle_to_mask",
@@ -69,6 +70,6 @@ __all__ = [
     "coco_names_91",
     "dota_ids",
     "voc_names",
+    "format_size",
     "natural_key",
-    "binary_to_url",
 ]
