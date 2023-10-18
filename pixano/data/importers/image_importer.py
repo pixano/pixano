@@ -39,8 +39,25 @@ class ImageImporter(Importer):
         """
 
         tables = {
-            "main": [{"name": "db"}],
-            "media": [{"name": "image"}],
+            "main": [
+                {
+                    "name": "db",
+                    "fields": {
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                }
+            ],
+            "media": [
+                {
+                    "name": "image",
+                    "fields": {
+                        "id": "str",
+                        "image": "image",
+                    },
+                }
+            ],
         }
 
         # Initialize Importer
