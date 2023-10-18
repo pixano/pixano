@@ -15,22 +15,20 @@ import json
 import random
 import shutil
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from collections.abc import Iterator
+from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 
-import lance
-import numpy as np
-import pandas as pd
+import lancedb
 import pyarrow as pa
-import pyarrow.dataset as ds
 import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.analytics import compute_stats
-from pixano.core import ObjectAnnotationType, is_image_type, pyarrow_array_from_list
-from pixano.data import DatasetInfo, Fields
+from pixano.data import Dataset, DatasetInfo
+from pixano.utils import estimate_size
 
 
 class Importer(ABC):
@@ -46,7 +44,7 @@ class Importer(ABC):
         self,
         name: str,
         description: str,
-        fields: Fields,
+        tables: dict[str, list],
         splits: list[str],
     ):
         """Initialize Importer
@@ -54,7 +52,7 @@ class Importer(ABC):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            fields (Fields): Dataset fields
+            tables (dict[str, list]): Dataset fields
             splits (list[str]): Dataset splits
         """
 
@@ -63,252 +61,71 @@ class Importer(ABC):
             id=shortuuid.uuid(),
             name=name,
             description=description,
-            fields=fields,
+            estimated_size="N/A",
             num_elements=0,
             preview=None,
+            splits=splits,
+            tables=tables,
             categories=[],
         )
 
-        # Dataset schema
-        self.schema = lance.json_to_schema(
-            lance.schema_to_json(pa.schema(self.info.fields.to_pyarrow()))
-        )
-
-        # Dataset splits
-        self.splits = splits
-
-    def create_json(self, import_dir: Path, categories: list[dict] = []):
+    def create_json(
+        self,
+        import_dir: Path,
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
+    ):
         """Create dataset spec.json
 
         Args:
             import_dir (Path): Import directory
-            categories (list[dict], optional): Dataset categories. Defaults to [].
+            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
         """
 
+        self.info.num_elements = len(ds_tables["main"]["db"])
+        self.info.estimated_size = estimate_size(import_dir)
+
         with tqdm(desc="Creating dataset info file", total=1) as progress:
-            # Read dataset
-            dataset = lance.dataset(import_dir / "db.lance")
-            # Check number of rows in the created dataset
-            self.info.num_elements = dataset.count_rows()
-
-            # Add categories
-            if categories:
-                self.info.categories = categories
-
             # Create spec.json
-            with open(import_dir / "spec.json", "w") as f:
+            with open(import_dir / "db.json", "w", encoding="utf-8") as f:
                 json.dump(self.info.to_dict(), f)
             progress.update(1)
 
-    def create_preview(self, import_dir: Path):
+    def create_preview(
+        self,
+        import_dir: Path,
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
+    ):
         """Create dataset preview image
 
         Args:
             import_dir (Path): Import directory
+            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
         """
-
-        # Read dataset
-        dataset = lance.dataset(import_dir / "db.lance")
 
         # Get list of image fields
-        image_fields = []
-        for field in self.schema:
-            if is_image_type(field.type):
-                image_fields.append(field.name)
-
-        if image_fields:
-            with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
-                tile_w = 64
-                tile_h = 64
-                preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
-                for i in range(6):
-                    field = image_fields[i % len(image_fields)]
-                    row_number = random.randrange(dataset.count_rows())
-                    row = dataset.take([row_number]).to_pylist()[0]
-                    with Image.open(BytesIO(row[field]["preview_bytes"])) as im:
-                        preview.paste(im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h))
-                preview.save(import_dir / "preview.png")
-                progress.update(1)
-
-    def create_stats(self, import_dir: Path):
-        """Create dataset statistics
-
-        Args:
-            import_dir (Path): Import directory
-        """
-
-        # Reset json file
-        open(import_dir / "db_feature_statistics.json", "w").close()
-        # Create objects stats
-        self.objects_stats(import_dir)
-        # Create image stats
-        self.image_stats(import_dir)
-
-    def objects_stats(self, import_dir: Path):
-        """Create dataset objects statistics
-
-        Args:
-            import_dir (Path): Import directory
-        """
-
-        # Read dataset
-        dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
-
-        # Create stats if objects field exist
-        objects = pa.field("objects", pa.list_(ObjectAnnotationType()))
-        if objects in self.schema:
-            # Create dataframe
-            df = dataset.to_table(columns=["split", "objects"]).to_pandas()
-            # Split objects in one object per row
-            df = df.explode("objects")
-            # Remove empty objects
-            df = df[df["objects"].notnull()]
-
-            # Get features
-            features = []
-            for split, object in tqdm(
-                zip(df["split"], df["objects"]),
-                desc="Computing objects stats",
-                total=len(df.index),
-            ):
-                try:
-                    area = 100 * (object["area"] / np.prod(object["mask"]["size"]))
-                except TypeError:
-                    area = None
-                features.append(
-                    {
-                        "id": object["id"],
-                        "view id": object["view_id"],
-                        "objects - is group of": object["is_group_of"],
-                        "objects - area (%)": area,
-                        "objects - category": object["category_name"],
-                        "split": split,
-                    }
-                )
-            features_df = pd.DataFrame.from_records(features).astype(
-                {
-                    "id": "string",
-                    "view id": "string",
-                    "objects - is group of": bool,
-                    "objects - area (%)": float,
-                    "objects - category": "string",
-                    "split": "string",
-                }
-            )
-
-            # Initialize stats
-            stats = [
-                {
-                    "name": "objects - category",
-                    "type": "categorical",
-                    "histogram": [],
-                },
-                {
-                    "name": "objects - is group of",
-                    "type": "categorical",
-                    "histogram": [],
-                },
-                {
-                    "name": "objects - area (%)",
-                    "type": "numerical",
-                    "range": [0.0, 100.0],
-                    "histogram": [],
-                },
-            ]
-
-            # Save stats
-            self.save_stats(import_dir, stats, features_df)
-
-    def image_stats(self, import_dir: Path):
-        """Create dataset image statistics
-
-        Args:
-            import_dir (Path): Import directory
-        """
-
-        # Read dataset
-        dataset = ds.dataset(import_dir / "db", partitioning=self.partitioning)
-
-        # Create URI prefix
-        media_dir = import_dir / "media"
-        uri_prefix = media_dir.absolute().as_uri()
-
-        # Iterate over dataset columns
-        for field in dataset.schema:
-            # If column has images
-            if is_image_type(field.type):
-                features = []
-                rows = dataset.to_batches(columns=[field.name, "split"], batch_size=1)
-
-                # Get features
-                for row in tqdm(
-                    rows,
-                    desc=f"Computing {field.name} stats",
-                    total=dataset.count_rows(),
-                ):
-                    # Open image
-                    im = row[field.name][0].as_py(uri_prefix)
-                    im_w, im_h = im.size
-                    # Compute image features
-                    aspect_ratio = round(im_w / im_h, 1)
-                    features.append(
-                        {
-                            f"{field.name} - aspect ratio": aspect_ratio,
-                            "split": row["split"][0].as_py(),
-                        }
-                    )
-                features_df = pd.DataFrame.from_records(features).astype(
-                    {
-                        f"{field.name} - aspect ratio": "float",
-                        "split": "string",
-                    }
-                )
-
-                # Initialize stats
-                stats = [
-                    {
-                        "name": f"{field.name} - aspect ratio",
-                        "type": "numerical",
-                        "histogram": [],
-                        "range": [
-                            features_df[f"{field.name} - aspect ratio"].min(),
-                            features_df[f"{field.name} - aspect ratio"].max(),
-                        ],
-                    },
+        if "media" in ds_tables:
+            if "image" in ds_tables["media"]:
+                image_table = ds_tables["media"]["image"]
+                image_fields = [
+                    field.name for field in image_table.schema if field.name != "id"
                 ]
-
-                # Save stats
-                self.save_stats(import_dir, stats, features_df)
-
-    def save_stats(self, import_dir: Path, stats: list[dict], df: pd.DataFrame):
-        """Compute and save stats to json
-
-        Args:
-            import_dir (Path): Import directory
-            stats (list[dict]): List of stats to save
-            df (pd.DataFrame): DataFrame to create stats from
-        """
-
-        # Compute stats
-        for split in self.splits:
-            for stat in stats:
-                split_df = df[df["split"] == split]
-                stat["histogram"].extend(compute_stats(split_df, split, stat))
-
-        # Check for existing db_feature_statistics.json
-        with open(import_dir / "db_feature_statistics.json", "r") as f:
-            try:
-                stat_json = json.load(f)
-                stat_json.extend(stats)
-            except ValueError:
-                stat_json = stats
-
-        # Add to db_feature_statistics.json
-        with open(import_dir / "db_feature_statistics.json", "w") as f:
-            json.dump(stat_json, f)
+                with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
+                    tile_w = 64
+                    tile_h = 64
+                    preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
+                    for i in range(6):
+                        field = image_fields[i % len(image_fields)]
+                        item_id = random.randrange(len(image_table))
+                        item = image_table.to_lance().take([item_id]).to_pylist()[0]
+                        with Image.open(BytesIO(item[field]["preview_bytes"])) as im:
+                            preview.paste(
+                                im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h)
+                            )
+                    preview.save(import_dir / "preview.png")
+                    progress.update(1)
 
     @abstractmethod
-    def import_row(
+    def import_rows(
         self,
         input_dirs: dict[str, Path],
         portable: bool = False,
@@ -322,77 +139,87 @@ class Importer(ABC):
             Iterator: Processed rows
         """
 
-        pass
-
-    def dict_to_recordbatch(self, row: dict[str, list]) -> pa.RecordBatch:
-        """Convert a dataset row from a Python dict to a PyArrow RecordBatch
-
-        Args:
-            row (dict[str, list]): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
-
-        Returns:
-            pa.RecordBatch: PyArrow RecordBatch
-        """
-
-        # Compare dict keys to field names
-        if set(row.keys()) != set(self.info.fields.to_dict().keys()):
-            raise ValueError("Dict keys do not match the names of the dataset fields")
-
-        # Convert the dict to a list of PyArrow arrays
-        fields = self.info.fields.to_pyarrow()
-        arrays = [
-            pyarrow_array_from_list([row[field.name]], field.type) for field in fields
-        ]
-
-        # Create the RecordBatch from PyArrow arrays
-        return pa.RecordBatch.from_struct_array(
-            pa.StructArray.from_arrays(arrays, fields=fields)
-        )
-
     def import_dataset(
         self,
         input_dirs: dict[str, Path],
         import_dir: Path,
         portable: bool = False,
-    ) -> lance.LanceDataset:
+    ) -> Dataset:
         """Import dataset to Pixano format
 
         Args:
             input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
             portable (int, optional): True to copy or download files inside import directory. Defaults to False.
+
+        Returns:
+            Dataset: Imported dataset
         """
 
         # Check input directories
         for source_path in input_dirs.values():
             if not source_path.exists():
-                raise Exception(f"{source_path} does not exist.")
+                raise FileNotFoundError(f"{source_path} does not exist.")
             if not any(source_path.iterdir()):
-                raise Exception(f"{source_path} is empty.")
+                raise FileNotFoundError(f"{source_path} is empty.")
 
-        reader = pa.RecordBatchReader.from_batches(
-            self.schema, tqdm(self.import_row(input_dirs), desc="Importing dataset")
-        )
-        ds = lance.write_dataset(reader, import_dir / "db.lance", mode="overwrite")
+        # Connect to dataset
+        import_dir.mkdir(parents=True, exist_ok=True)
+        ds = lancedb.connect(import_dir)
 
-        # Create spec.json
-        self.create_json(import_dir)
+        # Initialize dataset tables
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
+        tables_created = False
 
-        # Create preview.png
-        self.create_preview(import_dir)
+        # Add rows to tables
+        for rows in tqdm(
+            self.import_rows(input_dirs, portable),
+            desc="Importing dataset",
+        ):
+            # First, create tables
+            if not tables_created:
+                for table_group, tables in self.info.tables.items():
+                    for table in tables:
+                        # Convert row to PyArrow
+                        pa_row = pa.Table.from_pydict(rows[table_group][table["name"]])
+                        # Create table
+                        ds_tables[table_group][table["name"]] = ds.create_table(
+                            table["name"], data=pa_row, mode="overwrite"
+                        )
+                tables_created = True
+            # Then, append to tables
+            else:
+                for table_group, tables in self.info.tables.items():
+                    for table in tables:
+                        # Convert row to PyArrow
+                        pa_row = pa.Table.from_pydict(rows[table_group][table["name"]])
+                        # Append to table
+                        ds_tables[table_group][table["name"]].add(pa_row)
+
+        # Clear creation history
+        for table_group, tables in self.info.tables.items():
+            for table in tables:
+                table_as_lance_ds = ds_tables[table_group][table["name"]].to_lance()
+                table_as_lance_ds.cleanup_old_versions(older_than=timedelta(0))
 
         # Copy media directories if portable
-        if portable:
-            for field in tqdm(self.schema, desc="Copying media directories"):
-                if is_image_type(field.type):
-                    field_dir = import_dir / "media" / field.name
-                    field_dir.mkdir(parents=True, exist_ok=True)
-                    if input_dirs[field.name] != field_dir:
-                        shutil.copytree(
-                            input_dirs[field.name], field_dir, dirs_exist_ok=True
-                        )
+        if portable and "media" in ds_tables:
+            for table in tqdm(
+                ds_tables["media"].values(), desc="Copying media directories"
+            ):
+                for field in table.schema:
+                    if field.name in input_dirs:
+                        field_dir = import_dir / "media" / field.name
+                        field_dir.mkdir(parents=True, exist_ok=True)
+                        if input_dirs[field.name] != field_dir:
+                            shutil.copytree(
+                                input_dirs[field.name], field_dir, dirs_exist_ok=True
+                            )
 
-        # Create stats
-        # self.create_stats(import_dir)
+        # Create spec.json
+        self.create_json(import_dir, ds_tables)
 
-        return ds
+        # Create preview.png
+        self.create_preview(import_dir, ds_tables)
+
+        return Dataset(import_dir)
