@@ -17,24 +17,23 @@ from pathlib import Path
 
 import pyarrow as pa
 
+from pixano.core import ImageType
 from pixano.data.importers.image_importer import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {
-            "image": Path("unit_testing/assets/vdp_dataset/media/test/20180306_101220")
-        }
+        self.input_dirs = {"image": Path("unit_testing/assets/coco_dataset/image")}
         self.importer = ImageImporter(
-            name="VDP",
-            description="Image dataset using VDP",
-            splits=["cam_0"],
+            name="COCO",
+            description="Image dataset using COCO",
+            splits=["val"],
         )
 
     def test_import_dataset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
-            import_dir = Path(temp_dir) / "vdp"
+            import_dir = Path(temp_dir) / "coco"
 
             # Import dataset
             dataset = self.importer.import_dataset(
@@ -48,7 +47,7 @@ class ImageImporterTestCase(unittest.TestCase):
             self.assertTrue(spec_json_path.exists())
 
             # Check db.json content
-            self.assertEqual("VDP", dataset.info.name)
+            self.assertEqual("COCO", dataset.info.name)
             self.assertEqual(3, dataset.info.num_elements)
 
             # Check that db.lance exists
@@ -61,3 +60,14 @@ class ImageImporterTestCase(unittest.TestCase):
             self.assertEqual(len(table), 3)
             self.assertIn(pa.field("id", pa.string()), table.schema)
             self.assertIn(pa.field("split", pa.string()), table.schema)
+
+            # Check that image.lance exists
+            db_lance_path = import_dir / "image.lance"
+            self.assertTrue(db_lance_path.exists())
+
+            # Check image.lance content
+            ds = dataset.connect()
+            table = ds.open_table("image")
+            self.assertEqual(len(table), 3)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("image", ImageType), table.schema)
