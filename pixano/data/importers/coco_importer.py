@@ -137,40 +137,39 @@ class COCOImporter(Importer):
                 # Return rows
                 rows = {
                     "main": {
-                        "db": {
-                            "id": [str(im["id"])],
-                            "views": [["image"]],
-                            "split": [split],
-                        }
+                        "db": [
+                            {
+                                "id": str(im["id"]),
+                                "views": ["image"],
+                                "split": split,
+                            }
+                        ]
                     },
                     "media": {
-                        "image": {
-                            "id": [str(im["id"])],
-                            "image": [Image(im_uri, None, im_thumb).to_dict()],
-                        }
+                        "image": [
+                            {
+                                "id": str(im["id"]),
+                                "image": Image(im_uri, None, im_thumb).to_dict(),
+                            }
+                        ]
                     },
                     "objects": {
-                        "objects": {
-                            "id": [str(ann["id"]) for ann in im_anns],
-                            "item_id": [str(im["id"]) for ann in im_anns],
-                            "view_id": ["image" for ann in im_anns],
-                            "bbox": [
-                                BBox.from_xywh(ann["bbox"])
+                        "objects": [
+                            {
+                                "id": str(ann["id"]),
+                                "item_id": str(im["id"]),
+                                "view_id": "image",
+                                "bbox": BBox.from_xywh(ann["bbox"])
                                 .normalize(im["height"], im["width"])
-                                .to_dict()
-                                for ann in im_anns
-                            ],
-                            "mask": [
-                                CompressedRLE.encode(
+                                .to_dict(),
+                                "mask": CompressedRLE.encode(
                                     ann["segmentation"], im["height"], im["width"]
-                                ).to_dict()
-                                for ann in im_anns
-                            ],
-                            "category_id": [int(ann["category_id"]) for ann in im_anns],
-                            "category_name": [
-                                coco_names_91(ann["category_id"]) for ann in im_anns
-                            ],
-                        }
+                                ).to_dict(),
+                                "category_id": int(ann["category_id"]),
+                                "category_name": coco_names_91(ann["category_id"]),
+                            }
+                            for ann in im_anns
+                        ]
                     },
                 }
 

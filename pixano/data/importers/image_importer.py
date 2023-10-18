@@ -100,17 +100,21 @@ class ImageImporter(Importer):
                 # Return rows
                 rows = {
                     "main": {
-                        "db": {
-                            "id": [im_path.name],
-                            "views": [["image"]],
-                            "split": [split],
-                        }
+                        "db": [
+                            {
+                                "id": im_path.name,
+                                "views": ["image"],
+                                "split": split,
+                            }
+                        ]
                     },
                     "media": {
-                        "image": {
-                            "id": [im_path.name],
-                            "image": [Image(im_uri, None, im_thumb).to_dict()],
-                        }
+                        "image": [
+                            {
+                                "id": im_path.name,
+                                "image": Image(im_uri, None, im_thumb).to_dict(),
+                            }
+                        ]
                     },
                 }
                 yield rows

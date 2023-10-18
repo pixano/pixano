@@ -187,7 +187,7 @@ class Importer(ABC):
         ):
             for table_group, tables in self.info.tables.items():
                 for table in tables:
-                    pa_rows = pa.Table.from_pydict(
+                    pa_rows = pa.Table.from_pylist(
                         rows[table_group][table["name"]],
                         schema=Fields(table["fields"]).to_schema(),
                     )

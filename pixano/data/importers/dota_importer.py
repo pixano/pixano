@@ -135,25 +135,29 @@ class DOTAImporter(Importer):
                 # Return rows
                 rows = {
                     "main": {
-                        "db": {
-                            "id": [im_path.stem],
-                            "views": [["image"]],
-                            "split": [split],
-                        }
+                        "db": [
+                            {
+                                "id": im_path.stem,
+                                "views": ["image"],
+                                "split": split,
+                            }
+                        ]
                     },
                     "media": {
-                        "image": {
-                            "id": [im_path.stem],
-                            "image": [Image(im_uri, None, im_thumb).to_dict()],
-                        }
+                        "image": [
+                            {
+                                "id": im_path.stem,
+                                "image": Image(im_uri, None, im_thumb).to_dict(),
+                            }
+                        ]
                     },
                     "objects": {
-                        "objects": {
-                            "id": [shortuuid.uuid() for ann in im_anns],
-                            "item_id": [im_path.stem for ann in im_anns],
-                            "view_id": ["image" for ann in im_anns],
-                            "bbox": [
-                                BBox.from_xyxy(
+                        "objects": [
+                            {
+                                "id": shortuuid.uuid(),
+                                "item_id": im_path.stem,
+                                "view_id": "image",
+                                "bbox": BBox.from_xyxy(
                                     [
                                         float(ann[0]),
                                         float(ann[1]),
@@ -163,14 +167,12 @@ class DOTAImporter(Importer):
                                 )
                                 .to_xywh()
                                 .normalize(im_h, im_w)
-                                .to_dict()
-                                for ann in im_anns
-                            ],
-                            "category_id": [dota_ids(str(ann[8])) for ann in im_anns],
-                            "category_name": [
-                                str(ann[8]).replace("-", " ") for ann in im_anns
-                            ],
-                        }
+                                .to_dict(),
+                                "category_id": dota_ids(str(ann[8])),
+                                "category_name": str(ann[8]).replace("-", " "),
+                            }
+                            for ann in im_anns
+                        ]
                     },
                 }
 
