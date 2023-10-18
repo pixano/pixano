@@ -37,7 +37,7 @@
   src={value}
   loop
   muted
-  class="mx-2 h-20 w-20 min-w-[5rem] min-h-[5rem] object-cover"
+  class="mx-auto h-20 w-20 min-w-20 min-h-20 object-cover rounded"
   on:mouseenter={toggleHover}
   on:mouseleave={toggleHover}
 />

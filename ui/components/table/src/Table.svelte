@@ -20,6 +20,7 @@
   import TableCell from "./TableCell.svelte";
 
   import type { Dataset, DatasetItem } from "@pixano/core";
+  import { icons } from "@pixano/core";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -39,38 +40,47 @@
 </script>
 
 <div
-  class="h-full w-full overflow-y-auto overflow-x-auto border rounded-lg
-  bg-white dark:bg-zinc-800 shadow
-  text-zinc-500 dark:text-zinc-300
-  border-zinc-300 dark:border-zinc-600"
+  class="h-full w-full overflow-y-auto overflow-x-auto
+  rounded-sm bg-white border border-slate-200 shadow-sm shadow-zinc-200"
 >
-  <table class="table-auto z-0 w-full text-sm text-left">
-    <thead class="uppercase">
-      <tr
-        class="sticky top-0 bg-white dark:bg-zinc-700 shadow-md"
-      >
+  <table class="table-auto z-0 w-full text-center text-base">
+    <thead>
+      <tr class="sticky top-0 bg-white capitalize shadow-sm shadow-slate-200">
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
-            <th class="pl-2 py-3 text-rose-400 font-semibold">{name}</th>
+            <th class="py-4 font-semibold">{name}</th>
           {/if}
         {/each}
+        <th />
       </tr>
     </thead>
     <tbody>
       {#each selectedDataset.page.items as item}
         <tr
-          class="cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="cursor-pointer hover:bg-slate-50"
           on:click={() => {
             handleSelectItem(item);
           }}
         >
           {#each item as itemFeature}
             {#if itemFeature.dtype != "hidden"}
-              <td class="border-b py-2 border-zinc-300 dark:border-zinc-600">
+              <td class="py-1 border-b border-slate-200">
                 <TableCell {itemFeature} />
               </td>
             {/if}
           {/each}
+          <td class="py-1 border-b border-slate-200">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 mx-auto p-2 border rounded-full border-slate-200 hover:bg-slate-100"
+            >
+              <title>Open</title>
+              <path d={icons.svg_right_arrow} fill="currentcolor" />
+            </svg>
+          </td>
         </tr>
       {/each}
     </tbody>

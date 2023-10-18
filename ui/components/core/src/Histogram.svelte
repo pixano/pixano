@@ -20,10 +20,11 @@
   // Exports
   export let hist;
   export let maxHeight = 48;
+  export let hideTitle = false;
 
   // Calculate histogram height
-  let h = 10 * hist.histogram.length;
-  h = h < 175 ? 175 : h;
+  let h = 7.5 * hist.histogram.length;
+  h = h < 125 ? 125 : h;
 
   // Vega-Lite spec (default type : categorical)
   const spec: VisualizationSpec = {
@@ -109,14 +110,12 @@
 </script>
 
 <!-- Histogram -->
-<div
-  class="max-h-{maxHeight} w-80 flex flex-col justify-center items-center border rounded-lg
-  bg-zinc-100 dark:bg-zinc-700
-  border-zinc-300 dark:border-zinc-600"
->
-  <span class="py-1 text-sm font-bold">
-    {hist.name}
-  </span>
+<div class="max-h-{maxHeight} w-72 mx-auto flex flex-col justify-center items-center dark:bg-zinc-800">
+  {#if !hideTitle}
+    <span class="py-1 text-sm font-bold">
+      {hist.name}
+    </span>
+  {/if}
   <div class="place-items-center overflow-y-scroll">
     <VegaLite {spec} {options} />
   </div>

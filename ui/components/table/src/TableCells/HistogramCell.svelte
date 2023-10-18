@@ -22,6 +22,6 @@
   export let value: any;
 </script>
 
-<div class="overflow-y-scroll">
-  <Histogram hist={value} maxHeight={24} />
+<div class="w-full flex flex-row items-center overflow-y-scroll">
+  <Histogram hist={value} maxHeight={20} hideTitle />
 </div>
