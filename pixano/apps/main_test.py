@@ -76,7 +76,7 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("histogram", stat)
 
     def test_get_item_details(self):
-        response = self.client.get("/datasets/vdp_dataset/items/127")
+        response = self.client.get("/datasets/vdp_dataset/items/1")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
