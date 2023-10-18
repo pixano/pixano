@@ -102,7 +102,7 @@
     >
       {#each classes as cls}
         <button
-          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-zinc-800 font-semibold hover:brightness-110"
+          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-zinc-800 font-medium hover:brightness-110"
           style="background-color: {labelColors(cls.id)}; text-align:left"
           title="{cls.name} (id #{cls.id})"
           on:click={() => {
@@ -130,7 +130,9 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointPlusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
+        {selectedTool === pointPlusTool
+          ? 'border-rose-500 dark:border-rose-600'
+          : 'border-transparent'}"
       >
         <title>Positive point</title>
         <path d={icons.svg_point_plus} fill="currentcolor" />
@@ -149,7 +151,9 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white dark:bg-zinc-800
         hover:bg-zinc-200 dark:hover:bg-zinc-600
-        {selectedTool === pointMinusTool ? 'border-rose-500 dark:border-rose-600' : 'border-transparent'}"
+        {selectedTool === pointMinusTool
+          ? 'border-rose-500 dark:border-rose-600'
+          : 'border-transparent'}"
       >
         <title>Negative point</title>
         <path d={icons.svg_point_minus} fill="currentcolor" />

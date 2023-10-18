@@ -111,7 +111,11 @@
     }
   }
 
-  function handleViewVisibility(source: SourceLabels, view: ViewLabels, visibility: boolean) {
+  function handleViewVisibility(
+    source: SourceLabels,
+    view: ViewLabels,
+    visibility: boolean
+  ) {
     // Toggle visibility
     view.visible = visibility;
     // Toggle parents if needed
@@ -147,7 +151,8 @@
   async function handleDatasetScroll(event: Event) {
     const datasetTab = event.currentTarget as Element;
     if (currentPage * 100 < selectedDataset.page.total) {
-      const totalContentHeight = datasetTab.scrollHeight - datasetTab.clientHeight;
+      const totalContentHeight =
+        datasetTab.scrollHeight - datasetTab.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
       if (datasetTab.scrollTop > totalContentHeight - offset10percent) {
         dispatch("loadNextPage");
@@ -230,7 +235,7 @@
         class="flex flex-col p-4 border-b-2
             border-zinc-300 dark:border-zinc-600"
       >
-        <span class="font-semibold"> Item information : </span>
+        <span class="font-medium"> Item information : </span>
         <ul class="list-disc ml-6">
           {#each selectedItem.features as feature}
             {#if feature.dtype !== "image"}
@@ -242,7 +247,7 @@
         </ul>
       </div>
       {#if noLabels}
-        <p class="py-4 text-center font-semibold italic">No annotations yet.</p>
+        <p class="py-4 text-center font-medium italic">No annotations yet.</p>
       {:else}
         <div
           class="px-4 border-b-2
@@ -251,7 +256,7 @@
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
             <!-- Mask opacity slider -->
-            <label class="font-semibold mt-2 mb-1" for="maskSlider">
+            <label class="font-medium mt-2 mb-1" for="maskSlider">
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
@@ -268,7 +273,7 @@
             />
 
             <!-- BBox opacity slider -->
-            <label class="font-semibold mt-2 mb-1" for="bboxSlider">
+            <label class="font-medium mt-2 mb-1" for="bboxSlider">
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
@@ -285,7 +290,7 @@
             />
 
             <!-- Confidence filter -->
-            <label class="font-semibold mt-2 mb-1" for="confidenceSlider">
+            <label class="font-medium mt-2 mb-1" for="confidenceSlider">
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
@@ -309,26 +314,46 @@
                 border-zinc-300 dark:border-zinc-600
                 {source.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
             >
-              <button on:click={() => handleSourceVisibility(source, !source.visible)}>
-                <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
+              <button
+                on:click={() => handleSourceVisibility(source, !source.visible)}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="h-6 w-6"
+                >
                   <title>{source.visible ? "Hide" : "Show"}</title>
-                  <path d={source.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
+                  <path
+                    d={source.visible ? icons.svg_hide : icons.svg_show}
+                    fill="currentcolor"
+                  />
                 </svg>
               </button>
               <button
                 class="flex grow items-center space-x-1 text-left w-full"
                 on:click={() => (source.opened = !source.opened)}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="h-6 w-6"
+                >
                   <title>{source.opened ? "Close" : "Open"}</title>
-                  <path d={source.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
+                  <path
+                    d={source.opened ? icons.svg_close : icons.svg_open}
+                    fill="currentcolor"
+                  />
                 </svg>
 
                 <span class="relative pl-1 grow truncate w-5" title={source.id}>
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
+                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -345,7 +370,10 @@
                   {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
                   {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
               >
-                <button on:click={() => handleViewVisibility(source, view, !view.visible)}>
+                <button
+                  on:click={() =>
+                    handleViewVisibility(source, view, !view.visible)}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     height="48"
@@ -354,7 +382,10 @@
                     class="h-6 w-6"
                   >
                     <title>{view.visible ? "Hide" : "Show"}</title>
-                    <path d={view.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
+                    <path
+                      d={view.visible ? icons.svg_hide : icons.svg_show}
+                      fill="currentcolor"
+                    />
                   </svg>
                 </button>
                 <button
@@ -369,14 +400,17 @@
                     class="h-6 w-6"
                   >
                     <title>{view.opened ? "Close" : "Open"}</title>
-                    <path d={view.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
+                    <path
+                      d={view.opened ? icons.svg_close : icons.svg_open}
+                      fill="currentcolor"
+                    />
                   </svg>
 
                   <span class="relative pl-1 grow truncate w-5" title={view.id}>
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
+                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -393,7 +427,15 @@
                   {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
                   {category.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
                 >
-                  <button on:click={() => handleCategoryVisibility(source, view, category, !category.visible)}>
+                  <button
+                    on:click={() =>
+                      handleCategoryVisibility(
+                        source,
+                        view,
+                        category,
+                        !category.visible
+                      )}
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       height="48"
@@ -402,7 +444,10 @@
                       class="h-6 w-6"
                     >
                       <title>{category.visible ? "Hide" : "Show"}</title>
-                      <path d={category.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
+                      <path
+                        d={category.visible ? icons.svg_hide : icons.svg_show}
+                        fill="currentcolor"
+                      />
                     </svg>
                   </button>
                   <button
@@ -417,10 +462,13 @@
                       class="h-6 w-6"
                     >
                       <title>{category.opened ? "Close" : "Open"}</title>
-                      <path d={category.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
+                      <path
+                        d={category.opened ? icons.svg_close : icons.svg_open}
+                        fill="currentcolor"
+                      />
                     </svg>
                     <span
-                      class="grow pl-1 font-semibold text-zinc-800 truncate w-5"
+                      class="grow pl-1 font-medium text-zinc-800 truncate w-5"
                       title="{category.name} (id #{category.id})"
                     >
                       <button
@@ -431,21 +479,34 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-semibold"
+                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}
                     </span>
                   </button>
                 </div>
-                <div class="{source.opened && view.opened && category.opened ? 'flex' : 'hidden'} flex-col">
+                <div
+                  class="{source.opened && view.opened && category.opened
+                    ? 'flex'
+                    : 'hidden'} flex-col"
+                >
                   {#each Object.values(category.labels) as label}
                     <div
                       class="p-3 pl-12 flex items-center space-x-1 border-b-2
                       {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
                       border-zinc-300 dark:border-zinc-600"
                     >
-                      <button on:click={() => handleLabelVisibility(source, view, category, label, !label.visible)}>
+                      <button
+                        on:click={() =>
+                          handleLabelVisibility(
+                            source,
+                            view,
+                            category,
+                            label,
+                            !label.visible
+                          )}
+                      >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           height="48"
@@ -454,15 +515,24 @@
                           class="h-5 w-5"
                         >
                           <title>
-                            {(category.visible && label.visible) || label.visible ? "Hide" : "Show"}
+                            {(category.visible && label.visible) ||
+                            label.visible
+                              ? "Hide"
+                              : "Show"}
                           </title>
                           <path
-                            d={(category.visible && label.visible) || label.visible ? icons.svg_hide : icons.svg_show}
+                            d={(category.visible && label.visible) ||
+                            label.visible
+                              ? icons.svg_hide
+                              : icons.svg_show}
                             fill="currentcolor"
                           />
                         </svg>
                       </button>
-                      <span class="relative pl-1 text-sm grow truncate w-5" title={label.id}>
+                      <span
+                        class="relative pl-1 text-sm grow truncate w-5"
+                        title={label.id}
+                      >
                         {label.id}
                       </span>
                       <button on:click={() => handleDeleteLabel(label)}>
@@ -487,27 +557,42 @@
       {/if}
     </div>
     {#if selectedDataset}
-      <div class="w-full h-full overflow-y-scroll {activeTab == 'dataset' ? '' : 'hidden'}">
+      <div
+        class="w-full h-full overflow-y-scroll {activeTab == 'dataset'
+          ? ''
+          : 'hidden'}"
+      >
         <!-- Details -->
         <div
           class="flex flex-col p-4 border-b-2
             border-zinc-300 dark:border-zinc-600"
         >
-          <span class="font-semibold"> Active learning : </span>
+          <span class="font-medium"> Active learning : </span>
           <label class="pt-1 flex items-center select-none cursor-pointer">
-            <input type="checkbox" class="cursor-pointer mx-2" bind:checked={activeLearningFlag} />
+            <input
+              type="checkbox"
+              class="cursor-pointer mx-2"
+              bind:checked={activeLearningFlag}
+            />
             Show remaining items only
           </label>
         </div>
 
-        <div class="p-4 flex flex-wrap justify-center" on:scroll={handleDatasetScroll}>
+        <div
+          class="p-4 flex flex-wrap justify-center"
+          on:scroll={handleDatasetScroll}
+        >
           {#each filterItems(selectedDataset.page.items) as item, i}
             <button
               class="flex p-1 flex-col rounded h-min
           hover:bg-zinc-100 dark:hover:bg-zinc-700"
               on:click={() => handleSelectItem(item)}
             >
-              <div class={item.filter((f) => f.dtype === "image").length > 1 ? "grid grid-cols-2" : ""}>
+              <div
+                class={item.filter((f) => f.dtype === "image").length > 1
+                  ? "grid grid-cols-2"
+                  : ""}
+              >
                 {#each item as itemFeature}
                   {#if itemFeature.dtype === "image"}
                     <img
@@ -521,11 +606,15 @@
               <div class="flex mx-auto">
                 <span
                   class="text-xs justify-center truncate grow
-                  {item.filter((f) => f.dtype === 'image').length > 1 ? 'w-48' : 'w-24'}"
+                  {item.filter((f) => f.dtype === 'image').length > 1
+                    ? 'w-48'
+                    : 'w-24'}"
                   title={item.find((f) => f.name === "id").value}
                 >
                   {item.find((f) => f.name === "id").value.length > 12
-                    ? item.find((f) => f.name === "id").value.substring(0, 6) + "..." + item.find((f) => f.name === "id").value.slice(-6) 
+                    ? item.find((f) => f.name === "id").value.substring(0, 6) +
+                      "..." +
+                      item.find((f) => f.name === "id").value.slice(-6)
                     : item.find((f) => f.name === "id").value}
                 </span>
               </div>

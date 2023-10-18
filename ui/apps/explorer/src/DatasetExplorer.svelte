@@ -41,8 +41,16 @@
   async function loadPage() {
     selectedDataset.page = null;
     const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
-    console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
+    selectedDataset.page = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage,
+      itemsPerPage
+    );
+    console.log(
+      "DatasetExplorer.loadPage - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
 
     // If no dataset page, return error message
     if (selectedDataset.page == null) {
@@ -91,7 +99,9 @@
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
       bg-white shadow border-zinc-300 dark:border-zinc-600"
     >
-      <span class="font-semibold tracking-tight text-xl mt-3 uppercase"> Stats </span>
+      <span class="font-semibold tracking-tight text-xl mt-3">
+        Statistics
+      </span>
       {#if datasetStats != null && datasetStats.length != 0}
         <div class="grid grid-cols-1 2xl:grid-cols-2 w-full gap-4 p-4">
           <!-- If charts are ready to be displayed, display them -->
@@ -103,7 +113,9 @@
         </div>
       {:else}
         <!-- Else show a message -->
-        <span class="mt-80 italic text-zinc-500 dark:text-zinc-300"> No stats available. </span>
+        <span class="mt-80 italic text-zinc-500 dark:text-zinc-300">
+          No stats available.
+        </span>
       {/if}
     </div>
 
@@ -111,13 +123,21 @@
       {#if selectedDataset.page}
         <!-- Items list -->
         <div class=" h-[85vh] z-0 w-full max-w-7xl">
-          <Table {selectedDataset} on:selectItem={(event) => handleSelectItem(event.detail)} />
+          <Table
+            {selectedDataset}
+            on:selectItem={(event) => handleSelectItem(event.detail)}
+          />
         </div>
 
         <!-- Page navigation -->
-        <div class="flex justify-end items-center w-full max-w-7xl space-x-2 py-2">
+        <div
+          class="flex justify-end items-center w-full max-w-7xl space-x-2 py-2"
+        >
           <span class="mr-2">
-            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(itemsPerPage * currentPage, selectedDataset.page.total)} of
+            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
+              itemsPerPage * currentPage,
+              selectedDataset.page.total
+            )} of
             {selectedDataset.page.total}
           </span>
           {#if selectedDataset.page.total > itemsPerPage}
@@ -164,7 +184,9 @@
         </div>
       {:else}
         <div class="h-full flex justify-center items-center">
-          <span class="italic text-zinc-500 dark:text-zinc-300"> Loading items... </span>
+          <span class="italic text-zinc-500 dark:text-zinc-300">
+            Loading items...
+          </span>
         </div>
       {/if}
     </div>
