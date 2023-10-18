@@ -48,7 +48,10 @@
     </div>
 
     <p class="text-sm text-zinc-600 dark:text-zinc-400">
-      {dataset.num_elements} elements - {dataset.estimated_size}
+      {dataset.num_elements} elements {dataset.estimated_size &&
+      dataset.estimated_size != "N/A"
+        ? " - " + dataset.estimated_size
+        : ""}
     </p>
   </div>
 
