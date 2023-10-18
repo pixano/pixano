@@ -21,6 +21,7 @@ from datetime import timedelta
 from io import BytesIO
 from pathlib import Path
 
+import lance
 import lancedb
 import pyarrow as pa
 import shortuuid
@@ -191,7 +192,11 @@ class Importer(ABC):
                         rows[table_group][table["name"]],
                         schema=Fields(table["fields"]).to_schema(),
                     )
-                    ds_tables[table_group][table["name"]].add(pa_rows)
+                    lance.write_dataset(
+                        pa_rows,
+                        uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                        mode="append",
+                    )
 
         # Clear creation history
         for tables in ds_tables.values():
