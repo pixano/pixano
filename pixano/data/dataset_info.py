@@ -31,9 +31,6 @@ class DatasetInfo(BaseModel):
         splits (list[str]): Dataset splits
         tables (dict[str, list], optional): Dataset tables
         categories (list[dict], optional): Dataset categories
-        model_id (str, optional): Model ID
-        model_name (str, optional): Model name
-        model_description (str, optional): Model description
     """
 
     id: str
@@ -45,9 +42,6 @@ class DatasetInfo(BaseModel):
     splits: Optional[list[str]]
     tables: Optional[dict[str, list]]
     categories: Optional[list[dict]]
-    model_id: Optional[str]
-    model_name: Optional[str]
-    model_description: Optional[str]
 
     def save(self, save_dir: Path):
         """Save DatasetInfo to json file"""
