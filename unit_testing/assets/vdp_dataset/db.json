@@ -6,29 +6,12 @@
   "num_elements": 3,
   "preview": null,
   "splits": ["test"],
-  "fields": null,
   "tables": {
-    "main": [
-      {
-        "name": "db"
-      }
-    ],
-    "media": [
-      {
-        "name": "image"
-      }
-    ],
-    "objects": [
-      {
-        "name": "objects",
-        "source": "ground truth"
-      }
-    ],
+    "main": [{ "name": "db" }],
+    "media": [{ "name": "image" }],
+    "objects": [{ "name": "objects", "source": "ground truth" }],
     "active_learning": [
-      {
-        "name": "active_learning",
-        "source": "random sampler"
-      }
+      { "name": "active_learning", "source": "random sampler" }
     ]
   },
   "categories": [],
