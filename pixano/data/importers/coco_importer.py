@@ -17,8 +17,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
-from pixano.core import BBox, CompressedRLE, Image, ObjectAnnotation
-from pixano.data import Fields
+from pixano.core import BBox, CompressedRLE, Image
 from pixano.data.importers.importer import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
 
@@ -46,24 +45,52 @@ class COCOImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        fields = Fields.from_dict(
-            {
-                "id": "str",
-                "image": "Image",
-                "objects": "[ObjectAnnotation]",
-                "split": "str",
-            }
-        )
+        tables = {
+            "main": [
+                {
+                    "name": "db",
+                    "fields": {
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                }
+            ],
+            "media": [
+                {
+                    "name": "image",
+                    "fields": {
+                        "id": "str",
+                        "image": "image",
+                    },
+                }
+            ],
+            "objects": [
+                {
+                    "name": "objects",
+                    "fields": {
+                        "id": "str",
+                        "item_id": "str",
+                        "view_id": "str",
+                        "bbox": "bbox",
+                        "mask": "compressedrle",
+                        "category_id": "int",
+                        "category_name": "str",
+                    },
+                    "source": "ground truth",
+                }
+            ],
+        }
 
         # Initialize Importer
-        super().__init__(name, description, fields, splits)
+        super().__init__(name, description, tables, splits)
 
-    def import_row(
+    def import_rows(
         self,
         input_dirs: dict[str, Path],
         portable: bool = False,
     ) -> Iterator:
-        """Process dataset row for import
+        """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
@@ -74,7 +101,7 @@ class COCOImporter(Importer):
         """
 
         # iterate on splits
-        for split in self.splits:
+        for split in self.info.splits:
             # Open annotation files
             with open(input_dirs["objects"] / f"instances_{split}.json", "r") as f:
                 coco_instances = json.load(f)
@@ -107,30 +134,44 @@ class COCOImporter(Importer):
                     else im_path.absolute().as_uri()
                 )
 
-                # Fill row with ID, image, and list of image annotations
-                row = {
-                    "id": str(im["id"]),
-                    "image": Image(im_uri, None, im_thumb),
-                    "objects": [
-                        ObjectAnnotation(
-                            id=str(ann["id"]),
-                            view_id="image",
-                            area=float(ann["area"]) if ann["area"] else None,
-                            bbox=BBox.from_xywh(ann["bbox"]).normalize(
-                                im["height"], im["width"]
-                            ),
-                            mask=CompressedRLE.encode(
-                                ann["segmentation"], im["height"], im["width"]
-                            ),
-                            is_group_of=bool(ann["iscrowd"])
-                            if ann["iscrowd"]
-                            else None,
-                            category_id=int(ann["category_id"]),
-                            category_name=coco_names_91(ann["category_id"]),
-                        )
-                        for ann in im_anns
-                    ],
-                    "split": split,
+                # Return rows
+                rows = {
+                    "main": {
+                        "db": {
+                            "id": [str(im["id"])],
+                            "views": [["image"]],
+                            "split": [split],
+                        }
+                    },
+                    "media": {
+                        "image": {
+                            "id": [str(im["id"])],
+                            "image": [Image(im_uri, None, im_thumb).to_dict()],
+                        }
+                    },
+                    "objects": {
+                        "objects": {
+                            "id": [str(ann["id"]) for ann in im_anns],
+                            "item_id": [str(im["id"]) for ann in im_anns],
+                            "view_id": ["image" for ann in im_anns],
+                            "bbox": [
+                                BBox.from_xywh(ann["bbox"])
+                                .normalize(im["height"], im["width"])
+                                .to_dict()
+                                for ann in im_anns
+                            ],
+                            "mask": [
+                                CompressedRLE.encode(
+                                    ann["segmentation"], im["height"], im["width"]
+                                ).to_dict()
+                                for ann in im_anns
+                            ],
+                            "category_id": [int(ann["category_id"]) for ann in im_anns],
+                            "category_name": [
+                                coco_names_91(ann["category_id"]) for ann in im_anns
+                            ],
+                        }
+                    },
                 }
 
-                yield super().dict_to_recordbatch(row)
+                yield rows

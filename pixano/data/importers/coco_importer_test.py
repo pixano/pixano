@@ -15,52 +15,74 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import pandas as pd
+import pyarrow as pa
 
+from pixano.core import BBoxType, CompressedRLEType, ImageType
 from pixano.data.importers.coco_importer import COCOImporter
 
 
 class COCOImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "objects": Path("unit_testing/assets/coco_dataset"),
             "image": Path("unit_testing/assets/coco_dataset/image"),
+            "objects": Path("unit_testing/assets/coco_dataset"),
         }
-
         self.importer = COCOImporter(
-            name="coco test", description="LIST coco", splits=["val"]
+            name="COCO",
+            description="Image dataset using COCO",
+            splits=["val"],
         )
 
-    def test_import_existing_file(self):
-        with tempfile.TemporaryDirectory() as library_dir:
-            import_dir = Path(library_dir) / "test_coco"
-            ds = self.importer.import_dataset(self.input_dirs, import_dir)
+    def test_import_dataset(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Set import directory
+            import_dir = Path(temp_dir) / "coco"
 
-            # Verify that spec.json exists in import_dir
-            spec_json_path = import_dir / "spec.json"
-            self.assertTrue(spec_json_path.exists(), "spec.json file does not exist.")
+            # Import dataset
+            dataset = self.importer.import_dataset(
+                self.input_dirs,
+                import_dir,
+                portable=False,
+            )
 
-            # Verify that db.lance exists
+            # Check that db.json exists
+            spec_json_path = import_dir / "db.json"
+            self.assertTrue(spec_json_path.exists())
+
+            # Check db.json content
+            self.assertEqual("COCO", dataset.info.name)
+            self.assertEqual(3, dataset.info.num_elements)
+
+            # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"
-            self.assertTrue(db_lance_path.exists(), "db.lance file does not exist.")
+            self.assertTrue(db_lance_path.exists())
 
-    def test_import_data(self):
-        with tempfile.TemporaryDirectory() as library_dir:
-            import_dir = Path(library_dir) / "coco"
-            ds = self.importer.import_dataset(self.input_dirs, import_dir)
+            # Check db.lance content
+            ds = dataset.connect()
+            table = ds.open_table("db")
+            self.assertEqual(len(table), 3)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("split", pa.string()), table.schema)
 
-            for r in ds.to_batches():
-                db: pd.DataFrame = r.to_pandas()
+            # Check that image.lance exists
+            db_lance_path = import_dir / "image.lance"
+            self.assertTrue(db_lance_path.exists())
 
-                # Assertions to check for data correctness
-                self.assertIsInstance(db, pd.DataFrame, "db is not a pandas DataFrame.")
-                self.assertFalse(db.empty, "db DataFrame is empty.")
-                self.assertGreaterEqual(
-                    len(db), 1, "Dataframe should have at least 10 rows."
-                )
-                self.assertIn(
-                    "objects", db.columns, "Column 'split' not found in DataFrame."
-                )
-                self.assertIn(
-                    "image", db.columns, "Column 'split' not found in DataFrame."
-                )
+            # Check image.lance content
+            ds = dataset.connect()
+            table = ds.open_table("image")
+            self.assertEqual(len(table), 3)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("image", ImageType), table.schema)
+
+            # Check that objects.lance exists
+            db_lance_path = import_dir / "objects.lance"
+            self.assertTrue(db_lance_path.exists())
+
+            # Check objects.lance content
+            ds = dataset.connect()
+            table = ds.open_table("objects")
+            self.assertEqual(len(table), 39)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("bbox", BBoxType), table.schema)
+            self.assertIn(pa.field("mask", CompressedRLEType), table.schema)
