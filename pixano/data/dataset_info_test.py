@@ -11,51 +11,42 @@
 #
 # http://www.cecill.info
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from pixano.data.dataset_info import DatasetInfo
-from pixano.data.fields import Fields
 
 
 class DatasetInfoTestCase(unittest.TestCase):
     def setUp(self):
-        self.tmpdir = Path(tempfile.mkdtemp())
-
         self.info = DatasetInfo(
             id="datasetid001",
             name="My dataset",
             description="Dataset from a great AI project",
-            fields=Fields.from_dict({"field1": "int", "field2": "Image"}),
         )
 
-    def test_parse_file(self):
-        with open(self.tmpdir / "db.json", "w", encoding="utf-8") as f:
-            json.dump(self.info.to_dict(), f)
+    def test_save(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.info.save(Path(temp_dir))
+            saved_info = DatasetInfo.parse_file(Path(temp_dir) / "db.json")
 
-        info_read = DatasetInfo.parse_file(self.tmpdir / "db.json")
+            self.assertTrue(isinstance(saved_info, DatasetInfo))
+            self.assertEqual(self.info.id, saved_info.id)
+            self.assertEqual(self.info.name, saved_info.name)
+            self.assertEqual(self.info.description, saved_info.description)
 
-        self.assertTrue(isinstance(info_read, DatasetInfo))
-        self.assertEqual(self.info.id, info_read.id)
-        self.assertEqual(self.info.name, info_read.name)
-        self.assertEqual(self.info.description, info_read.description)
-        self.assertEqual(self.info.fields, info_read.fields)
+    def test_dict(self):
+        info_to_dict = self.info.dict()
 
-    def test_to_dict(self):
-        info_dict = self.info.to_dict()
+        self.assertTrue(isinstance(info_to_dict, dict))
+        self.assertEqual(self.info.id, info_to_dict["id"])
+        self.assertEqual(self.info.name, info_to_dict["name"])
+        self.assertEqual(self.info.description, info_to_dict["description"])
 
-        self.assertTrue(isinstance(info_dict, dict))
-        self.assertEqual(self.info.id, info_dict["id"])
-        self.assertEqual(self.info.name, info_dict["name"])
-        self.assertEqual(self.info.description, info_dict["description"])
-        self.assertEqual(self.info.fields.to_dict(), info_dict["fields"])
+        info_from_dict = DatasetInfo(**info_from_dict)
 
-        info_convert = DatasetInfo(**info_dict)
-
-        self.assertTrue(isinstance(info_convert, DatasetInfo))
-        self.assertEqual(self.info.id, info_convert.id)
-        self.assertEqual(self.info.name, info_convert.name)
-        self.assertEqual(self.info.description, info_convert.description)
-        self.assertEqual(self.info.fields, info_convert.fields)
+        self.assertTrue(isinstance(info_from_dict, DatasetInfo))
+        self.assertEqual(self.info.id, info_from_dict.id)
+        self.assertEqual(self.info.name, info_from_dict.name)
+        self.assertEqual(self.info.description, info_from_dict.description)

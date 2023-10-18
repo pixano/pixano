@@ -86,8 +86,7 @@ class Dataset:
     def save_info(self):
         """Save dataset info to file"""
 
-        with open(self.path / "db.json", "w", encoding="utf-8") as f:
-            json.dump(self.info.to_dict(), f)
+        self.info.save(self.path)
 
 
 class InferenceDataset(Dataset):

@@ -11,11 +11,11 @@
 #
 # http://www.cecill.info
 
-from typing import Any, Optional
+import json
+from pathlib import Path
+from typing import Optional
 
 from pydantic import BaseModel
-
-from pixano.data.fields import Fields
 
 
 class DatasetInfo(BaseModel):
@@ -29,7 +29,6 @@ class DatasetInfo(BaseModel):
         num_elements (int): Number of elements in dataset
         preview (str, optional): Dataset preview
         splits (list[str]): Dataset splits
-        fields (Fields, optional): Dataset fields
         tables (dict[str, list], optional): Dataset tables
         categories (list[dict], optional): Dataset categories
         model_id (str, optional): Model ID
@@ -44,21 +43,14 @@ class DatasetInfo(BaseModel):
     num_elements: Optional[int]
     preview: Optional[str]
     splits: Optional[list[str]]
-    fields: Optional[Fields]
     tables: Optional[dict[str, list]]
     categories: Optional[list[dict]]
     model_id: Optional[str]
     model_name: Optional[str]
     model_description: Optional[str]
 
-    class Config:
-        arbitrary_types_allowed = True
+    def save(self, save_dir: Path):
+        """Save DatasetInfo to json file"""
 
-    def to_dict(self) -> dict[str, Any]:
-        def _value_as_dict(value):
-            if isinstance(value, Fields):
-                return value.to_dict()
-            else:
-                return value
-
-        return {attr: _value_as_dict(getattr(self, attr)) for attr in vars(self).keys()}
+        with open(save_dir / "db.json", "w", encoding="utf-8") as f:
+            json.dump(self.dict(), f)
