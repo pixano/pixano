@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import json
 from pathlib import Path
 
 import lancedb
