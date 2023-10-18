@@ -25,6 +25,7 @@ class DatasetInfo(BaseModel):
         id (str): Dataset ID
         name (str): Dataset name
         description (str): Dataset description
+        estimated_size (str): Dataset estimated size
         num_elements (int): Number of elements in dataset
         preview (str, optional): Dataset preview
         splits (list[str]): Dataset splits
@@ -39,6 +40,7 @@ class DatasetInfo(BaseModel):
     id: str
     name: str
     description: str
+    estimated_size: Optional[str]
     num_elements: Optional[int]
     preview: Optional[str]
     splits: Optional[list[str]]
