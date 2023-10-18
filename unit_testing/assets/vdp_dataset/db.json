@@ -10,22 +10,10 @@
     "main": [
       {
         "name": "db",
-        "fields": {
-          "id": "str",
-          "views": "[str]",
-          "split": "str"
-        }
+        "fields": { "id": "str", "views": "[str]", "split": "str" }
       }
     ],
-    "media": [
-      {
-        "name": "image",
-        "fields": {
-          "id": "str",
-          "image": "image"
-        }
-      }
-    ],
+    "media": [{ "name": "image", "fields": { "id": "str", "image": "image" } }],
     "objects": [
       {
         "name": "objects",
@@ -45,11 +33,7 @@
       {
         "name": "active_learning",
         "source": "random sampler",
-        "fields": {
-          "id": "str",
-          "round": "int",
-          "label": "str"
-        }
+        "fields": { "id": "str", "round": "int", "label": "str" }
       }
     ]
   },
