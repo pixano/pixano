@@ -27,7 +27,7 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetInfo
+from pixano.data import Dataset, DatasetInfo, Fields
 from pixano.utils import estimate_size
 
 
@@ -87,7 +87,7 @@ class Importer(ABC):
         with tqdm(desc="Creating dataset info file", total=1) as progress:
             # Create spec.json
             with open(import_dir / "db.json", "w", encoding="utf-8") as f:
-                json.dump(self.info.to_dict(), f)
+                json.dump(self.info.dict(), f)
             progress.update(1)
 
     def create_preview(
@@ -106,23 +106,24 @@ class Importer(ABC):
         if "media" in ds_tables:
             if "image" in ds_tables["media"]:
                 image_table = ds_tables["media"]["image"]
-                image_fields = [
-                    field.name for field in image_table.schema if field.name != "id"
-                ]
-                with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
-                    tile_w = 64
-                    tile_h = 64
-                    preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
-                    for i in range(6):
-                        field = image_fields[i % len(image_fields)]
-                        item_id = random.randrange(len(image_table))
-                        item = image_table.to_lance().take([item_id]).to_pylist()[0]
-                        with Image.open(BytesIO(item[field]["preview_bytes"])) as im:
-                            preview.paste(
-                                im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h)
-                            )
-                    preview.save(import_dir / "preview.png")
-                    progress.update(1)
+                if len(image_table) > 0:
+                    image_fields = [
+                        field.name for field in image_table.schema if field.name != "id"
+                    ]
+                    with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
+                        tile_w = 64
+                        tile_h = 64
+                        preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
+                        for i in range(6):
+                            field = image_fields[i % len(image_fields)]
+                            item_id = random.randrange(len(image_table))
+                            item = image_table.to_lance().take([item_id]).to_pylist()[0]
+                            with Image.open(BytesIO(item[field].preview_bytes)) as im:
+                                preview.paste(
+                                    im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h)
+                                )
+                        preview.save(import_dir / "preview.png")
+                        progress.update(1)
 
     @abstractmethod
     def import_rows(
@@ -169,38 +170,33 @@ class Importer(ABC):
 
         # Initialize dataset tables
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
-        tables_created = False
+
+        # Create tables
+        for table_group, tables in self.info.tables.items():
+            for table in tables:
+                ds_tables[table_group][table["name"]] = ds.create_table(
+                    table["name"],
+                    schema=Fields(table["fields"]).to_schema(),
+                    mode="overwrite",
+                )
 
         # Add rows to tables
         for rows in tqdm(
             self.import_rows(input_dirs, portable),
             desc="Importing dataset",
         ):
-            # First, create tables
-            if not tables_created:
-                for table_group, tables in self.info.tables.items():
-                    for table in tables:
-                        # Convert row to PyArrow
-                        pa_row = pa.Table.from_pydict(rows[table_group][table["name"]])
-                        # Create table
-                        ds_tables[table_group][table["name"]] = ds.create_table(
-                            table["name"], data=pa_row, mode="overwrite"
-                        )
-                tables_created = True
-            # Then, append to tables
-            else:
-                for table_group, tables in self.info.tables.items():
-                    for table in tables:
-                        # Convert row to PyArrow
-                        pa_row = pa.Table.from_pydict(rows[table_group][table["name"]])
-                        # Append to table
-                        ds_tables[table_group][table["name"]].add(pa_row)
+            for table_group, tables in self.info.tables.items():
+                for table in tables:
+                    pa_rows = pa.Table.from_pydict(
+                        rows[table_group][table["name"]],
+                        schema=Fields(table["fields"]).to_schema(),
+                    )
+                    ds_tables[table_group][table["name"]].add(pa_rows)
 
         # Clear creation history
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                table_as_lance_ds = ds_tables[table_group][table["name"]].to_lance()
-                table_as_lance_ds.cleanup_old_versions(older_than=timedelta(0))
+        for tables in ds_tables.values():
+            for table in tables.values():
+                table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         # Copy media directories if portable
         if portable and "media" in ds_tables:
