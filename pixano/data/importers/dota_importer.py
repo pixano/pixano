@@ -47,24 +47,51 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        fields = Fields.from_dict(
-            {
-                "id": "str",
-                "image": "Image",
-                "objects": "[ObjectAnnotation]",
-                "split": "str",
-            }
-        )
+        tables = {
+            "main": [
+                {
+                    "name": "db",
+                    "fields": {
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                }
+            ],
+            "media": [
+                {
+                    "name": "image",
+                    "fields": {
+                        "id": "str",
+                        "image": "image",
+                    },
+                }
+            ],
+            "objects": [
+                {
+                    "name": "objects",
+                    "fields": {
+                        "id": "str",
+                        "item_id": "str",
+                        "view_id": "str",
+                        "bbox": "bbox",
+                        "category_id": "int",
+                        "category_name": "str",
+                    },
+                    "source": "ground truth",
+                }
+            ],
+        }
 
         # Initialize Importer
-        super().__init__(name, description, fields, splits)
+        super().__init__(name, description, tables, splits)
 
-    def import_row(
+    def import_rows(
         self,
         input_dirs: dict[str, Path],
         portable: bool = False,
     ) -> Iterator:
-        """Process dataset row for import
+        """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
@@ -73,7 +100,7 @@ class DOTAImporter(Importer):
         Yields:
             Iterator: Processed rows
         """
-        for split in self.splits:
+        for split in self.info.splits:
             # Get images paths
             image_paths = glob.glob(str(input_dirs["image"] / split / "*.png"))
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
@@ -87,6 +114,8 @@ class DOTAImporter(Importer):
                     / "hbb"
                     / im_path.name.replace("png", "txt")
                 )
+                with open(im_anns_file) as f:
+                    im_anns = [line.strip().split() for line in f]
 
                 # Allow DOTA largest images
                 PILImage.MAX_IMAGE_PIXELS = 806504000
@@ -103,32 +132,46 @@ class DOTAImporter(Importer):
                     else im_path.absolute().as_uri()
                 )
 
-                # Fill row with ID, image, and list of image annotations
-                with open(im_anns_file) as im_anns:
-                    row = {
-                        "id": im_path.stem,
-                        "image": Image(im_uri, None, im_thumb),
-                        "objects": [
-                            ObjectAnnotation(
-                                id=shortuuid.uuid(),
-                                view_id="image",
-                                bbox=BBox.from_xyxy(
+                # Return rows
+                rows = {
+                    "main": {
+                        "db": {
+                            "id": [im_path.stem],
+                            "views": [["image"]],
+                            "split": [split],
+                        }
+                    },
+                    "media": {
+                        "image": {
+                            "id": [im_path.stem],
+                            "image": [Image(im_uri, None, im_thumb).to_dict()],
+                        }
+                    },
+                    "objects": {
+                        "objects": {
+                            "id": [shortuuid.uuid() for ann in im_anns],
+                            "item_id": [im_path.stem for ann in im_anns],
+                            "view_id": ["image" for ann in im_anns],
+                            "bbox": [
+                                BBox.from_xyxy(
                                     [
-                                        float(line.strip().split()[0]),
-                                        float(line.strip().split()[1]),
-                                        float(line.strip().split()[4]),
-                                        float(line.strip().split()[5]),
+                                        float(ann[0]),
+                                        float(ann[1]),
+                                        float(ann[4]),
+                                        float(ann[5]),
                                     ]
-                                ).normalize(im_h, im_w),
-                                is_difficult=bool(line.strip().split()[9]),
-                                category_id=dota_ids(str(line.strip().split()[8])),
-                                category_name=str(line.strip().split()[8]).replace(
-                                    "-", " "
-                                ),
-                            )
-                            for line in im_anns
-                        ],
-                        "split": split,
-                    }
+                                )
+                                .to_xywh()
+                                .normalize(im_h, im_w)
+                                .to_dict()
+                                for ann in im_anns
+                            ],
+                            "category_id": [dota_ids(str(ann[8])) for ann in im_anns],
+                            "category_name": [
+                                str(ann[8]).replace("-", " ") for ann in im_anns
+                            ],
+                        }
+                    },
+                }
 
-                    yield super().dict_to_recordbatch(row)
+                yield rows
