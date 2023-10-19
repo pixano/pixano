@@ -40,7 +40,7 @@
   // Optional dataset navigation
   export let selectedDataset: Dataset = null;
   export let currentPage: number = 1;
-  export let activeLearningFlag: boolean;
+  export let activeLearningFlag: boolean = false;
 
   const dispatch = createEventDispatcher();
 
