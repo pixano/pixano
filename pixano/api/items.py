@@ -23,7 +23,7 @@ from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
 from pixano.core import BBox, CompressedRLE, Image, is_number, is_string
-from pixano.data import Dataset
+from pixano.data import Dataset, Fields
 from pixano.utils import format_bbox, rle_to_mask
 
 
@@ -411,25 +411,74 @@ def save_item_details(
             for key in list(obj):
                 if key not in obj_tables[source].schema.names:
                     obj.pop(key)
+
             # Look for existing object
             scanner = (
                 obj_tables[source].to_lance().scanner(filter=f"id in ('{obj['id']}')")
             )
             pyarrow_obj = scanner.to_table()
+
             # If object exists
             if pyarrow_obj.num_rows > 0:
                 obj_tables[source].update(f"id in ('{obj['id']}')", obj)
+
             # If object does not exists
             else:
-                obj_tables[source].add(obj)
+                pa_obj = pa.Table.from_pylist(
+                    [obj],
+                    schema=obj_tables[source].schema,
+                )
+                obj_tables[source].add(pa_obj)
 
             # Clear change history to prevent dataset from becoming too large
             obj_tables[source].to_lance().cleanup_old_versions()
 
         # If objects table does not exist
         else:
-            # TODO: create objects table for new source
-            pass
+            if source == "Pixano Annotator":
+                annnotator_fields = {
+                    "id": "str",
+                    "item_id": "str",
+                    "view_id": "str",
+                    "bbox": "bbox",
+                    "mask": "compressedrle",
+                    "category_id": "int",
+                    "category_name": "str",
+                }
+                annotator_table = {
+                    "name": "obj_annotator",
+                    "source": source,
+                    "fields": annnotator_fields,
+                }
+
+                # Create new objects table
+                obj_tables[source] = ds.create_table(
+                    "obj_annotator",
+                    schema=Fields(annnotator_fields).to_schema(),
+                    mode="overwrite",
+                )
+
+                # Add new objects table to DatasetInfo
+                if "objects" in dataset.info.tables:
+                    dataset.info.tables["objects"].append(annotator_table)
+                else:
+                    dataset.info.tables["objects"] = [annotator_table]
+                dataset.save_info()
+
+                # Remove keys not in schema (mostly for removing source_id for now)
+                for key in list(obj):
+                    if key not in obj_tables[source].schema.names:
+                        obj.pop(key)
+
+                # Add object
+                pa_obj = pa.Table.from_pylist(
+                    [obj],
+                    schema=obj_tables[source].schema,
+                )
+                obj_tables[source].add(pa_obj)
+
+                # Clear change history to prevent dataset from becoming too large
+                obj_tables[source].to_lance().cleanup_old_versions()
 
     # Delete removed item objects
     for obj_source, cur_objects in current_objects.items():
