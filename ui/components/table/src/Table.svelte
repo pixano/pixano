@@ -16,21 +16,21 @@
 
   // Imports
   import { createEventDispatcher } from "svelte/internal";
-
   import TableCell from "./TableCell.svelte";
-
-  import type { Dataset, DatasetItem } from "@pixano/core";
+  import type { DatasetItem } from "@pixano/core";
   import { icons } from "@pixano/core";
 
   // Exports
-  export let selectedDataset: Dataset;
+  export let data: any;
 
-  const featureNames = selectedDataset.page.items[0].map((feature) => {
+  // Calculate row headers
+  const featureNames = data[0].map((feature) => {
     return { name: feature.name, type: feature.dtype };
   });
 
   const dispatch = createEventDispatcher();
 
+  // Select an item
   function handleSelectItem(item: DatasetItem) {
     const itemId = item.find((feature) => {
       return feature.name === "id";
@@ -44,6 +44,7 @@
   rounded-sm bg-white border border-slate-200 shadow-sm shadow-zinc-200"
 >
   <table class="table-auto z-0 w-full text-center text-base">
+    <!-- Header -->
     <thead>
       <tr class="sticky top-0 bg-white capitalize shadow-sm shadow-slate-200">
         {#each featureNames as { name, type }}
@@ -54,18 +55,19 @@
         <th />
       </tr>
     </thead>
+    <!-- Rows -->
     <tbody>
-      {#each selectedDataset.page.items as item}
+      {#each data as row}
         <tr
           class="cursor-pointer hover:bg-slate-50"
           on:click={() => {
-            handleSelectItem(item);
+            handleSelectItem(row);
           }}
         >
-          {#each item as itemFeature}
-            {#if itemFeature.dtype != "hidden"}
+          {#each row as cell}
+            {#if cell.dtype != "hidden"}
               <td class="py-1 border-b border-slate-200">
-                <TableCell {itemFeature} />
+                <TableCell itemFeature={cell} />
               </td>
             {/if}
           {/each}

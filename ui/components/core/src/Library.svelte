@@ -32,11 +32,13 @@
   }
 </script>
 
-<div class="h-full w-full pt-64 flex bg-slate-50">
+<div class="py-8 flex">
   {#if datasets.length != 0}
     <div class="w-full mx-60">
       <div class="grid grid-cols-3 gap-6">
         {#each datasets as dataset}
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
+          <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
           <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
           <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />
           <DatasetPreviewCard {dataset} {buttonLabel} on:selectDataset={() => handleSelectDataset(dataset)} />

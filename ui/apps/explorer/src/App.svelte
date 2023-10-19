@@ -201,37 +201,35 @@
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
 />
-<div class="h-screen w-full">
-  {#if datasets}
-    {#if selectedDataset}
-      {#if selectedItem}
-        <ExplorationWorkspace
-          {selectedItem}
-          {annotations}
-          {classes}
-          {masks}
-          {bboxes}
-          on:unselectItem={handleUnselectItem}
-        />
-      {:else}
-        <DatasetExplorer
-          {selectedDataset}
-          {currentPage}
-          on:selectItem={(event) => handleSelectItem(event.detail)}
-          on:datasetError={() => (handleUnselectDataset(), (datasetErrorModal = true))}
-        />
-      {/if}
+{#if datasets}
+  {#if selectedDataset}
+    {#if selectedItem}
+      <ExplorationWorkspace
+        {selectedItem}
+        {annotations}
+        {classes}
+        {masks}
+        {bboxes}
+        on:unselectItem={handleUnselectItem}
+      />
     {:else}
-      <Library {datasets} buttonLabel="Explore" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
+      <DatasetExplorer
+        {selectedDataset}
+        {currentPage}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:datasetError={() => (handleUnselectDataset(), (datasetErrorModal = true))}
+      />
     {/if}
   {:else}
-    <LoadingLibrary />
+    <Library {datasets} buttonLabel="Explore" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
-  {#if datasetErrorModal}
-    <WarningModal
-      message="Error while retrieving dataset items."
-      details="Please look at the application logs for more information, and report this issue if the error persists."
-      on:confirm={() => (datasetErrorModal = false)}
-    />
-  {/if}
-</div>
+{:else}
+  <LoadingLibrary />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}

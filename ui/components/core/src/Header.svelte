@@ -47,7 +47,7 @@
 
 <!-- Header -->
 {#if selectedDataset}
-  <header class="w-full fixed z-40">
+  <header class="w-full z-40">
     <div
       class="h-20 py-4 px-4 flex justify-start items-center shrink-0 border-b
     shadow dark:shadow-zinc-700
@@ -119,7 +119,7 @@
     </div>
   </header>
 {:else}
-  <header class="w-full h-56 px-60 fixed flex flex-col justify-evenly bg-[#771E5F] z-10">
+  <header class="w-full h-56 px-60 flex flex-col justify-evenly bg-[#771E5F] z-10">
     <!-- Logo & app name -->
     <button class="flex w-max space-x-6" on:click={handleUnselectDataset}>
       <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />

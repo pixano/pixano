@@ -111,7 +111,7 @@
       {#if selectedDataset.page}
         <!-- Items list -->
         <div class=" h-[85vh] z-0 w-full max-w-7xl">
-          <Table {selectedDataset} on:selectItem={(event) => handleSelectItem(event.detail)} />
+          <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
         </div>
 
         <!-- Page navigation -->

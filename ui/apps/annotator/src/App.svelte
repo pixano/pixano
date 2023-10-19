@@ -367,59 +367,57 @@
   on:unselectItem={handleUnselectItem}
   on:saveItemDetails={handleSaveItemDetails}
 />
-<div class="h-screen w-full">
-  {#if datasets}
-    {#if selectedItem}
-      <AnnotationWorkspace
-        {selectedDataset}
-        {selectedItem}
-        bind:annotations
-        {classes}
-        bind:masks
-        bind:bboxes
-        {embeddings}
-        {currentPage}
-        bind:activeLearningFlag
-        bind:saveFlag
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-        on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={() => (saveFlag = true)}
-      />
-    {:else}
-      <Library {datasets} buttonLabel="Annotate" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
-    {/if}
+{#if datasets}
+  {#if selectedItem}
+    <AnnotationWorkspace
+      {selectedDataset}
+      {selectedItem}
+      bind:annotations
+      {classes}
+      bind:masks
+      bind:bboxes
+      {embeddings}
+      {currentPage}
+      bind:activeLearningFlag
+      bind:saveFlag
+      on:selectItem={(event) => handleSelectItem(event.detail)}
+      on:loadNextPage={handleLoadNextPage}
+      on:enableSaveFlag={() => (saveFlag = true)}
+    />
   {:else}
-    <LoadingLibrary />
+    <Library {datasets} buttonLabel="Annotate" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
-  {#if modelPromptModal}
-    <PromptModal
-      message="Please provide the name of your ONNX model for interactive segmentation."
-      placeholder={defaultModelName}
-      bind:input={inputModelName}
-      on:confirm={handleModelPrompt}
-    />
-  {/if}
-  {#if modelNotFoundModal}
-    <WarningModal
-      message="models/{inputModelName} was not found in your dataset library."
-      details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-      moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-      on:confirm={() => (modelNotFoundModal = false)}
-    />
-  {/if}
-  {#if unselectItemModal}
-    <ConfirmModal
-      message="You have unsaved changes."
-      confirm="Close without saving"
-      on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
-      on:cancel={() => (unselectItemModal = false)}
-    />
-  {/if}
-  {#if datasetErrorModal}
-    <WarningModal
-      message="Error while retrieving dataset items."
-      details="Please look at the application logs for more information, and report this issue if the error persists."
-      on:confirm={() => (datasetErrorModal = false)}
-    />
-  {/if}
-</div>
+{:else}
+  <LoadingLibrary />
+{/if}
+{#if modelPromptModal}
+  <PromptModal
+    message="Please provide the name of your ONNX model for interactive segmentation."
+    placeholder={defaultModelName}
+    bind:input={inputModelName}
+    on:confirm={handleModelPrompt}
+  />
+{/if}
+{#if modelNotFoundModal}
+  <WarningModal
+    message="models/{inputModelName} was not found in your dataset library."
+    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+    moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
+    on:confirm={() => (modelNotFoundModal = false)}
+  />
+{/if}
+{#if unselectItemModal}
+  <ConfirmModal
+    message="You have unsaved changes."
+    confirm="Close without saving"
+    on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
+    on:cancel={() => (unselectItemModal = false)}
+  />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}
