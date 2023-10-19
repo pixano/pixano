@@ -18,9 +18,8 @@ from pathlib import Path
 
 import lance
 import pyarrow as pa
-from tqdm.auto import tqdm
 
-from pixano.core import EmbeddingType, ObjectAnnotationType, pyarrow_array_from_list
+from pixano.core import pyarrow_array_from_list
 from pixano.data import Dataset, DatasetInfo, Fields
 
 
@@ -138,17 +137,17 @@ class InferenceModel(ABC):
 
         # Inference generation schema
         if process_type == "infer":
-            self.schema = self.schema.append(
-                pa.field("objects", pa.list_(ObjectAnnotationType)),
-            )
+            # self.schema = self.schema.append(
+            #     pa.field("objects", pa.list_(ObjectAnnotationType)),
+            # )
             fields_dict["objects"] = "[objectannotation]"
 
         # Embedding precomputing schema
         elif process_type == "embed":
             for view in views:
-                self.schema = self.schema.append(
-                    pa.field(f"{view}_embedding", EmbeddingType)
-                )
+                # self.schema = self.schema.append(
+                #     pa.field(f"{view}_embedding", EmbeddingType)
+                # )
                 fields_dict[f"{view}_embedding"] = "embedding"
 
         # Create fields
