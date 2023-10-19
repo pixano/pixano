@@ -11,11 +11,11 @@
 #
 # http://www.cecill.info
 
+import base64
 from collections import defaultdict
 from typing import Any
 
 import duckdb
-import lance
 import lancedb
 import pyarrow as pa
 from fastapi_pagination.api import create_page, resolve_params
@@ -66,6 +66,7 @@ def _create_features(item: dict, schema: pa.schema) -> list[ItemFeature]:
             )
         # Image fields
         elif field.name in item["views"]:
+            # TODO: get type from db.json to handle other media like videos
             if isinstance(item[field.name], dict):
                 item[field.name] = Image.from_dict(item[field.name])
             thumbnail = item[field.name].preview_url
@@ -247,6 +248,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
     # Iterate on view
     for field in pyarrow_item.schema:
         if field.name in item["views"]:
+            # TODO: get type from db.json to handle other media like videos
             if isinstance(item[field.name], dict):
                 item[field.name] = Image.from_dict(item[field.name])
             image = item[field.name]
@@ -305,9 +307,30 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
 
     # Load dataset
     ds = dataset.connect()
-    main_table: lance.LanceDataset = ds.open_table("db").to_lance()
 
-    # TODO: load item embeddings for all views
+    emb_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "embeddings" in dataset.info.tables:
+        for emb_info in dataset.info.tables["embeddings"]:
+            emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
+
+    # Get item embeddings
+    embeddings = {}
+    for emb_source, emb_table in emb_tables.items():
+        media_scanner = emb_table.to_lance().scanner(filter=f"id in ('{item_id}')")
+        embeddings[emb_source] = media_scanner.to_table().to_pylist()[0]
+
+    # Return first embeddings for first table containing SAM (Segment Anything Model)
+    for emb_source in embeddings.keys():
+        if "SAM" in emb_source:
+            # Keep only embedding fields
+            embeddings[emb_source].pop("id")
+            # Convert binary embeddings to b64 strings for FastAPI
+            for name, value in embeddings[emb_source].items():
+                if isinstance(value, bytes):
+                    embeddings[emb_source][name] = base64.b64encode(value).decode(
+                        "ascii"
+                    )
+            return embeddings[emb_source]
 
 
 def save_item_details(

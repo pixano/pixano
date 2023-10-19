@@ -108,38 +108,27 @@ export async function getItemDetails(datasetId: String, itemId: string) {
   return itemDetails;
 }
 
-export async function getViewEmbedding(
-  datasetId: String,
-  itemId: string,
-  viewId: string = "image"
-) {
-  let embedding = null;
+export async function getItemEmbeddings(datasetId: String, itemId: string) {
+  let embeddings = null;
 
   try {
     const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/${viewId}/embedding`,
-      {
-        headers: {
-          Accept: "application/octet-stream",
-          "Content-Type": "application/octet-stream",
-        },
-        method: "POST",
-      }
+      `/datasets/${datasetId}/items/${itemId}/embeddings`
     );
     if (response.ok) {
-      embedding = await response.arrayBuffer();
+      embeddings = await response.json();
     } else {
       console.log(
-        "api.getViewEmbedding -",
+        "api.getItemEmbeddings -",
         response.status,
         response.statusText,
         await response.text()
       );
     }
   } catch (e) {
-    console.log("api.getViewEmbedding -", e);
+    console.log("api.getItemEmbeddings -", e);
   }
-  return embedding;
+  return embeddings;
 }
 
 export async function postItemDetails(

@@ -24,8 +24,8 @@ from pixano.api import (
     load_dataset,
     load_dataset_list,
     load_dataset_stats,
-    load_item_embeddings,
     load_item_details,
+    load_item_embeddings,
     load_items,
     save_item_details,
 )
@@ -118,15 +118,15 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             # Load item objects
             return load_item_details(ds, item_id)
 
-    @app.post("/datasets/{ds_id}/items/{item_id}/embeddings")
+    @app.get("/datasets/{ds_id}/items/{item_id}/embeddings")
     async def get_item_embeddings(ds_id: str, item_id: str):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
         else:
-            # TODO: Load item embeddings
-            return Response(content=load_item_embeddings(ds, item_id))
+            # Load item embeddings
+            return load_item_embeddings(ds, item_id)
 
     @app.post(
         "/datasets/{ds_id}/items/{item_id}/details",

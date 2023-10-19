@@ -141,7 +141,7 @@
     bboxes = [];
     embeddings = {};
 
-    const start = Date.now();
+    let start = Date.now();
     const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
     selectedItem = itemDetails["itemData"] as ItemData;
     const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
@@ -268,24 +268,25 @@
     }
 
     // Embeddings
-    for (const viewId of Object.keys(selectedItem.views)) {
-      let viewEmbedding = null;
-      const start = Date.now();
-      const viewEmbeddingArrayBytes = await api.getViewEmbedding(
-        selectedDataset.id,
-        selectedItem.id,
-        viewId
-      );
-      console.log(
-        "App.handleSelectItem - api.getViewEmbedding in",
-        Date.now() - start,
-        "ms"
-      );
-
-      if (viewEmbeddingArrayBytes) {
+    start = Date.now();
+    const embeddingsBytes = await api.getItemEmbeddings(
+      selectedDataset.id,
+      selectedItem.id
+    );
+    console.log(
+      "App.handleSelectItem - api.getItemEmbeddings in",
+      Date.now() - start,
+      "ms"
+    );
+    if (embeddingsBytes) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(
+        embeddingsBytes
+      )) {
         try {
-          const viewEmbeddingArray = npy.parse(viewEmbeddingArrayBytes);
-          viewEmbedding = new ort.Tensor(
+          const viewEmbeddingArray = npy.parse(
+            npy.b64ToBuffer(viewEmbeddingBytes)
+          );
+          embeddings[viewId] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
             viewEmbeddingArray.shape
@@ -294,7 +295,6 @@
           console.log("App.handleSelectItem - Error loading embeddings", e);
         }
       }
-      embeddings[viewId] = viewEmbedding;
     }
   }
 
