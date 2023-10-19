@@ -14,8 +14,6 @@
 from pathlib import Path
 
 import lancedb
-import pyarrow as pa
-import pyarrow.dataset as ds
 
 from pixano.data.dataset_info import DatasetInfo
 
@@ -26,12 +24,7 @@ class Dataset:
     Attributes:
         _path (Path): Dataset path
         _info (DatasetInfo): Dataset info
-        _partitioning (ds.partitioning): Dataset partitioning
     """
-
-    _partitioning: ds.partitioning = ds.partitioning(
-        pa.schema([("split", pa.string())]), flavor="hive"
-    )
 
     def __init__(self, path: Path):
         """Initialize dataset
@@ -86,65 +79,3 @@ class Dataset:
         """Save dataset info to file"""
 
         self.info.save(self.path)
-
-
-class InferenceDataset(Dataset):
-    """Inference Dataset
-
-    Attributes:
-        _path (Path): Dataset path
-        _info (DatasetInfo): Dataset info
-        _partitioning (ds.partitioning): Dataset partitioning
-    """
-
-    def __init__(self, path: Path):
-        """Initialize inference dataset
-
-        Args:
-            path (Path): Inference dataset path
-        """
-
-        self._path = path
-        self._info = DatasetInfo.parse_file(self._path / "infer.json")
-
-    def load(self) -> ds.Dataset:
-        """Load inference dataset as PyArrow dataset
-
-        Returns:
-            ds.Dataset: Dataset as PyArrow dataset
-        """
-
-        return ds.dataset(
-            self._path, partitioning=self._partitioning, ignore_prefixes=["infer.json"]
-        )
-
-
-class EmbeddingDataset(Dataset):
-    """Embedding Dataset
-
-    Attributes:
-        _path (Path): Dataset path
-        _info (DatasetInfo): Dataset info
-        _partitioning (ds.partitioning): Dataset partitioning
-    """
-
-    def __init__(self, path: Path):
-        """Initialize embedding dataset
-
-        Args:
-            path (Path): Embedding dataset path
-        """
-
-        self._path = path
-        self._info = DatasetInfo.parse_file(self._path / "embed.json")
-
-    def load(self) -> ds.Dataset:
-        """Load embedding dataset as PyArrow dataset
-
-        Returns:
-            ds.Dataset: Dataset as PyArrow dataset
-        """
-
-        return ds.dataset(
-            self._path, partitioning=self._partitioning, ignore_prefixes=["embed.json"]
-        )
