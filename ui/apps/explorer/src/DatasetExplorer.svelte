@@ -92,12 +92,12 @@
   });
 </script>
 
-<div class="pt-2 px-2 bg-zinc-100">
+<div class="pt-2 px-2 bg-white dark:bg-zinc-800">
   <div class="flex">
     <!-- Stats -->
     <div
       class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-      bg-white shadow border-zinc-300 dark:border-zinc-600"
+      bg-white dark:bg-zinc-800 shadow border-zinc-300 dark:border-zinc-600"
     >
       <span class="font-semibold tracking-tight text-xl mt-3">
         Statistics
