@@ -346,12 +346,6 @@
               item_id: selectedItem.id,
               source_id: label.sourceId,
               view_id: label.viewId,
-              mask: mask
-                ? {
-                    size: mask.rle ? mask.rle.size : [0, 0],
-                    counts: mask.rle ? mask.rle.counts : [],
-                  }
-                : { size: [0, 0], counts: [] },
               bbox: {
                 coords: bbox
                   ? [
@@ -364,6 +358,12 @@
                 format: "xywh",
                 confidence: label.confidence,
               },
+              mask: mask
+                ? {
+                    size: mask.rle ? mask.rle.size : [0, 0],
+                    counts: mask.rle ? mask.rle.counts : [],
+                  }
+                : { size: [0, 0], counts: [] },
               category_id: label.categoryId,
               category_name: label.categoryName,
             });
