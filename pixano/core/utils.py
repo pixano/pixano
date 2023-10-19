@@ -14,7 +14,6 @@
 import pyarrow as pa
 
 from pixano.core.image import ImageType
-from pixano.core.object_annotation import ObjectAnnotationType
 
 
 def is_number(t: pa.DataType) -> bool:
@@ -57,19 +56,6 @@ def is_image_type(t: pa.DataType) -> bool:
         ImageType.equals(t)
         or str(t) == "struct<uri: string, bytes: binary, preview_bytes: binary>"
     )
-
-
-def is_list_of_object_annotation_type(t: pa.DataType) -> bool:
-    """Check if DataType is a list of ObjectAnnotation
-
-    Args:
-        t (pa.DataType): DataType to check
-
-    Returns:
-        bool: True if DataType is list of ObjectAnnotation
-    """
-
-    return t == pa.list_(ObjectAnnotationType)
 
 
 def pyarrow_array_from_list(

@@ -16,14 +16,7 @@ import unittest
 import pyarrow as pa
 
 from pixano.core.image import Image, ImageType
-from pixano.core.object_annotation import ObjectAnnotation, ObjectAnnotationType
-from pixano.core.pose import Pose
-from pixano.core.utils import (
-    is_image_type,
-    is_list_of_object_annotation_type,
-    is_number,
-    pyarrow_array_from_list,
-)
+from pixano.core.utils import is_image_type, is_number, pyarrow_array_from_list
 
 
 class IsNumberTestCase(unittest.TestCase):
@@ -39,14 +32,6 @@ class IsImageTypeTestCase(unittest.TestCase):
     def test_is_image_type(self):
         pa_im_field = pa.field("some images", ImageType)
         self.assertTrue(is_image_type(pa_im_field.type))
-
-
-class IsListOfObjectAnnotationTypeTestCase(unittest.TestCase):
-    def test_is_list_of_object_annotation_type(self):
-        pa_obj_field = pa.field(
-            "some lists of ObjectAnnotation", pa.list_(ObjectAnnotationType)
-        )
-        self.assertTrue(is_list_of_object_annotation_type(pa_obj_field.type))
 
 
 class TestPaArrayConversion(unittest.TestCase):

@@ -19,10 +19,8 @@ from pixano.core import (
     CameraType,
     CompressedRLEType,
     DepthImageType,
-    EmbeddingType,
     GtInfoType,
     ImageType,
-    ObjectAnnotationType,
     PoseType,
 )
 
@@ -73,12 +71,10 @@ class Fields(BaseModel):
                 "image": ImageType,
                 "depthimage": DepthImageType,
                 "camera": CameraType,
-                "objectannotation": ObjectAnnotationType,
                 "compressedrle": CompressedRLEType,
                 "pose": PoseType,
                 "bbox": BBoxType,
                 "gtinfo": GtInfoType,
-                "embedding": EmbeddingType,
             }
 
             # str
