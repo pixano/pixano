@@ -33,6 +33,7 @@
     CategoryData,
     Dataset,
     DatasetItem,
+    DatasetItemFeature,
     ItemData,
     ItemLabels,
     Label,
@@ -132,14 +133,22 @@
   }
 
   function addCurrentFeatures() {
+    let labelExists = false;
     for (let feat of selectedItem.features) {
-      if (feat["name"] === "label") {
-        //TODO get label from "editables"(? - to define)
+      if (feat["name"] === "label" && !labelExists) {
+        // TODO get label from "editables"(? - to define)
         feat["value"] = currentAnnCatName;
         // Update visibility
         selectedItem = selectedItem;
-        break;
+        labelExists = true;
       }
+    }
+    if (!labelExists) {
+      selectedItem.features.push({
+        name: "label",
+        dtype: "text",
+        value: currentAnnCatName,
+      });
     }
   }
 

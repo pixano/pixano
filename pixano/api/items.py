@@ -361,29 +361,37 @@ def save_item_details(
         for al_info in dataset.info.tables["active_learning"]:
             al_tables[al_info["source"]] = ds.open_table(al_info["name"])
 
-    ### Save item features (classification)
+    ### Save item features (classification label)
 
     features = item_details["itemData"]
 
     # Classification
     for feature in features:
         if feature["name"] == "label":
-            # If classification label in main table
-            if "label" in main_table.schema.names:
-                scanner = main_table.to_lance().scanner(filter=f"id in ('{item_id}')")
-                item = scanner.to_table().to_pylist()[0]
-                item["label"] = feature["value"]
-                main_table.update(f"id in ('{item_id}')", item)
-            # If classification label in active learning table
-            else:
-                for al_table in al_tables.values():
-                    if "label" in al_table.schema.names:
-                        scanner = al_table.to_lance().scanner(
-                            filter=f"id in ('{item_id}')"
-                        )
-                        item = scanner.to_table().to_pylist()[0]
-                        item["label"] = feature["value"]
-                        al_table.update(f"id in ('{item_id}')", item)
+            # If label not in main table
+            if "label" not in main_table.schema.names:
+                main_table_ds = main_table.to_lance()
+                # Create label table
+                label_table = main_table_ds.to_table(columns=["id"])
+                label_array = pa.array([""] * len(main_table), type=pa.string())
+                label_table = label_table.append_column(
+                    pa.field("label", pa.string()), label_array
+                )
+                # Merge with main table
+                main_table_ds.merge(label_table, "id")
+                # Update DatasetInfo
+                dataset.info.tables["main"][0]["fields"]["label"] = "str"
+                dataset.save_info()
+
+            # Get item
+            scanner = main_table.to_lance().scanner(filter=f"id in ('{item_id}')")
+            item = scanner.to_table().to_pylist()[0]
+            # Update item
+            item["label"] = feature["value"]
+            main_table.update(f"id in ('{item_id}')", item)
+
+            # Clear change history to prevent dataset from becoming too large
+            main_table.to_lance().cleanup_old_versions()
 
     ### Save item objects
 
