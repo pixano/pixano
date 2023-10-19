@@ -22,7 +22,6 @@
 
   // Exports
   export let dataset: Dataset;
-  export let buttonLabel: string;
 
   const dispatch = createEventDispatcher();
 
@@ -32,7 +31,7 @@
 </script>
 
 <button
-  class="w-full h-52 flex flex-col transition-all text-left
+  class="w-full h-56 flex flex-col transition-all text-left
   bg-white
   border-2 rounded-sm border-slate-100 shadow shadow-slate-100"
   on:click={handleSelectDataset}
@@ -69,4 +68,9 @@
       <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full object-cover object-center" />
     {/if}
   </div>
+  <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">
+    {#each dataset.preview as preview}
+      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-zinc-100" />
+    {/each}
+  </div> -->
 </button>

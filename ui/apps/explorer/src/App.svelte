@@ -221,7 +221,7 @@
       />
     {/if}
   {:else}
-    <Library {datasets} buttonLabel="Explore" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
+    <Library {datasets} app="Explorer" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
 {:else}
   <LoadingLibrary />

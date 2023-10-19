@@ -16,19 +16,15 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-
-  import pixanoLogo from "./assets/pixano.png";
   import { svg_open, svg_quit, svg_save } from "./icons";
-
   import type { Dataset, ItemData } from "./interfaces";
+  import pixanoLogo from "./assets/pixano.png";
 
   // Exports
   export let app: string = "";
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
-  export let nbDatasets: number = 3;
-  export let nbItems: number = 3125236;
 
   const dispatch = createEventDispatcher();
 
@@ -116,26 +112,6 @@
           </svg>
         </button>
       {/if}
-    </div>
-  </header>
-{:else}
-  <header class="w-full h-56 px-60 flex flex-col justify-evenly bg-[#771E5F] z-10">
-    <!-- Logo & app name -->
-    <button class="flex w-max space-x-6" on:click={handleUnselectDataset}>
-      <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-      <span class="text-3xl font-bold text-white uppercase font-[Montserrat]"> Pixano {app} </span>
-    </button>
-    <!-- Infos -->
-    <div class="flex flex-row text-white">
-      <div class="py-6 px-8 border-2 rounded-lg border-[#872E6F]">
-        <span class="text-5xl"> {nbDatasets} </span> <span class="ml-2 text-2xl"> datasets </span>
-      </div>
-      <div class="ml-8 py-6 px-8 border-2 rounded-lg border-[#872E6F]">
-        <span class="text-5xl"> {nbItems} </span> <span class="ml-2 text-2xl"> items </span>
-      </div>
-      <div class="grow flex flex-row justify-end items-end">
-        <input type="text" placeholder="Search" class="h-10 px-4 rounded border-2 border-[#872E6F] text-black font-medium" />
-      </div>
     </div>
   </header>
 {/if}

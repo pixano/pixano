@@ -385,7 +385,7 @@
       on:enableSaveFlag={() => (saveFlag = true)}
     />
   {:else}
-    <Library {datasets} buttonLabel="Annotate" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
+    <Library {datasets} app="Annotator" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
 {:else}
   <LoadingLibrary />
