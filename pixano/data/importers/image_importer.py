@@ -46,7 +46,6 @@ class ImageImporter(Importer):
                         "id": "str",
                         "views": "[str]",
                         "split": "str",
-                        "label": "str",
                     },
                 }
             ],
