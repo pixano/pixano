@@ -327,10 +327,18 @@
     saveFlag = false;
 
     const itemDetails = {
-      itemData: selectedItem.features,
+      itemData: [],
       itemObjects: [],
     };
 
+    // Return every feature that is not an image
+    for (const feat of selectedItem.features) {
+      if (feat["dtype"] !== "image") {
+        itemDetails["itemData"].push(feat);
+      }
+    }
+
+    // Return annotations
     for (const sourceLabels of Object.values(annotations)) {
       for (const viewLabels of Object.values(sourceLabels.views)) {
         for (const catLabels of Object.values(viewLabels.categories)) {
