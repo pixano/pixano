@@ -32,15 +32,14 @@
 
 <button
   class="w-full h-56 flex flex-col transition-all text-left
-  bg-white
-  border-2 rounded-sm border-slate-100 shadow shadow-slate-100"
+  bg-white border rounded-sm border-slate-200 shadow shadow-slate-200 hover:shadow-md"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
   <div class="w-full h-2/5 px-4 flex flex-col justify-center relative">
     <div>
       <h3
-        class="text-lg font-semibold font-[Montserrat] truncate text-[#771E5F]"
+        class="text-lg font-semibold font-[Montserrat] truncate text-main"
         title="{dataset.name}&#10;&#13;{dataset.description}"
       >
         {dataset.name}

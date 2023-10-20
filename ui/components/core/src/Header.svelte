@@ -16,7 +16,7 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import { svg_open, svg_quit, svg_save } from "./icons";
+  import { svg_next_page, svg_quit, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
   import type { Dataset, ItemData } from "./interfaces";
   import pixanoLogo from "./assets/pixano.png";
 
@@ -25,6 +25,7 @@
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
+  export let tabSelected: string = "database";
 
   const dispatch = createEventDispatcher();
 
@@ -45,34 +46,37 @@
 {#if selectedDataset}
   <header class="w-full z-40">
     <div
-      class="h-20 py-4 px-4 flex justify-start items-center shrink-0 border-b
-    shadow dark:shadow-zinc-700
-    text-zinc-800 dark:text-zinc-300
-    bg-white dark:bg-zinc-800
-    border-zinc-300 dark:border-zinc-600"
+      class="py-5 px-6 flex justify-start items-center shrink-0
+      bg-white border-b border-slate-200"
     >
-      <!-- Logo & app name -->
-      <div class="flex items-center grow space-x-2 font-semibold text-3xl">
-        <button
-          class="flex items-center space-x-2
-        hover:text-rose-600 dark:hover:text-rose-500"
-          on:click={handleUnselectDataset}
-        >
-          <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
-          <span class="transition-colors"> Pixano {app} </span>
+      <!-- Navigation -->
+      <div class="flex items-center grow font-semibold text-2xl">
+        <button on:click={handleUnselectDataset}>
+          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mr-6" />
         </button>
-        {#if selectedDataset}
-          <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
-            <path d={svg_open} fill="currentcolor" />
-          </svg>
-          <button class="hover:text-rose-600 dark:hover:text-rose-500" on:click={handleUnselectItem}>
-            <span class="transition-colors">
-              {selectedDataset.name}
-            </span>
+        {#if !selectedItem}
+          <button on:click={handleUnselectDataset}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 mr-4 p-2 border rounded-full border-slate-200 hover:bg-slate-100"
+            >
+              <path d={svg_left_arrow} />
+            </svg>
           </button>
+        {/if}
+        <button on:click={handleUnselectItem}>
+          <span class="transition-colors">
+            {selectedDataset.name}
+          </span>
+        </button>
+
+        {#if selectedDataset}
           {#if selectedItem}
             <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
-              <path d={svg_open} fill="currentcolor" />
+              <path d={svg_next_page} fill="currentcolor" />
             </svg>
             <span>
               {selectedItem.id}
@@ -81,34 +85,59 @@
         {/if}
       </div>
 
+      <div class="relative flex items-center">
+        <button
+          class="font-semibold pl-10 pr-6 py-1
+          {tabSelected === 'database'
+            ? 'bg-main rounded-full text-white '
+            : 'bg-white border border-slate-100 rounded-full text-main '}"
+        >
+          Database
+        </button>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="48"
+          viewBox="0 -960 960 960"
+          width="48"
+          class="absolute left-3 h-5 w-5 pointer-events-none"
+        >
+          <path d={svg_database} fill="white" />
+        </svg>
+      </div>
+
+      <div class="relative ml-4 flex items-center">
+        <button
+          class="font-semibold pl-10 pr-6 py-1
+        {tabSelected === 'dashboard'
+            ? 'bg-main rounded-full text-white '
+            : 'bg-white border border-slate-100 rounded-full text-main'}"
+        >
+          Dashboard
+        </button>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="48"
+          viewBox="0 -960 960 960"
+          width="48"
+          class="absolute left-3 h-5 w-5 pointer-events-none"
+        >
+          <path d={svg_dashboard} fill="#771E5F" />
+        </svg>
+      </div>
+
       <!-- Navigation -->
-      {#if selectedDataset}
-        {#if selectedItem && app === "Annotator"}
-          <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveItemDetails}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="48"
-              viewBox="0 -960 960 960"
-              width="48"
-              class="h-8 w-8
-              {saveFlag ? 'hover:text-rose-600' : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
-            >
-              <title>Save</title>
-              <path d={svg_save} fill="currentcolor" />
-            </svg>
-          </button>
-        {/if}
-        <button class="w-30 pr-4 flex justify-end" on:click={selectedItem ? handleUnselectItem : handleUnselectDataset}>
+      {#if selectedItem && app === "Annotator"}
+        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveItemDetails}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-8 w-8 hover:text-rose-600 dark:hover:text-rose-500"
-            name="close"
+            class="h-8 w-8
+              {saveFlag ? 'hover:text-rose-600' : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
           >
-            <title>Close</title>
-            <path d={svg_quit} fill="currentcolor" />
+            <title>Save</title>
+            <path d={svg_save} fill="currentcolor" />
           </svg>
         </button>
       {/if}

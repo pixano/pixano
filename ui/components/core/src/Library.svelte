@@ -19,6 +19,7 @@
   import type { Dataset } from "./interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
   import pixanoLogo from "./assets/pixano.png";
+  import { svg_filter, svg_search } from "./icons";
 
   // Exports
   export let datasets: Array<Dataset>;
@@ -37,7 +38,7 @@
   }
 </script>
 
-<header class="w-full h-56 px-60 flex flex-col justify-evenly bg-[#771E5F] z-10">
+<header class="w-full h-56 px-60 flex flex-col justify-evenly bg-main z-10">
   <!-- Logo & app name -->
   <button class="flex w-max space-x-6">
     <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
@@ -45,21 +46,45 @@
   </button>
   <!-- Infos -->
   <div class="flex flex-row text-white">
-    <div class="py-6 px-8 border-2 rounded-lg border-[#872E6F]">
+    <div class="py-5 px-8 border-2 rounded-lg border-[#872E6F]">
       <span class="text-5xl"> {datasets.length} </span> <span class="ml-2 text-2xl"> datasets </span>
     </div>
-    <div class="ml-8 py-6 px-8 border-2 rounded-lg border-[#872E6F]">
+    <div class="ml-8 py-5 px-8 border-2 rounded-lg border-[#872E6F]">
       <span class="text-5xl"> {datasets.reduce((sum, dataset) => sum + dataset.num_elements, 0)} </span>
       <span class="ml-2 text-2xl"> items </span>
     </div>
     <div class="grow flex flex-row justify-end items-end">
-      <input
-        id="search-input"
-        type="text"
-        placeholder="Search"
-        class="h-10 px-4 rounded border-2 border-[#872E6F] text-black font-medium"
-        on:input={handleSearch}
-      />
+      <div class="flex items-center space-x-2">
+        <button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="h-10 w-10 p-2 rounded-full hover:bg-[#872E6F]"
+          >
+            <path d={svg_filter} fill="currentcolor" />
+          </svg>
+        </button>
+        <div class="relative flex items-center">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="Search"
+            class="h-10 pl-10 pr-4 rounded border-2 border-[#872E6F] text-black font-medium"
+            on:input={handleSearch}
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="absolute left-3 h-5 w-5 pointer-events-none"
+          >
+            <path d={svg_search} />
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 </header>
