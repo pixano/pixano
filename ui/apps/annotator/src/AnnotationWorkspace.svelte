@@ -41,7 +41,6 @@
   } from "@pixano/core";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import PromptModal from "@pixano/core/src/PromptModal.svelte";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -99,7 +98,9 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = activeLearningFlag
+  let selectedTool: tools.Tool = selectedItem.features.find(
+    (f) => f.name === "label"
+  )
     ? classifTool
     : pointPlusTool;
 
