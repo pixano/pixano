@@ -77,7 +77,7 @@ class DOTAImporter(Importer):
                         "category_id": "int",
                         "category_name": "str",
                     },
-                    "source": "ground truth",
+                    "source": "Ground Truth",
                 }
             ],
         }
