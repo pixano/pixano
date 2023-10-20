@@ -155,20 +155,16 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
 
         # Media tables
         for media_table in media_tables.values():
-            pyarrow_media_table = media_table.to_lance().to_table(
-                limit=raw_params.limit, offset=raw_params.offset
-            )
+            pyarrow_media_table = media_table.to_lance().to_table()
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY len(id), id"
+                f"SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY len(id), id LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
             ).to_arrow_table()
 
         # Active Learning tables
         for al_table in al_tables:
-            pyarrow_al_table = al_table.to_lance().to_table(
-                limit=raw_params.limit, offset=raw_params.offset
-            )
+            pyarrow_al_table = al_table.to_lance().to_table()
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id) ORDER BY len(id), id"
+                f"SELECT * FROM pyarrow_table LEFT JOIN pyarrow_al_table USING (id) ORDER BY len(id), id LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
             ).to_arrow_table()
 
     # Create items features
