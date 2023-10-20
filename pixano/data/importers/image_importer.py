@@ -46,6 +46,7 @@ class ImageImporter(Importer):
                         "id": "str",
                         "views": "[str]",
                         "split": "str",
+                        "label": "str",
                     },
                 }
             ],
@@ -105,6 +106,7 @@ class ImageImporter(Importer):
                                 "id": im_path.name,
                                 "views": ["image"],
                                 "split": split,
+                                "label": "",
                             }
                         ]
                     },

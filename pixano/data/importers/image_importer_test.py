@@ -60,6 +60,7 @@ class ImageImporterTestCase(unittest.TestCase):
             self.assertEqual(len(table), 3)
             self.assertIn(pa.field("id", pa.string()), table.schema)
             self.assertIn(pa.field("split", pa.string()), table.schema)
+            self.assertIn(pa.field("label", pa.string()), table.schema)
 
             # Check that image.lance exists
             db_lance_path = import_dir / "image.lance"
