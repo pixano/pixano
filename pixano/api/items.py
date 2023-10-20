@@ -148,9 +148,10 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     ## Else
     else:
         # Main table
-        pyarrow_table = main_table.to_lance().to_table(
-            limit=raw_params.limit, offset=raw_params.offset
-        )
+        pyarrow_table = main_table.to_lance()
+        pyarrow_table = duckdb.query(
+            f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+        ).to_arrow_table()
 
         # Media tables
         for media_table in media_tables.values():
