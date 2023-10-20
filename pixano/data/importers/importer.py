@@ -171,6 +171,7 @@ class Importer(ABC):
 
         # Initialize dataset tables
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
+        ds_batches: dict[str, dict[str, list]] = defaultdict(dict)
 
         # Create tables
         for table_group, tables in self.info.tables.items():
@@ -180,6 +181,7 @@ class Importer(ABC):
                     schema=Fields(table["fields"]).to_schema(),
                     mode="overwrite",
                 )
+                ds_batches[table_group][table["name"]] = []
 
         # Add rows to tables
         for rows in tqdm(
@@ -188,19 +190,41 @@ class Importer(ABC):
         ):
             for table_group, tables in self.info.tables.items():
                 for table in tables:
-                    pa_rows = pa.Table.from_pylist(
-                        rows[table_group][table["name"]],
+                    # Store rows in a batch
+                    ds_batches[table_group][table["name"]].extend(
+                        rows[table_group][table["name"]]
+                    )
+                    # If batch reaches 1024 rows, store in table
+                    if len(ds_batches[table_group][table["name"]]) >= 1024:
+                        pa_batch = pa.Table.from_pylist(
+                            ds_batches[table_group][table["name"]],
+                            schema=Fields(table["fields"]).to_schema(),
+                        )
+                        lance.write_dataset(
+                            pa_batch,
+                            uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                            mode="append",
+                        )
+                        ds_batches[table_group][table["name"]] = []
+
+        # Store final batches
+        for table_group, tables in self.info.tables.items():
+            for table in tables:
+                if len(ds_batches[table_group][table["name"]]) > 0:
+                    pa_batch = pa.Table.from_pylist(
+                        ds_batches[table_group][table["name"]],
                         schema=Fields(table["fields"]).to_schema(),
                     )
                     lance.write_dataset(
-                        pa_rows,
+                        pa_batch,
                         uri=ds_tables[table_group][table["name"]].to_lance().uri,
                         mode="append",
                     )
 
-        # Clear creation history
+        # Optimize and clear creation history
         for tables in ds_tables.values():
             for table in tables.values():
+                table.to_lance().optimize.compact_files()
                 table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         # Refresh tables
