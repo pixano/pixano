@@ -79,7 +79,7 @@
             </svg>
           </button>
         {/if}
-        <button on:click={handleUnselectItem}>
+        <button on:click={selectDatabaseTab}>
           <span class="transition-colors">
             {selectedDataset.name}
           </span>

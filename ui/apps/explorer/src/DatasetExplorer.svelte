@@ -17,7 +17,7 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, Histogram } from "@pixano/core";
+  import { api, Dashboard } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
@@ -32,7 +32,6 @@
     svg_prev_page,
     svg_search,
   } from "@pixano/core/src/icons";
-  import Dashboard from "@pixano/core/src/Dashboard.svelte";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -99,27 +98,6 @@
 </script>
 
 <div class="w-full px-20 flex flex-col bg-slate-100">
-  <!-- Stats -->
-  <!-- <div
-      class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-      bg-white shadow border-zinc-300 dark:border-zinc-600"
-    >
-      <span class="font-semibold tracking-tight text-xl mt-3 uppercase"> Stats </span>
-      {#if datasetStats != null && datasetStats.length != 0}
-        <div class="grid grid-cols-1 2xl:grid-cols-2 w-full gap-4 p-4">
-          <!-- If charts are ready to be displayed, display them -->
-  <!--{#each datasetStats as chart}
-            <div class="w-full">
-              <Histogram hist={chart} />
-            </div>
-          {/each}
-        </div>
-      {:else}
-        <!-- Else show a message -->
-  <!--<span class="mt-80 italic text-zinc-500 dark:text-zinc-300"> No stats available. </span>
-      {/if}
-    </div> -->
-
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-[87.5vh] flex flex-col">
@@ -180,7 +158,7 @@
       {#if selectedTab === "database"}
         <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
       {:else if selectedTab === "dashboard"}
-        <Dashboard {selectedDataset} />
+        <Dashboard {selectedDataset} {datasetStats} />
       {/if}
     </div>
 
