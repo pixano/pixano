@@ -18,7 +18,7 @@
   import { createEventDispatcher } from "svelte";
   import type { Dataset } from "./interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
-  import pixanoLogo from "./assets/pixano.png";
+  import pixanoLogoWhite from "./assets/pixano_white.png";
   import { svg_filter, svg_search } from "./icons";
 
   // Exports
@@ -42,7 +42,7 @@
 <header class="w-full h-56 px-60 flex flex-col justify-evenly bg-main z-10">
   <!-- Logo & app name -->
   <button class="flex w-max space-x-6">
-    <img src={pixanoLogo} alt="Logo Pixano" class="w-10" />
+    <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10" />
     <span class="text-3xl font-bold text-white uppercase font-[Montserrat]">
       Pixano {app}
     </span>
