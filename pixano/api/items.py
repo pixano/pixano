@@ -205,12 +205,22 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
-            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
+            try:
+                obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
+            except FileNotFoundError:
+                # Remove missing objects tables from DatasetInfo
+                dataset.info.tables["objects"].remove(obj_info)
+                dataset.save_info()
 
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
-            al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+            try:
+                al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+            except FileNotFoundError:
+                # Remove missing Active Learning tables from DatasetInfo
+                dataset.info.tables["active_learning"].remove(al_info)
+                dataset.save_info()
 
     # Get item
     main_scanner = main_table.to_lance().scanner(filter=f"id in ('{item_id}')")
@@ -314,7 +324,12 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     emb_tables: dict[str, lancedb.db.LanceTable] = {}
     if "embeddings" in dataset.info.tables:
         for emb_info in dataset.info.tables["embeddings"]:
-            emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
+            try:
+                emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
+            except FileNotFoundError:
+                # Remove missing embeddings tables from DatasetInfo
+                dataset.info.tables["embeddings"].remove(emb_info)
+                dataset.save_info()
 
     # Get item embeddings
     embeddings = {}
