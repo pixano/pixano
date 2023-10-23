@@ -110,7 +110,7 @@ class InferenceModel(ABC):
             dataset_dir (Path): Dataset directory
             process_type (str): Process type ('obj' for preannotation or 'emb' for embedding precomputing)
             views (list[str]): Dataset views
-            splits (list[str], optional): Dataset splits, all if []. Defaults to None.
+            splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
 
