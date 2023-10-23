@@ -117,7 +117,7 @@
           <a
             href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
             target="_blank"
-            class="text-rose-500 hover:text-rose-600"
+            class="text-main hover:text-secondary"
           >
             this Jupyter notebook
           </a>

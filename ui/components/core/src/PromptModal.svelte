@@ -45,13 +45,13 @@
         type="text"
         {placeholder}
         class="py-1 px-2 border rounded focus:outline-none
-        bg-zinc-100 border-zinc-300 focus:border-rose-600"
+        bg-zinc-100 border-zinc-300 focus:border-main"
         bind:value={input}
       />
       <button
         type="button"
         class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
-        bg-rose-500 hover:bg-rose-600"
+        bg-main hover:bg-secondary"
         on:click={handleConfirm}
       >
         Ok

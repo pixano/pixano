@@ -82,7 +82,7 @@
       {placeholder}
       id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
-      bg-zinc-100 border-zinc-300 focus:border-rose-500"
+      bg-zinc-100 border-zinc-300 focus:border-main"
       on:keyup={handleFilterCategories}
       on:keydown={handleKeyPress}
       bind:value={currentAnnCatName}
@@ -123,9 +123,7 @@
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
         bg-white hover:bg-zinc-200
-        {selectedTool === pointPlusTool
-          ? 'border-rose-500'
-          : 'border-transparent'}"
+        {selectedTool === pointPlusTool ? 'border-main' : 'border-transparent'}"
       >
         <title>Positive point</title>
         <path d={icons.svg_point_plus} fill="currentcolor" />
@@ -144,7 +142,7 @@
         class="h-10 w-10 p-1 border-2 rounded
         bg-white hover:bg-zinc-200
         {selectedTool === pointMinusTool
-          ? 'border-rose-500 '
+          ? 'border-main '
           : 'border-transparent'}"
       >
         <title>Negative point</title>
@@ -159,7 +157,7 @@
       viewBox="0 -960 960 960"
       width="48"
       class="h-10 w-10 p-1 rounded border border-transparent text-zinc-50
-      bg-rose-500 hover:bg-rose-600"
+      bg-main hover:bg-secondary"
     >
       <title>Validate</title>
       <path d={icons.svg_validate} fill="currentcolor" />

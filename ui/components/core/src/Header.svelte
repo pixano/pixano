@@ -171,7 +171,7 @@
             width="48"
             class="h-8 w-8
               {saveFlag
-              ? 'hover:text-rose-600'
+              ? 'hover:text-secondary'
               : 'text-zinc-300 cursor-default'}"
           >
             <title>Save</title>

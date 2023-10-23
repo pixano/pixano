@@ -50,7 +50,7 @@
       <button
         type="button"
         class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
-        bg-rose-500 hover:bg-rose-600"
+        bg-main hover:bg-secondary"
         on:click={handleConfirm}
       >
         Ok

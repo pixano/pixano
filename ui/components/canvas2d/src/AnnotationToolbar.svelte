@@ -46,7 +46,7 @@
                   class="h-10 w-10 p-1 border-2 rounded
                   bg-white hover:bg-zinc-200
                   {tool['modes'].includes(selectedTool)
-                    ? 'border-rose-500'
+                    ? 'border-main'
                     : 'border-transparent'}"
                 >
                   <title>{tool.name}</title>
@@ -68,7 +68,7 @@
                       class="h-10 w-10 p-1 border-2 rounded
                       bg-white hover:bg-zinc-200
                       {mode === selectedTool
-                        ? 'border-rose-500'
+                        ? 'border-main'
                         : 'border-transparent'}"
                     >
                       <title>{mode.name}</title>
@@ -87,9 +87,7 @@
                 width="48"
                 class="h-10 w-10 p-1 border-2 rounded
                 bg-white hover:bg-zinc-200
-                {selectedTool === tool
-                  ? 'border-rose-500'
-                  : 'border-transparent'}"
+                {selectedTool === tool ? 'border-main' : 'border-transparent'}"
               >
                 <title>{tool.name}</title>
                 <path d={tool.icon} fill="currentcolor" />

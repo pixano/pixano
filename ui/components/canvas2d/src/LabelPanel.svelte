@@ -189,7 +189,7 @@
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tl-lg
         hover:bg-zinc-100
         {activeTab == 'labels'
-          ? 'bg-zinc-100 border-rose-500'
+          ? 'bg-zinc-100 border-main'
           : 'border-zinc-300 '}"
         on:click={() => {
           activeTab = "labels";
@@ -202,7 +202,7 @@
           class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tr-lg
         hover:bg-zinc-100
         {activeTab == 'dataset'
-            ? 'bg-zinc-100 border-rose-500 '
+            ? 'bg-zinc-100 border-main '
             : 'border-zinc-300'}"
           on:click={() => {
             activeTab = "dataset";
@@ -218,7 +218,7 @@
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-t-lg
           hover:bg-zinc-100
           {activeTab == 'labels'
-          ? 'bg-zinc-100 border-rose-500 '
+          ? 'bg-zinc-100 border-main '
           : 'border-zinc-300 '}"
       >
         Labels
@@ -257,8 +257,7 @@
               Mask opacity: {maskOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer
-              accent-rose-500 hover:accent-rose-600"
+              class="cursor-pointer accent-main"
               type="range"
               id="maskSlider"
               min="0"
@@ -273,8 +272,7 @@
               Bounding box opacity: {bboxOpacity * 100}%
             </label>
             <input
-              class="cursor-pointer
-              accent-rose-500 hover:accent-rose-600"
+              class="cursor-pointer accent-main"
               type="range"
               id="bboxSlider"
               min="0"
@@ -289,8 +287,7 @@
               Confidence threshold: {Math.round(confidenceThreshold * 100)}%
             </label>
             <input
-              class="cursor-pointer
-              accent-rose-500 hover:accent-rose-600"
+              class="cursor-pointer accent-main"
               type="range"
               id="confidenceSlider"
               min="0"
@@ -347,7 +344,7 @@
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
+                  class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-zinc-50 font-medium"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -404,7 +401,7 @@
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
+                    class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-zinc-50 font-medium"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -473,7 +470,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
+                      class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-zinc-50 font-medium"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}
