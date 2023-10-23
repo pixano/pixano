@@ -182,6 +182,7 @@ class Importer(ABC):
                     mode="overwrite",
                 )
                 ds_batches[table_group][table["name"]] = []
+        save_batch_size = 1024
 
         # Add rows to tables
         for rows in tqdm(
@@ -195,7 +196,7 @@ class Importer(ABC):
                         rows[table_group][table["name"]]
                     )
                     # If batch reaches 1024 rows, store in table
-                    if len(ds_batches[table_group][table["name"]]) >= 1024:
+                    if len(ds_batches[table_group][table["name"]]) >= save_batch_size:
                         pa_batch = pa.Table.from_pylist(
                             ds_batches[table_group][table["name"]],
                             schema=Fields(table["fields"]).to_schema(),
@@ -220,6 +221,7 @@ class Importer(ABC):
                         uri=ds_tables[table_group][table["name"]].to_lance().uri,
                         mode="append",
                     )
+                    ds_batches[table_group][table["name"]] = []
 
         # Optimize and clear creation history
         for tables in ds_tables.values():

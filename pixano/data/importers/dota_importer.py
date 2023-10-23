@@ -164,7 +164,6 @@ class DOTAImporter(Importer):
                                         float(ann[5]),
                                     ]
                                 )
-                                .to_xywh()
                                 .normalize(im_h, im_w)
                                 .to_dict(),
                                 "category_id": dota_ids(str(ann[8])),
