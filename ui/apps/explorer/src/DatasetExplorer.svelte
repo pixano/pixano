@@ -32,9 +32,11 @@
     svg_prev_page,
     svg_search,
   } from "@pixano/core/src/icons";
+  import Dashboard from "@pixano/core/src/Dashboard.svelte";
 
   // Exports
   export let selectedDataset: Dataset;
+  export let selectedTab: string;
   export let currentPage: number;
 
   let datasetStats = null;
@@ -46,6 +48,8 @@
 
   function handleSelectItem(itemId: string) {
     dispatch("selectItem", itemId);
+
+    selectedTab = "";
   }
 
   async function loadPage() {
@@ -120,28 +124,30 @@
     <!-- Items list -->
     <div class="w-full h-[87.5vh] flex flex-col">
       <div class="py-4 flex space-x-2 items-center">
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_list} fill="currentcolor" />
-          </svg>
-        </button>
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_grid} fill="currentcolor" />
-          </svg>
-        </button>
+        {#if selectedTab === "database"}
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_list} fill="currentcolor" />
+            </svg>
+          </button>
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_grid} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
         <button>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -171,66 +177,72 @@
           </svg>
         </div>
       </div>
-      <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
+      {#if selectedTab === "database"}
+        <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
+      {:else if selectedTab === "dashboard"}
+        <Dashboard {selectedDataset} />
+      {/if}
     </div>
 
     <!-- Page navigation -->
-    <div class="w-full my-3 flex justify-center items-center">
-      {#if selectedDataset.page.total > itemsPerPage}
-        <button on:click={handleGoToFirstPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_first_page} fill="currentcolor" />
-          </svg>
-        </button>
+    {#if selectedTab === "database"}
+      <div class="w-full my-3 flex justify-center items-center">
+        {#if selectedDataset.page.total > itemsPerPage}
+          <button on:click={handleGoToFirstPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_first_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToPreviousPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_prev_page} fill="currentcolor" />
-          </svg>
-        </button>
+          <button on:click={handleGoToPreviousPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_prev_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <span class="mx-4">
-          {1 + itemsPerPage * (currentPage - 1)} - {Math.min(itemsPerPage * currentPage, selectedDataset.page.total)} of
-          {selectedDataset.page.total}
-        </span>
+          <span class="mx-4">
+            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(itemsPerPage * currentPage, selectedDataset.page.total)} of
+            {selectedDataset.page.total}
+          </span>
 
-        <button on:click={handleGoToNextPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_next_page} fill="currentcolor" />
-          </svg>
-        </button>
+          <button on:click={handleGoToNextPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_next_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToLastPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
-          >
-            <path d={svg_last_page} fill="currentcolor" />
-          </svg>
-        </button>
-      {/if}
-    </div>
+          <button on:click={handleGoToLastPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_last_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
   {:else}
     <div class="h-full flex justify-center items-center">
       <span class="italic text-zinc-500 dark:text-zinc-300"> Loading items... </span>

@@ -31,6 +31,7 @@
   let currentPage = 1;
 
   let selectedItem: ItemData;
+  let selectedTab: string = "dashboard";
 
   let annotations: ItemLabels;
   let classes: Array<CategoryData>;
@@ -197,6 +198,7 @@
   app="Explorer"
   bind:selectedDataset
   bind:selectedItem
+  bind:selectedTab
   saveFlag={false}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
@@ -214,6 +216,7 @@
       />
     {:else}
       <DatasetExplorer
+        bind:selectedTab
         {selectedDataset}
         {currentPage}
         on:selectItem={(event) => handleSelectItem(event.detail)}

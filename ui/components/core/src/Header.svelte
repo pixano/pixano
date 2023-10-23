@@ -25,7 +25,7 @@
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
-  export let tabSelected: string = "database";
+  export let selectedTab: string;
 
   const dispatch = createEventDispatcher();
 
@@ -39,6 +39,18 @@
 
   function handleSaveItemDetails() {
     dispatch("saveItemDetails");
+  }
+
+  function selectDatabaseTab() {
+    handleUnselectItem();
+
+    selectedTab = "database";
+  }
+
+  function selectDashboardTab() {
+    handleUnselectItem();
+
+    selectedTab = "dashboard";
   }
 </script>
 
@@ -87,10 +99,11 @@
 
       <div class="relative flex items-center">
         <button
-          class="font-semibold pl-10 pr-6 py-1
-          {tabSelected === 'database'
+          class="font-medium pl-10 pr-6 py-1
+          {selectedTab === 'database'
             ? 'bg-main rounded-full text-white '
             : 'bg-white border border-slate-100 rounded-full text-main '}"
+          on:click={selectDatabaseTab}
         >
           Database
         </button>
@@ -101,16 +114,17 @@
           width="48"
           class="absolute left-3 h-5 w-5 pointer-events-none"
         >
-          <path d={svg_database} fill="white" />
+          <path d={svg_database} fill={selectedTab === "database" ? "white" : "#771E5F"} />
         </svg>
       </div>
 
       <div class="relative ml-4 flex items-center">
         <button
-          class="font-semibold pl-10 pr-6 py-1
-        {tabSelected === 'dashboard'
+          class="font-medium pl-10 pr-6 py-1
+        {selectedTab === 'dashboard'
             ? 'bg-main rounded-full text-white '
             : 'bg-white border border-slate-100 rounded-full text-main'}"
+          on:click={selectDashboardTab}
         >
           Dashboard
         </button>
@@ -121,7 +135,7 @@
           width="48"
           class="absolute left-3 h-5 w-5 pointer-events-none"
         >
-          <path d={svg_dashboard} fill="#771E5F" />
+          <path d={svg_dashboard} fill="{selectedTab === "dashboard" ? "white" : "#771E5F"} " />
         </svg>
       </div>
 
