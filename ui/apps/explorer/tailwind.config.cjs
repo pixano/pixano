@@ -13,6 +13,9 @@ module.exports = {
       fontFamily: {
         "DM Sans": ["DM Sans", "sans-serif"],
       },
+      colors: {
+        main: "#771E5F",
+      },
     },
   },
   plugins: [],

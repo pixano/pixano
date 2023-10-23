@@ -17,27 +17,13 @@
   // Imports
   import { onMount } from "svelte";
 
-  import {
-    api,
-    Header,
-    Library,
-    LoadingLibrary,
-    WarningModal,
-  } from "@pixano/core";
+  import { api, Header, Library, LoadingLibrary, WarningModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import DatasetExplorer from "./DatasetExplorer.svelte";
   import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
-  import type {
-    BBox,
-    CategoryData,
-    Dataset,
-    ItemData,
-    ItemLabels,
-    ItemObjects,
-    Mask,
-  } from "@pixano/core";
+  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, ItemObjects, Mask } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -45,6 +31,7 @@
   let currentPage = 1;
 
   let selectedItem: ItemData;
+  let selectedTab: string = "dashboard";
 
   let annotations: ItemLabels;
   let classes: Array<CategoryData>;
@@ -57,11 +44,7 @@
     console.log("App.handleGetDatasets");
     const start = Date.now();
     datasets = await api.getDatasetList();
-    console.log(
-      "App.handleGetDatasets - api.getDatasetList in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
   }
 
   async function handleSelectDataset(dataset: Dataset) {
@@ -88,11 +71,7 @@
     selectedItem = itemDetails["itemData"] as ItemData;
     const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
-    console.log(
-      "App.handleSelectItem - api.getItemDetails in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
@@ -140,16 +119,13 @@
             }
 
             // Add label
-            annotations[sourceId].views[viewId].categories[catId].labels[
-              obj.id
-            ] = {
+            annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
               id: obj.id,
               categoryId: catId,
               categoryName: catName,
               sourceId: sourceId,
               viewId: viewId,
-              confidence:
-                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
               bboxOpacity: 1.0,
               maskOpacity: 1.0,
               visible: true,
@@ -188,21 +164,14 @@
                   obj.bbox.width * selectedItem.views[viewId].width,
                   obj.bbox.height * selectedItem.views[viewId].height,
                 ], // denormalized
-                tooltip:
-                  catName +
-                  (obj.bbox.predicted
-                    ? " " + obj.bbox.confidence.toFixed(2)
-                    : ""),
+                tooltip: catName + (obj.bbox.predicted ? " " + obj.bbox.confidence.toFixed(2) : ""),
                 catId: catId,
                 visible: true,
                 opacity: 1.0,
               });
             }
           } else {
-            console.log(
-              "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id
-            );
+            console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
             continue;
           }
         }
@@ -229,51 +198,41 @@
   app="Explorer"
   bind:selectedDataset
   bind:selectedItem
+  bind:selectedTab
   saveFlag={false}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
 />
-<div
-  class="pt-20 h-screen w-full
-  bg-white dark:bg-zinc-800
-  text-zinc-800 dark:text-zinc-300"
->
-  {#if datasets}
-    {#if selectedDataset}
-      {#if selectedItem}
-        <ExplorationWorkspace
-          {selectedItem}
-          {annotations}
-          {classes}
-          {masks}
-          {bboxes}
-          on:unselectItem={handleUnselectItem}
-        />
-      {:else}
-        <DatasetExplorer
-          {selectedDataset}
-          {currentPage}
-          on:selectItem={(event) => handleSelectItem(event.detail)}
-          on:datasetError={() => (
-            handleUnselectDataset(), (datasetErrorModal = true)
-          )}
-        />
-      {/if}
+{#if datasets}
+  {#if selectedDataset}
+    {#if selectedItem}
+      <ExplorationWorkspace
+        {selectedItem}
+        {annotations}
+        {classes}
+        {masks}
+        {bboxes}
+        on:unselectItem={handleUnselectItem}
+      />
     {:else}
-      <Library
-        {datasets}
-        buttonLabel="Explore"
-        on:selectDataset={(event) => handleSelectDataset(event.detail)}
+      <DatasetExplorer
+        bind:selectedTab
+        {selectedDataset}
+        {currentPage}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:datasetError={() => (handleUnselectDataset(), (datasetErrorModal = true))}
       />
     {/if}
   {:else}
-    <LoadingLibrary />
+    <Library {datasets} app="Explorer" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
-  {#if datasetErrorModal}
-    <WarningModal
-      message="Error while retrieving dataset items."
-      details="Please look at the application logs for more information, and report this issue if the error persists."
-      on:confirm={() => (datasetErrorModal = false)}
-    />
-  {/if}
-</div>
+{:else}
+  <LoadingLibrary />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}

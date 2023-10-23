@@ -17,14 +17,25 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, Histogram } from "@pixano/core";
+  import { api, Dashboard } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
   import type { Dataset } from "@pixano/core";
+  import {
+    svg_filter,
+    svg_first_page,
+    svg_grid,
+    svg_last_page,
+    svg_list,
+    svg_next_page,
+    svg_prev_page,
+    svg_search,
+  } from "@pixano/core/src/icons";
 
   // Exports
   export let selectedDataset: Dataset;
+  export let selectedTab: string;
   export let currentPage: number;
 
   let datasetStats = null;
@@ -36,6 +47,8 @@
 
   function handleSelectItem(itemId: string) {
     dispatch("selectItem", itemId);
+
+    selectedTab = "";
   }
 
   async function loadPage() {
@@ -92,103 +105,133 @@
   });
 </script>
 
-<div class="pt-2 px-2 bg-white dark:bg-zinc-800">
-  <div class="flex">
-    <!-- Stats -->
-    <div
-      class="w-1/2 h-[85vh] flex flex-col items-center border rounded-lg overflow-y-scroll max-w-5xl
-      bg-white dark:bg-zinc-800 shadow border-zinc-300 dark:border-zinc-600"
-    >
-      <span class="font-semibold tracking-tight text-xl mt-3">
-        Statistics
-      </span>
-      {#if datasetStats != null && datasetStats.length != 0}
-        <div class="grid grid-cols-1 2xl:grid-cols-2 w-full gap-4 p-4">
-          <!-- If charts are ready to be displayed, display them -->
-          {#each datasetStats as chart}
-            <div class="w-full">
-              <Histogram hist={chart} />
-            </div>
-          {/each}
+<div class="w-full px-20 flex flex-col bg-slate-100">
+  {#if selectedDataset.page}
+    <!-- Items list -->
+    <div class="w-full h-[87.5vh] flex flex-col">
+      <div class="py-4 flex space-x-2 items-center">
+        {#if selectedTab === "database"}
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_list} fill="currentcolor" />
+            </svg>
+          </button>
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_grid} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
+        <button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+          >
+            <path d={svg_filter} fill="currentcolor" />
+          </svg>
+        </button>
+        <div class="flex-grow" />
+        <div class="relative flex items-center">
+          <input
+            type="text"
+            placeholder="Search"
+            class="h-8 pl-8 pr-4 border rounded-sm border-slate-200 shadow-slate-200"
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="absolute left-2 h-4 w-4 pointer-events-none"
+          >
+            <path d={svg_search} />
+          </svg>
         </div>
-      {:else}
-        <!-- Else show a message -->
-        <span class="mt-80 italic text-zinc-500 dark:text-zinc-300">
-          No stats available.
-        </span>
+      </div>
+      {#if selectedTab === "database"}
+        <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
+      {:else if selectedTab === "dashboard"}
+        <Dashboard {selectedDataset} {datasetStats} />
       {/if}
     </div>
 
-    <div class="w-1/2 ml-4">
-      {#if selectedDataset.page}
-        <!-- Items list -->
-        <div class=" h-[85vh] z-0 w-full max-w-7xl">
-          <Table
-            {selectedDataset}
-            on:selectItem={(event) => handleSelectItem(event.detail)}
-          />
-        </div>
+    <!-- Page navigation -->
+    {#if selectedTab === "database"}
+      <div class="w-full my-3 flex justify-center items-center">
+        {#if selectedDataset.page.total > itemsPerPage}
+          <button on:click={handleGoToFirstPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_first_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <!-- Page navigation -->
-        <div
-          class="flex justify-end items-center w-full max-w-7xl space-x-2 py-2"
-        >
-          <span class="mr-2">
-            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
-              itemsPerPage * currentPage,
-              selectedDataset.page.total
-            )} of
+          <button on:click={handleGoToPreviousPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            >
+              <path d={svg_prev_page} fill="currentcolor" />
+            </svg>
+          </button>
+
+          <span class="mx-4">
+            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(itemsPerPage * currentPage, selectedDataset.page.total)} of
             {selectedDataset.page.total}
           </span>
-          {#if selectedDataset.page.total > itemsPerPage}
-            <button
-              class="py-1 px-2 border rounded-lg text-sm font-medium
-              bg-white dark:bg-zinc-800
-              hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-600"
-              on:click={handleGoToFirstPage}
-            >
-              FIRST
-            </button>
 
-            <button
-              class="py-1 px-2 border rounded-lg text-sm font-medium
-              bg-white dark:bg-zinc-800
-              hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-600"
-              on:click={handleGoToPreviousPage}
+          <button on:click={handleGoToNextPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
             >
-              PREV
-            </button>
+              <path d={svg_next_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-            <button
-              class="py-1 px-2 border rounded-lg text-sm font-medium
-              bg-white dark:bg-zinc-800
-              hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-600"
-              on:click={handleGoToNextPage}
+          <button on:click={handleGoToLastPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
             >
-              NEXT
-            </button>
-
-            <button
-              class="py-1 px-2 border rounded-lg text-sm font-medium
-              bg-white dark:bg-zinc-800
-              hover:bg-zinc-100 dark:hover:bg-zinc-700
-              border-zinc-300 dark:border-zinc-600"
-              on:click={handleGoToLastPage}
-            >
-              LAST
-            </button>
-          {/if}
-        </div>
-      {:else}
-        <div class="h-full flex justify-center items-center">
-          <span class="italic text-zinc-500 dark:text-zinc-300">
-            Loading items...
-          </span>
-        </div>
-      {/if}
+              <path d={svg_last_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
+  {:else}
+    <div class="h-full flex justify-center items-center">
+      <span class="italic text-zinc-500 dark:text-zinc-300"> Loading items... </span>
     </div>
-  </div>
+  {/if}
 </div>

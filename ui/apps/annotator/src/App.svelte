@@ -18,29 +18,13 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import {
-    api,
-    ConfirmModal,
-    Header,
-    Library,
-    LoadingLibrary,
-    PromptModal,
-    WarningModal,
-  } from "@pixano/core";
+  import { api, ConfirmModal, Header, Library, LoadingLibrary, PromptModal, WarningModal } from "@pixano/core";
   import { mask_utils, npy, SAM } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
-  import type {
-    BBox,
-    CategoryData,
-    Dataset,
-    ItemData,
-    ItemLabels,
-    ItemObjects,
-    Mask,
-  } from "@pixano/core";
+  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, ItemObjects, Mask } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -78,39 +62,22 @@
     console.log("App.handleGetDatasets");
     const start = Date.now();
     datasets = await api.getDatasetList();
-    console.log(
-      "App.handleGetDatasets - api.getDatasetList in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
   }
 
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
     const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage
-    );
-    console.log(
-      "App.handleSelectDataset - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage);
+    console.log("App.handleSelectDataset - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      const firstItemId = selectedDataset.page.items[0].find(
-        (feature) => feature.name === "id"
-      ).value;
+      const firstItemId = selectedDataset.page.items[0].find((feature) => feature.name === "id").value;
 
       // Toggle active learning filtering if "round" found
-      if (
-        !!selectedDataset.page.items[0].find(
-          (feature) => feature.name === "round"
-        )
-      ) {
+      if (!!selectedDataset.page.items[0].find((feature) => feature.name === "round")) {
         activeLearningFlag = true;
       } else {
         activeLearningFlag = false;
@@ -146,11 +113,7 @@
     selectedItem = itemDetails["itemData"] as ItemData;
     const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
-    console.log(
-      "App.handleSelectItem - api.getItemDetails in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
@@ -198,16 +161,13 @@
             }
 
             // Add label
-            annotations[sourceId].views[viewId].categories[catId].labels[
-              obj.id
-            ] = {
+            annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
               id: obj.id,
               categoryId: catId,
               categoryName: catName,
               sourceId: sourceId,
               viewId: viewId,
-              confidence:
-                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
               bboxOpacity: 1.0,
               maskOpacity: 1.0,
               visible: true,
@@ -246,21 +206,14 @@
                   obj.bbox.width * selectedItem.views[viewId].width,
                   obj.bbox.height * selectedItem.views[viewId].height,
                 ], // denormalized
-                tooltip:
-                  catName +
-                  (obj.bbox.predicted
-                    ? " " + obj.bbox.confidence.toFixed(2)
-                    : ""),
+                tooltip: catName + (obj.bbox.predicted ? " " + obj.bbox.confidence.toFixed(2) : ""),
                 catId: catId,
                 visible: true,
                 opacity: 1.0,
               });
             }
           } else {
-            console.log(
-              "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id
-            );
+            console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
             continue;
           }
         }
@@ -343,12 +296,8 @@
       for (const viewLabels of Object.values(sourceLabels.views)) {
         for (const catLabels of Object.values(viewLabels.categories)) {
           for (const label of Object.values(catLabels.labels)) {
-            const mask = masks.find(
-              (m) => m.id === label.id && m.viewId === label.viewId
-            );
-            const bbox = bboxes.find(
-              (b) => b.id === label.id && b.viewId === label.viewId
-            );
+            const mask = masks.find((m) => m.id === label.id && m.viewId === label.viewId);
+            const bbox = bboxes.find((b) => b.id === label.id && b.viewId === label.viewId);
             itemDetails["itemObjects"].push({
               id: label.id,
               item_id: selectedItem.id,
@@ -382,11 +331,7 @@
 
     let start = Date.now();
     api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
-    console.log(
-      "App.handleSaveItemDetails - api.postItemDetails in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleSaveItemDetails - api.postItemDetails in", Date.now() - start, "ms");
 
     // Reload item details
     handleSelectItem(selectedItem.id);
@@ -397,20 +342,11 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    const new_dbImages = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage
-    );
-    console.log(
-      "App.handleLoadNextPage - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
+    console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (new_dbImages) {
-      selectedDataset.page.items = selectedDataset.page.items.concat(
-        new_dbImages.items
-      );
+      selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
     } else {
       // End of dataset: reset last page
       currentPage = currentPage - 1;
@@ -451,67 +387,57 @@
   on:unselectItem={handleUnselectItem}
   on:saveItemDetails={handleSaveItemDetails}
 />
-<div
-  class="pt-20 h-screen w-full
-  bg-white dark:bg-zinc-800
-  text-zinc-800 dark:text-zinc-300"
->
-  {#if datasets}
-    {#if selectedItem}
-      <AnnotationWorkspace
-        {selectedDataset}
-        {selectedItem}
-        bind:annotations
-        {classes}
-        bind:masks
-        bind:bboxes
-        {embeddings}
-        {currentPage}
-        bind:activeLearningFlag
-        bind:saveFlag
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-        on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={() => (saveFlag = true)}
-      />
-    {:else}
-      <Library
-        {datasets}
-        buttonLabel="Annotate"
-        on:selectDataset={(event) => handleSelectDataset(event.detail)}
-      />
-    {/if}
+{#if datasets}
+  {#if selectedItem}
+    <AnnotationWorkspace
+      {selectedDataset}
+      {selectedItem}
+      bind:annotations
+      {classes}
+      bind:masks
+      bind:bboxes
+      {embeddings}
+      {currentPage}
+      bind:activeLearningFlag
+      bind:saveFlag
+      on:selectItem={(event) => handleSelectItem(event.detail)}
+      on:loadNextPage={handleLoadNextPage}
+      on:enableSaveFlag={() => (saveFlag = true)}
+    />
   {:else}
-    <LoadingLibrary />
+    <Library {datasets} app="Annotator" on:selectDataset={(event) => handleSelectDataset(event.detail)} />
   {/if}
-  {#if modelPromptModal}
-    <PromptModal
-      message="Please provide the name of your ONNX model for interactive segmentation."
-      placeholder={defaultModelName}
-      bind:input={inputModelName}
-      on:confirm={handleModelPrompt}
-    />
-  {/if}
-  {#if modelNotFoundModal}
-    <WarningModal
-      message="models/{inputModelName} was not found in your dataset library."
-      details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-      moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-      on:confirm={() => (modelNotFoundModal = false)}
-    />
-  {/if}
-  {#if unselectItemModal}
-    <ConfirmModal
-      message="You have unsaved changes."
-      confirm="Close without saving"
-      on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
-      on:cancel={() => (unselectItemModal = false)}
-    />
-  {/if}
-  {#if datasetErrorModal}
-    <WarningModal
-      message="Error while retrieving dataset items."
-      details="Please look at the application logs for more information, and report this issue if the error persists."
-      on:confirm={() => (datasetErrorModal = false)}
-    />
-  {/if}
-</div>
+{:else}
+  <LoadingLibrary />
+{/if}
+{#if modelPromptModal}
+  <PromptModal
+    message="Please provide the name of your ONNX model for interactive segmentation."
+    placeholder={defaultModelName}
+    bind:input={inputModelName}
+    on:confirm={handleModelPrompt}
+  />
+{/if}
+{#if modelNotFoundModal}
+  <WarningModal
+    message="models/{inputModelName} was not found in your dataset library."
+    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+    moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
+    on:confirm={() => (modelNotFoundModal = false)}
+  />
+{/if}
+{#if unselectItemModal}
+  <ConfirmModal
+    message="You have unsaved changes."
+    confirm="Close without saving"
+    on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
+    on:cancel={() => (unselectItemModal = false)}
+  />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}
