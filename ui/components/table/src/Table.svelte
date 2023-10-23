@@ -40,14 +40,13 @@
 </script>
 
 <div
-  class="h-full w-full overflow-y-auto overflow-x-auto rounded-lg
-   bg-white dark:bg-zinc-800
-   border border-zinc-300 dark:border-zinc-600"
+  class="h-full w-full overflow-y-auto overflow-x-auto
+  rounded-sm bg-white border border-slate-200 shadow-sm shadow-zinc-200"
 >
   <table class="table-auto z-0 w-full text-center text-base">
     <!-- Header -->
     <thead>
-      <tr class="sticky top-0 bg-zinc-100 dark:bg-zinc-900">
+      <tr class="sticky top-0 bg-white capitalize shadow-sm shadow-slate-200">
         {#each featureNames as { name, type }}
           {#if type != "hidden"}
             <th class="py-4 font-semibold">{name}</th>
@@ -60,7 +59,7 @@
     <tbody>
       {#each data as row}
         <tr
-          class="cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          class="cursor-pointer hover:bg-slate-50"
           on:click={() => {
             handleSelectItem(row);
           }}
@@ -72,13 +71,13 @@
               </td>
             {/if}
           {/each}
-          <td class="py-1 border-b border-zinc-300 dark:border-zinc-600">
+          <td class="py-1 border-b border-slate-200">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 mx-auto p-2 border rounded-full border-zinc-300 dark:border-zinc-600 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              class="h-8 w-8 mx-auto p-2 border rounded-full border-slate-200 hover:bg-slate-100"
             >
               <title>Open</title>
               <path d={icons.svg_right_arrow} fill="currentcolor" />
