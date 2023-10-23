@@ -272,7 +272,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                         # Object bounding box
                         bbox = (
                             format_bbox(
-                                obj["bbox"].coords,
+                                obj["bbox"].xywh_coords,
                                 obj["bbox"].confidence,
                             )
                             if "bbox" in obj
