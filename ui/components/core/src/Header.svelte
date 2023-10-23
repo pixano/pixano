@@ -102,7 +102,7 @@
             >
               <path d={svg_next_page} fill="currentcolor" />
             </svg>
-            <span>
+            <span class="truncate">
               {selectedItem.id}
             </span>
           {/if}
