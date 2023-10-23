@@ -12,20 +12,13 @@
 # http://www.cecill.info
 
 import glob
-from collections.abc import Generator
+from collections.abc import Iterator
 from pathlib import Path
 
 import pyarrow as pa
 import shortuuid
 
-from pixano.core import (
-    BBox,
-    CompressedRLE,
-    Image,
-    ImageType,
-    ObjectAnnotation,
-    ObjectAnnotationType,
-)
+from pixano.core import BBox, CompressedRLE, Image
 from pixano.data import Fields, Importer
 from pixano.utils import coco_names_91, image_to_thumbnail
 
@@ -53,48 +46,70 @@ class TemplateImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        fields = Fields.from_dict(
-            {
-                "id": "str",
-                "image": "Image",
-                "objects": "[ObjectAnnotation]",
-                "split": "str",
-            }
-        )
+        tables = {
+            "main": [
+                {
+                    "name": "db",
+                    "fields": {
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                }
+            ],
+            "media": [
+                {
+                    "name": "image",
+                    "fields": {
+                        "id": "str",
+                        "image": "image",
+                    },
+                }
+            ],
+            "objects": [
+                {
+                    "name": "objects",
+                    "fields": {
+                        "id": "str",
+                        "item_id": "str",
+                        "view_id": "str",
+                        "bbox": "bbox",
+                        "mask": "compressedrle",
+                        "category_id": "int",
+                        "category_name": "str",
+                    },
+                    "source": "Ground Truth",
+                }
+            ],
+        }
 
         # Initialize Importer
-        super().__init__(name, description, splits, fields)
+        super().__init__(name, description, splits, tables)
 
-    def import_row(
+    def import_rows(
         self,
         input_dirs: dict[str, Path],
         portable: bool = False,
-    ) -> Generator[dict]:
-        """Process dataset row for import
+    ) -> Iterator:
+        """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            split (str): Dataset split
             portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
-            Generator[dict]: Processed rows
+            Iterator: Processed rows
         """
 
-        ##### Retrieve your images here #####
-        image_paths = glob.glob(str(input_dirs["image"] / split / "......"))
+        for split in self.info.splits:
+            ##### Retrieve your annotations #####
+            annotations = input_dirs["objects"] / "......"
 
-        ##### Retrieve your annotations here #####
-        annotations = input_dirs["objects"] / "......"
+            ##### Retrieve your images #####
+            image_paths = glob.glob(str(input_dirs["image"] / split / "......"))
 
-        # Process rows
-        for split in self.splits:
-            for im_id, im_path in enumerate(image_paths):
-                ##### Retrieve image data here #####
-                im_height = 0
-                im_width = 0
-                im_anns = annotations[im_id]
-
+            # Process rows
+            for im_path in image_paths:
                 # Create image thumbnail
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
                 # Set image URI
@@ -103,37 +118,50 @@ class TemplateImporter(Importer):
                     if portable
                     else im_path.absolute().as_uri()
                 )
+                # Load image
+                image = Image(im_uri, None, im_thumb)
+                w, h = image.size
 
-                ##### Fill row with ID, image, and list of annotations #####
-                row = {
-                    "id": im_path.stem,
-                    "image": Image(im_uri, None, im_thumb),
-                    "objects": [
-                        ObjectAnnotation(
-                            id=shortuuid.uuid(),
-                            view_id="image",
-                            area=float(ann["area"]),
-                            bbox=BBox.from_xywh(ann["bbox"]).normalize(
-                                im_height, im_width
-                            ),
-                            mask=CompressedRLE.from_mask(ann["segmentation"]),
-                            is_group_of=False,
-                            category_id=int(ann["category_id"]),
-                            category_name=coco_names_91(ann["category_id"]),
-                        )
-                        for ann in im_anns
-                    ],
-                    "split": split,
+                ##### Load image annotation #####
+                im_anns = annotations[im_path]
+
+                # Return rows
+                rows = {
+                    "main": {
+                        "db": [
+                            {
+                                "id": im_path.name,
+                                "views": ["image"],
+                                "split": split,
+                            }
+                        ]
+                    },
+                    "media": {
+                        "image": [
+                            {
+                                "id": im_path.name,
+                                "image": image.to_dict(),
+                            }
+                        ]
+                    },
+                    "objects": {
+                        "objects": [
+                            {
+                                "id": str(ann["id"]),
+                                "item_id": im_path.name,
+                                "view_id": "image",
+                                "bbox": BBox.from_xywh(ann["bbox"])
+                                .normalize(h, w)
+                                .to_dict(),
+                                "mask": CompressedRLE.encode(
+                                    ann["segmentation"], h, w
+                                ).to_dict(),
+                                "category_id": int(ann["category_id"]),
+                                "category_name": coco_names_91(ann["category_id"]),
+                            }
+                            for ann in im_anns
+                        ]
+                    },
                 }
-                struct_arr = pa.StructArray.from_arrays(
-                    [
-                        pa.array([row["id"]]),
-                        ImageType.Array.from_list([row["image"]]),
-                        ObjectAnnotationType.Array.from_lists([row["objects"]]),
-                        pa.array([row["split"]]),
-                    ],
-                    fields=self.info.fields.to_pyarrow(),
-                )
 
-                # Return row
-                yield pa.RecordBatch.from_struct_array(struct_arr)
+                yield rows
