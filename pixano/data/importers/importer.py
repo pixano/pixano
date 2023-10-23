@@ -46,7 +46,7 @@ class Importer(ABC):
         name: str,
         description: str,
         tables: dict[str, list],
-        splits: list[str] = ["dataset"],
+        splits: list[str],
     ):
         """Initialize Importer
 
@@ -54,7 +54,7 @@ class Importer(ABC):
             name (str): Dataset name
             description (str): Dataset description
             tables (dict[str, list]): Dataset fields
-            splits (list[str], optional): Dataset splits. Defaults to ["dataset"].
+            splits (list[str]): Dataset splits
         """
 
         # Dataset info

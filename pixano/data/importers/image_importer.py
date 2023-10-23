@@ -29,13 +29,13 @@ class ImageImporter(Importer):
         splits (list[str]): Dataset splits
     """
 
-    def __init__(self, name: str, description: str, splits: list[str]):
+    def __init__(self, name: str, description: str, splits: list[str] = ["dataset"]):
         """Initialize Image Importer
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            splits (list[str]): Dataset splits
+            splits (list[str], optional): Dataset splits. Defaults to ["dataset"] for datasets with no subfolders for splits.
         """
 
         tables = {
