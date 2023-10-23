@@ -31,9 +31,7 @@
   {#each tools_lists as tools}
     <div
       class="m-4 flex flex-col border rounded-lg
-      shadow dark:shadow-zinc-700
-      bg-white dark:bg-zinc-800
-      border-zinc-300 dark:border-zinc-600"
+      shadow bg-white border-zinc-300"
     >
       <div class="flex flex-col items-center">
         {#each tools as tool}
@@ -46,10 +44,9 @@
                   viewBox="0 -960 960 960"
                   width="48"
                   class="h-10 w-10 p-1 border-2 rounded
-                  bg-white dark:bg-zinc-800
-                  hover:bg-zinc-200 dark:hover:bg-zinc-600
+                  bg-white hover:bg-zinc-200
                   {tool['modes'].includes(selectedTool)
-                    ? 'border-rose-500 dark:border-rose-600'
+                    ? 'border-rose-500'
                     : 'border-transparent'}"
                 >
                   <title>{tool.name}</title>
@@ -59,9 +56,7 @@
 
               <div
                 class="absolute inset-y-0 left-16 border rounded-lg z-10 hidden group-hover:flex
-                shadow dark:shadow-zinc-700
-                bg-white dark:bg-zinc-800
-                border-zinc-300 dark:border-zinc-600"
+                shadow bg-white border-zinc-300"
               >
                 {#each tool["modes"] as mode}
                   <button class="w-full p-4" on:click={() => selectTool(mode)}>
@@ -71,10 +66,9 @@
                       viewBox="0 -960 960 960"
                       width="48"
                       class="h-10 w-10 p-1 border-2 rounded
-                      bg-white dark:bg-zinc-800
-                      hover:bg-zinc-200 dark:hover:bg-zinc-600
+                      bg-white hover:bg-zinc-200
                       {mode === selectedTool
-                        ? 'border-rose-500 dark:border-rose-600'
+                        ? 'border-rose-500'
                         : 'border-transparent'}"
                     >
                       <title>{mode.name}</title>
@@ -92,10 +86,9 @@
                 viewBox="0 -960 960 960"
                 width="48"
                 class="h-10 w-10 p-1 border-2 rounded
-                bg-white dark:bg-zinc-800
-                hover:bg-zinc-200 dark:hover:bg-zinc-600
+                bg-white hover:bg-zinc-200
                 {selectedTool === tool
-                  ? 'border-rose-500 dark:border-rose-600'
+                  ? 'border-rose-500'
                   : 'border-transparent'}"
               >
                 <title>{tool.name}</title>

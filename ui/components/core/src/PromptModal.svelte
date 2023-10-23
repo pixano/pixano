@@ -38,25 +38,20 @@
   <div class="flex min-h-full justify-center text-center items-center">
     <div
       class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-          bg-white dark:bg-zinc-800
-          text-zinc-800 dark:text-zinc-300"
+          bg-white text-zinc-800"
     >
       <p class="pb-1">{message}</p>
       <input
         type="text"
         {placeholder}
         class="py-1 px-2 border rounded focus:outline-none
-        bg-zinc-100 dark:bg-zinc-700
-        border-zinc-300 dark:border-zinc-600
-        focus:border-rose-600 dark:focus:border-rose-500
-        "
+        bg-zinc-100 border-zinc-300 focus:border-rose-600"
         bind:value={input}
       />
       <button
         type="button"
         class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
-        bg-rose-500 dark:bg-rose-600
-        hover:bg-rose-600 dark:hover:bg-rose-500"
+        bg-rose-500 hover:bg-rose-600"
         on:click={handleConfirm}
       >
         Ok

@@ -65,9 +65,13 @@
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5 mx-4 mb-4 bg-zinc-100 dark:bg-zinc-700">
+  <div class="h-3/5 mx-4 mb-4 bg-zinc-100">
     {#if dataset.preview}
-      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full object-cover object-center" />
+      <img
+        src={dataset.preview}
+        alt="{dataset.name} thumbnail"
+        class="h-full w-full object-cover object-center"
+      />
     {/if}
   </div>
   <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">

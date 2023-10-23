@@ -181,19 +181,16 @@
 
 <div
   class="absolute h-4/6 w-72 top-1/2 -translate-y-1/2 right-6 border rounded-lg
-  shadow dark:shadow-zinc-700
-  bg-white dark:bg-zinc-800
-  border-zinc-300 dark:border-zinc-600
-  text-zinc-500 dark:text-zinc-300"
+  shadow bg-white border-zinc-300 text-zinc-500"
 >
   {#if selectedDataset}
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tl-lg
-        hover:bg-zinc-100 dark:hover:bg-zinc-700
+        hover:bg-zinc-100
         {activeTab == 'labels'
-          ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-600'}"
+          ? 'bg-zinc-100 border-rose-500'
+          : 'border-zinc-300 '}"
         on:click={() => {
           activeTab = "labels";
         }}
@@ -203,10 +200,10 @@
       {#if selectedDataset}
         <button
           class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tr-lg
-        hover:bg-zinc-100 dark:hover:bg-zinc-700
+        hover:bg-zinc-100
         {activeTab == 'dataset'
-            ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-            : 'border-zinc-300 dark:border-zinc-600'}"
+            ? 'bg-zinc-100 border-rose-500 '
+            : 'border-zinc-300'}"
           on:click={() => {
             activeTab = "dataset";
           }}
@@ -219,10 +216,10 @@
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-t-lg
-          hover:bg-zinc-100 dark:hover:bg-zinc-700
+          hover:bg-zinc-100
           {activeTab == 'labels'
-          ? 'bg-zinc-100 dark:bg-zinc-700 border-rose-500 dark:border-rose-600'
-          : 'border-zinc-300 dark:border-zinc-600'}"
+          ? 'bg-zinc-100 border-rose-500 '
+          : 'border-zinc-300 '}"
       >
         Labels
       </button>
@@ -233,7 +230,7 @@
       <!-- Details -->
       <div
         class="flex flex-col p-4 border-b-2
-            border-zinc-300 dark:border-zinc-600"
+            border-zinc-300"
       >
         <span class="font-medium"> Item information : </span>
         <ul class="list-disc ml-6">
@@ -251,7 +248,7 @@
       {:else}
         <div
           class="px-4 border-b-2
-          border-zinc-300 dark:border-zinc-600"
+          border-zinc-300"
         >
           <!-- Controls -->
           <div class="flex flex-col pt-2 pb-4">
@@ -261,8 +258,7 @@
             </label>
             <input
               class="cursor-pointer
-              accent-rose-500 dark:accent-rose-600
-              hover:accent-rose-600 hover:dark:accent-rose-500"
+              accent-rose-500 hover:accent-rose-600"
               type="range"
               id="maskSlider"
               min="0"
@@ -278,8 +274,7 @@
             </label>
             <input
               class="cursor-pointer
-              accent-rose-500 dark:accent-rose-600
-              hover:accent-rose-600 hover:dark:accent-rose-500"
+              accent-rose-500 hover:accent-rose-600"
               type="range"
               id="bboxSlider"
               min="0"
@@ -295,8 +290,7 @@
             </label>
             <input
               class="cursor-pointer
-              accent-rose-500 dark:accent-rose-600
-              hover:accent-rose-600 hover:dark:accent-rose-500"
+              accent-rose-500 hover:accent-rose-600"
               type="range"
               id="confidenceSlider"
               min="0"
@@ -311,8 +305,8 @@
           {#if Object.keys(annotations).length > 1 && source.numLabels}
             <div
               class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                border-zinc-300 dark:border-zinc-600
-                {source.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+                border-zinc-300
+                {source.opened ? 'bg-zinc-100' : ''}"
             >
               <button
                 on:click={() => handleSourceVisibility(source, !source.visible)}
@@ -353,7 +347,7 @@
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
+                  class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -365,10 +359,10 @@
             {#if Object.keys(source.views).length > 1 && view.numLabels}
               <div
                 class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-600
+                  border-zinc-300
                   {source.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
-                  {view.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+                  {view.opened ? 'bg-zinc-100 ' : ''}"
               >
                 <button
                   on:click={() =>
@@ -410,7 +404,7 @@
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
+                    class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -422,10 +416,10 @@
               {#if Object.keys(category.labels).length > 0}
                 <div
                   class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
-                  border-zinc-300 dark:border-zinc-600
+                  border-zinc-300
                   {source.opened && view.opened ? 'flex' : 'hidden'}
                   {Object.keys(annotations).length > 1 ? 'pl-9' : 'pl-6'}
-                  {category.opened ? 'bg-zinc-100 dark:bg-zinc-700' : ''}"
+                  {category.opened ? 'bg-zinc-100' : ''}"
                 >
                   <button
                     on:click={() =>
@@ -479,7 +473,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-rose-500 dark:bg-rose-600 rounded-full text-xs text-zinc-50 font-medium"
+                      class="h-5 w-5 flex items-center justify-center bg-rose-500 rounded-full text-xs text-zinc-50 font-medium"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}
@@ -495,7 +489,7 @@
                     <div
                       class="p-3 pl-12 flex items-center space-x-1 border-b-2
                       {Object.keys(annotations).length > 1 ? 'pl-12' : 'pl-9'}
-                      border-zinc-300 dark:border-zinc-600"
+                      border-zinc-300"
                     >
                       <button
                         on:click={() =>
@@ -563,10 +557,7 @@
           : 'hidden'}"
       >
         <!-- Details -->
-        <div
-          class="flex flex-col p-4 border-b-2
-            border-zinc-300 dark:border-zinc-600"
-        >
+        <div class="flex flex-col p-4 border-b-2 border-zinc-300">
           <span class="font-medium"> Active learning : </span>
           <label class="pt-1 flex items-center select-none cursor-pointer">
             <input
@@ -584,8 +575,7 @@
         >
           {#each filterItems(selectedDataset.page.items) as item, i}
             <button
-              class="flex p-1 flex-col rounded h-min
-          hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex p-1 flex-col rounded h-min hover:bg-zinc-100"
               on:click={() => handleSelectItem(item)}
             >
               <div

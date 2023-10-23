@@ -16,7 +16,14 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import { svg_next_page, svg_quit, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
+  import {
+    svg_next_page,
+    svg_quit,
+    svg_save,
+    svg_left_arrow,
+    svg_database,
+    svg_dashboard,
+  } from "./icons";
   import type { Dataset, ItemData } from "./interfaces";
   import pixanoLogo from "./assets/pixano.png";
 
@@ -87,7 +94,13 @@
 
         {#if selectedDataset}
           {#if selectedItem}
-            <svg xmlns="http://www.w3.org/2000/svg" height="48" viewBox="0 -960 960 960" width="48" class="h-6 w-6">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-6 w-6"
+            >
               <path d={svg_next_page} fill="currentcolor" />
             </svg>
             <span>
@@ -114,7 +127,10 @@
           width="48"
           class="absolute left-3 h-5 w-5 pointer-events-none"
         >
-          <path d={svg_database} fill={selectedTab === "database" ? "white" : "#771E5F"} />
+          <path
+            d={svg_database}
+            fill={selectedTab === "database" ? "white" : "#771E5F"}
+          />
         </svg>
       </div>
 
@@ -135,20 +151,28 @@
           width="48"
           class="absolute left-3 h-5 w-5 pointer-events-none"
         >
-          <path d={svg_dashboard} fill="{selectedTab === "dashboard" ? "white" : "#771E5F"} " />
+          <path
+            d={svg_dashboard}
+            fill="{selectedTab === 'dashboard' ? 'white' : '#771E5F'} "
+          />
         </svg>
       </div>
 
       <!-- Navigation -->
       {#if selectedItem && app === "Annotator"}
-        <button class="w-30 h pr-4 flex justify-end" on:click={handleSaveItemDetails}>
+        <button
+          class="w-30 h pr-4 flex justify-end"
+          on:click={handleSaveItemDetails}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"
             viewBox="0 -960 960 960"
             width="48"
             class="h-8 w-8
-              {saveFlag ? 'hover:text-rose-600' : 'text-zinc-300 dark:text-zinc-700 cursor-default'}"
+              {saveFlag
+              ? 'hover:text-rose-600'
+              : 'text-zinc-300 cursor-default'}"
           >
             <title>Save</title>
             <path d={svg_save} fill="currentcolor" />

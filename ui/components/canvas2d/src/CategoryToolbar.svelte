@@ -74,9 +74,7 @@
 
 <div
   class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10
-  shadow dark:shadow-zinc-700
-  bg-white dark:bg-zinc-800
-  border-zinc-300 dark:border-zinc-600"
+  shadow bg-white border-zinc-300"
 >
   <div class="group">
     <input
@@ -84,10 +82,7 @@
       {placeholder}
       id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
-      bg-zinc-100 dark:bg-zinc-900
-      border-zinc-300 dark:border-zinc-600
-      focus:border-rose-500 dark:focus:border-rose-600
-      "
+      bg-zinc-100 border-zinc-300 focus:border-rose-500"
       on:keyup={handleFilterCategories}
       on:keydown={handleKeyPress}
       bind:value={currentAnnCatName}
@@ -96,8 +91,7 @@
     <div
       id="category_list"
       class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex hover:flex flex-col
-      shadow dark:shadow-zinc-700
-      bg-white dark:bg-zinc-800"
+      shadow bg-white"
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
@@ -128,10 +122,9 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-white dark:bg-zinc-800
-        hover:bg-zinc-200 dark:hover:bg-zinc-600
+        bg-white hover:bg-zinc-200
         {selectedTool === pointPlusTool
-          ? 'border-rose-500 dark:border-rose-600'
+          ? 'border-rose-500'
           : 'border-transparent'}"
       >
         <title>Positive point</title>
@@ -149,10 +142,9 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-white dark:bg-zinc-800
-        hover:bg-zinc-200 dark:hover:bg-zinc-600
+        bg-white hover:bg-zinc-200
         {selectedTool === pointMinusTool
-          ? 'border-rose-500 dark:border-rose-600'
+          ? 'border-rose-500 '
           : 'border-transparent'}"
       >
         <title>Negative point</title>
@@ -167,8 +159,7 @@
       viewBox="0 -960 960 960"
       width="48"
       class="h-10 w-10 p-1 rounded border border-transparent text-zinc-50
-      bg-rose-500 dark:bg-rose-600
-      hover:bg-rose-600 dark:hover:bg-rose-500"
+      bg-rose-500 hover:bg-rose-600"
     >
       <title>Validate</title>
       <path d={icons.svg_validate} fill="currentcolor" />

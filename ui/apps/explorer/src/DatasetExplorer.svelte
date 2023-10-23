@@ -164,7 +164,10 @@
         </div>
       </div>
       {#if selectedTab === "database"}
-        <Table data={selectedDataset.page.items} on:selectItem={(event) => handleSelectItem(event.detail)} />
+        <Table
+          data={selectedDataset.page.items}
+          on:selectItem={(event) => handleSelectItem(event.detail)}
+        />
       {:else if selectedTab === "dashboard"}
         <Dashboard {selectedDataset} {datasetStats} />
       {/if}
@@ -199,7 +202,10 @@
           </button>
 
           <span class="mx-4">
-            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(itemsPerPage * currentPage, selectedDataset.page.total)} of
+            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
+              itemsPerPage * currentPage,
+              selectedDataset.page.total
+            )} of
             {selectedDataset.page.total}
           </span>
 
@@ -231,7 +237,7 @@
     {/if}
   {:else}
     <div class="h-full flex justify-center items-center">
-      <span class="italic text-zinc-500 dark:text-zinc-300"> Loading items... </span>
+      <span class="italic text-zinc-500"> Loading items... </span>
     </div>
   {/if}
 </div>
