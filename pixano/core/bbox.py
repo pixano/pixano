@@ -15,7 +15,7 @@ from typing import Optional
 
 import numpy as np
 import pyarrow as pa
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import (
@@ -37,10 +37,10 @@ class BBox(PixanoType, BaseModel):
         confidence (float, optional): Bounding box confidence if predicted
     """
 
-    coords: list[float]
-    format: str
-    is_normalized: Optional[bool]
-    confidence: Optional[float]
+    _coords: list[float] = PrivateAttr()
+    _format: str = PrivateAttr()
+    _is_normalized: Optional[bool] = PrivateAttr()
+    _confidence: Optional[float] = PrivateAttr()
 
     def __init__(
         self,
@@ -59,16 +59,27 @@ class BBox(PixanoType, BaseModel):
         """
 
         # Define public attributes through Pydantic BaseModel
-        super().__init__(
-            coords=coords,
-            format=format,
-            is_normalized=is_normalized,
-            confidence=confidence,
-        )
+        super().__init__()
+
+        # Define private attributes manually
+        self._coords = coords
+        self._format = format
+        self._is_normalized = is_normalized
+        self._confidence = confidence
+
+    @property
+    def coords(self) -> list[float]:
+        """Return bounding box coordinates
+
+        Returns:
+            list[float]: Coordinates
+        """
+
+        return self._coords
 
     @property
     def xyxy_coords(self) -> list[float]:
-        """Get bounding box xyxy coordinates
+        """Return bounding box xyxy coordinates
 
         Returns:
             list[float]: Coordinates in xyxy format
@@ -78,13 +89,43 @@ class BBox(PixanoType, BaseModel):
 
     @property
     def xywh_coords(self) -> list[float]:
-        """Get bounding box xywh coordinates
+        """Return bounding box xywh coordinates
 
         Returns:
             list[float]: Coordinates in xywh format
         """
 
         return self.coords if self.format == "xywh" else xyxy_to_xywh(self.coords)
+
+    @property
+    def format(self) -> str:
+        """Return bounding box coordinates format
+
+        Returns:
+            str: Coordinates format, 'xyxy' or 'xywh'
+        """
+
+        return self._format
+
+    @property
+    def is_normalized(self) -> bool:
+        """Return bounding box normalization information
+
+        Returns:
+            bool: True if coordinates are normalized to image size
+        """
+
+        return self._is_normalized
+
+    @property
+    def confidence(self) -> float:
+        """Return bounding box confidence
+
+        Returns:
+            float: Bounding box confidence if predicted, else None
+        """
+
+        return self._confidence
 
     @property
     def is_predicted(self) -> bool:
