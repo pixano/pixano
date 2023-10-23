@@ -82,7 +82,12 @@ class ImageImporter(Importer):
             # Get images paths
             image_paths = []
             for ftype in ["*.png", "*.jpg", "*.jpeg"]:
-                image_paths.extend(glob.glob(str(input_dirs["image"] / split / ftype)))
+                if split == "dataset":
+                    image_paths.extend(glob.glob(str(input_dirs["image"] / ftype)))
+                else:
+                    image_paths.extend(
+                        glob.glob(str(input_dirs["image"] / split / ftype))
+                    )
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
             # Process rows
@@ -91,11 +96,14 @@ class ImageImporter(Importer):
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
 
                 # Set image URI
-                im_uri = (
-                    f"image/{split}/{im_path.name}"
-                    if portable
-                    else im_path.absolute().as_uri()
-                )
+                if portable:
+                    im_uri = (
+                        f"image/{im_path.name}"
+                        if split == "dataset"
+                        else f"image/{split}/{im_path.name}"
+                    )
+                else:
+                    im_uri = im_path.absolute().as_uri()
 
                 # Return rows
                 rows = {
