@@ -32,7 +32,7 @@
 
 <button
   class="w-full h-56 flex flex-col transition-all text-left
-  bg-white border rounded-sm border-slate-200 shadow shadow-slate-200 hover:shadow-md"
+  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-md"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -46,7 +46,7 @@
       </h3>
     </div>
 
-    <p class="text-sm text-zinc-400 font-medium">
+    <p class="text-sm text-slate-500 font-medium">
       {dataset.num_elements} elements {dataset.estimated_size &&
       dataset.estimated_size != "N/A"
         ? " - " + dataset.estimated_size
@@ -57,7 +57,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="absolute right-5 h-8 w-8 mx-auto p-2 border rounded-full border-slate-200 hover:bg-slate-100"
+      class="absolute right-5 h-8 w-8 mx-auto p-2 border rounded-full border-slate-300 hover:bg-slate-300"
     >
       <title>Open</title>
       <path d={svg_right_arrow} fill="currentcolor" />
@@ -65,7 +65,7 @@
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5 mx-4 mb-4 bg-zinc-100">
+  <div class="h-3/5 mx-4 mb-4 bg-slate-100">
     {#if dataset.preview}
       <img
         src={dataset.preview}
@@ -76,7 +76,7 @@
   </div>
   <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">
     {#each dataset.preview as preview}
-      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-zinc-100" />
+      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-slate-100" />
     {/each}
   </div> -->
 </button>

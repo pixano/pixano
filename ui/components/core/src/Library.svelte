@@ -43,17 +43,17 @@
   <!-- Logo & app name -->
   <button class="flex w-max space-x-6">
     <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10" />
-    <span class="text-3xl font-bold text-white uppercase font-[Montserrat]">
+    <span class="text-3xl font-bold text-slate-50 uppercase font-[Montserrat]">
       Pixano {app}
     </span>
   </button>
   <!-- Infos -->
-  <div class="flex flex-row text-white">
-    <div class="py-5 px-8 border-2 rounded-lg border-[#872E6F]">
+  <div class="flex flex-row text-slate-50">
+    <div class="py-5 px-8 border-2 rounded-lg border-secondary">
       <span class="text-5xl"> {datasets.length} </span>
       <span class="ml-2 text-2xl"> datasets </span>
     </div>
-    <div class="ml-8 py-5 px-8 border-2 rounded-lg border-[#872E6F]">
+    <div class="ml-8 py-5 px-8 border-2 rounded-lg border-secondary">
       <span class="text-5xl">
         {datasets.reduce((sum, dataset) => sum + dataset.num_elements, 0)}
       </span>
@@ -67,7 +67,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-10 w-10 p-2 rounded-full hover:bg-[#872E6F]"
+            class="h-10 w-10 p-2 rounded-full hover:bg-secondary"
           >
             <path d={svg_filter} fill="currentcolor" />
           </svg>
@@ -77,7 +77,7 @@
             id="search-input"
             type="text"
             placeholder="Search"
-            class="h-10 pl-10 pr-4 rounded border-2 border-[#872E6F] text-black font-medium"
+            class="h-10 pl-10 pr-4 rounded border-2 accent-main text-black font-medium"
             on:input={handleSearch}
           />
           <svg
@@ -109,7 +109,7 @@
       </div>
     </div>
   {:else}
-    <div class="mt-4 py-8 flex w-full justify-center text-lg text-zinc-500">
+    <div class="mt-4 py-8 flex w-full justify-center text-lg text-slate-500">
       <span style="text-align: center;">
         No datasets found in this directory. <br /> <br />
         Please refer to

@@ -42,7 +42,7 @@
   <div class="flex min-h-full justify-center text-center items-center">
     <div
       class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-        bg-white text-zinc-800"
+        bg-slate-50 text-slate-800"
     >
       <p class="pb-1">{message}</p>
       {#if details}
@@ -51,14 +51,14 @@
       <button
         type="button"
         class="rounded border mt-3 mx-1 py-1 px-3
-        bg-white hover:bg-zinc-100 border-zinc-300"
+        bg-slate-50 hover:bg-slate-100 border-slate-300"
         on:click={handleCancel}
       >
         Cancel
       </button>
       <button
         type="button"
-        class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
+        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
         bg-main hover:bg-secondary"
         on:click={handleConfirm}
       >

@@ -74,7 +74,7 @@
 
 <div
   class="absolute top-24 left-1/2 -translate-x-1/2 p-4 flex items-center space-x-4 border rounded-lg z-10
-  shadow bg-white border-zinc-300"
+  shadow bg-slate-50 border-slate-300"
 >
   <div class="group">
     <input
@@ -82,7 +82,7 @@
       {placeholder}
       id="categoryInput"
       class="h-10 py-1 px-2 w-80 border-2 rounded focus:outline-none
-      bg-zinc-100 border-zinc-300 focus:border-main"
+      bg-slate-100 border-slate-300 focus:border-main"
       on:keyup={handleFilterCategories}
       on:keydown={handleKeyPress}
       bind:value={currentAnnCatName}
@@ -91,12 +91,12 @@
     <div
       id="category_list"
       class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex hover:flex flex-col
-      shadow bg-white"
+      shadow bg-slate-50"
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
         <button
-          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-zinc-800 font-medium hover:brightness-110"
+          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-slate-800 font-medium hover:brightness-110"
           style="background-color: {labelColors(cls.id)}; text-align:left"
           title="{cls.name} (id #{cls.id})"
           on:click={() => {
@@ -122,7 +122,7 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-white hover:bg-zinc-200
+        bg-slate-50 hover:bg-slate-300
         {selectedTool === pointPlusTool ? 'border-main' : 'border-transparent'}"
       >
         <title>Positive point</title>
@@ -140,7 +140,7 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-white hover:bg-zinc-200
+        bg-slate-50 hover:bg-slate-300
         {selectedTool === pointMinusTool
           ? 'border-main '
           : 'border-transparent'}"
@@ -156,7 +156,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="h-10 w-10 p-1 rounded border border-transparent text-zinc-50
+      class="h-10 w-10 p-1 rounded border border-transparent text-slate-50
       bg-main hover:bg-secondary"
     >
       <title>Validate</title>

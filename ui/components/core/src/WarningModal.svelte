@@ -38,7 +38,7 @@
   <div class="flex min-h-full justify-center text-center items-center">
     <div
       class="relative transform overflow-hidden rounded-lg p-6 max-w-2xl
-      bg-white text-zinc-800"
+      bg-slate-50 text-slate-800"
     >
       <p class="pb-1">{message}</p>
       {#if details}
@@ -49,7 +49,7 @@
       {/if}
       <button
         type="button"
-        class="rounded border border-transparent text-zinc-50 mt-3 mx-1 py-1 px-3
+        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
         bg-main hover:bg-secondary"
         on:click={handleConfirm}
       >

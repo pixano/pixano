@@ -18,7 +18,6 @@
   import { createEventDispatcher } from "svelte";
   import {
     svg_next_page,
-    svg_quit,
     svg_save,
     svg_left_arrow,
     svg_database,
@@ -32,7 +31,7 @@
   export let selectedDataset: Dataset = null;
   export let selectedItem: ItemData;
   export let saveFlag: boolean;
-  export let selectedTab: string;
+  export let selectedTab: string = null;
 
   const dispatch = createEventDispatcher();
 
@@ -66,7 +65,7 @@
   <header class="w-full z-40">
     <div
       class="py-5 px-6 flex justify-start items-center shrink-0
-      bg-white border-b border-slate-200"
+      bg-slate-50 border-b border-slate-300"
     >
       <!-- Navigation -->
       <div class="flex items-center grow font-semibold text-2xl">
@@ -80,7 +79,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 mr-4 p-2 border rounded-full border-slate-200 hover:bg-slate-100"
+              class="h-8 w-8 mr-4 p-2 border rounded-full border-slate-300 hover:bg-slate-100"
             >
               <path d={svg_left_arrow} />
             </svg>
@@ -114,8 +113,8 @@
         <button
           class="font-medium pl-10 pr-6 py-1
           {selectedTab === 'database'
-            ? 'bg-main rounded-full text-white '
-            : 'bg-white border border-slate-100 rounded-full text-main '}"
+            ? 'bg-main rounded-full text-slate-50 '
+            : 'bg-slate-50 border border-slate-100 rounded-full text-main '}"
           on:click={selectDatabaseTab}
         >
           Database
@@ -138,8 +137,8 @@
         <button
           class="font-medium pl-10 pr-6 py-1
         {selectedTab === 'dashboard'
-            ? 'bg-main rounded-full text-white '
-            : 'bg-white border border-slate-100 rounded-full text-main'}"
+            ? 'bg-main rounded-full text-slate-50 '
+            : 'bg-slate-50 border border-slate-100 rounded-full text-main'}"
           on:click={selectDashboardTab}
         >
           Dashboard
@@ -172,7 +171,7 @@
             class="h-8 w-8
               {saveFlag
               ? 'text-main hover:text-secondary'
-              : 'text-zinc-300 cursor-default'}"
+              : 'text-slate-500 cursor-default'}"
           >
             <title>Save</title>
             <path d={svg_save} fill="currentcolor" />

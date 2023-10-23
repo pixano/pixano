@@ -1191,7 +1191,7 @@
   }
 </script>
 
-<div class="flex h-full w-full bg-zinc-100" bind:this={stageContainer}>
+<div class="flex h-full w-full bg-slate-100" bind:this={stageContainer}>
   <Stage
     bind:config={stageConfig}
     bind:handle={stage}

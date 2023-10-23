@@ -31,7 +31,7 @@
   {#each tools_lists as tools}
     <div
       class="m-4 flex flex-col border rounded-lg
-      shadow bg-white border-zinc-300"
+      shadow bg-slate-50 border-slate-300"
     >
       <div class="flex flex-col items-center">
         {#each tools as tool}
@@ -44,7 +44,7 @@
                   viewBox="0 -960 960 960"
                   width="48"
                   class="h-10 w-10 p-1 border-2 rounded
-                  bg-white hover:bg-zinc-200
+                  bg-slate-50 hover:bg-slate-300
                   {tool['modes'].includes(selectedTool)
                     ? 'border-main'
                     : 'border-transparent'}"
@@ -56,7 +56,7 @@
 
               <div
                 class="absolute inset-y-0 left-16 border rounded-lg z-10 hidden group-hover:flex
-                shadow bg-white border-zinc-300"
+                shadow bg-slate-50 border-slate-300"
               >
                 {#each tool["modes"] as mode}
                   <button class="w-full p-4" on:click={() => selectTool(mode)}>
@@ -66,7 +66,7 @@
                       viewBox="0 -960 960 960"
                       width="48"
                       class="h-10 w-10 p-1 border-2 rounded
-                      bg-white hover:bg-zinc-200
+                      bg-slate-50 hover:bg-slate-300
                       {mode === selectedTool
                         ? 'border-main'
                         : 'border-transparent'}"
@@ -86,7 +86,7 @@
                 viewBox="0 -960 960 960"
                 width="48"
                 class="h-10 w-10 p-1 border-2 rounded
-                bg-white hover:bg-zinc-200
+                bg-slate-50 hover:bg-slate-300
                 {selectedTool === tool ? 'border-main' : 'border-transparent'}"
               >
                 <title>{tool.name}</title>

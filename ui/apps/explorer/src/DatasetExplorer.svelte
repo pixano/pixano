@@ -105,7 +105,7 @@
   });
 </script>
 
-<div class="w-full px-20 flex flex-col bg-slate-100">
+<div class="w-full px-20 flex flex-col bg-slate-100 text-slate-800">
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-[87.5vh] flex flex-col">
@@ -117,7 +117,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_list} fill="currentcolor" />
             </svg>
@@ -128,7 +128,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_grid} fill="currentcolor" />
             </svg>
@@ -140,7 +140,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+            class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
           >
             <path d={svg_filter} fill="currentcolor" />
           </svg>
@@ -150,7 +150,7 @@
           <input
             type="text"
             placeholder="Search"
-            class="h-8 pl-8 pr-4 border rounded-sm border-slate-200 shadow-slate-200"
+            class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
           />
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -175,7 +175,7 @@
 
     <!-- Page navigation -->
     {#if selectedTab === "database"}
-      <div class="w-full my-3 flex justify-center items-center">
+      <div class="w-full my-3 flex justify-center items-center text-slate-800">
         {#if selectedDataset.page.total > itemsPerPage}
           <button on:click={handleGoToFirstPage}>
             <svg
@@ -183,7 +183,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_first_page} fill="currentcolor" />
             </svg>
@@ -195,7 +195,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_prev_page} fill="currentcolor" />
             </svg>
@@ -215,7 +215,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_next_page} fill="currentcolor" />
             </svg>
@@ -227,7 +227,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-200"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
             >
               <path d={svg_last_page} fill="currentcolor" />
             </svg>
@@ -237,7 +237,7 @@
     {/if}
   {:else}
     <div class="h-full flex justify-center items-center">
-      <span class="italic text-zinc-500"> Loading items... </span>
+      <span class="italic text-slate-500"> Loading items... </span>
     </div>
   {/if}
 </div>

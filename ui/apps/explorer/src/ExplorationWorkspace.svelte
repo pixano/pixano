@@ -132,7 +132,7 @@
   });
 </script>
 
-<div class="flex h-full w-full bg-zinc-100">
+<div class="flex h-full w-full bg-slate-100">
   {#if selectedItem}
     <Canvas2D {selectedItem} {selectedTool} {labelColors} {masks} {bboxes} />
     {#if annotations}
@@ -153,7 +153,7 @@
 <!-- Pixano Explorer footer -->
 <div
   class="absolute bottom-0 right-0 px-2 py-1 text-sm border-t border-l rounded-tl-lg
-  text-zinc-500 bg-white border-zinc-300"
+  text-slate-500 bg-slate-50 border-slate-300"
 >
   Pixano Explorer
 </div>
