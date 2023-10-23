@@ -27,8 +27,6 @@ class COCOImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
-        schema (pa.schema): Dataset schema
-        splits (list[str]): Dataset splits
     """
 
     def __init__(

@@ -25,8 +25,6 @@ class ImageImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
-        schema (pa.schema): Dataset schema
-        splits (list[str]): Dataset splits
     """
 
     def __init__(self, name: str, description: str, splits: list[str] = ["dataset"]):
