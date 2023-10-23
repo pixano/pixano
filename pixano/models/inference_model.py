@@ -11,16 +11,18 @@
 #
 # http://www.cecill.info
 
-import json
 from abc import ABC
-from datetime import datetime
+from datetime import datetime, timedelta
+from math import ceil
 from pathlib import Path
 
+import duckdb
 import lance
+import lancedb
 import pyarrow as pa
+from tqdm.auto import tqdm
 
-from pixano.core import pyarrow_array_from_list
-from pixano.data import Dataset, DatasetInfo, Fields
+from pixano.data import Dataset, Fields
 
 
 class InferenceModel(ABC):
@@ -57,14 +59,14 @@ class InferenceModel(ABC):
         self.device = device
         self.description = description
 
-    def inference_batch(
+    def preannotate(
         self,
         batch: pa.RecordBatch,
         views: list[str],
         uri_prefix: str,
         threshold: float = 0.0,
-    ) -> pa.RecordBatch:
-        """Inference preannotation for a batch
+    ) -> list[dict]:
+        """Preannotate dataset rows
 
         Args:
             batch (pa.RecordBatch): Input batch
@@ -73,18 +75,16 @@ class InferenceModel(ABC):
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
 
         Returns:
-            pa.RecordBatch: Inference rows
+            list[dict]: Annotation rows
         """
 
-        pass
-
-    def embedding_batch(
+    def precompute_embeddings(
         self,
         batch: pa.RecordBatch,
         views: list[str],
         uri_prefix: str,
-    ) -> pa.RecordBatch:
-        """Embedding precomputing for a batch
+    ) -> list[dict]:
+        """Precompute embeddings for dataset rows
 
         Args:
             batch (pa.RecordBatch): Input batch
@@ -92,159 +92,166 @@ class InferenceModel(ABC):
             uri_prefix (str): URI prefix for media files
 
         Returns:
-            pa.RecordBatch: Embedding rows
+            list[dict]: Embedding rows
         """
-
-        pass
 
     def process_dataset(
         self,
         dataset_dir: Path,
         process_type: str,
         views: list[str],
-        splits: list[str] = [],
+        splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
-    ) -> Path:
-        """Process dataset for inference preannotation or embedding precomputing
+    ) -> Dataset:
+        """Process dataset for preannotation or embedding precomputing
 
         Args:
-            dataset_dir (Path): Input dataset directory
-            process_type (str): Process type ('infer' for inference preannotation or 'embed' for embedding precomputing)
+            dataset_dir (Path): Dataset directory
+            process_type (str): Process type ('obj' for preannotation or 'emb' for embedding precomputing)
             views (list[str]): Dataset views
-            splits (list[str], optional): Dataset splits, all if []. Defaults to [].
+            splits (list[str], optional): Dataset splits, all if []. Defaults to None.
             batch_size (int, optional): Rows per batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
 
         Returns:
-            Path: Output dataset directory
+            Dataset: Dataset
         """
 
-        output_filename = f"db_{process_type}_{self.id}"
-
-        # Input dataset
-        dataset = Dataset(dataset_dir)
-
-        # Create URI prefix
-        media_dir = dataset_dir / "media"
-        uri_prefix = media_dir.absolute().as_uri()
-
-        # Create inference schema
-        self.schema = pa.schema(
-            [pa.field("id", pa.string()), pa.field("split", pa.string())]
-        )
-        fields_dict = {"id": "str", "split": "str"}
-
-        # Inference generation schema
-        if process_type == "infer":
-            # self.schema = self.schema.append(
-            #     pa.field("objects", pa.list_(ObjectAnnotationType)),
-            # )
-            fields_dict["objects"] = "[objectannotation]"
-
-        # Embedding precomputing schema
-        elif process_type == "embed":
-            for view in views:
-                # self.schema = self.schema.append(
-                #     pa.field(f"{view}_embedding", EmbeddingType)
-                # )
-                fields_dict[f"{view}_embedding"] = "embedding"
-
-        # Create fields
-        self.fields = Fields.from_dict(fields_dict)
+        output_filename = f"{process_type}_{self.id}"
+        if splits:
+            split_ids = "'" + "', '".join(splits) + "'"
+        if process_type != "obj" and process_type != "emb":
+            raise Exception(
+                "Please choose a valid process type ('obj' for preannotation or 'emb' for embedding precomputing)"
+            )
 
         # Load dataset
-        input_ds = dataset.load()
-        split_filter = f"split IN {splits}" if splits else None
-        batches = input_ds.to_batches(filter=split_filter, batch_size=batch_size)
+        dataset = Dataset(dataset_dir)
+        ds = dataset.connect()
 
-        # Process dataset
-        reader = pa.RecordBatchReader.from_batches(
-            self.schema,
-            [
-                self.inference_batch(batch, views, uri_prefix, threshold)
-                if process_type == "infer"
-                else self.embedding_batch(batch, views, uri_prefix)
-                if process_type == "embed"
-                else None
-                for batch in batches
-            ],
-        )
+        # Load dataset tables
+        main_table: lancedb.db.LanceTable = ds.open_table("db")
+        media_tables: dict[str, lancedb.db.LanceTable] = {}
+        if "media" in dataset.info.tables:
+            for md_info in dataset.info.tables["media"]:
+                media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
-        # Save inference dataset
-        inference_ds = lance.write_dataset(
-            reader,
-            dataset_dir / f"{output_filename}.lance",
+        # Create URI prefix
+        uri_prefix = dataset.media_dir.absolute().as_uri()
+
+        # Objects preannotation schema
+        if process_type == "obj":
+            table_group = "objects"
+            table_fields = {
+                "id": "str",
+                "item_id": "str",
+                "view_id": "str",
+                "bbox": "bbox",
+                "mask": "compressedrle",
+                "category_id": "int",
+                "category_name": "str",
+            }
+        # Embedding precomputing schema
+        elif process_type == "emb":
+            table_group = "embeddings"
+            table_fields = {"id": "str"}
+            # Add embedding column for each selected view
+            for view in views:
+                table_fields[view] = "bytes"
+
+        # Create new table
+        table: lancedb.db.LanceTable = ds.create_table(
+            output_filename,
+            schema=Fields(table_fields).to_schema(),
             mode="overwrite",
         )
+        table_ds = table.to_lance()
+        output_batch = []
+        save_batch_size = 1024
 
-        # Save.json
-        self.create_json(
-            output_filename=output_filename,
-            dataset_info=dataset.info,
-            num_elements=inference_ds.count_rows(),
-        )
-
-        return Path(dataset_dir / f"{output_filename}.lance")
-
-    def dicts_to_recordbatch(self, rows: list[dict[str, list]]) -> pa.RecordBatch:
-        """Convert a dataset row from a Python dict to a PyArrow RecordBatch
-
-        Args:
-            rows (list[dict[str, list]]): Dataset row as Python dict. Dict keys must match the names of the dataset fields.
-
-        Returns:
-            pa.RecordBatch: PyArrow RecordBatch
-        """
-
-        # Compare dict keys to field names
-        if set(rows[0].keys()) != set(self.fields.to_dict().keys()):
-            raise ValueError("Dict keys do not match the names of the dataset fields")
-
-        # Convert the dict to a list of PyArrow arrays
-        arrays = [
-            pyarrow_array_from_list([row[field.name] for row in rows], field.type)
-            for field in self.schema
-        ]
-
-        # Create the RecordBatch from PyArrow arrays
-        return pa.RecordBatch.from_struct_array(pa.StructArray.from_arrays(arrays))
-
-    def create_json(
-        self,
-        output_filename: str,
-        dataset_info: DatasetInfo,
-        num_elements: int,
-    ):
-        """Save output .json
-
-        Args:
-            output_filename (str): Output filename
-            dataset_info (DatasetInfo): Dataset info
-            num_elements (int): Number of processed rows
-        """
-
-        # Load existing .json
-        if (f"{output_filename}.json").is_file():
-            with open(f"{output_filename}.json", "r") as f:
-                output_json = json.load(f)
-            output_json["num_elements"] += num_elements
-
-        # Or create .json from scratch
+        # Add new table to DatasetInfo
+        table_info = {
+            "name": output_filename,
+            "source": self.name,
+            "fields": table_fields,
+        }
+        if table_group in dataset.info.tables:
+            dataset.info.tables[table_group].append(table_info)
         else:
-            output_json = {
-                "id": dataset_info.id,
-                "name": dataset_info.name,
-                "description": dataset_info.description,
-                "num_elements": num_elements,
-                "model_id": self.id,
-                "model_name": self.name,
-                "model_description": self.description,
-            }
+            dataset.info.tables[table_group] = [table_info]
+        dataset.save_info()
 
-        # Save .json
-        with open(f"{output_filename}.json", "w") as f:
-            json.dump(output_json, f)
+        # Add rows to tables
+        with tqdm(desc="Processing dataset", total=len(main_table)) as progress:
+            for i in range(ceil(len(main_table) / save_batch_size)):
+                # Load rows
+                offset = i * save_batch_size
+                limit = min(len(main_table), offset + save_batch_size)
+                pyarrow_table = main_table.to_lance()
+                pyarrow_table = duckdb.query(
+                    f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                ).to_arrow_table()
+                for media_table in media_tables.values():
+                    pyarrow_media_table = media_table.to_lance().to_table(
+                        limit=limit, offset=offset
+                    )
+                    pyarrow_media_table = duckdb.query(
+                        f"SELECT * FROM pyarrow_media_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                    ).to_arrow_table()
+                    pyarrow_table = duckdb.query(
+                        "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY len(id), id"
+                    ).to_arrow_table()
+                # Filter splits
+                if splits:
+                    pyarrow_table = duckdb.query(
+                        f"SELECT * FROM pyarrow_table WHERE split in ({split_ids})"
+                    ).to_arrow_table()
+                # Convert to RecordBatch
+                input_batches = pyarrow_table.to_batches(max_chunksize=batch_size)
+
+                # Store rows in a batch
+                for input_batch in input_batches:
+                    output_batch.extend(
+                        self.preannotate(input_batch, views, uri_prefix, threshold)
+                        if process_type == "obj"
+                        else self.precompute_embeddings(input_batch, views, uri_prefix)
+                        if process_type == "emb"
+                        else []
+                    )
+                    progress.update(batch_size)
+
+                # If batch reaches 1024 rows, store in table
+                if len(output_batch) >= save_batch_size:
+                    pa_batch = pa.Table.from_pylist(
+                        output_batch,
+                        schema=Fields(table_info["fields"]).to_schema(),
+                    )
+                    lance.write_dataset(
+                        pa_batch,
+                        uri=table_ds.uri,
+                        mode="append",
+                    )
+                    output_batch = []
+
+        # Store final batch
+        if len(output_batch) > 0:
+            pa_batch = pa.Table.from_pylist(
+                output_batch,
+                schema=Fields(table_info["fields"]).to_schema(),
+            )
+            lance.write_dataset(
+                pa_batch,
+                uri=table_ds.uri,
+                mode="append",
+            )
+            output_batch = []
+
+        # Optimize and clear creation history
+        table_ds.optimize.compact_files()
+        table_ds.cleanup_old_versions(older_than=timedelta(0))
+
+        return dataset
 
     def export_to_onnx(self, library_dir: Path):
         """Export Torch model to ONNX
@@ -252,5 +259,3 @@ class InferenceModel(ABC):
         Args:
             library_dir (Path): Dataset library directory
         """
-
-        pass
