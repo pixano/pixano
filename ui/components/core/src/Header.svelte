@@ -161,7 +161,7 @@
       <!-- Navigation -->
       {#if selectedItem && app === "Annotator"}
         <button
-          class="w-30 h pr-4 flex justify-end"
+          class="w-30 h px-4 flex justify-end"
           on:click={handleSaveItemDetails}
         >
           <svg
@@ -171,7 +171,7 @@
             width="48"
             class="h-8 w-8
               {saveFlag
-              ? 'hover:text-secondary'
+              ? 'text-main hover:text-secondary'
               : 'text-zinc-300 cursor-default'}"
           >
             <title>Save</title>
