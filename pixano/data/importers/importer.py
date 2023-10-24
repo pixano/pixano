@@ -112,14 +112,15 @@ class Importer(ABC):
                     with tqdm(desc="Creating dataset thumbnail", total=1) as progress:
                         tile_w = 64
                         tile_h = 64
-                        preview = Image.new("RGB", (3 * tile_w, 2 * tile_h))
-                        for i in range(6):
+                        preview = Image.new("RGB", (4 * tile_w, 2 * tile_h))
+                        for i in range(8):
                             field = image_fields[i % len(image_fields)]
                             item_id = random.randrange(len(image_table))
                             item = image_table.to_lance().take([item_id]).to_pylist()[0]
                             with Image.open(BytesIO(item[field].preview_bytes)) as im:
                                 preview.paste(
-                                    im, ((i % 3) * tile_w, (int(i / 3) % 2) * tile_h)
+                                    im,
+                                    ((i % 4) * tile_w, (int(i / 4) % 2) * tile_h),
                                 )
                         preview.save(import_dir / "preview.png")
                         progress.update(1)

@@ -31,12 +31,12 @@
 </script>
 
 <button
-  class="w-full h-56 flex flex-col transition-all text-left
+  class="w-96 h-72 flex flex-col transition-all text-left
   bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-md"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
-  <div class="w-full h-2/5 px-4 flex flex-col justify-center relative">
+  <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
     <div>
       <h3
         class="text-lg font-semibold font-[Montserrat] truncate text-main"
@@ -65,12 +65,12 @@
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5 mx-4 mb-4 bg-slate-100">
+  <div class="m-4 bg-slate-100">
     {#if dataset.preview}
       <img
         src={dataset.preview}
         alt="{dataset.name} thumbnail"
-        class="h-full w-full object-cover object-center"
+        class="w-96 h-44 object-contain object-center"
       />
     {/if}
   </div>
