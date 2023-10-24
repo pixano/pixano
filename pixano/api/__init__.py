@@ -19,8 +19,8 @@ from pixano.api.datasets import (
 )
 from pixano.api.items import (
     ItemFeatures,
-    load_item_embeddings,
     load_item_details,
+    load_item_embeddings,
     load_items,
     save_item_details,
 )
