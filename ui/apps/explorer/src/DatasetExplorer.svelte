@@ -101,12 +101,14 @@
     }
   }
 
-  async function handleSearchEnter(query_str) {
+  async function handleSearchEnter(query_str: string) {
     query = query_str;
     if (query_str == "") {
       loadPage()
     } else {
       const start = Date.now();
+      let actual_page = selectedDataset.page
+      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
       let res = await api.getSearchResult(
         selectedDataset.id,
         query,
@@ -120,9 +122,10 @@
       );
       // If no dataset page, return error message
       if (res == null) {
+        selectedDataset.page = actual_page;
         dispatch("searchError");
       } else {
-        selectedDataset.page = res
+        selectedDataset.page = res;
       }
     }
   }
