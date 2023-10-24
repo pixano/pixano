@@ -94,7 +94,7 @@
     </div>
   </div>
 </header>
-<div class="py-8 flex">
+<div class="py-8 flex bg-slate-100">
   {#if datasets.length != 0}
     <div class="w-full mx-60">
       <div class="grid grid-cols-3 gap-6">

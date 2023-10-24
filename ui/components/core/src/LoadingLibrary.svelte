@@ -32,7 +32,7 @@
 </header>
 
 <div
-  class="mt-4 py-8 flex w-full justify-center font-bold text-lg italic text-slate-500"
+  class="mt-4 py-8 flex bg-slate-100 w-full justify-center font-bold text-lg italic text-slate-500"
 >
   Loading datasets...
 </div>
