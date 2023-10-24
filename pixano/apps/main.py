@@ -162,8 +162,11 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             raise HTTPException(status_code=404, detail="Dataset not found")
         else:
             if "query" in query_rep:
-                res = search_query(ds, query_rep["query"], params)
-                return res
+                try:
+                    res = search_query(ds, query_rep["query"], params)
+                    return res
+                except Exception as err:
+                    raise HTTPException(status_code=404, detail=str(err))
             else:
                 raise HTTPException(status_code=404, detail="Error in query input")
 

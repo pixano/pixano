@@ -593,4 +593,4 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
 
         return create_page(items, total=total, params=params)
     else:
-        raise "No Semantics Embeddings, Semantic search not available"
+        raise Exception("No semantic embeddings")
