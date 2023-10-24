@@ -26,6 +26,8 @@ from pixano.core import BBox, CompressedRLE, Image, is_number, is_string
 from pixano.data import Dataset, Fields
 from pixano.utils import format_bbox, rle_to_mask
 
+from transformers import CLIPModel, CLIPTokenizerFast  # , CLIPProcessor
+
 
 class ItemFeature(BaseModel):
     """Feature
@@ -515,3 +517,79 @@ def save_item_details(
             ):
                 # Remove object from table
                 obj_tables[obj_source].delete(f"id in ('{cur_obj['id']}')")
+
+
+# TMP mettre ailleurs
+tokenizer = None
+model = None
+
+
+def search_query(dataset: Dataset, query: str, params: AbstractParams = None) -> AbstractPage:
+    global tokenizer, model
+
+    def text_embed_func(query):
+        inputs = tokenizer([query], padding=True, return_tensors="pt")
+        text_features = model.get_text_features(**inputs)
+        return text_features.detach().numpy()[0]
+
+    print("Query", query, dataset, params)
+    ds = dataset.connect()
+    if "clip" in ds.table_names():
+        # TODO: mettre ailleurs, ne pas utiliser global ... (TMP)
+        # we init tokenizer and model at the first search
+        MODEL_ID = "openai/clip-vit-base-patch32"
+        if not tokenizer:
+            tokenizer = CLIPTokenizerFast.from_pretrained(MODEL_ID)
+        if not model:
+            model = CLIPModel.from_pretrained(MODEL_ID)
+
+        tbl = ds.open_table("clip")  # TODO: get table name from dataset.info.tables
+        search_res_table = tbl.search(text_embed_func(query)).to_arrow()
+
+        main_table: lancedb.db.LanceTable = ds.open_table("db")
+        media_tables: dict[str, lancedb.db.LanceTable] = {}
+        if "media" in dataset.info.tables:
+            for md_info in dataset.info.tables["media"]:
+                media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+
+        # Get page parameters
+        params = resolve_params(params)
+        raw_params = params.to_raw_params()
+        total = main_table.to_lance().count_rows()
+
+        # Get page items
+        start = raw_params.offset
+        stop = min(raw_params.offset + raw_params.limit, total)
+        if start >= stop:
+            return None
+
+        # search Resut table (filter and limit to page)
+        pyarrow_table = duckdb.query(
+            f"SELECT id, view FROM search_res_table LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+        ).to_arrow_table()
+
+        # join with main table
+        main_table = main_table.to_lance()
+        pyarrow_table = duckdb.query(
+            "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id)"
+            f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+        ).to_arrow_table()
+
+        # join with Media tables
+        for media_table in media_tables.values():
+            pyarrow_media_table = media_table.to_lance()
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id)"
+                f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+            ).to_arrow_table()
+
+        # Create items features
+        items = [
+            _create_features(item, pyarrow_table.schema)
+            for item in pyarrow_table.to_pylist()
+        ]
+
+        return create_page(items, total=total, params=params)
+    else:
+        print("No Semantics Embeddings, Semantic search not available")
+        return None

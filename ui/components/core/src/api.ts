@@ -160,3 +160,39 @@ export async function postItemDetails(
     console.log("api.postItemDetails -", e);
   }
 }
+
+export async function getSearchResult(
+  datasetId: String,
+  query: string,
+  page: number = 1,
+  size: number = 100
+) {
+  let datasetItems = null;
+  try {
+    const response = await fetch(
+      `/datasets/${datasetId}/search?page=${page}&size=${size}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({"query": query}),
+        method: "POST",
+      }
+    );
+    if (response.ok) {
+      datasetItems = await response.json();
+    }
+    else {
+      console.log(
+        "api.getSearchResult -",
+        response.status,
+        response.statusText,
+        await response.text()
+      );
+    }
+  } catch (e) {
+    console.log("api.getSearchResult -", e);
+  }
+  return datasetItems
+}

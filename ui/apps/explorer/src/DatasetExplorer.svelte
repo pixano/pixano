@@ -39,6 +39,7 @@
   export let currentPage: number;
 
   let datasetStats = null;
+  let query = null;
 
   // Page navigation
   const itemsPerPage = 100;
@@ -99,6 +100,34 @@
     }
   }
 
+  async function handleSearchEnter(query_str) {
+    query = query_str;
+    if (query_str == "") {
+      loadPage()
+    } else {
+      selectedDataset.page = null;
+      const start = Date.now();
+      selectedDataset.page = await api.getSearchResult(
+        selectedDataset.id,
+        query,
+        currentPage,
+        itemsPerPage
+      );
+      console.log(
+        "DatasetExplorer.handleSearchEnter - api.getSearchResult in",
+        Date.now() - start,
+        "ms"
+      );
+
+      // If no dataset page, return error message
+      if (selectedDataset.page == null) {
+        dispatch("datasetError");
+      }
+    }
+  }
+
+
+
   onMount(async () => {
     loadPage();
     datasetStats = await api.getDatasetStats(selectedDataset.id);
@@ -152,7 +181,9 @@
           <input
             type="text"
             placeholder="Search"
+            value={query}
             class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
+            on:change={(event) => handleSearchEnter(event.srcElement.value)}
           />
           <svg
             xmlns="http://www.w3.org/2000/svg"
