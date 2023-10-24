@@ -532,7 +532,6 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
         text_features = model.get_text_features(**inputs)
         return text_features.detach().numpy()[0]
 
-    print("Query", query, dataset, params)
     ds = dataset.connect()
     if "clip" in ds.table_names():
         # TODO: mettre ailleurs, ne pas utiliser global ... (TMP)
@@ -594,5 +593,4 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
 
         return create_page(items, total=total, params=params)
     else:
-        print("No Semantics Embeddings, Semantic search not available")
-        return None
+        raise "No Semantics Embeddings, Semantic search not available"

@@ -18,7 +18,7 @@
   import { createEventDispatcher, onMount } from "svelte";
 
   import { api, Dashboard } from "@pixano/core";
-
+  
   import { Table } from "@pixano/table";
 
   import type { Dataset } from "@pixano/core";
@@ -39,6 +39,7 @@
   export let currentPage: number;
 
   let datasetStats = null;
+ 
   let query = null;
 
   // Page navigation
@@ -105,9 +106,8 @@
     if (query_str == "") {
       loadPage()
     } else {
-      selectedDataset.page = null;
       const start = Date.now();
-      selectedDataset.page = await api.getSearchResult(
+      let res = await api.getSearchResult(
         selectedDataset.id,
         query,
         currentPage,
@@ -118,10 +118,11 @@
         Date.now() - start,
         "ms"
       );
-
       // If no dataset page, return error message
-      if (selectedDataset.page == null) {
-        dispatch("datasetError");
+      if (res == null) {
+        dispatch("searchError");
+      } else {
+        selectedDataset.page = res
       }
     }
   }

@@ -53,6 +53,7 @@
   let bboxes: Array<BBox>;
 
   let datasetErrorModal = false;
+  let searchErrorModal = false;
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
@@ -272,5 +273,12 @@
     message="Error while retrieving dataset items."
     details="Please look at the application logs for more information, and report this issue if the error persists."
     on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}
+{#if searchErrorModal}
+  <WarningModal
+    message="Error in Semantic Search"
+    details="No Semantics Embeddings, Semantic search not available"
+    on:confirm={() => (searchErrorModal = false)}
   />
 {/if}
