@@ -94,19 +94,17 @@
     </div>
   </div>
 </header>
-<div class="py-8 flex bg-slate-100">
+<div class="flex bg-slate-100 py-10">
   {#if datasets.length != 0}
-    <div class="w-full mx-20">
-      <div class="flex flex-wrap justify-center gap-6">
-        {#each datasets as dataset}
-          {#if dataset.name.toUpperCase().includes(filter.toUpperCase())}
-            <DatasetPreviewCard
-              {dataset}
-              on:selectDataset={() => handleSelectDataset(dataset)}
-            />
-          {/if}
-        {/each}
-      </div>
+    <div class="flex flex-wrap justify-center gap-6 mx-20">
+      {#each datasets as dataset}
+        {#if dataset.name.toUpperCase().includes(filter.toUpperCase())}
+          <DatasetPreviewCard
+            {dataset}
+            on:selectDataset={() => handleSelectDataset(dataset)}
+          />
+        {/if}
+      {/each}
     </div>
   {:else}
     <div class="mt-4 py-8 flex w-full justify-center text-lg text-slate-500">
