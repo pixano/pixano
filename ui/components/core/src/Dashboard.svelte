@@ -63,18 +63,18 @@
         <!-- Overview -->
         <div class="w-full mb-16 flex flex-row justify-between">
           <div>
-            <span class="text-5xl font-bold font-[Montserrat]">
+            <span class="text-5xl font-bold font-Montserrat">
               {selectedDataset.name}
             </span>
-            <span class="text-xl text-slate-500 font-[Montserrat]">
+            <span class="text-xl text-slate-500 font-Montserrat">
               #{selectedDataset.id}
             </span>
           </div>
           <div>
-            <span class="text-5xl font-bold font-[Montserrat]">
+            <span class="text-5xl font-bold font-Montserrat">
               {selectedDataset.num_elements}
             </span>
-            <span class="ml-2 text-xl font-[Montserrat]"> items </span>
+            <span class="ml-2 text-xl font-Montserrat"> items </span>
           </div>
         </div>
         <div class="text-lg text-justify">
@@ -103,7 +103,7 @@
         </div>
       {:else if selectedTab === "stats"}
         <!-- Stats -->
-        <span class="text-5xl font-bold font-[Montserrat]"> STATISTICS </span>
+        <span class="text-5xl font-bold font-Montserrat"> STATISTICS </span>
         {#if datasetStats != null && datasetStats.length != 0}
           <div class="mt-16 grid grid-cols-3 gap-16">
             <!-- If charts are ready to be displayed, display them -->

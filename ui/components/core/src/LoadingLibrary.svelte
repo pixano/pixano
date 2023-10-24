@@ -25,7 +25,7 @@
   <!-- Logo & app name -->
   <button class="flex w-max space-x-6">
     <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10" />
-    <span class="text-3xl font-bold text-slate-50 uppercase font-[Montserrat]">
+    <span class="text-3xl font-bold text-slate-50 uppercase font-Montserrat">
       Pixano {app}
     </span>
   </button>

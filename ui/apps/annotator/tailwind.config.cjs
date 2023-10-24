@@ -11,6 +11,7 @@ module.exports = {
     extend: {
       fontFamily: {
         "DM Sans": ["DM Sans", "sans-serif"],
+        Montserrat: ["Montserrat", "sans-serif"],
       },
       colors: {
         main: "#771E5F",
