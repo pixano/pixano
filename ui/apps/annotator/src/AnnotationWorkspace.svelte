@@ -393,7 +393,7 @@
   });
 </script>
 
-<div class="flex h-full w-full bg-slate-100">
+<div class="flex h-full w-full pt-20 bg-slate-100">
   {#if selectedItem}
     <Canvas2D
       {selectedItem}
