@@ -62,7 +62,7 @@
 
 <!-- Header -->
 {#if selectedDataset}
-  <header class="w-full z-40">
+  <header class="w-full fixed z-40">
     <div
       class="py-5 px-6 flex justify-start items-center shrink-0
       bg-slate-50 border-b border-slate-300"
