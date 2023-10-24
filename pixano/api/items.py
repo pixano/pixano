@@ -560,25 +560,21 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
         if start >= stop:
             return None
 
-        print("AAA", raw_params)
         # CLIP search
         tbl = ds.open_table("clip")  # TODO: get table name from dataset.info.tables
         search_res_table = tbl.search(text_embed_func(query)).limit(stop).to_arrow()
-        print("BBB", len(search_res_table))
 
         # search Resut table (filter and limit to page)
         pyarrow_table = duckdb.query(
             "SELECT id, view, _distance as distance FROM search_res_table ORDER BY distance ASC "
             f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
         ).to_arrow_table()
-        print("CCC", len(pyarrow_table))
 
         # join with main table
         main_table = main_table.to_lance()
         pyarrow_table = duckdb.query(
             "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id) ORDER BY distance ASC "
         ).to_arrow_table()
-        print("DDD", len(pyarrow_table))
 
         # join with Media tables
         for media_table in media_tables.values():
@@ -586,14 +582,12 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
             pyarrow_table = duckdb.query(
                 "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY distance ASC "
             ).to_arrow_table()
-        print("EEE", len(pyarrow_table))
 
         # Create items features
         items = [
             _create_features(item, pyarrow_table.schema)
             for item in pyarrow_table.to_pylist()
         ]
-        print("FFF", len(items))
         return create_page(items, total=total, params=params)
     else:
         raise Exception("No semantic embeddings")
