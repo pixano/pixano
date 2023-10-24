@@ -202,15 +202,17 @@
               <path d={svg_prev_page} fill="currentcolor" />
             </svg>
           </button>
+        {/if}
 
-          <span class="mx-4">
-            {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
-              itemsPerPage * currentPage,
-              selectedDataset.page.total
-            )} of
-            {selectedDataset.page.total}
-          </span>
+        <span class="mx-4">
+          {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
+            itemsPerPage * currentPage,
+            selectedDataset.page.total
+          )} of
+          {selectedDataset.page.total}
+        </span>
 
+        {#if selectedDataset.page.total > itemsPerPage}
           <button on:click={handleGoToNextPage}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
