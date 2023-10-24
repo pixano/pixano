@@ -543,9 +543,7 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
         if not model:
             model = CLIPModel.from_pretrained(MODEL_ID)
 
-        tbl = ds.open_table("clip")  # TODO: get table name from dataset.info.tables
-        search_res_table = tbl.search(text_embed_func(query)).to_arrow()
-
+        # main & media tables
         main_table: lancedb.db.LanceTable = ds.open_table("db")
         media_tables: dict[str, lancedb.db.LanceTable] = {}
         if "media" in dataset.info.tables:
@@ -563,15 +561,20 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
         if start >= stop:
             return None
 
+        # CLIP search
+        tbl = ds.open_table("clip")  # TODO: get table name from dataset.info.tables
+        search_res_table = tbl.search(text_embed_func(query)).limit(raw_params.limit).to_arrow()
+
         # search Resut table (filter and limit to page)
         pyarrow_table = duckdb.query(
-            f"SELECT id, view FROM search_res_table LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+            "SELECT id, view, _distance as distance FROM search_res_table ORDER BY distance ASC "
+            f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
         ).to_arrow_table()
 
         # join with main table
         main_table = main_table.to_lance()
         pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id)"
+            "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id) ORDER BY distance ASC "
             f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
         ).to_arrow_table()
 
@@ -579,7 +582,7 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
         for media_table in media_tables.values():
             pyarrow_media_table = media_table.to_lance()
             pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id)"
+                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY distance ASC "
                 f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
             ).to_arrow_table()
 
