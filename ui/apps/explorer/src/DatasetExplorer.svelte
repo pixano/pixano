@@ -235,9 +235,5 @@
         {/if}
       </div>
     {/if}
-  {:else}
-    <div class="h-full flex justify-center items-center">
-      <span class="italic text-slate-500"> Loading items... </span>
-    </div>
   {/if}
 </div>
