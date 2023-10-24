@@ -85,7 +85,11 @@
             </svg>
           </button>
         {/if}
-        <button on:click={selectDatabaseTab}>
+        <button
+          on:click={app === "Explorer"
+            ? selectDatabaseTab
+            : handleUnselectDataset}
+        >
           <span class="transition-colors">
             {selectedDataset.name}
           </span>
@@ -109,55 +113,58 @@
         {/if}
       </div>
 
-      <div class="relative flex items-center">
-        <button
-          class="font-medium pl-10 pr-6 py-1
+      <!-- Database / Dashboard links -->
+      {#if app === "Explorer"}
+        <div class="relative flex items-center">
+          <button
+            class="font-medium pl-10 pr-6 py-1
           {selectedTab === 'database'
-            ? 'bg-main rounded-full text-slate-50 '
-            : 'bg-slate-50 border border-slate-100 rounded-full text-main '}"
-          on:click={selectDatabaseTab}
-        >
-          Database
-        </button>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          height="48"
-          viewBox="0 -960 960 960"
-          width="48"
-          class="absolute left-3 h-5 w-5 pointer-events-none"
-        >
-          <path
-            d={svg_database}
-            fill={selectedTab === "database" ? "white" : "#771E5F"}
-          />
-        </svg>
-      </div>
+              ? 'bg-main rounded-full text-slate-50 '
+              : 'bg-slate-50 border border-slate-300 rounded-full text-main '}"
+            on:click={selectDatabaseTab}
+          >
+            Database
+          </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="absolute left-3 h-5 w-5 pointer-events-none"
+          >
+            <path
+              d={svg_database}
+              fill={selectedTab === "database" ? "white" : "#771E5F"}
+            />
+          </svg>
+        </div>
 
-      <div class="relative ml-4 flex items-center">
-        <button
-          class="font-medium pl-10 pr-6 py-1
+        <div class="relative ml-4 flex items-center">
+          <button
+            class="font-medium pl-10 pr-6 py-1
         {selectedTab === 'dashboard'
-            ? 'bg-main rounded-full text-slate-50 '
-            : 'bg-slate-50 border border-slate-100 rounded-full text-main'}"
-          on:click={selectDashboardTab}
-        >
-          Dashboard
-        </button>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          height="48"
-          viewBox="0 -960 960 960"
-          width="48"
-          class="absolute left-3 h-5 w-5 pointer-events-none"
-        >
-          <path
-            d={svg_dashboard}
-            fill="{selectedTab === 'dashboard' ? 'white' : '#771E5F'} "
-          />
-        </svg>
-      </div>
+              ? 'bg-main rounded-full text-slate-50 '
+              : 'bg-slate-50 border border-slate-300 rounded-full text-main'}"
+            on:click={selectDashboardTab}
+          >
+            Dashboard
+          </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="absolute left-3 h-5 w-5 pointer-events-none"
+          >
+            <path
+              d={svg_dashboard}
+              fill="{selectedTab === 'dashboard' ? 'white' : '#771E5F'} "
+            />
+          </svg>
+        </div>
+      {/if}
 
-      <!-- Navigation -->
+      <!-- Save icon -->
       {#if selectedItem && app === "Annotator"}
         <button
           class="w-30 h px-4 flex justify-end"
