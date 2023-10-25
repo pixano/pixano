@@ -11,7 +11,6 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added:
 - UI: Add a **dataset dashboard** in Pixano Explorer with dataset information and statistics
-- UI: Add first page and last page buttons for **improved navigation** in Pixano Explorer
 - UI: Add a **labels hierarchy** to group them by source, by view, and by category in item view
 - UI: Add label category ID on hover in side panel and label toolbar in item view
 - Add **labeling tool** for **classification** in Pixano Annotator
