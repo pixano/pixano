@@ -7,21 +7,21 @@ All notable changes to Pixano will be documented in this file.
 ## [Unreleased]
 
 
-## [0.4.0] - 2023-10-27
+## [0.4.0] - 2023-10-26
 
 ### Added:
-- UI: Add a dataset dashboard in Pixano Explorer with dataset information and statistics
-- UI: Add first page and last page buttons in Pixano Explorer
-- UI: Add labels hierarchy (group by source, view, and category) in item view
+- UI: Add a **dataset dashboard** in Pixano Explorer with dataset information and statistics
+- UI: Add first page and last page buttons for **improved navigation** in Pixano Explorer
+- UI: Add a **labels hierarchy** to group them by source, by view, and by category in item view
 - UI: Add label category ID on hover in side panel and label toolbar in item view
-- Add labeling tool for classification
-- Add delete tool for clearing current annotations
+- Add **labeling tool** for **classification** in Pixano Annotator
+- Add **delete tool** for clearing current annotations in Pixano Annotator
 
 ### Changed:
-- **BREAKING:** Replace ObjectAnnotation by new and better-defined PixanoTypes, and add notebook for creating a custom PixanoType
-- **BREAKING:** Update dataset storage format, using .lance instead of .parquet, and with multiple tables per dataset  
-- Complete design overhaul of both Explorer and Annotator apps
-- Refactor UI code and merge common code of Explorer and Annotator apps
+- **Breaking:** Replace ObjectAnnotation by new and better-defined **PixanoTypes**, and add notebook for creating a custom PixanoType
+- **Breaking:** Update dataset **storage format** to **lancedb**, using .lance files instead of .parquet, and with separate tables for media, annotations, and embeddings
+- **Design overhaul** of both Pixano Explorer and Annotator apps
+- Refactor UI code and merge common code of Pixano Explorer and Annotator apps
 - Refactor Python code and add unit tests
 - Change thumbnails from 3x2 images to 4x2 images in dataset importer
 - Generate API references automatically on the Pixano documentation website using mkdocs plugins
