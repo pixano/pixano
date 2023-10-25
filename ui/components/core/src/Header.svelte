@@ -37,6 +37,8 @@
 
   function handleUnselectDataset() {
     dispatch("unselectDataset");
+
+    selectedTab = "dashboard";
   }
 
   function handleUnselectItem() {
