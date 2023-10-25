@@ -6,28 +6,35 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+
+## [0.4.0] - 2023-10-27
+
 ### Added:
-- Add labels hierarchy (group by source, view, and category) in both Pixano apps
-- Add label category ID on hover in side panel and label toolbar in both Pixano apps
-- Scale item annotations with zoom inside Pixano apps
-- Add new and better-defined PixanoTypes, and their corresponding PyArrow types
-- Add notebook for creating a custom PixanoType, and its corresponding PyArrow type
-- Add unit testing files to automate Python code testing
+- UI: Add a dataset dashboard in Pixano Explorer with dataset information and statistics
+- UI: Add first page and last page buttons in Pixano Explorer
+- UI: Add labels hierarchy (group by source, view, and category) in item view
+- UI: Add label category ID on hover in side panel and label toolbar in item view
+- Add labeling tool for classification
+- Add delete tool for clearing current annotations
 
 ### Changed:
-- Update dataset storage format, using .lance instead of .parquet, and with multiple tables per dataset for each needs  
+- **BREAKING:** Replace ObjectAnnotation by new and better-defined PixanoTypes, and add notebook for creating a custom PixanoType
+- **BREAKING:** Update dataset storage format, using .lance instead of .parquet, and with multiple tables per dataset  
+- Complete design overhaul of both Explorer and Annotator apps
+- Refactor UI code and merge common code of Explorer and Annotator apps
 - Refactor Python code and add unit tests
-- Refactor UI code and merge common code for Explorer and Annotator apps
-- Replace JavaScript popup boxes by integrated windows in Pixano Apps to fix notebook integration
-- Update import dataset portable option from moving files to copying them
-- Generate API reference automatically on the Pixano documentation website using mkdocs plugins
+- Change thumbnails from 3x2 images to 4x2 images in dataset importer
+- Generate API references automatically on the Pixano documentation website using mkdocs plugins
 
-## Fixed:
-- Fix category colors
+### Fixed:
+- UI: Fix category colors in item view
+- UI: Fix item annotations to scale with zoom in item view
+- UI: Fix displaying item information in item view
+- UI: Fix clearing user inputs in item view if either segmentation model or embeddings are missing
+- UI: Fix notebook integration by replacing JavaScript pop-ups by integrated windows
+- UI: Fix displaying multi-view datasets in Pixano Annotator
 - Fix saving annotations to file from Pixano Annotator
-- Fix displaying item information inside Pixano apps item view
-- Clear user inputs if either inference model or embedding directory is missing in Pixano Annotator 
-- Fix Pixano Annotator for multi-views datasets
+- Fix portable option in dataset import to copy files instead of moving them
 - Fix imports and dependency versions for Pixano apps and UI components
 
 
@@ -133,7 +140,8 @@ All notable changes to Pixano will be documented in this file.
 
 
 
-[Unreleased]: https://github.com/pixano/pixano/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/pixano/pixano/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/pixano/pixano/compare/v0.2.1...v0.3.0
