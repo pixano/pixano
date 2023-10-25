@@ -151,7 +151,7 @@ class Importer(ABC):
         Args:
             input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
-            portable (int, optional): True to copy or download files inside import directory. Defaults to False.
+            portable (bool, optional): True to copy or download files to import directory and use relative paths. Defaults to False.
 
         Returns:
             Dataset: Imported dataset
