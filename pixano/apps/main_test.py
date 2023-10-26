@@ -12,6 +12,8 @@
 #
 # http://www.cecill.info
 
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -19,12 +21,65 @@ from fastapi.testclient import TestClient
 
 from pixano.api import Settings
 from pixano.apps.main import create_app
+from pixano.data import COCOImporter
 
 
 class AppTestCase(unittest.TestCase):
     def setUp(self):
-        self.settings = Settings(data_dir=Path("unit_testing/assets/"))
+        # Create temporary directory
+        self.temp_dir = tempfile.TemporaryDirectory()
+        library_dir = Path(self.temp_dir.name)
+
+        # Create a COCO dataset
+        import_dir = library_dir / "coco"
+        input_dirs = {
+            "image": Path("unit_testing/assets/coco_dataset/image"),
+            "objects": Path("unit_testing/assets/coco_dataset"),
+        }
+        importer = COCOImporter(
+            name="coco",
+            description="COCO dataset",
+            splits=["val"],
+        )
+        dataset = importer.import_dataset(input_dirs, import_dir, portable=False)
+
+        # Set dataset ID
+        dataset.info.id = "coco_dataset"
+        dataset.save_info()
+
+        # Create dataset stats
+        stats = [
+            {
+                "name": "Some numerical statistics",
+                "type": "numerical",
+                "histogram": [
+                    {"bin_start": 0.0, "bin_end": 1.0, "counts": 2, "split": "train"},
+                    {"bin_start": 1.0, "bin_end": 2.0, "counts": 4, "split": "train"},
+                    {"bin_start": 2.0, "bin_end": 3.0, "counts": 6, "split": "train"},
+                    {"bin_start": 3.0, "bin_end": 4.0, "counts": 8, "split": "train"},
+                ],
+                "range": [0.0, 10.0],
+            },
+            {
+                "name": "Some categorical statistics",
+                "type": "categorical",
+                "histogram": [
+                    {"Some categorical statistics": "a", "counts": 2, "split": "train"},
+                    {"Some categorical statistics": "b", "counts": 4, "split": "train"},
+                    {"Some categorical statistics": "c", "counts": 6, "split": "train"},
+                    {"Some categorical statistics": "d", "counts": 8, "split": "train"},
+                ],
+            },
+        ]
+        with open(import_dir / "stats.json", "w", encoding="utf-8") as f:
+            json.dump(stats, f)
+
+        # Launch app
+        self.settings = Settings(data_dir=library_dir)
         self.client = TestClient(create_app(self.settings))
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
 
     def test_get_dataset_list(self):
         response = self.client.get("/datasets")
@@ -41,7 +96,7 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("preview", ds)
 
     def test_get_dataset(self):
-        response = self.client.get("/datasets/vdp_dataset")
+        response = self.client.get("/datasets/coco_dataset")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -52,7 +107,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("preview", output)
 
     def test_get_dataset_items(self):
-        response = self.client.get("/datasets/vdp_dataset/items")
+        response = self.client.get("/datasets/coco_dataset/items")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -63,7 +118,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("pages", output)
 
     def test_get_dataset_stats(self):
-        response = self.client.get("/datasets/vdp_dataset/stats")
+        response = self.client.get("/datasets/coco_dataset/stats")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -76,7 +131,7 @@ class AppTestCase(unittest.TestCase):
             self.assertIn("histogram", stat)
 
     def test_get_item_details(self):
-        response = self.client.get("/datasets/vdp_dataset/items/1")
+        response = self.client.get("/datasets/coco_dataset/items/139")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -87,11 +142,11 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("id", output["itemData"])
         self.assertIn("views", output["itemData"])
         self.assertIn("features", output["itemData"])
-        self.assertIn("ground truth", output["itemObjects"])
+        self.assertIn("Ground Truth", output["itemObjects"])
 
     def test_post_item_details(self):
         response = self.client.post(
-            "/datasets/vdp_dataset/items/127/details",
+            "/datasets/coco_dataset/items/127/details",
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/json",
