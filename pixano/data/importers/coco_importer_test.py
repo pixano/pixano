@@ -29,7 +29,7 @@ class COCOImporterTestCase(unittest.TestCase):
         }
         self.importer = COCOImporter(
             name="COCO",
-            description="Image dataset using COCO",
+            description="COCO dataset",
             splits=["val"],
         )
 
