@@ -17,11 +17,11 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import BBoxType, CompressedRLEType, ImageType
+from pixano.core import BBoxType, ImageType
 from pixano.data.importers.dota_importer import DOTAImporter
 
 
-class COCOImporterTestCase(unittest.TestCase):
+class DOTAImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
             "image": Path("unit_testing/assets/dota_dataset/image"),
