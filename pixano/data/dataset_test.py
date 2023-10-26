@@ -11,21 +11,44 @@
 #
 # http://www.cecill.info
 
+import tempfile
 import unittest
 from pathlib import Path
 
 from pixano.data.dataset import Dataset
 from pixano.data.dataset_info import DatasetInfo
+from pixano.data.importers import COCOImporter
 
 
 class DatasetTestCase(unittest.TestCase):
     def setUp(self):
-        self.path = Path("unit_testing/assets/vdp_dataset")
-        self.dataset = Dataset(self.path)
+        # Create temporary directory
+        self.temp_dir = tempfile.TemporaryDirectory()
+        library_dir = Path(self.temp_dir.name)
+
+        # Create a COCO dataset
+        self.path = library_dir / "coco"
+        input_dirs = {
+            "image": Path("unit_testing/assets/coco_dataset/image"),
+            "objects": Path("unit_testing/assets/coco_dataset"),
+        }
+        importer = COCOImporter(
+            name="coco",
+            description="COCO dataset",
+            splits=["val"],
+        )
+        self.dataset = importer.import_dataset(input_dirs, self.path, portable=False)
+
+        # Set dataset ID
+        self.dataset.info.id = "coco_dataset"
+        self.dataset.save_info()
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
 
     def test_info_property(self):
         self.assertTrue(isinstance(self.dataset.info, DatasetInfo))
-        self.assertEqual(self.dataset.info.id, "vdp_dataset")
+        self.assertEqual(self.dataset.info.id, "coco_dataset")
 
     def test_path_property(self):
         self.assertTrue(isinstance(self.dataset.path, Path))
@@ -37,15 +60,15 @@ class DatasetTestCase(unittest.TestCase):
 
     def test_save_info(self):
         # Edit DatasetInfo
-        self.dataset.info.id = "vdp_dataset_2"
+        self.dataset.info.id = "coco_dataset_2"
         self.dataset.save_info()
 
         updated_info = DatasetInfo.parse_file(self.path / "db.json")
-        self.assertEqual(updated_info.id, "vdp_dataset_2")
+        self.assertEqual(updated_info.id, "coco_dataset_2")
 
         # Revert DatasetInfo back to normal
-        self.dataset.info.id = "vdp_dataset"
+        self.dataset.info.id = "coco_dataset"
         self.dataset.save_info()
 
         updated_info = DatasetInfo.parse_file(self.path / "db.json")
-        self.assertEqual(updated_info.id, "vdp_dataset")
+        self.assertEqual(updated_info.id, "coco_dataset")
