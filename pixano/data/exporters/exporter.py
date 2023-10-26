@@ -14,63 +14,9 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-import pyarrow as pa
-import pyarrow.dataset as ds
-import shortuuid
-
-from pixano.data import DatasetInfo
-
 
 class Exporter(ABC):
-    """Abstract Data Importer class
-
-    Attributes:
-        name (str): Dataset name
-        description (str): Dataset description
-        splits (list[str]): Dataset splits
-        schema (pa.schema): Dataset schema
-        partitioning (ds.partitioning): Dataset partitioning
-    """
-
-    def __init__(
-        self,
-        name: str,
-        description: str,
-        splits: list[str],
-        views: list[pa.Field],
-    ):
-        """Initialize Data Importer
-
-        Args:
-            name (str): Dataset name
-            description (str): Dataset description
-            splits (list[str]): Dataset splits
-            views (list[pa.Field]): Dataset views
-        """
-
-        # Dataset info
-        self.info = DatasetInfo(
-            id=shortuuid.uuid(),
-            name=name,
-            description=description,
-            num_elements=0,
-            preview=None,
-            categories=[],
-            fields={"split": "str", "id": "str", "objects": "[ObjectAnnotationType]"},
-        )
-        self.splits = splits
-
-        # Dataset schema
-        fields = [
-            pa.field("split", pa.string()),
-            pa.field("id", pa.string()),
-            # pa.field("objects", pa.list_(ObjectAnnotationType)),
-        ]
-        fields.extend(views)
-        self.schema = pa.schema(fields)
-        self.partitioning = ds.partitioning(
-            pa.schema([("split", pa.string())]), flavor="hive"
-        )
+    """Abstract Data Exmporter class"""
 
     @abstractmethod
     def export_dataset(self, input_dir: Path, export_dir: Path):
@@ -80,5 +26,3 @@ class Exporter(ABC):
             input_dir (Path): Input directory
             export_dir (Path): Export directory
         """
-
-        pass
