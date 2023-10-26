@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 from pixano.core import BBox, CompressedRLE, Image
 from pixano.data.importers.importer import Importer
-from pixano.utils import coco_names_91, image_to_thumbnail, natural_key
+from pixano.utils import image_to_thumbnail, natural_key
 
 
 class COCOImporter(Importer):
@@ -168,7 +168,7 @@ class COCOImporter(Importer):
                                 if ann["segmentation"]
                                 else None,
                                 "category_id": int(ann["category_id"]),
-                                "category_name": coco_names_91(ann["category_id"]),
+                                "category_name": str(ann["category_name"]),
                             }
                             for ann in im_anns
                         ]
