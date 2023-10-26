@@ -79,27 +79,6 @@
         </div>
         <div class="text-lg text-justify">
           {selectedDataset.description}
-          <br />
-          <!-- Lorem ipsum -->
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur vel
-          sagittis massa, eu viverra nisl. Donec nibh orci, pellentesque quis elit
-          sed, gravida tempus massa. Quisque laoreet, odio vitae iaculis fermentum,
-          nisi erat viverra orci, a tristique tortor arcu quis nisl. Duis et orci
-          condimentum, lobortis lacus in, ultricies metus. Etiam sed vestibulum nibh.
-          Mauris id nisi consectetur, porttitor odio sed, ullamcorper diam. In pellentesque
-          tristique erat, sit amet cursus ante luctus et. Praesent eros velit, convallis
-          vitae pretium ac, tincidunt non metus. Aenean facilisis neque eu velit
-          hendrerit auctor. Donec condimentum nulla eu varius gravida. Praesent lacinia
-          nibh nec augue vulputate pretium. Nam eu tellus a nisi posuere pharetra
-          at non metus. Duis molestie nec odio nec laoreet. Ut commodo, augue eget
-          sagittis egestas, lectus orci cursus velit, et lobortis libero eros non
-          nunc. Suspendisse arcu lectus, sodales id maximus eu, dignissim commodo
-          dui. Integer gravida varius mi, et pretium leo dictum sagittis. Mauris
-          in arcu eu urna mattis accumsan. Curabitur ultrices, nisl a molestie tempor,
-          ex ipsum tristique sem, fermentum porta nisl odio ac sapien. Integer mauris
-          dui, aliquam et euismod nec, congue vel nulla. Proin accumsan molestie
-          ipsum at venenatis. Pellentesque aliquet sapien justo, a euismod velit
-          sagittis fringilla. Maecenas at ornare arcu, et ullamcorper ligula.
         </div>
       {:else if selectedTab === "stats"}
         <!-- Stats -->
