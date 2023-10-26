@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from fractions import Fraction
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -44,7 +45,7 @@ def compute_additional_data(data_table: pa.Table) -> pd.DataFrame:
     return data
 
 
-def objects_tableToDF(data_table: pa.Table, field: str) -> pd.DataFrame:
+def objects_table_to_df(data_table: pa.Table, field: str) -> pd.DataFrame:
     """Convert a field from the objects column to a DataFrame
 
     Args:
@@ -59,9 +60,8 @@ def objects_tableToDF(data_table: pa.Table, field: str) -> pd.DataFrame:
         df_objs = data_table.select(["objects"]).to_pandas()
         sel = [{field: d[field]} for objs in df_objs["objects"] for d in objs]
         return pd.DataFrame.from_dict(sel)
-    except Exception:
-        print("ERROR: Unable to convert table Pandas DataFrame")
-        return None
+    except ValueError as e:
+        raise ValueError("Unable to convert table Pandas DataFrame") from e
 
 
 def categorical_stats(df: pd.DataFrame, split: str, field_name: str) -> list[dict]:
@@ -107,7 +107,7 @@ def numerical_stats(
     ]
 
 
-def compute_stats(df: pd.DataFrame, split: str, feature: dict) -> list[dict]:
+def compute_stats(df: pd.DataFrame, split: str, feature: dict[str, Any]) -> list[dict]:
     """Compute feature statistics
 
     Args:

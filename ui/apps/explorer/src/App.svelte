@@ -1,179 +1,228 @@
 <script lang="ts">
   /**
-  @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-  @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-  @license CECILL-C
-
-  This software is a collaborative computer program whose purpose is to
-  generate and explore labeled data for computer vision applications.
-  This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
-  modify and/ or redistribute the software under the terms of the CeCILL-C
-  license as circulated by CEA, CNRS and INRIA at the following URL
-
-  http://www.cecill.info
-  */
+   * @copyright CEA
+   * @author CEA
+   * @license CECILL
+   *
+   * This software is a collaborative computer program whose purpose is to
+   * generate and explore labeled data for computer vision applications.
+   * This software is governed by the CeCILL-C license under French law and
+   * abiding by the rules of distribution of free software. You can use,
+   * modify and/ or redistribute the software under the terms of the CeCILL-C
+   * license as circulated by CEA, CNRS and INRIA at the following URL
+   *
+   * http://www.cecill.info
+   */
 
   // Imports
   import { onMount } from "svelte";
 
-  import Header from "../../../components/core/src/Header.svelte";
-  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
-  import Library from "../../../components/core/src/Library.svelte";
   import {
-    convertSegmentsToSVG,
-    generatePolygonSegments,
-  } from "../../../components/models/src/mask_utils";
-  import * as api from "./lib/api";
-  import DatasetExplorer from "./lib/DatasetExplorer.svelte";
-  import ExplorationWorkspace from "./lib/ExplorationWorkspace.svelte";
+    api,
+    Header,
+    Library,
+    LoadingLibrary,
+    WarningModal,
+  } from "@pixano/core";
+  import { mask_utils } from "@pixano/models";
+
+  import DatasetExplorer from "./DatasetExplorer.svelte";
+  import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
   import type {
-    ItemData,
-    MaskGT,
     BBox,
-    AnnotationsLabels,
-    AnnLabel,
-    ViewData,
-  } from "../../../components/canvas2d/src/interfaces";
+    CategoryData,
+    Dataset,
+    ItemData,
+    ItemLabels,
+    ItemObjects,
+    Mask,
+  } from "@pixano/core";
 
   // Dataset navigation
-  let datasets = null;
-  let selectedDataset = null;
-  let selectedItem: ItemData = null;
-  let showDetailsPage: boolean = false;
-  let masksGT: Array<MaskGT> = [];
-  let bboxes: Array<BBox> = [];
-  let annotations: Array<AnnotationsLabels> = [];
-  let itemDetails = null;
+  let datasets: Array<Dataset>;
+  let selectedDataset: Dataset;
+  let currentPage = 1;
 
-  async function selectDataset(event: CustomEvent) {
-    selectedDataset = event.detail.dataset;
+  let selectedItem: ItemData;
+  let selectedTab: string = "dashboard";
+
+  let annotations: ItemLabels;
+  let classes: Array<CategoryData>;
+  let masks: Array<Mask>;
+  let bboxes: Array<BBox>;
+
+  let datasetErrorModal = false;
+
+  async function handleGetDatasets() {
+    console.log("App.handleGetDatasets");
+    const start = Date.now();
+    datasets = await api.getDatasetList();
+    console.log(
+      "App.handleGetDatasets - api.getDatasetList in",
+      Date.now() - start,
+      "ms"
+    );
   }
 
-  async function selectItem(event: CustomEvent) {
-    showDetailsPage = true;
-    //selectedItem = event.detail.id;
+  async function handleSelectDataset(dataset: Dataset) {
+    console.log("App.handleSelectDataset");
+    selectedDataset = dataset;
+  }
 
-    //selected item
-    console.log("=== LOADING SELECTED ITEM ===");
-    itemDetails = await api.getItemDetails(selectedDataset.id, event.detail.id);
-    let views: Array<ViewData> = [];
-    for (let viewId of Object.keys(itemDetails.views)) {
-      let view: ViewData = {
-        viewId: viewId,
-        imageURL: itemDetails.views[viewId].image,
+  function handleUnselectDataset() {
+    console.log("App.handleUnselectDataset");
+    handleUnselectItem();
+    selectedDataset = null;
+    currentPage = 1;
+    handleGetDatasets();
+  }
+
+  async function handleSelectItem(itemId: string) {
+    annotations = {};
+    classes = selectedDataset.categories;
+    masks = [];
+    bboxes = [];
+
+    const start = Date.now();
+    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
+    selectedItem = itemDetails["itemData"] as ItemData;
+    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+
+    console.log(
+      "App.handleSelectItem - api.getItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
+
+    for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
+      // Initialize annotations
+      annotations[sourceId] = {
+        id: sourceId,
+        views: {},
+        numLabels: 0,
+        opened: Object.entries(ItemObjects).length > 1 ? false : true,
+        visible: true,
       };
-      views.push(view);
-    }
-    selectedItem = {
-      dbName: selectedDataset.name,
-      id: event.detail.id,
-      views: views,
-    };
-    console.log("item loaded:", selectedItem);
 
-    //build annotations, masksGT, bboxes and classes
-    let struct_categories = {};
-    for (let viewId of Object.keys(itemDetails.views)) {
-      for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
-        const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
-        const bbox = itemDetails.views[viewId].objects.boundingBox[i];
-        const cat_name = itemDetails.views[viewId].objects.category[i].name;
+      for (const [viewId, viewObjects] of Object.entries(sourceObjects)) {
+        // Initialize annotations
+        annotations[sourceId].views[viewId] = {
+          id: viewId,
+          categories: {},
+          numLabels: 0,
+          opened: Object.entries(sourceObjects).length > 1 ? false : true,
+          visible: true,
+        };
 
-        // ensure all items goes in unique category (by name)
-        if (!struct_categories[cat_name]) {
-          let annotation: AnnotationsLabels = {
-            viewId: viewId,
-            category_name: cat_name,
-            category_id: itemDetails.views[viewId].objects.category[i].id,
-            items: [],
-            visible: true,
-          };
-          struct_categories[cat_name] = annotation;
-        }
+        for (const obj of viewObjects) {
+          const catId = obj.category.id;
+          const catName = obj.category.name;
 
-        if (!(bbox || mask_rle)) {
-          console.log("WARNING!, no mask nor bounding box!!");
-          continue;
-        }
+          // Masks and bounding boxes
+          if (obj.mask || obj.bbox) {
+            // Add class if new
+            if (!classes.some((cls) => cls.id === catId)) {
+              classes.push({
+                id: catId,
+                name: catName,
+              });
+            }
 
-        if (mask_rle) {
-          const rle = mask_rle["counts"];
-          const size = mask_rle["size"];
-          const maskPolygons = generatePolygonSegments(rle, size[0]);
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
+            // Add category if new
+            if (!annotations[sourceId].views[viewId].categories[catId]) {
+              annotations[sourceId].views[viewId].categories[catId] = {
+                labels: {},
+                id: catId,
+                name: catName,
+                opened: false,
+                visible: true,
+              };
+            }
 
-          masksGT.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
-            mask: masksSVG,
-            rle: mask_rle,
-            catId: itemDetails.views[viewId].objects.category[i].id,
-            visible: true,
-            opacity: 1.0,
-          });
-          let item: AnnLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            type: "mask",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
-            visible: true,
-            opacity: 1.0,
-          };
-          if (bbox && bbox.is_predict) {
-            item.confidence = bbox.confidence;
+            // Add label
+            annotations[sourceId].views[viewId].categories[catId].labels[
+              obj.id
+            ] = {
+              id: obj.id,
+              categoryId: catId,
+              categoryName: catName,
+              sourceId: sourceId,
+              viewId: viewId,
+              confidence:
+                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              bboxOpacity: 1.0,
+              maskOpacity: 1.0,
+              visible: true,
+            };
+
+            // Update counters
+            annotations[sourceId].numLabels += 1;
+            annotations[sourceId].views[viewId].numLabels += 1;
+
+            if (obj.mask) {
+              const rle = obj.mask["counts"];
+              const size = obj.mask["size"];
+              const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+              const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+              // Add mask
+              masks.push({
+                id: obj.id,
+                viewId: viewId,
+                svg: masksSVG,
+                rle: obj.mask,
+                catId: catId,
+                visible: true,
+                opacity: 1.0,
+              });
+            }
+
+            if (obj.bbox) {
+              // Add bbox
+              bboxes.push({
+                id: obj.id,
+                viewId: viewId,
+                bbox: [
+                  obj.bbox.x * selectedItem.views[viewId].width,
+                  obj.bbox.y * selectedItem.views[viewId].height,
+                  obj.bbox.width * selectedItem.views[viewId].width,
+                  obj.bbox.height * selectedItem.views[viewId].height,
+                ], // denormalized
+                tooltip:
+                  catName +
+                  (obj.bbox.predicted
+                    ? " " + obj.bbox.confidence.toFixed(2)
+                    : ""),
+                catId: catId,
+                visible: true,
+                opacity: 1.0,
+              });
+            }
+          } else {
+            console.log(
+              "App.handleSelectItem - Warning: no mask nor bounding box for item",
+              obj.id
+            );
+            continue;
           }
-          struct_categories[cat_name].items.push(item);
-        }
-        if (bbox) {
-          bboxes.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
-            bbox: [bbox.x, bbox.y, bbox.width, bbox.height], //still normalized
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              (bbox.is_predict
-                ? " " + parseFloat(bbox.confidence).toFixed(2)
-                : ""),
-            catId: itemDetails.views[viewId].objects.category[i].id,
-            visible: true,
-          });
-          let item: AnnLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            type: "bbox",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
-            visible: true,
-            opacity: 1.0,
-          };
-          if (bbox.is_predict) {
-            item.confidence = bbox.confidence;
-          }
-          struct_categories[cat_name].items.push(item);
         }
       }
     }
-    for (let cat_name in struct_categories)
-      annotations.push(struct_categories[cat_name]);
-
-    console.log("selectItem Done", masksGT, bboxes, annotations);
   }
 
-  function unselectItem() {
-    showDetailsPage = false;
+  function handleUnselectItem() {
+    console.log("App.handleUnselectItem");
     selectedItem = null;
-    masksGT = [];
+    annotations = {};
+    classes = [];
+    masks = [];
     bboxes = [];
-    annotations = [];
   }
 
   onMount(async () => {
-    datasets = await api.getDatasetsList();
+    console.log("App.onMount");
+    handleGetDatasets();
   });
 </script>
 
@@ -181,30 +230,47 @@
   app="Explorer"
   bind:selectedDataset
   bind:selectedItem
-  save_flag={false}
-  on:closeclick={unselectItem}
+  bind:selectedTab
+  saveFlag={false}
+  on:unselectDataset={handleUnselectDataset}
+  on:unselectItem={handleUnselectItem}
 />
-<div
-  class="pt-20 h-screen w-screen text-zinc-800 dark:text-zinc-300 dark:bg-zinc-800"
->
-  {#if datasets}
-    {#if selectedDataset}
-      {#if selectedItem}
-        <ExplorationWorkspace
-          itemData={selectedItem}
-          features={itemDetails}
-          {annotations}
-          {masksGT}
-          {bboxes}
-          on:closeclick={unselectItem}
-        />
-      {:else}
-        <DatasetExplorer dataset={selectedDataset} on:itemclick={selectItem} />
-      {/if}
+{#if datasets}
+  {#if selectedDataset}
+    {#if selectedItem}
+      <ExplorationWorkspace
+        {selectedItem}
+        {annotations}
+        {classes}
+        {masks}
+        {bboxes}
+        on:unselectItem={handleUnselectItem}
+      />
     {:else}
-      <Library {datasets} btn_label="Explore" on:datasetclick={selectDataset} />
+      <DatasetExplorer
+        bind:selectedTab
+        {selectedDataset}
+        {currentPage}
+        on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:datasetError={() => (
+          handleUnselectDataset(), (datasetErrorModal = true)
+        )}
+      />
     {/if}
   {:else}
-    <LoadingLibrary />
+    <Library
+      {datasets}
+      app="Explorer"
+      on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    />
   {/if}
-</div>
+{:else}
+  <LoadingLibrary app="Explorer" />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}

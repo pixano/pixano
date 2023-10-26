@@ -10,7 +10,12 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
+        "DM Sans": ["DM Sans", "sans-serif"],
+        Montserrat: ["Montserrat", "sans-serif"],
+      },
+      colors: {
+        main: "#771E5F",
+        secondary: "#872f6e",
       },
     },
   },

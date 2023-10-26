@@ -1,27 +1,23 @@
 /**
-@copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-@author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-@license CECILL-C
-
-This software is a collaborative computer program whose purpose is to
-generate and explore labeled data for computer vision applications.
-This software is governed by the CeCILL-C license under French law and
-abiding by the rules of distribution of free software. You can use, 
-modify and/ or redistribute the software under the terms of the CeCILL-C
-license as circulated by CEA, CNRS and INRIA at the following URL
-
-http://www.cecill.info
-*/
+ * @copyright CEA
+ * @author CEA
+ * @license CECILL
+ *
+ * This software is a collaborative computer program whose purpose is to
+ * generate and explore labeled data for computer vision applications.
+ * This software is governed by the CeCILL-C license under French law and
+ * abiding by the rules of distribution of free software. You can use,
+ * modify and/ or redistribute the software under the terms of the CeCILL-C
+ * license as circulated by CEA, CNRS and INRIA at the following URL
+ *
+ * http://www.cecill.info
+ */
 
 import type { Meta, StoryObj } from "@storybook/svelte";
-import Canvas2D from "../../../../../components/canvas2d/src/Canvas2D.svelte";
-import {
-  createLabeledPointTool,
-  createRectangleTool,
-} from "../../../../../components/canvas2d/src/tools";
-import * as mocks from "./mocks";
+import { Canvas2D, tools } from "@pixano/canvas2d";
+import { utils } from "@pixano/core";
 
-//import { initModel } from "../../../../../apps/annotator/src/lib/sam_api"
+import * as mocks from "./mocks";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
@@ -37,62 +33,84 @@ type Story = StoryObj<typeof meta>;
 // initModel("sam_vit_b_01ec64.onnx");
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
+
+let catCol = utils.colorLabel([1, 2]);
+
 export const CanvasWithoutSelectedTool: Story = {
   args: {
-    views: [
-      {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+    selectedItem: {
+      id: "1",
+      views: {
+        view: {
+          id: "view",
+          url: "img-02.jpg",
+        },
       },
-    ],
-    itemId: "image_moyenne",
-    annotations: [],
-    masksGT: null,
-    bboxes: null,
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
     selectedTool: null,
-    prediction: null,
+    labelColors: catCol,
+    masks: [],
+    bboxes: [],
+    embeddings: {},
+    currentAnn: null,
   },
 };
 
 const segmenter = new mocks.MockInteractiveImageSegmenter();
-let labeledPointCreator = createLabeledPointTool(1);
+let labeledPointCreator = tools.createLabeledPointTool(1);
 labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
-    views: [
-      {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+    selectedItem: {
+      id: "1",
+      views: {
+        view: {
+          id: "view",
+          url: "img-02.jpg",
+        },
       },
-    ],
-    itemId: "image_moyenne",
-    annotations: [],
-    embedding: [],
-    masksGT: null,
-    bboxes: null,
-    prediction: null,
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
     selectedTool: labeledPointCreator,
+    labelColors: catCol,
+    masks: [],
+    bboxes: [],
+    embeddings: { view: [] },
+    currentAnn: null,
   },
 };
 
-let rectangleCreator = createRectangleTool();
+const rectangleCreator = tools.createRectangleTool();
 rectangleCreator.postProcessor = segmenter;
 
 export const CanvasWithRectangleTool: Story = {
   args: {
-    views: [
-      {
-        viewId: "view",
-        imageURL: "image_moyenne.jpg",
+    selectedItem: {
+      id: "1",
+      views: {
+        view: {
+          id: "view",
+          url: "img-02.jpg",
+        },
       },
-    ],
-    itemId: "image_moyenne",
-    annotations: [],
-    embedding: [],
-    masksGT: null,
-    bboxes: null,
-    prediction: null,
+      features: [
+        { name: "id", dtype: "text", value: "1" },
+        { name: "view", dtype: "image", value: "img-02.jpg" },
+      ],
+    },
     selectedTool: rectangleCreator,
+    labelColors: catCol,
+    masks: [],
+    bboxes: [],
+    embeddings: { view: [] },
+    currentAnn: null,
   },
 };

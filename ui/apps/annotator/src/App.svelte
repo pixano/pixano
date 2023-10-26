@@ -1,286 +1,443 @@
 <script lang="ts">
   /**
-  @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-  @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-  @license CECILL-C
-
-  This software is a collaborative computer program whose purpose is to
-  generate and explore labeled data for computer vision applications.
-  This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
-  modify and/ or redistribute the software under the terms of the CeCILL-C
-  license as circulated by CEA, CNRS and INRIA at the following URL
-
-  http://www.cecill.info
-  */
+   * @copyright CEA
+   * @author CEA
+   * @license CECILL
+   *
+   * This software is a collaborative computer program whose purpose is to
+   * generate and explore labeled data for computer vision applications.
+   * This software is governed by the CeCILL-C license under French law and
+   * abiding by the rules of distribution of free software. You can use,
+   * modify and/ or redistribute the software under the terms of the CeCILL-C
+   * license as circulated by CEA, CNRS and INRIA at the following URL
+   *
+   * http://www.cecill.info
+   */
 
   // Imports
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import Header from "../../../components/core/src/Header.svelte";
-  import LoadingLibrary from "../../../components/core/src/LoadingLibrary.svelte";
-  import Library from "../../../components/core/src/Library.svelte";
-  import * as npyjs from "../../../components/models/src/npy";
-  import { SAM } from "../../../components/models/src/Sam";
   import {
-    convertSegmentsToSVG,
-    generatePolygonSegments,
-  } from "../../../components/models/src/mask_utils";
-  import AnnotationWorkspace from "./lib/AnnotationWorkspace.svelte";
-  import * as api from "./lib/api";
+    api,
+    ConfirmModal,
+    Header,
+    Library,
+    LoadingLibrary,
+    PromptModal,
+    WarningModal,
+  } from "@pixano/core";
+  import { mask_utils, npy, SAM } from "@pixano/models";
+
+  import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
+    BBox,
+    CategoryData,
+    Dataset,
     ItemData,
-    MaskGT,
-    AnnotationsLabels,
-    AnnLabel,
-    ViewData,
-    DatabaseFeats,
-  } from "../../../components/canvas2d/src/interfaces";
+    ItemLabels,
+    ItemObjects,
+    Mask,
+  } from "@pixano/core";
 
   // Dataset navigation
-  let datasets = null;
-  let selectedDataset = null;
-  let curPage = 1;
+  let datasets: Array<Dataset>;
+  let selectedDataset: Dataset;
+  let currentPage = 1;
 
   let selectedItem: ItemData;
-  let selectedItemEmbedding: any;
-  let save_flag: boolean = false;
+  let annotations: ItemLabels;
+  let classes: Array<CategoryData>;
+  let masks: Array<Mask>;
+  let bboxes: Array<BBox>;
+  let embeddings = {};
 
-  let masksGT: Array<MaskGT> = [];
-  let annotations: Array<AnnotationsLabels> = [];
-  let classes = [];
-  let itemDetails = null;
-  let dbImages: DatabaseFeats = null;
+  let activeLearningFlag = false;
+  let saveFlag = false;
+  let unselectItemModal = false;
+  let datasetErrorModal = false;
 
-  let sam = new SAM();
+  const defaultModelName = "sam_vit_h_4b8939.onnx";
+  let inputModelName: string;
+  let modelPromptModal = false;
+  let modelNotFoundModal = false;
 
-  async function selectDataset(event: CustomEvent) {
-    selectedDataset = event.detail.dataset;
+  const sam = new SAM();
 
-    dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
-    //select first item
-    let firstItem = dbImages.items[0];
-    for (let feat of firstItem) {
-      if (feat.name === "id") {
-        selectItem({ id: feat.value });
-        break;
+  function until(conditionFunction: Function): Promise<Function> {
+    const poll = (resolve) => {
+      if (conditionFunction()) resolve();
+      else setTimeout((_) => poll(resolve), 400);
+    };
+    return new Promise(poll);
+  }
+
+  async function handleGetDatasets() {
+    console.log("App.handleGetDatasets");
+    const start = Date.now();
+    datasets = await api.getDatasetList();
+    console.log(
+      "App.handleGetDatasets - api.getDatasetList in",
+      Date.now() - start,
+      "ms"
+    );
+  }
+
+  async function handleSelectDataset(dataset: Dataset) {
+    console.log("App.handleSelectDataset");
+    selectedDataset = dataset;
+    const start = Date.now();
+    selectedDataset.page = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
+    console.log(
+      "App.handleSelectDataset - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
+
+    if (selectedDataset.page) {
+      // If selected dataset successfully, select first item
+      const firstItemId = selectedDataset.page.items[0].find(
+        (feature) => feature.name === "id"
+      ).value;
+
+      // Toggle active learning filtering if "round" found
+      if (
+        !!selectedDataset.page.items[0].find(
+          (feature) => feature.name === "round"
+        )
+      ) {
+        activeLearningFlag = true;
+      } else {
+        activeLearningFlag = false;
       }
+
+      handleSelectItem(firstItemId);
+    } else {
+      // Otherwise display error message
+      handleUnselectDataset();
+      datasetErrorModal = true;
     }
   }
 
-  async function selectItem(data) {
-    //selected item
-    console.log("=== LOADING SELECTED ITEM ===");
-    const start = Date.now();
-    itemDetails = await api.getItemDetails(selectedDataset.id, data.id);
-    console.log("getItemDetails time (ms):", Date.now() - start);
-    let views: Array<ViewData> = [];
-    for (let viewId of Object.keys(itemDetails.views)) {
-      let view: ViewData = {
-        viewId: viewId,
-        imageURL: itemDetails.views[viewId].image,
-      };
-      views.push(view);
+  async function handleUnselectDataset() {
+    console.log("App.handleUnselectDataset");
+    await handleUnselectItem();
+    if (!saveFlag) {
+      selectedDataset = null;
+      currentPage = 1;
+      handleGetDatasets();
     }
-    selectedItem = {
-      dbName: selectedDataset.name,
-      id: data.id,
-      views: views,
-    };
-    console.log("item loaded:", selectedItem);
+  }
 
-    //build annotations, masksGT and classes
-    masksGT = [];
-    annotations = [];
-
-    //predefined classes from spec.json "categories"
+  async function handleSelectItem(itemId: string) {
+    annotations = {};
     classes = selectedDataset.categories;
+    masks = [];
+    bboxes = [];
+    embeddings = {};
 
-    let struct_views_categories = {};
-    for (let viewId of Object.keys(itemDetails.views)) {
-      let struct_categories = {};
+    let start = Date.now();
+    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
+    selectedItem = itemDetails["itemData"] as ItemData;
+    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
-      for (let i = 0; i < itemDetails.views[viewId].objects.id.length; ++i) {
-        const mask_rle = itemDetails.views[viewId].objects.segmentation[i];
-        const cat_name = itemDetails.views[viewId].objects.category[i].name;
+    console.log(
+      "App.handleSelectItem - api.getItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
 
-        if (mask_rle) {
-          //separate in case we add bboxes or other annotation types later
-          // ensure all items goes in unique category (by name)
-          if (!struct_categories[cat_name]) {
-            let annotation: AnnotationsLabels = {
+    for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
+      // Initialize annotations
+      annotations[sourceId] = {
+        id: sourceId,
+        views: {},
+        numLabels: 0,
+        opened: Object.entries(ItemObjects).length > 1 ? false : true,
+        visible: true,
+      };
+
+      for (const [viewId, viewObjects] of Object.entries(sourceObjects)) {
+        // Initialize annotations
+        annotations[sourceId].views[viewId] = {
+          id: viewId,
+          categories: {},
+          numLabels: 0,
+          opened: Object.entries(sourceObjects).length > 1 ? false : true,
+          visible: true,
+        };
+
+        for (const obj of viewObjects) {
+          const catId = obj.category.id;
+          const catName = obj.category.name;
+
+          // Masks and bounding boxes
+          if (obj.mask || obj.bbox) {
+            // Add class if new
+            if (!classes.some((cls) => cls.id === catId)) {
+              classes.push({
+                id: catId,
+                name: catName,
+              });
+            }
+
+            // Add category if new
+            if (!annotations[sourceId].views[viewId].categories[catId]) {
+              annotations[sourceId].views[viewId].categories[catId] = {
+                labels: {},
+                id: catId,
+                name: catName,
+                opened: false,
+                visible: true,
+              };
+            }
+
+            // Add label
+            annotations[sourceId].views[viewId].categories[catId].labels[
+              obj.id
+            ] = {
+              id: obj.id,
+              categoryId: catId,
+              categoryName: catName,
+              sourceId: sourceId,
               viewId: viewId,
-              category_name: cat_name,
-              category_id: itemDetails.views[viewId].objects.category[i].id,
-              items: [],
+              confidence:
+                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              bboxOpacity: 1.0,
+              maskOpacity: 1.0,
               visible: true,
             };
-            struct_categories[cat_name] = annotation;
+
+            // Update counters
+            annotations[sourceId].numLabels += 1;
+            annotations[sourceId].views[viewId].numLabels += 1;
+
+            if (obj.mask) {
+              const rle = obj.mask["counts"];
+              const size = obj.mask["size"];
+              const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+              const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+              // Add mask
+              masks.push({
+                id: obj.id,
+                viewId: viewId,
+                svg: masksSVG,
+                rle: obj.mask,
+                catId: catId,
+                visible: true,
+                opacity: 1.0,
+              });
+            }
+
+            if (obj.bbox) {
+              // Add bbox
+              bboxes.push({
+                id: obj.id,
+                viewId: viewId,
+                bbox: [
+                  obj.bbox.x * selectedItem.views[viewId].width,
+                  obj.bbox.y * selectedItem.views[viewId].height,
+                  obj.bbox.width * selectedItem.views[viewId].width,
+                  obj.bbox.height * selectedItem.views[viewId].height,
+                ], // denormalized
+                tooltip:
+                  catName +
+                  (obj.bbox.predicted
+                    ? " " + obj.bbox.confidence.toFixed(2)
+                    : ""),
+                catId: catId,
+                visible: true,
+                opacity: 1.0,
+              });
+            }
+          } else {
+            console.log(
+              "App.handleSelectItem - Warning: no mask nor bounding box for item",
+              obj.id
+            );
+            continue;
           }
         }
-
-        if (mask_rle) {
-          const rle = mask_rle["counts"];
-          const size = mask_rle["size"];
-          const maskPolygons = generatePolygonSegments(rle, size[0]);
-          const masksSVG = convertSegmentsToSVG(maskPolygons);
-
-          masksGT.push({
-            viewId: viewId,
-            id: itemDetails.views[viewId].objects.id[i],
-            mask: masksSVG,
-            rle: mask_rle,
-            catId: itemDetails.views[viewId].objects.category[i].id,
-            visible: true,
-            opacity: 1.0,
-          });
-          let item: AnnLabel = {
-            id: itemDetails.views[viewId].objects.id[i],
-            type: "mask",
-            label:
-              itemDetails.views[viewId].objects.category[i].name +
-              "-" +
-              struct_categories[cat_name].items.length,
-            visible: true,
-            opacity: 1.0,
-          };
-          struct_categories[cat_name].items.push(item);
-        }
-      }
-      struct_views_categories[viewId] = struct_categories;
-    }
-    for (let view in struct_views_categories) {
-      for (let cat_name in struct_views_categories[view]) {
-        annotations.push(struct_views_categories[view][cat_name]);
-      }
-    }
-
-    console.log("init masksGT", masksGT);
-    //unique classes from existing annotations
-    for (let ann of annotations) {
-      if (!classes.some((cls) => cls.id === ann.category_id)) {
-        classes.push({
-          id: ann.category_id,
-          name: ann.category_name,
-        });
       }
     }
 
     // Embeddings
-    console.log("=== LOADING EMBEDDING ===");
-    const embeddingArrByte = await api.getViewEmbedding(
+    start = Date.now();
+    const embeddingsBytes = await api.getItemEmbeddings(
       selectedDataset.id,
-      itemDetails.id,
-      itemDetails.viewId
+      selectedItem.id
     );
-    try {
-      const embeddingArr = npyjs.parse(embeddingArrByte);
-      selectedItemEmbedding = new ort.Tensor(
-        "float32",
-        embeddingArr.data,
-        embeddingArr.shape
-      );
-    } catch (err) {
-      console.log("Embedding not loaded", err);
-      selectedItemEmbedding = null;
+    console.log(
+      "App.handleSelectItem - api.getItemEmbeddings in",
+      Date.now() - start,
+      "ms"
+    );
+    if (embeddingsBytes) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(
+        embeddingsBytes
+      )) {
+        try {
+          const viewEmbeddingArray = npy.parse(
+            npy.b64ToBuffer(viewEmbeddingBytes)
+          );
+          embeddings[viewId] = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape
+          );
+        } catch (e) {
+          console.log("App.handleSelectItem - Error loading embeddings", e);
+        }
+      }
     }
-    console.log("Embedding:", selectedItemEmbedding);
-    console.log("DONE");
+  }
+
+  async function handleUnselectItem() {
+    console.log("App.handleUnselectItem");
+    if (!saveFlag) {
+      unselectItem();
+    } else {
+      unselectItemModal = true;
+      await until((_) => unselectItemModal == false);
+      if (!saveFlag) {
+        unselectItem();
+      }
+    }
   }
 
   function unselectItem() {
-    if (handleUnsavedChanges()) {
-      selectedDataset = null;
-      selectedItem = null;
-      selectedItemEmbedding = null;
-      masksGT = [];
-      annotations = [];
-      classes = [];
-      curPage = 1;
-    }
+    unselectItemModal = false;
+    selectedItem = null;
+    annotations = {};
+    classes = [];
+    masks = [];
+    bboxes = [];
+    embeddings = {};
   }
 
-  function saveAnns(annotations, masksGT) {
-    console.log("App - save annotations");
-    //format annotation data for export
-    let anns = [];
-    for (let mask of masksGT) {
-      const mask_class = annotations.find(
-        (obj) => obj.category_id === mask.catId && obj.viewId === mask.viewId
-      );
-      let ann = {
-        id: mask.id,
-        view_id: mask.viewId,
-        category_id: mask_class.category_id,
-        category_name: mask_class.category_name,
-        mask: mask.rle,
-        mask_source: "Pixano Annotator",
-      };
-      anns.push(ann);
+  function handleSaveItemDetails() {
+    console.log("App.handleSaveItemDetails");
+
+    saveFlag = false;
+
+    const itemDetails = {
+      itemData: [],
+      itemObjects: [],
+    };
+
+    // Return every feature that is not an image
+    for (const feat of selectedItem.features) {
+      if (feat["dtype"] !== "image") {
+        itemDetails["itemData"].push(feat);
+      }
     }
-    api.postAnnotations(anns, selectedDataset.id, selectedItem.id);
+
+    // Return annotations
+    for (const sourceLabels of Object.values(annotations)) {
+      for (const viewLabels of Object.values(sourceLabels.views)) {
+        for (const catLabels of Object.values(viewLabels.categories)) {
+          for (const label of Object.values(catLabels.labels)) {
+            const mask = masks.find(
+              (m) => m.id === label.id && m.viewId === label.viewId
+            );
+            const bbox = bboxes.find(
+              (b) => b.id === label.id && b.viewId === label.viewId
+            );
+            itemDetails["itemObjects"].push({
+              id: label.id,
+              item_id: selectedItem.id,
+              source_id: label.sourceId,
+              view_id: label.viewId,
+              bbox: {
+                coords: bbox
+                  ? [
+                      bbox.bbox[0] / selectedItem.views[label.viewId].width,
+                      bbox.bbox[1] / selectedItem.views[label.viewId].height,
+                      bbox.bbox[2] / selectedItem.views[label.viewId].width,
+                      bbox.bbox[3] / selectedItem.views[label.viewId].height,
+                    ] // normalized
+                  : [0, 0, 0, 0],
+                format: "xywh",
+                confidence: label.confidence,
+              },
+              mask: mask
+                ? {
+                    size: mask.rle ? mask.rle.size : [0, 0],
+                    counts: mask.rle ? mask.rle.counts : [],
+                  }
+                : { size: [0, 0], counts: [] },
+              category_id: label.categoryId,
+              category_name: label.categoryName,
+            });
+          }
+        }
+      }
+    }
+
+    let start = Date.now();
+    api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
+    console.log(
+      "App.handleSaveItemDetails - api.postItemDetails in",
+      Date.now() - start,
+      "ms"
+    );
+
+    // Reload item details
+    handleSelectItem(selectedItem.id);
   }
 
   async function handleLoadNextPage() {
-    curPage = curPage + 1;
-    let new_dbImages = await api.getDatasetItems(selectedDataset.id, curPage);
+    console.log("App.handleLoadNextPage");
+    currentPage = currentPage + 1;
+
+    const start = Date.now();
+    const new_dbImages = await api.getDatasetItems(
+      selectedDataset.id,
+      currentPage
+    );
+    console.log(
+      "App.handleLoadNextPage - api.getDatasetItems in",
+      Date.now() - start,
+      "ms"
+    );
+
     if (new_dbImages) {
-      dbImages.items = dbImages.items.concat(new_dbImages.items);
-    } else {
-      //end of dataset : reset last page
-      curPage = curPage - 1;
-    }
-  }
-
-  function handleSaveClick() {
-    saveAnns(annotations, masksGT);
-    save_flag = false;
-  }
-
-  function handleUnsavedChanges() {
-    let val = true;
-    if (save_flag) {
-      val = confirm(
-        "Warning: You have not saved your changes.\nDo you want to discard and continue ?"
+      selectedDataset.page.items = selectedDataset.page.items.concat(
+        new_dbImages.items
       );
+    } else {
+      // End of dataset: reset last page
+      currentPage = currentPage - 1;
     }
-    if (val) {
-      save_flag = false;
-    }
-    return val;
   }
 
-  function enableSaveFlag() {
-    save_flag = true;
+  async function handleModelPrompt() {
+    modelPromptModal = false;
+    // Try loading model name from user input
+    try {
+      await sam.init("/models/" + inputModelName);
+      interactiveSegmenterModel.set(sam);
+    } catch (e) {
+      modelNotFoundModal = false;
+    }
   }
 
   onMount(async () => {
-    datasets = await api.getDatasetsList();
-
-    let model_name = "sam_vit_h_4b8939.onnx";
-
-    // Try loading default model name
+    console.log("App.onMount");
+    handleGetDatasets();
+    // Try loading default model
     try {
-      await sam.init("/models/" + model_name);
+      await sam.init("/models/" + defaultModelName);
       interactiveSegmenterModel.set(sam);
     } catch (e) {
-      // If default not found, ask user for model name
-      model_name = prompt(
-        "Please provide the name of your ONNX model for interactive segmentation",
-        model_name
-      );
-      // Try loading model name from user input
-      try {
-        await sam.init("/models/" + model_name);
-        interactiveSegmenterModel.set(sam);
-      } catch (e) {
-        alert(
-          `models/${model_name} was not found in your dataset library, or your internet connection is not working!\n\nPlease refer the interactive annotation notebook for information on how to export your model to ONNX.`
-        );
-      }
+      // If default not found, ask user for model
+      modelPromptModal = true;
     }
   });
 </script>
@@ -289,36 +446,66 @@
   app="Annotator"
   bind:selectedDataset
   bind:selectedItem
-  {save_flag}
-  on:saveclick={handleSaveClick}
-  on:closeclick={unselectItem}
+  {saveFlag}
+  on:unselectDataset={handleUnselectDataset}
+  on:unselectItem={handleUnselectItem}
+  on:saveItemDetails={handleSaveItemDetails}
 />
-<div
-  class="pt-20 h-screen w-screen text-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
->
-  {#if datasets}
-    {#if selectedItem}
-      <AnnotationWorkspace
-        itemData={selectedItem}
-        embedding={selectedItemEmbedding}
-        bind:annotations
-        bind:masksGT
-        {classes}
-        {dbImages}
-        {curPage}
-        {handleUnsavedChanges}
-        on:imageSelected={(event) => selectItem(event.detail)}
-        on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={enableSaveFlag}
-      />
-    {:else}
-      <Library
-        {datasets}
-        btn_label="Annotate"
-        on:datasetclick={selectDataset}
-      />
-    {/if}
+{#if datasets}
+  {#if selectedItem}
+    <AnnotationWorkspace
+      {selectedDataset}
+      {selectedItem}
+      bind:annotations
+      {classes}
+      bind:masks
+      bind:bboxes
+      {embeddings}
+      {currentPage}
+      bind:activeLearningFlag
+      bind:saveFlag
+      on:selectItem={(event) => handleSelectItem(event.detail)}
+      on:loadNextPage={handleLoadNextPage}
+      on:enableSaveFlag={() => (saveFlag = true)}
+    />
   {:else}
-    <LoadingLibrary />
+    <Library
+      {datasets}
+      app="Annotator"
+      on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    />
   {/if}
-</div>
+{:else}
+  <LoadingLibrary app="Explorer" />
+{/if}
+{#if modelPromptModal}
+  <PromptModal
+    message="Please provide the name of your ONNX model for interactive segmentation."
+    placeholder={defaultModelName}
+    bind:input={inputModelName}
+    on:confirm={handleModelPrompt}
+  />
+{/if}
+{#if modelNotFoundModal}
+  <WarningModal
+    message="models/{inputModelName} was not found in your dataset library."
+    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+    moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
+    on:confirm={() => (modelNotFoundModal = false)}
+  />
+{/if}
+{#if unselectItemModal}
+  <ConfirmModal
+    message="You have unsaved changes."
+    confirm="Close without saving"
+    on:confirm={() => ((saveFlag = false), (unselectItemModal = false))}
+    on:cancel={() => (unselectItemModal = false)}
+  />
+{/if}
+{#if datasetErrorModal}
+  <WarningModal
+    message="Error while retrieving dataset items."
+    details="Please look at the application logs for more information, and report this issue if the error persists."
+    on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}

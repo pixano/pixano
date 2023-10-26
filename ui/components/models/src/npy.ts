@@ -1,17 +1,17 @@
 /**
-@copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-@author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-@license CECILL-C
-
-This software is a collaborative computer program whose purpose is to
-generate and explore labeled data for computer vision applications.
-This software is governed by the CeCILL-C license under French law and
-abiding by the rules of distribution of free software. You can use, 
-modify and/ or redistribute the software under the terms of the CeCILL-C
-license as circulated by CEA, CNRS and INRIA at the following URL
-
-http://www.cecill.info
-*/
+ * @copyright CEA
+ * @author CEA
+ * @license CECILL
+ *
+ * This software is a collaborative computer program whose purpose is to
+ * generate and explore labeled data for computer vision applications.
+ * This software is governed by the CeCILL-C license under French law and
+ * abiding by the rules of distribution of free software. You can use,
+ * modify and/ or redistribute the software under the terms of the CeCILL-C
+ * license as circulated by CEA, CNRS and INRIA at the following URL
+ *
+ * http://www.cecill.info
+ */
 
 // Exports
 const dtypes = {
@@ -96,4 +96,12 @@ export function parse(buffer) {
     shape: header.shape,
     dtype: dtype.name,
   };
+}
+export function b64ToBuffer(b64) {
+  const binaryString = atob(b64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
 }

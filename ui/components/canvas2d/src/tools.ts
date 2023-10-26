@@ -14,19 +14,15 @@
 */
 
 // Imports
-import {
-  svg_pan,
-  svg_point,
-  svg_rectangle,
-  svg_point_plus,
-  svg_point_minus,
-} from "../../core/src/icons";
+import { icons } from "@pixano/core";
 
 // Exports
 export enum ToolType {
   LabeledPoint = "LABELED_POINT",
   Rectangle = "RECTANGLE",
+  Delete = "DELETE",
   Pan = "PAN",
+  Classification = "CLASSIFICATION",
 }
 
 interface Tool {
@@ -41,7 +37,6 @@ interface Tool {
 interface MultiModalTool extends Tool {
   modes: Array<Tool>;
 }
-
 interface LabeledPointTool extends Tool {
   type: ToolType.LabeledPoint;
   label: number;
@@ -51,8 +46,16 @@ interface RectangleTool extends Tool {
   type: ToolType.Rectangle;
 }
 
+interface DeleteTool extends Tool {
+  type: ToolType.Delete;
+}
+
 interface PanTool extends Tool {
   type: ToolType.Pan;
+}
+
+interface ClassificationTool extends Tool {
+  type: ToolType.Classification;
 }
 
 function getIcon(type: ToolType, label?: number): string {
@@ -60,16 +63,20 @@ function getIcon(type: ToolType, label?: number): string {
     case ToolType.LabeledPoint:
       switch (label) {
         case 0:
-          return svg_point_minus;
+          return icons.svg_point_minus;
         case 1:
-          return svg_point_plus;
+          return icons.svg_point_plus;
         default:
-          return svg_point;
+          return icons.svg_point;
       }
     case ToolType.Rectangle:
-      return svg_rectangle;
+      return icons.svg_rectangle;
+    case ToolType.Delete:
+      return icons.svg_delete;
     case ToolType.Pan:
-      return svg_pan;
+      return icons.svg_pan;
+    case ToolType.Classification:
+      return icons.svg_classify;
   }
 }
 
@@ -88,7 +95,7 @@ export function createMultiModalTool(
 
 export function createLabeledPointTool(label: number): LabeledPointTool {
   return {
-    name: "Point selection" + (label ? " (Positive)" : " (Negative)"),
+    name: (label ? "Positive" : "Negative") + " point selection",
     type: ToolType.LabeledPoint,
     label: label,
     icon: getIcon(ToolType.LabeledPoint, label),
@@ -105,6 +112,15 @@ export function createRectangleTool(): RectangleTool {
   } as RectangleTool;
 }
 
+export function createDeleteTool(): DeleteTool {
+  return {
+    name: "Delete selection",
+    type: ToolType.Delete,
+    icon: getIcon(ToolType.Delete),
+    cursor: "auto",
+  } as DeleteTool;
+}
+
 export function createPanTool(): PanTool {
   return {
     name: "Move image",
@@ -114,4 +130,20 @@ export function createPanTool(): PanTool {
   } as PanTool;
 }
 
-export type { Tool, LabeledPointTool, RectangleTool, PanTool };
+export function createClassifTool(): ClassificationTool {
+  return {
+    name: "Classification",
+    type: ToolType.Classification,
+    icon: getIcon(ToolType.Classification),
+    cursor: "default",
+  } as ClassificationTool;
+}
+
+export type {
+  Tool,
+  LabeledPointTool,
+  RectangleTool,
+  DeleteTool,
+  PanTool,
+  ClassificationTool,
+};

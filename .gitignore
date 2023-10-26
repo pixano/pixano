@@ -15,6 +15,9 @@ dist-ssr
 .vite
 .cache
 
+# Coverage
+.coverage
+
 # Docs
 site
 
@@ -30,6 +33,7 @@ site
 *.sln
 *.sw?
 *lock.yaml
+makefile
 
 # Environment
 .ipynb_checkpoints
@@ -37,8 +41,7 @@ __pycache__
 *.pyc
 .env
 
-# Inference
-*.npy
+# Inference files
 *.pt
 *.pth
 *.onnx

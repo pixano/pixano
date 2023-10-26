@@ -1,34 +1,35 @@
 /**
-@copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-@author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-@license CECILL-C
-
-This software is a collaborative computer program whose purpose is to
-generate and explore labeled data for computer vision applications.
-This software is governed by the CeCILL-C license under French law and
-abiding by the rules of distribution of free software. You can use, 
-modify and/ or redistribute the software under the terms of the CeCILL-C
-license as circulated by CEA, CNRS and INRIA at the following URL
-
-http://www.cecill.info
-*/
+ * @copyright CEA
+ * @author CEA
+ * @license CECILL
+ *
+ * This software is a collaborative computer program whose purpose is to
+ * generate and explore labeled data for computer vision applications.
+ * This software is governed by the CeCILL-C license under French law and
+ * abiding by the rules of distribution of free software. You can use,
+ * modify and/ or redistribute the software under the terms of the CeCILL-C
+ * license as circulated by CEA, CNRS and INRIA at the following URL
+ *
+ * http://www.cecill.info
+ */
 
 // Imports
 import * as ort from "onnxruntime-web";
 
 import {
+  convertSegmentsToSVG,
+  generatePolygonSegments,
+  maskDataToFortranArrayToRle,
+} from "./mask_utils";
+
+import type {
   Box,
   InteractiveImageSegmenter,
   InteractiveImageSegmenterInput,
   LabeledClick,
   LabeledPointsTensor,
   SegmentationResult,
-} from "./interactive_image_segmentation";
-import {
-  convertSegmentsToSVG,
-  generatePolygonSegments,
-  maskDataToFortranArrayToRle,
-} from "./mask_utils";
+} from "./interfaces";
 
 ort.env.wasm.wasmPaths =
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";
@@ -45,9 +46,10 @@ export class SAM implements InteractiveImageSegmenter {
   // prediction threshold
   predictionThreshold = 0.0;
 
-  async init(modelWeights: string) {
+  async init(modelWeights: ArrayBuffer);
+  async init(modelWeights: string);
+  async init(modelWeights: any) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
-    console.log("init sam model");
   }
 
   getScalingFactor(imageWidth: number, imageHeight: number) {
@@ -78,7 +80,7 @@ export class SAM implements InteractiveImageSegmenter {
   /** Pre-process UI inputs before feeding them into SAM */
   preProcessInputs(
     clicks: Array<LabeledClick>,
-    box: Box,
+    box: Box | null,
     imageWidth: number,
     imageHeight: number
   ): LabeledPointsTensor {
@@ -156,9 +158,10 @@ export class SAM implements InteractiveImageSegmenter {
       has_mask_input: previousMask[1],
     };
 
-    console.log("RUN SAM PREDICTION");
-    console.log("SAM inputs: ", samInputs);
+    const start = Date.now();
     const results = await this.onnxModel.run(samInputs);
+    console.log("SAM.segmentImage in", Date.now() - start, "ms");
+    this.previousMask = results.low_res_masks;
     const rleMask = maskDataToFortranArrayToRle(
       results.masks.data,
       imageHeight,

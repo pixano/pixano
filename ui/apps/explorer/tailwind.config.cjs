@@ -3,14 +3,20 @@ module.exports = {
   content: [
     "./index.html",
     "./src/**/*.{svelte,js,ts}",
-    "../../../ui/components/core/src/*.{svelte,js,ts}",
     "../../../ui/components/core/src/**/*.{svelte,js,ts}",
+    "../../../ui/components/table/src/**/*.{svelte,js,ts}",
+    "../../../ui/components/canvas2d/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
   theme: {
     extend: {
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
+        "DM Sans": ["DM Sans", "sans-serif"],
+        Montserrat: ["Montserrat", "sans-serif"],
+      },
+      colors: {
+        main: "#771E5F",
+        secondary: "#872f6e",
       },
     },
   },

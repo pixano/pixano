@@ -1,76 +1,82 @@
 <script lang="ts">
   /**
-  @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-  @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-  @license CECILL-C
-
-  This software is a collaborative computer program whose purpose is to
-  generate and explore labeled data for computer vision applications.
-  This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
-  modify and/ or redistribute the software under the terms of the CeCILL-C
-  license as circulated by CEA, CNRS and INRIA at the following URL
-
-  http://www.cecill.info
-  */
+   * @copyright CEA
+   * @author CEA
+   * @license CECILL
+   *
+   * This software is a collaborative computer program whose purpose is to
+   * generate and explore labeled data for computer vision applications.
+   * This software is governed by the CeCILL-C license under French law and
+   * abiding by the rules of distribution of free software. You can use,
+   * modify and/ or redistribute the software under the terms of the CeCILL-C
+   * license as circulated by CEA, CNRS and INRIA at the following URL
+   *
+   * http://www.cecill.info
+   */
 
   // Imports
   import { createEventDispatcher } from "svelte";
 
+  import type { Dataset } from "./interfaces";
+  import { svg_right_arrow } from "./icons";
+
   // Exports
-  export let dataset: any;
-  export let btn_label: string;
+  export let dataset: Dataset;
 
   const dispatch = createEventDispatcher();
 
-  function handleClick() {
-    dispatch("click");
+  function handleSelectDataset() {
+    dispatch("selectDataset");
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div
-  class="w-64 h-80 m-4 flex flex-col rounded-md cursor-pointer transition-all hover:scale-110
-  border border-zinc-300 dark:border-zinc-500"
-  on:click={handleClick}
+<button
+  class="w-96 h-72 flex flex-col transition-all text-left
+  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-md"
+  on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
-  <div class="h-1/5 px-4 flex flex-col justify-center">
-    <div class="group">
+  <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
+    <div>
       <h3
-        class="text-lg font-heavy truncate"
-        title="{dataset.name} - {dataset.description}"
+        class="text-lg font-semibold font-Montserrat truncate text-main"
+        title="{dataset.name}&#10;&#13;{dataset.description}"
       >
         {dataset.name}
       </h3>
     </div>
 
-    <p class="text-sm text-zinc-600 dark:text-zinc-400">
-      {dataset.num_elements} elements
+    <p class="text-sm text-slate-500 font-medium">
+      {dataset.num_elements} items {dataset.estimated_size &&
+      dataset.estimated_size != "N/A"
+        ? " - " + dataset.estimated_size
+        : ""}
     </p>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      height="48"
+      viewBox="0 -960 960 960"
+      width="48"
+      class="absolute right-5 h-8 w-8 mx-auto p-2 border rounded-full border-slate-300 hover:bg-slate-300"
+    >
+      <title>Open</title>
+      <path d={svg_right_arrow} fill="currentcolor" />
+    </svg>
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="h-3/5">
-    <img
-      src={dataset.preview}
-      alt={dataset.name}
-      class="h-full w-full object-cover object-center"
-    />
+  <div class="m-4 bg-slate-100">
+    {#if dataset.preview}
+      <img
+        src={dataset.preview}
+        alt="{dataset.name} thumbnail"
+        class="w-96 h-44 object-contain object-center"
+      />
+    {/if}
   </div>
-
-  <!-- Actions -->
-  <div class="h-1/5 px-4 flex flex-col justify-center items-end text-sm">
-    <button
-      on:click={handleClick}
-      class="py-2 px-3 font-heavy rounded-md border-2 transition-all
-      text-zinc-50
-      bg-rose-500 dark:bg-rose-600
-      hover:bg-rose-600 dark:hover:bg-rose-500
-      border-rose-500 dark:border-rose-600
-      hover:border-rose-600 dark:hover:border-rose-500"
-    >
-      {btn_label}
-    </button>
-  </div>
-</div>
+  <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">
+    {#each dataset.preview as preview}
+      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-slate-100" />
+    {/each}
+  </div> -->
+</button>

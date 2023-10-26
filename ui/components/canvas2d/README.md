@@ -4,7 +4,9 @@ This template should help get you started developing with Svelte and TypeScript 
 
 ## Recommended IDE Setup
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- [VS Code](https://code.visualstudio.com/)
+- [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+- [Tailwind CSS](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss)
 
 ## Need an official Svelte framework?
 

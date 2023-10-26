@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from .feature_statistics import compute_additional_data, compute_stats
+from pixano.analytics.feature_statistics import compute_additional_data, compute_stats
 
 __all__ = [
     "compute_additional_data",

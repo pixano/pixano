@@ -1,31 +1,33 @@
 <script lang="ts">
   /**
-  @copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-  @author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-  @license CECILL-C
-
-  This software is a collaborative computer program whose purpose is to
-  generate and explore labeled data for computer vision applications.
-  This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
-  modify and/ or redistribute the software under the terms of the CeCILL-C
-  license as circulated by CEA, CNRS and INRIA at the following URL
-
-  http://www.cecill.info
-  */
+   * @copyright CEA
+   * @author CEA
+   * @license CECILL
+   *
+   * This software is a collaborative computer program whose purpose is to
+   * generate and explore labeled data for computer vision applications.
+   * This software is governed by the CeCILL-C license under French law and
+   * abiding by the rules of distribution of free software. You can use,
+   * modify and/ or redistribute the software under the terms of the CeCILL-C
+   * license as circulated by CEA, CNRS and INRIA at the following URL
+   *
+   * http://www.cecill.info
+   */
 
   // Imports
   import { VegaLite, type VisualizationSpec } from "svelte-vega";
 
   // Exports
   export let hist;
+  export let maxHeight = 48;
+  export let hideTitle = false;
 
   // Calculate histogram height
-  let h = 10 * hist.histogram.length;
-  h = h < 175 ? 175 : h;
+  let h = 7.5 * hist.histogram.length;
+  h = h < 125 ? 125 : h;
 
   // Vega-Lite spec (default type : categorical)
-  let spec: VisualizationSpec = {
+  const spec: VisualizationSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     config: {
       style: {
@@ -92,7 +94,7 @@
   if (hist.type == "numerical") {
     // Set bin ranges
     for (let i = 0; i < hist.histogram.length; ++i) {
-      let value = hist.histogram[i];
+      const value = hist.histogram[i];
       value.bin_range = value.bin_start + "-" + value.bin_end;
     }
 
@@ -109,14 +111,14 @@
 
 <!-- Histogram -->
 <div
-  class="h-full w-full flex flex-col justify-center items-center border rounded-lg
-  bg-zinc-100 dark:bg-zinc-700
-  border-zinc-300 dark:border-zinc-500"
+  class="max-h-{maxHeight} w-72 mx-auto flex flex-col justify-center items-center"
 >
-  <span class="py-1 text-sm font-bold">
-    {hist.name}
-  </span>
-  <div class="max-h-48 w-full place-items-center overflow-y-scroll">
+  {#if !hideTitle}
+    <span class="py-1 text-sm font-bold">
+      {hist.name}
+    </span>
+  {/if}
+  <div class="place-items-center overflow-y-scroll">
     <VegaLite {spec} {options} />
   </div>
 </div>

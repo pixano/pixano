@@ -48,6 +48,11 @@ extra:
 plugins:
 - search
 - autorefs
+- gen-files:
+    scripts:
+    - docs/gen_ref_pages.py
+- literate-nav:
+    nav_file: SUMMARY.md
 - mkdocstrings:
     handlers:
       python:
@@ -63,14 +68,17 @@ plugins:
         options:
           docstring_style: google
           docstring_options:
+            returns_named_value: false
             ignore_init_summary: yes
-          show_submodules: no
+          show_submodules: true
           docstring_section_style: table
           members_order: alphabetical
           merge_init_into_class: yes
           show_root_heading: true
           show_source: true
           heading_level: 1
+          preload_modules:
+            - pydantic
 
           
 nav:
@@ -86,37 +94,6 @@ nav:
   - "Using Pixano Explorer": user/explorer.md
   - "Using Pixano Annotator": user/annotator.md
   
-- "API reference": 
-  - code/index.md
-
-  - "analytics":
-    - "feature_statistics": code/analytics/feature_statistics.md
-
-  - "apps":
-    - "core":
-      - "db_utils": code/apps/core/db_utils.md
-      - "main": code/apps/core/main.md
-      - "serve": code/apps/core/serve.md
-    - "annotator": code/apps/annotator.md
-    - "explorer": code/apps/explorer.md
-
-  - "core":
-    - "arrow_types": code/core/arrow_types.md
-    - "dataset": code/core/dataset.md
-
-  - "data":
-    - "DataLoader": code/data/data_loader.md
-    - "CocoLoader": code/data/coco_loader.md
-    - "ImageLoader": code/data/image_loader.md
-    - "DOTALoader": code/data/dota_loader.md
-    - "LegacyLoader": code/data/legacy_loader.md
-
-  - "models":
-    - "InferenceModel": code/models/inference_model.md
-
-  - "transforms":
-    - "boxes": code/transforms/boxes.md
-    - "image": code/transforms/image.md
-    - "labels": code/transforms/labels.md
+- "API reference": code/
 
 - "Pixano Inference": https://pixano.github.io/pixano-inference/

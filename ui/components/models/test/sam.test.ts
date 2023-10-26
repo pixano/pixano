@@ -1,29 +1,27 @@
 /**
-@copyright CEA-LIST/DIASI/SIALV/LVA (2023)
-@author CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-@license CECILL-C
-
-This software is a collaborative computer program whose purpose is to
-generate and explore labeled data for computer vision applications.
-This software is governed by the CeCILL-C license under French law and
-abiding by the rules of distribution of free software. You can use, 
-modify and/ or redistribute the software under the terms of the CeCILL-C
-license as circulated by CEA, CNRS and INRIA at the following URL
-
-http://www.cecill.info
-*/
+ * @copyright CEA
+ * @author CEA
+ * @license CECILL
+ *
+ * This software is a collaborative computer program whose purpose is to
+ * generate and explore labeled data for computer vision applications.
+ * This software is governed by the CeCILL-C license under French law and
+ * abiding by the rules of distribution of free software. You can use,
+ * modify and/ or redistribute the software under the terms of the CeCILL-C
+ * license as circulated by CEA, CNRS and INRIA at the following URL
+ *
+ * http://www.cecill.info
+ */
 
 // Imports
-import { readFile } from "fs/promises";
 import fs from "fs";
-import { describe, test, expect } from "vitest";
-import { SAM } from "../src/Sam";
-import {
-  InteractiveImageSegmenterInput,
-  LabeledClick,
-} from "../src/interactive_image_segmentation";
+import { readFile } from "fs/promises";
 import * as ort from "onnxruntime-node";
+import { describe, expect, test } from "vitest";
+
+import { LabeledClick } from "../src/interfaces";
 import * as npyjs from "../src/npy";
+import { SAM } from "../src/Sam";
 
 // Target values are generated from the sam python notebook with the following parameters
 const W: number = 768;
@@ -64,14 +62,14 @@ describe("SAM", () => {
 
     const expectedLabels = [1, 1, 0, -1];
 
-    const inputClicks = [
+    const inputClicks: Array<LabeledClick> = [
       { x: 291, y: 100, label: 1 },
       { x: 490, y: 167, label: 1 },
       { x: 627, y: 179, label: 0 },
     ];
 
     const sam = new SAM();
-    const samPoints = sam.preProcessClicks(inputClicks, W, H);
+    const samPoints = sam.preProcessInputs(inputClicks, null, W, H);
 
     for (let i = 0; i < expectedPointsCoords.length; ++i) {
       expect(samPoints.points.data[i]).toBeCloseTo(expectedPointsCoords[i]);

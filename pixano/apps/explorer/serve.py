@@ -14,7 +14,7 @@
 import click
 import pkg_resources
 
-from pixano.apps import PixanoApp
+from pixano.apps.serve import App
 
 LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
@@ -33,7 +33,7 @@ ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist/asse
 TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/explorer/dist")
 
 
-class ExplorerApp(PixanoApp):
+class Explorer(App):
     """Pixano Explorer App
 
     Attributes:
@@ -84,4 +84,4 @@ def main(library_dir: str, host: str, port: int):
 
     LIBRARY_DIR: Dataset library directory
     """
-    ExplorerApp(library_dir, host, port)
+    Explorer(library_dir, host, port)

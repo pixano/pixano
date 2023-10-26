@@ -11,16 +11,20 @@
 #
 # http://www.cecill.info
 
-from .coco_loader import COCOLoader
-from .data_loader import DataLoader
-from .dota_loader import DOTALoader
-from .image_loader import ImageLoader
-from .legacy_loader import LegacyLoader
+from pixano.data.dataset import Dataset
+from pixano.data.dataset_info import DatasetInfo
+from pixano.data.exporters import COCOExporter, Exporter
+from pixano.data.fields import Fields
+from pixano.data.importers import COCOImporter, DOTAImporter, ImageImporter, Importer
 
 __all__ = [
-    "DataLoader",
-    "COCOLoader",
-    "DOTALoader",
-    "ImageLoader",
-    "LegacyLoader",
+    "Dataset",
+    "DatasetInfo",
+    "Fields",
+    "Exporter",
+    "COCOExporter",
+    "Importer",
+    "ImageImporter",
+    "DOTAImporter",
+    "COCOImporter",
 ]

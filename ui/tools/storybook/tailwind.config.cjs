@@ -8,7 +8,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Poppins", "sans-serif"],
+        "DM Sans": ["DM Sans", "sans-serif"],
+        Montserrat: ["Montserrat", "sans-serif"],
       },
     },
   },
