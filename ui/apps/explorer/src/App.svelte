@@ -256,6 +256,7 @@
         on:datasetError={() => (
           handleUnselectDataset(), (datasetErrorModal = true)
         )}
+        on:searchError={() => (searchErrorModal = true)}
       />
     {/if}
   {:else}
