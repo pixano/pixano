@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-from pixano.data.importers.bop_wds_importer import BopWDSImporter
 from pixano.data.importers.coco_importer import COCOImporter
 from pixano.data.importers.dota_importer_test import DOTAImporter
 from pixano.data.importers.image_importer import ImageImporter
@@ -20,7 +19,6 @@ from pixano.data.importers.importer import Importer
 __all__ = [
     "Importer",
     "ImageImporter",
-    "BopWDSImporter",
     "DOTAImporter",
     "COCOImporter",
 ]
