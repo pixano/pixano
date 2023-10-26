@@ -24,13 +24,13 @@ from pixano.data.importers.dota_importer import DOTAImporter
 class DOTAImporterTestCase(unittest.TestCase):
     def setUp(self):
         self.input_dirs = {
-            "image": Path("unit_testing/assets/dota_dataset/image"),
-            "objects": Path("unit_testing/assets/dota_dataset/objects"),
+            "image": Path("unit_testing/assets/coco_dataset/image"),
+            "objects": Path("unit_testing/assets/coco_dataset/objects"),
         }
         self.importer = DOTAImporter(
             name="DOTA",
-            description="DOTA dataset",
-            splits=["train"],
+            description="DOTA dataset from COCO",
+            splits=["val"],
         )
 
     def test_import_dataset(self):
@@ -51,7 +51,7 @@ class DOTAImporterTestCase(unittest.TestCase):
 
             # Check db.json content
             self.assertEqual("DOTA", dataset.info.name)
-            self.assertEqual(1, dataset.info.num_elements)
+            self.assertEqual(dataset.info.num_elements, 1)
 
             # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"
