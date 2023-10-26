@@ -159,10 +159,14 @@ class COCOImporter(Importer):
                                 "view_id": "image",
                                 "bbox": BBox.from_xywh(ann["bbox"])
                                 .normalize(im["height"], im["width"])
-                                .to_dict(),
+                                .to_dict()
+                                if ann["bbox"]
+                                else None,
                                 "mask": CompressedRLE.encode(
                                     ann["segmentation"], im["height"], im["width"]
-                                ).to_dict(),
+                                ).to_dict()
+                                if ann["segmentation"]
+                                else None,
                                 "category_id": int(ann["category_id"]),
                                 "category_name": coco_names_91(ann["category_id"]),
                             }
