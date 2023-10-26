@@ -176,6 +176,9 @@ class InferenceModel(ABC):
             "source": self.name,
             "fields": table_fields,
         }
+        if process_type == "emb":
+            table_info["type"] = "segment"
+
         if table_group in dataset.info.tables:
             dataset.info.tables[table_group].append(table_info)
         else:
