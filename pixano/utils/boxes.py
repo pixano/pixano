@@ -16,7 +16,7 @@ import numpy as np
 from pixano.utils.image import rle_to_mask, urle_to_rle
 
 
-def denormalize_coords(coord: list[float], height: int, width: int) -> list[float]:
+def denormalize_coords(coord: list[float], height: int, width: int, rounded_int=True) -> list[float]:
     """Denormalize coordinates
 
     Args:
@@ -25,16 +25,16 @@ def denormalize_coords(coord: list[float], height: int, width: int) -> list[floa
         width (int): Width
 
     Returns:
-        list[float]: Unnormalized coordinates
+        list[float]: Unnormalized coordinates,
     """
 
     denorm = []
 
     for i, c in enumerate(coord):
         if i % 2 == 0:
-            denorm.append(c * width)
+            denorm.append(round(c * width) if rounded_int else c * width)
         else:
-            denorm.append(c * height)
+            denorm.append(round(c * height) if rounded_int else c * height)
 
     return denorm
 
