@@ -558,17 +558,19 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
             if not model:
                 model = CLIPModel.from_pretrained(ss_source)
 
-            # get main & media tables
+            # get main & media tables, and number of views
+            n_views = 0
             main_table: lancedb.db.LanceTable = ds.open_table("db")
             media_tables: dict[str, lancedb.db.LanceTable] = {}
             if "media" in dataset.info.tables:
                 for md_info in dataset.info.tables["media"]:
                     media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+                    n_views = max(n_views, media_tables[md_info["name"]].to_arrow().num_columns - 1)
 
             # Get page parameters
             params = resolve_params(params)
             raw_params = params.to_raw_params()
-            total = main_table.to_lance().count_rows()
+            total = main_table.to_lance().count_rows() * n_views
 
             # Get page items
             start = raw_params.offset
@@ -577,13 +579,19 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
                 return None
 
             # Semantic search
-            search_res_table = semantic_search_table.search(text_embed_func(query)).limit(stop).to_arrow()
+            search_res_table = semantic_search_table.search(text_embed_func(query)).limit(200).to_arrow()
 
             # search Resut table (filter and limit to page)
-            pyarrow_table = duckdb.query(
-                "SELECT id, view, _distance as distance FROM search_res_table ORDER BY distance ASC "
-                f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
-            ).to_arrow_table()
+            if n_views < 2:
+                pyarrow_table = duckdb.query(
+                    "SELECT id, _distance as distance FROM search_res_table ORDER BY distance ASC "
+                    f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+                ).to_arrow_table()
+            else:
+                pyarrow_table = duckdb.query(
+                    "SELECT id, view, _distance as distance FROM search_res_table ORDER BY distance ASC "
+                    f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+                ).to_arrow_table()
 
             # join with main table
             main_table = main_table.to_lance()
@@ -605,8 +613,6 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
             ]
             return create_page(items, total=total, params=params)
         else:
-            print("EERR1")
             raise Exception("No semantic embeddings")
     else:
-        print("EERR2")
         raise Exception("No semantic embeddings")  # No embeddings at all, but it doesn't matter

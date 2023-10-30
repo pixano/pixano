@@ -130,6 +130,7 @@
 
   async function handleSearchEnter(query_str: string) {
     query = query_str;
+    currentPage = 1
     loadPage()
   }
 
