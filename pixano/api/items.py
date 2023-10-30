@@ -579,7 +579,7 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
                 return None
 
             # Semantic search
-            search_res_table = semantic_search_table.search(text_embed_func(query)).limit(200).to_arrow()
+            search_res_table = semantic_search_table.search(text_embed_func(query)).limit(stop).to_arrow()
 
             # search Resut table (filter and limit to page)
             if n_views < 2:
