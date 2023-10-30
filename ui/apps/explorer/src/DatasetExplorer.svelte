@@ -31,6 +31,7 @@
     svg_next_page,
     svg_prev_page,
     svg_search,
+    svg_quit,
   } from "@pixano/core/src/icons";
 
   // Exports
@@ -199,6 +200,22 @@
           >
             <path d={svg_search} />
           </svg>
+          {#if query !== ""}
+          <button
+            class="absolute right-2"
+            on:click={()=> handleSearchEnter("")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-4 w-4"
+            >
+              <path d={svg_quit} />
+            </svg>
+          </button>
+          {/if}
         </div>
       </div>
       {#if selectedTab === "database"}
