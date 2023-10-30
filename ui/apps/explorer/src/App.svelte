@@ -44,6 +44,8 @@
   let selectedDataset: Dataset;
   let currentPage = 1;
 
+  let query = "";
+
   let selectedItem: ItemData;
   let selectedTab: string = "dashboard";
 
@@ -76,6 +78,7 @@
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
+    query = "";
     handleGetDatasets();
   }
 
@@ -252,6 +255,7 @@
         bind:selectedTab
         {selectedDataset}
         {currentPage}
+        bind:query
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:datasetError={() => (
           handleUnselectDataset(), (datasetErrorModal = true)

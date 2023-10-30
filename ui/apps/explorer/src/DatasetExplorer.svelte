@@ -37,10 +37,10 @@
   export let selectedDataset: Dataset;
   export let selectedTab: string;
   export let currentPage: number;
+  export let query: string;
 
   let datasetStats = null;
  
-  let query = null;
 
   // Page navigation
   const itemsPerPage = 100;
@@ -54,22 +54,48 @@
   }
 
   async function loadPage() {
-    selectedDataset.page = null;
-    const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage,
-      itemsPerPage
-    );
-    console.log(
-      "DatasetExplorer.loadPage - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    if (query == "") {
+      // no query, standard load
+      selectedDataset.page = null;
+      const start = Date.now();
+      selectedDataset.page = await api.getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
+      console.log(
+        "DatasetExplorer.loadPage - api.getDatasetItems in",
+        Date.now() - start,
+        "ms"
+      );
 
-    // If no dataset page, return error message
-    if (selectedDataset.page == null) {
-      dispatch("datasetError");
+      // If no dataset page, return error message
+      if (selectedDataset.page == null) {
+        dispatch("datasetError");
+      }
+    } else {
+      // query available, show query result
+      const start = Date.now();
+      let actual_page = selectedDataset.page
+      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
+      let res = await api.getSearchResult(
+        selectedDataset.id,
+        query,
+        currentPage,
+        itemsPerPage
+      );
+      console.log(
+        "DatasetExplorer.loadPage - api.getSearchResult in",
+        Date.now() - start,
+        "ms"
+      );
+      // If no dataset page, return error message
+      if (res == null) {
+        selectedDataset.page = actual_page;
+        dispatch("searchError");
+      } else {
+        selectedDataset.page = res;
+      }
     }
   }
 
@@ -103,33 +129,8 @@
 
   async function handleSearchEnter(query_str: string) {
     query = query_str;
-    if (query_str == "") {
-      loadPage()
-    } else {
-      const start = Date.now();
-      let actual_page = selectedDataset.page
-      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
-      let res = await api.getSearchResult(
-        selectedDataset.id,
-        query,
-        currentPage,
-        itemsPerPage
-      );
-      console.log(
-        "DatasetExplorer.handleSearchEnter - api.getSearchResult in",
-        Date.now() - start,
-        "ms"
-      );
-      // If no dataset page, return error message
-      if (res == null) {
-        selectedDataset.page = actual_page;
-        dispatch("searchError");
-      } else {
-        selectedDataset.page = res;
-      }
-    }
+    loadPage()
   }
-
 
 
   onMount(async () => {
