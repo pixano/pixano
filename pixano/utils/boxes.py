@@ -23,6 +23,7 @@ def denormalize_coords(coord: list[float], height: int, width: int, rounded_int=
         coord (list[float]): Normalized coordinates
         height (int): Height
         width (int): Width
+        rounded_int (bool): True to round denormalized float to nearest integer. Default to True
 
     Returns:
         list[float]: Unnormalized coordinates,
