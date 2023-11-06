@@ -50,7 +50,7 @@ plugins:
 - autorefs
 - gen-files:
     scripts:
-    - docs/gen_ref_pages.py
+    - ../pixano/docs/gen_ref_pages.py
 - literate-nav:
     nav_file: SUMMARY.md
 - mkdocstrings:
