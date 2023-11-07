@@ -187,7 +187,7 @@ class InferenceModel(ABC):
         if process_type == "segment_emb":
             table_info["type"] = "segment"
         elif process_type == "search_emb":
-            table_info["type"] = "semantic_search"
+            table_info["type"] = "search"
 
         if table_group in dataset.info.tables:
             dataset.info.tables[table_group].append(table_info)
