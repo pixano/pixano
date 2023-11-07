@@ -34,6 +34,7 @@ class COCOImporter(Importer):
         name: str,
         description: str,
         splits: list[str],
+        media_fields: dict[str, str] = {"image": "image"},
     ):
         """Initialize COCO Importer
 
@@ -41,6 +42,7 @@ class COCOImporter(Importer):
             name (str): Dataset name
             description (str): Dataset description
             splits (list[str]): Dataset splits
+            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
 
         tables = {
@@ -54,15 +56,7 @@ class COCOImporter(Importer):
                     },
                 }
             ],
-            "media": [
-                {
-                    "name": "image",
-                    "fields": {
-                        "id": "str",
-                        "image": "image",
-                    },
-                }
-            ],
+            "media": [],
             "objects": [
                 {
                     "name": "objects",
@@ -79,6 +73,26 @@ class COCOImporter(Importer):
                 }
             ],
         }
+
+        # Add media fields to tables
+        for field_name, field_type in media_fields.items():
+            table_exists = False
+            # If table for given field type exists
+            for media_table in tables["media"]:
+                if field_type == media_table["name"] and not table_exists:
+                    media_table["fields"][field_name] = field_type
+                    table_exists = True
+            # Else, create that table
+            if not table_exists:
+                tables["media"].append(
+                    {
+                        "name": field_type,
+                        "fields": {
+                            "id": "str",
+                            field_name: field_type,
+                        },
+                    }
+                )
 
         # Initialize Importer
         super().__init__(name, description, tables, splits)
