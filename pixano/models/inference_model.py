@@ -108,7 +108,10 @@ class InferenceModel(ABC):
 
         Args:
             dataset_dir (Path): Dataset directory
-            process_type (str): Process type ('obj' for preannotation or 'emb' for embedding precomputing)
+            process_type (str): Process type
+                                - 'obj' for preannotation
+                                - 'segment_emb' for segmentation embedding precomputing
+                                - 'search_emb' for semantic search embedding precomputing
             views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per batch. Defaults to 1.
@@ -121,9 +124,10 @@ class InferenceModel(ABC):
         output_filename = f"{process_type}_{self.id}"
         if splits:
             split_ids = "'" + "', '".join(splits) + "'"
-        if process_type != "obj" and process_type != "emb":
+        if process_type not in ["obj", "segment_emb", "search_emb"]:
             raise Exception(
-                "Please choose a valid process type ('obj' for preannotation or 'emb' for embedding precomputing)"
+                "Please choose a valid process type ('obj' for preannotation, 'segment_emb' or 'search_emb'"
+                "for segmentation or semantic search embedding precomputing)"
             )
 
         # Load dataset
@@ -152,13 +156,17 @@ class InferenceModel(ABC):
                 "category_id": "int",
                 "category_name": "str",
             }
-        # Embedding precomputing schema
-        elif process_type == "emb":
+        # Segmentation Embedding precomputing schema
+        elif process_type == "segment_emb":
             table_group = "embeddings"
             table_fields = {"id": "str"}
             # Add embedding column for each selected view
             for view in views:
                 table_fields[view] = "bytes"
+        # Semantic Search Embedding precomputing schema
+        elif process_type == "search_emb":
+            table_group = "embeddings"
+            table_fields = {"id": "str", "view": "str", "vector": "bytes"}
 
         # Create new table
         table: lancedb.db.LanceTable = ds.create_table(
@@ -176,8 +184,10 @@ class InferenceModel(ABC):
             "source": self.name,
             "fields": table_fields,
         }
-        if process_type == "emb":
+        if process_type == "segment_emb":
             table_info["type"] = "segment"
+        elif process_type == "search_emb":
+            table_info["type"] = "semantic_search"
 
         if table_group in dataset.info.tables:
             dataset.info.tables[table_group].append(table_info)
@@ -219,7 +229,7 @@ class InferenceModel(ABC):
                         self.preannotate(input_batch, views, uri_prefix, threshold)
                         if process_type == "obj"
                         else self.precompute_embeddings(input_batch, views, uri_prefix)
-                        if process_type == "emb"
+                        if process_type == "segment_emb" or process_type == "search_emb"
                         else []
                     )
                     progress.update(batch_size)
