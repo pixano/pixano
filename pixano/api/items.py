@@ -539,7 +539,7 @@ def search_query(dataset: Dataset, query: str, params: AbstractParams = None) ->
     if "embeddings" in dataset.info.tables:
         semantic_search_tables: dict[str, lancedb.db.LanceTable] = {}
         for ss_info in dataset.info.tables["embeddings"]:
-            if ss_info["type"] == "semantic_search":
+            if ss_info["type"] == "search":
                 try:
                     semantic_search_tables[ss_info["source"]] = ds.open_table(ss_info["name"])
                 except FileNotFoundError:
