@@ -31,7 +31,7 @@ class ImageImporter(Importer):
         self,
         name: str,
         description: str,
-        splits: list[str] = ["dataset"],
+        splits: list[str] = None,
         media_fields: dict[str, str] = {"image": "image"},
     ):
         """Initialize Image Importer
@@ -39,7 +39,7 @@ class ImageImporter(Importer):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            splits (list[str], optional): Dataset splits. Defaults to ["dataset"] for datasets with no subfolders for splits.
+            splits (list[str], optional): Dataset splits. Defaults to None for datasets with no subfolders for splits.
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
 
@@ -76,6 +76,10 @@ class ImageImporter(Importer):
                         },
                     }
                 )
+
+        # If no splits given, define a default single dataset split
+        if not splits:
+            splits = ["dataset"]
 
         # Initialize Importer
         super().__init__(name, description, tables, splits)
