@@ -166,7 +166,7 @@ class InferenceModel(ABC):
         # Semantic Search Embedding precomputing schema
         elif process_type == "search_emb":
             table_group = "embeddings"
-            table_fields = {"id": "str", "view": "str", "vector": "bytes"}
+            table_fields = {"id": "str", "view": "str", "vector": "vector(512)"}
 
         # Create new table
         table: lancedb.db.LanceTable = ds.create_table(

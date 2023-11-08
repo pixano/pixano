@@ -85,6 +85,10 @@ class Fields(BaseModel):
                             input_type.removeprefix("[").removesuffix("]").lower()
                         ]
                     )
+                if input_type.startswith("vector(") and input_type.endswith(")"):
+                    size_str = input_type.removeprefix("vector(").removesuffix(")")
+                    if size_str.isnumeric():
+                        return pa.list_(pa.float32(), list_size=int(size_str))
                 return pa_type_mapping[input_type.lower()]
 
         fields = []
