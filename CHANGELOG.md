@@ -7,6 +7,21 @@ All notable changes to Pixano will be documented in this file.
 ## [Unreleased]
 
 
+## [0.4.1] - 2023-11-10
+
+### Added:
+- Add **semantic search** on images using models like CLIP 
+- Add the ability to define custom media fields in COCO and Image Importer in addition to the standard "image" field
+- Add a warning in the Importer if the generated dataset is empty because no files were found
+
+### Changed:
+- Improve descriptions and remove unused parameters in the notebooks
+
+### Fixed:
+- Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
+- Fix paths for Pixano API reference generation
+
+
 ## [0.4.0] - 2023-10-26
 
 ### Added:
@@ -139,7 +154,8 @@ All notable changes to Pixano will be documented in this file.
 
 
 
-[Unreleased]: https://github.com/pixano/pixano/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.4.1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.4.0
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
