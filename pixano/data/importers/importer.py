@@ -233,6 +233,12 @@ class Importer(ABC):
             for table in tables:
                 ds_tables[table_group][table["name"]] = ds.open_table(table["name"])
 
+        # Raise error if generated dataset is empty
+        if len(ds_tables["main"]["db"]) == 0:
+            raise FileNotFoundError(
+                "Generated dataset is empty. Please make sure that the paths to your media files are correct, and that they each contain subfolders for your splits."
+            )
+
         # Copy media directories if portable
         if portable and "media" in ds_tables:
             for table in tqdm(
