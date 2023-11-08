@@ -7,6 +7,7 @@ All notable changes to Pixano will be documented in this file.
 ## [Unreleased]
 
 
+
 ## [0.4.1] - 2023-11-10
 
 ### Added:
@@ -20,6 +21,7 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed:
 - Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
 - Fix paths for Pixano API reference generation
+
 
 
 ## [0.4.0] - 2023-10-26
@@ -50,6 +52,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix saving annotations to file from Pixano Annotator
 - Fix portable option in dataset import to copy files instead of moving them
 - Fix imports and dependency versions for Pixano apps and UI components
+
 
 
 ## [0.3.2] - 2023-07-11
