@@ -149,14 +149,12 @@
   }
 
   async function handleDatasetScroll(event: Event) {
-    console.log("aaa")
     const datasetTab = event.currentTarget as Element;
     if (currentPage * 100 < selectedDataset.page.total) {
       const totalContentHeight =
         datasetTab.scrollHeight - datasetTab.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
       if (datasetTab.scrollTop > totalContentHeight - offset10percent) {
-        console.log("jjj")
         dispatch("loadNextPage");
       }
     }
