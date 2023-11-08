@@ -33,7 +33,7 @@
     "@pixano/models": "workspace:^0.3.0",
     "konva": "^8.4.2",
     "npyjs": "^0.4.0",
-    "onnxruntime-node": "^1.15.0",
+    "onnxruntime-node": "~1.16.0",
     "onnxruntime-web": "~1.16.0",
     "svelte-konva": "^0.1.1",
     "svelte-vega": "^1.2.0",
