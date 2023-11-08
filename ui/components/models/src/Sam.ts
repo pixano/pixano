@@ -32,7 +32,7 @@ import type {
 } from "./interfaces";
 
 ort.env.wasm.wasmPaths =
-  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.15.1/dist/";
+  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
 
 // Exports
 export class SAM implements InteractiveImageSegmenter {
