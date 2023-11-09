@@ -15,7 +15,8 @@ All notable changes to Pixano will be documented in this file.
 - Add optional **custom media fields** in COCO and Image Importer in addition to the standard "image" field
 
 ### Changed:
-- Improve descriptions and remove unused parameters in the notebooks
+- Improve descriptions and fix parameters in the notebooks
+- Update dependencies requirements (Lance, FastAPI, Pydantic...)
 
 ### Fixed:
 - Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
