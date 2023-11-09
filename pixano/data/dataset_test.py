@@ -63,12 +63,12 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.info.id = "coco_dataset_2"
         self.dataset.save_info()
 
-        updated_info = DatasetInfo.parse_file(self.path / "db.json")
+        updated_info = DatasetInfo.from_json(self.path / "db.json")
         self.assertEqual(updated_info.id, "coco_dataset_2")
 
         # Revert DatasetInfo back to normal
         self.dataset.info.id = "coco_dataset"
         self.dataset.save_info()
 
-        updated_info = DatasetInfo.parse_file(self.path / "db.json")
+        updated_info = DatasetInfo.from_json(self.path / "db.json")
         self.assertEqual(updated_info.id, "coco_dataset")

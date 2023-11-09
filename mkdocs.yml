@@ -63,7 +63,7 @@ plugins:
           - https://pandas.pydata.org/pandas-docs/version/1.5/objects.inv
           - https://pillow.readthedocs.io/en/stable/objects.inv
           - https://arrow.apache.org/docs/objects.inv
-          - https://docs.pydantic.dev/2.0/objects.inv # no objects.inv available for 1.10
+          - https://docs.pydantic.dev/2.4/objects.inv
           - https://ipython.readthedocs.io/en/8.13.2/objects.inv
         options:
           docstring_style: google

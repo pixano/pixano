@@ -34,7 +34,7 @@ class Dataset:
         """
 
         self._path = path
-        self._info = DatasetInfo.parse_file(self._path / "db.json")
+        self._info = DatasetInfo.from_json(self._path / "db.json")
 
     @property
     def info(self) -> DatasetInfo:

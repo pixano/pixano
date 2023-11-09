@@ -83,10 +83,9 @@ class Importer(ABC):
         self.info.num_elements = len(ds_tables["main"]["db"])
         self.info.estimated_size = estimate_size(import_dir)
 
+        # Save DatasetInfo
         with tqdm(desc="Creating dataset info file", total=1) as progress:
-            # Create spec.json
-            with open(import_dir / "db.json", "w", encoding="utf-8") as f:
-                json.dump(self.info.dict(), f)
+            self.info.save(import_dir)
             progress.update(1)
 
     def create_preview(

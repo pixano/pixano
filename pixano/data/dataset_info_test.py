@@ -29,7 +29,7 @@ class DatasetInfoTestCase(unittest.TestCase):
     def test_save(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             self.info.save(Path(temp_dir))
-            saved_info = DatasetInfo.parse_file(Path(temp_dir) / "db.json")
+            saved_info = DatasetInfo.from_json(Path(temp_dir) / "db.json")
 
             self.assertTrue(isinstance(saved_info, DatasetInfo))
             self.assertEqual(self.info.id, saved_info.id)
@@ -37,7 +37,7 @@ class DatasetInfoTestCase(unittest.TestCase):
             self.assertEqual(self.info.description, saved_info.description)
 
     def test_dict(self):
-        info_to_dict = self.info.dict()
+        info_to_dict = self.info.model_dump()
 
         self.assertTrue(isinstance(info_to_dict, dict))
         self.assertEqual(self.info.id, info_to_dict["id"])
