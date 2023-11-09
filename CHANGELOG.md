@@ -12,16 +12,16 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added:
 - Add **semantic search** on images using models like CLIP 
-- Add the ability to define custom media fields in COCO and Image Importer in addition to the standard "image" field
-- Add a warning in the Importer if the generated dataset is empty because no files were found
+- Add optional **custom media fields** in COCO and Image Importer in addition to the standard "image" field
 
 ### Changed:
 - Improve descriptions and remove unused parameters in the notebooks
 
 ### Fixed:
 - Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
+- Fix dataset scrolling in Pixano Annotator
 - Fix paths for Pixano API reference generation
-
+- Raise an error when importing a dataset if the output is empty, generally because no files were found
 
 
 ## [0.4.0] - 2023-10-26
