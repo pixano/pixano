@@ -47,7 +47,6 @@ dependencies = [
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
   "tqdm ~= 4.64.0",
-  "transformers ~= 4.33.0",
   "uvicorn ~= 0.20.0",
 ]
 
