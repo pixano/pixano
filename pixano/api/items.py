@@ -611,7 +611,7 @@ def search_query(
                     ).to_arrow_table()
 
                     results_table = duckdb.query(
-                        "SELECT (id), (SELECT Max(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
+                        "SELECT (id), (SELECT Min(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
                     ).to_arrow_table()
 
             # Filter results to page
