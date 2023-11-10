@@ -598,7 +598,7 @@ def search_query(
                 .to_arrow()
             )
 
-            # If more than view, search on all views and select the best results based on distance
+            # If more than one view, search on all views and select the best results based on distance
             if len(sem_search_views) > 1:
                 for view in sem_search_views[1:]:
                     view_results_table = (
