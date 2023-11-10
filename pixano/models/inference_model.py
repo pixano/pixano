@@ -121,7 +121,6 @@ class InferenceModel(ABC):
             Dataset: Dataset
         """
 
-        output_filename = f"{process_type}_{self.id}"
         if splits:
             split_ids = "'" + "', '".join(splits) + "'"
         if process_type not in ["obj", "segment_emb", "search_emb"]:
@@ -129,6 +128,10 @@ class InferenceModel(ABC):
                 "Please choose a valid process type ('obj' for preannotation, 'segment_emb' or 'search_emb'"
                 "for segmentation or semantic search embedding precomputing)"
             )
+
+        output_filename = (
+            f"emb_{self.id}" if "emb" in process_type else f"obj_{self.id}"
+        )
 
         # Load dataset
         dataset = Dataset(dataset_dir)
@@ -166,7 +169,10 @@ class InferenceModel(ABC):
         # Semantic Search Embedding precomputing schema
         elif process_type == "search_emb":
             table_group = "embeddings"
-            table_fields = {"id": "str", "view": "str", "vector": "vector(512)"}
+            table_fields = {"id": "str"}
+            # Add vector column for each selected view
+            for view in views:
+                table_fields[view] = "vector(512)"
 
         # Create new table
         table: lancedb.db.LanceTable = ds.create_table(
