@@ -18,7 +18,7 @@
   import { createEventDispatcher, onMount } from "svelte";
 
   import { api, Dashboard } from "@pixano/core";
-  
+
   import { Table } from "@pixano/table";
 
   import type { Dataset } from "@pixano/core";
@@ -41,7 +41,6 @@
   export let query: string;
 
   let datasetStats = null;
- 
 
   // Page navigation
   const itemsPerPage = 100;
@@ -77,7 +76,7 @@
     } else {
       // query available, show query result
       const start = Date.now();
-      let actual_page = selectedDataset.page
+      let actual_page = selectedDataset.page;
       selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
       let res = await api.getSearchResult(
         selectedDataset.id,
@@ -128,12 +127,18 @@
     }
   }
 
-  async function handleSearchEnter(query_str: string) {
-    query = query_str;
-    currentPage = 1
-    loadPage()
+  function handleSearch() {
+    query = (document.getElementById("sem-search-input") as HTMLInputElement)
+      .value;
+    currentPage = 1;
+    loadPage();
   }
 
+  function handleClearSearch() {
+    (document.getElementById("sem-search-input") as HTMLInputElement).value =
+      "";
+    handleSearch();
+  }
 
   onMount(async () => {
     loadPage();
@@ -186,11 +191,12 @@
         <div class="flex-grow" />
         <div class="relative flex items-center">
           <input
+            id="sem-search-input"
             type="text"
             placeholder="Search"
             value={query}
             class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
-            on:change={(event) => handleSearchEnter(event.srcElement.value)}
+            on:change={handleSearch}
           />
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -202,20 +208,20 @@
             <path d={svg_search} />
           </svg>
           {#if query !== ""}
-          <button
-            class="absolute right-2"
-            on:click={()=> handleSearchEnter("")}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="48"
-              viewBox="0 -960 960 960"
-              width="48"
-              class="h-4 w-4"
+            <button
+              class="absolute right-2"
+              on:click={() => handleClearSearch()}
             >
-              <path d={svg_quit} />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="48"
+                viewBox="0 -960 960 960"
+                width="48"
+                class="h-4 w-4"
+              >
+                <path d={svg_quit} />
+              </svg>
+            </button>
           {/if}
         </div>
       </div>
