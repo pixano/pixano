@@ -28,7 +28,7 @@ from pixano.api import (
     load_item_embeddings,
     load_items,
     save_item_details,
-    search_query
+    search_query,
 )
 from pixano.data import DatasetInfo
 
@@ -152,23 +152,14 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         response_model=Page[ItemFeatures],
     )
     async def post_search_query(
-        ds_id: str,
-        query_rep: dict,
-        params: Params = Depends()
+        ds_id: str, query_rep: dict, params: Params = Depends()
     ):
         # Load dataset
         ds = load_dataset(ds_id, settings)
         if ds is None:
             raise HTTPException(status_code=404, detail="Dataset not found")
         else:
-            if "query" in query_rep:
-                try:
-                    res = search_query(ds, query_rep["query"], params)
-                    return res
-                except Exception as err:
-                    raise HTTPException(status_code=404, detail=str(err))
-            else:
-                raise HTTPException(status_code=404, detail="Error in query input")
+            return search_query(ds, query_rep["query"], params)
 
     add_pagination(app)
     return app

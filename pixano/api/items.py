@@ -95,13 +95,17 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
 
     # Load dataset
     ds = dataset.connect()
+
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open media tables
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
+    # Open Active Learning tables
     al_tables: list[lancedb.db.LanceTable] = []
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
@@ -195,13 +199,17 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
 
     # Load dataset
     ds = dataset.connect()
+
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open media tables
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
+    # Open objects tables
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
@@ -212,6 +220,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                 dataset.info.tables["objects"].remove(obj_info)
                 dataset.save_info()
 
+    # Open Active Learning tables
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
@@ -321,6 +330,7 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     # Load dataset
     ds = dataset.connect()
 
+    # Open embedddings tables
     emb_tables: dict[str, lancedb.db.LanceTable] = {}
     if "embeddings" in dataset.info.tables:
         for emb_info in dataset.info.tables["embeddings"]:
@@ -369,23 +379,23 @@ def save_item_details(
     # Load dataset
     ds = dataset.connect()
 
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open objects tables
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
             obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
 
+    # Open Active Learning tables
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
             al_tables[al_info["source"]] = ds.open_table(al_info["name"])
 
-    ### Save item features (classification label)
-
+    # Save item features (classification label)
     features = item_details["itemData"]
-
-    # Classification
     for feature in features:
         if feature["name"] == "label":
             # If label not in main table
@@ -413,9 +423,7 @@ def save_item_details(
             # Clear change history to prevent dataset from becoming too large
             main_table.to_lance().cleanup_old_versions()
 
-    ### Save item objects
-
-    # Convert objects
+    # Convert item objects
     for obj in item_details["itemObjects"]:
         # Convert mask from URLE to RLE
         if "mask" in obj:
@@ -519,125 +527,114 @@ def save_item_details(
                 obj_tables[obj_source].delete(f"id in ('{cur_obj['id']}')")
 
 
-# TODO: Stop using global variables
-tokenizer = None
-model = None
-
-
-def clip_search_query(query: str, model_name: str):
-    """Process semantic search query with CLIP
-
-    Args:
-        query (str): Search query text
-        model_name (str): CLIP model name
-
-    Returns:
-        np.ndarray: Search query vector
-    """
-
-    global tokenizer, model
-
-    if not tokenizer:
-        from transformers import CLIPTokenizerFast
-
-        tokenizer = CLIPTokenizerFast.from_pretrained(model_name)
-    if not model:
-        from transformers import CLIPModel
-
-        model = CLIPModel.from_pretrained(model_name)
-
-    inputs = tokenizer([query], padding=True, return_tensors="pt")
-    text_features = model.get_text_features(**inputs)
-    return text_features.detach().numpy()[0]
-
-
 def search_query(
     dataset: Dataset, query: str, params: AbstractParams = None
 ) -> AbstractPage:
     # Load dataset
     ds = dataset.connect()
 
-    semantic_search_tables: dict[str, lancedb.db.LanceTable] = {}
+    # Open main table
+    main_table: lancedb.db.LanceTable = ds.open_table("db")
 
-    # Load semantic search embeddings tables
+    # Open media tables
+    media_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "media" in dataset.info.tables:
+        for md_info in dataset.info.tables["media"]:
+            media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+
+    # Open semantic search embeddings tables
+    sem_search_tables: dict[str, lancedb.db.LanceTable] = {}
+    sem_search_views = []
     if "embeddings" in dataset.info.tables:
-        for ss_info in dataset.info.tables["embeddings"]:
-            if ss_info["type"] == "search":
+        for emb_info in dataset.info.tables["embeddings"]:
+            if emb_info["type"] == "search":
                 try:
-                    semantic_search_tables[ss_info["source"]] = ds.open_table(
-                        ss_info["name"]
+                    sem_search_tables[emb_info["source"]] = ds.open_table(
+                        emb_info["name"]
                     )
+                    # List views in embedding table
+                    sem_search_views = [
+                        field_name
+                        for field_name, field_type in emb_info["fields"].items()
+                        if field_type == "vector(512)"
+                    ]
                 except FileNotFoundError:
                     # Remove missing embeddings tables from DatasetInfo
-                    dataset.info.tables["embeddings"].remove(ss_info)
+                    dataset.info.tables["embeddings"].remove(emb_info)
                     dataset.save_info()
 
-    # Select first semantic search embeddings table
+    # Return first embeddings for first table containing CLIP
     # TODO: Add embeddings table select option
-    if len(semantic_search_tables) > 0:
-        ss_source = list(semantic_search_tables.keys())[0]
-        semantic_search_table: lancedb.db.LanceTable = semantic_search_tables[ss_source]
+    for emb_source in sem_search_tables.keys():
+        if "CLIP" in emb_source:
+            sem_search_table: lancedb.db.LanceTable = sem_search_tables[emb_source]
 
-        # Get main and media tables, and number of views
-        n_views = 0
-        main_table: lancedb.db.LanceTable = ds.open_table("db")
-        media_tables: dict[str, lancedb.db.LanceTable] = {}
-        if "media" in dataset.info.tables:
-            for md_info in dataset.info.tables["media"]:
-                media_tables[md_info["name"]] = ds.open_table(md_info["name"])
-                n_views = max(
-                    n_views, media_tables[md_info["name"]].to_arrow().num_columns - 1
-                )
+            # Get page parameters
+            params = resolve_params(params)
+            raw_params = params.to_raw_params()
+            total = main_table.to_lance().count_rows()
 
-        # Get page parameters
-        params = resolve_params(params)
-        raw_params = params.to_raw_params()
-        total = main_table.to_lance().count_rows() * n_views
+            # Get page items
+            start = raw_params.offset
+            stop = min(raw_params.offset + raw_params.limit, total)
+            if start >= stop:
+                return None
 
-        # Get page items
-        start = raw_params.offset
-        stop = min(raw_params.offset + raw_params.limit, total)
-        if start >= stop:
-            return None
+            # Initialize CLIP model
+            try:
+                from pixano_inference.transformers import CLIP
+            except ImportError as e:
+                raise ImportError(
+                    "Please install the pixano-inference module to perform semantic search with CLIP"
+                ) from e
 
-        # Perform semantic search
-        # TODO: Generalize to other models
-        search_res_table = (
-            semantic_search_table.search(clip_search_query(query, ss_source))
-            .limit(stop)
-            .to_arrow()
-        )
+            model = CLIP()
+            model_query = model.semantic_search(query)
 
-        # Get results (filter and limit to page)
-        if n_views < 2:
+            # Perform semantic search
+            results_table = (
+                sem_search_table.search(model_query, sem_search_views[0])
+                .limit(stop)
+                .to_arrow()
+            )
+
+            # If more than view, search on all views and select the best results based on distance
+            if len(sem_search_views) > 1:
+                for view in sem_search_views[1:]:
+                    view_results_table = (
+                        sem_search_table.search(model_query, view)
+                        .limit(stop)
+                        .to_arrow()
+                    )
+                    results_table = duckdb.query(
+                        "SELECT id, results_table._distance as distance_1, view_results_table._distance as distance_2 FROM results_table LEFT JOIN view_results_table USING (id)"
+                    ).to_arrow_table()
+
+                    results_table = duckdb.query(
+                        "SELECT (id), (SELECT Max(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
+                    ).to_arrow_table()
+
+            # Filter results to page
             pyarrow_table = duckdb.query(
-                "SELECT id, _distance as distance FROM search_res_table ORDER BY distance ASC "
-                f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
-            ).to_arrow_table()
-        else:
-            pyarrow_table = duckdb.query(
-                "SELECT id, view, _distance as distance FROM search_res_table ORDER BY distance ASC "
-                f"LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
-            ).to_arrow_table()
-
-        # Join with main table
-        main_table = main_table.to_lance()
-        pyarrow_table = duckdb.query(
-            "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id) ORDER BY distance ASC "
-        ).to_arrow_table()
-
-        # Join with media tables
-        for media_table in media_tables.values():
-            pyarrow_media_table = media_table.to_lance()
-            pyarrow_table = duckdb.query(
-                "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY distance ASC "
+                f"SELECT id, _distance as distance FROM results_table ORDER BY distance ASC LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
             ).to_arrow_table()
 
-        # Create items features
-        items = [
-            _create_features(item, pyarrow_table.schema)
-            for item in pyarrow_table.to_pylist()
-        ]
-        return create_page(items, total=total, params=params)
-    else:
-        raise Exception("No semantic embeddings")
+            # Join with main table
+            main_table = main_table.to_lance()
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id) ORDER BY distance ASC"
+            ).to_arrow_table()
+
+            # Join with media tables
+            for media_table in media_tables.values():
+                pyarrow_media_table = media_table.to_lance()
+                pyarrow_table = duckdb.query(
+                    "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY distance ASC"
+                ).to_arrow_table()
+
+            # Create items features
+            items = [
+                _create_features(item, pyarrow_table.schema)
+                for item in pyarrow_table.to_pylist()
+            ]
+            return create_page(items, total=total, params=params)
