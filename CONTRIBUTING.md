@@ -16,52 +16,67 @@ To contribute more actively to the project, you are welcome to develop the fix o
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
 
 
-### Formatting your code
-
-We use these extensions for formatting the Pixano source code:
-- Python: Black
-- Typescript: Prettier
-- Svelte: Svelte for VS Code
-
-
 ## Running Pixano locally
 
-If you are looking to contribute to Pixano and develop new features, you might be interested in running Pixano locally.
+If you are looking to contribute to Pixano and develop new features, you will need to run Pixano locally.
 
 ### Requirements
 
-- Backend:
-  - python == 3.10
+#### Backend
+
+You will need `python == 3.10`. Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
 
 ```bash
 pip install .
 ```
 
-- Frontend:
-  - node ~= 18.17
-  - pnpm ~= 8.6
+#### Frontend
+
+You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, inside the `pixano/ui/` directory, run this command to install all the pnpm dependencies:
 
 ```bash
-cd ui
 pnpm i
 ```
 
 ### Running the server and apps
 
-- Backend server:
-```
-DATA_DIR=[PATH TO DATA] uvicorn pixano.apps.explorer.main:app --reload
+First, launch the backend server using this command:
+
+```bash
+DATA_DIR=your_datasets_directory/ uvicorn pixano.apps:create_app --factory --reload
 ```
 
-- Frontend apps:
+Then, in another terminal, launch the frontend apps using:
+
 ```bash
 pnpm --parallel run dev
 ```
 
-### Running the storybook
+This command should provide you with `http://localhost` links you can open in your browser to access the Explorer and Annotator apps.
 
-The frontend includes a storybook for testing each components.
+Both the uvicorn server and the pnpm apps will refresh automatically when you make changes to the code.
+
+
+## Testing the code
+
+We test our backend code with Python's built-in `unittest` framework. All our unit testing files are in the `tests/` folder, with a `test_` prefix, so your settings file in VS Code should look like this:
+
+```json
+  "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
+  "python.testing.pytestEnabled": false,
+  "python.testing.unittestEnabled": true
+```
+
+Our frontend code is tested using Storybook, which you can launch with the following command:
 
 ```bash
 pnpm -r run storybook
 ```
+
+
+## Formatting the code
+
+We use these extensions for formatting the Pixano source code:
+- Python: Black
+- Typescript: Prettier
+- Svelte: Svelte for VS Code
