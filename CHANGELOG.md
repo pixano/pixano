@@ -6,6 +6,9 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+
+## [0.4.1] - 2023-11-13
+
 ### Added:
 - Add **semantic search** on images using models like CLIP 
 - Add optional **custom media fields** in COCO and Image Importer in addition to the standard "image" field
@@ -158,6 +161,7 @@ All notable changes to Pixano will be documented in this file.
 
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.4.0]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1
