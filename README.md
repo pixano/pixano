@@ -45,7 +45,7 @@ Please refer to these links for using the <a href="https://github.com/pixano/pix
 
 # Contributing
 
-Please refer to the CONTRIBUTING.md for information on running Pixano locally and guidelines on how to publish your contributions.
+Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) for information on running Pixano locally and guidelines on how to publish your contributions.
 
 # License
 
