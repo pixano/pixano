@@ -552,6 +552,7 @@
         class="w-full h-full overflow-y-scroll {activeTab == 'dataset'
           ? ''
           : 'hidden'}"
+          on:scroll={handleDatasetScroll}
       >
         <!-- Details -->
         <div class="flex flex-col p-4 border-b-2 border-slate-300">
@@ -568,7 +569,6 @@
 
         <div
           class="p-4 flex flex-wrap justify-center"
-          on:scroll={handleDatasetScroll}
         >
           {#each filterItems(selectedDataset.page.items) as item, i}
             <button

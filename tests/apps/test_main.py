@@ -20,7 +20,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from pixano.api import Settings
-from pixano.apps.main import create_app
+from pixano.apps import create_app
 from pixano.data import COCOImporter
 
 
@@ -33,8 +33,8 @@ class AppTestCase(unittest.TestCase):
         # Create a COCO dataset
         import_dir = library_dir / "coco"
         input_dirs = {
-            "image": Path("unit_testing/assets/coco_dataset/image"),
-            "objects": Path("unit_testing/assets/coco_dataset"),
+            "image": Path("tests/assets/coco_dataset/image"),
+            "objects": Path("tests/assets/coco_dataset"),
         }
         importer = COCOImporter(
             name="coco",

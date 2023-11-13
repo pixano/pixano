@@ -7,7 +7,7 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
-SRC_PATH = "pixano"
+SRC_PATH = "../pixano/pixano"
 REF_PATH = "code"
 IGNORED_FILES = ["__init__.md", "__version__.md", "_test.md"]
 
@@ -30,7 +30,7 @@ for path in sorted(Path(SRC_PATH).rglob("*.py")):
         doc_path = doc_path.with_name("index.md")
         full_doc_path = full_doc_path.with_name("index.md")
         nav["index"] = doc_path.as_posix()
-        with open(f"docs/{REF_PATH}/index.md", "r") as index_file:
+        with open(f"../pixano/docs/{REF_PATH}/index.md", "r") as index_file:
             lines = index_file.readlines()
             with mkdocs_gen_files.open(full_doc_path, "w") as fd:
                 fd.writelines(lines)
@@ -45,5 +45,5 @@ for path in sorted(Path(SRC_PATH).rglob("*.py")):
         mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
 
-with mkdocs_gen_files.open(f"{REF_PATH}/SUMMARY.md", "w") as nav_file:
+with mkdocs_gen_files.open("code/SUMMARY.md", "w") as nav_file:
     nav_file.writelines(nav.build_literate_nav())

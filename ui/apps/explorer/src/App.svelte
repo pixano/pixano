@@ -44,6 +44,8 @@
   let selectedDataset: Dataset;
   let currentPage = 1;
 
+  let query = "";
+
   let selectedItem: ItemData;
   let selectedTab: string = "dashboard";
 
@@ -53,6 +55,7 @@
   let bboxes: Array<BBox>;
 
   let datasetErrorModal = false;
+  let searchErrorModal = false;
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
@@ -75,6 +78,7 @@
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
+    query = "";
     handleGetDatasets();
   }
 
@@ -251,10 +255,12 @@
         bind:selectedTab
         {selectedDataset}
         {currentPage}
+        bind:query
         on:selectItem={(event) => handleSelectItem(event.detail)}
         on:datasetError={() => (
           handleUnselectDataset(), (datasetErrorModal = true)
         )}
+        on:searchError={() => (searchErrorModal = true)}
       />
     {/if}
   {:else}
@@ -272,5 +278,12 @@
     message="Error while retrieving dataset items."
     details="Please look at the application logs for more information, and report this issue if the error persists."
     on:confirm={() => (datasetErrorModal = false)}
+  />
+{/if}
+{#if searchErrorModal}
+  <WarningModal
+    message="Error in Semantic Search"
+    details="No Semantics Embeddings, Semantic search not available"
+    on:confirm={() => (searchErrorModal = false)}
   />
 {/if}

@@ -15,13 +15,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-
 import imageio
 import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.depth_image import DepthImage, DepthImageType
+from pixano.core import DepthImage, DepthImageType
 
 
 class DepthImageTestCase(unittest.TestCase):
@@ -82,18 +81,15 @@ class DepthImageTestCase(unittest.TestCase):
 
 class TestParquetDepthImage(unittest.TestCase):
     def setUp(self) -> None:
-        uri1 = "unit_testing/assets/depth_images/000067.png"
-        uri2 = "unit_testing/assets/depth_images/000934.png"
-        uri3 = "unit_testing/assets/depth_images/20170320_144339_cam_0_00011901.npy"
+        uri1 = "tests/assets/depth_images/000067.png"
+        uri2 = "tests/assets/depth_images/000934.png"
 
         self.depth_image1 = DepthImage.load(uri1)
         self.depth_image2 = DepthImage.load(uri2)
-        self.depth_image3 = DepthImage.load_npy(uri3)
 
         self.depth_image_list = [
             self.depth_image1,
             self.depth_image2,
-            self.depth_image3,
         ]
 
     def test_depth_image_table(self):

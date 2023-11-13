@@ -7,6 +7,26 @@ All notable changes to Pixano will be documented in this file.
 ## [Unreleased]
 
 
+## [0.4.1] - 2023-11-13
+
+### Added:
+- Add **semantic search** on images using models like CLIP 
+- Add optional **custom media fields** in COCO and Image Importer in addition to the standard "image" field
+- Add CONTRIBUTING.md for installation information and contribution guidelines
+
+### Changed:
+- Improve descriptions and fix parameters in the notebooks
+- Update dependencies requirements (Lance, FastAPI, Pydantic...)
+- Move unit tests and assets to `tests/` folder
+
+### Fixed:
+- Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
+- Fix dataset scrolling in Pixano Annotator
+- Fix paths for Pixano API reference generation
+- Raise an error when importing a dataset if the output is empty, generally because no files were found
+- Fix Python import in `data/importers`
+
+
 ## [0.4.0] - 2023-10-26
 
 ### Added:
@@ -35,6 +55,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix saving annotations to file from Pixano Annotator
 - Fix portable option in dataset import to copy files instead of moving them
 - Fix imports and dependency versions for Pixano apps and UI components
+
 
 
 ## [0.3.2] - 2023-07-11
@@ -139,7 +160,8 @@ All notable changes to Pixano will be documented in this file.
 
 
 
-[Unreleased]: https://github.com/pixano/pixano/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.4.0]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/pixano/pixano/compare/v0.3.0...v0.3.1

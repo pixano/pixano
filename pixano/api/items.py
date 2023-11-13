@@ -95,13 +95,17 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
 
     # Load dataset
     ds = dataset.connect()
+
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open media tables
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
+    # Open Active Learning tables
     al_tables: list[lancedb.db.LanceTable] = []
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
@@ -195,13 +199,17 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
 
     # Load dataset
     ds = dataset.connect()
+
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open media tables
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
             media_tables[md_info["name"]] = ds.open_table(md_info["name"])
 
+    # Open objects tables
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
@@ -212,6 +220,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                 dataset.info.tables["objects"].remove(obj_info)
                 dataset.save_info()
 
+    # Open Active Learning tables
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
@@ -321,15 +330,17 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     # Load dataset
     ds = dataset.connect()
 
+    # Open embedddings tables
     emb_tables: dict[str, lancedb.db.LanceTable] = {}
     if "embeddings" in dataset.info.tables:
         for emb_info in dataset.info.tables["embeddings"]:
-            try:
-                emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
-            except FileNotFoundError:
-                # Remove missing embeddings tables from DatasetInfo
-                dataset.info.tables["embeddings"].remove(emb_info)
-                dataset.save_info()
+            if emb_info["type"] == "segment":
+                try:
+                    emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
+                except FileNotFoundError:
+                    # Remove missing embeddings tables from DatasetInfo
+                    dataset.info.tables["embeddings"].remove(emb_info)
+                    dataset.save_info()
 
     # Get item embeddings
     embeddings = {}
@@ -338,6 +349,7 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
         embeddings[emb_source] = media_scanner.to_table().to_pylist()[0]
 
     # Return first embeddings for first table containing SAM (Segment Anything Model)
+    # TODO: Add embeddings table select option
     for emb_source in embeddings.keys():
         if "SAM" in emb_source:
             # Keep only embedding fields
@@ -367,23 +379,23 @@ def save_item_details(
     # Load dataset
     ds = dataset.connect()
 
+    # Open main table
     main_table: lancedb.db.LanceTable = ds.open_table("db")
 
+    # Open objects tables
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
             obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
 
+    # Open Active Learning tables
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
             al_tables[al_info["source"]] = ds.open_table(al_info["name"])
 
-    ### Save item features (classification label)
-
+    # Save item features (classification label)
     features = item_details["itemData"]
-
-    # Classification
     for feature in features:
         if feature["name"] == "label":
             # If label not in main table
@@ -411,9 +423,7 @@ def save_item_details(
             # Clear change history to prevent dataset from becoming too large
             main_table.to_lance().cleanup_old_versions()
 
-    ### Save item objects
-
-    # Convert objects
+    # Convert item objects
     for obj in item_details["itemObjects"]:
         # Convert mask from URLE to RLE
         if "mask" in obj:
@@ -515,3 +525,116 @@ def save_item_details(
             ):
                 # Remove object from table
                 obj_tables[obj_source].delete(f"id in ('{cur_obj['id']}')")
+
+
+def search_query(
+    dataset: Dataset, query: str, params: AbstractParams = None
+) -> AbstractPage:
+    # Load dataset
+    ds = dataset.connect()
+
+    # Open main table
+    main_table: lancedb.db.LanceTable = ds.open_table("db")
+
+    # Open media tables
+    media_tables: dict[str, lancedb.db.LanceTable] = {}
+    if "media" in dataset.info.tables:
+        for md_info in dataset.info.tables["media"]:
+            media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+
+    # Open semantic search embeddings tables
+    sem_search_tables: dict[str, lancedb.db.LanceTable] = {}
+    sem_search_views = []
+    if "embeddings" in dataset.info.tables:
+        for emb_info in dataset.info.tables["embeddings"]:
+            if emb_info["type"] == "search":
+                try:
+                    sem_search_tables[emb_info["source"]] = ds.open_table(
+                        emb_info["name"]
+                    )
+                    # List views in embedding table
+                    sem_search_views = [
+                        field_name
+                        for field_name, field_type in emb_info["fields"].items()
+                        if field_type == "vector(512)"
+                    ]
+                except FileNotFoundError:
+                    # Remove missing embeddings tables from DatasetInfo
+                    dataset.info.tables["embeddings"].remove(emb_info)
+                    dataset.save_info()
+
+    # Return first embeddings for first table containing CLIP
+    # TODO: Add embeddings table select option
+    for emb_source in sem_search_tables.keys():
+        if "CLIP" in emb_source:
+            sem_search_table: lancedb.db.LanceTable = sem_search_tables[emb_source]
+
+            # Get page parameters
+            params = resolve_params(params)
+            raw_params = params.to_raw_params()
+            total = main_table.to_lance().count_rows()
+
+            # Get page items
+            start = raw_params.offset
+            stop = min(raw_params.offset + raw_params.limit, total)
+            if start >= stop:
+                return None
+
+            # Initialize CLIP model
+            try:
+                from pixano_inference.transformers import CLIP
+            except ImportError as e:
+                raise ImportError(
+                    "Please install the pixano-inference module to perform semantic search with CLIP"
+                ) from e
+
+            model = CLIP()
+            model_query = model.semantic_search(query)
+
+            # Perform semantic search
+            results_table = (
+                sem_search_table.search(model_query, sem_search_views[0])
+                .limit(stop)
+                .to_arrow()
+            )
+
+            # If more than one view, search on all views and select the best results based on distance
+            if len(sem_search_views) > 1:
+                for view in sem_search_views[1:]:
+                    view_results_table = (
+                        sem_search_table.search(model_query, view)
+                        .limit(stop)
+                        .to_arrow()
+                    )
+                    results_table = duckdb.query(
+                        "SELECT id, results_table._distance as distance_1, view_results_table._distance as distance_2 FROM results_table LEFT JOIN view_results_table USING (id)"
+                    ).to_arrow_table()
+
+                    results_table = duckdb.query(
+                        "SELECT (id), (SELECT Min(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
+                    ).to_arrow_table()
+
+            # Filter results to page
+            pyarrow_table = duckdb.query(
+                f"SELECT id, _distance as distance FROM results_table ORDER BY distance ASC LIMIT {raw_params.limit} OFFSET {raw_params.offset}"
+            ).to_arrow_table()
+
+            # Join with main table
+            main_table = main_table.to_lance()
+            pyarrow_table = duckdb.query(
+                "SELECT * FROM pyarrow_table LEFT JOIN main_table USING (id) ORDER BY distance ASC"
+            ).to_arrow_table()
+
+            # Join with media tables
+            for media_table in media_tables.values():
+                pyarrow_media_table = media_table.to_lance()
+                pyarrow_table = duckdb.query(
+                    "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_media_table USING (id) ORDER BY distance ASC"
+                ).to_arrow_table()
+
+            # Create items features
+            items = [
+                _create_features(item, pyarrow_table.schema)
+                for item in pyarrow_table.to_pylist()
+            ]
+            return create_page(items, total=total, params=params)

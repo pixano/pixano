@@ -15,8 +15,13 @@ import unittest
 
 import pyarrow as pa
 
-from pixano.core.image import Image, ImageType
-from pixano.core.utils import is_image_type, is_number, pyarrow_array_from_list
+from pixano.core import (
+    Image,
+    ImageType,
+    is_image_type,
+    is_number,
+    pyarrow_array_from_list,
+)
 
 
 class IsNumberTestCase(unittest.TestCase):

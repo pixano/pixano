@@ -14,7 +14,7 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 from pixano.core import Image
 from pixano.data import Dataset, DatasetInfo
@@ -43,7 +43,7 @@ def load_dataset_list(settings: Settings) -> list[DatasetInfo]:
     infos = []
     for json_file in sorted(settings.data_dir.glob("*/db.json")):
         # Load dataset info
-        info = DatasetInfo.parse_file(json_file)
+        info = DatasetInfo.from_json(json_file)
         # Load thumbnail
         preview_path = json_file.parent / "preview.png"
         if preview_path.is_file():
@@ -70,7 +70,7 @@ def load_dataset(ds_id: str, settings: Settings) -> Dataset:
     """
 
     for json_file in settings.data_dir.glob("*/db.json"):
-        info = DatasetInfo.parse_file(json_file)
+        info = DatasetInfo.from_json(json_file)
         if ds_id == info.id:
             return Dataset(json_file.parent)
 

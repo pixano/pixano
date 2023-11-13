@@ -23,6 +23,7 @@ from pixano.api.items import (
     load_item_embeddings,
     load_items,
     save_item_details,
+    search_query,
 )
 
 __all__ = [
@@ -35,4 +36,5 @@ __all__ = [
     "load_item_details",
     "load_items",
     "save_item_details",
+    "search_query",
 ]

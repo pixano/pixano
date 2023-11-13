@@ -31,12 +31,14 @@
     svg_next_page,
     svg_prev_page,
     svg_search,
+    svg_quit,
   } from "@pixano/core/src/icons";
 
   // Exports
   export let selectedDataset: Dataset;
   export let selectedTab: string;
   export let currentPage: number;
+  export let query: string;
 
   let datasetStats = null;
 
@@ -52,22 +54,48 @@
   }
 
   async function loadPage() {
-    selectedDataset.page = null;
-    const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage,
-      itemsPerPage
-    );
-    console.log(
-      "DatasetExplorer.loadPage - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    if (query == "") {
+      // no query, standard load
+      selectedDataset.page = null;
+      const start = Date.now();
+      selectedDataset.page = await api.getDatasetItems(
+        selectedDataset.id,
+        currentPage,
+        itemsPerPage
+      );
+      console.log(
+        "DatasetExplorer.loadPage - api.getDatasetItems in",
+        Date.now() - start,
+        "ms"
+      );
 
-    // If no dataset page, return error message
-    if (selectedDataset.page == null) {
-      dispatch("datasetError");
+      // If no dataset page, return error message
+      if (selectedDataset.page == null) {
+        dispatch("datasetError");
+      }
+    } else {
+      // query available, show query result
+      const start = Date.now();
+      let actual_page = selectedDataset.page;
+      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
+      let res = await api.getSearchResult(
+        selectedDataset.id,
+        query,
+        currentPage,
+        itemsPerPage
+      );
+      console.log(
+        "DatasetExplorer.loadPage - api.getSearchResult in",
+        Date.now() - start,
+        "ms"
+      );
+      // If no dataset page, return error message
+      if (res == null) {
+        selectedDataset.page = actual_page;
+        dispatch("searchError");
+      } else {
+        selectedDataset.page = res;
+      }
     }
   }
 
@@ -97,6 +125,19 @@
       currentPage = Math.ceil(selectedDataset.page.total / itemsPerPage);
       loadPage();
     }
+  }
+
+  function handleSearch() {
+    query = (document.getElementById("sem-search-input") as HTMLInputElement)
+      .value;
+    currentPage = 1;
+    loadPage();
+  }
+
+  function handleClearSearch() {
+    (document.getElementById("sem-search-input") as HTMLInputElement).value =
+      "";
+    handleSearch();
   }
 
   onMount(async () => {
@@ -150,9 +191,12 @@
         <div class="flex-grow" />
         <div class="relative flex items-center">
           <input
+            id="sem-search-input"
             type="text"
             placeholder="Search"
+            value={query}
             class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
+            on:change={handleSearch}
           />
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -163,6 +207,22 @@
           >
             <path d={svg_search} />
           </svg>
+          {#if query !== ""}
+            <button
+              class="absolute right-2"
+              on:click={() => handleClearSearch()}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="48"
+                viewBox="0 -960 960 960"
+                width="48"
+                class="h-4 w-4"
+              >
+                <path d={svg_quit} />
+              </svg>
+            </button>
+          {/if}
         </div>
       </div>
       {#if selectedTab === "database"}

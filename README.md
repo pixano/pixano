@@ -45,12 +45,7 @@ Please refer to these links for using the <a href="https://github.com/pixano/pix
 
 # Contributing
 
-If you find a bug or you think of some missing features that could be useful while using Pixano, please [open an issue](https://github.com/pixano/pixano/issues)!
-
-To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
-
-And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
-
+Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) for information on running Pixano locally and guidelines on how to publish your contributions.
 
 # License
 

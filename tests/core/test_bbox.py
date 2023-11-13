@@ -18,7 +18,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from pixano.core.bbox import BBox, BBoxType
+from pixano.core import BBox, BBoxType
 
 
 class BBoxTestCase(unittest.TestCase):
