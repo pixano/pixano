@@ -14,12 +14,14 @@ All notable changes to Pixano will be documented in this file.
 ### Changed:
 - Improve descriptions and fix parameters in the notebooks
 - Update dependencies requirements (Lance, FastAPI, Pydantic...)
+- Move unit tests and assets to `tests/` folder
 
 ### Fixed:
 - Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
 - Fix dataset scrolling in Pixano Annotator
 - Fix paths for Pixano API reference generation
 - Raise an error when importing a dataset if the output is empty, generally because no files were found
+- Fix Python import in `data/importers`
 
 
 ## [0.4.0] - 2023-10-26
