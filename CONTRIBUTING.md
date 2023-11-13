@@ -18,7 +18,7 @@ And if you want to change the application to your liking, feel free to [fork thi
 
 ## Running Pixano locally
 
-If you are looking to contribute to Pixano and develop new features, you will need to run Pixano locally.
+If you are looking to contribute to Pixano and develop new features, you will need to clone the Pixano repository and run it locally.
 
 ### Requirements
 
