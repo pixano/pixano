@@ -15,9 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pixano.data.dataset import Dataset
-from pixano.data.dataset_info import DatasetInfo
-from pixano.data.importers import COCOImporter
+from pixano.data import COCOImporter, Dataset, DatasetInfo
 
 
 class DatasetTestCase(unittest.TestCase):
@@ -29,15 +27,17 @@ class DatasetTestCase(unittest.TestCase):
         # Create a COCO dataset
         self.path = library_dir / "coco"
         input_dirs = {
-            "image": Path("unit_testing/assets/coco_dataset/image"),
-            "objects": Path("unit_testing/assets/coco_dataset"),
+            "image": Path("tests/assets/coco_dataset/image"),
+            "objects": Path("tests/assets/coco_dataset"),
         }
         importer = COCOImporter(
             name="coco",
             description="COCO dataset",
             splits=["val"],
         )
-        self.dataset = importer.import_dataset(input_dirs, self.path, portable=False)
+        self.dataset: Dataset = importer.import_dataset(
+            input_dirs, self.path, portable=False
+        )
 
         # Set dataset ID
         self.dataset.info.id = "coco_dataset"

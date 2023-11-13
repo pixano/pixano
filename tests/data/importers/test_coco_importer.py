@@ -17,16 +17,19 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import ImageType
-from pixano.data.importers.image_importer import ImageImporter
+from pixano.core import BBoxType, CompressedRLEType, ImageType
+from pixano.data import COCOImporter
 
 
-class ImageImporterTestCase(unittest.TestCase):
+class COCOImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {"image": Path("unit_testing/assets/coco_dataset/image")}
-        self.importer = ImageImporter(
+        self.input_dirs = {
+            "image": Path("tests/assets/coco_dataset/image"),
+            "objects": Path("tests/assets/coco_dataset"),
+        }
+        self.importer = COCOImporter(
             name="COCO",
-            description="Image dataset using COCO",
+            description="COCO dataset",
             splits=["val"],
         )
 
@@ -71,3 +74,15 @@ class ImageImporterTestCase(unittest.TestCase):
             self.assertEqual(len(table), 3)
             self.assertIn(pa.field("id", pa.string()), table.schema)
             self.assertIn(pa.field("image", ImageType), table.schema)
+
+            # Check that objects.lance exists
+            db_lance_path = import_dir / "objects.lance"
+            self.assertTrue(db_lance_path.exists())
+
+            # Check objects.lance content
+            ds = dataset.connect()
+            table = ds.open_table("objects")
+            self.assertEqual(len(table), 39)
+            self.assertIn(pa.field("id", pa.string()), table.schema)
+            self.assertIn(pa.field("bbox", BBoxType), table.schema)
+            self.assertIn(pa.field("mask", CompressedRLEType), table.schema)

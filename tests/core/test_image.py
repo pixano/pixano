@@ -23,7 +23,7 @@ import pyarrow.parquet as pq
 from IPython.display import Image as IPyImage
 from PIL import Image as PILImage
 
-from pixano.core.image import Image, ImageType
+from pixano.core import Image, ImageType
 from pixano.utils import binary_to_url
 
 

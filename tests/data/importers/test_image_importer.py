@@ -17,26 +17,23 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import BBoxType, ImageType
-from pixano.data.importers.dota_importer import DOTAImporter
+from pixano.core import ImageType
+from pixano.data import ImageImporter
 
 
-class DOTAImporterTestCase(unittest.TestCase):
+class ImageImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {
-            "image": Path("unit_testing/assets/coco_dataset/image"),
-            "objects": Path("unit_testing/assets/coco_dataset/objects"),
-        }
-        self.importer = DOTAImporter(
-            name="DOTA",
-            description="DOTA dataset from COCO",
+        self.input_dirs = {"image": Path("tests/assets/coco_dataset/image")}
+        self.importer = ImageImporter(
+            name="COCO",
+            description="Image dataset using COCO",
             splits=["val"],
         )
 
     def test_import_dataset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
-            import_dir = Path(temp_dir) / "dota"
+            import_dir = Path(temp_dir) / "coco"
 
             # Import dataset
             dataset = self.importer.import_dataset(
@@ -50,8 +47,8 @@ class DOTAImporterTestCase(unittest.TestCase):
             self.assertTrue(spec_json_path.exists())
 
             # Check db.json content
-            self.assertEqual("DOTA", dataset.info.name)
-            self.assertEqual(dataset.info.num_elements, 1)
+            self.assertEqual("COCO", dataset.info.name)
+            self.assertEqual(3, dataset.info.num_elements)
 
             # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"
@@ -60,7 +57,7 @@ class DOTAImporterTestCase(unittest.TestCase):
             # Check db.lance content
             ds = dataset.connect()
             table = ds.open_table("db")
-            self.assertEqual(len(table), 1)
+            self.assertEqual(len(table), 3)
             self.assertIn(pa.field("id", pa.string()), table.schema)
             self.assertIn(pa.field("split", pa.string()), table.schema)
 
@@ -71,17 +68,6 @@ class DOTAImporterTestCase(unittest.TestCase):
             # Check image.lance content
             ds = dataset.connect()
             table = ds.open_table("image")
-            self.assertEqual(len(table), 1)
+            self.assertEqual(len(table), 3)
             self.assertIn(pa.field("id", pa.string()), table.schema)
             self.assertIn(pa.field("image", ImageType), table.schema)
-
-            # Check that objects.lance exists
-            db_lance_path = import_dir / "objects.lance"
-            self.assertTrue(db_lance_path.exists())
-
-            # Check objects.lance content
-            ds = dataset.connect()
-            table = ds.open_table("objects")
-            self.assertEqual(len(table), 323)
-            self.assertIn(pa.field("id", pa.string()), table.schema)
-            self.assertIn(pa.field("bbox", BBoxType), table.schema)
