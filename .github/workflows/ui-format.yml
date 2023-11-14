@@ -17,22 +17,22 @@
 name: Lint UI and markdown code
 
 on:
-    push:
-      branches: [ "develop" ]
-    pull_request:
-      branches: [ "develop" ]  
+  push:
+    branches: ["develop"]
+  pull_request:
+    branches: ["develop"]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Prettify code
+      - name: Lint Python code with Prettier
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_plugins: "prettier-plugin-svelte"
-          prettier_options: --check **/*.{js,ts,svelte,json,md}
+          # prettier_plugins: "prettier-plugin-svelte" # Prettier Action currently doesn't support community plugins
+          prettier_options: --check **/*.{js,ts,cjs,html,css,json,yaml,yml,md}
