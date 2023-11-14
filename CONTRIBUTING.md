@@ -74,6 +74,12 @@ pnpm -r run storybook
 
 We use these extensions for formatting the Pixano source code:
 
-- Python: Black
-- Typescript: Prettier
-- Svelte: Svelte for VS Code
+- Black: Python, Jupyter
+  - https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter
+- Prettier: Typescript, Javascript, Svelte, HTML, CSS, JSON, YAML, Markdown
+  - https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode
+  - https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode
+
+## Updating the changelog
+
+When you want to create a pull request with the changes you have made, please update the CHANGELOG.md accordingly.
