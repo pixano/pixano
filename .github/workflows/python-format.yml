@@ -33,12 +33,12 @@ jobs:
     - name: Lint Python code with black
       uses: psf/black@stable
       with:
-        options: "--verbose"
+        options: "--check --verbose"
         src: "./pixano"
 
     - name: Lint Jupyter notebooks with black
       uses: psf/black@stable
       with:
-        options: "--verbose"
+        options: "--check --verbose"
         src: "./notebooks"
         jupyter: true
