@@ -4,6 +4,11 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+### Added:
+
+- Add GitHub action to test Python code
+- Add GitHub actions to format Python, UI, and Markdown code
+
 ## [0.4.1] - 2023-11-13
 
 ### Added:
