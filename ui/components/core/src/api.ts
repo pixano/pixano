@@ -176,14 +176,13 @@ export async function getSearchResult(
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({"query": query}),
+        body: JSON.stringify({ query: query }),
         method: "POST",
       }
     );
     if (response.ok) {
       datasetItems = await response.json();
-    }
-    else {
+    } else {
       console.log(
         "api.getSearchResult -",
         response.status,
@@ -194,5 +193,5 @@ export async function getSearchResult(
   } catch (e) {
     console.log("api.getSearchResult -", e);
   }
-  return datasetItems
+  return datasetItems;
 }

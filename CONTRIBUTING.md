@@ -2,7 +2,6 @@
 
 Thank you for your interest in Pixano! Here you will find information on running Pixano locally and guidelines on how to publish your contributions.
 
-
 ## Getting started
 
 ### Issue and suggestions
@@ -14,7 +13,6 @@ If you find a bug or you think of some missing features that could be useful whi
 To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
 
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
-
 
 ## Running Pixano locally
 
@@ -56,7 +54,6 @@ This command should provide you with `http://localhost` links you can open in yo
 
 Both the uvicorn server and the pnpm apps will refresh automatically when you make changes to the code.
 
-
 ## Testing the code
 
 We test our backend code with Python's built-in `unittest` framework. All our unit testing files are in the `tests/` folder, with a `test_` prefix, so your settings file in VS Code should look like this:
@@ -73,10 +70,10 @@ Our frontend code is tested using Storybook, which you can launch with the follo
 pnpm -r run storybook
 ```
 
-
 ## Formatting the code
 
 We use these extensions for formatting the Pixano source code:
+
 - Python: Black
 - Typescript: Prettier
 - Svelte: Svelte for VS Code

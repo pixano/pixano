@@ -7,7 +7,7 @@
 
 **Data-centric AI building blocks for computer vision applications**
 
-***Under active development, subject to API change***
+**_Under active development, subject to API change_**
 
 [![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
 [![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
@@ -16,7 +16,6 @@
 [![Python version](https://img.shields.io/pypi/pyversions/pixano?color=important&logo=python&logoColor=white)](https://www.python.org/downloads/)
 
 </div>
-
 
 # Installing Pixano
 

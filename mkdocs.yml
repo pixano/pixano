@@ -42,58 +42,56 @@ extra:
     - icon: material/web
       link: https://list.cea.fr/en/
       name: CEA LIST
-    - icon: fontawesome/brands/github 
+    - icon: fontawesome/brands/github
       link: https://github.com/pixano/pixano
       name: Pixano on GitHub
 plugins:
-- search
-- autorefs
-- gen-files:
-    scripts:
-    - ../pixano/docs/gen_ref_pages.py
-- literate-nav:
-    nav_file: SUMMARY.md
-- mkdocstrings:
-    handlers:
-      python:
-        paths: ["pixano"]
-        import:
-          - https://docs.python.org/3.10/objects.inv
-          - https://numpy.org/doc/1.23/objects.inv
-          - https://pandas.pydata.org/pandas-docs/version/1.5/objects.inv
-          - https://pillow.readthedocs.io/en/stable/objects.inv
-          - https://arrow.apache.org/docs/objects.inv
-          - https://docs.pydantic.dev/2.4/objects.inv
-          - https://ipython.readthedocs.io/en/8.13.2/objects.inv
-        options:
-          docstring_style: google
-          docstring_options:
-            returns_named_value: false
-            ignore_init_summary: yes
-          show_submodules: true
-          docstring_section_style: table
-          members_order: alphabetical
-          merge_init_into_class: yes
-          show_root_heading: true
-          show_source: true
-          heading_level: 1
-          preload_modules:
-            - pydantic
+  - search
+  - autorefs
+  - gen-files:
+      scripts:
+        - ../pixano/docs/gen_ref_pages.py
+  - literate-nav:
+      nav_file: SUMMARY.md
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["pixano"]
+          import:
+            - https://docs.python.org/3.10/objects.inv
+            - https://numpy.org/doc/1.23/objects.inv
+            - https://pandas.pydata.org/pandas-docs/version/1.5/objects.inv
+            - https://pillow.readthedocs.io/en/stable/objects.inv
+            - https://arrow.apache.org/docs/objects.inv
+            - https://docs.pydantic.dev/2.4/objects.inv
+            - https://ipython.readthedocs.io/en/8.13.2/objects.inv
+          options:
+            docstring_style: google
+            docstring_options:
+              returns_named_value: false
+              ignore_init_summary: yes
+            show_submodules: true
+            docstring_section_style: table
+            members_order: alphabetical
+            merge_init_into_class: yes
+            show_root_heading: true
+            show_source: true
+            heading_level: 1
+            preload_modules:
+              - pydantic
 
-          
 nav:
+  - "Home": index.md
 
-- "Home": index.md
+  - "Getting started":
+      - user/index.md
+      - "Installing Pixano": user/install.md
+      - "Importing datasets": user/import.md
+      - "Exporting datasets": user/export.md
+      - "Launching an app": user/launch.md
+      - "Using Pixano Explorer": user/explorer.md
+      - "Using Pixano Annotator": user/annotator.md
 
-- "Getting started":
-  - user/index.md
-  - "Installing Pixano": user/install.md
-  - "Importing datasets": user/import.md
-  - "Exporting datasets": user/export.md
-  - "Launching an app": user/launch.md
-  - "Using Pixano Explorer": user/explorer.md
-  - "Using Pixano Annotator": user/annotator.md
-  
-- "API reference": code/
+  - "API reference": code/
 
-- "Pixano Inference": https://pixano.github.io/pixano-inference/
+  - "Pixano Inference": https://pixano.github.io/pixano-inference/

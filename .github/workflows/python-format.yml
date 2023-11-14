@@ -18,27 +18,27 @@ name: Lint Python code
 
 on:
   push:
-    branches: [ "develop" ]
+    branches: ["develop"]
   pull_request:
-    branches: [ "develop" ]
+    branches: ["develop"]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-  
-    - name: Lint Python code with black
-      uses: psf/black@stable
-      with:
-        options: "--check --verbose"
-        src: "./pixano"
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Lint Jupyter notebooks with black
-      uses: psf/black@stable
-      with:
-        options: "--check --verbose"
-        src: "./notebooks"
-        jupyter: true
+      - name: Lint Python code with black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./pixano"
+
+      - name: Lint Jupyter notebooks with black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./notebooks"
+          jupyter: true

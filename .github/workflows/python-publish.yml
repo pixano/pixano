@@ -28,44 +28,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.10'
-        
-    - name: Setup Node.js 18
-      uses: actions/setup-node@v1
-      with:
-        node-version: 18
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup pnpm 7
-      uses: pnpm/action-setup@v2
-      with:
-        version: 7     
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install hatch
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18
 
-    - name: Build apps
-      run: |
-        cd ui
-        pnpm i
-        cd apps/explorer
-        pnpm build
-        cd ../annotator
-        pnpm build
-        cd ../../..
+      - name: Setup pnpm 7
+        uses: pnpm/action-setup@v2
+        with:
+          version: 7
 
-    - name: Build package
-      run: hatch build
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install hatch
 
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Build apps
+        run: |
+          cd ui
+          pnpm i
+          cd apps/explorer
+          pnpm build
+          cd ../annotator
+          pnpm build
+          cd ../../..
+
+      - name: Build package
+        run: hatch build
+
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
