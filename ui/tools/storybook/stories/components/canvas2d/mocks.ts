@@ -94,7 +94,7 @@ export class MockInteractiveImageSegmenter
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
     //console.log(masksSVG);
     //console.log(masksSVG.length);
-    return Promise.resolve({ masksImageSVG: masksSVG, rle:null });
+    return Promise.resolve({ masksImageSVG: masksSVG, rle: null });
   }
 
   reset() {

@@ -2,34 +2,39 @@
 
 All notable changes to Pixano will be documented in this file.
 
-
-
 ## [Unreleased]
 
+### Added:
+
+- Add GitHub action to test Python code
+- Add GitHub actions to format Python, UI, and Markdown code
 
 ## [0.4.1] - 2023-11-13
 
 ### Added:
-- Add **semantic search** on images using models like CLIP 
+
+- Add **semantic search** on images using models like CLIP
 - Add optional **custom media fields** in COCO and Image Importer in addition to the standard "image" field
 - Add CONTRIBUTING.md for installation information and contribution guidelines
 
 ### Changed:
+
 - Improve descriptions and fix parameters in the notebooks
 - Update dependencies requirements (Lance, FastAPI, Pydantic...)
 - Move unit tests and assets to `tests/` folder
 
 ### Fixed:
+
 - Fix ONNX Runtime dependencies for using SAM and other interactive annotation models
 - Fix dataset scrolling in Pixano Annotator
 - Fix paths for Pixano API reference generation
 - Raise an error when importing a dataset if the output is empty, generally because no files were found
 - Fix Python import in `data/importers`
 
-
 ## [0.4.0] - 2023-10-26
 
 ### Added:
+
 - UI: Add a **dataset dashboard** in Pixano Explorer with dataset information and statistics
 - UI: Add a **labels hierarchy** to group them by source, by view, and by category in item view
 - UI: Add label category ID on hover in side panel and label toolbar in item view
@@ -37,6 +42,7 @@ All notable changes to Pixano will be documented in this file.
 - Add **delete tool** for clearing current annotations in Pixano Annotator
 
 ### Changed:
+
 - **Breaking:** Replace ObjectAnnotation by new and better-defined **PixanoTypes**, and add notebook for creating a custom PixanoType
 - **Breaking:** Update dataset **storage format** to **lancedb**, using .lance files instead of .parquet, and with separate tables for media, annotations, and embeddings
 - **Design overhaul** of both Pixano Explorer and Annotator apps
@@ -46,6 +52,7 @@ All notable changes to Pixano will be documented in this file.
 - Generate API references automatically on the Pixano documentation website using mkdocs plugins
 
 ### Fixed:
+
 - UI: Fix category colors in item view
 - UI: Fix item annotations to scale with zoom in item view
 - UI: Fix displaying item information in item view
@@ -56,21 +63,22 @@ All notable changes to Pixano will be documented in this file.
 - Fix portable option in dataset import to copy files instead of moving them
 - Fix imports and dependency versions for Pixano apps and UI components
 
-
-
 ## [0.3.2] - 2023-07-11
 
 ### Added:
+
 - Add first and last page buttons in Pixano Explorer
 - Add search in label toolbar in Pixano Annotator
 
 ### Changed:
+
 - Separate image tools and annotation tools in Pixano Annotator
 - Refactor Pixano Apps components
 - Add links to Pixano Inference documentation in Pixano documentation
 - Add link to dataset import notebook in Pixano apps
 
 ### Fixed:
+
 - Fix version requirement for pydantic package
 - Fix color schemes and dark mode in Pixano apps
 - Fix uses of svg icons in Pixano apps
@@ -80,28 +88,27 @@ All notable changes to Pixano will be documented in this file.
 - Fix default images paths for dataset import in notebook
 - Update CHANGELOG format
 
-
-
 ## [0.3.1] - 2023-07-07
 
 ### Fixed:
+
 - Fix READMEs pictures and links
 - Fix getting splits when processing dataset with an inference model
 - Add warnings in inference notebooks for selecting CPU or GPU device
 
-
-
 ## [0.3.0] - 2023-07-07
 
 ### Added:
+
 - Add **Pixano Annotator** for smart dataset annotation using AI models like the **Segment Anything Model (SAM)**
 - Add support for **importing datasets to Pixano** (image-only, COCO format, DOTAv2, and legacy Pixano datasets)
-- Add support for **exporting Pixano datasets** to COCO format 
-- Add **dataset import and export notebooks** for an easier process 
+- Add support for **exporting Pixano datasets** to COCO format
+- Add **dataset import and export notebooks** for an easier process
 - Add **thumbnail and statistics generation** to dataset import process
 - Add **user guides** for the Pixano Explorer and Annotator apps
 
 ### Changed:
+
 - Merge inference generation and embedding precomputing into a **single inference model class**
 - Add custom type for embeddings for better support of **precomputed embedding datasets**
 - Improve custom type for images
@@ -112,6 +119,7 @@ All notable changes to Pixano will be documented in this file.
 - Improve READMEs and documentation
 
 ### Fixed:
+
 - Allow Pixano Explorer and Annotator apps to be created on any available port
 - Check if dataset library exists when launching an app
 - Fix support for nonnumerical IDs in datasets
@@ -120,45 +128,41 @@ All notable changes to Pixano will be documented in this file.
 - Order all image transforms args to height first and width second for consistency
 - Check provided user data in inference and dataset notebooks before running scripts, like splits folder or source media folders
 
-
-
 ## [0.2.1] - 2023-06-06
 
 ### Added
+
 - Add GitHub workflow for automatically publishing new releases to PyPI
-
-
 
 ## [0.2.0] - 2023-05-22
 
 ### Added
+
 - Add **embedding precomputing**
 - Add **ONNX model support**
 - Add **inference notebooks**
 - Add **notebook display function** for Pixano Explorer
 
 ### Changed
+
 - Improve overall Python code documentation and readability
 - Improve README files and project documentation
 
 ### Fixed
+
 - Fix License, Python version, and Python requirements in pyproject.toml file
-
-
 
 ## [0.1.1] - 2023-05-11
 
 ### Fixed
+
 - Fix Python requirements
-
-
 
 ## [0.1.0] - 2023-05-11
 
 ### Added
+
 - Create first public release
-
-
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
@@ -170,4 +174,3 @@ All notable changes to Pixano will be documented in this file.
 [0.2.0]: https://github.com/pixano/pixano/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/pixano/pixano/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pixano/pixano/releases/tag/v0.1.0
-
