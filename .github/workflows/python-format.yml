@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-# This workflow will install Python dependencies and lint code with black
+# This workflow will lint Python code with black
 # For more information see: https://black.readthedocs.io/en/stable/integrations/github_actions.html
 
-name: Lint Python package
+name: Lint Python code
 
 on:
   push:

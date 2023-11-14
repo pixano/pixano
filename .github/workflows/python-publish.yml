@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-# This workflow will upload a Python Package using Twine when a release is created
+# This workflow will publish the new version of Pixano to PyPI when a release is created
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Upload Python Package
+name: Publish to PyPI
 
 on:
   release:

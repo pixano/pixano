@@ -11,10 +11,10 @@
 #
 # http://www.cecill.info
 
-# This workflow will install Python dependencies and run tests with a single version of Python
+# This workflow will run tests with unittest on a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Test Python package
+name: Test Python code
 
 on:
   push:
