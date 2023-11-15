@@ -18,9 +18,12 @@ name: Test Python code
 
 on:
   push:
-    branches: ["develop"]
+    branches:
+      - "**"
   pull_request:
-    branches: ["develop"]
+    branches:
+      - "develop"
+      - "main"
 
 permissions:
   contents: read

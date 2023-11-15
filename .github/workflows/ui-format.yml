@@ -18,9 +18,12 @@ name: Lint UI and markdown code
 
 on:
   push:
-    branches: ["develop"]
+    branches:
+      - "**"
   pull_request:
-    branches: ["develop"]
+    branches:
+      - "develop"
+      - "main"
 
 jobs:
   lint:
