@@ -11,7 +11,8 @@ All notable changes to Pixano will be documented in this file.
 
 ### Changed:
 
-- Update README
+- Update README with a small header description listing main features
+- Update API reference generation
 
 ### Fixed:
 
