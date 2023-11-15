@@ -56,6 +56,7 @@ plugins:
   - literate-nav:
       nav_file: SUMMARY.md
   - mkdocstrings:
+      enable_inventory: true
       handlers:
         python:
           paths: ["pixano"]

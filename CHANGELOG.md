@@ -18,6 +18,7 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - Fix broken link in CHANGELOG.md
+- Fix internal cross-references in the API reference of the documentation website
 
 ## [0.4.1] - 2023-11-13
 
