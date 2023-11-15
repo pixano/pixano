@@ -12,6 +12,7 @@ All notable changes to Pixano will be documented in this file.
 ### Changed:
 
 - Update README with a small header description listing main features
+- Update documentation website accent color to match with the new theme of the Pixano apps
 - Update API reference generation
 
 ### Fixed:

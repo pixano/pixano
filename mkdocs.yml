@@ -8,7 +8,7 @@ theme:
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
-      primary: pink
+      primary: custom
       scheme: default
       toggle:
         icon: material/brightness-7
@@ -16,7 +16,7 @@ theme:
 
     # Palette toggle for dark mode
     - media: "(prefers-color-scheme: dark)"
-      primary: pink
+      primary: custom
       scheme: slate
       toggle:
         icon: material/brightness-4
@@ -45,6 +45,8 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/pixano/pixano
       name: Pixano on GitHub
+extra_css:
+  - assets/extra.css
 plugins:
   - search
   - autorefs
