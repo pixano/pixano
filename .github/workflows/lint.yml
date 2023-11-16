@@ -1,0 +1,113 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
+name: Lint code
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - "develop"
+      - "main"
+
+permissions:
+  contents: read
+
+jobs:
+  # This workflow will lint frontend code (Svelte, Typescript) code with eslint and Prettier
+  ui_lint:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i
+
+      - name: Run eslint and Prettier test
+        run: hatch build
+
+      # TODO: Replace with custom script to run eslint and support Svelte files
+      - name: Lint frontend code with Prettier
+        uses: creyD/prettier_action@v4.3
+        with:
+          dry: True
+          prettier_version: 2.8.8
+          prettier_options: --check **/*.{js,ts,cjs,html,css,json,yaml,yml,md}
+
+  # This job will lint backend code (Python) with black
+  # For more information see: https://black.readthedocs.io/en/stable/integrations/github_actions.html
+  python_lint:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Lint Python code with black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./pixano"
+
+  # This job will lint notebooks code (Jupyter) with black
+  # For more information see: https://black.readthedocs.io/en/stable/integrations/github_actions.html
+  jupyter_lint:
+    name: Notebooks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Lint Jupyter notebooks with black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./notebooks"
+          jupyter: true
+
+  # This workflow will lint the rest of the code (Mardown, YAML, JSON) with Prettier
+  # For more information see: https://github.com/marketplace/actions/prettier-action
+  other_lint:
+    name: Other
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Lint Markdown and YAML code with Prettier
+        uses: creyD/prettier_action@v4.3
+        with:
+          dry: True
+          prettier_options: --check **/*.{md,yaml,yml,json}
+          # Prettier 3.0 not yet available in VSCode extension
+          prettier_version: 2.8.8

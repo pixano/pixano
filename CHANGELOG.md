@@ -6,14 +6,15 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add GitHub action to test Python code
-- Add GitHub actions to format Python, UI, and Markdown code
+- Add GitHub action to test backend code
+- Add GitHub actions to format frontend and backend code
 
 ### Changed
 
 - Update README with a small header description listing main features
 - Update documentation website accent color to match with the new theme of the Pixano apps
 - Update API reference generation
+- Reformat GitHub actions
 
 ### Fixed
 
