@@ -50,9 +50,6 @@ jobs:
           cd ui
           pnpm i
 
-      - name: Run eslint and Prettier test
-        run: hatch build
-
       # TODO: Replace with custom script to run eslint and support Svelte files
       - name: Lint frontend code with Prettier
         uses: creyD/prettier_action@v4.3
