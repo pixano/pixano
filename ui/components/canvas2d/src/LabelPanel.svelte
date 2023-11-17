@@ -33,7 +33,7 @@
   // Exports
   export let selectedItem: ItemData;
   export let annotations: ItemLabels;
-  export let labelColors: (id: number) => void;
+  export let labelColors: Function;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;

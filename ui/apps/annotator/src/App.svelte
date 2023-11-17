@@ -69,7 +69,7 @@
   function until(conditionFunction: Function): Promise<Function> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
-      else setTimeout((_) => poll(resolve), 400);
+      else setTimeout(() => poll(resolve), 400);
     };
     return new Promise(poll);
   }
@@ -78,48 +78,33 @@
     console.log("App.handleGetDatasets");
     const start = Date.now();
     datasets = await api.getDatasetList();
-    console.log(
-      "App.handleGetDatasets - api.getDatasetList in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
   }
 
   async function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
     const start = Date.now();
-    selectedDataset.page = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage
-    );
-    console.log(
-      "App.handleSelectDataset - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage);
+    console.log("App.handleSelectDataset - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
       const firstItemId = selectedDataset.page.items[0].find(
-        (feature) => feature.name === "id"
+        (feature) => feature.name === "id",
       ).value;
 
       // Toggle active learning filtering if "round" found
-      if (
-        !!selectedDataset.page.items[0].find(
-          (feature) => feature.name === "round"
-        )
-      ) {
+      if (selectedDataset.page.items[0].find((feature) => feature.name === "round")) {
         activeLearningFlag = true;
       } else {
         activeLearningFlag = false;
       }
 
-      handleSelectItem(firstItemId);
+      await handleSelectItem(firstItemId);
     } else {
       // Otherwise display error message
-      handleUnselectDataset();
+      await handleUnselectDataset();
       datasetErrorModal = true;
     }
   }
@@ -130,7 +115,7 @@
     if (!saveFlag) {
       selectedDataset = null;
       currentPage = 1;
-      handleGetDatasets();
+      await handleGetDatasets();
     }
   }
 
@@ -146,11 +131,7 @@
     selectedItem = itemDetails["itemData"] as ItemData;
     const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
 
-    console.log(
-      "App.handleSelectItem - api.getItemDetails in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 
     for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
       // Initialize annotations
@@ -198,16 +179,13 @@
             }
 
             // Add label
-            annotations[sourceId].views[viewId].categories[catId].labels[
-              obj.id
-            ] = {
+            annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
               id: obj.id,
               categoryId: catId,
               categoryName: catName,
               sourceId: sourceId,
               viewId: viewId,
-              confidence:
-                obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
               bboxOpacity: 1.0,
               maskOpacity: 1.0,
               visible: true,
@@ -246,11 +224,7 @@
                   obj.bbox.width * selectedItem.views[viewId].width,
                   obj.bbox.height * selectedItem.views[viewId].height,
                 ], // denormalized
-                tooltip:
-                  catName +
-                  (obj.bbox.predicted
-                    ? " " + obj.bbox.confidence.toFixed(2)
-                    : ""),
+                tooltip: catName + (obj.bbox.predicted ? " " + obj.bbox.confidence.toFixed(2) : ""),
                 catId: catId,
                 visible: true,
                 opacity: 1.0,
@@ -259,7 +233,7 @@
           } else {
             console.log(
               "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id
+              obj.id,
             );
             continue;
           }
@@ -269,27 +243,19 @@
 
     // Embeddings
     start = Date.now();
-    const embeddingsBytes = await api.getItemEmbeddings(
+    const embeddingsBytes: string = await api.getItemEmbeddings(
       selectedDataset.id,
-      selectedItem.id
+      selectedItem.id,
     );
-    console.log(
-      "App.handleSelectItem - api.getItemEmbeddings in",
-      Date.now() - start,
-      "ms"
-    );
+    console.log("App.handleSelectItem - api.getItemEmbeddings in", Date.now() - start, "ms");
     if (embeddingsBytes) {
-      for (const [viewId, viewEmbeddingBytes] of Object.entries(
-        embeddingsBytes
-      )) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(embeddingsBytes)) {
         try {
-          const viewEmbeddingArray = npy.parse(
-            npy.b64ToBuffer(viewEmbeddingBytes)
-          );
+          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes));
           embeddings[viewId] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
-            viewEmbeddingArray.shape
+            viewEmbeddingArray.shape,
           );
         } catch (e) {
           console.log("App.handleSelectItem - Error loading embeddings", e);
@@ -304,7 +270,7 @@
       unselectItem();
     } else {
       unselectItemModal = true;
-      await until((_) => unselectItemModal == false);
+      await until(() => unselectItemModal == false);
       if (!saveFlag) {
         unselectItem();
       }
@@ -321,7 +287,7 @@
     embeddings = {};
   }
 
-  function handleSaveItemDetails() {
+  async function handleSaveItemDetails() {
     console.log("App.handleSaveItemDetails");
 
     saveFlag = false;
@@ -343,12 +309,8 @@
       for (const viewLabels of Object.values(sourceLabels.views)) {
         for (const catLabels of Object.values(viewLabels.categories)) {
           for (const label of Object.values(catLabels.labels)) {
-            const mask = masks.find(
-              (m) => m.id === label.id && m.viewId === label.viewId
-            );
-            const bbox = bboxes.find(
-              (b) => b.id === label.id && b.viewId === label.viewId
-            );
+            const mask = masks.find((m) => m.id === label.id && m.viewId === label.viewId);
+            const bbox = bboxes.find((b) => b.id === label.id && b.viewId === label.viewId);
             itemDetails["itemObjects"].push({
               id: label.id,
               item_id: selectedItem.id,
@@ -381,15 +343,11 @@
     }
 
     let start = Date.now();
-    api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
-    console.log(
-      "App.handleSaveItemDetails - api.postItemDetails in",
-      Date.now() - start,
-      "ms"
-    );
+    await api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
+    console.log("App.handleSaveItemDetails - api.postItemDetails in", Date.now() - start, "ms");
 
     // Reload item details
-    handleSelectItem(selectedItem.id);
+    await handleSelectItem(selectedItem.id);
   }
 
   async function handleLoadNextPage() {
@@ -397,20 +355,11 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    const new_dbImages = await api.getDatasetItems(
-      selectedDataset.id,
-      currentPage
-    );
-    console.log(
-      "App.handleLoadNextPage - api.getDatasetItems in",
-      Date.now() - start,
-      "ms"
-    );
+    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
+    console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (new_dbImages) {
-      selectedDataset.page.items = selectedDataset.page.items.concat(
-        new_dbImages.items
-      );
+      selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
     } else {
       // End of dataset: reset last page
       currentPage = currentPage - 1;
@@ -430,7 +379,7 @@
 
   onMount(async () => {
     console.log("App.onMount");
-    handleGetDatasets();
+    await handleGetDatasets();
     // Try loading default model
     try {
       await sam.init("/models/" + defaultModelName);

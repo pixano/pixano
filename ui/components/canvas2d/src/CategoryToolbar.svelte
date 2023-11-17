@@ -30,7 +30,7 @@
   export let selectedTool: Tool;
   export let pointPlusTool: Tool;
   export let pointMinusTool: Tool;
-  export let labelColors: (id: number) => void;
+  export let labelColors: Function;
   export let placeholder: string = "Category name";
 
   const dispatch = createEventDispatcher();
