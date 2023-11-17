@@ -721,7 +721,7 @@
     }
   }
 
-  function dragInputPointEnd(drag_point: Konva.Circle, viewId: string) {
+  function dragInputPointEnd() {
     stage.container().style.cursor = "grab";
   }
 
