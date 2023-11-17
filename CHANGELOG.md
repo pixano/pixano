@@ -6,8 +6,9 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add GitHub action to test backend code
+- Add Prettier and eslint packages and scripts for formatting and linting frontend code
 - Add GitHub actions to format frontend and backend code
+- Add GitHub action to test backend code
 
 ### Changed
 
@@ -15,11 +16,13 @@ All notable changes to Pixano will be documented in this file.
 - Update documentation website accent color to match with the new theme of the Pixano apps
 - Update API reference generation
 - Reformat GitHub actions
+- Reformat frontend code with Prettier
 
 ### Fixed
 
 - Fix broken link in CHANGELOG.md
 - Fix internal cross-references in the API reference of the documentation website
+- Fix eslint and TypeScript errors
 
 ## [0.4.1] - 2023-11-13
 

@@ -15,14 +15,14 @@
 export function maskDataToFortranArrayToRle(
   input: any,
   nrows: number,
-  ncols: number
+  ncols: number,
 ): Array<number> {
   const result: Array<number> = [];
   let count = 0;
   let bit = false;
   for (let c = 0; c < ncols; c++) {
     for (let r = 0; r < nrows; r++) {
-      var i = c + r * ncols;
+      const i = c + r * ncols;
       if (i < input.length) {
         const filled = input[i] > 0.0;
         if (filled !== bit) {
@@ -41,7 +41,7 @@ export function arrayToImageData(
   inputArray: any,
   width: number,
   height: number,
-  threshold: number = 0.0
+  threshold: number = 0.0,
 ) {
   const [r, g, b, a] = [0, 114, 189, 255];
   const arr = new Uint8ClampedArray(4 * width * height).fill(0);
@@ -103,8 +103,8 @@ function splitPointKey(point: string): Array<number> {
  */
 function getLineBreakpoints(
   rleMask: string | any[],
-  height: number
-): Array<object> {
+  height: number,
+): Array<{ line: number; points: any }> {
   const breakpoints = [];
   const currentLine: { line: number; points: any } = { line: -1, points: [] };
   let sum = 0; // sum of pixels seen so far, used to compute breakpoints
@@ -188,10 +188,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
   // ------------------
 
   // Given two points, format each into a string and add the bidirectional segment to polySegments
-  const addToPolySegments = (
-    p1: { x: any; y: any },
-    p2: { x: any; y: any }
-  ) => {
+  const addToPolySegments = (p1: { x: any; y: any }, p2: { x: any; y: any }) => {
     const p1Str = `${p1.x} ${p1.y}`,
       p2Str = `${p2.x} ${p2.y}`;
     if (!polySegments.has(p1Str)) polySegments.set(p1Str, new Set());
@@ -236,8 +233,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
       canStraighten = true;
     }
     // Add line, setting x to maxX if a horizontal segment has been closed
-    if (canStraighten)
-      addToPolySegments({ x: maxX, y: y1 }, { x: maxX, y: y2 });
+    if (canStraighten) addToPolySegments({ x: maxX, y: y1 }, { x: maxX, y: y2 });
     else addToPolySegments({ x: x1, y: y1 }, { x: x2, y: y2 });
   };
 
@@ -277,10 +273,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
     while (lastLineIndex < lastPoints.length || newLineIndex < points.length) {
       // Get next breakpoint by comparing values at pointer for both lines
       let x2, y2;
-      if (
-        lastLineIndex === lastPoints.length ||
-        points[newLineIndex] < lastPoints[lastLineIndex]
-      ) {
+      if (lastLineIndex === lastPoints.length || points[newLineIndex] < lastPoints[lastLineIndex]) {
         x2 = line;
         y2 = points[newLineIndex];
         newLineIndex++;
@@ -321,7 +314,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
       const [x2, y2] = splitPointKey(b[0]);
       if (x1 === x2) return y1 - y2;
       return x1 - x2;
-    })
+    }),
   );
 
   return sortedSegments;

@@ -38,8 +38,7 @@
   <div class="h-full flex flex-row">
     <div class="w-1/6 flex flex-col items-start">
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab ===
-        'overview'
+        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'overview'
           ? ' text-main bg-slate-300'
           : 'hover:bg-slate-300'}"
         on:click={selectOverviewTab}
@@ -47,8 +46,7 @@
         Overview
       </button>
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab ===
-        'stats'
+        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'stats'
           ? ' text-main bg-slate-300'
           : 'hover:bg-slate-300'}"
         on:click={selectStatsTab}
@@ -56,9 +54,7 @@
         Statistics
       </button>
     </div>
-    <div
-      class="w-5/6 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300"
-    >
+    <div class="w-5/6 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300">
       {#if selectedTab === "overview"}
         <!-- Overview -->
         <div class="w-full mb-16 flex flex-row justify-between">
@@ -93,8 +89,7 @@
         {:else}
           <!-- Else show a message -->
           <p class="mt-80 text-slate-500 italic text-center">
-            Sorry, no statistics are available for this dataset. Did you forget
-            to include them ?
+            Sorry, no statistics are available for this dataset. Did you forget to include them ?
           </p>
         {/if}
       {/if}

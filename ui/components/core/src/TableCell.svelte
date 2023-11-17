@@ -34,7 +34,4 @@
   };
 </script>
 
-<svelte:component
-  this={componentsMap[itemFeature.dtype]}
-  value={itemFeature.value}
-/>
+<svelte:component this={componentsMap[itemFeature.dtype]} value={itemFeature.value} />

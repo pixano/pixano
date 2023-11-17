@@ -61,13 +61,9 @@
       selectedDataset.page = await api.getDatasetItems(
         selectedDataset.id,
         currentPage,
-        itemsPerPage
+        itemsPerPage,
       );
-      console.log(
-        "DatasetExplorer.loadPage - api.getDatasetItems in",
-        Date.now() - start,
-        "ms"
-      );
+      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
 
       // If no dataset page, return error message
       if (selectedDataset.page == null) {
@@ -78,17 +74,8 @@
       const start = Date.now();
       let actual_page = selectedDataset.page;
       selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
-      let res = await api.getSearchResult(
-        selectedDataset.id,
-        query,
-        currentPage,
-        itemsPerPage
-      );
-      console.log(
-        "DatasetExplorer.loadPage - api.getSearchResult in",
-        Date.now() - start,
-        "ms"
-      );
+      let res = await api.getSearchResult(selectedDataset.id, query, currentPage, itemsPerPage);
+      console.log("DatasetExplorer.loadPage - api.getSearchResult in", Date.now() - start, "ms");
       // If no dataset page, return error message
       if (res == null) {
         selectedDataset.page = actual_page;
@@ -128,15 +115,13 @@
   }
 
   function handleSearch() {
-    query = (document.getElementById("sem-search-input") as HTMLInputElement)
-      .value;
+    query = (document.getElementById("sem-search-input") as HTMLInputElement).value;
     currentPage = 1;
     loadPage();
   }
 
   function handleClearSearch() {
-    (document.getElementById("sem-search-input") as HTMLInputElement).value =
-      "";
+    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
     handleSearch();
   }
 
@@ -146,9 +131,7 @@
   });
 </script>
 
-<div
-  class="w-full h-full pt-20 px-20 flex flex-col bg-slate-100 text-slate-800"
->
+<div class="w-full h-full pt-20 px-20 flex flex-col bg-slate-100 text-slate-800">
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-[87.5vh] flex flex-col">
@@ -208,10 +191,7 @@
             <path d={svg_search} />
           </svg>
           {#if query !== ""}
-            <button
-              class="absolute right-2"
-              on:click={() => handleClearSearch()}
-            >
+            <button class="absolute right-2" on:click={() => handleClearSearch()}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 height="48"
@@ -267,7 +247,7 @@
         <span class="mx-4">
           {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
             itemsPerPage * currentPage,
-            selectedDataset.page.total
+            selectedDataset.page.total,
           )} of
           {selectedDataset.page.total}
         </span>

@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "format": "prettier --write --ignore-unknown .",
+    "format_check": "prettier --check --ignore-unknown .",
+    "lint": "tsc --noEmit && eslint ./src"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.3",

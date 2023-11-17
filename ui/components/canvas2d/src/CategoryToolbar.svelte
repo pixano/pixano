@@ -141,9 +141,7 @@
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
         bg-slate-50 hover:bg-slate-300
-        {selectedTool === pointMinusTool
-          ? 'border-main '
-          : 'border-transparent'}"
+        {selectedTool === pointMinusTool ? 'border-main ' : 'border-transparent'}"
       >
         <title>Negative point</title>
         <path d={icons.svg_point_minus} fill="currentcolor" />

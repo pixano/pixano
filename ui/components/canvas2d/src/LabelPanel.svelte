@@ -72,7 +72,7 @@
     view: ViewLabels,
     category: CategoryLabels,
     label: Label,
-    visibility: boolean
+    visibility: boolean,
   ) {
     // Toggle visibility
     label.visible = visibility;
@@ -93,7 +93,7 @@
     source: SourceLabels,
     view: ViewLabels,
     category: CategoryLabels,
-    visibility: boolean
+    visibility: boolean,
   ) {
     // Toggle visibility
     category.visible = visibility;
@@ -111,11 +111,7 @@
     }
   }
 
-  function handleViewVisibility(
-    source: SourceLabels,
-    view: ViewLabels,
-    visibility: boolean
-  ) {
+  function handleViewVisibility(source: SourceLabels, view: ViewLabels, visibility: boolean) {
     // Toggle visibility
     view.visible = visibility;
     // Toggle parents if needed
@@ -148,11 +144,10 @@
     }
   }
 
-  async function handleDatasetScroll(event: Event) {
+  function handleDatasetScroll(event: Event) {
     const datasetTab = event.currentTarget as Element;
     if (currentPage * 100 < selectedDataset.page.total) {
-      const totalContentHeight =
-        datasetTab.scrollHeight - datasetTab.clientHeight;
+      const totalContentHeight = datasetTab.scrollHeight - datasetTab.clientHeight;
       const offset10percent = Math.ceil(totalContentHeight * 0.1);
       if (datasetTab.scrollTop > totalContentHeight - offset10percent) {
         dispatch("loadNextPage");
@@ -188,9 +183,7 @@
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tl-lg
         hover:bg-slate-100
-        {activeTab == 'labels'
-          ? 'bg-slate-100 border-main'
-          : 'border-slate-300 '}"
+        {activeTab == 'labels' ? 'bg-slate-100 border-main' : 'border-slate-300 '}"
         on:click={() => {
           activeTab = "labels";
         }}
@@ -201,9 +194,7 @@
         <button
           class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tr-lg
         hover:bg-slate-100
-        {activeTab == 'dataset'
-            ? 'bg-slate-100 border-main '
-            : 'border-slate-300'}"
+        {activeTab == 'dataset' ? 'bg-slate-100 border-main ' : 'border-slate-300'}"
           on:click={() => {
             activeTab = "dataset";
           }}
@@ -217,9 +208,7 @@
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-t-lg
           hover:bg-slate-100
-          {activeTab == 'labels'
-          ? 'bg-slate-100 border-main '
-          : 'border-slate-300 '}"
+          {activeTab == 'labels' ? 'bg-slate-100 border-main ' : 'border-slate-300 '}"
       >
         Labels
       </button>
@@ -305,9 +294,7 @@
                 border-slate-300
                 {source.opened ? 'bg-slate-100' : ''}"
             >
-              <button
-                on:click={() => handleSourceVisibility(source, !source.visible)}
-              >
+              <button on:click={() => handleSourceVisibility(source, !source.visible)}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   height="48"
@@ -316,10 +303,7 @@
                   class="h-6 w-6"
                 >
                   <title>{source.visible ? "Hide" : "Show"}</title>
-                  <path
-                    d={source.visible ? icons.svg_hide : icons.svg_show}
-                    fill="currentcolor"
-                  />
+                  <path d={source.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
                 </svg>
               </button>
               <button
@@ -334,10 +318,7 @@
                   class="h-6 w-6"
                 >
                   <title>{source.opened ? "Close" : "Open"}</title>
-                  <path
-                    d={source.opened ? icons.svg_close : icons.svg_open}
-                    fill="currentcolor"
-                  />
+                  <path d={source.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
                 </svg>
 
                 <span class="relative pl-1 grow truncate w-5" title={source.id}>
@@ -361,10 +342,7 @@
                   {Object.keys(annotations).length > 1 ? 'pl-6' : ''}
                   {view.opened ? 'bg-slate-100 ' : ''}"
               >
-                <button
-                  on:click={() =>
-                    handleViewVisibility(source, view, !view.visible)}
-                >
+                <button on:click={() => handleViewVisibility(source, view, !view.visible)}>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     height="48"
@@ -373,10 +351,7 @@
                     class="h-6 w-6"
                   >
                     <title>{view.visible ? "Hide" : "Show"}</title>
-                    <path
-                      d={view.visible ? icons.svg_hide : icons.svg_show}
-                      fill="currentcolor"
-                    />
+                    <path d={view.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
                   </svg>
                 </button>
                 <button
@@ -391,10 +366,7 @@
                     class="h-6 w-6"
                   >
                     <title>{view.opened ? "Close" : "Open"}</title>
-                    <path
-                      d={view.opened ? icons.svg_close : icons.svg_open}
-                      fill="currentcolor"
-                    />
+                    <path d={view.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
                   </svg>
 
                   <span class="relative pl-1 grow truncate w-5" title={view.id}>
@@ -420,12 +392,7 @@
                 >
                   <button
                     on:click={() =>
-                      handleCategoryVisibility(
-                        source,
-                        view,
-                        category,
-                        !category.visible
-                      )}
+                      handleCategoryVisibility(source, view, category, !category.visible)}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -490,13 +457,7 @@
                     >
                       <button
                         on:click={() =>
-                          handleLabelVisibility(
-                            source,
-                            view,
-                            category,
-                            label,
-                            !label.visible
-                          )}
+                          handleLabelVisibility(source, view, category, label, !label.visible)}
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -506,24 +467,17 @@
                           class="h-5 w-5"
                         >
                           <title>
-                            {(category.visible && label.visible) ||
-                            label.visible
-                              ? "Hide"
-                              : "Show"}
+                            {(category.visible && label.visible) || label.visible ? "Hide" : "Show"}
                           </title>
                           <path
-                            d={(category.visible && label.visible) ||
-                            label.visible
+                            d={(category.visible && label.visible) || label.visible
                               ? icons.svg_hide
                               : icons.svg_show}
                             fill="currentcolor"
                           />
                         </svg>
                       </button>
-                      <span
-                        class="relative pl-1 text-sm grow truncate w-5"
-                        title={label.id}
-                      >
+                      <span class="relative pl-1 text-sm grow truncate w-5" title={label.id}>
                         {label.id}
                       </span>
                       <button on:click={() => handleDeleteLabel(label)}>
@@ -549,20 +503,14 @@
     </div>
     {#if selectedDataset}
       <div
-        class="w-full h-full overflow-y-scroll {activeTab == 'dataset'
-          ? ''
-          : 'hidden'}"
+        class="w-full h-full overflow-y-scroll {activeTab == 'dataset' ? '' : 'hidden'}"
         on:scroll={handleDatasetScroll}
       >
         <!-- Details -->
         <div class="flex flex-col p-4 border-b-2 border-slate-300">
           <span class="font-medium"> Active learning : </span>
           <label class="pt-1 flex items-center select-none cursor-pointer">
-            <input
-              type="checkbox"
-              class="cursor-pointer mx-2"
-              bind:checked={activeLearningFlag}
-            />
+            <input type="checkbox" class="cursor-pointer mx-2" bind:checked={activeLearningFlag} />
             Show remaining items only
           </label>
         </div>
@@ -574,9 +522,7 @@
               on:click={() => handleSelectItem(item)}
             >
               <div
-                class={item.filter((f) => f.dtype === "image").length > 1
-                  ? "grid grid-cols-2"
-                  : ""}
+                class={item.filter((f) => f.dtype === "image").length > 1 ? "grid grid-cols-2" : ""}
               >
                 {#each item as itemFeature}
                   {#if itemFeature.dtype === "image"}
@@ -591,9 +537,7 @@
               <div class="flex mx-auto">
                 <span
                   class="text-xs justify-center truncate grow
-                  {item.filter((f) => f.dtype === 'image').length > 1
-                    ? 'w-48'
-                    : 'w-24'}"
+                  {item.filter((f) => f.dtype === 'image').length > 1 ? 'w-48' : 'w-24'}"
                   title={item.find((f) => f.name === "id").value}
                 >
                   {item.find((f) => f.name === "id").value.length > 12

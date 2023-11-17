@@ -83,7 +83,7 @@ function getIcon(type: ToolType, label?: number): string {
 export function createMultiModalTool(
   name: string,
   type: ToolType,
-  tools: Array<Tool>
+  tools: Array<Tool>,
 ): MultiModalTool {
   return {
     name: name,
@@ -139,11 +139,4 @@ export function createClassifTool(): ClassificationTool {
   } as ClassificationTool;
 }
 
-export type {
-  Tool,
-  LabeledPointTool,
-  RectangleTool,
-  DeleteTool,
-  PanTool,
-  ClassificationTool,
-};
+export type { Tool, LabeledPointTool, RectangleTool, DeleteTool, PanTool, ClassificationTool };

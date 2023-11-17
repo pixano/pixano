@@ -33,7 +33,6 @@
     CategoryData,
     Dataset,
     DatasetItem,
-    DatasetItemFeature,
     ItemData,
     ItemLabels,
     Label,
@@ -89,7 +88,7 @@
     tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
       pointPlusTool,
       pointMinusTool,
-    ])
+    ]),
   );
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
@@ -98,9 +97,7 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = selectedItem.features.find(
-    (f) => f.name === "label"
-  )
+  let selectedTool: tools.Tool = selectedItem.features.find((f) => f.name === "label")
     ? classifTool
     : pointPlusTool;
 
@@ -113,10 +110,10 @@
     }
   });
 
-  function until(conditionFunction: Function): Promise<Function> {
+  function until<T>(conditionFunction): Promise<T> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
-      else setTimeout((_) => poll(resolve), 400);
+      else setTimeout(() => poll(resolve), 400);
     };
     return new Promise(poll);
   }
@@ -178,9 +175,7 @@
       }
       classes.push({ id: currentAnnCatId, name: currentAnnCatName });
     } else {
-      currentAnnCatId = classes.find(
-        (obj) => obj.name === currentAnnCatName
-      ).id;
+      currentAnnCatId = classes.find((obj) => obj.name === currentAnnCatName).id;
     }
 
     // Add current mask
@@ -218,14 +213,8 @@
     }
 
     // Check if the new label's category already exists in the current annotations
-    if (
-      !annotations[currentAnnSource].views[currentAnn.viewId].categories[
-        currentAnnCatId
-      ]
-    ) {
-      annotations[currentAnnSource].views[currentAnn.viewId].categories[
-        currentAnnCatId
-      ] = {
+    if (!annotations[currentAnnSource].views[currentAnn.viewId].categories[currentAnnCatId]) {
+      annotations[currentAnnSource].views[currentAnn.viewId].categories[currentAnnCatId] = {
         labels: {},
         id: currentAnnCatId,
         name: currentAnnCatName,
@@ -244,9 +233,9 @@
       bboxOpacity: 1.0,
       visible: true,
     };
-    annotations[currentAnnSource].views[currentAnn.viewId].categories[
-      currentAnnCatId
-    ].labels[currentAnn.id] = currentLabel;
+    annotations[currentAnnSource].views[currentAnn.viewId].categories[currentAnnCatId].labels[
+      currentAnn.id
+    ] = currentLabel;
 
     annotations[currentAnnSource].numLabels += 1;
     annotations[currentAnnSource].views[currentAnn.viewId].numLabels += 1;
@@ -270,7 +259,7 @@
         changeSelectedItem(newItemId, item);
       } else {
         selectItemModal = true;
-        await until((_) => selectItemModal == false);
+        await until(() => selectItemModal == false);
         if (!saveFlag) {
           changeSelectedItem(newItemId, item);
         }
@@ -296,9 +285,9 @@
     console.log("AnnotationWorkspace.handleDeleteLabel");
 
     // Remove from annotations
-    delete annotations[label.sourceId].views[label.viewId].categories[
-      label.categoryId
-    ].labels[label.id];
+    delete annotations[label.sourceId].views[label.viewId].categories[label.categoryId].labels[
+      label.id
+    ];
     annotations[label.sourceId].numLabels -= 1;
     annotations[label.sourceId].views[label.viewId].numLabels -= 1;
 
@@ -314,18 +303,14 @@
 
   function handleLabelVisibility(label: Label) {
     // Try and find a mask
-    const mask = masks.find(
-      (mask) => mask.id === label.id && mask.viewId === label.viewId
-    );
+    const mask = masks.find((mask) => mask.id === label.id && mask.viewId === label.viewId);
     if (mask) {
       mask.visible = label.visible;
       mask.opacity = label.maskOpacity;
     }
 
     // Try and find a bbox
-    const bbox = bboxes.find(
-      (bbox) => bbox.id === label.id && bbox.viewId === label.viewId
-    );
+    const bbox = bboxes.find((bbox) => bbox.id === label.id && bbox.viewId === label.viewId);
     if (bbox) {
       bbox.visible = label.visible;
       bbox.opacity = label.bboxOpacity;
@@ -359,7 +344,7 @@
     }
   }
 
-  function handleLabelColors(): Function {
+  function handleLabelColors() {
     let range: Array<number>;
     if (colorMode === "category") {
       range = [
@@ -369,10 +354,10 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range);
+    return utils.colorLabel(range.map((i) => i.toString()));
   }
 
-  async function handleLoadNextPage() {
+  function handleLoadNextPage() {
     dispatch("loadNextPage");
   }
 

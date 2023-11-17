@@ -27,7 +27,7 @@ export async function getDatasetList() {
         "api.getDatasetList -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -37,17 +37,11 @@ export async function getDatasetList() {
   return datasets;
 }
 
-export async function getDatasetItems(
-  datasetId: String,
-  page: number = 1,
-  size: number = 100
-) {
+export async function getDatasetItems(datasetId: string, page: number = 1, size: number = 100) {
   let datasetItems = null;
 
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items?page=${page}&size=${size}`
-    );
+    const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
     if (response.ok) {
       datasetItems = await response.json();
     } else {
@@ -55,7 +49,7 @@ export async function getDatasetItems(
         "api.getDatasetItems -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -65,7 +59,7 @@ export async function getDatasetItems(
   return datasetItems;
 }
 
-export async function getDatasetStats(datasetId: String) {
+export async function getDatasetStats(datasetId: string) {
   let datasetStats = null;
 
   try {
@@ -77,7 +71,7 @@ export async function getDatasetStats(datasetId: String) {
         "api.getDatasetStats -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -87,7 +81,7 @@ export async function getDatasetStats(datasetId: String) {
   return datasetStats;
 }
 
-export async function getItemDetails(datasetId: String, itemId: string) {
+export async function getItemDetails(datasetId: string, itemId: string) {
   let itemDetails = null;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
@@ -98,7 +92,7 @@ export async function getItemDetails(datasetId: String, itemId: string) {
         "api.getItemDetails -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -108,13 +102,11 @@ export async function getItemDetails(datasetId: String, itemId: string) {
   return itemDetails;
 }
 
-export async function getItemEmbeddings(datasetId: String, itemId: string) {
+export async function getItemEmbeddings(datasetId: string, itemId: string) {
   let embeddings = null;
 
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/embeddings`
-    );
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings`);
     if (response.ok) {
       embeddings = await response.json();
     } else {
@@ -122,7 +114,7 @@ export async function getItemEmbeddings(datasetId: String, itemId: string) {
         "api.getItemEmbeddings -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -131,29 +123,22 @@ export async function getItemEmbeddings(datasetId: String, itemId: string) {
   return embeddings;
 }
 
-export async function postItemDetails(
-  itemDetails: Object,
-  datasetId: String,
-  itemId: string
-) {
+export async function postItemDetails(itemDetails: object, datasetId: string, itemId: string) {
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/details`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(itemDetails),
-        method: "POST",
-      }
-    );
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/details`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(itemDetails),
+      method: "POST",
+    });
     if (!response.ok) {
       console.log(
         "api.postItemDetails -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
@@ -162,24 +147,21 @@ export async function postItemDetails(
 }
 
 export async function getSearchResult(
-  datasetId: String,
+  datasetId: string,
   query: string,
   page: number = 1,
-  size: number = 100
+  size: number = 100,
 ) {
   let datasetItems = null;
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/search?page=${page}&size=${size}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: query }),
-        method: "POST",
-      }
-    );
+    const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: query }),
+      method: "POST",
+    });
     if (response.ok) {
       datasetItems = await response.json();
     } else {
@@ -187,7 +169,7 @@ export async function getSearchResult(
         "api.getSearchResult -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {

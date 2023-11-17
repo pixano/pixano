@@ -34,8 +34,7 @@
   }
 
   function handleSearch() {
-    filter = (document.getElementById("search-input") as HTMLInputElement)
-      .value;
+    filter = (document.getElementById("search-input") as HTMLInputElement).value;
   }
 </script>
 
@@ -99,10 +98,7 @@
     <div class="flex flex-wrap justify-center gap-6 mx-20">
       {#each datasets as dataset}
         {#if dataset.name.toUpperCase().includes(filter.toUpperCase())}
-          <DatasetPreviewCard
-            {dataset}
-            on:selectDataset={() => handleSelectDataset(dataset)}
-          />
+          <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
         {/if}
       {/each}
     </div>

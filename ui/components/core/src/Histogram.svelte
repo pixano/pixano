@@ -110,9 +110,7 @@
 </script>
 
 <!-- Histogram -->
-<div
-  class="max-h-{maxHeight} w-72 mx-auto flex flex-col justify-center items-center"
->
+<div class="max-h-{maxHeight} w-72 mx-auto flex flex-col justify-center items-center">
   {#if !hideTitle}
     <span class="py-1 text-sm font-bold">
       {hist.name}

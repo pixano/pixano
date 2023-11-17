@@ -7,7 +7,10 @@
   "scripts": {
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write --ignore-unknown .",
+    "format_check": "prettier --check --ignore-unknown .",
+    "lint": "tsc --noEmit --skipLibCheck && eslint ./src"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
@@ -20,6 +23,8 @@
     "vite": "^4.3.0"
   },
   "dependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/d3-scale-chromatic": "^3.0.2",
     "d3": "^7.8.2",
     "d3-color": "^3.1.0",
     "d3-scale-chromatic": "^3.0.0",
