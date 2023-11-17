@@ -37,8 +37,7 @@ export const Base: Story = {
       name: "fake_dataset",
       description: "Fake dataset",
       num_elements: 1000,
-      preview:
-        "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
+      preview: "https://tailwindui.com/img/ecommerce-images/product-page-01-related-product-01.jpg",
       categories: [],
       page: { items: [], total: 100 },
     },

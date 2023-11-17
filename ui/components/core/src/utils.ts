@@ -19,5 +19,5 @@ import { schemeSet3 } from "d3-scale-chromatic";
 
 // Exports
 export function colorLabel(range: Iterable<string>) {
-	return scaleOrdinal(schemeSet3).domain(range);
+  return scaleOrdinal(schemeSet3).domain(range);
 }
