@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest",
-    "lint": "tsc --noEmit --skipLibCheck && eslint --cache ./src"
+    "format": "prettier --write --ignore-unknown .",
+    "lint": "tsc --noEmit --skipLibCheck && eslint ./src"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
