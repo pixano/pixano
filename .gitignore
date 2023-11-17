@@ -33,6 +33,7 @@ site
 *.sln
 *.sw?
 *lock.yaml
+*.code-workspace
 makefile
 
 # Environment
@@ -46,3 +47,7 @@ __pycache__
 *.pth
 *.onnx
 *.wasm
+
+# Dataset files
+*.lance
+

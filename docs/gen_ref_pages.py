@@ -9,7 +9,7 @@ import mkdocs_gen_files
 
 SRC_PATH = "../pixano/pixano"
 REF_PATH = "code"
-IGNORED_FILES = ["__init__.md", "__version__.md", "_test.md"]
+IGNORED_FILES = ["__init__.py", "__version__.py"]
 
 nav = mkdocs_gen_files.Nav()
 
@@ -37,13 +37,13 @@ for path in sorted(Path(SRC_PATH).rglob("*.py")):
         mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
     # Add all python files that are not in the ignore list
-    elif not any(ignored in full_doc_path.name for ignored in IGNORED_FILES):
+    elif not any(ignored in path.name for ignored in IGNORED_FILES):
         nav[parts] = doc_path.as_posix()
         with mkdocs_gen_files.open(full_doc_path, "w") as fd:
             identifier = ".".join(parts)
-            print("::: " + identifier, file=fd)
+            print("::: pixano." + identifier, file=fd)
         mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
 
-with mkdocs_gen_files.open("code/SUMMARY.md", "w") as nav_file:
+with mkdocs_gen_files.open(f"{REF_PATH}/SUMMARY.md", "w") as nav_file:
     nav_file.writelines(nav.build_literate_nav())

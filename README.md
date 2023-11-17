@@ -7,7 +7,7 @@
 
 **Data-centric AI building blocks for computer vision applications**
 
-***Under active development, subject to API change***
+**_Under active development, subject to API change_**
 
 [![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
 [![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
@@ -17,8 +17,19 @@
 
 </div>
 
+<hr />
 
-# Installing Pixano
+Pixano is an open-source tool by CEA List for exploring and annotating your dataset using AI features:
+
+- **Fast dataset navigation** using the the modern storage format _Lance_
+- **Multi-view datasets** support for images, and soon for _3D point clouds_ and _videos_.
+- **Import and export** support for dataset formats like _COCO_
+- **Semantic search** using models like _CLIP_
+- **Smart segmentation** using models like _SAM_
+
+# Getting started
+
+## Installing Pixano
 
 As Pixano requires specific versions for its dependencies, we recommend creating a new Python virtual environment to install it.
 
@@ -35,11 +46,11 @@ Then, you can install the Pixano package inside that environment with pip:
 pip install pixano
 ```
 
-# Using your datasets
+## Using your datasets
 
 Please refer to our Jupyter notebooks for <a href="https://github.com/pixano/pixano/blob/main/notebooks/datasets/import_dataset.ipynb" target="_blank">importing</a> and <a href="https://github.com/pixano/pixano/blob/main/notebooks/datasets/export_dataset.ipynb" target="_blank">exporting</a> your datasets.
 
-# Using the Pixano apps
+## Using the Pixano apps
 
 Please refer to these links for using the <a href="https://github.com/pixano/pixano/tree/main/pixano/apps/explorer/README.md" target="_blank">Pixano Explorer</a> and the <a href="https://github.com/pixano/pixano/tree/main/pixano/apps/annotator/README.md" target="_blank">Pixano Annotator</a> apps.
 

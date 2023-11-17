@@ -7,10 +7,9 @@
 
 **Data-centric AI building blocks for computer vision applications**
 
-***Under active development, subject to API change***
+**_Under active development, subject to API change_**
 
 </div>
-
 
 # Pixano Annotator
 
