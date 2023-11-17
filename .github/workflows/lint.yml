@@ -102,7 +102,7 @@ jobs:
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_options: --check *.{md,yml}
+          prettier_options: --check ./*.{md,yml}
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
 
@@ -110,7 +110,7 @@ jobs:
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_options: --check .github/**/*.{yml}
+          prettier_options: --check ./.github/workflows/*.{yml}
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
 
@@ -118,7 +118,7 @@ jobs:
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_options: --check docs/**/*.{md}
+          prettier_options: --check ./docs/**/*.{md}
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
 
@@ -126,6 +126,6 @@ jobs:
         uses: creyD/prettier_action@v4.3
         with:
           dry: True
-          prettier_options: --check pixano/**/*.{md}
+          prettier_options: --check ./pixano/**/*.{md}
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
