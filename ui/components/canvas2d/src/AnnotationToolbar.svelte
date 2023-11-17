@@ -19,7 +19,7 @@
 
   // Exports
   export let tools_lists: Array<Array<Tool>> = [];
-  export let selectedTool: Tool = null;
+  export let selectedTool: Tool | null = null;
 
   function selectTool(tool: Tool) {
     // Prevent re-selecting the active tool
@@ -45,9 +45,7 @@
                   width="48"
                   class="h-10 w-10 p-1 border-2 rounded
                   bg-slate-50 hover:bg-slate-300
-                  {tool['modes'].includes(selectedTool)
-                    ? 'border-main'
-                    : 'border-transparent'}"
+                  {tool['modes'].includes(selectedTool) ? 'border-main' : 'border-transparent'}"
                 >
                   <title>{tool.name}</title>
                   <path d={tool.icon} fill="currentcolor" />
@@ -67,9 +65,7 @@
                       width="48"
                       class="h-10 w-10 p-1 border-2 rounded
                       bg-slate-50 hover:bg-slate-300
-                      {mode === selectedTool
-                        ? 'border-main'
-                        : 'border-transparent'}"
+                      {mode === selectedTool ? 'border-main' : 'border-transparent'}"
                     >
                       <title>{mode.name}</title>
                       <path d={mode.icon} fill="currentcolor" />
