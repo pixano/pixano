@@ -105,4 +105,4 @@ jobs:
           prettier_options: --check **/*.{md,yaml,yml,json}
           # Prettier 3.0 not yet available in VSCode extension
           prettier_version: 2.8.8
-          file_pattern: !ui
+          file_pattern: "!ui"
