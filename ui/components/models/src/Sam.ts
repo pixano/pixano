@@ -31,12 +31,11 @@ import type {
   SegmentationResult,
 } from "./interfaces";
 
-ort.env.wasm.wasmPaths =
-  "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.1/dist/";
 
 // Exports
 export class SAM implements InteractiveImageSegmenter {
-  private onnxModel: ort.InferenceSession;
+  private onnxModel!: ort.InferenceSession;
 
   private previousMask: ort.Tensor | null = null;
 
@@ -46,8 +45,8 @@ export class SAM implements InteractiveImageSegmenter {
   // prediction threshold
   predictionThreshold = 0.0;
 
-  async init(modelWeights: ArrayBuffer);
-  async init(modelWeights: string);
+  async init(modelWeights: ArrayBuffer): Promise<void>;
+  async init(modelWeights: string): Promise<void>;
   async init(modelWeights: any) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
   }
@@ -65,11 +64,7 @@ export class SAM implements InteractiveImageSegmenter {
       hasMaskInput = new ort.Tensor("float32", [1]);
     } else {
       // There is no previous mask, so default to an empty tensor
-      maskInput = new ort.Tensor(
-        "float32",
-        new Float32Array(256 * 256),
-        [1, 1, 256, 256]
-      );
+      maskInput = new ort.Tensor("float32", new Float32Array(256 * 256), [1, 1, 256, 256]);
       // There is no previous mask, so default to 0
       hasMaskInput = new ort.Tensor("float32", [0]);
     }
@@ -80,20 +75,20 @@ export class SAM implements InteractiveImageSegmenter {
   /** Pre-process UI inputs before feeding them into SAM */
   preProcessInputs(
     clicks: Array<LabeledClick>,
-    box: Box | null,
+    box: Box | null | undefined,
     imageWidth: number,
-    imageHeight: number
+    imageHeight: number,
   ): LabeledPointsTensor {
     const scale = this.getScalingFactor(imageWidth, imageHeight);
 
     // If there is no box input, a single padding point with
     // label -1 and coordinates (0.0, 0.0) should be concatenated
     // so initialize the array to support (n + 1) points.
-    const n = clicks.length;
-    //with a box: 2 more points; without: 1 for padding
+    const n = clicks?.length;
+    // with a box: 2 more points; without: 1 for padding
     const num_additionalPoints = box ? 2 : 1;
-    let pointCoords = new Float32Array(2 * (n + num_additionalPoints));
-    let pointLabels = new Float32Array(n + num_additionalPoints);
+    const pointCoords = new Float32Array(2 * (n + num_additionalPoints));
+    const pointLabels = new Float32Array(n + num_additionalPoints);
 
     // Add clicks and scale to what SAM expects
     for (let i = 0; i < n; i++) {
@@ -124,29 +119,18 @@ export class SAM implements InteractiveImageSegmenter {
       n + num_additionalPoints,
       2,
     ]);
-    const pointLabelsTensor = new ort.Tensor("float32", pointLabels, [
-      1,
-      n + num_additionalPoints,
-    ]);
+    const pointLabelsTensor = new ort.Tensor("float32", pointLabels, [1, n + num_additionalPoints]);
 
     return { points: pointCoordsTensor, labels: pointLabelsTensor };
   }
 
   async segmentImage(
-    inputs: InteractiveImageSegmenterInput
+    inputs: Required<InteractiveImageSegmenterInput>,
   ): Promise<SegmentationResult> {
     const imageWidth = inputs.image.naturalWidth;
     const imageHeight = inputs.image.naturalHeight;
-    const imageSizeTensor = new ort.Tensor("float32", [
-      imageHeight,
-      imageWidth,
-    ]);
-    const labeledPoints = this.preProcessInputs(
-      inputs.points,
-      inputs.box,
-      imageWidth,
-      imageHeight
-    );
+    const imageSizeTensor = new ort.Tensor("float32", [imageHeight, imageWidth]);
+    const labeledPoints = this.preProcessInputs(inputs.points, inputs.box, imageWidth, imageHeight);
     const previousMask = this.getPreviousMask();
 
     const samInputs = {
@@ -162,11 +146,7 @@ export class SAM implements InteractiveImageSegmenter {
     const results = await this.onnxModel.run(samInputs);
     console.log("SAM.segmentImage in", Date.now() - start, "ms");
     this.previousMask = results.low_res_masks;
-    const rleMask = maskDataToFortranArrayToRle(
-      results.masks.data,
-      imageHeight,
-      imageWidth
-    );
+    const rleMask = maskDataToFortranArrayToRle(results.masks.data, imageHeight, imageWidth);
     const maskPolygons = generatePolygonSegments(rleMask, imageHeight);
 
     const masksSVG = convertSegmentsToSVG(maskPolygons);

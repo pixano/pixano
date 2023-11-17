@@ -52,9 +52,7 @@ export interface SegmentationResult {
 }
 
 export interface InteractiveImageSegmenter {
-  segmentImage(
-    input: InteractiveImageSegmenterInput
-  ): Promise<SegmentationResult>;
+  segmentImage(input: InteractiveImageSegmenterInput): Promise<SegmentationResult>;
   reset(): void;
 }
 
