@@ -11,22 +11,21 @@
 #
 # http://www.cecill.info
 
-# This workflow will run tests with unittest on a single version of Python
+# This workflow will publish the new version of Pixano to PyPI when a release is created
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Test Python code
+name: Publish code
 
 on:
-  push:
-    branches: ["develop"]
-  pull_request:
-    branches: ["develop"]
+  release:
+    types: [published]
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  deploy:
+    name: Build and publish to PyPI
     runs-on: ubuntu-latest
 
     steps:
@@ -38,11 +37,36 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup pnpm 8
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install .
+          pip install hatch
 
-      - name: Test with unittest
+      - name: Build apps
         run: |
-          python -m unittest discover -s tests/ -p "test_*.py"
+          cd ui
+          pnpm i
+          cd apps/explorer
+          pnpm build
+          cd ../annotator
+          pnpm build
+          cd ../../..
+
+      - name: Build package
+        run: hatch build
+
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
