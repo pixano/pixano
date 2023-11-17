@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "format": "prettier --write --ignore-unknown .",
+    "format_check": "prettier --check --ignore-unknown .",
     "lint": "tsc --noEmit --skipLibCheck && eslint ./src"
   },
   "devDependencies": {

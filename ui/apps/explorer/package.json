@@ -12,6 +12,7 @@
     "test": "vitest",
     "coverage": "vitest run --coverage",
     "format": "prettier --write --ignore-unknown .",
+    "format_check": "prettier --check --ignore-unknown .",
     "lint": "tsc --noEmit && eslint ./src"
   },
   "devDependencies": {

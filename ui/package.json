@@ -2,6 +2,7 @@
   "name": "pixano_ui",
   "scripts": {
     "format": "prettier --write --ignore-unknown .",
+    "format_check": "prettier --check --ignore-unknown .",
     "lint": "pnpm run -r -no-bail lint"
   },
   "devDependencies": {
