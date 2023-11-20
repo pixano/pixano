@@ -138,6 +138,7 @@
               sourceId: sourceId,
               viewId: viewId,
               confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
+              attributes: obj.attributes ? obj.attributes : null,
               bboxOpacity: 1.0,
               maskOpacity: 1.0,
               visible: true,

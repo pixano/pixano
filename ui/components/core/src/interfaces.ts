@@ -43,6 +43,7 @@ export interface ObjectData {
   mask: MaskRLE;
   bbox: BBoxXYWH;
   category: CategoryData;
+  attributes: string;
 }
 
 export interface CategoryData {
@@ -103,6 +104,7 @@ export interface Label {
   sourceId: string;
   viewId: string;
   confidence?: number;
+  attributes?: string;
   bboxOpacity: number;
   maskOpacity: number;
   visible: boolean;

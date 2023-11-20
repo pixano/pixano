@@ -310,6 +310,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                                 "mask": mask,
                                 "bbox": bbox,
                                 "category": category,
+                                "attributes": obj["attributes"] if "attributes" in obj else None
                             }
                         )
 
