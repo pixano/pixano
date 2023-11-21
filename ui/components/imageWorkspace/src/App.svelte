@@ -14,11 +14,12 @@
    * http://www.cecill.info
    */
   import Toolbar from "./components/Toolbar.svelte";
+  import ImageCanvas from "./components/ImageCanvas.svelte";
+  import ActionsTabs from "./components/ActionsTabs.svelte";
 </script>
 
 <div class="flex w-full h-screen">
   <Toolbar />
-
-  <div>main image goes her</div>
-  <div>nav tools go here</div>
+  <ImageCanvas />
+  <ActionsTabs />
 </div>
