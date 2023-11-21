@@ -354,7 +354,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString()));
+    return utils.colorLabel(range.map((i) => i.toString())) as Function;
   }
 
   function handleLoadNextPage() {

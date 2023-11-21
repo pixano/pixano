@@ -89,44 +89,44 @@
   async function handleGoToFirstPage() {
     if (currentPage > 1) {
       currentPage = 1;
-      loadPage();
+      await loadPage();
     }
   }
 
   async function handleGoToPreviousPage() {
     if (currentPage > 1) {
       currentPage -= 1;
-      loadPage();
+      await loadPage();
     }
   }
 
   async function handleGoToNextPage() {
     if (selectedDataset.page.total > currentPage * itemsPerPage) {
       currentPage += 1;
-      loadPage();
+      await loadPage();
     }
   }
 
   async function handleGoToLastPage() {
     if (selectedDataset.page.total > currentPage * itemsPerPage) {
       currentPage = Math.ceil(selectedDataset.page.total / itemsPerPage);
-      loadPage();
+      await loadPage();
     }
   }
 
-  function handleSearch() {
+  async function handleSearch() {
     query = (document.getElementById("sem-search-input") as HTMLInputElement).value;
     currentPage = 1;
-    loadPage();
+    await loadPage();
   }
 
-  function handleClearSearch() {
+  async function handleClearSearch() {
     (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
-    handleSearch();
+    await handleSearch();
   }
 
   onMount(async () => {
-    loadPage();
+    await loadPage();
     datasetStats = await api.getDatasetStats(selectedDataset.id);
   });
 </script>

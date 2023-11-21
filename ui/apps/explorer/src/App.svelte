@@ -58,18 +58,18 @@
     console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
   }
 
-  async function handleSelectDataset(dataset: Dataset) {
+  function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
   }
 
-  function handleUnselectDataset() {
+  async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
     query = "";
-    handleGetDatasets();
+    await handleGetDatasets();
   }
 
   async function handleSelectItem(itemId: string) {
@@ -205,7 +205,7 @@
 
   onMount(async () => {
     console.log("App.onMount");
-    handleGetDatasets();
+    await handleGetDatasets();
   });
 </script>
 

@@ -26,7 +26,7 @@
   let h = 7.5 * hist.histogram.length;
   h = h < 125 ? 125 : h;
 
-  // Vega-Lite spec (default type : categorical)
+  // Vega-Lite spec
   const spec: VisualizationSpec = {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
     config: {
@@ -65,9 +65,9 @@
         },
       },
       y: {
-        field: hist.name,
+        field: hist.type == "categorical" ? hist.name : "bin_range",
         type: "nominal",
-        sort: "-x",
+        sort: "x",
         axis: {
           title: null,
           domain: false,
@@ -89,19 +89,6 @@
       },
     },
   };
-
-  // Change spec depending on histogram type
-  if (hist.type == "numerical") {
-    // Set bin ranges
-    for (let i = 0; i < hist.histogram.length; ++i) {
-      const value = hist.histogram[i];
-      value.bin_range = value.bin_start + "-" + value.bin_end;
-    }
-
-    // Set histogram y axis
-    spec.encoding.y.field = "bin_range";
-    spec.encoding.y.sort = null;
-  }
 
   // Vega-lite chart options
   const options = {

@@ -87,7 +87,7 @@
     }
   }
 
-  function handleLabelColors(): Function {
+  function handleLabelColors() {
     let range: Array<number>;
     if (colorMode === "category") {
       range = [
@@ -97,14 +97,14 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range);
+    return utils.colorLabel(range.map((i) => i.toString())) as Function;
   }
 
-  async function handleKeyDown(event: KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key == "Escape") dispatch("unselectItem");
   }
 
-  onMount(async () => {
+  onMount(() => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
       labelColors = handleLabelColors();
