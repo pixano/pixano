@@ -374,7 +374,7 @@ export function convertSegmentsToSVG(polySegments: any) {
     let shouldBeClockwise = false;
     const [sampleX, sampleY] = path[0];
     for (const otherPath of renderedPaths) {
-      if (ctx!.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
+      if (ctx.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
         shouldBeClockwise = !shouldBeClockwise;
     }
     // All paths are default counter-clockwise based on how the segments were generated,
@@ -391,7 +391,7 @@ export function convertSegmentsToSVG(polySegments: any) {
 
     // Add a new Path2D to the canvas to be able to call isPointInPath for the remaining paths
     const pathObj = new Path2D(svgStr);
-    ctx!.fill(pathObj);
+    ctx.fill(pathObj);
     renderedPaths.push(pathObj);
   }
 

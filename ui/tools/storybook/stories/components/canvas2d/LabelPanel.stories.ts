@@ -29,7 +29,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-let catCol = utils.colorLabel([1, 2]); // Define a color map for each category id
+let catCol = utils.colorLabel(["1", "2"]); // Define a color map for each category id
 
 export const Base: Story = {
   args: {
@@ -51,6 +51,7 @@ export const Base: Story = {
       name: "Dataset",
       description: "Dataset description",
       num_elements: 4,
+      estimated_size: "N?A",
       preview: "",
       categories: [],
       page: {

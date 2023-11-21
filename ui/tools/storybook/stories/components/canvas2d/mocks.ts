@@ -17,6 +17,7 @@
 import { mask_utils } from "@pixano/models";
 
 import type { InteractiveImageSegmenter, InteractiveImageSegmenterInput } from "@pixano/models";
+import { SegmentationResult } from "@pixano/models/src/interfaces";
 
 function flattenArray(image: number[][]): number[] {
   const flattenedArray: number[] = [];
@@ -81,7 +82,10 @@ export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter 
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
     //console.log(masksSVG);
     //console.log(masksSVG.length);
-    return Promise.resolve({ masksImageSVG: masksSVG, rle: null });
+    return Promise.resolve({
+      masksImageSVG: masksSVG,
+      rle: { counts: [], size: [] },
+    } as SegmentationResult);
   }
 
   reset() {
