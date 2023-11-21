@@ -19,7 +19,7 @@
 
   // Exports
   // Represents an histogram (name, type, values)
-  export let value: any;
+  export let value: object;
 </script>
 
 <div class="w-full flex flex-row items-center overflow-y-scroll">

@@ -23,6 +23,7 @@ module.exports = {
     "tailwind.config.cjs",
     "postcss.config.cjs",
     "vite.config.ts",
+    "mask_utils.ts", // external code
   ],
   overrides: [
     {
@@ -40,7 +41,6 @@ module.exports = {
     "@typescript-eslint/no-unsafe-assignment": "off",
     "@typescript-eslint/no-unsafe-return": "off",
     "@typescript-eslint/no-unsafe-call": "off",
-    "@typescript-eslint/no-unsafe-argument": "off",
-    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unsafe-argument": "off", // can't add type annotations in Svelte code for variables like event.detail
   },
 };

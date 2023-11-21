@@ -91,9 +91,8 @@
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      const firstItemId: string = selectedDataset.page.items[0].find(
-        (feature) => feature.name === "id",
-      ).value;
+      const firstItemId = selectedDataset.page.items[0].find((feature) => feature.name === "id")
+        .value as string;
 
       // Toggle active learning filtering if "round" found
       if (selectedDataset.page.items[0].find((feature) => feature.name === "round")) {

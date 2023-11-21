@@ -17,5 +17,5 @@
 type DType = "image" | "text" | "number" | "histogram" | "hidden";
 export interface CellData {
   dtype: DType;
-  value: any;
+  value: string | number | object;
 }

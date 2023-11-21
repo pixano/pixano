@@ -15,6 +15,7 @@
 
 // Imports
 import { icons } from "@pixano/core";
+import { type InteractiveImageSegmenter } from "@pixano/models";
 
 // Exports
 export enum ToolType {
@@ -31,7 +32,7 @@ interface Tool {
   icon: string;
   cursor: string;
   onSelect: () => void;
-  postProcessor: any;
+  postProcessor: InteractiveImageSegmenter;
 }
 
 interface MultiModalTool extends Tool {

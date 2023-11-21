@@ -39,7 +39,7 @@
     Mask,
   } from "@pixano/core";
 
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import type { InteractiveImageSegmenter, InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -104,9 +104,9 @@
   // Segmentation model
   interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
-      pointPlusTool.postProcessor = segmenter;
-      pointMinusTool.postProcessor = segmenter;
-      rectangleTool.postProcessor = segmenter;
+      pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
     }
   });
 
@@ -250,9 +250,9 @@
 
   async function handleChangeSelectedItem(item: DatasetItem) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId: string = item.find((feature) => {
+    const newItemId = item.find((feature) => {
       return feature.name === "id";
-    }).value;
+    }).value as string;
 
     if (newItemId !== selectedItem.id) {
       if (!saveFlag) {
@@ -273,7 +273,7 @@
       if (itemFeature.dtype === "image") {
         selectedItem.views[itemFeature.name] = {
           id: itemFeature.name,
-          url: itemFeature.value,
+          url: itemFeature.value as string,
         };
       }
     }

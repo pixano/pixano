@@ -21,7 +21,7 @@
   import { icons } from "@pixano/core";
 
   // Exports
-  export let data: any;
+  export let data: DatasetItem[];
 
   // Calculate row headers
   const featureNames = data[0].map((feature) => {

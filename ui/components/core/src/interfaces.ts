@@ -129,7 +129,7 @@ export type DatasetItem = Array<DatasetItemFeature>;
 export interface DatasetItemFeature {
   name: string;
   dtype: string;
-  value: any;
+  value: number | string | object;
 }
 
 export interface MaskRLE {
