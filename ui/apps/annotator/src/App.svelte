@@ -36,6 +36,7 @@
     BBox,
     CategoryData,
     Dataset,
+    DatasetItems,
     ItemData,
     ItemLabels,
     ItemObjects,
@@ -90,7 +91,7 @@
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      const firstItemId = selectedDataset.page.items[0].find(
+      const firstItemId: string = selectedDataset.page.items[0].find(
         (feature) => feature.name === "id",
       ).value;
 
@@ -255,7 +256,7 @@
           embeddings[viewId] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
-            viewEmbeddingArray.shape,
+            viewEmbeddingArray.shape as Array<number>,
           );
         } catch (e) {
           console.log("App.handleSelectItem - Error loading embeddings", e);
@@ -355,7 +356,7 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
+    const new_dbImages: DatasetItems = await api.getDatasetItems(selectedDataset.id, currentPage);
     console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (new_dbImages) {

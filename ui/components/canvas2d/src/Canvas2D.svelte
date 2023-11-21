@@ -55,7 +55,6 @@
   let embeddingDirectoryModal = false;
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-  let timerId;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -267,7 +266,7 @@
     if (viewLayer) {
       const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
       const image: Konva.Image = viewLayer.findOne("#image");
-      const bboxIds = [];
+      const bboxIds: Array<string> = [];
 
       for (let i = 0; i < bboxes.length; ++i) {
         if (bboxes[i].viewId === viewId) {
@@ -372,7 +371,7 @@
     if (viewLayer) {
       const maskGroup: Konva.Group = viewLayer.findOne("#masks");
       const image: Konva.Image = viewLayer.findOne("#image");
-      const maskIds = [];
+      const maskIds: Array<string> = [];
 
       for (let i = 0; i < masks.length; ++i) {
         if (masks[i].viewId === viewId) {
@@ -737,8 +736,7 @@
     }
 
     // new currentAnn on new location
-    clearTimeout(timerId); // reinit timer on each move move
-    timerId = await updateCurrentMask(viewId);
+    await updateCurrentMask(viewId);
   }
 
   function highlightInputPoint(hl_point: Konva.Circle, viewId: string) {

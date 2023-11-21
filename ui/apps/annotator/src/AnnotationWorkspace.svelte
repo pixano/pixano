@@ -250,7 +250,7 @@
 
   async function handleChangeSelectedItem(item: DatasetItem) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId = item.find((feature) => {
+    const newItemId: string = item.find((feature) => {
       return feature.name === "id";
     }).value;
 
