@@ -54,6 +54,10 @@ jobs:
         run: |
           cd ui
           pnpm format_check
+
+      - name: Lint frontend code with eslint
+        run: |
+          cd ui
           pnpm lint
 
   # This job will lint backend code (Python) with black
