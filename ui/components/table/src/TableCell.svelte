@@ -20,6 +20,7 @@
   import VideoCell from "./TableCells/VideoCell.svelte";
   import NumberCell from "./TableCells/NumberCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
+  import BooleanCell from "./TableCells/BooleanCell.svelte";
 
   import type { DatasetItemFeature } from "@pixano/core";
 
@@ -30,6 +31,7 @@
   const componentsMap = {
     number: NumberCell,
     text: TextCell,
+    boolean: BooleanCell,
     image: ImageCell,
     video: VideoCell,
     histogram: HistogramCell,

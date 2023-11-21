@@ -22,7 +22,7 @@ from fastapi_pagination.api import create_page, resolve_params
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from pydantic import BaseModel
 
-from pixano.core import BBox, CompressedRLE, Image, is_number, is_string
+from pixano.core import BBox, CompressedRLE, Image, is_number, is_string, is_bool
 from pixano.data import Dataset, Fields
 from pixano.utils import format_bbox, rle_to_mask
 
@@ -77,6 +77,11 @@ def _create_features(item: dict, schema: pa.schema) -> list[ItemFeature]:
         elif is_string(field.type):
             features.append(
                 ItemFeature(name=field.name, dtype="text", value=item[field.name])
+            )
+        # Boolean fields
+        elif is_bool(field.type):
+            features.append(
+                ItemFeature(name=field.name, dtype="boolean", value=item[field.name])
             )
 
     return features
@@ -347,7 +352,10 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
     embeddings = {}
     for emb_source, emb_table in emb_tables.items():
         media_scanner = emb_table.to_lance().scanner(filter=f"id in ('{item_id}')")
-        embeddings[emb_source] = media_scanner.to_table().to_pylist()[0]
+        try:
+            embeddings[emb_source] = media_scanner.to_table().to_pylist()[0]
+        except IndexError:
+            print(f"Warning: Embeddings for {emb_source} are empty")
 
     # Return first embeddings for first table containing SAM (Segment Anything Model)
     # TODO: Add embeddings table select option

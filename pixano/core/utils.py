@@ -42,6 +42,19 @@ def is_string(t: pa.DataType) -> bool:
     return pa.types.is_string(t) or pa.types.is_large_string(t)
 
 
+def is_bool(t: pa.DataType) -> bool:
+    """Check if DataType is a boolean
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is a boolean
+    """
+
+    return pa.types.is_boolean(t)
+
+
 def is_image_type(t: pa.DataType) -> bool:
     """Check if DataType is an Image
 

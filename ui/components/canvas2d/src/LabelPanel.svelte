@@ -477,7 +477,7 @@
                           />
                         </svg>
                       </button>
-                      <span class="relative pl-1 text-sm grow truncate w-5" title={label.id + "\nattributes:" + label.attributes})} >
+                      <span class="relative pl-1 text-sm grow truncate w-5" title={label.id + "\nattributes:" + label.attributes} >
                         {label.id}
                       </span>
                       <button on:click={() => handleDeleteLabel(label)}>
