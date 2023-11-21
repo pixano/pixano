@@ -54,6 +54,7 @@ jobs:
         run: |
           cd ui
           pnpm format_check
+          pnpm lint
 
   # This job will lint backend code (Python) with black
   # For more information see: https://black.readthedocs.io/en/stable/integrations/github_actions.html
