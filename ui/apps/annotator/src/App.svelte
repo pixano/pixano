@@ -66,7 +66,7 @@
 
   const sam = new SAM();
 
-  function until(conditionFunction: Function): Promise<Function> {
+  function until(conditionFunction: () => boolean): Promise<() => void> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout(() => poll(resolve), 400);

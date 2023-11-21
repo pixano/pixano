@@ -110,7 +110,7 @@
     }
   });
 
-  function until<T>(conditionFunction): Promise<T> {
+  function until(conditionFunction: () => boolean): Promise<() => void> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout(() => poll(resolve), 400);
@@ -354,7 +354,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString())) as Function;
+    return utils.colorLabel(range.map((i) => i.toString())) as (id: string) => string;
   }
 
   function handleLoadNextPage() {

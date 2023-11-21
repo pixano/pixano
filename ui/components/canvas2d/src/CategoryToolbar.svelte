@@ -30,7 +30,7 @@
   export let selectedTool: Tool;
   export let pointPlusTool: Tool;
   export let pointMinusTool: Tool;
-  export let labelColors: Function;
+  export let labelColors: (id: string) => string;
   export let placeholder: string = "Category name";
 
   const dispatch = createEventDispatcher();
@@ -97,7 +97,7 @@
       {#each classes as cls}
         <button
           class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-slate-800 font-medium hover:brightness-110"
-          style="background-color: {labelColors(cls.id)}; text-align:left"
+          style="background-color: {labelColors(cls.id.toString())}; text-align:left"
           title="{cls.name} (id #{cls.id})"
           on:click={() => {
             focusInput();

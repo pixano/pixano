@@ -97,7 +97,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString())) as Function;
+    return utils.colorLabel(range.map((i) => i.toString())) as (id: string) => string;
   }
 
   function handleKeyDown(event: KeyboardEvent) {

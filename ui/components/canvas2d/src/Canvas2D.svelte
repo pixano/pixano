@@ -38,7 +38,7 @@
   // Exports
   export let selectedItem: ItemData;
   export let selectedTool: Tool | null;
-  export let labelColors: Function;
+  export let labelColors: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let embeddings = {};
@@ -276,14 +276,14 @@
           //don't add a bbox that already exist
           const bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bboxKonva) {
-            addBBox(bboxes[i], labelColors(bboxes[i].catId), bboxGroup, image, viewId);
+            addBBox(bboxes[i], labelColors(bboxes[i].catId.toString()), bboxGroup, image, viewId);
           } else {
             //update visibility & opacity
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = labelColors(bboxes[i].catId);
+            style.color = labelColors(bboxes[i].catId.toString());
             for (const bboxElement of bboxKonva.children) {
               if (bboxElement instanceof Konva.Rect) {
                 bboxElement.stroke(style.color);
@@ -381,14 +381,14 @@
           //don't add a mask that already exist
           const maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
           if (!maskKonva) {
-            addMask(masks[i], labelColors(masks[i].catId), maskGroup, image, viewId);
+            addMask(masks[i], labelColors(masks[i].catId.toString()), maskGroup, image, viewId);
           } else {
             //update visibility & opacity
             maskKonva.visible(masks[i].visible);
             maskKonva.opacity(masks[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = labelColors(masks[i].catId);
+            style.color = labelColors(masks[i].catId.toString());
             maskKonva.stroke(style.color);
             maskKonva.fill(`rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`);
           }
