@@ -13,22 +13,12 @@
    *
    * http://www.cecill.info
    */
-  import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
+  import Toolbar from "./components/Toolbar.svelte";
 </script>
 
-<div class="flex w-full bg-red-white h-screen">
-  <div class="h-full bg-red-50 shadow-sm w-10">
-    <div class="border-b border-green-400 flex items-center flex-col gap-4">
-      <MousePointer />
-      <Square />
-      <Share2 />
-      <BrushIcon />
-    </div>
-    <div class="flex items-center flex-col gap-4 mt-4">
-      <Square />
-      <BrushIcon />
-    </div>
-  </div>
+<div class="flex w-full h-screen">
+  <Toolbar />
+
   <div>main image goes her</div>
   <div>nav tools go here</div>
 </div>
