@@ -47,13 +47,13 @@
   let activeTab = "labels"; //"dataset";
   let noLabels = true;
 
-  function filterItems(items) {
+  function filterItems(items: Array<DatasetItem>): Array<DatasetItem> {
     // Only filter if round column exists and active learning is on
     if (items[0].find((obj) => obj.name === "round") && activeLearningFlag) {
       return items.filter((subArray) => {
-        const roundObj = subArray.find((obj) => obj.name === "round");
-        const labelObj = subArray.find((obj) => obj.name === "label");
-        return roundObj.value >= 0 && labelObj.value === null;
+        const round = subArray.find((obj) => obj.name === "round").value as number;
+        const label = subArray.find((obj) => obj.name === "label").value as string;
+        return round >= 0 && label === null;
       });
     } else return items;
   }
@@ -527,7 +527,7 @@
                 {#each item as itemFeature}
                   {#if itemFeature.dtype === "image"}
                     <img
-                      src={itemFeature.value}
+                      src={itemFeature.value.toString()}
                       alt="#{itemFeature.name}-#{i}"
                       class="w-24 h-24 p-1 object-cover rounded"
                     />
@@ -538,13 +538,19 @@
                 <span
                   class="text-xs justify-center truncate grow
                   {item.filter((f) => f.dtype === 'image').length > 1 ? 'w-48' : 'w-24'}"
-                  title={item.find((f) => f.name === "id").value}
+                  title={item.find((f) => f.name === "id").value.toString()}
                 >
-                  {item.find((f) => f.name === "id").value.length > 12
-                    ? item.find((f) => f.name === "id").value.substring(0, 6) +
+                  {item.find((f) => f.name === "id").value.toString().length > 12
+                    ? item
+                        .find((f) => f.name === "id")
+                        .value.toString()
+                        .substring(0, 6) +
                       "..." +
-                      item.find((f) => f.name === "id").value.slice(-6)
-                    : item.find((f) => f.name === "id").value}
+                      item
+                        .find((f) => f.name === "id")
+                        .value.toString()
+                        .slice(-6)
+                    : item.find((f) => f.name === "id").value.toString()}
                 </span>
               </div>
             </button>

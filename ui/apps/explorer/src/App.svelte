@@ -23,15 +23,7 @@
   import DatasetExplorer from "./DatasetExplorer.svelte";
   import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
-  import type {
-    BBox,
-    CategoryData,
-    Dataset,
-    ItemData,
-    ItemLabels,
-    ItemObjects,
-    Mask,
-  } from "@pixano/core";
+  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, Mask } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -80,8 +72,8 @@
 
     const start = Date.now();
     const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = itemDetails["itemData"] as ItemData;
-    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+    selectedItem = itemDetails["itemData"];
+    const ItemObjects = itemDetails["itemObjects"];
 
     console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 

@@ -32,16 +32,7 @@
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
-  import type {
-    BBox,
-    CategoryData,
-    Dataset,
-    DatasetItems,
-    ItemData,
-    ItemLabels,
-    ItemObjects,
-    Mask,
-  } from "@pixano/core";
+  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, Mask, Dict } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -128,8 +119,8 @@
 
     let start = Date.now();
     const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = itemDetails["itemData"] as ItemData;
-    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+    selectedItem = itemDetails["itemData"];
+    const ItemObjects = itemDetails["itemObjects"];
 
     console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 
@@ -243,7 +234,7 @@
 
     // Embeddings
     start = Date.now();
-    const embeddingsBytes: string = await api.getItemEmbeddings(
+    const embeddingsBytes: Dict<string> = await api.getItemEmbeddings(
       selectedDataset.id,
       selectedItem.id,
     );
@@ -355,7 +346,7 @@
     currentPage = currentPage + 1;
 
     const start = Date.now();
-    const new_dbImages: DatasetItems = await api.getDatasetItems(selectedDataset.id, currentPage);
+    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
     console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
 
     if (new_dbImages) {

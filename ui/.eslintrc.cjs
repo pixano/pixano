@@ -36,10 +36,8 @@ module.exports = {
   ],
   rules: {
     "no-undef": "off",
-    // should be reworked
     "@typescript-eslint/no-unsafe-member-access": "off",
     "@typescript-eslint/no-unsafe-assignment": "off",
-    "@typescript-eslint/no-unsafe-return": "off",
     "@typescript-eslint/no-unsafe-call": "off",
     "@typescript-eslint/no-unsafe-argument": "off", // can't add type annotations in Svelte code for variables like event.detail
   },
