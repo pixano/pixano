@@ -21,7 +21,7 @@
 
   import { Table } from "@pixano/table";
 
-  import type { Dataset } from "@pixano/core";
+  import type { Dataset, Stats } from "@pixano/core";
   import {
     svg_filter,
     svg_first_page,
@@ -40,7 +40,7 @@
   export let currentPage: number;
   export let query: string;
 
-  let datasetStats = null;
+  let datasetStats: Array<Stats>;
 
   // Page navigation
   const itemsPerPage = 100;

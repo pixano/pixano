@@ -15,7 +15,7 @@
 
 // Imports
 
-import type { Dataset, DatasetItems, ItemDetails, Dict } from "./interfaces";
+import type { Dataset, DatasetItems, ItemDetails, Dict, Stats } from "./interfaces";
 
 // Exports
 
@@ -67,8 +67,8 @@ export async function getDatasetItems(
   return datasetItems;
 }
 
-export async function getDatasetStats(datasetId: string): Promise<Array<object>> {
-  let datasetStats: Array<object>;
+export async function getDatasetStats(datasetId: string): Promise<Array<Stats>> {
+  let datasetStats: Array<Stats>;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/stats`);

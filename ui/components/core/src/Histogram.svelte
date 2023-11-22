@@ -17,8 +17,10 @@
   // Imports
   import { VegaLite, type VisualizationSpec } from "svelte-vega";
 
+  import type { Stats } from "./interfaces";
+
   // Exports
-  export let hist;
+  export let hist: Stats;
   export let maxHeight = 48;
   export let hideTitle = false;
 

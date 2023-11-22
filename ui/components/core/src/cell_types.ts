@@ -13,9 +13,25 @@
  * http://www.cecill.info
  */
 
+import type { Stats } from "./interfaces";
+
 // Exports
-type DType = "image" | "text" | "number" | "histogram" | "hidden";
-export interface CellData {
-  dtype: DType;
-  value: string | number | object;
+
+export type CellData = TextCellData | ImageCellData | NumberCellData | HistogramCellData;
+
+interface ImageCellData {
+  dtype: "image";
+  value: string;
+}
+interface TextCellData {
+  dtype: "text";
+  value: string;
+}
+interface NumberCellData {
+  dtype: "number";
+  value: number;
+}
+interface HistogramCellData {
+  dtype: "histogram";
+  value: Stats;
 }

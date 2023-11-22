@@ -17,15 +17,16 @@
   // Imports
   import { createEventDispatcher } from "svelte/internal";
   import TableCell from "./TableCell.svelte";
-  import type { DatasetItem } from "@pixano/core";
   import { icons } from "@pixano/core";
+
+  import type { DatasetItem } from "@pixano/core";
 
   // Exports
   export let data: DatasetItem[];
 
   // Calculate row headers
   const featureNames = data[0].map((feature) => {
-    return { name: feature.name, type: feature.dtype };
+    return feature.name;
   });
 
   const dispatch = createEventDispatcher();
@@ -47,10 +48,8 @@
     <!-- Header -->
     <thead>
       <tr class="sticky top-0 bg-slate-50 shadow-sm shadow-slate-300">
-        {#each featureNames as { name, type }}
-          {#if type != "hidden"}
-            <th class="py-4 font-semibold">{name}</th>
-          {/if}
+        {#each featureNames as name}
+          <th class="py-4 font-semibold">{name}</th>
         {/each}
         <th />
       </tr>
@@ -65,11 +64,9 @@
           }}
         >
           {#each row as cell}
-            {#if cell.dtype != "hidden"}
-              <td class="py-1 border-b border-slate-300">
-                <TableCell itemFeature={cell} />
-              </td>
-            {/if}
+            <td class="py-1 border-b border-slate-300">
+              <TableCell itemFeature={cell} />
+            </td>
           {/each}
           <td class="py-1 border-b border-slate-300">
             <svg

@@ -130,7 +130,7 @@ export type DatasetItem = Array<DatasetItemFeature>;
 export interface DatasetItemFeature {
   name: string;
   dtype: string;
-  value: number | string | object;
+  value: number | string | Stats;
 }
 
 export interface MaskRLE {
@@ -141,10 +141,10 @@ export interface MaskRLE {
 export type MaskSVG = Array<string>;
 
 export interface BBoxXYWH {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  predicted: boolean;
-  confidence?: number;
+
+export interface Stats {
+  name: string;
+  type: string;
+  range?: Array<number>;
+  histogram: Array<Dict<number | string | boolean>>;
 }

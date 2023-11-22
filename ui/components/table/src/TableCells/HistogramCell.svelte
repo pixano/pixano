@@ -17,9 +17,10 @@
   // Imports
   import { Histogram } from "@pixano/core";
 
+  import type { Stats } from "@pixano/core";
+
   // Exports
-  // Represents an histogram (name, type, values)
-  export let value: object;
+  export let value: Stats;
 </script>
 
 <div class="w-full flex flex-row items-center overflow-y-scroll">
