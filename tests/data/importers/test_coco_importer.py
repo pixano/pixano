@@ -42,7 +42,7 @@ class COCOImporterTestCase(unittest.TestCase):
             dataset = self.importer.import_dataset(
                 self.input_dirs,
                 import_dir,
-                portable=False,
+                copy=True,
             )
 
             # Check that db.json exists

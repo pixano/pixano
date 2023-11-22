@@ -36,7 +36,7 @@ class COCOExporter(Exporter):
         export_dir: Path,
         splits: list[str] = None,
         objects_sources: list[str] = None,
-        portable: bool = False,
+        copy: bool = True,
     ):
         """Export dataset back to original format
 
@@ -45,7 +45,7 @@ class COCOExporter(Exporter):
             export_dir (Path): Export directory
             splits (list[str], optional): Dataset splits to export, all if None. Defaults to None.
             objects_sources (list[str], optional): Objects sources to export, all if None. Defaults to None.
-            portable (bool, optional): True to copy or download files to export directory and use relative paths. Defaults to False.
+            copy (bool, optional): True to copy files to export directory. Defaults to True.
         """
 
         # Load dataset
@@ -84,8 +84,11 @@ class COCOExporter(Exporter):
 
         # Create URI prefix
         media_dir = dataset.media_dir
-        uri_prefix = media_dir.absolute().as_uri()
-        export_uri_prefix = (export_dir / "media").absolute().as_uri()
+        uri_prefix = (
+            (export_dir / "media").absolute().as_uri()
+            if copy
+            else media_dir.absolute().as_uri()
+        )
 
         # Create export directory
         ann_dir = export_dir / f"annotations [{', '.join(list(obj_tables.keys()))}]"
@@ -153,9 +156,7 @@ class COCOExporter(Exporter):
                         for field_name in image_field_names:
                             # Open image
                             ims[field_name] = Image.from_dict(row[field_name])
-                            ims[field_name].uri_prefix = (
-                                export_uri_prefix if portable else uri_prefix
-                            )
+                            ims[field_name].uri_prefix = uri_prefix
                             im_filename = Path(
                                 urlparse(ims[field_name].get_uri()).path
                             ).name
@@ -242,12 +243,7 @@ class COCOExporter(Exporter):
                 with open(ann_dir / f"instances_{split}.json", "w") as f:
                     json.dump(coco_json, f)
 
-        # Copy media directory if portable
-        if portable:
-            if media_dir.exists():
-                if media_dir != export_dir / "media":
-                    shutil.copytree(media_dir, export_dir / "media", dirs_exist_ok=True)
-            else:
-                raise Exception(
-                    f"Activated portable option for export but {media_dir} does not exist."
-                )
+        # Copy media directory
+        if copy:
+            if media_dir.exists() and media_dir != export_dir / "media":
+                shutil.copytree(media_dir, export_dir / "media", dirs_exist_ok=True)

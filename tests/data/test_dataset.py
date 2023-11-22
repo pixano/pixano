@@ -36,7 +36,7 @@ class DatasetTestCase(unittest.TestCase):
             splits=["val"],
         )
         self.dataset: Dataset = importer.import_dataset(
-            input_dirs, self.path, portable=False
+            input_dirs, self.path, copy=True
         )
 
         # Set dataset ID
