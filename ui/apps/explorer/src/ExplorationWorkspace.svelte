@@ -33,7 +33,7 @@
 
   // Category colors
   let colorMode = "category";
-  let labelColors = handleLabelColors();
+  let colorScale = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
@@ -97,7 +97,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString())) as (id: string) => string;
+    return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -107,7 +107,7 @@
   onMount(() => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
-      labelColors = handleLabelColors();
+      colorScale = handleLabelColors();
     }
   });
 
@@ -123,12 +123,12 @@
 
 <div class="flex h-full w-full pt-20 bg-slate-100">
   {#if selectedItem}
-    <Canvas2D {selectedItem} {selectedTool} {labelColors} {masks} {bboxes} />
+    <Canvas2D {selectedItem} {selectedTool} {colorScale} {masks} {bboxes} />
     {#if annotations}
       <LabelPanel
         {selectedItem}
         {annotations}
-        {labelColors}
+        {colorScale}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold

@@ -61,7 +61,7 @@
 
   // Category colors
   let colorMode = "category";
-  let labelColors = handleLabelColors();
+  let colorScale = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
@@ -354,7 +354,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString())) as (id: string) => string;
+    return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
   }
 
   function handleLoadNextPage() {
@@ -364,7 +364,7 @@
   onMount(() => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
-      labelColors = handleLabelColors();
+      colorScale = handleLabelColors();
     }
   });
 
@@ -383,7 +383,7 @@
     <Canvas2D
       {selectedItem}
       bind:selectedTool
-      {labelColors}
+      {colorScale}
       {masks}
       {bboxes}
       {embeddings}
@@ -394,7 +394,7 @@
       <LabelPanel
         {selectedItem}
         {annotations}
-        {labelColors}
+        {colorScale}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold
@@ -416,7 +416,7 @@
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
-        {labelColors}
+        {colorScale}
         placeholder="Label name"
         on:addCurrentAnn={handleAddClassification}
       />
@@ -427,7 +427,7 @@
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
-        {labelColors}
+        {colorScale}
         on:addCurrentAnn={handleAddCurrentAnn}
       />
     {/if}

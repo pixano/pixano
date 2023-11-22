@@ -34,7 +34,7 @@ type Story = StoryObj<typeof meta>;
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 
-let catCol = utils.colorLabel(["1", "2"]);
+let catCol = utils.ordinalColorScale(["1", "2"]);
 
 export const CanvasWithoutSelectedTool: Story = {
   args: {
@@ -52,7 +52,7 @@ export const CanvasWithoutSelectedTool: Story = {
       ],
     },
     selectedTool: null,
-    labelColors: catCol,
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: {},
@@ -80,7 +80,7 @@ export const CanvasWithLabeledPointTool: Story = {
       ],
     },
     selectedTool: labeledPointCreator,
-    labelColors: catCol,
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },
@@ -107,7 +107,7 @@ export const CanvasWithRectangleTool: Story = {
       ],
     },
     selectedTool: rectangleCreator,
-    labelColors: catCol,
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },
