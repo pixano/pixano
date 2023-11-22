@@ -66,7 +66,7 @@
   // Filters
   let maskOpacity = 1.0;
   let bboxOpacity = 0.0;
-  let confidenceThreshold = 1.0;
+  let confidenceThreshold = 0.0;
 
   // Current annotations
   let currentAnn: InteractiveImageSegmenterOutput = null;

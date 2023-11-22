@@ -21,7 +21,7 @@ export interface Dict<Type> {
 
 export interface ItemDetails {
   itemData: ItemData;
-  itemObjects: ItemObjects;
+  itemObjects: Array<ObjectData>;
 }
 
 export interface ItemData {
@@ -37,13 +37,15 @@ export interface ViewData {
   width?: number;
 }
 
-export type ItemObjects = Dict<Dict<Array<ObjectData>>>;
-
 export interface ObjectData {
   id: string;
+  item_id: string;
+  source_id: string;
+  view_id: string;
   mask: MaskRLE;
   bbox: BBoxXYWH;
-  category: CategoryData;
+  category_id: number;
+  category_name: string;
 }
 
 export interface CategoryData {
@@ -141,6 +143,10 @@ export interface MaskRLE {
 export type MaskSVG = Array<string>;
 
 export interface BBoxXYWH {
+  coords: Array<number>;
+  format: string;
+  confidence: number;
+}
 
 export interface Stats {
   name: string;

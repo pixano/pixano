@@ -13,7 +13,6 @@
 
 from pixano.utils.boxes import (
     denormalize_coords,
-    format_bbox,
     mask_to_bbox,
     normalize_coords,
     urle_to_bbox,
@@ -49,7 +48,6 @@ __all__ = [
     "denormalize_coords",
     "mask_to_bbox",
     "urle_to_bbox",
-    "format_bbox",
     "xywh_to_xyxy",
     "xyxy_to_xywh",
     "image_to_binary",

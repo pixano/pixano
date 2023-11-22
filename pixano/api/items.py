@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 from pixano.core import BBox, CompressedRLE, Image, is_number, is_string
 from pixano.data import Dataset, Fields
-from pixano.utils import format_bbox, rle_to_mask
+from pixano.utils import rle_to_mask
 
 
 class ItemFeature(BaseModel):
@@ -264,7 +264,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
             "views": defaultdict(dict),
             "features": _create_features(item, pyarrow_item.schema),
         },
-        "itemObjects": defaultdict(lambda: defaultdict(list)),
+        "itemObjects": [],
     }
 
     # Iterate on view
@@ -290,26 +290,32 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                         mask = obj["mask"].to_urle() if "mask" in obj else None
                         # Object bounding box
                         bbox = (
-                            format_bbox(
-                                obj["bbox"].xywh_coords,
-                                obj["bbox"].confidence,
-                            )
-                            if "bbox" in obj
-                            else None
+                            obj["bbox"].to_xywh().to_dict() if "bbox" in obj else None
                         )
+
                         # Object category
-                        category = (
-                            {"id": obj["category_id"], "name": obj["category_name"]}
+                        category_id = (
+                            obj["category_id"]
                             if "category_id" in obj and "category_name" in obj
                             else None
                         )
+                        category_name = (
+                            obj["category_name"]
+                            if "category_id" in obj and "category_name" in obj
+                            else None
+                        )
+
                         # Add object
-                        item_details["itemObjects"][obj_source][field.name].append(
+                        item_details["itemObjects"].append(
                             {
                                 "id": obj["id"],
+                                "item_id": item["id"],
+                                "source_id": obj_source,
+                                "view_id": obj["view_id"],
                                 "mask": mask,
                                 "bbox": bbox,
-                                "category": category,
+                                "category_id": category_id,
+                                "category_name": category_name,
                             }
                         )
 
