@@ -89,7 +89,7 @@
           id: sourceId,
           views: {},
           numLabels: 0,
-          opened: Object.entries(itemObjects).length > 1 ? false : true,
+          opened: false,
           visible: true,
         };
       }
@@ -100,7 +100,7 @@
           id: viewId,
           categories: {},
           numLabels: 0,
-          opened: Object.entries(annotations[sourceId]).length > 1 ? false : true,
+          opened: false,
           visible: true,
         };
       }
@@ -193,6 +193,21 @@
       } else {
         console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
         continue;
+      }
+    }
+
+    // Open source annotations if only one source
+    const sources = Object.keys(annotations);
+    if (sources.length == 1) {
+      annotations[sources[0]].opened = true;
+    }
+
+    // Open view annotations if only one view
+    for (const sourceId of sources) {
+      const views = Object.keys(annotations[sourceId].views);
+      if (views.length == 1) {
+        console.log("open", views[0]);
+        annotations[sourceId].views[views[0]].opened = true;
       }
     }
   }
