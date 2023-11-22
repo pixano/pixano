@@ -92,6 +92,14 @@
     },
   };
 
+  if (hist.type == "numerical") {
+    // Set bin ranges
+    for (let i = 0; i < hist.histogram.length; ++i) {
+      const value = hist.histogram[i];
+      value.bin_range = value.bin_start + "-" + value.bin_end;
+    }
+  }
+
   // Vega-lite chart options
   const options = {
     actions: false,
