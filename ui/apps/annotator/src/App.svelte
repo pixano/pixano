@@ -132,7 +132,6 @@
     const itemObjects = itemDetails["itemObjects"];
 
     console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
-    console.log(itemObjects);
 
     for (const obj of itemObjects) {
       const sourceId = obj.source_id;
@@ -252,7 +251,6 @@
         continue;
       }
     }
-    console.log(annotations);
 
     // Embeddings
     start = Date.now();

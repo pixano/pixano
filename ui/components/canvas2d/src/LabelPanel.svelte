@@ -334,7 +334,7 @@
             </div>
           {/if}
           {#each Object.values(source.views) as view}
-            {#if Object.keys(source.views).length > 1 && view.numLabels}
+            {#if Object.keys(source.views).length > 0 && view.numLabels}
               <div
                 class="px-3 py-5 flex items-center space-x-1 select-none border-b-2
                   border-slate-300
