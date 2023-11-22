@@ -268,7 +268,7 @@
           embeddings[viewId] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
-            viewEmbeddingArray.shape as Array<number>,
+            viewEmbeddingArray.shape,
           );
         } catch (e) {
           console.log("App.handleSelectItem - Error loading embeddings", e);
