@@ -38,7 +38,7 @@ export const Base: Story = {
       views: {
         view: {
           id: "view",
-          url: "img-02.jpg",
+          uri: "img-02.jpg",
         },
       },
       features: [

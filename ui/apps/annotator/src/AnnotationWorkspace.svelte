@@ -273,7 +273,7 @@
       if (itemFeature.dtype === "image") {
         selectedItem.views[itemFeature.name] = {
           id: itemFeature.name,
-          url: itemFeature.value as string,
+          uri: itemFeature.value as string,
         };
       }
     }

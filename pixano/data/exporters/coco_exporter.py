@@ -48,14 +48,10 @@ class COCOExporter(Exporter):
             portable (bool, optional): True to copy or download files to export directory and use relative paths. Defaults to False.
         """
 
-        # Create URI prefix
-        media_dir = input_dir / "media"
-        uri_prefix = media_dir.absolute().as_uri()
-        export_uri_prefix = (export_dir / "media").absolute().as_uri()
-
         # Load dataset
         dataset = Dataset(input_dir)
         ds = dataset.connect()
+
         main_table: lancedb.db.LanceTable = ds.open_table("db")
 
         image_table: dict[str, lancedb.db.LanceTable]
@@ -85,6 +81,11 @@ class COCOExporter(Exporter):
                         raise FileNotFoundError(f"Objects table not found: {e}") from e
         else:
             raise Exception("No objects table to export")
+
+        # Create URI prefix
+        media_dir = dataset.media_dir
+        uri_prefix = media_dir.absolute().as_uri()
+        export_uri_prefix = (export_dir / "media").absolute().as_uri()
 
         # Create export directory
         ann_dir = export_dir / f"annotations [{', '.join(list(obj_tables.keys()))}]"
