@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Button as ButtonPrimitive } from "bits-ui";
-  import { SvelteComponentTyped } from "svelte";
   import { cn } from "../../../utils";
   import { buttonVariants, type Props } from ".";
   // import { buttonVariants, type Props, type Events } from ".";
