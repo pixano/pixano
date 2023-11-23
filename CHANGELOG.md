@@ -12,8 +12,8 @@ All notable changes to Pixano will be documented in this file.
 
 ### Changed
 
-- **Breaking:** Send media files as URI instead of a base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
-- **Breaking:** Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
+- **Breaking:** Send media files as URI instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
+- Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
 - Update README with a small header description listing main features
 - Update documentation website accent color to match with the new theme of the Pixano apps
 - Update API reference generation
