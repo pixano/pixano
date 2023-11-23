@@ -30,11 +30,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Base: Story = {
   args: {
+    selectedTab: "dashboard",
     selectedDataset: {
       id: "euHS4xM5SSvQKAhmv3sFcp",
       name: "Dataset",
       description: "Dataset description",
       num_elements: 4,
+      estimated_size: "N/A",
       preview: "",
       categories: [
         { id: 0, name: "Dog" },
@@ -68,5 +70,6 @@ export const Base: Story = {
       },
     }, // storybook has no access to REST API...
     currentPage: 1,
+    query: "",
   },
 };

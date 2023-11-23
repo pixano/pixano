@@ -16,7 +16,7 @@ All notable changes to Pixano will be documented in this file.
 - Update documentation website accent color to match with the new theme of the Pixano apps
 - Update API reference generation
 - Reformat GitHub actions
-- Reformat frontend code with Prettier
+- Reformat and refactor frontend code with Prettier and eslint
 
 ### Fixed
 

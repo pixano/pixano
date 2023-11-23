@@ -16,6 +16,8 @@
 // Imports
 import { icons } from "@pixano/core";
 
+import type { InteractiveImageSegmenter } from "@pixano/models";
+
 // Exports
 export enum ToolType {
   LabeledPoint = "LABELED_POINT",
@@ -31,7 +33,7 @@ interface Tool {
   icon: string;
   cursor: string;
   onSelect: () => void;
-  postProcessor: any;
+  postProcessor: InteractiveImageSegmenter;
 }
 
 interface MultiModalTool extends Tool {

@@ -36,6 +36,7 @@ export const Base: Story = {
         name: "Some dataset",
         description: "Dataset description",
         num_elements: 20,
+        estimated_size: "N/A",
         preview: "img-01.jpg",
         categories: [],
         page: {
@@ -54,6 +55,7 @@ export const Base: Story = {
         name: "Another dataset",
         description: "Dataset description",
         num_elements: 50000,
+        estimated_size: "N/A",
         preview: "img-02.jpg",
         categories: [],
         page: {
@@ -72,6 +74,7 @@ export const Base: Story = {
         name: "Yet another dataset",
         description: "Dataset description",
         num_elements: 1000,
+        estimated_size: "N/A",
         preview: "img-03.jpg",
         categories: [],
         page: {
@@ -91,6 +94,7 @@ export const Base: Story = {
         description: "Dataset description",
 
         num_elements: 20000,
+        estimated_size: "N/A",
         preview: "img-04.jpg",
         categories: [],
         page: {
@@ -105,6 +109,6 @@ export const Base: Story = {
         },
       },
     ],
-    buttonLabel: "Explore",
+    app: "Explore",
   },
 };
