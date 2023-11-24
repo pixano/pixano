@@ -13,12 +13,14 @@
    *
    * http://www.cecill.info
    */
+  import "./index.css";
+
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
 </script>
 
-<div class="flex w-full h-screen">
+<div class="flex w-full h-screen bg-primary">
   <Toolbar />
   <ImageCanvas />
   <ActionsTabs />

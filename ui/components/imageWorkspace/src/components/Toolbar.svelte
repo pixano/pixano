@@ -14,8 +14,6 @@
    * http://www.cecill.info
    */
   import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
-  import { Button } from "@pixano/core/src/lib/components/ui/button";
-  import * as Tooltip from "@pixano/core/src/lib/components/ui/tooltip";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 
   import MagicIcon from "../assets/MagicIcon.svelte";
