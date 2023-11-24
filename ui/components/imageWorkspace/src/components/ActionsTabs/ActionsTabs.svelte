@@ -13,13 +13,22 @@
    *
    * http://www.cecill.info
    */
-  import Toolbar from "./components/Toolbar.svelte";
-  import ImageCanvas from "./components/ImageCanvas.svelte";
-  import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
+
+  import * as Tabs from "@pixano/core/src/lib/components/ui/tabs";
+
+  import SceneTabContent from "./SceneTabContent.svelte";
+  import ObjectTabContent from "./ObjectTabContent.svelte";
 </script>
 
-<div class="flex w-full h-screen">
-  <Toolbar />
-  <ImageCanvas />
-  <ActionsTabs />
+<div class="h-full shadow-md w-10 bg-popover flex-[2_0_auto]">
+  <Tabs.Root value="scene">
+    <Tabs.List>
+      <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
+      <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
+    </Tabs.List>
+    <Tabs.Content value="scene">
+      <SceneTabContent />
+    </Tabs.Content>
+    <Tabs.Content value="objects"><ObjectTabContent /></Tabs.Content>
+  </Tabs.Root>
 </div>

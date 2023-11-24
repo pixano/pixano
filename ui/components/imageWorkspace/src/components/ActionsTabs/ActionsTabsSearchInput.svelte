@@ -13,26 +13,20 @@
    *
    * http://www.cecill.info
    */
+  import { Eye, Filter, Search } from "lucide-svelte";
 
-  import { Button } from "../ui/button";
-  import * as Tooltip from "../ui/tooltip";
-
-  export let tooltipContent: string = "";
+  import { Input } from "@pixano/core/src/lib/components/ui/input";
+  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 </script>
 
-<Tooltip.Root>
-  <Tooltip.Trigger>
-    <Button
-      size="icon"
-      class="bg-transparent text-gray-800 hover:bg-primary-light relative"
-      on:click
-    >
-      <slot />
-    </Button>
-  </Tooltip.Trigger>
-  {#if tooltipContent}
-    <Tooltip.Content>
-      <p>{tooltipContent}</p>
-    </Tooltip.Content>
-  {/if}
-</Tooltip.Root>
+<div class="flex mt-4 items-center gap-3">
+  <IconButton tooltipContent="see more">
+    <Eye class="h-4" />
+  </IconButton>
+  <IconButton>
+    <Filter class="h-4" />
+  </IconButton>
+  <Input placeholder="Search" class="grow">
+    <Search class="h-4" />
+  </Input>
+</div>

@@ -16,71 +16,34 @@
   import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
   import { Button } from "@pixano/core/src/lib/components/ui/button";
   import * as Tooltip from "@pixano/core/src/lib/components/ui/tooltip";
+  import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+
+  import MagicIcon from "../assets/MagicIcon.svelte";
 </script>
 
 <div class="h-full shadow-md w-10 bg-popover">
   <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
-    <Tooltip.Root>
-      <Tooltip.Trigger>
-        <Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light">
-          <MousePointer />
-        </Button></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        ><Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light"
-          ><Square /></Button
-        ></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        ><Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light"
-          ><Share2 /></Button
-        ></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        ><Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light"
-          ><BrushIcon /></Button
-        ></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
+    <TooltipIconButton tooltipContent="TODO">
+      <MousePointer />
+    </TooltipIconButton>
+    <TooltipIconButton tooltipContent="TODO">
+      <Square />
+    </TooltipIconButton>
+    <TooltipIconButton tooltipContent="TODO">
+      <Share2 />
+    </TooltipIconButton>
+    <TooltipIconButton tooltipContent="TODO">
+      <BrushIcon />
+    </TooltipIconButton>
   </div>
   <div class="flex items-center flex-col gap-4 mt-4">
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        ><Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light"
-          ><BrushIcon /></Button
-        ></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        ><Button size="icon" class="bg-transparent text-gray-800 hover:bg-primary-light"
-          ><Square /></Button
-        ></Tooltip.Trigger
-      >
-      <Tooltip.Content>
-        <p>TODO</p>
-      </Tooltip.Content>
-    </Tooltip.Root>
+    <TooltipIconButton tooltipContent="TODO">
+      <BrushIcon />
+      <MagicIcon />
+    </TooltipIconButton>
+    <TooltipIconButton tooltipContent="TODO">
+      <Square />
+      <MagicIcon />
+    </TooltipIconButton>
   </div>
 </div>

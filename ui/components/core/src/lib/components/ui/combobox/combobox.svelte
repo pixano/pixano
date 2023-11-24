@@ -10,7 +10,7 @@
   export let placeholder: string = "Select an item";
 
   let open = false;
-  let value: string = "";
+  export let value: string = "";
 
   $: selectedValue = listItems.find((f) => f.value === value)?.label ?? placeholder;
 
