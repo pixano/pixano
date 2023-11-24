@@ -173,7 +173,7 @@
         }
 
         // Add bbox
-        if (obj.bbox) {
+        if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
           const x = obj.bbox.coords[0] * selectedItem.views[viewId].width;
           const y = obj.bbox.coords[1] * selectedItem.views[viewId].height;
           const w = obj.bbox.coords[2] * selectedItem.views[viewId].width;
