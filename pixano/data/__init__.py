@@ -13,14 +13,34 @@
 
 from pixano.data.dataset import Dataset
 from pixano.data.dataset_info import DatasetInfo
+from pixano.data.dataset_item import (
+    DatasetItem,
+    ItemBBox,
+    ItemEmbedding,
+    ItemFeature,
+    ItemObject,
+    ItemURLE,
+    ItemView,
+)
+from pixano.data.dataset_stat import DatasetStat
 from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields
 from pixano.data.importers import COCOImporter, DOTAImporter, ImageImporter, Importer
+from pixano.data.settings import Settings
 
 __all__ = [
     "Dataset",
     "DatasetInfo",
+    "DatasetItem",
+    "DatasetStat",
+    "ItemBBox",
+    "ItemEmbedding",
+    "ItemFeature",
+    "ItemObject",
+    "ItemURLE",
+    "ItemView",
     "Fields",
+    "Settings",
     "Exporter",
     "COCOExporter",
     "Importer",

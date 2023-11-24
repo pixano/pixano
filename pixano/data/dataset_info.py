@@ -17,6 +17,9 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+from pixano.core import Image
+from pixano.data.dataset_stat import DatasetStat
+
 
 class DatasetInfo(BaseModel):
     """DatasetInfo
@@ -36,51 +39,13 @@ class DatasetInfo(BaseModel):
     id: str
     name: str
     description: str
-    estimated_size: Optional[str]
-    num_elements: Optional[int]
-    preview: Optional[str]
-    splits: Optional[list[str]]
-    tables: Optional[dict[str, list]]
-    categories: Optional[list[dict]]
-
-    def __init__(
-        self,
-        id: str,
-        name: str,
-        description: str,
-        estimated_size: str = None,
-        num_elements: int = None,
-        preview: str = None,
-        splits: list[str] = None,
-        tables: dict[str, list] = None,
-        categories: list[dict] = None,
-    ):
-        """Initialize Bounding box
-
-        Args:
-            id (str): Dataset ID
-            name (str): Dataset name
-            description (str): Dataset description
-            estimated_size (str, optional): Dataset estimated size. Defaults to None.
-            num_elements (int, optional): Number of elements in dataset. Defaults to None.
-            preview (str, optional): Dataset preview. Defaults to None.
-            splits (list[str]): Dataset splits. Defaults to None.
-            tables (dict[str, list], optional): Dataset tables. Defaults to None.
-            categories (list[dict], optional): Dataset categories. Defaults to None.
-        """
-
-        # Define public attributes through Pydantic BaseModel
-        super().__init__(
-            id=id,
-            name=name,
-            description=description,
-            estimated_size=estimated_size,
-            num_elements=num_elements,
-            preview=preview,
-            splits=splits,
-            tables=tables,
-            categories=categories,
-        )
+    estimated_size: Optional[str] = None
+    num_elements: Optional[int] = None
+    preview: Optional[str] = None
+    splits: Optional[list[str]] = None
+    tables: Optional[dict[str, list]] = None
+    categories: Optional[list[dict]] = None
+    stats: Optional[list[DatasetStat]] = None
 
     def save(self, save_dir: Path):
         """Save DatasetInfo to json file"""
@@ -89,11 +54,17 @@ class DatasetInfo(BaseModel):
             json.dump(self.model_dump(), f)
 
     @staticmethod
-    def from_json(json_fp: Path) -> "DatasetInfo":
+    def from_json(
+        json_fp: Path,
+        load_thumbnail: bool = False,
+        load_stats: bool = False,
+    ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file
 
         Args:
             json_fp (Path): JSON file path
+            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+            load_stats (bool, optional): Load dataset stats. Defaults to False.
 
         Returns:
             DatasetInfo: DatasetInfo
@@ -102,4 +73,80 @@ class DatasetInfo(BaseModel):
         with open(json_fp) as json_file:
             info_json = json.load(json_file)
 
-        return DatasetInfo.model_validate(info_json)
+        info = DatasetInfo.model_validate(info_json)
+
+        # Load thumbnail
+        if load_thumbnail:
+            preview_path = json_fp.parent / "preview.png"
+            if preview_path.is_file():
+                im = Image(uri=preview_path.absolute().as_uri())
+                info.preview = im.url
+        # Load dataset stats file
+        if load_stats:
+            stats_file = json_fp.parent / "stats.json"
+            if stats_file.is_file():
+                info.stats = DatasetStat.from_json(stats_file)
+
+        return info
+
+    @staticmethod
+    def find(
+        id: str,
+        directory: Path,
+        load_thumbnail: bool = False,
+        load_stats: bool = False,
+    ) -> "DatasetInfo":
+        """Find DatasetInfo in directory
+
+        Args:
+            id (str): Dataset ID
+            directory (Path): Directory to search in
+            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+            load_stats (bool, optional): Load dataset stats. Defaults to False.
+
+        Returns:
+            DatasetInfo: DatasetInfo
+        """
+
+        # Browse directory
+        for json_fp in directory.glob("*/db.json"):
+            info = DatasetInfo.from_json(json_fp)
+            if info.id == id:
+                # Return dataset info
+                return DatasetInfo.from_json(
+                    json_fp,
+                    load_thumbnail=load_thumbnail,
+                    load_stats=load_stats,
+                )
+
+    @staticmethod
+    def load_directory(
+        directory: Path,
+        load_thumbnail: bool = False,
+        load_stats: bool = False,
+    ) -> list["DatasetInfo"]:
+        """Load list of DatasetInfo from directory
+
+        Args:
+            directory (Path): Directory to load
+            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+            load_stats (bool, optional): Load dataset stats. Defaults to False.
+
+        Returns:
+            list[DatasetInfo]: List of DatasetInfo
+        """
+
+        infos = []
+
+        # Browse directory
+        for json_fp in sorted(directory.glob("*/db.json")):
+            # Add dataset info to list
+            infos.append(
+                DatasetInfo.from_json(
+                    json_fp,
+                    load_thumbnail=load_thumbnail,
+                    load_stats=load_stats,
+                )
+            )
+
+        return infos
