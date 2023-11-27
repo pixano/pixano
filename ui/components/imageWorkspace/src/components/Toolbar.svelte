@@ -17,7 +17,7 @@
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { tools } from "@pixano/canvas2d";
   import MagicIcon from "../assets/MagicIcon.svelte";
-  import { panTool, rectangleTool, type SelectionTool } from "../lib/tools";
+  import { panTool, rectangleTool, smartMaskTool, type SelectionTool } from "../lib/tools";
   import { interactiveSegmenterModel } from "../lib/stores";
 
   export let selectedTool: SelectionTool | null;
@@ -28,7 +28,7 @@
   interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
       console.log({ segmenter });
-      // pointPlusTool.postProcessor = segmenter;
+      smartMaskTool.postProcessor = segmenter;
       // pointMinusTool.postProcessor = segmenter;
       rectangleTool.postProcessor = segmenter;
     }
@@ -44,14 +44,7 @@
     >
       <MousePointer />
     </TooltipIconButton>
-    <TooltipIconButton
-      tooltipContent="select a rectangle"
-      on:click={() => {
-        console.log({ rectangleTool });
-        selectTool(rectangleTool);
-      }}
-      selected={selectedTool?.type === tools.ToolType.Rectangle}
-    >
+    <TooltipIconButton>
       <Square />
     </TooltipIconButton>
     <TooltipIconButton tooltipContent="TODO">
@@ -62,11 +55,19 @@
     </TooltipIconButton>
   </div>
   <div class="flex items-center flex-col gap-4 mt-4">
-    <TooltipIconButton tooltipContent="TODO">
+    <TooltipIconButton
+      tooltipContent="Smart mask"
+      on:click={() => selectTool(smartMaskTool)}
+      selected={selectedTool?.type === tools.ToolType.LabeledPoint}
+    >
       <BrushIcon />
       <MagicIcon />
     </TooltipIconButton>
-    <TooltipIconButton tooltipContent="TODO">
+    <TooltipIconButton
+      tooltipContent="Smart rectangle"
+      on:click={() => selectTool(rectangleTool)}
+      selected={selectedTool?.type === tools.ToolType.Rectangle}
+    >
       <Square />
       <MagicIcon />
     </TooltipIconButton>

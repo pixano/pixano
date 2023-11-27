@@ -13,3 +13,9 @@ export const rectangleTool: SelectionTool = {
   type: tools.ToolType.Rectangle,
   cursor: "crosshair",
 };
+
+export const smartMaskTool: SelectionTool = {
+  name: " point selection",
+  type: tools.ToolType.LabeledPoint,
+  cursor: "crosshair",
+};
