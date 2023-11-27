@@ -15,12 +15,13 @@
    */
 
   // Imports
-  import type { Dataset } from "./interfaces";
   import Histogram from "./Histogram.svelte";
+
+  import type { Dataset, Stats } from "./interfaces";
 
   // Exports
   export let selectedDataset: Dataset = null;
-  export let datasetStats = null;
+  export let datasetStats: Array<Stats> = null;
 
   let selectedTab: string = "overview";
 

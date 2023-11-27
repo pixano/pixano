@@ -17,4 +17,4 @@
 import { writable } from "svelte/store";
 
 // Exports
-export const interactiveSegmenterModel = writable(null);
+export const interactiveSegmenterModel = writable();

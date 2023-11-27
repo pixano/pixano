@@ -45,9 +45,7 @@ export class SAM implements InteractiveImageSegmenter {
   // prediction threshold
   predictionThreshold = 0.0;
 
-  async init(modelWeights: ArrayBuffer): Promise<void>;
-  async init(modelWeights: string): Promise<void>;
-  async init(modelWeights: any) {
+  async init(modelWeights: string) {
     this.onnxModel = await ort.InferenceSession.create(modelWeights);
   }
 

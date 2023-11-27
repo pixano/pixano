@@ -15,34 +15,37 @@
 
 // Exports
 
-export interface StringDict<Type> {
+export interface Dict<Type> {
   [key: string]: Type;
 }
 
-export interface NumberDict<Type> {
-  [key: string]: Type;
+export interface ItemDetails {
+  itemData: ItemData;
+  itemObjects: Array<ObjectData>;
 }
 
 export interface ItemData {
   id: string;
-  views: StringDict<ViewData>;
+  views: Dict<ViewData>;
   features: DatasetItem;
 }
 
 export interface ViewData {
   id: string;
-  url: string;
+  uri: string;
   height?: number;
   width?: number;
 }
 
-export type ItemObjects = StringDict<StringDict<Array<ObjectData>>>;
-
 export interface ObjectData {
   id: string;
+  item_id: string;
+  source_id: string;
+  view_id: string;
   mask: MaskRLE;
   bbox: BBoxXYWH;
-  category: CategoryData;
+  category_id: number;
+  category_name: string;
 }
 
 export interface CategoryData {
@@ -70,11 +73,11 @@ export interface BBox {
   opacity: number;
 }
 
-export type ItemLabels = StringDict<SourceLabels>;
+export type ItemLabels = Dict<SourceLabels>;
 
 export interface SourceLabels {
   id: string;
-  views: StringDict<ViewLabels>;
+  views: Dict<ViewLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -82,7 +85,7 @@ export interface SourceLabels {
 
 export interface ViewLabels {
   id: string;
-  categories: NumberDict<CategoryLabels>;
+  categories: Dict<CategoryLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -91,7 +94,7 @@ export interface ViewLabels {
 export interface CategoryLabels {
   id: number;
   name: string;
-  labels: StringDict<Label>;
+  labels: Dict<Label>;
   opened: boolean;
   visible: boolean;
 }
@@ -129,7 +132,7 @@ export type DatasetItem = Array<DatasetItemFeature>;
 export interface DatasetItemFeature {
   name: string;
   dtype: string;
-  value: string;
+  value: number | string | Stats;
 }
 
 export interface MaskRLE {
@@ -140,10 +143,14 @@ export interface MaskRLE {
 export type MaskSVG = Array<string>;
 
 export interface BBoxXYWH {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  predicted: boolean;
-  confidence?: number;
+  coords: Array<number>;
+  format: string;
+  confidence: number;
+}
+
+export interface Stats {
+  name: string;
+  type: string;
+  range?: Array<number>;
+  histogram: Array<Dict<number | string | boolean>>;
 }

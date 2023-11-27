@@ -15,11 +15,8 @@ import glob
 from collections.abc import Iterator
 from pathlib import Path
 
-import pyarrow as pa
-import shortuuid
-
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data import Fields, Importer
+from pixano.data import Importer
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 
@@ -89,13 +86,11 @@ class TemplateImporter(Importer):
     def import_rows(
         self,
         input_dirs: dict[str, Path],
-        portable: bool = False,
     ) -> Iterator:
         """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
@@ -113,11 +108,7 @@ class TemplateImporter(Importer):
                 # Create image thumbnail
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
                 # Set image URI
-                im_uri = (
-                    f"image/{split}/{im_path.name}"
-                    if portable
-                    else im_path.absolute().as_uri()
-                )
+                im_uri = f"image/{split}/{im_path.name}"
                 # Load image
                 image = Image(im_uri, None, im_thumb)
                 w, h = image.size

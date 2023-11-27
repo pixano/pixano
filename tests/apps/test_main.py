@@ -41,7 +41,7 @@ class AppTestCase(unittest.TestCase):
             description="COCO dataset",
             splits=["val"],
         )
-        dataset = importer.import_dataset(input_dirs, import_dir, portable=False)
+        dataset = importer.import_dataset(input_dirs, import_dir, copy=True)
 
         # Set dataset ID
         dataset.info.id = "coco_dataset"
@@ -142,7 +142,7 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("id", output["itemData"])
         self.assertIn("views", output["itemData"])
         self.assertIn("features", output["itemData"])
-        self.assertIn("Ground Truth", output["itemObjects"])
+        self.assertEqual(20, len(output["itemObjects"]))
 
     def test_post_item_details(self):
         response = self.client.post(
