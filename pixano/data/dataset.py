@@ -14,57 +14,86 @@
 from pathlib import Path
 
 import lancedb
+from pydantic import BaseModel
 
-from pixano.data.dataset_info import DatasetInfo
+from pixano.core import Image
+from pixano.data.dataset_info import DatasetInfo, DatasetStat
 
 
-class Dataset:
-    """Dataset class
+class Dataset(BaseModel):
+    """Dataset
 
     Attributes:
-        _path (Path): Dataset path
-        _info (DatasetInfo): Dataset info
+        path (Path): Dataset path
+        info (DatasetInfo): Dataset info
+        stats (DatasetStat): Dataset stat
+        thumbnail (str): Dataset thumbnail base 64 URL
     """
 
-    def __init__(self, path: Path):
+    path: Path
+    info: DatasetInfo
+    stats: DatasetStat
+    thumbnail: str
+
+    def __init__(
+        self,
+        path: Path,
+    ):
         """Initialize dataset
 
         Args:
             path (Path): Dataset path
         """
 
-        self._path = path
-        self._info = DatasetInfo.from_json(self._path / "db.json")
+        info_file = self.path / "db.json"
+        stats_file = self.path / "stats.json"
+        thumb_file = self.path / "preview.png"
 
-    @property
-    def info(self) -> DatasetInfo:
-        """Return Dataset info
-
-        Returns:
-            DatasetInfo: Dataset info
-        """
-
-        return self._info
-
-    @property
-    def path(self) -> Path:
-        """Return Dataset path
-
-        Returns:
-            Path: Dataset path
-        """
-
-        return self._path
+        # Define public attributes through Pydantic BaseModel
+        super().__init__(
+            path=path,
+            info=DatasetInfo.from_json(info_file),
+            stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
+            thumbnail=Image(uri=thumb_file.absolute().as_uri()).url
+            if thumb_file.is_file()
+            else None,
+        )
 
     @property
     def media_dir(self) -> Path:
-        """Return Dataset media directory
+        """Return dataset media directory
 
         Returns:
             Path: Dataset media directory
         """
 
-        return self._path / "media"
+        return self.path / "media"
+
+    def load_info(
+        self,
+        load_stats: bool = False,
+        load_thumbnail: bool = False,
+    ) -> DatasetInfo:
+        """Return dataset info with thumbnail and stats inside
+
+        Args:
+            load_stats (bool, optional): Load dataset stats. Defaults to False.
+            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+
+        Returns:
+            DatasetInfo: Dataset info
+        """
+
+        return DatasetInfo.from_json(
+            self.path / "db.json",
+            load_stats=load_stats,
+            load_thumbnail=load_thumbnail,
+        )
+
+    def save_info(self):
+        """Save updated dataset info"""
+
+        self.info.save(self.path)
 
     def connect(self) -> lancedb.DBConnection:
         """Connect to dataset with LanceDB
@@ -73,9 +102,26 @@ class Dataset:
             lancedb.DBConnection: Dataset LanceDB connection
         """
 
-        return lancedb.connect(self._path)
+        return lancedb.connect(self.path)
 
-    def save_info(self):
-        """Save dataset info to file"""
+    @staticmethod
+    def find(
+        id: str,
+        directory: Path,
+    ) -> "Dataset":
+        """Find Dataset in directory
 
-        self.info.save(self.path)
+        Args:
+            id (str): Dataset ID
+            directory (Path): Directory to search in
+
+        Returns:
+            Dataset: Dataset
+        """
+
+        # Browse directory
+        for json_fp in directory.glob("*/db.json"):
+            info = DatasetInfo.from_json(json_fp)
+            if info.id == id:
+                # Return dataset
+                return Dataset(json_fp.parent)

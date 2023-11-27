@@ -15,7 +15,7 @@ from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException
 
-from pixano.data import DatasetInfo, DatasetStat, Settings
+from pixano.data import Dataset, DatasetInfo, Settings
 
 # TMP: Mock data
 from .mock_data import datasets
@@ -79,14 +79,13 @@ async def get_dataset(ds_id: str) -> DatasetInfo:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
     # # Load dataset
-    # dataset = DatasetInfo.find(
+    # dataset = Dataset.find(
     #     id=ds_id,
     #     directory=get_settings().data_dir,
-    #     load_stats=True,
     # )
 
-    # # Return dataset
+    # # Return dataset info
     # if dataset:
-    #     return dataset
+    #     return dataset.load_info(load_stats=True)
     # else:
     #     raise HTTPException(status_code=404, detail="Dataset not found")

@@ -56,15 +56,15 @@ class DatasetInfo(BaseModel):
     @staticmethod
     def from_json(
         json_fp: Path,
-        load_thumbnail: bool = False,
         load_stats: bool = False,
+        load_thumbnail: bool = False,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file
 
         Args:
             json_fp (Path): JSON file path
-            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
             load_stats (bool, optional): Load dataset stats. Defaults to False.
+            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
 
         Returns:
             DatasetInfo: DatasetInfo
@@ -75,49 +75,20 @@ class DatasetInfo(BaseModel):
 
         info = DatasetInfo.model_validate(info_json)
 
-        # Load thumbnail
-        if load_thumbnail:
-            preview_path = json_fp.parent / "preview.png"
-            if preview_path.is_file():
-                im = Image(uri=preview_path.absolute().as_uri())
-                info.preview = im.url
         # Load dataset stats file
         if load_stats:
-            stats_file = json_fp.parent / "stats.json"
-            if stats_file.is_file():
-                info.stats = DatasetStat.from_json(stats_file)
+            stats_fp = json_fp.parent / "stats.json"
+            if stats_fp.is_file():
+                info.stats = DatasetStat.from_json(stats_fp)
+
+        # Load thumbnail
+        if load_thumbnail:
+            thumb_fp = json_fp.parent / "preview.png"
+            if thumb_fp.is_file():
+                im = Image(uri=thumb_fp.absolute().as_uri())
+                info.preview = im.url
 
         return info
-
-    @staticmethod
-    def find(
-        id: str,
-        directory: Path,
-        load_thumbnail: bool = False,
-        load_stats: bool = False,
-    ) -> "DatasetInfo":
-        """Find DatasetInfo in directory
-
-        Args:
-            id (str): Dataset ID
-            directory (Path): Directory to search in
-            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
-            load_stats (bool, optional): Load dataset stats. Defaults to False.
-
-        Returns:
-            DatasetInfo: DatasetInfo
-        """
-
-        # Browse directory
-        for json_fp in directory.glob("*/db.json"):
-            info = DatasetInfo.from_json(json_fp)
-            if info.id == id:
-                # Return dataset info
-                return DatasetInfo.from_json(
-                    json_fp,
-                    load_thumbnail=load_thumbnail,
-                    load_stats=load_stats,
-                )
 
     @staticmethod
     def load_directory(
