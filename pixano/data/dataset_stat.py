@@ -45,8 +45,6 @@ class DatasetStat(BaseModel):
         """
 
         with open(json_fp) as json_file:
-            info_json = json.load(json_file)
+            stats_json = json.load(json_file)
 
-        print(info_json)
-
-        return [DatasetStat.model_validate(stat) for stat in info_json]
+        return [DatasetStat.model_validate(stat) for stat in stats_json]
