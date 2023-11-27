@@ -68,20 +68,20 @@ class Image(PixanoType, BaseModel):
 
     @property
     def url(self) -> str:
-        """Return image URL
+        """Return image base 64 URL
 
         Returns:
-            str: Image URL
+            str: Image base 64 URL
         """
 
         return binary_to_url(self.get_bytes())
 
     @property
     def preview_url(self) -> str:
-        """Return image preview URL
+        """Return image preview base 64 URL
 
         Returns:
-            str: Image preview URL
+            str: Image preview base 64 URL
         """
 
         return binary_to_url(self.preview_bytes)

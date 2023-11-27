@@ -67,7 +67,7 @@ def binary_to_url(im_bytes: bytes) -> str:
         im_bytes (bytes): Image as binary
 
     Returns:
-        str: Image as base 64
+        str: Image base 64 URL
     """
 
     if im_bytes is not None:
