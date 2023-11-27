@@ -86,13 +86,11 @@ class DOTAImporter(Importer):
     def import_rows(
         self,
         input_dirs: dict[str, Path],
-        portable: bool = False,
     ) -> Iterator:
         """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
@@ -123,11 +121,7 @@ class DOTAImporter(Importer):
                     im_thumb = image_to_thumbnail(im)
 
                 # Set image URI
-                im_uri = (
-                    f"image/{split}/{im_path.name}"
-                    if portable
-                    else im_path.absolute().as_uri()
-                )
+                im_uri = f"image/{split}/{im_path.name}"
 
                 # Return rows
                 rows = {

@@ -32,7 +32,7 @@ export interface ItemData {
 
 export interface ViewData {
   id: string;
-  url: string;
+  uri: string;
   height?: number;
   width?: number;
 }

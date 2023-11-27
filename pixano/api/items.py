@@ -14,6 +14,7 @@
 import base64
 from collections import defaultdict
 from typing import Any
+from urllib.parse import urlparse
 
 import duckdb
 import lancedb
@@ -275,9 +276,14 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
                 item[field.name] = Image.from_dict(item[field.name])
             image = item[field.name]
             image.uri_prefix = dataset.media_dir.absolute().as_uri()
+            image_uri = (
+                f"data/{dataset.path.name}/media/{image.uri}"
+                if urlparse(image.uri).scheme == ""
+                else image.uri
+            )
             item_details["itemData"]["views"][field.name] = {
                 "id": field.name,
-                "url": image.url,
+                "uri": image_uri,
                 "height": image.size[1],
                 "width": image.size[0],
             }

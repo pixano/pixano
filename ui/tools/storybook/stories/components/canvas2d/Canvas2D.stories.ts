@@ -43,7 +43,7 @@ export const CanvasWithoutSelectedTool: Story = {
       views: {
         view: {
           id: "view",
-          url: "img-02.jpg",
+          uri: "img-02.jpg",
         },
       },
       features: [
@@ -71,7 +71,7 @@ export const CanvasWithLabeledPointTool: Story = {
       views: {
         view: {
           id: "view",
-          url: "img-02.jpg",
+          uri: "img-02.jpg",
         },
       },
       features: [
@@ -98,7 +98,7 @@ export const CanvasWithRectangleTool: Story = {
       views: {
         view: {
           id: "view",
-          url: "img-02.jpg",
+          uri: "img-02.jpg",
         },
       },
       features: [

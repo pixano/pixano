@@ -41,7 +41,7 @@ class AppTestCase(unittest.TestCase):
             description="COCO dataset",
             splits=["val"],
         )
-        dataset = importer.import_dataset(input_dirs, import_dir, portable=False)
+        dataset = importer.import_dataset(input_dirs, import_dir, copy=True)
 
         # Set dataset ID
         dataset.info.id = "coco_dataset"

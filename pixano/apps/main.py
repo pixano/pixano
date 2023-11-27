@@ -62,10 +62,16 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
             f"Dataset library '{settings.data_dir.absolute()}' not found"
         )
 
-    # Create models folder
+    # Create models directory
     model_dir = settings.data_dir / "models"
     model_dir.mkdir(exist_ok=True)
-    app.mount("/models", StaticFiles(directory=model_dir), name="models")
+
+    # Mount data directory (datasets + models)
+    app.mount(
+        "/data",
+        StaticFiles(directory=settings.data_dir),
+        name="data",
+    )
 
     @app.get("/datasets", response_model=list[DatasetInfo])
     async def get_dataset_list():

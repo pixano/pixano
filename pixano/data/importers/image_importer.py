@@ -87,13 +87,11 @@ class ImageImporter(Importer):
     def import_rows(
         self,
         input_dirs: dict[str, Path],
-        portable: bool = False,
     ) -> Iterator:
         """Process dataset rows for import
 
         Args:
             input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
@@ -117,14 +115,11 @@ class ImageImporter(Importer):
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
 
                 # Set image URI
-                if portable:
-                    im_uri = (
-                        f"image/{im_path.name}"
-                        if split == "dataset"
-                        else f"image/{split}/{im_path.name}"
-                    )
-                else:
-                    im_uri = im_path.absolute().as_uri()
+                im_uri = (
+                    f"image/{im_path.name}"
+                    if split == "dataset"
+                    else f"image/{split}/{im_path.name}"
+                )
 
                 # Return rows
                 rows = {
