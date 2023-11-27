@@ -72,7 +72,7 @@ class ItemObject(BaseModel):
         source_id (str): Object source ID
         bbox (ItemBBox, optional): Object bounding box
         mask (ItemURLE, optional): Object mask
-        attributes (list[ItemFeature], optional): Object attributes
+        features (list[ItemFeature], optional): Object features
     """
 
     id: str
@@ -81,7 +81,7 @@ class ItemObject(BaseModel):
     source_id: str
     bbox: Optional[ItemBBox] = None
     mask: Optional[ItemURLE] = None
-    attributes: Optional[list[ItemFeature]] = None
+    features: Optional[list[ItemFeature]] = None
 
 
 class ItemEmbedding(BaseModel):
@@ -104,14 +104,14 @@ class ItemView(BaseModel):
         url (str): View URI
         frame_number (int, optional): View frame number
         total_frames (int, optional): View total frames
-        attributes (list[ItemFeature], optional): View attributes
+        features (list[ItemFeature], optional): View features
     """
 
     id: str
     uri: str
     frame_number: Optional[int] = None
     total_frames: Optional[int] = None
-    attributes: Optional[list[ItemFeature]] = None
+    features: Optional[list[ItemFeature]] = None
 
 
 class DatasetItem(BaseModel):

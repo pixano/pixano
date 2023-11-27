@@ -92,7 +92,7 @@ items = {
                 ItemView(
                     id="view1",
                     uri="http://example.com/image1.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -102,7 +102,7 @@ items = {
                 ItemView(
                     id="view2",
                     uri="http://example.com/image2.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -117,7 +117,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[10, 10, 20, 20], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -130,7 +130,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[30, 30, 10, 10], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -143,7 +143,7 @@ items = {
                 ItemView(
                     id="view1",
                     uri="http://example.com/image1.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -153,7 +153,7 @@ items = {
                 ItemView(
                     id="view2",
                     uri="http://example.com/image2.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -168,7 +168,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[10, 10, 20, 20], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -181,7 +181,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[30, 30, 10, 10], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -196,7 +196,7 @@ items = {
                 ItemView(
                     id="view1",
                     uri="http://example.com/image1.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -206,7 +206,7 @@ items = {
                 ItemView(
                     id="view2",
                     uri="http://example.com/image2.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -221,7 +221,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[10, 10, 20, 20], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -234,7 +234,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[30, 30, 10, 10], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -247,7 +247,7 @@ items = {
                 ItemView(
                     id="view1",
                     uri="http://example.com/image1.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -257,7 +257,7 @@ items = {
                 ItemView(
                     id="view2",
                     uri="http://example.com/image2.jpg",
-                    attributes=[
+                    features=[
                         ItemFeature(name="width", dtype="number", value=100),
                         ItemFeature(name="height", dtype="number", value=100),
                     ],
@@ -272,7 +272,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[10, 10, 20, 20], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
@@ -285,7 +285,7 @@ items = {
                     bbox=ItemBBox(
                         coords=[30, 30, 10, 10], format="xywh", confidence=0.9
                     ),
-                    attributes=[
+                    features=[
                         ItemFeature(name="color", dtype="string", value="red"),
                         ItemFeature(name="speed", dtype="number", value=50),
                     ],
