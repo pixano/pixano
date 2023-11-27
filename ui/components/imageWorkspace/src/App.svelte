@@ -13,15 +13,18 @@
    *
    * http://www.cecill.info
    */
-  import "./index.css";
+  import { tools } from "@pixano/canvas2d";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
+  import "./index.css";
+
+  export let selectedTool: tools.Tool | null;
 </script>
 
 <div class="flex w-full h-screen bg-primary">
-  <Toolbar />
-  <ImageCanvas />
+  <Toolbar bind:selectedTool />
+  <ImageCanvas {selectedTool} />
   <ActionsTabs />
 </div>

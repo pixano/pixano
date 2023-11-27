@@ -31,6 +31,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const mock = new MockInteractiveImageSegmenter();
+
 stores.interactiveSegmenterModel.set(mock);
 
 export const Base: Story = {

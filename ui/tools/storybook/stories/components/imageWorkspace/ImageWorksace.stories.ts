@@ -16,6 +16,9 @@
 import type { Meta, StoryObj } from "@storybook/svelte";
 
 import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
+import { interactiveSegmenterModel } from "@pixano/imageworkspace/src/lib/stores";
+
+import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
@@ -27,42 +30,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
-export const SimpleImage: Story = {};
+const mock = new MockInteractiveImageSegmenter();
+console.log({ mock });
+interactiveSegmenterModel.set(mock);
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
-// export const AllFeaturesTable: Story = {
-//   args: {
-//     data: [
-//       [
-//         { name: "number", dtype: "number", value: "1" },
-//         { name: "image", dtype: "image", value: "img-03.jpg" },
-//         {
-//           name: "video",
-//           dtype: "video",
-//           value: "https://www.w3schools.com/html/mov_bbb.mp4",
-//         },
-//         {
-//           name: "text",
-//           dtype: "text",
-//           value: "This is a sample text.",
-//         },
-//         {
-//           name: "histogram cell",
-//           dtype: "histogram",
-//           value: {
-//             name: "categories",
-//             type: "categorical",
-//             histogram: [
-//               { categories: "woman", counts: 838421, split: "train" },
-//               { categories: "man", counts: 738421, split: "train" },
-//               { categories: "car", counts: 19901, split: "train" },
-//               { categories: "dog", counts: 300000, split: "train" },
-//               { categories: "cat", counts: 150000, split: "train" },
-//             ],
-//           },
-//         },
-//       ],
-//     ],
-//   },
-// };
+export const SimpleImage: Story = {
+  args: {
+    selectedTool: null,
+  },
+};

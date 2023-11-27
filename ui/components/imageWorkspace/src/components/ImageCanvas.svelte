@@ -21,16 +21,9 @@
   export let selectedItem: ItemData = mockImage;
   export let masks: Array<Mask> = [];
   export let bboxes: Array<BBox> = [];
-  export let embeddings = {};
+  export let embeddings = { view: [] };
   export let labelColors: () => void = () => console.log("weird");
-  export let selectedTool: tools.Tool = {
-    name: "mock tool",
-    type: tools.ToolType.LabeledPoint,
-    icon: "string",
-    cursor: "string",
-    onSelect: () => console.log("selected"),
-    postProcessor: "any",
-  };
+  export let selectedTool: tools.Tool | null;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 </script>
 

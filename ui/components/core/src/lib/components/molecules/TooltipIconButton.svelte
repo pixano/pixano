@@ -16,15 +16,19 @@
 
   import { Button } from "../ui/button";
   import * as Tooltip from "../ui/tooltip";
+  import { cn } from "../../utils";
 
   export let tooltipContent: string = "";
+  export let selected: boolean = false;
 </script>
 
 <Tooltip.Root>
   <Tooltip.Trigger>
     <Button
       size="icon"
-      class="bg-transparent text-gray-800 hover:bg-primary-light relative"
+      class={cn("bg-transparent text-gray-800 hover:bg-primary-light relative", {
+        "bg-primary text-white": selected,
+      })}
       on:click
     >
       <slot />

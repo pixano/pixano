@@ -15,16 +15,43 @@
    */
   import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-
+  import { tools } from "@pixano/canvas2d";
   import MagicIcon from "../assets/MagicIcon.svelte";
+  import { panTool, rectangleTool, type SelectionTool } from "../lib/tools";
+  import { interactiveSegmenterModel } from "../lib/stores";
+
+  export let selectedTool: SelectionTool | null;
+  const selectTool = (tool: SelectionTool | null) => {
+    if (tool !== selectedTool) selectedTool = tool;
+  };
+
+  interactiveSegmenterModel.subscribe((segmenter) => {
+    if (segmenter) {
+      console.log({ segmenter });
+      // pointPlusTool.postProcessor = segmenter;
+      // pointMinusTool.postProcessor = segmenter;
+      rectangleTool.postProcessor = segmenter;
+    }
+  });
 </script>
 
-<div class="h-full shadow-md w-10 bg-popover">
+<div class="h-full shadow-md bg-popover p-1">
   <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
-    <TooltipIconButton tooltipContent="TODO">
+    <TooltipIconButton
+      tooltipContent="Move your picture around"
+      on:click={() => selectTool(panTool)}
+      selected={selectedTool?.type === tools.ToolType.Pan}
+    >
       <MousePointer />
     </TooltipIconButton>
-    <TooltipIconButton tooltipContent="TODO">
+    <TooltipIconButton
+      tooltipContent="select a rectangle"
+      on:click={() => {
+        console.log({ rectangleTool });
+        selectTool(rectangleTool);
+      }}
+      selected={selectedTool?.type === tools.ToolType.Rectangle}
+    >
       <Square />
     </TooltipIconButton>
     <TooltipIconButton tooltipContent="TODO">
