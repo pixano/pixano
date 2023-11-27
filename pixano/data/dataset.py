@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+from typing import Optional
 
 import lancedb
 from pydantic import BaseModel
@@ -25,15 +26,15 @@ class Dataset(BaseModel):
 
     Attributes:
         path (Path): Dataset path
-        info (DatasetInfo): Dataset info
-        stats (DatasetStat): Dataset stat
-        thumbnail (str): Dataset thumbnail base 64 URL
+        info (DatasetInfo, optional): Dataset info
+        stats (DatasetStat, optional): Dataset stat
+        thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
     path: Path
-    info: DatasetInfo
-    stats: DatasetStat
-    thumbnail: str
+    info: Optional[DatasetInfo] = None
+    stats: Optional[DatasetStat] = None
+    thumbnail: Optional[str] = None
 
     def __init__(
         self,
@@ -45,9 +46,9 @@ class Dataset(BaseModel):
             path (Path): Dataset path
         """
 
-        info_file = self.path / "db.json"
-        stats_file = self.path / "stats.json"
-        thumb_file = self.path / "preview.png"
+        info_file = path / "db.json"
+        stats_file = path / "stats.json"
+        thumb_file = path / "preview.png"
 
         # Define public attributes through Pydantic BaseModel
         super().__init__(
