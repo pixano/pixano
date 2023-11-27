@@ -27,13 +27,13 @@ class Dataset(BaseModel):
     Attributes:
         path (Path): Dataset path
         info (DatasetInfo, optional): Dataset info
-        stats (DatasetStat, optional): Dataset stat
+        stats (list[DatasetStat], optional): Dataset stat
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
     path: Path
     info: Optional[DatasetInfo] = None
-    stats: Optional[DatasetStat] = None
+    stats: Optional[list[DatasetStat]] = None
     thumbnail: Optional[str] = None
 
     def __init__(
