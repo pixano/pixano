@@ -96,6 +96,26 @@ class Image(PixanoType, BaseModel):
 
         return self.as_pillow().size
 
+    @property
+    def width(self) -> int:
+        """Return image width
+
+        Returns:
+            int: Image width
+        """
+
+        return self.as_pillow().width
+
+    @property
+    def height(self) -> int:
+        """Return image height
+
+        Returns:
+            int: Image height
+        """
+
+        return self.as_pillow().height
+
     def get_uri(self) -> str:
         """Return complete image URI from URI and URI prefix
 
