@@ -37,7 +37,7 @@
 
   // Exports
   export let selectedItem: ItemData;
-  export let selectedTool: Tool | null;
+  export let selectedTool: (Tool & { isSmart?: boolean }) | null; // TODO100: refacto type here
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
@@ -64,12 +64,16 @@
   let stage: Konva.Stage;
   let toolsLayer: Konva.Layer;
   let highlighted_point: Konva.Circle = null;
+  let transformer = new Konva.Transformer({
+    rotateEnabled: false,
+  });
 
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
     width: 1024,
     height: 780,
     name: "konva",
+    id: "stage",
   };
 
   // Multiview image grid
@@ -107,14 +111,12 @@
   // ********** INIT ********** //
 
   onMount(() => {
-    console.log("Canvas2D.onMount");
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
   });
 
   afterUpdate(() => {
-    console.log("Canvas2D.afterUpdate");
     if (currentId !== selectedItem.id) loadItem();
 
     if (selectedTool) {
@@ -217,6 +219,7 @@
 
     // Scale bboxes
     const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+    if (!bboxGroup) return;
     for (const bboxKonva of bboxGroup.children) {
       if (bboxKonva instanceof Konva.Group) {
         for (const bboxElement of bboxKonva.children) {
@@ -268,6 +271,8 @@
       const image: Konva.Image = viewLayer.findOne("#image");
       const bboxIds: Array<string> = [];
 
+      if (!bboxGroup) return;
+
       for (let i = 0; i < bboxes.length; ++i) {
         if (bboxes[i].viewId === viewId) {
           bboxIds.push(bboxes[i].id);
@@ -311,15 +316,16 @@
     const y = image.y() + bbox.bbox[1];
     const rect_width = bbox.bbox[2];
     const rect_height = bbox.bbox[3];
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     const bboxKonva = new Konva.Group({
       id: bbox.id,
       visible: bbox.visible,
       opacity: bbox.opacity,
-      listening: false,
     });
 
     const bboxRect = new Konva.Rect({
+      id: `react${bbox.id}`,
       x: x,
       y: y,
       width: rect_width,
@@ -331,8 +337,9 @@
 
     // Create a tooltip for bounding box category and confidence
     const tooltip = new Konva.Label({
-      x: x,
-      y: y,
+      id: `tooltip${bbox.id}`,
+      x,
+      y,
       offsetY: 18,
       scale: {
         x: 1 / zoomFactor[viewId],
@@ -363,6 +370,21 @@
     // Add to group
     bboxKonva.add(tooltip);
     bboxGroup.add(bboxKonva);
+
+    bboxRect.on("click", function (e) {
+      e.cancelBubble = true;
+      bboxRect.draggable(true);
+      viewLayer.add(transformer);
+      transformer.nodes([bboxRect]);
+      tooltip.opacity(0);
+    });
+    bboxRect.on("transformend", function () {
+      bboxRect.draggable(false);
+      transformer.nodes([]);
+      tooltip.x(bboxRect.x());
+      tooltip.y(bboxRect.y());
+      tooltip.opacity(1);
+    });
   }
 
   function updateMasks(viewId: string) {
@@ -874,7 +896,10 @@
           rect.destroy();
         } else {
           //predict
-          await updateCurrentMask(viewId);
+          // TODO100 : RECT : SAVE RECTANGLE HERE
+          console.log({ rect, selectedTool });
+          // !selectedTool.isSmart && (rectangles = [...rectangles, { ...rect.attrs }]); // TODO100: better conditionning here
+          selectedTool.isSmart && (await updateCurrentMask(viewId)); // SMART RECTANGLE ONLY
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
@@ -968,7 +993,7 @@
 
   async function handleClickOnImage(event: CustomEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    // Perfome tool action if any active tool
+    // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
     if (selectedTool?.type == ToolType.Pan || event.detail.evt.which == 2) {
       viewLayer.draggable(true);
@@ -1010,7 +1035,6 @@
     } else if (selectedTool?.type == ToolType.Rectangle) {
       const pos = viewLayer.getRelativePointerPosition();
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
-
       //add RECT
       let rect: Konva.Rect = inputGroup.findOne("#drag-rect");
       if (rect) {
@@ -1031,6 +1055,7 @@
         });
         inputGroup.add(rect);
       }
+      // TODO100: where magic happens
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
     }
@@ -1124,6 +1149,23 @@
       }
     }
   }
+
+  // ********** HELPER FUNCTIONS ********** //
+
+  function handleLayerClick(viewId: string) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const allBBoxes: Konva.Group = viewLayer.findOne("#bboxes");
+    allBBoxes.children.forEach((bbox) => {
+      bbox.draggable(false);
+      transformer.nodes([]);
+      const tooltip = allBBoxes.findOne("#tooltip" + bbox.id());
+      const rect = allBBoxes.findOne("#react" + bbox.id());
+      tooltip.opacity(1);
+      tooltip.x(rect.attrs.x);
+      tooltip.y(rect.attrs.y);
+      rect.draggable(false);
+    });
+  }
 </script>
 
 <div class="flex h-full w-full bg-slate-100" bind:this={stageContainer}>
@@ -1136,7 +1178,11 @@
   >
     {#each Object.values(selectedItem.views) as view}
       {#if images[view.id]}
-        <Layer config={{ id: view.id }} on:wheel={(event) => handleWheelOnImage(event, view)}>
+        <Layer
+          config={{ id: view.id }}
+          on:wheel={(event) => handleWheelOnImage(event, view)}
+          on:click={() => handleLayerClick(view.id)}
+        >
           <KonvaImage
             config={{ image: images[view.id], id: "image" }}
             on:pointerdown={(event) => handleClickOnImage(event, view.id)}

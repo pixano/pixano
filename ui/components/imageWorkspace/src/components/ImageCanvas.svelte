@@ -15,14 +15,27 @@
    */
   import { Canvas2D, tools } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { mockImage } from "../lib/mock";
+
   import type { BBox, ItemData, Mask } from "@pixano/core";
 
-  export let selectedItem: ItemData = mockImage;
+  export let selectedItem: ItemData;
   export let masks: Array<Mask> = [];
-  export let bboxes: Array<BBox> = [];
+  export let bboxes: Array<BBox> = [
+    {
+      id: "1",
+      viewId: "view",
+      bbox: [100, 100, 100, 100],
+      catId: 0.9,
+      opacity: 1,
+      visible: true,
+      tooltip: "tooltip content",
+    },
+  ];
   export let embeddings = { view: [] };
-  export let labelColors: () => void = () => console.log("weird");
+  export let colorScale = (value: string) => {
+    console.log("temp function, TODO100", value);
+    return "red";
+  };
   export let selectedTool: tools.Tool | null;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 </script>
@@ -30,7 +43,7 @@
 <div class="flex-auto max-w-[70%]">
   <Canvas2D
     {selectedItem}
-    {labelColors}
+    {colorScale}
     {masks}
     {bboxes}
     {embeddings}
