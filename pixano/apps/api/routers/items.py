@@ -13,14 +13,11 @@
 
 from functools import lru_cache
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
-from fastapi_pagination.api import create_page
+from fastapi_pagination.api import create_page, resolve_params
 
-from pixano.data import DatasetItem, ItemEmbedding, Settings
-
-# TMP: Mock data
-from .mock_data import item_embeddings, items
+from pixano.data import Dataset, DatasetItem, Settings
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
 
@@ -51,12 +48,31 @@ async def get_dataset_items(
         Page[DatasetItem]: Dataset items page
     """
 
-    # TMP: Mock data
-    total = len(items[ds_id])
-    if total > 0:
-        return create_page(list(items[ds_id].values()), total=total, params=params)
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    if dataset:
+        # Get page parameters
+        params = resolve_params(params)
+        raw_params = params.to_raw_params()
+        total = dataset.num_rows
+
+        # Check page parameters
+        start = raw_params.offset
+        stop = min(raw_params.offset + raw_params.limit, total)
+        if start >= stop:
+            raise HTTPException(status_code=404, detail="Invalid page parameters")
+
+        # Load dataset items
+        items = dataset.load_items(raw_params.limit, raw_params.offset)
+
+        # Return dataset items
+        if items:
+            return create_page(items, total=total, params=params)
+        else:
+            raise HTTPException(status_code=404, detail="Dataset item not found")
     else:
-        raise HTTPException(status_code=404, detail="Items not found")
+        raise HTTPException(status_code=404, detail="Dataset not found")
 
 
 @router.get("/search", response_model=Page[DatasetItem])
@@ -76,12 +92,31 @@ async def search_dataset_items(
         Page[DatasetItem]: Dataset items page
     """
 
-    # TMP: Mock data
-    total = len(items[ds_id])
-    if total > 0:
-        return create_page(list(items[ds_id].values()), total=total, params=params)
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    if dataset:
+        # Get page parameters
+        params = resolve_params(params)
+        raw_params = params.to_raw_params()
+        total = dataset.num_rows
+
+        # Check page parameters
+        start = raw_params.offset
+        stop = min(raw_params.offset + raw_params.limit, total)
+        if start >= stop:
+            raise HTTPException(status_code=404, detail="Invalid page parameters")
+
+        # Load dataset items
+        items = dataset.search_items(raw_params.limit, raw_params.offset, query)
+
+        # Return dataset items
+        if items:
+            return create_page(items, total=total, params=params)
+        else:
+            raise HTTPException(status_code=404, detail="Dataset item not found")
     else:
-        raise HTTPException(status_code=404, detail="Items not found")
+        raise HTTPException(status_code=404, detail="Dataset not found")
 
 
 @router.get("/items/{item_id}", response_model=DatasetItem)
@@ -96,15 +131,24 @@ async def get_dataset_item(ds_id: str, item_id: str) -> DatasetItem:
         DatasetItem: Dataset item
     """
 
-    # TMP: Mock data
-    if item_id in items[ds_id]:
-        return items[ds_id][item_id]
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    if dataset:
+        # Load dataset item
+        item = dataset.load_item(item_id, load_objects=True)
+
+        # Return dataset item
+        if item:
+            return item
+        else:
+            raise HTTPException(status_code=404, detail="Dataset item not found")
     else:
-        raise HTTPException(status_code=404, detail="Item not found")
+        raise HTTPException(status_code=404, detail="Dataset not found")
 
 
 @router.post("/items/{item_id}", response_model=DatasetItem)
-async def post_dataset_item(ds_id: str, item_id: str, item: DatasetItem):
+async def post_dataset_item(ds_id: str, item: DatasetItem):
     """Save dataset item
 
     Args:
@@ -112,17 +156,24 @@ async def post_dataset_item(ds_id: str, item_id: str, item: DatasetItem):
         item_id (str): Item ID
     """
 
-    # TODO: Mock data
-    pass
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    if dataset:
+        # Save dataset item
+        dataset.save_item(item)
+
+        # Return response
+        return Response()
+    else:
+        raise HTTPException(status_code=404, detail="Dataset not found")
 
 
 @router.get(
     "/items/{item_id}/embeddings/{model_id}",
-    response_model=list[ItemEmbedding],
+    response_model=DatasetItem,
 )
-async def get_item_embeddings(
-    ds_id: str, item_id: str, model_id: str
-) -> list[ItemEmbedding]:
+async def get_item_embeddings(ds_id: str, item_id: str, model_id: str) -> DatasetItem:
     """Load dataset item embeddings
 
     Args:
@@ -131,11 +182,24 @@ async def get_item_embeddings(
         model_id (str): Model ID
     """
 
-    # TMP: Mock data
-    if (
-        model_id in item_embeddings[ds_id]
-        and item_id in item_embeddings[ds_id][model_id]
-    ):
-        return item_embeddings[ds_id][model_id][item_id]
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    if dataset:
+        item = dataset.load_item(
+            item_id,
+            load_media=False,
+            load_active_learning=False,
+            load_embeddings=True,
+            model_id=model_id,
+        )
+
+        # Return dataset item embeddings
+        if item:
+            return item
+        else:
+            raise HTTPException(
+                status_code=404, detail="Dataset item embeddings not found"
+            )
     else:
-        raise HTTPException(status_code=404, detail="Embeddings not found")
+        raise HTTPException(status_code=404, detail="Dataset not found")

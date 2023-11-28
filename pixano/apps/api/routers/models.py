@@ -17,9 +17,6 @@ from fastapi import APIRouter, HTTPException
 
 from pixano.data import Settings
 
-# TMP: Mock data
-from .mock_data import models
-
 router = APIRouter(tags=["models"])
 
 
@@ -42,15 +39,13 @@ async def get_models() -> list[str]:
         list[DatasetInfo]: List of dataset infos
     """
 
-    # TMP: Mock data
-    return models
+    # Load list of models
+    models = []
+    for model_path in get_settings().data_dir.glob("models/*.onnx"):
+        models.append(model_path.name)
 
-    # models = []
-    # for model_path in get_settings().data_dir.glob("models/*.onnx"):
-    #     models.append(model_path.name)
-
-    # # Return list of models
-    # if models:
-    #     return models
-    # else:
-    #     raise HTTPException(status_code=404, detail="No model found")
+    # Return list of models
+    if models:
+        return models
+    else:
+        raise HTTPException(status_code=404, detail="No model found")

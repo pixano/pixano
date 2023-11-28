@@ -17,9 +17,6 @@ from fastapi import APIRouter, HTTPException
 
 from pixano.data import Dataset, DatasetInfo, Settings
 
-# TMP: Mock data
-from .mock_data import datasets
-
 router = APIRouter(tags=["datasets"])
 
 
@@ -42,23 +39,17 @@ async def get_datasets() -> list[DatasetInfo]:
         list[DatasetInfo]: List of dataset infos
     """
 
-    # TMP: Mock data
-    if len(datasets) > 0:
-        return list(datasets.values())
+    # Load datasets
+    infos = DatasetInfo.load_directory(
+        directory=get_settings().data_dir,
+        load_thumbnail=True,
+    )
+
+    # Return datasets
+    if infos:
+        return infos
     else:
         raise HTTPException(status_code=404, detail="No dataset found")
-
-    # # Load datasets
-    # infos = DatasetInfo.load_directory(
-    #     directory=get_settings().data_dir,
-    #     load_thumbnail=True,
-    # )
-
-    # # Return datasets
-    # if infos:
-    #     return infos
-    # else:
-    #     raise HTTPException(status_code=404, detail="No dataset found")
 
 
 @router.get("/datasets/{ds_id}", response_model=DatasetInfo)
@@ -72,20 +63,11 @@ async def get_dataset(ds_id: str) -> DatasetInfo:
         DatasetInfo: Dataset info
     """
 
-    # TMP: Mock data
-    if ds_id in datasets:
-        return datasets[ds_id]
+    # Load dataset
+    dataset = Dataset.find(ds_id, get_settings().data_dir)
+
+    # Return dataset info
+    if dataset:
+        return dataset.load_info(load_stats=True)
     else:
         raise HTTPException(status_code=404, detail="Dataset not found")
-
-    # # Load dataset
-    # dataset = Dataset.find(
-    #     id=ds_id,
-    #     directory=get_settings().data_dir,
-    # )
-
-    # # Return dataset info
-    # if dataset:
-    #     return dataset.load_info(load_stats=True)
-    # else:
-    #     raise HTTPException(status_code=404, detail="Dataset not found")
