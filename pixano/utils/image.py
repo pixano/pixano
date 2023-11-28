@@ -14,7 +14,6 @@
 import base64
 from io import BytesIO
 from itertools import groupby
-from typing import Any
 
 import cv2
 import numpy as np
@@ -169,11 +168,11 @@ def mask_to_rle(mask: Image.Image) -> dict:
         return mask_api.encode(mask_array)
 
 
-def rle_to_mask(rle: dict[str, Any]) -> np.ndarray:
+def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
     """Decode mask from RLE to NumPy array
 
     Args:
-        rle (dict[str, Any]): Mask as RLE
+        rle (dict[str, list[int] | bytes]): Mask as RLE
 
     Returns:
         np.ndarray: Mask as NumPy array
@@ -200,11 +199,11 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
         return mask_api.merge(rles)
 
 
-def rle_to_polygons(rle: dict[str, Any]) -> list[list]:
+def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
     """Encode mask from RLE to polygons
 
     Args:
-        rle (dict[str, Any]): Mask as RLE
+        rle (dict[str, list[int] | bytes]): Mask as RLE
 
     Returns:
         list[list]: Mask as polygons
@@ -267,14 +266,14 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
         return res, has_holes
 
 
-def urle_to_rle(urle: dict[str, Any]) -> dict[str, Any]:
+def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
     """Encode mask from uncompressed RLE to RLE
 
     Args:
-        urle (dict[str, Any]): Mask as uncompressed RLE
+        urle (dict[str, list[int]]): Mask as uncompressed RLE
 
     Returns:
-        dict[str, Any]: Mask as RLE
+        dict[str, list[int] | bytes]: Mask as RLE
     """
 
     if urle is not None:
@@ -282,14 +281,14 @@ def urle_to_rle(urle: dict[str, Any]) -> dict[str, Any]:
         return mask_api.frPyObjects(urle, height, width)
 
 
-def rle_to_urle(rle: dict[str, Any]) -> dict[str, Any]:
+def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     """Encode mask from RLE to uncompressed RLE
 
     Args:
-        rle (dict[str, Any]): Mask as RLE
+        rle (dict[str, list[int] | bytes]): Mask as RLE
 
     Returns:
-        dict[str, Any]: Mask as uncompressed RLE
+        dict[str, list[int]]: Mask as uncompressed RLE
     """
 
     if rle is not None and rle["counts"] is not None:
