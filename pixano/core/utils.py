@@ -42,6 +42,19 @@ def is_string(t: pa.DataType) -> bool:
     return pa.types.is_string(t) or pa.types.is_large_string(t)
 
 
+def is_binary(t: pa.DataType) -> bool:
+    """Check if DataType is binary
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is binary
+    """
+
+    return pa.types.is_binary(t)
+
+
 def is_image_type(t: pa.DataType) -> bool:
     """Check if DataType is an Image
 
