@@ -10,3 +10,15 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from pixano.data.item.item_embedding import ItemEmbedding
+from pixano.data.item.item_feature import ItemFeature
+from pixano.data.item.item_object import ItemObject
+from pixano.data.item.item_view import ItemView
+
+__all__ = [
+    "ItemObject",
+    "ItemFeature",
+    "ItemView",
+    "ItemEmbedding",
+]

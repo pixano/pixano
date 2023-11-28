@@ -10,3 +10,15 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from pixano.data.dataset.dataset import Dataset
+from pixano.data.dataset.dataset_info import DatasetInfo
+from pixano.data.dataset.dataset_item import DatasetItem
+from pixano.data.dataset.dataset_stat import DatasetStat
+
+__all__ = [
+    "Dataset",
+    "DatasetInfo",
+    "DatasetStat",
+    "DatasetItem",
+]

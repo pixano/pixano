@@ -18,7 +18,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from pixano.core import Image
-from pixano.data.dataset_stat import DatasetStat
+from pixano.data.dataset.dataset_stat import DatasetStat
 
 
 class DatasetInfo(BaseModel):
