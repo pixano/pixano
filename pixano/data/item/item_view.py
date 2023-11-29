@@ -56,7 +56,8 @@ class ItemView(BaseModel):
             list[ItemView]: List of ItemView
         """
 
-        item = table.to_pylist()[0]  # TODO: Flattened view fields?
+        # TODO: Flattened view fields with one row per view?
+        item = table.to_pylist()[0]
         views = []
 
         # Iterate on fields
