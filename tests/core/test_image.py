@@ -96,7 +96,7 @@ class ImageTestCase(unittest.TestCase):
         expected_dict = {
             "uri": self.uri,
             "bytes": self.bytes,
-            "preview_bytes": None,
+            "preview_bytes": self.preview_bytes,
         }
         self.assertEqual(self.image.to_dict(), expected_dict)
 
