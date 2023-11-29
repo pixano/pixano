@@ -18,12 +18,19 @@
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import { cn } from "@pixano/core/src/lib/utils";
   import ArrowSvg from "./ArrowSvg.svelte";
+  import type { ObjectContent } from "../../lib/types/objects";
 
-  export let name: string = "Object 1";
+  export let objectContent: ObjectContent;
 
-  let open: boolean = false;
-  let boxChecked: boolean = false;
-  let maskChecked: boolean = false;
+  let open: boolean = true;
+  let boxChecked: boolean = objectContent.type === "box";
+  let maskChecked: boolean = objectContent.type === "mask";
+
+  const handleEditIconClick = () => {
+    if (objectContent.type === "box") {
+      objectContent.boundingBox.editing = !objectContent.boundingBox.editing;
+    }
+  };
 </script>
 
 <div
@@ -34,10 +41,10 @@
   <div class="flex items-center">
     <IconButton><Eye class="h-4" /></IconButton>
     <div class="rounded-full bg-red-400 border border-red-800 w-3 h-3 mr-2" />
-    <span>{name}</span>
+    <span>{objectContent.name}</span>
   </div>
   <div class="flex items-center">
-    <IconButton><Pencil class="h-4" /></IconButton>
+    <IconButton on:click={handleEditIconClick}><Pencil class="h-4" /></IconButton>
     <IconButton><Lock class="h-4" /></IconButton>
     <IconButton><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}

@@ -23,7 +23,7 @@
     rectangleTool,
     smartMaskTool,
     type SelectionTool,
-  } from "../lib/tools";
+  } from "../lib/types/tools";
   import { interactiveSegmenterModel } from "../lib/stores";
 
   export let selectedTool: SelectionTool | null;

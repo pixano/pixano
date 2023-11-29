@@ -20,17 +20,7 @@
 
   export let selectedItem: ItemData;
   export let masks: Array<Mask> = [];
-  export let bboxes: Array<BBox> = [
-    {
-      id: "1",
-      viewId: "view",
-      bbox: [100, 100, 100, 100],
-      catId: 0.9,
-      opacity: 1,
-      visible: true,
-      tooltip: "tooltip content",
-    },
-  ];
+  export let bboxes: Array<BBox> = [];
   export let embeddings = { view: [] };
   export let colorScale = (value: string) => {
     console.log("temp function, TODO100", value);

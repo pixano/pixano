@@ -20,8 +20,10 @@
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
   import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
+  import type { ObjectContent } from "../../lib/types/objects";
 
-  let value = "labels";
+  let value = "flat";
+  export let allObjects: ObjectContent[] = [];
 </script>
 
 <div class="p-4">
@@ -44,15 +46,12 @@
   {#if value === "flat"}
     <h3 class="uppercase font-extralight">Ground truth</h3>
     <ActionsTabsSearchInput />
-    <ObjectTabFlatItem name="object 1" />
-    <ObjectTabFlatItem name="object 2" />
-    <ObjectTabFlatItem name="object 3" />
-    <ObjectTabFlatItem name="object 4" />
+    {#each allObjects as objectContent}
+      <ObjectTabFlatItem bind:objectContent />
+    {/each}
+
     <h3 class="uppercase font-extralight mt-8">Model run</h3>
     <ActionsTabsSearchInput />
-    <ObjectTabFlatItem name="object 1" />
-    <ObjectTabFlatItem name="object 2" />
-    <ObjectTabFlatItem name="object 3" />
   {/if}
   {#if value === "labels"}
     <ActionsTabsSearchInput />

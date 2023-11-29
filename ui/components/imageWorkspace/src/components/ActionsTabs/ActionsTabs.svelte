@@ -18,10 +18,13 @@
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
+  import type { ObjectContent } from "../../lib/types/objects";
+
+  export let allObjects: ObjectContent[];
 </script>
 
 <div class="h-full shadow-md w-10 bg-popover flex-[2_0_auto]">
-  <Tabs.Root value="scene">
+  <Tabs.Root value="objects">
     <Tabs.List>
       <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
       <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
@@ -29,6 +32,6 @@
     <Tabs.Content value="scene">
       <SceneTabContent />
     </Tabs.Content>
-    <Tabs.Content value="objects"><ObjectTabContent /></Tabs.Content>
+    <Tabs.Content value="objects"><ObjectTabContent bind:allObjects /></Tabs.Content>
   </Tabs.Root>
 </div>
