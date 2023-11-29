@@ -109,4 +109,4 @@ class TestParquetDepthImage(unittest.TestCase):
 
         self.assertEqual(re_table.column_names, ["DepthImage"])
         depth_image0 = re_table.take([0])["DepthImage"][0].as_py()
-        self.assertTrue(isinstance(depth_image0, DepthImage))
+        self.assertIsInstance(depth_image0, DepthImage)

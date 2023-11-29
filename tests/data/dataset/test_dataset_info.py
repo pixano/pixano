@@ -31,7 +31,7 @@ class DatasetInfoTestCase(unittest.TestCase):
             self.info.save(Path(temp_dir))
             saved_info = DatasetInfo.from_json(Path(temp_dir) / "db.json")
 
-            self.assertTrue(isinstance(saved_info, DatasetInfo))
+            self.assertIsInstance(saved_info, DatasetInfo)
             self.assertEqual(self.info.id, saved_info.id)
             self.assertEqual(self.info.name, saved_info.name)
             self.assertEqual(self.info.description, saved_info.description)
@@ -39,14 +39,14 @@ class DatasetInfoTestCase(unittest.TestCase):
     def test_dict(self):
         info_to_dict = self.info.model_dump()
 
-        self.assertTrue(isinstance(info_to_dict, dict))
+        self.assertIsInstance(info_to_dict, dict)
         self.assertEqual(self.info.id, info_to_dict["id"])
         self.assertEqual(self.info.name, info_to_dict["name"])
         self.assertEqual(self.info.description, info_to_dict["description"])
 
         info_from_dict = DatasetInfo(**info_to_dict)
 
-        self.assertTrue(isinstance(info_from_dict, DatasetInfo))
+        self.assertIsInstance(info_from_dict, DatasetInfo)
         self.assertEqual(self.info.id, info_from_dict.id)
         self.assertEqual(self.info.name, info_from_dict.name)
         self.assertEqual(self.info.description, info_from_dict.description)

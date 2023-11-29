@@ -133,4 +133,4 @@ class TestParquetImage(unittest.TestCase):
 
         self.assertEqual(re_table.column_names, ["image"])
         image0 = re_table.take([0])["image"][0].as_py()
-        self.assertTrue(isinstance(image0, Image))
+        self.assertIsInstance(image0, Image)

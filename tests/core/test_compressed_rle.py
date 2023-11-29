@@ -115,4 +115,4 @@ class TestParquetCompressedRLE(unittest.TestCase):
 
         self.assertEqual(re_table.column_names, ["compressedRLE"])
         compressedRLE1 = re_table.take([0])["compressedRLE"][0].as_py()
-        self.assertTrue(isinstance(compressedRLE1, CompressedRLE))
+        self.assertIsInstance(compressedRLE1, CompressedRLE)
