@@ -80,20 +80,17 @@ class ItemView(BaseModel):
                     else im.uri,
                     thumbnail=im.preview_url,
                 )
-                image_view.features = []
-                image_view.features.append(
-                    ItemFeature(
-                        name="width",
-                        dtype="number",
-                        value=im.width,
-                    )
+                image_view.features = {}
+                image_view.features["width"] = ItemFeature(
+                    name="width",
+                    dtype="number",
+                    value=im.width,
                 )
-                image_view.features.append(
-                    ItemFeature(
-                        name="height",
-                        dtype="number",
-                        value=im.height,
-                    )
+
+                image_view.features["height"] = ItemFeature(
+                    name="height",
+                    dtype="number",
+                    value=im.height,
                 )
                 views[field.name] = image_view
             # TODO: Video, Point cloud
