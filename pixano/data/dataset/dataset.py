@@ -477,39 +477,39 @@ class Dataset(BaseModel):
         # Load dataset
         ds_tables = self.open_tables()
 
-        # Save item features (classification label)
-        for feature in item.features:
-            if feature.name == "label":
-                # If label not in main table
-                if "label" not in ds_tables["main"]["db"].schema.names:
-                    main_table_ds = ds_tables["main"]["db"].to_lance()
-                    # Create label table
-                    label_table = main_table_ds.to_table(columns=["id"])
-                    label_array = pa.array(
-                        [""] * len(ds_tables["main"]["db"]), type=pa.string()
-                    )
-                    label_table = label_table.append_column(
-                        pa.field("label", pa.string()), label_array
-                    )
-                    # Merge with main table
-                    main_table_ds.merge(label_table, "id")
-                    # Update DatasetInfo
-                    self.info.tables["main"][0]["fields"]["label"] = "str"
-                    self.save_info()
-
-                # Get item
-                scanner = (
-                    ds_tables["main"]["db"]
-                    .to_lance()
-                    .scanner(filter=f"id in ('{item.id}')")
+        # Save item label if it exists
+        item_label = item.find_feature("label")
+        if item_label is not None:
+            # If label not in main table, add label field
+            if "label" not in ds_tables["main"]["db"].schema.names:
+                main_table_ds = ds_tables["main"]["db"].to_lance()
+                # Create label table
+                label_table = main_table_ds.to_table(columns=["id"])
+                label_array = pa.array(
+                    [""] * len(ds_tables["main"]["db"]), type=pa.string()
                 )
-                item = scanner.to_table().to_pylist()[0]
-                # Update item
-                item["label"] = feature.value
-                ds_tables["main"]["db"].update(f"id in ('{item.id}')", item)
+                label_table = label_table.append_column(
+                    pa.field("label", pa.string()), label_array
+                )
+                # Merge with main table
+                main_table_ds.merge(label_table, "id")
+                # Update DatasetInfo
+                self.info.tables["main"][0]["fields"]["label"] = "str"
+                self.save_info()
 
-                # Clear change history to prevent dataset from becoming too large
-                ds_tables["main"]["db"].to_lance().cleanup_old_versions()
+            # Get item
+            scanner = (
+                ds_tables["main"]["db"]
+                .to_lance()
+                .scanner(filter=f"id in ('{item.id}')")
+            )
+            item = scanner.to_table().to_pylist()[0]
+            # Update item
+            item["label"] = item_label
+            ds_tables["main"]["db"].update(f"id in ('{item.id}')", item)
+
+            # Clear change history to prevent dataset from becoming too large
+            ds_tables["main"]["db"].to_lance().cleanup_old_versions()
 
         # Get current item objects
         current_obj_tables = {}

@@ -45,6 +45,20 @@ class DatasetItem(BaseModel):
     objects: Optional[list[ItemObject]] = None
     embeddings: Optional[list[ItemEmbedding]] = None
 
+    def find_feature(self, name: str) -> str | int | float | bool | None:
+        """Find ItemFeature value by name
+
+        Args:
+            name (str): Name of ItemFeature
+
+        Returns:
+            str | int | float | bool | None: ItemFeature value
+        """
+
+        for feature in self.features:
+            if feature["name"] == name:
+                return feature.value
+
     @staticmethod
     def from_pyarrow(
         pyarrow_item: dict[str, dict[str, pa.Table]],

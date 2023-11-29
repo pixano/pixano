@@ -41,6 +41,20 @@ class ItemView(BaseModel):
     total_frames: Optional[int] = None
     features: Optional[list[ItemFeature]] = None
 
+    def find_feature(self, name: str) -> str | int | float | bool | None:
+        """Find ItemFeature value by name
+
+        Args:
+            name (str): Name of ItemFeature
+
+        Returns:
+            str | int | float | bool | None: ItemFeature value
+        """
+
+        for feature in self.features:
+            if feature["name"] == name:
+                return feature.value
+
     @staticmethod
     def from_pyarrow(
         table: pa.Table, schema: pa.schema, media_dir: Path
