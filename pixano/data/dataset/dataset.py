@@ -283,6 +283,9 @@ class Dataset(BaseModel):
         # Load PyArrow items from tables
         pyarrow_items: dict[str, dict[str, pa.Table]] = defaultdict(dict)
 
+        if "embeddings" not in self.info.tables:
+            return None
+
         # Return first embeddings for first table containing CLIP
         # TODO: Add embeddings table select option
         for table in self.info.tables["embeddings"]:
