@@ -13,10 +13,14 @@
  * http://www.cecill.info
  */
 
+// Imports
+
+import type { Dataset, DatasetItems, ItemDetails, Dict, Stats } from "./interfaces";
+
 // Exports
 
-export async function getDatasetList() {
-  let datasets = null;
+export async function getDatasetList(): Promise<Array<Dataset>> {
+  let datasets: Array<Dataset>;
 
   try {
     const response = await fetch("/datasets");
@@ -37,8 +41,12 @@ export async function getDatasetList() {
   return datasets;
 }
 
-export async function getDatasetItems(datasetId: string, page: number = 1, size: number = 100) {
-  let datasetItems = null;
+export async function getDatasetItems(
+  datasetId: string,
+  page: number = 1,
+  size: number = 100,
+): Promise<DatasetItems> {
+  let datasetItems: DatasetItems;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
@@ -59,8 +67,8 @@ export async function getDatasetItems(datasetId: string, page: number = 1, size:
   return datasetItems;
 }
 
-export async function getDatasetStats(datasetId: string) {
-  let datasetStats = null;
+export async function getDatasetStats(datasetId: string): Promise<Array<Stats>> {
+  let datasetStats: Array<Stats>;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/stats`);
@@ -81,8 +89,8 @@ export async function getDatasetStats(datasetId: string) {
   return datasetStats;
 }
 
-export async function getItemDetails(datasetId: string, itemId: string) {
-  let itemDetails = null;
+export async function getItemDetails(datasetId: string, itemId: string): Promise<ItemDetails> {
+  let itemDetails: ItemDetails;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
@@ -102,8 +110,8 @@ export async function getItemDetails(datasetId: string, itemId: string) {
   return itemDetails;
 }
 
-export async function getItemEmbeddings(datasetId: string, itemId: string) {
-  let embeddings = null;
+export async function getItemEmbeddings(datasetId: string, itemId: string): Promise<Dict<string>> {
+  let embeddings: Dict<string>;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings`);
@@ -151,8 +159,8 @@ export async function getSearchResult(
   query: string,
   page: number = 1,
   size: number = 100,
-) {
-  let datasetItems = null;
+): Promise<DatasetItems> {
+  let datasetItems: DatasetItems;
   try {
     const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
       headers: {

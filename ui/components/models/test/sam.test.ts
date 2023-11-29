@@ -30,9 +30,8 @@ const H: number = 576;
 
 describe("SAM", () => {
   test("Init model", async () => {
-    const modelWeights = await readFile(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
     const sam = new SAM();
-    await sam.init(modelWeights);
+    await sam.init(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
 
     const expectedInputs = [
       "image_embeddings",
@@ -75,9 +74,8 @@ describe("SAM", () => {
   });
 
   test("segmentImage from clicks", async () => {
-    const modelWeights = await readFile(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
     const sam = new SAM();
-    await sam.init(modelWeights);
+    await sam.init(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
 
     Object.defineProperty(Image.prototype, "naturalHeight", { get: () => H });
     Object.defineProperty(Image.prototype, "naturalWidth", { get: () => W });

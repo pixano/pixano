@@ -71,7 +71,7 @@ const dtypes = {
     arrayConstructor: Float64Array,
   },
 };
-export function parse(buffer: Array<number>) {
+export function parse(buffer: ArrayBufferLike | Array<number>) {
   const buf = new Uint8Array(buffer);
   if (buf[6] != 1) throw "Only npy version 1 is supported";
 

@@ -39,7 +39,7 @@
     Mask,
   } from "@pixano/core";
 
-  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import type { InteractiveImageSegmenter, InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
   export let selectedDataset: Dataset;
@@ -61,12 +61,12 @@
 
   // Category colors
   let colorMode = "category";
-  let labelColors = handleLabelColors();
+  let colorScale = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
   let bboxOpacity = 0.0;
-  let confidenceThreshold = 1.0;
+  let confidenceThreshold = 0.0;
 
   // Current annotations
   let currentAnn: InteractiveImageSegmenterOutput = null;
@@ -104,13 +104,13 @@
   // Segmentation model
   interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
-      pointPlusTool.postProcessor = segmenter;
-      pointMinusTool.postProcessor = segmenter;
-      rectangleTool.postProcessor = segmenter;
+      pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
     }
   });
 
-  function until<T>(conditionFunction): Promise<T> {
+  function until(conditionFunction: () => boolean): Promise<() => void> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout(() => poll(resolve), 400);
@@ -252,7 +252,7 @@
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
     const newItemId = item.find((feature) => {
       return feature.name === "id";
-    }).value;
+    }).value as string;
 
     if (newItemId !== selectedItem.id) {
       if (!saveFlag) {
@@ -273,7 +273,7 @@
       if (itemFeature.dtype === "image") {
         selectedItem.views[itemFeature.name] = {
           id: itemFeature.name,
-          url: itemFeature.value,
+          uri: itemFeature.value as string,
         };
       }
     }
@@ -354,7 +354,7 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range.map((i) => i.toString()));
+    return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
   }
 
   function handleLoadNextPage() {
@@ -364,7 +364,7 @@
   onMount(() => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
-      labelColors = handleLabelColors();
+      colorScale = handleLabelColors();
     }
   });
 
@@ -383,7 +383,7 @@
     <Canvas2D
       {selectedItem}
       bind:selectedTool
-      {labelColors}
+      {colorScale}
       {masks}
       {bboxes}
       {embeddings}
@@ -394,7 +394,7 @@
       <LabelPanel
         {selectedItem}
         {annotations}
-        {labelColors}
+        {colorScale}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold
@@ -416,7 +416,7 @@
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
-        {labelColors}
+        {colorScale}
         placeholder="Label name"
         on:addCurrentAnn={handleAddClassification}
       />
@@ -427,7 +427,7 @@
         bind:selectedTool
         {pointPlusTool}
         {pointMinusTool}
-        {labelColors}
+        {colorScale}
         on:addCurrentAnn={handleAddCurrentAnn}
       />
     {/if}

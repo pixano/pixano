@@ -33,12 +33,12 @@
 
   // Category colors
   let colorMode = "category";
-  let labelColors = handleLabelColors();
+  let colorScale = handleLabelColors();
 
   // Filters
   let maskOpacity = 1.0;
   let bboxOpacity = 1.0;
-  let confidenceThreshold = 0.5;
+  let confidenceThreshold = 0.0;
 
   // Tools
   const panTool = tools.createPanTool();
@@ -87,7 +87,7 @@
     }
   }
 
-  function handleLabelColors(): Function {
+  function handleLabelColors() {
     let range: Array<number>;
     if (colorMode === "category") {
       range = [
@@ -97,17 +97,17 @@
     } else if (colorMode === "source") {
       range = [0, Object.keys(annotations).length];
     }
-    return utils.colorLabel(range);
+    return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
   }
 
-  async function handleKeyDown(event: KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key == "Escape") dispatch("unselectItem");
   }
 
-  onMount(async () => {
+  onMount(() => {
     if (annotations) {
       console.log("ExplorationWorkspace.onMount");
-      labelColors = handleLabelColors();
+      colorScale = handleLabelColors();
     }
   });
 
@@ -123,12 +123,12 @@
 
 <div class="flex h-full w-full pt-20 bg-slate-100">
   {#if selectedItem}
-    <Canvas2D {selectedItem} {selectedTool} {labelColors} {masks} {bboxes} />
+    <Canvas2D {selectedItem} {selectedTool} {colorScale} {masks} {bboxes} />
     {#if annotations}
       <LabelPanel
         {selectedItem}
         {annotations}
-        {labelColors}
+        {colorScale}
         bind:maskOpacity
         bind:bboxOpacity
         bind:confidenceThreshold

@@ -117,7 +117,7 @@ class Image(PixanoType, BaseModel):
                 return parsed_uri.geturl()
             # No URI prefix
             else:
-                raise Exception("Need Uri prefix for relative uri")
+                raise Exception("Need URI prefix for relative URI")
         # Complete URI
         else:
             return self.uri

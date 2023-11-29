@@ -40,6 +40,7 @@ export const Base: Story = {
       name: "Dataset",
       description: "Dataset description",
       num_elements: 4,
+      estimated_size: "N/A",
       preview: "",
       categories: [],
       page: {
@@ -69,7 +70,7 @@ export const Base: Story = {
       views: {
         view: {
           id: "view",
-          url: "img-02.jpg",
+          uri: "img-02.jpg",
         },
       },
       features: [
@@ -136,5 +137,6 @@ export const Base: Story = {
     embeddings: { view: [] }, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
     currentPage: 1,
     saveFlag: false,
+    activeLearningFlag: false,
   },
 };

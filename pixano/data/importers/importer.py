@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import json
 import random
 import shutil
 from abc import ABC, abstractmethod
@@ -128,7 +127,6 @@ class Importer(ABC):
     def import_rows(
         self,
         input_dirs: dict[str, Path],
-        portable: bool = False,
     ) -> Iterator:
         """Process dataset rows for import
 
@@ -143,14 +141,14 @@ class Importer(ABC):
         self,
         input_dirs: dict[str, Path],
         import_dir: Path,
-        portable: bool = False,
+        copy: bool = True,
     ) -> Dataset:
         """Import dataset to Pixano format
 
         Args:
             input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
-            portable (bool, optional): True to copy or download files to import directory and use relative paths. Defaults to False.
+            copy (bool, optional): True to copy files to the import directory, False to move them. Defaults to True.
 
         Returns:
             Dataset: Imported dataset
@@ -184,7 +182,7 @@ class Importer(ABC):
 
         # Add rows to tables
         for rows in tqdm(
-            self.import_rows(input_dirs, portable),
+            self.import_rows(input_dirs),
             desc="Importing dataset",
         ):
             for table_group, tables in self.info.tables.items():
@@ -238,19 +236,31 @@ class Importer(ABC):
                 "Generated dataset is empty. Please make sure that the paths to your media files are correct, and that they each contain subfolders for your splits."
             )
 
-        # Copy media directories if portable
-        if portable and "media" in ds_tables:
-            for table in tqdm(
-                ds_tables["media"].values(), desc="Copying media directories"
-            ):
-                for field in table.schema:
-                    if field.name in input_dirs:
-                        field_dir = import_dir / "media" / field.name
-                        field_dir.mkdir(parents=True, exist_ok=True)
-                        if input_dirs[field.name] != field_dir:
-                            shutil.copytree(
-                                input_dirs[field.name], field_dir, dirs_exist_ok=True
-                            )
+        # Copy or move media directories
+        if "media" in ds_tables:
+            if copy:
+                for table in tqdm(
+                    ds_tables["media"].values(), desc="Copying media directories"
+                ):
+                    for field in table.schema:
+                        if field.name in input_dirs:
+                            field_dir = import_dir / "media" / field.name
+                            field_dir.mkdir(parents=True, exist_ok=True)
+                            if input_dirs[field.name] != field_dir:
+                                shutil.copytree(
+                                    input_dirs[field.name],
+                                    field_dir,
+                                    dirs_exist_ok=True,
+                                )
+            else:
+                for table in tqdm(
+                    ds_tables["media"].values(), desc="Moving media directories"
+                ):
+                    for field in table.schema:
+                        if field.name in input_dirs:
+                            field_dir = import_dir / "media" / field.name
+                            if input_dirs[field.name] != field_dir:
+                                input_dirs[field.name].rename(field_dir)
 
         # Create spec.json
         self.create_json(import_dir, ds_tables)

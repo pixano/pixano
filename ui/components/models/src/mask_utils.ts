@@ -168,7 +168,10 @@ function getLineBreakpoints(
  *    - key: "x y" string-formatted point
  *    - value: Set of string-formatted points adjacent to key
  */
-export function generatePolygonSegments(rleMask: any, height: any) {
+export function generatePolygonSegments(
+  rleMask: Array<number>,
+  height: number,
+): Map<string, Set<string>> {
   const breakpoints = getLineBreakpoints(rleMask, height);
 
   // If mask is actually an empty mask, return nothing since there are no edges
@@ -263,8 +266,8 @@ export function generatePolygonSegments(rleMask: any, height: any) {
     }
     // We want to iterate through breakpoints in both lines in order of increasing y value
     // Find the first breakpoint
-    let x1 = lastPoints.length && lastPoints[0] <= points[0] ? lastLine : line;
-    let y1 = x1 === lastLine ? lastPoints[0] : points[0];
+    let x1: number = lastPoints.length && lastPoints[0] <= points[0] ? lastLine : line;
+    let y1: number = x1 === lastLine ? lastPoints[0] : points[0];
     // Keep a pointer for each line
     let lastLineIndex = x1 === lastLine ? 1 : 0;
     let newLineIndex = x1 === lastLine ? 0 : 1;
@@ -272,7 +275,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
     let odd = true;
     while (lastLineIndex < lastPoints.length || newLineIndex < points.length) {
       // Get next breakpoint by comparing values at pointer for both lines
-      let x2, y2;
+      let x2: number, y2: number;
       if (lastLineIndex === lastPoints.length || points[newLineIndex] < lastPoints[lastLineIndex]) {
         x2 = line;
         y2 = points[newLineIndex];
@@ -309,7 +312,7 @@ export function generatePolygonSegments(rleMask: any, height: any) {
 
   // Reinitialize the map with keys in sorted order by (x, y)
   const sortedSegments = new Map(
-    [...polySegments].sort((a, b) => {
+    [...polySegments].sort((a: Array<string>, b: Array<string>) => {
       const [x1, y1] = splitPointKey(a[0]);
       const [x2, y2] = splitPointKey(b[0]);
       if (x1 === x2) return y1 - y2;
@@ -327,18 +330,18 @@ export function generatePolygonSegments(rleMask: any, height: any) {
  * Converts Map of segments from generatePolygonSegments into closed SVG paths combined into one string,
  * where nested paths alternate direction so holes are correctly rendered using the nonzero fill rule.
  * @param {Map<string, Set<string>>} polySegments output of generatePolygonSegments
- * @returns {string} SVG data string for display
+ * @returns {Array<string>} SVG data string for display
  */
-export function convertSegmentsToSVG(polySegments: any) {
+export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Array<string> {
   // 1. Generate the closed polygon paths (as lists of points) in order from outermost to innermost
-  const paths = [];
+  const paths: Array<Array<Array<number>>> = [];
   while (polySegments.size) {
     // Pick the outermost vertex from the remaining set (smallest (x, y))
-    let [point, targets] = polySegments.entries().next().value;
+    let [point, targets]: [string, Set<string>] = polySegments.entries().next().value;
     const firstPoint = point;
     const path = [splitPointKey(firstPoint)];
     // Repeatedly pick the next adjacent vertex and add it to the path until the path is closed
-    let nextPoint = null;
+    let nextPoint: string = null;
     while (nextPoint !== firstPoint) {
       nextPoint = targets.values().next().value;
       path.push(splitPointKey(nextPoint));
@@ -361,7 +364,7 @@ export function convertSegmentsToSVG(polySegments: any) {
   }
 
   // 2. Compute desired direction for each path, flip if necessary, then convert to SVG string
-  const renderedPaths = [];
+  const renderedPaths: Array<Path2D> = [];
   const svgStrings = [];
 
   // We use a canvas element to draw the paths and check isPointInPath to determine wanted direction
@@ -372,9 +375,9 @@ export function convertSegmentsToSVG(polySegments: any) {
     // Count how many other paths a point contained inside this path is contained within
     //  if odd number: should be clockwise, even number: should be counter-clockwise
     let shouldBeClockwise = false;
-    const [sampleX, sampleY] = path[0];
+    const [sampleX, sampleY]: Array<number> = path[0];
     for (const otherPath of renderedPaths) {
-      if (ctx!.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
+      if (ctx.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
         shouldBeClockwise = !shouldBeClockwise;
     }
     // All paths are default counter-clockwise based on how the segments were generated,
@@ -391,7 +394,7 @@ export function convertSegmentsToSVG(polySegments: any) {
 
     // Add a new Path2D to the canvas to be able to call isPointInPath for the remaining paths
     const pathObj = new Path2D(svgStr);
-    ctx!.fill(pathObj);
+    ctx.fill(pathObj);
     renderedPaths.push(pathObj);
   }
 

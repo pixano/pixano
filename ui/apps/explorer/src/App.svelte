@@ -23,15 +23,7 @@
   import DatasetExplorer from "./DatasetExplorer.svelte";
   import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
-  import type {
-    BBox,
-    CategoryData,
-    Dataset,
-    ItemData,
-    ItemLabels,
-    ItemObjects,
-    Mask,
-  } from "@pixano/core";
+  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, Mask } from "@pixano/core";
 
   // Dataset navigation
   let datasets: Array<Dataset>;
@@ -58,18 +50,18 @@
     console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
   }
 
-  async function handleSelectDataset(dataset: Dataset) {
+  function handleSelectDataset(dataset: Dataset) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
   }
 
-  function handleUnselectDataset() {
+  async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
     query = "";
-    handleGetDatasets();
+    await handleGetDatasets();
   }
 
   async function handleSelectItem(itemId: string) {
@@ -80,117 +72,143 @@
 
     const start = Date.now();
     const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = itemDetails["itemData"] as ItemData;
-    const ItemObjects = itemDetails["itemObjects"] as ItemObjects;
+    selectedItem = itemDetails["itemData"];
+    const itemObjects = itemDetails["itemObjects"];
 
     console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
 
-    for (const [sourceId, sourceObjects] of Object.entries(ItemObjects)) {
-      // Initialize annotations
-      annotations[sourceId] = {
-        id: sourceId,
-        views: {},
-        numLabels: 0,
-        opened: Object.entries(ItemObjects).length > 1 ? false : true,
-        visible: true,
-      };
+    for (const obj of itemObjects) {
+      const sourceId = obj.source_id;
+      const viewId = obj.view_id;
+      const catId = obj.category_id;
+      const catName = obj.category_name;
 
-      for (const [viewId, viewObjects] of Object.entries(sourceObjects)) {
-        // Initialize annotations
+      // Initialize source annotations
+      if (!annotations[sourceId]) {
+        annotations[sourceId] = {
+          id: sourceId,
+          views: {},
+          numLabels: 0,
+          opened: false,
+          visible: true,
+        };
+      }
+
+      // Initialize view annotations
+      if (!annotations[sourceId].views[viewId]) {
         annotations[sourceId].views[viewId] = {
           id: viewId,
           categories: {},
           numLabels: 0,
-          opened: Object.entries(sourceObjects).length > 1 ? false : true,
+          opened: false,
+          visible: true,
+        };
+      }
+
+      // Initialize category annotations
+      if (!annotations[sourceId].views[viewId].categories[catId]) {
+        annotations[sourceId].views[viewId].categories[catId] = {
+          labels: {},
+          id: catId,
+          name: catName,
+          opened: false,
+          visible: true,
+        };
+      }
+
+      // Masks and bounding boxes
+      if (obj.mask || obj.bbox) {
+        // Add label
+        annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
+          id: obj.id,
+          categoryId: catId,
+          categoryName: catName,
+          sourceId: sourceId,
+          viewId: viewId,
+          confidence: obj.bbox && obj.bbox.confidence != 0.0 ? obj.bbox.confidence : null,
+          attributes: obj.attributes ? obj.attributes : null,
+          bboxOpacity: 1.0,
+          maskOpacity: 1.0,
           visible: true,
         };
 
-        for (const obj of viewObjects) {
-          const catId = obj.category.id;
-          const catName = obj.category.name;
+        // Update counters
+        annotations[sourceId].numLabels += 1;
+        annotations[sourceId].views[viewId].numLabels += 1;
 
-          // Masks and bounding boxes
-          if (obj.mask || obj.bbox) {
-            // Add class if new
-            if (!classes.some((cls) => cls.id === catId)) {
-              classes.push({
-                id: catId,
-                name: catName,
-              });
-            }
-
-            // Add category if new
-            if (!annotations[sourceId].views[viewId].categories[catId]) {
-              annotations[sourceId].views[viewId].categories[catId] = {
-                labels: {},
-                id: catId,
-                name: catName,
-                opened: false,
-                visible: true,
-              };
-            }
-
-            // Add label
-            annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
-              id: obj.id,
-              categoryId: catId,
-              categoryName: catName,
-              sourceId: sourceId,
-              viewId: viewId,
-              confidence: obj.bbox && obj.bbox.predicted ? obj.bbox.confidence : null,
-              attributes: obj.attributes ? obj.attributes : null,
-              bboxOpacity: 1.0,
-              maskOpacity: 1.0,
-              visible: true,
-            };
-
-            // Update counters
-            annotations[sourceId].numLabels += 1;
-            annotations[sourceId].views[viewId].numLabels += 1;
-
-            if (obj.mask) {
-              const rle = obj.mask["counts"];
-              const size = obj.mask["size"];
-              const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-              const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
-
-              // Add mask
-              masks.push({
-                id: obj.id,
-                viewId: viewId,
-                svg: masksSVG,
-                rle: obj.mask,
-                catId: catId,
-                visible: true,
-                opacity: 1.0,
-              });
-            }
-
-            if (obj.bbox) {
-              // Add bbox
-              bboxes.push({
-                id: obj.id,
-                viewId: viewId,
-                bbox: [
-                  obj.bbox.x * selectedItem.views[viewId].width,
-                  obj.bbox.y * selectedItem.views[viewId].height,
-                  obj.bbox.width * selectedItem.views[viewId].width,
-                  obj.bbox.height * selectedItem.views[viewId].height,
-                ], // denormalized
-                tooltip: catName + (obj.bbox.predicted ? " " + obj.bbox.confidence.toFixed(2) : ""),
-                catId: catId,
-                visible: true,
-                opacity: 1.0,
-              });
-            }
-          } else {
-            console.log(
-              "App.handleSelectItem - Warning: no mask nor bounding box for item",
-              obj.id,
-            );
-            continue;
-          }
+        // Add class if new
+        if (!classes.some((cls) => cls.id === catId)) {
+          classes.push({
+            id: catId,
+            name: catName,
+          });
         }
+
+        // Add category if new
+        if (!annotations[sourceId].views[viewId].categories[catId]) {
+          annotations[sourceId].views[viewId].categories[catId] = {
+            labels: {},
+            id: catId,
+            name: catName,
+            opened: false,
+            visible: true,
+          };
+        }
+
+        // Add mask
+        if (obj.mask) {
+          const rle = obj.mask["counts"];
+          const size = obj.mask["size"];
+          const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+          const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+          masks.push({
+            id: obj.id,
+            viewId: viewId,
+            svg: masksSVG,
+            rle: obj.mask,
+            catId: catId,
+            visible: true,
+            opacity: 1.0,
+          });
+        }
+
+        // Add bbox
+        if (obj.bbox) {
+          const x = obj.bbox.coords[0] * selectedItem.views[viewId].width;
+          const y = obj.bbox.coords[1] * selectedItem.views[viewId].height;
+          const w = obj.bbox.coords[2] * selectedItem.views[viewId].width;
+          const h = obj.bbox.coords[3] * selectedItem.views[viewId].height;
+          const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
+
+          bboxes.push({
+            id: obj.id,
+            viewId: viewId,
+            bbox: [x, y, w, h], // denormalized
+            tooltip: catName + confidence,
+            catId: catId,
+            visible: true,
+            opacity: 1.0,
+          });
+        }
+      } else {
+        console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
+        continue;
+      }
+    }
+
+    // Open source annotations if only one source
+    const sources = Object.keys(annotations);
+    if (sources.length == 1) {
+      annotations[sources[0]].opened = true;
+    }
+
+    // Open view annotations if only one view
+    for (const sourceId of sources) {
+      const views = Object.keys(annotations[sourceId].views);
+      if (views.length == 1) {
+        console.log("open", views[0]);
+        annotations[sourceId].views[views[0]].opened = true;
       }
     }
   }
@@ -206,7 +224,7 @@
 
   onMount(async () => {
     console.log("App.onMount");
-    handleGetDatasets();
+    await handleGetDatasets();
   });
 </script>
 
