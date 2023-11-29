@@ -35,7 +35,7 @@
     {selectedItem}
     {colorScale}
     {masks}
-    {bboxes}
+    bind:bboxes
     {embeddings}
     bind:selectedTool
     bind:currentAnn

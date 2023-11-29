@@ -54,6 +54,6 @@
 
 <div class="flex w-full h-screen bg-primary">
   <Toolbar bind:selectedTool />
-  <ImageCanvas {selectedTool} {selectedItem} {bboxes} />
+  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes />
   <ActionsTabs bind:allObjects />
 </div>

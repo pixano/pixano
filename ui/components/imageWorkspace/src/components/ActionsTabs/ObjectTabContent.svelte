@@ -49,7 +49,6 @@
     {#each allObjects as objectContent}
       <ObjectTabFlatItem bind:objectContent />
     {/each}
-
     <h3 class="uppercase font-extralight mt-8">Model run</h3>
     <ActionsTabsSearchInput />
   {/if}

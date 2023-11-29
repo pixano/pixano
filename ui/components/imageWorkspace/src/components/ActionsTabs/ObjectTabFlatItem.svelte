@@ -31,6 +31,8 @@
       objectContent.boundingBox.editing = !objectContent.boundingBox.editing;
     }
   };
+
+  $: isEditing = objectContent.type === "box" && objectContent.boundingBox.editing;
 </script>
 
 <div
@@ -44,7 +46,9 @@
     <span>{objectContent.name}</span>
   </div>
   <div class="flex items-center">
-    <IconButton on:click={handleEditIconClick}><Pencil class="h-4" /></IconButton>
+    <IconButton selected={isEditing} on:click={handleEditIconClick}
+      ><Pencil class="h-4" /></IconButton
+    >
     <IconButton><Lock class="h-4" /></IconButton>
     <IconButton><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}

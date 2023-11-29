@@ -34,6 +34,7 @@ interface Tool {
   cursor: string;
   onSelect: () => void;
   postProcessor: InteractiveImageSegmenter;
+  isSmart?: boolean;
 }
 
 interface MultiModalTool extends Tool {
