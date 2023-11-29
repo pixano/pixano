@@ -55,7 +55,7 @@ class ItemURLE(BaseModel):
             CompressedRLE: Compressed RLE
         """
 
-        return CompressedRLE.from_urle(self) if self.counts else None
+        return CompressedRLE.from_urle(self.model_dump()) if self.counts else None
 
 
 class ItemBBox(BaseModel):
@@ -106,9 +106,9 @@ class ItemBBox(BaseModel):
         """
 
         return (
-            BBox.from_dict(self)
+            BBox.from_dict(self.model_dump())
             if self.coords != [0.0, 0.0, 0.0, 0.0]
-            else BBox.from_rle(rle).to_dict()
+            else BBox.from_rle(rle)
             if rle
             else None
         )
@@ -192,11 +192,16 @@ class ItemObject(BaseModel):
         pyarrow_object["view_id"] = self.view_id
 
         # BBox and Mask
-        pyarrow_object["mask"] = self.mask.to_pyarrow()
-        pyarrow_object["bbox"] = self.bbox.to_pyarrow(rle=pyarrow_object["mask"])
+        pyarrow_object["mask"] = self.mask.to_pyarrow().to_dict() if self.mask else None
+        pyarrow_object["bbox"] = (
+            self.bbox.to_pyarrow(rle=pyarrow_object["mask"]).to_dict()
+            if self.bbox
+            else None
+        )
 
         # Features
-        for feature in self.features:
-            pyarrow_object[feature.name] = feature.value
+        if self.features:
+            for feature in self.features:
+                pyarrow_object[feature.name] = feature.value
 
         return pyarrow_object
