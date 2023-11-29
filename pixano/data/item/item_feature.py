@@ -53,7 +53,7 @@ class ItemFeature(BaseModel):
 
         # Iterate on fields
         for field in schema:
-            if field.name is not ignored_fields:
+            if field.name not in ignored_fields:
                 # Number fields
                 if is_number(field.type):
                     features.append(
