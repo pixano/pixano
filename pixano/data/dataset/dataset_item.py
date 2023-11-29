@@ -56,7 +56,7 @@ class DatasetItem(BaseModel):
         """
 
         for feature in self.features:
-            if feature["name"] == name:
+            if feature.name == name:
                 return feature.value
 
     @staticmethod
