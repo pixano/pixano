@@ -18,7 +18,7 @@ from typing import Optional
 import duckdb
 import lancedb
 import pyarrow as pa
-import pyarrow.dataset as ds
+import pyarrow.dataset as pa_ds
 from pydantic import BaseModel
 
 from pixano.core import Image
@@ -237,16 +237,16 @@ class Dataset(BaseModel):
                 # Media tables
                 for media_source in ds_tables["media"].keys():
                     pyarrow_item_list[index]["media"][media_source] = (
-                        ds.dataset(pyarrow_items["media"][media_source])
-                        .scanner(filter=ds.field("id") == item_id)
+                        pa_ds.dataset(pyarrow_items["media"][media_source])
+                        .scanner(filter=pa_ds.field("id") == item_id)
                         .to_table()
                     )
                 # Active Learning tables
                 if load_active_learning:
                     for al_source in ds_tables["active_learning"].keys():
                         pyarrow_item_list[index]["active_learning"][al_source] = (
-                            ds.dataset(pyarrow_items["active_learning"][al_source])
-                            .scanner(filter=ds.field("id") == item_id)
+                            pa_ds.dataset(pyarrow_items["active_learning"][al_source])
+                            .scanner(filter=pa_ds.field("id") == item_id)
                             .to_table()
                         )
             return [
@@ -575,6 +575,7 @@ class Dataset(BaseModel):
                     }
 
                     # Create new objects table
+                    ds = self.connect()
                     ds_tables["objects"][source] = ds.create_table(
                         "obj_annotator",
                         schema=Fields(annnotator_fields).to_schema(),
