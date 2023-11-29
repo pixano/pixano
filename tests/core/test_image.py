@@ -31,26 +31,25 @@ class ImageTestCase(unittest.TestCase):
     def setUp(self):
         self.uri = "https://farm8.staticflickr.com/7051/6805092802_551636b55d_z.jpg"
         self.bytes = urlopen(self.uri).read()
+        self.preview_bytes = b"preview bytes"
+
+        self.image = Image(self.uri, self.bytes, self.preview_bytes)
 
     def test_image_bytes(self):
-        image = Image(self.uri, self.bytes)
-        self.assertEqual(image.bytes, self.bytes)
+        self.assertEqual(self.image.bytes, self.bytes)
 
     def test_image_preview_bytes(self):
-        preview_bytes = b"preview bytes"
-        image = Image(self.uri, self.bytes, preview_bytes)
-        self.assertEqual(image.preview_bytes, preview_bytes)
+        self.assertEqual(self.image.preview_bytes, self.preview_bytes)
 
     def test_image_url(self):
-        image = Image(self.uri, self.bytes)
         expected_url = binary_to_url(self.bytes)
-        self.assertEqual(image.url, expected_url)
+
+        self.assertEqual(self.image.url, expected_url)
 
     def test_image_preview_url(self):
-        preview_bytes = b"preview bytes"
-        image = Image(self.uri, self.bytes, preview_bytes)
-        expected_url = binary_to_url(preview_bytes)
-        self.assertEqual(image.preview_url, expected_url)
+        expected_url = binary_to_url(self.preview_bytes)
+
+        self.assertEqual(self.image.preview_url, expected_url)
 
     def test_image_uri_relative_with_prefix(self):
         uri_prefix = "http://example.com/images/"
@@ -71,40 +70,34 @@ class ImageTestCase(unittest.TestCase):
         self.assertEqual(image.uri, expected_uri)
 
     def test_image_size(self):
-        image = Image(self.uri, self.bytes)
         pillow_image = PILImage.open(BytesIO(self.bytes))
         expected_size = pillow_image.size
-        self.assertEqual(image.size, expected_size)
+        self.assertEqual(self.image.size, expected_size)
 
     def test_image_open(self):
-        image = Image(self.uri, self.bytes)
-        with image.open() as f:
+        with self.image.open() as f:
             opened_bytes = f.read()
         self.assertEqual(opened_bytes, self.bytes)
 
     def test_image_as_pillow(self):
-        image = Image(self.uri, self.bytes)
-        pillow_image = image.as_pillow()
+        pillow_image = self.image.as_pillow()
         self.assertIsInstance(pillow_image, PILImage.Image)
 
     def test_image_as_cv2(self):
-        image = Image(self.uri, self.bytes)
-        cv2_image = image.as_cv2()
+        cv2_image = self.image.as_cv2()
         self.assertIsInstance(cv2_image, np.ndarray)
 
     def test_image_display(self):
-        image = Image(self.uri, self.bytes)
-        display_result = image.display()
+        display_result = self.image.display()
         self.assertIsInstance(display_result, IPyImage)
 
     def test_image_to_dict(self):
-        image = Image(self.uri, self.bytes)
         expected_dict = {
             "uri": self.uri,
             "bytes": self.bytes,
             "preview_bytes": None,
         }
-        self.assertEqual(image.to_dict(), expected_dict)
+        self.assertEqual(self.image.to_dict(), expected_dict)
 
 
 class TestParquetImage(unittest.TestCase):
