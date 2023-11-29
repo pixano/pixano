@@ -194,6 +194,9 @@ class Dataset(BaseModel):
             list[DatasetItem]: List of dataset items
         """
 
+        # Update info in case of change
+        self.info = self.load_info()
+
         # Load tables
         ds_tables = self.open_tables()
 
@@ -270,6 +273,9 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: List of dataset items
         """
+
+        # Update info in case of change
+        self.info = self.load_info()
 
         # Load tables
         ds_tables = self.open_tables()
@@ -397,6 +403,9 @@ class Dataset(BaseModel):
             DatasetItem: Dataset item
         """
 
+        # Update info in case of change
+        self.info = self.load_info()
+
         # Load tables
         ds_tables = self.open_tables()
 
@@ -458,6 +467,9 @@ class Dataset(BaseModel):
         Args:
             item (DatasetItem): Item to save
         """
+
+        # Update info in case of change
+        self.info = self.load_info()
 
         # Load dataset
         ds_tables = self.open_tables()
