@@ -240,6 +240,12 @@ class DatasetTestCase(unittest.TestCase):
         # Item should now have 19 objects
         item_2 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_2.objects), 19)
+        for obj in item_2.objects:
+            if obj.id == "added_object":
+                self.assertEqual(
+                    [round(coord) for coord in obj.bbox.coords],
+                    [round(coord) for coord in added_object_1.bbox.coords],
+                )
 
         # 2. Edit existing object
         item_2.objects = [obj for obj in item_2.objects if obj.id != "added_object"]
@@ -256,6 +262,12 @@ class DatasetTestCase(unittest.TestCase):
         # Item should still have 19 objects
         item_3 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_3.objects), 19)
+        for obj in item_3.objects:
+            if obj.id == "added_object":
+                self.assertEqual(
+                    [round(coord) for coord in obj.bbox.coords],
+                    [round(coord) for coord in added_object_2.bbox.coords],
+                )
 
         # 3. Delete existing object
         item_3.objects = [obj for obj in item_3.objects if obj.id != "added_object"]
@@ -279,6 +291,12 @@ class DatasetTestCase(unittest.TestCase):
         # Item should now have 19 objects
         item_5 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_5.objects), 19)
+        for obj in item_5.objects:
+            if obj.id == "added_object":
+                self.assertEqual(
+                    [round(coord) for coord in obj.bbox.coords],
+                    [round(coord) for coord in added_object_3.bbox.coords],
+                )
 
     def test_find(self):
         print(self.dataset.info.id)
