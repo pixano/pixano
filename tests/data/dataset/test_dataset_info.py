@@ -50,3 +50,28 @@ class DatasetInfoTestCase(unittest.TestCase):
         self.assertEqual(self.info.id, info_from_dict.id)
         self.assertEqual(self.info.name, info_from_dict.name)
         self.assertEqual(self.info.description, info_from_dict.description)
+
+    def test_load_directory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dir1 = Path(temp_dir) / "dir1"
+            dir2 = Path(temp_dir) / "dir2"
+            dir3 = Path(temp_dir) / "dir3"
+
+            dir1.mkdir()
+            dir2.mkdir()
+            dir3.mkdir()
+
+            self.info.save(dir1)
+            self.info.save(dir2)
+            self.info.save(dir3)
+
+            saved_infos = DatasetInfo.load_directory(Path(temp_dir))
+
+            self.assertIsInstance(saved_infos, list)
+            self.assertEqual(len(saved_infos), 3)
+
+            for info in saved_infos:
+                self.assertIsInstance(info, DatasetInfo)
+                self.assertEqual(info.id, self.info.id)
+                self.assertEqual(info.name, self.info.name)
+                self.assertEqual(info.description, self.info.description)
