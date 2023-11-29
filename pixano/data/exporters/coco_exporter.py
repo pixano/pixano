@@ -111,35 +111,36 @@ class COCOExporter(Exporter):
                         if item.split in splits:
                             # Export images
                             images: dict[str, Image] = {}
-                            for image_view in item.image:
-                                # Reformat URI for export
-                                uri = (
-                                    image_view.uri.replace(
-                                        f"data/{dataset.path.name}/media/", ""
+                            for view in item.views.values():
+                                if view.type == "image":
+                                    # Reformat URI for export
+                                    uri = (
+                                        view.uri.replace(
+                                            f"data/{dataset.path.name}/media/", ""
+                                        )
+                                        if urlparse(view.uri).scheme == ""
+                                        else view.uri
                                     )
-                                    if urlparse(image_view.uri).scheme == ""
-                                    else image_view.uri
-                                )
-                                # Create image from URI
-                                images[image_view.id] = Image(
-                                    uri=uri,
-                                    uri_prefix=dataset.media_dir.absolute().as_uri(),
-                                )
-                                # Append image info
-                                coco_json["images"].append(
-                                    {
-                                        "license": 1,
-                                        "coco_url": images[image_view.id].uri,
-                                        "file_name": images[image_view.id].file_name,
-                                        "height": images[image_view.id].height,
-                                        "width": images[image_view.id].width,
-                                        "id": item.id,
-                                    }
-                                )
+                                    # Create image from URI
+                                    images[view.id] = Image(
+                                        uri=uri,
+                                        uri_prefix=dataset.media_dir.absolute().as_uri(),
+                                    )
+                                    # Append image info
+                                    coco_json["images"].append(
+                                        {
+                                            "license": 1,
+                                            "coco_url": images[view.id].uri,
+                                            "file_name": images[view.id].file_name,
+                                            "height": images[view.id].height,
+                                            "width": images[view.id].width,
+                                            "id": item.id,
+                                        }
+                                    )
 
                             # Export objects
                             item = dataset.load_item(item.id, load_objects=True)
-                            for obj in item.objects:
+                            for obj in item.objects.values():
                                 # Filter by views and object sources
                                 if (
                                     obj.view_id in images.keys()
@@ -164,8 +165,12 @@ class COCOExporter(Exporter):
                                     )
                                     # Category
                                     category = {
-                                        "id": obj.find_feature("category_id"),
-                                        "name": obj.find_feature("category_name"),
+                                        "id": obj.features["category_id"].value
+                                        if "category_id" in obj.features
+                                        else None,
+                                        "name": obj.features["category_name"].value
+                                        if "category_name" in obj.features
+                                        else None,
                                     }
                                     # Add object
                                     coco_json["annotations"].append(

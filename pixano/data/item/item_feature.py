@@ -36,19 +36,19 @@ class ItemFeature(BaseModel):
     def from_pyarrow(
         table: pa.Table,
         schema: pa.schema,
-    ) -> list["ItemFeature"]:
-        """Create list of ItemFeature from PyArrow Table
+    ) -> dict[str, "ItemFeature"]:
+        """Create dictionary of ItemFeature from PyArrow Table
 
         Args:
             table (pa.Table): PyArrow table
             schema (pa.schema): PyArrow schema
 
         Returns:
-            list[ItemFeature]: List of ItemFeature
+            dict[str, ItemFeature]: Dictionary of ItemFeature
         """
 
         item = table.to_pylist()[0]
-        features = []
+        features = {}
         ignored_fields = ["id", "item_id", "view_id", "source_id", "split"]
 
         # Iterate on fields
@@ -56,21 +56,18 @@ class ItemFeature(BaseModel):
             if field.name not in ignored_fields:
                 # Number fields
                 if is_number(field.type):
-                    features.append(
-                        ItemFeature(
-                            name=field.name,
-                            dtype="number",
-                            value=item[field.name],
-                        )
+                    features[field.name] = ItemFeature(
+                        name=field.name,
+                        dtype="number",
+                        value=item[field.name],
                     )
+
                 # String fields
                 elif is_string(field.type):
-                    features.append(
-                        ItemFeature(
-                            name=field.name,
-                            dtype="text",
-                            value=item[field.name],
-                        )
+                    features[field.name] = ItemFeature(
+                        name=field.name,
+                        dtype="text",
+                        value=item[field.name],
                     )
 
         return features

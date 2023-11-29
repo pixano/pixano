@@ -28,36 +28,18 @@ class DatasetItem(BaseModel):
     Attributes:
         id (str): Item ID
         split (str): Item split
-        features (list[ItemFeature], optional): Item features
-        image (list[ItemView], optional): Item image views
-        video (list[ItemView], optional): Item video views
-        point_cloud (list[ItemView], optional): Item point cloud views
-        objects (list[ItemObject], optional): Item objects
-        embeddings (list[ItemEmbedding], optional): Item embeddings
+        features (dict[str, ItemFeature], optional): Item features
+        views (dict[str, ItemView], optional): Item views
+        objects (dict[str, ItemObject], optional): Item objects
+        embeddings (dict[str, ItemEmbedding], optional): Item embeddings
     """
 
     id: str
     split: str
-    features: Optional[list[ItemFeature]] = None
-    image: Optional[list[ItemView]] = None
-    video: Optional[list[ItemView]] = None
-    point_cloud: Optional[list[ItemView]] = None
-    objects: Optional[list[ItemObject]] = None
-    embeddings: Optional[list[ItemEmbedding]] = None
-
-    def find_feature(self, name: str) -> str | int | float | bool | None:
-        """Find ItemFeature value by name
-
-        Args:
-            name (str): Name of ItemFeature
-
-        Returns:
-            str | int | float | bool | None: ItemFeature value
-        """
-
-        for feature in self.features:
-            if feature.name == name:
-                return feature.value
+    features: Optional[dict[str, ItemFeature]] = None
+    views: Optional[dict[str, ItemView]] = None
+    objects: Optional[dict[str, ItemObject]] = None
+    embeddings: Optional[dict[str, ItemEmbedding]] = None
 
     @staticmethod
     def from_pyarrow(
@@ -99,39 +81,22 @@ class DatasetItem(BaseModel):
 
             # Media tables
             if table_type == "media" and "media" in pyarrow_item:
+                item.views = {}
                 for table in table_group:
-                    # Image table
-                    if table["name"] == "image":
-                        item.image = ItemView.from_pyarrow(
-                            pyarrow_item["media"][table["name"]],
-                            Fields(table["fields"]).to_schema(),
-                            media_dir,
-                        )
-                    # Video table
-                    elif table["name"] == "video":
-                        item.video = ItemView.from_pyarrow(
-                            pyarrow_item["media"][table["name"]],
-                            Fields(table["fields"]).to_schema(),
-                            media_dir,
-                        )
-                    # Point cloud table
-                    elif table["name"] == "point_cloud":
-                        item.point_cloud = ItemView.from_pyarrow(
-                            pyarrow_item["media"][table["name"]],
-                            Fields(table["fields"]).to_schema(),
-                            media_dir,
-                        )
+                    item.views = item.views | ItemView.from_pyarrow(
+                        pyarrow_item["media"][table["name"]],
+                        Fields(table["fields"]).to_schema(),
+                        media_dir,
+                    )
 
             # Objects
             if table_type == "objects" and "objects" in pyarrow_item:
-                item.objects = []
+                item.objects = {}
                 for table in table_group:
-                    item.objects.extend(
-                        ItemObject.from_pyarrow(
-                            pyarrow_item["objects"][table["source"]],
-                            Fields(table["fields"]).to_schema(),
-                            table["source"],
-                        )
+                    item.objects = item.objects | ItemObject.from_pyarrow(
+                        pyarrow_item["objects"][table["source"]],
+                        Fields(table["fields"]).to_schema(),
+                        table["source"],
                     )
 
             # Active Learning
@@ -141,18 +106,16 @@ class DatasetItem(BaseModel):
                         pyarrow_item["active_learning"][table["source"]],
                         Fields(table["fields"]).to_schema(),
                     )
-                    item.features.extend(al_features)
+                    item.features = item.features | al_features
 
             # Segmentation embeddings
             if table_type == "embeddings" and "embeddings" in pyarrow_item:
-                item.embeddings = []
+                item.embeddings = {}
                 for table in table_group:
                     if model_id in table["source"]:
-                        item.embeddings.extend(
-                            ItemEmbedding.from_pyarrow(
-                                pyarrow_item["embeddings"][table["source"]],
-                                Fields(table["fields"]).to_schema(),
-                            )
+                        item.embeddings = item.embeddings | ItemEmbedding.from_pyarrow(
+                            pyarrow_item["embeddings"][table["source"]],
+                            Fields(table["fields"]).to_schema(),
                         )
 
         return item

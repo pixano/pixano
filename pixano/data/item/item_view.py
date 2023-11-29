@@ -27,39 +27,27 @@ class ItemView(BaseModel):
 
     Attributes:
         id (str): View ID
+        type (str): View type ("image", "video", "point_cloud")
         url (str): View URI
         thumbnail (str, optional): View thumbnail as base 64 URL
         frame_number (int, optional): View frame number
         total_frames (int, optional): View total frames
-        features (list[ItemFeature], optional): View features
+        features (dict[str, ItemFeature], optional): View features
     """
 
     id: str
+    type: str
     uri: str
     thumbnail: Optional[str] = None
     frame_number: Optional[int] = None
     total_frames: Optional[int] = None
-    features: Optional[list[ItemFeature]] = None
-
-    def find_feature(self, name: str) -> str | int | float | bool | None:
-        """Find ItemFeature value by name
-
-        Args:
-            name (str): Name of ItemFeature
-
-        Returns:
-            str | int | float | bool | None: ItemFeature value
-        """
-
-        for feature in self.features:
-            if feature.name == name:
-                return feature.value
+    features: Optional[dict[str, ItemFeature]] = None
 
     @staticmethod
     def from_pyarrow(
         table: pa.Table, schema: pa.schema, media_dir: Path
-    ) -> list["ItemView"]:
-        """Create list of ItemView from PyArrow Table
+    ) -> dict[str, "ItemView"]:
+        """Create dictionary of ItemView from PyArrow Table
 
         Args:
             table (dict[str, Any]): PyArrow table
@@ -67,12 +55,12 @@ class ItemView(BaseModel):
             media_dir (Path): Dataset media directory
 
         Returns:
-            list[ItemView]: List of ItemView
+            dict[ItemView]: Dictionary of ItemView
         """
 
         # TODO: Flattened view fields with one row per view?
         item = table.to_pylist()[0]
-        views = []
+        views = {}
 
         # Iterate on fields
         for field in schema:
@@ -86,6 +74,7 @@ class ItemView(BaseModel):
                 im.uri_prefix = media_dir.absolute().as_uri()
                 image_view = ItemView(
                     id=field.name,
+                    type="image",
                     uri=f"data/{media_dir.parent.name}/media/{im.uri}"
                     if urlparse(im.uri).scheme == ""
                     else im.uri,
@@ -106,7 +95,7 @@ class ItemView(BaseModel):
                         value=im.height,
                     )
                 )
-                views.append(image_view)
+                views[field.name] = image_view
             # TODO: Video, Point cloud
 
         return views

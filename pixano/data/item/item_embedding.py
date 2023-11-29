@@ -31,28 +31,27 @@ class ItemEmbedding(BaseModel):
     data: str
 
     @staticmethod
-    def from_pyarrow(table: pa.Table, schema: pa.schema) -> list["ItemEmbedding"]:
-        """Create list of ItemEmbedding from PyArrow Table
+    def from_pyarrow(table: pa.Table, schema: pa.schema) -> dict[str, "ItemEmbedding"]:
+        """Create dictionary of ItemEmbedding from PyArrow Table
 
         Args:
             table (dict[str, Any]): PyArrow table
             schema (pa.schema): PyArrow schema
 
         Returns:
-            list[ItemEmbedding]: List of ItemEmbedding
+            dict[str, ItemEmbedding]: Dictionary of ItemEmbedding
         """
 
         item = table.to_pylist()[0]
-        embeddings = []
+        embeddings = {}
 
         # Iterate on fields
         for field in schema:
             # Image
             if is_binary(field.type):
-                emb = ItemEmbedding(
+                embeddings[field.name] = ItemEmbedding(
                     view_id=field.name,
                     data=base64.b64encode(item[field.name]).decode("ascii"),
                 )
-                embeddings.append(emb)
 
         return embeddings

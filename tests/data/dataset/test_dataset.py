@@ -27,6 +27,7 @@ from pixano.data import (
     DatasetItem,
     DatasetStat,
     ItemObject,
+    ItemView,
 )
 
 
@@ -169,12 +170,12 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(items[0], DatasetItem)
         self.assertEqual(items[0].id, "139")
         self.assertEqual(items[0].split, "val")
-        self.assertEqual(items[0].image[0].id, "image")
+        self.assertIsInstance(items[0].views["image"], ItemView)
 
         self.assertIsInstance(items[1], DatasetItem)
         self.assertEqual(items[1].id, "285")
         self.assertEqual(items[1].split, "val")
-        self.assertEqual(items[1].image[0].id, "image")
+        self.assertIsInstance(items[1].views["image"], ItemView)
 
         items = self.dataset.load_items(limit=1, offset=2)
 
@@ -184,7 +185,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(items[0], DatasetItem)
         self.assertEqual(items[0].id, "632")
         self.assertEqual(items[0].split, "val")
-        self.assertEqual(items[0].image[0].id, "image")
+        self.assertIsInstance(items[0].views["image"], ItemView)
 
     def test_search_items(self):
         items = self.dataset.search_items(limit=1, offset=0, query={"query": "bear"})
@@ -218,8 +219,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "632")
         self.assertEqual(item.split, "val")
-        self.assertEqual(item.image[0].id, "image")
-        self.assertEqual(len(item.objects), 18)
+        self.assertIsInstance(item.views["image"], ItemView)
+        self.assertEqual(len(item.objects.values()), 18)
 
     def test_save_item(self):
         # Original item has 18 objects
@@ -234,21 +235,18 @@ class DatasetTestCase(unittest.TestCase):
             source_id="Ground Truth",
             bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
         )
-        item_1.objects.append(added_object_1)
+        item_1.objects["added_object"] = added_object_1
         self.dataset.save_item(item_1)
 
         # Item should now have 19 objects
         item_2 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_2.objects), 19)
-        for obj in item_2.objects:
-            if obj.id == "added_object":
-                self.assertEqual(
-                    [round(coord) for coord in obj.bbox.coords],
-                    [round(coord) for coord in added_object_1.bbox.coords],
-                )
+        self.assertEqual(
+            [round(coord) for coord in item_2.objects["added_object"].bbox.coords],
+            [round(coord) for coord in added_object_1.bbox.coords],
+        )
 
         # 2. Edit existing object
-        item_2.objects = [obj for obj in item_2.objects if obj.id != "added_object"]
         added_object_2 = ItemObject(
             id="added_object",
             item_id="632",
@@ -256,21 +254,19 @@ class DatasetTestCase(unittest.TestCase):
             source_id="Ground Truth",
             bbox=dict(coords=[0.2, 0.2, 0.4, 0.4], format="xywh"),
         )
-        item_2.objects.append(added_object_2)
+        item_2.objects["added_object"] = added_object_2
         self.dataset.save_item(item_2)
 
         # Item should still have 19 objects
         item_3 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_3.objects), 19)
-        for obj in item_3.objects:
-            if obj.id == "added_object":
-                self.assertEqual(
-                    [round(coord) for coord in obj.bbox.coords],
-                    [round(coord) for coord in added_object_2.bbox.coords],
-                )
+        self.assertEqual(
+            [round(coord) for coord in item_3.objects["added_object"].bbox.coords],
+            [round(coord) for coord in added_object_2.bbox.coords],
+        )
 
         # 3. Delete existing object
-        item_3.objects = [obj for obj in item_3.objects if obj.id != "added_object"]
+        item_3.objects.pop("added_object")
         self.dataset.save_item(item_3)
 
         # Item should now have 18 objects again
@@ -285,18 +281,16 @@ class DatasetTestCase(unittest.TestCase):
             source_id="Pixano Annotator",
             bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
         )
-        item_4.objects.append(added_object_3)
+        item_4.objects["added_object"] = added_object_3
         self.dataset.save_item(item_4)
 
         # Item should now have 19 objects
         item_5 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_5.objects), 19)
-        for obj in item_5.objects:
-            if obj.id == "added_object":
-                self.assertEqual(
-                    [round(coord) for coord in obj.bbox.coords],
-                    [round(coord) for coord in added_object_3.bbox.coords],
-                )
+        self.assertEqual(
+            [round(coord) for coord in item_5.objects["added_object"].bbox.coords],
+            [round(coord) for coord in added_object_3.bbox.coords],
+        )
 
     def test_find(self):
         print(self.dataset.info.id)

@@ -34,7 +34,7 @@ class Dataset(BaseModel):
     Attributes:
         path (Path): Dataset path
         info (DatasetInfo, optional): Dataset info
-        stats (list[DatasetStat], optional): Dataset stat
+        stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
@@ -478,8 +478,7 @@ class Dataset(BaseModel):
         ds_tables = self.open_tables()
 
         # Save item label if it exists
-        item_label = item.find_feature("label")
-        if item_label is not None:
+        if "label" in item.features:
             # If label not in main table, add label field
             if "label" not in ds_tables["main"]["db"].schema.names:
                 main_table_ds = ds_tables["main"]["db"].to_lance()
@@ -503,10 +502,10 @@ class Dataset(BaseModel):
                 .to_lance()
                 .scanner(filter=f"id in ('{item.id}')")
             )
-            item = scanner.to_table().to_pylist()[0]
+            pyarrow_item = scanner.to_table().to_pylist()[0]
             # Update item
-            item["label"] = item_label
-            ds_tables["main"]["db"].update(f"id in ('{item.id}')", item)
+            pyarrow_item["label"] = item.features["label"].value
+            ds_tables["main"]["db"].update(f"id in ('{item.id}')", pyarrow_item)
 
             # Clear change history to prevent dataset from becoming too large
             ds_tables["main"]["db"].to_lance().cleanup_old_versions()
@@ -520,7 +519,7 @@ class Dataset(BaseModel):
             current_obj_tables[obj_source] = media_scanner.to_table().to_pylist()
 
         # Save or update new item objects
-        for obj in item.objects:
+        for obj in item.objects.values():
             source = obj.source_id
 
             # If objects table exists
@@ -609,7 +608,9 @@ class Dataset(BaseModel):
         for obj_source, current_obj_table in current_obj_tables.items():
             for current_obj in current_obj_table:
                 # If object has been deleted
-                if not any(obj.id == current_obj["id"] for obj in item.objects):
+                if not any(
+                    obj_id == current_obj["id"] for obj_id in item.objects.keys()
+                ):
                     # Remove object from table
                     ds_tables["objects"][obj_source].delete(
                         f"id in ('{current_obj['id']}')"

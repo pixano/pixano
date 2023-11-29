@@ -124,7 +124,7 @@ class ItemObject(BaseModel):
         source_id (str): Object source ID
         bbox (ItemBBox, optional): Object bounding box
         mask (ItemURLE, optional): Object mask
-        features (list[ItemFeature], optional): Object features
+        features (dict[str, ItemFeature], optional): Object features
     """
 
     id: str
@@ -133,29 +133,15 @@ class ItemObject(BaseModel):
     source_id: str
     bbox: Optional[ItemBBox] = None
     mask: Optional[ItemURLE] = None
-    features: Optional[list[ItemFeature]] = None
-
-    def find_feature(self, name: str) -> str | int | float | bool | None:
-        """Find ItemFeature value by name
-
-        Args:
-            name (str): Name of ItemFeature
-
-        Returns:
-            str | int | float | bool | None: ItemFeature value
-        """
-
-        for feature in self.features:
-            if feature.name == name:
-                return feature.value
+    features: Optional[dict[str, ItemFeature]] = None
 
     @staticmethod
     def from_pyarrow(
         table: pa.Table,
         schema: pa.schema,
         source_id: str,
-    ) -> list["ItemObject"]:
-        """Create list of ItemObject from PyArrow Table
+    ) -> dict[str, "ItemObject"]:
+        """Create dictionary of ItemObject from PyArrow Table
 
         Args:
             table (dict[str, Any]): PyArrow table
@@ -163,11 +149,11 @@ class ItemObject(BaseModel):
             source_id (str): Objects source ID
 
         Returns:
-            list[ItemView]: List of ItemObject
+            dict[str, ItemObject]: Dictionary of ItemObject
         """
 
         items = table.to_pylist()
-        objects = []
+        objects = {}
 
         # Iterate on objects
         for index, item in enumerate(items):
@@ -187,7 +173,7 @@ class ItemObject(BaseModel):
             # Add features
             object.features = ItemFeature.from_pyarrow(table.take([index]), schema)
             # Append object
-            objects.append(object)
+            objects[item["id"]] = object
 
         return objects
 
@@ -215,7 +201,7 @@ class ItemObject(BaseModel):
 
         # Features
         if self.features:
-            for feature in self.features:
+            for feature in self.features.values():
                 pyarrow_object[feature.name] = feature.value
 
         return pyarrow_object
