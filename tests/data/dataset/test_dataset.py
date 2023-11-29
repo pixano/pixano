@@ -168,13 +168,13 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(items[0], DatasetItem)
         self.assertEqual(items[0].id, "139")
+        self.assertEqual(items[0].split, "val")
         self.assertEqual(items[0].image[0].id, "image")
-        self.assertEqual(items[0].features[0].name, "split")
 
         self.assertIsInstance(items[1], DatasetItem)
         self.assertEqual(items[1].id, "285")
+        self.assertEqual(items[1].split, "val")
         self.assertEqual(items[1].image[0].id, "image")
-        self.assertEqual(items[1].features[0].name, "split")
 
         items = self.dataset.load_items(limit=1, offset=2)
 
@@ -183,8 +183,8 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(items[0], DatasetItem)
         self.assertEqual(items[0].id, "632")
+        self.assertEqual(items[0].split, "val")
         self.assertEqual(items[0].image[0].id, "image")
-        self.assertEqual(items[0].features[0].name, "split")
 
     def test_search_items(self):
         items = self.dataset.search_items(limit=1, offset=0, query={"query": "bear"})
@@ -217,8 +217,8 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "632")
+        self.assertEqual(item.split, "val")
         self.assertEqual(item.image[0].id, "image")
-        self.assertEqual(item.features[0].name, "split")
         self.assertEqual(len(item.objects), 18)
 
     def test_save_item(self):

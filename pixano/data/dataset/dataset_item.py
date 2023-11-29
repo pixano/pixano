@@ -27,6 +27,7 @@ class DatasetItem(BaseModel):
 
     Attributes:
         id (str): Item ID
+        split (str): Item split
         features (list[ItemFeature], optional): Item features
         image (list[ItemView], optional): Item image views
         video (list[ItemView], optional): Item video views
@@ -36,6 +37,7 @@ class DatasetItem(BaseModel):
     """
 
     id: str
+    split: str
     features: Optional[list[ItemFeature]] = None
     image: Optional[list[ItemView]] = None
     video: Optional[list[ItemView]] = None
@@ -62,7 +64,13 @@ class DatasetItem(BaseModel):
             DatasetItem: Formatted item
         """
 
-        item = DatasetItem(id=pyarrow_item["main"]["db"].to_pylist()[0]["id"])
+        item_info = pyarrow_item["main"]["db"].to_pylist()[0]
+
+        # Create item
+        item = DatasetItem(
+            id=item_info["id"],
+            split=item_info["split"],
+        )
 
         for table_type, table_group in info.tables.items():
             # Main table
