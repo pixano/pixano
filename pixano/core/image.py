@@ -87,6 +87,16 @@ class Image(PixanoType, BaseModel):
         return binary_to_url(self.preview_bytes)
 
     @property
+    def file_name(self) -> str:
+        """Return image file name from URI
+
+        Returns:
+            str: Image file name
+        """
+
+        return Path(urlparse(self.uri).path).name
+
+    @property
     def size(self) -> list[int]:
         """Return image size
 

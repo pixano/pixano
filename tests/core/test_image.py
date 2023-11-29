@@ -29,6 +29,7 @@ from pixano.utils import binary_to_url
 
 class ImageTestCase(unittest.TestCase):
     def setUp(self):
+        self.file_name = "6805092802_551636b55d_z.jpg"
         self.uri = "https://farm8.staticflickr.com/7051/6805092802_551636b55d_z.jpg"
         self.bytes = urlopen(self.uri).read()
         self.preview_bytes = b"preview bytes"
@@ -98,6 +99,9 @@ class ImageTestCase(unittest.TestCase):
             "preview_bytes": None,
         }
         self.assertEqual(self.image.to_dict(), expected_dict)
+
+    def test_image_file_name(self):
+        self.assertEqual(self.image.file_name, self.file_name)
 
 
 class TestParquetImage(unittest.TestCase):
