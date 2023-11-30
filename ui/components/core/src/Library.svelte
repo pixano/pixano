@@ -16,20 +16,20 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import type { Dataset } from "./interfaces";
+  import type { DatasetInfo } from "./interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
   import pixanoLogoWhite from "./assets/pixano_white.png";
   import { svg_filter, svg_search } from "./icons";
 
   // Exports
-  export let datasets: Array<Dataset>;
+  export let datasets: Array<DatasetInfo>;
   export let app: string = "";
 
   let filter = "";
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectDataset(dataset: Dataset) {
+  function handleSelectDataset(dataset: DatasetInfo) {
     dispatch("selectDataset", dataset);
   }
 

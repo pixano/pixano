@@ -21,7 +21,7 @@
 
   import { Table } from "@pixano/table";
 
-  import type { Dataset, Stats } from "@pixano/core";
+  import type { DatasetInfo } from "@pixano/core";
   import {
     svg_filter,
     svg_first_page,
@@ -35,12 +35,10 @@
   } from "@pixano/core/src/icons";
 
   // Exports
-  export let selectedDataset: Dataset;
+  export let selectedDataset: DatasetInfo;
   export let selectedTab: string;
   export let currentPage: number;
   export let query: string;
-
-  let datasetStats: Array<Stats>;
 
   // Page navigation
   const itemsPerPage = 100;
@@ -74,8 +72,8 @@
       const start = Date.now();
       let actual_page = selectedDataset.page;
       selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
-      let res = await api.getSearchResult(selectedDataset.id, query, currentPage, itemsPerPage);
-      console.log("DatasetExplorer.loadPage - api.getSearchResult in", Date.now() - start, "ms");
+      let res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
+      console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
       // If no dataset page, return error message
       if (res == null) {
         selectedDataset.page = actual_page;
@@ -127,7 +125,6 @@
 
   onMount(async () => {
     await loadPage();
-    datasetStats = await api.getDatasetStats(selectedDataset.id);
   });
 </script>
 
@@ -207,11 +204,11 @@
       </div>
       {#if selectedTab === "database"}
         <Table
-          data={selectedDataset.page.items}
+          items={selectedDataset.page.items}
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {:else if selectedTab === "dashboard"}
-        <Dashboard {selectedDataset} {datasetStats} />
+        <Dashboard {selectedDataset} />
       {/if}
     </div>
 

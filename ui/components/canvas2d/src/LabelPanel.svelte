@@ -21,9 +21,8 @@
 
   import type {
     CategoryLabels,
-    Dataset,
+    DatasetInfo,
     DatasetItem,
-    ItemData,
     ItemLabels,
     Label,
     SourceLabels,
@@ -31,14 +30,14 @@
   } from "@pixano/core";
 
   // Exports
-  export let selectedItem: ItemData;
+  export let selectedItem: DatasetItem;
   export let annotations: ItemLabels;
   export let colorScale: (id: string) => string;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;
   // Optional dataset navigation
-  export let selectedDataset: Dataset = null;
+  export let selectedDataset: DatasetInfo = null;
   export let currentPage: number = 1;
   export let activeLearningFlag: boolean = false;
 
@@ -49,10 +48,10 @@
 
   function filterItems(items: Array<DatasetItem>): Array<DatasetItem> {
     // Only filter if round column exists and active learning is on
-    if (items[0].find((obj) => obj.name === "round") && activeLearningFlag) {
+    if ("round" in items[0].features && activeLearningFlag) {
       return items.filter((subArray) => {
-        const round = subArray.find((obj) => obj.name === "round").value as number;
-        const label = subArray.find((obj) => obj.name === "label").value as string;
+        const round = subArray.features["round"].value as number;
+        const label = subArray.features["label"].value;
         return round >= 0 && label === null;
       });
     } else return items;
@@ -60,7 +59,7 @@
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
-    dispatch("selectItem", item);
+    dispatch("selectItem", item.id);
   }
 
   function handleDeleteLabel(label: Label) {
@@ -223,7 +222,7 @@
       >
         <span class="font-medium"> Item information : </span>
         <ul class="list-disc ml-6">
-          {#each selectedItem.features as feature}
+          {#each Object.values(selectedItem.features) as feature}
             {#if feature.dtype !== "image"}
               <li class="break-words">
                 {feature.name}: {feature.value}
@@ -521,36 +520,24 @@
               class="flex p-1 flex-col rounded h-min hover:bg-slate-100"
               on:click={() => handleSelectItem(item)}
             >
-              <div
-                class={item.filter((f) => f.dtype === "image").length > 1 ? "grid grid-cols-2" : ""}
-              >
-                {#each item as itemFeature}
-                  {#if itemFeature.dtype === "image"}
-                    <img
-                      src={itemFeature.value.toString()}
-                      alt="#{itemFeature.name}-#{i}"
-                      class="w-24 h-24 p-1 object-cover rounded"
-                    />
-                  {/if}
+              <div class={Object.values(item.views).length > 1 ? "grid grid-cols-2" : ""}>
+                {#each Object.values(item.views) as itemView}
+                  <img
+                    src={itemView.thumbnail}
+                    alt="#{itemView.id}-#{i}"
+                    class="w-24 h-24 p-1 object-cover rounded"
+                  />
                 {/each}
               </div>
               <div class="flex mx-auto">
                 <span
                   class="text-xs justify-center truncate grow
-                  {item.filter((f) => f.dtype === 'image').length > 1 ? 'w-48' : 'w-24'}"
-                  title={item.find((f) => f.name === "id").value.toString()}
+                  {Object.values(item.views).length > 1 ? 'w-48' : 'w-24'}"
+                  title={item.id}
                 >
-                  {item.find((f) => f.name === "id").value.toString().length > 12
-                    ? item
-                        .find((f) => f.name === "id")
-                        .value.toString()
-                        .substring(0, 6) +
-                      "..." +
-                      item
-                        .find((f) => f.name === "id")
-                        .value.toString()
-                        .slice(-6)
-                    : item.find((f) => f.name === "id").value.toString()}
+                  {item.id.length > 12
+                    ? item.id.substring(0, 6) + "..." + item.id.slice(-6)
+                    : item.id}
                 </span>
               </div>
             </button>

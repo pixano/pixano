@@ -30,10 +30,9 @@
 
   import type {
     BBox,
-    CategoryData,
-    Dataset,
+    DatasetCategory,
+    DatasetInfo,
     DatasetItem,
-    ItemData,
     ItemLabels,
     Label,
     Mask,
@@ -42,10 +41,10 @@
   import type { InteractiveImageSegmenter, InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
-  export let selectedDataset: Dataset;
-  export let selectedItem: ItemData;
+  export let selectedDataset: DatasetInfo;
+  export let selectedItem: DatasetItem;
   export let annotations: ItemLabels;
-  export let classes: Array<CategoryData>;
+  export let classes: Array<DatasetCategory>;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let embeddings = {};
@@ -97,9 +96,7 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = selectedItem.features.find((f) => f.name === "label")
-    ? classifTool
-    : pointPlusTool;
+  let selectedTool: tools.Tool = "label" in selectedItem.features ? classifTool : pointPlusTool;
 
   // Segmentation model
   interactiveSegmenterModel.subscribe((segmenter) => {
@@ -131,22 +128,17 @@
   }
 
   function addCurrentFeatures() {
-    let labelExists = false;
-    for (let feat of selectedItem.features) {
-      if (feat["name"] === "label" && !labelExists) {
-        // TODO get label from "editables"(? - to define)
-        feat["value"] = currentAnnCatName;
-        // Update visibility
-        selectedItem = selectedItem;
-        labelExists = true;
-      }
-    }
-    if (!labelExists) {
-      selectedItem.features.push({
+    if ("label" in selectedItem.features) {
+      // TODO get label from "editables"(? - to define)
+      selectedItem.features["label"].value = currentAnnCatName;
+      // Update visibility
+      selectedItem = selectedItem;
+    } else {
+      selectedItem.features["label"] = {
         name: "label",
         dtype: "text",
         value: currentAnnCatName,
-      });
+      };
     }
   }
 
@@ -248,37 +240,24 @@
     annotations = annotations;
   }
 
-  async function handleChangeSelectedItem(item: DatasetItem) {
+  async function handleChangeSelectedItem(itemId: string) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId = item.find((feature) => {
-      return feature.name === "id";
-    }).value as string;
-
-    if (newItemId !== selectedItem.id) {
+    if (itemId !== selectedItem.id) {
       if (!saveFlag) {
-        changeSelectedItem(newItemId, item);
+        changeSelectedItem(itemId);
       } else {
         selectItemModal = true;
         await until(() => selectItemModal == false);
         if (!saveFlag) {
-          changeSelectedItem(newItemId, item);
+          changeSelectedItem(itemId);
         }
       }
     }
   }
 
-  function changeSelectedItem(newItemId: string, item: DatasetItem) {
+  function changeSelectedItem(itemId: string) {
     currentAnnCatName = "";
-    for (const itemFeature of item) {
-      if (itemFeature.dtype === "image") {
-        selectedItem.views[itemFeature.name] = {
-          id: itemFeature.name,
-          uri: itemFeature.value as string,
-        };
-      }
-    }
-    selectedItem = selectedItem;
-    dispatch("selectItem", newItemId);
+    dispatch("selectItem", itemId);
   }
 
   function handleDeleteLabel(label: Label) {

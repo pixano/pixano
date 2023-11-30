@@ -17,11 +17,11 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import type { Dataset } from "./interfaces";
+  import type { DatasetInfo } from "./interfaces";
   import { svg_right_arrow } from "./icons";
 
   // Exports
-  export let dataset: Dataset;
+  export let dataset: DatasetInfo;
 
   const dispatch = createEventDispatcher();
 
@@ -73,9 +73,4 @@
       />
     {/if}
   </div>
-  <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">
-    {#each dataset.preview as preview}
-      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-slate-100" />
-    {/each}
-  </div> -->
 </button>

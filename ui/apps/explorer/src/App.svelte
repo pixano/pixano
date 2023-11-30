@@ -23,20 +23,27 @@
   import DatasetExplorer from "./DatasetExplorer.svelte";
   import ExplorationWorkspace from "./ExplorationWorkspace.svelte";
 
-  import type { BBox, CategoryData, Dataset, ItemData, ItemLabels, Mask } from "@pixano/core";
+  import type {
+    BBox,
+    DatasetCategory,
+    DatasetInfo,
+    DatasetItem,
+    ItemLabels,
+    Mask,
+  } from "@pixano/core";
 
   // Dataset navigation
-  let datasets: Array<Dataset>;
-  let selectedDataset: Dataset;
+  let datasets: Array<DatasetInfo>;
+  let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
   let query = "";
 
-  let selectedItem: ItemData;
+  let selectedItem: DatasetItem;
   let selectedTab: string = "dashboard";
 
   let annotations: ItemLabels;
-  let classes: Array<CategoryData>;
+  let classes: Array<DatasetCategory>;
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
 
@@ -46,13 +53,15 @@
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
     const start = Date.now();
-    datasets = await api.getDatasetList();
-    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
+    datasets = await api.getDatasets();
+    console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
   }
 
-  function handleSelectDataset(dataset: Dataset) {
+  async function handleSelectDataset(dataset: DatasetInfo) {
     console.log("App.handleSelectDataset");
-    selectedDataset = dataset;
+    const start = Date.now();
+    selectedDataset = await api.getDataset(dataset.id);
+    console.log("App.handleSelectDataset - api.getDataset in", Date.now() - start, "ms");
   }
 
   async function handleUnselectDataset() {
@@ -66,22 +75,22 @@
 
   async function handleSelectItem(itemId: string) {
     annotations = {};
-    classes = selectedDataset.categories;
+    classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
     bboxes = [];
 
     const start = Date.now();
-    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = itemDetails["itemData"];
-    const itemObjects = itemDetails["itemObjects"];
+    selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
 
-    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
+    console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    for (const obj of itemObjects) {
+    for (const obj of Object.values(selectedItem.objects)) {
       const sourceId = obj.source_id;
       const viewId = obj.view_id;
-      const catId = obj.category_id;
-      const catName = obj.category_name;
+      const catId =
+        "category_id" in obj.features ? (obj.features["category_id"].value as number) : null;
+      const catName =
+        "category_name" in obj.features ? (obj.features["category_name"].value as string) : null;
 
       // Initialize source annotations
       if (!annotations[sourceId]) {
@@ -173,11 +182,14 @@
         }
 
         // Add bbox
+        const imageWidth = selectedItem.views[viewId].features["width"].value as number;
+        const imageHeight = selectedItem.views[viewId].features["height"].value as number;
+
         if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
-          const x = obj.bbox.coords[0] * selectedItem.views[viewId].width;
-          const y = obj.bbox.coords[1] * selectedItem.views[viewId].height;
-          const w = obj.bbox.coords[2] * selectedItem.views[viewId].width;
-          const h = obj.bbox.coords[3] * selectedItem.views[viewId].height;
+          const x = obj.bbox.coords[0] * imageWidth;
+          const y = obj.bbox.coords[1] * imageHeight;
+          const w = obj.bbox.coords[2] * imageWidth;
+          const h = obj.bbox.coords[3] * imageHeight;
           const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
 
           bboxes.push({
@@ -206,7 +218,6 @@
     for (const sourceId of sources) {
       const views = Object.keys(annotations[sourceId].views);
       if (views.length == 1) {
-        console.log("open", views[0]);
         annotations[sourceId].views[views[0]].opened = true;
       }
     }

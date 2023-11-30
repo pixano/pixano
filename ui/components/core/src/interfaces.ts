@@ -19,49 +19,113 @@ export interface Dict<Type> {
   [key: string]: Type;
 }
 
-export interface ItemDetails {
-  itemData: ItemData;
-  itemObjects: Array<ObjectData>;
+// DATASET
+
+export interface DatasetInfo {
+  id: string;
+  name: string;
+  description: string;
+  estimated_size: string;
+  num_elements: number;
+  preview: string;
+  splits: Array<string>;
+  categories: Array<DatasetCategory>;
+  stats: Array<DatasetStat>;
+  page: DatasetItems;
 }
 
-export interface ItemData {
-  id: string;
-  views: Dict<ViewData>;
-  features: DatasetItem;
+export interface DatasetCategory {
+  id: number;
+  name: string;
 }
 
-export interface ViewData {
+export interface DatasetStat {
+  name: string;
+  type: string;
+  histogram: Array<Dict<number | string | boolean>>;
+  range?: Array<number>;
+}
+
+// DATASET ITEM
+
+export interface DatasetItem {
   id: string;
+  split: string;
+  views: Dict<ItemView>;
+  objects: Dict<ItemObject>;
+  features: Dict<ItemFeature>;
+  embeddings: Dict<ItemEmbedding>;
+}
+
+export interface DatasetItems {
+  items: Array<DatasetItem>;
+  total: number;
+}
+
+// ITEM DATA
+
+export interface ItemView {
+  id: string;
+  type: string;
   uri: string;
-  height?: number;
-  width?: number;
+  thumbnail?: string;
+  frame_number?: number;
+  total_frames?: number;
+  features: Dict<ItemFeature>;
 }
 
-export interface ObjectData {
+// ITEM OBJECT
+
+export interface ItemObject {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  mask: MaskRLE;
-  bbox: BBoxXYWH;
-  category_id: number;
-  category_name: string;
+  mask: ItemURLE;
+  bbox: ItemBBox;
+  features: Dict<ItemFeature>;
 }
 
-export interface CategoryData {
-  id: number;
-  name: string;
+export interface ItemURLE {
+  counts: Array<number>;
+  size: Array<number>;
 }
+
+export interface ItemBBox {
+  coords: Array<number>;
+  format: string;
+  is_normalized: boolean;
+  confidence: number;
+}
+
+// ITEM EMBEDDING
+
+export interface ItemEmbedding {
+  view_id: string;
+  data: string;
+}
+
+// ITEM FEATURE
+
+export interface ItemFeature {
+  name: string;
+  dtype: string;
+  value: number | string | boolean | DatasetStat;
+}
+
+// UI DATA
 
 export interface Mask {
   id: string;
   viewId: string;
   svg: MaskSVG;
-  rle?: MaskRLE;
+  rle?: ItemURLE;
   catId: number;
   visible: boolean;
   opacity: number;
 }
+
+export type MaskSVG = Array<string>;
 
 export interface BBox {
   id: string;
@@ -72,6 +136,8 @@ export interface BBox {
   visible: boolean;
   opacity: number;
 }
+
+// LABELS DATA
 
 export type ItemLabels = Dict<SourceLabels>;
 
@@ -109,48 +175,4 @@ export interface Label {
   bboxOpacity: number;
   maskOpacity: number;
   visible: boolean;
-}
-
-export interface Dataset {
-  id: string;
-  name: string;
-  description: string;
-  num_elements: number;
-  estimated_size: string;
-  preview: string;
-  categories: Array<CategoryData>;
-  page: DatasetItems;
-}
-
-export interface DatasetItems {
-  items: Array<DatasetItem>;
-  total: number;
-}
-
-export type DatasetItem = Array<DatasetItemFeature>;
-
-export interface DatasetItemFeature {
-  name: string;
-  dtype: string;
-  value: number | string | Stats;
-}
-
-export interface MaskRLE {
-  counts: Array<number>;
-  size: Array<number>;
-}
-
-export type MaskSVG = Array<string>;
-
-export interface BBoxXYWH {
-  coords: Array<number>;
-  format: string;
-  confidence: number;
-}
-
-export interface Stats {
-  name: string;
-  type: string;
-  range?: Array<number>;
-  histogram: Array<Dict<number | string | boolean>>;
 }

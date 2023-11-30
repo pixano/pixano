@@ -13,11 +13,16 @@
  * http://www.cecill.info
  */
 
-import type { Stats } from "./interfaces";
+import type { DatasetStat } from "./interfaces";
 
 // Exports
 
-export type CellData = TextCellData | ImageCellData | NumberCellData | HistogramCellData;
+export type CellData =
+  | TextCellData
+  | ImageCellData
+  | NumberCellData
+  | BooleanCellData
+  | HistogramCellData;
 
 interface ImageCellData {
   dtype: "image";
@@ -31,7 +36,11 @@ interface NumberCellData {
   dtype: "number";
   value: number;
 }
+interface BooleanCellData {
+  dtype: "boolean";
+  value: boolean;
+}
 interface HistogramCellData {
   dtype: "histogram";
-  value: Stats;
+  value: DatasetStat;
 }

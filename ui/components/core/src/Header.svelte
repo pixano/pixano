@@ -18,13 +18,13 @@
   // Imports
   import { createEventDispatcher } from "svelte";
   import { svg_next_page, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
-  import type { Dataset, ItemData } from "./interfaces";
+  import type { DatasetInfo, DatasetItem } from "./interfaces";
   import pixanoLogo from "./assets/pixano.png";
 
   // Exports
   export let app: string = "";
-  export let selectedDataset: Dataset = null;
-  export let selectedItem: ItemData;
+  export let selectedDataset: DatasetInfo = null;
+  export let selectedItem: DatasetItem;
   export let saveFlag: boolean;
   export let selectedTab: string = null;
 

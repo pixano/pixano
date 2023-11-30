@@ -33,10 +33,10 @@
     ClassificationTool,
   } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, ItemData, ViewData } from "@pixano/core";
+  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
 
   // Exports
-  export let selectedItem: ItemData;
+  export let selectedItem: DatasetItem;
   export let selectedTool: Tool | null;
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
@@ -162,7 +162,7 @@
     currentId = selectedItem.id;
   }
 
-  function scaleView(view: ViewData) {
+  function scaleView(view: ItemView) {
     const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
     if (viewLayer) {
       // Calculate max dims for every image in the grid
@@ -200,7 +200,7 @@
     }
   }
 
-  function scaleElements(view: ViewData) {
+  function scaleElements(view: ItemView) {
     const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
 
     // Scale input points
@@ -1068,7 +1068,7 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event: CustomEvent, view: ViewData) {
+  function handleWheelOnImage(event: CustomEvent, view: ItemView) {
     event.detail.evt.preventDefault(); // Prevent default scrolling
     let direction = event.detail.evt.deltaY < 0 ? 1 : -1; // Get zoom direction
     // When we zoom on trackpad, e.evt.ctrlKey is true

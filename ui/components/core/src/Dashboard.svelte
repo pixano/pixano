@@ -17,11 +17,10 @@
   // Imports
   import Histogram from "./Histogram.svelte";
 
-  import type { Dataset, Stats } from "./interfaces";
+  import type { DatasetInfo } from "./interfaces";
 
   // Exports
-  export let selectedDataset: Dataset = null;
-  export let datasetStats: Array<Stats> = null;
+  export let selectedDataset: DatasetInfo = null;
 
   let selectedTab: string = "overview";
 
@@ -80,10 +79,10 @@
       {:else if selectedTab === "stats"}
         <!-- Stats -->
         <span class="text-5xl font-bold font-Montserrat"> STATISTICS </span>
-        {#if datasetStats != null && datasetStats.length != 0}
+        {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
           <div class="mt-16 grid grid-cols-3 gap-16">
             <!-- If charts are ready to be displayed, display them -->
-            {#each datasetStats as chart}
+            {#each selectedDataset.stats as chart}
               <Histogram hist={chart} />
             {/each}
           </div>

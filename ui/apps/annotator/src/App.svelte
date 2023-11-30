@@ -34,23 +34,21 @@
 
   import type {
     BBox,
-    CategoryData,
-    Dataset,
-    ItemData,
+    DatasetCategory,
+    DatasetInfo,
+    DatasetItem,
     ItemLabels,
     Mask,
-    Dict,
-    ItemDetails,
   } from "@pixano/core";
 
   // Dataset navigation
-  let datasets: Array<Dataset>;
-  let selectedDataset: Dataset;
+  let datasets: Array<DatasetInfo>;
+  let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
-  let selectedItem: ItemData;
+  let selectedItem: DatasetItem;
   let annotations: ItemLabels;
-  let classes: Array<CategoryData>;
+  let classes: Array<DatasetCategory>;
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
   let embeddings = {};
@@ -78,11 +76,11 @@
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
     const start = Date.now();
-    datasets = await api.getDatasetList();
-    console.log("App.handleGetDatasets - api.getDatasetList in", Date.now() - start, "ms");
+    datasets = await api.getDatasets();
+    console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
   }
 
-  async function handleSelectDataset(dataset: Dataset) {
+  async function handleSelectDataset(dataset: DatasetInfo) {
     console.log("App.handleSelectDataset");
     selectedDataset = dataset;
     const start = Date.now();
@@ -91,17 +89,16 @@
 
     if (selectedDataset.page) {
       // If selected dataset successfully, select first item
-      const firstItemId = selectedDataset.page.items[0].find((feature) => feature.name === "id")
-        .value as string;
+      const firstItem = selectedDataset.page.items[0];
 
       // Toggle active learning filtering if "round" found
-      if (selectedDataset.page.items[0].find((feature) => feature.name === "round")) {
+      if ("round" in firstItem) {
         activeLearningFlag = true;
       } else {
         activeLearningFlag = false;
       }
 
-      await handleSelectItem(firstItemId);
+      await handleSelectItem(firstItem.id);
     } else {
       // Otherwise display error message
       await handleUnselectDataset();
@@ -121,23 +118,23 @@
 
   async function handleSelectItem(itemId: string) {
     annotations = {};
-    classes = selectedDataset.categories;
+    classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
     bboxes = [];
     embeddings = {};
 
     let start = Date.now();
-    const itemDetails = await api.getItemDetails(selectedDataset.id, itemId);
-    selectedItem = itemDetails["itemData"];
-    const itemObjects = itemDetails["itemObjects"];
+    selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
 
-    console.log("App.handleSelectItem - api.getItemDetails in", Date.now() - start, "ms");
+    console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    for (const obj of itemObjects) {
+    for (const obj of Object.values(selectedItem.objects)) {
       const sourceId = obj.source_id;
       const viewId = obj.view_id;
-      const catId = obj.category_id;
-      const catName = obj.category_name;
+      const catId =
+        "category_id" in obj.features ? (obj.features["category_id"].value as number) : null;
+      const catName =
+        "category_name" in obj.features ? (obj.features["category_name"].value as string) : null;
 
       // Initialize source annotations
       if (!annotations[sourceId]) {
@@ -229,11 +226,14 @@
         }
 
         // Add bbox
+        const imageWidth = selectedItem.views[viewId].features["width"].value as number;
+        const imageHeight = selectedItem.views[viewId].features["height"].value as number;
+
         if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
-          const x = obj.bbox.coords[0] * selectedItem.views[viewId].width;
-          const y = obj.bbox.coords[1] * selectedItem.views[viewId].height;
-          const w = obj.bbox.coords[2] * selectedItem.views[viewId].width;
-          const h = obj.bbox.coords[3] * selectedItem.views[viewId].height;
+          const x = obj.bbox.coords[0] * imageWidth;
+          const y = obj.bbox.coords[1] * imageHeight;
+          const w = obj.bbox.coords[2] * imageWidth;
+          const h = obj.bbox.coords[3] * imageHeight;
           const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
 
           bboxes.push({
@@ -262,22 +262,18 @@
     for (const sourceId of sources) {
       const views = Object.keys(annotations[sourceId].views);
       if (views.length == 1) {
-        console.log("open", views[0]);
         annotations[sourceId].views[views[0]].opened = true;
       }
     }
 
     // Embeddings
     start = Date.now();
-    const embeddingsBytes: Dict<string> = await api.getItemEmbeddings(
-      selectedDataset.id,
-      selectedItem.id,
-    );
+    const item = await api.getItemEmbeddings(selectedDataset.id, selectedItem.id);
     console.log("App.handleSelectItem - api.getItemEmbeddings in", Date.now() - start, "ms");
-    if (embeddingsBytes) {
-      for (const [viewId, viewEmbeddingBytes] of Object.entries(embeddingsBytes)) {
+    if (item.embeddings) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
         try {
-          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes));
+          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
           embeddings[viewId] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
@@ -318,10 +314,10 @@
 
     saveFlag = false;
 
-    let itemDetails: ItemDetails;
+    let savedItem: DatasetItem;
 
     // Return features
-    itemDetails.itemData = selectedItem;
+    savedItem.features = selectedItem.features;
 
     // Return annotations
     for (const sourceLabels of Object.values(annotations)) {
@@ -330,7 +326,11 @@
           for (const label of Object.values(catLabels.labels)) {
             const mask = masks.find((m) => m.id === label.id && m.viewId === label.viewId);
             const bbox = bboxes.find((b) => b.id === label.id && b.viewId === label.viewId);
-            itemDetails.itemObjects.push({
+
+            const imageWidth = selectedItem.views[label.viewId].features["width"].value as number;
+            const imageHeight = selectedItem.views[label.viewId].features["height"].value as number;
+
+            savedItem.objects[label.id] = {
               id: label.id,
               item_id: selectedItem.id,
               source_id: label.sourceId,
@@ -338,13 +338,14 @@
               bbox: {
                 coords: bbox
                   ? [
-                      bbox.bbox[0] / selectedItem.views[label.viewId].width,
-                      bbox.bbox[1] / selectedItem.views[label.viewId].height,
-                      bbox.bbox[2] / selectedItem.views[label.viewId].width,
-                      bbox.bbox[3] / selectedItem.views[label.viewId].height,
+                      bbox.bbox[0] / imageWidth,
+                      bbox.bbox[1] / imageHeight,
+                      bbox.bbox[2] / imageWidth,
+                      bbox.bbox[3] / imageHeight,
                     ] // normalized
                   : [0, 0, 0, 0],
                 format: "xywh",
+                is_normalized: true,
                 confidence: label.confidence,
               },
               mask: mask
@@ -353,17 +354,23 @@
                     counts: mask.rle ? mask.rle.counts : [],
                   }
                 : { size: [0, 0], counts: [] },
-              category_id: label.categoryId,
-              category_name: label.categoryName,
-            });
+              features: {
+                category_id: { name: "category_id", dtype: "number", value: label.categoryId },
+                category_name: {
+                  name: "category_name",
+                  dtype: "number",
+                  value: label.categoryName,
+                },
+              },
+            };
           }
         }
       }
     }
 
     let start = Date.now();
-    await api.postItemDetails(itemDetails, selectedDataset.id, selectedItem.id);
-    console.log("App.handleSaveItemDetails - api.postItemDetails in", Date.now() - start, "ms");
+    await api.postDatasetItem(selectedDataset.id, savedItem);
+    console.log("App.handleSaveItemDetails - api.postDatasetItem in", Date.now() - start, "ms");
 
     // Reload item details
     await handleSelectItem(selectedItem.id);
