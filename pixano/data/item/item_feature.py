@@ -16,7 +16,7 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core import is_number, is_string
+from pixano.core import is_boolean, is_number, is_string
 
 
 class ItemFeature(BaseModel):
@@ -67,6 +67,14 @@ class ItemFeature(BaseModel):
                     features[field.name] = ItemFeature(
                         name=field.name,
                         dtype="text",
+                        value=item[field.name],
+                    )
+
+                # Boolean fields
+                elif is_boolean(field.type):
+                    features[field.name] = ItemFeature(
+                        name=field.name,
+                        dtype="boolean",
                         value=item[field.name],
                     )
 

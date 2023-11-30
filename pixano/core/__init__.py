@@ -21,6 +21,7 @@ from pixano.core.pixano_type import PixanoType, convert_field, create_pyarrow_ty
 from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
     is_binary,
+    is_boolean,
     is_image_type,
     is_number,
     is_string,
@@ -46,6 +47,7 @@ __all__ = [
     "Pose",
     "PoseType",
     "is_binary",
+    "is_boolean",
     "is_image_type",
     "is_number",
     "is_string",

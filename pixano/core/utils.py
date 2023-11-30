@@ -42,6 +42,19 @@ def is_string(t: pa.DataType) -> bool:
     return pa.types.is_string(t) or pa.types.is_large_string(t)
 
 
+def is_boolean(t: pa.DataType) -> bool:
+    """Check if DataType is boolean
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is boolean
+    """
+
+    return pa.types.is_boolean(t)
+
+
 def is_binary(t: pa.DataType) -> bool:
     """Check if DataType is binary
 
