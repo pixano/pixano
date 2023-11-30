@@ -17,6 +17,7 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
   import type { BBox, ItemData, Mask } from "@pixano/core";
+  import { newShape } from "../lib/stores/stores";
 
   export let selectedItem: ItemData;
   export let masks: Array<Mask> = [];
@@ -39,5 +40,6 @@
     {embeddings}
     bind:selectedTool
     bind:currentAnn
+    createNewShape={(shape) => newShape.set(shape)}
   />
 </div>

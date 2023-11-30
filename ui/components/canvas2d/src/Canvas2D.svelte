@@ -31,6 +31,7 @@
     DeleteTool,
     PanTool,
     ClassificationTool,
+    Shape,
   } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { Mask, BBox, ItemData, ViewData } from "@pixano/core";
@@ -57,6 +58,8 @@
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
+  // export let newShape: Shape;
+  export let createNewShape: (shape: Shape) => void;
 
   export let embeddings = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
@@ -751,6 +754,14 @@
         } else {
           //predict
           // TODO100 : RECT : SAVE RECTANGLE HERE
+          if (!selectedTool.isSmart) {
+            console.log(rect);
+            createNewShape({
+              attrs: rect.attrs,
+              type: "rectangle",
+              status: "creating",
+            });
+          }
           // !selectedTool.isSmart && (rectangles = [...rectangles, { ...rect.attrs }]); // TODO100: better conditionning here
           selectedTool.isSmart && (await updateCurrentMask(viewId)); // SMART RECTANGLE ONLY
         }

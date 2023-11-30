@@ -15,23 +15,35 @@
    */
 
   import * as Tabs from "@pixano/core/src/lib/components/ui/tabs";
+  import type { tools } from "@pixano/canvas2d";
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
+  import SaveShapeForm from "../SaveShapeForm.svelte";
   import type { ObjectContent } from "../../lib/types/objects";
-
+  import { newShape } from "../../lib/stores/stores";
   export let allObjects: ObjectContent[];
+
+  let shape: tools.Shape | null;
+
+  newShape.subscribe((value) => {
+    shape = value;
+  });
 </script>
 
 <div class="h-full shadow-md w-10 bg-popover flex-[2_0_auto]">
-  <Tabs.Root value="objects">
-    <Tabs.List>
-      <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
-      <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
-    </Tabs.List>
-    <Tabs.Content value="scene">
-      <SceneTabContent />
-    </Tabs.Content>
-    <Tabs.Content value="objects"><ObjectTabContent bind:allObjects /></Tabs.Content>
-  </Tabs.Root>
+  {#if shape}
+    <SaveShapeForm />
+  {:else}
+    <Tabs.Root value="objects">
+      <Tabs.List>
+        <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
+        <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="scene">
+        <SceneTabContent />
+      </Tabs.Content>
+      <Tabs.Content value="objects"><ObjectTabContent bind:allObjects /></Tabs.Content>
+    </Tabs.Root>
+  {/if}
 </div>
