@@ -18,8 +18,6 @@ from math import ceil
 from pathlib import Path
 from urllib.parse import urlparse
 
-import duckdb
-import lancedb
 from tqdm.auto import tqdm
 
 from pixano.core import Image
@@ -28,11 +26,14 @@ from pixano.data.exporters.exporter import Exporter
 
 
 class COCOExporter(Exporter):
-    """Exporter class for COCO instances dataset"""
+    """Exporter class for COCO instances dataset
+
+    Attributes:
+    dataset (Dataset): Dataset to export
+    """
 
     def export_dataset(
         self,
-        input_dir: Path,
         export_dir: Path,
         splits: list[str] = None,
         objects_sources: list[str] = None,
@@ -41,22 +42,18 @@ class COCOExporter(Exporter):
         """Export dataset back to original format
 
         Args:
-            input_dir (Path): Input directory
             export_dir (Path): Export directory
             splits (list[str], optional): Dataset splits to export, all if None. Defaults to None.
             objects_sources (list[str], optional): Objects sources to export, all if None. Defaults to None.
             copy (bool, optional): True to copy files to export directory. Defaults to True.
         """
 
-        # Load dataset
-        dataset = Dataset(input_dir)
-
         # Load tables
-        ds_tables = dataset.open_tables()
+        ds_tables = self.dataset.open_tables()
 
         # If no splits provided, select all splits
         if not splits:
-            splits = dataset.info.splits
+            splits = self.dataset.info.splits
             # If no splits, there is nothing to export
             if not splits:
                 raise Exception("Dataset has no splits to export.")
@@ -73,12 +70,12 @@ class COCOExporter(Exporter):
         ann_dir.mkdir(parents=True, exist_ok=True)
 
         # Iterate on splits
-        with tqdm(desc="Processing dataset", total=dataset.num_rows) as progress:
+        with tqdm(desc="Processing dataset", total=self.dataset.num_rows) as progress:
             for split in splits:
                 # Create COCO json
                 coco_json = {
                     "info": {
-                        "description": dataset.info.name,
+                        "description": self.dataset.info.name,
                         "url": "N/A",
                         "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
                         "year": datetime.date.today().year,
@@ -94,16 +91,18 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": [],
+                    "categories": [
+                        cat.model_dump() for cat in self.dataset.info.categories
+                    ],
                 }
-                category_ids = []
+                category_ids = [cat.id for cat in self.dataset.info.categories]
                 batch_size = 1024
 
-                for i in range(ceil(dataset.num_rows / batch_size)):
+                for i in range(ceil(self.dataset.num_rows / batch_size)):
                     # Load items
                     offset = i * batch_size
-                    limit = min(dataset.num_rows, offset + batch_size)
-                    items = dataset.load_items(limit, offset)
+                    limit = min(self.dataset.num_rows, offset + batch_size)
+                    items = self.dataset.load_items(limit, offset)
 
                     # Iterate on items
                     for item in items:
@@ -116,7 +115,7 @@ class COCOExporter(Exporter):
                                     # Reformat URI for export
                                     uri = (
                                         view.uri.replace(
-                                            f"data/{dataset.path.name}/media/", ""
+                                            f"data/{self.dataset.path.name}/media/", ""
                                         )
                                         if urlparse(view.uri).scheme == ""
                                         else view.uri
@@ -124,7 +123,7 @@ class COCOExporter(Exporter):
                                     # Create image from URI
                                     images[view.id] = Image(
                                         uri=uri,
-                                        uri_prefix=dataset.media_dir.absolute().as_uri(),
+                                        uri_prefix=self.dataset.media_dir.absolute().as_uri(),
                                     )
                                     # Append image info
                                     coco_json["images"].append(
@@ -139,7 +138,7 @@ class COCOExporter(Exporter):
                                     )
 
                             # Export objects
-                            item = dataset.load_item(item.id, load_objects=True)
+                            item = self.dataset.load_item(item.id, load_objects=True)
                             for obj in item.objects.values():
                                 # Filter by views and object sources
                                 if (
@@ -212,7 +211,10 @@ class COCOExporter(Exporter):
 
         # Copy media directory
         if copy:
-            if dataset.media_dir.exists() and dataset.media_dir != export_dir / "media":
+            if (
+                self.dataset.media_dir.exists()
+                and self.dataset.media_dir != export_dir / "media"
+            ):
                 shutil.copytree(
-                    dataset.media_dir, export_dir / "media", dirs_exist_ok=True
+                    self.dataset.media_dir, export_dir / "media", dirs_exist_ok=True
                 )

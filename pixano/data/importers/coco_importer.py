@@ -18,7 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data.dataset.dataset_table import DatasetTable
+from pixano.data.dataset import DatasetCategory, DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -28,12 +28,14 @@ class COCOImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str],
         media_fields: dict[str, str] = {"image": "image"},
     ):
@@ -42,6 +44,7 @@ class COCOImporter(Importer):
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
@@ -95,26 +98,36 @@ class COCOImporter(Importer):
                     )
                 )
 
+        # Check input directories
+        self.input_dirs = input_dirs
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
+        # Get COCO categories
+        categories = []
+        for split in splits:
+            with open(input_dirs["objects"] / f"instances_{split}.json", "r") as f:
+                coco_instances = json.load(f)
+                for category in coco_instances["categories"]:
+                    categories.append(DatasetCategory.model_validate(category))
+
         # Initialize Importer
-        super().__init__(name, description, tables, splits)
+        super().__init__(name, description, tables, splits, categories)
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
 
         Yields:
             Iterator: Processed rows
         """
 
-        # iterate on splits
+        # Iterate on splits
         for split in self.info.splits:
             # Open annotation files
-            with open(input_dirs["objects"] / f"instances_{split}.json", "r") as f:
+            with open(self.input_dirs["objects"] / f"instances_{split}.json", "r") as f:
                 coco_instances = json.load(f)
 
             # Group annotations by image ID
@@ -131,7 +144,7 @@ class COCOImporter(Importer):
                 # Load image
                 file_name_uri = urlparse(im["file_name"])
                 if file_name_uri.scheme == "":
-                    im_path = input_dirs["image"] / split / im["file_name"]
+                    im_path = self.input_dirs["image"] / split / im["file_name"]
                 else:
                     im_path = Path(file_name_uri.path)
 

@@ -19,7 +19,7 @@ import shortuuid
 from PIL import Image as PILImage
 
 from pixano.core import BBox, Image
-from pixano.data.dataset.dataset_table import DatasetTable
+from pixano.data.dataset import DatasetCategory, DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
@@ -29,12 +29,14 @@ class DOTAImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str],
     ):
         """Initialize DOTA Importer
@@ -42,6 +44,7 @@ class DOTAImporter(Importer):
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
         """
 
@@ -81,31 +84,55 @@ class DOTAImporter(Importer):
             ],
         }
 
+        # Check input directories
+        self.input_dirs = input_dirs
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
+        # Get DOTA categories
+        categories = [
+            DatasetCategory(name="plane", id=1),
+            DatasetCategory(name="ship", id=2),
+            DatasetCategory(name="storage tank", id=3),
+            DatasetCategory(name="baseball diamond", id=4),
+            DatasetCategory(name="tennis court", id=5),
+            DatasetCategory(name="basketball court", id=6),
+            DatasetCategory(name="ground track field", id=7),
+            DatasetCategory(name="harbor", id=8),
+            DatasetCategory(name="bridge", id=9),
+            DatasetCategory(name="large vehicle", id=10),
+            DatasetCategory(name="small vehicle", id=11),
+            DatasetCategory(name="helicopter", id=12),
+            DatasetCategory(name="roundabout", id=13),
+            DatasetCategory(name="soccer ball field", id=14),
+            DatasetCategory(name="swimming pool", id=15),
+            DatasetCategory(name="container crane", id=16),
+            DatasetCategory(name="airport", id=17),
+            DatasetCategory(name="helipad", id=18),
+        ]
+
         # Initialize Importer
-        super().__init__(name, description, tables, splits)
+        super().__init__(name, description, tables, splits, categories)
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
 
         Yields:
             Iterator: Processed rows
         """
         for split in self.info.splits:
             # Get images paths
-            image_paths = glob.glob(str(input_dirs["image"] / split / "*.png"))
+            image_paths = glob.glob(str(self.input_dirs["image"] / split / "*.png"))
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
             # Process rows
             for im_path in image_paths:
                 # Load image annotations
                 im_anns_file = (
-                    input_dirs["objects"]
+                    self.input_dirs["objects"]
                     / split
                     / "hbb"
                     / im_path.name.replace("png", "txt")

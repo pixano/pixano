@@ -20,29 +20,28 @@ from pixano.data import COCOExporter, COCOImporter
 
 
 class COCOExporterTestCase(unittest.TestCase):
-    def setUp(self):
-        self.input_dirs = {
-            "image": Path("tests/assets/coco_dataset/image"),
-            "objects": Path("tests/assets/coco_dataset"),
-        }
-        self.importer = COCOImporter(
-            name="COCO",
-            description="COCO dataset",
-            splits=["val"],
-        )
-        self.exporter = COCOExporter()
-
     def test_import_dataset(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import and export directory
             import_dir = Path(temp_dir) / "coco"
             export_dir = Path(temp_dir) / "coco_exported"
 
-            # Import dataset
-            self.importer.import_dataset(self.input_dirs, import_dir)
+            # Create COCO dataset
+            input_dirs = {
+                "image": Path("tests/assets/coco_dataset/image"),
+                "objects": Path("tests/assets/coco_dataset"),
+            }
+            importer = COCOImporter(
+                name="COCO",
+                description="COCO dataset",
+                input_dirs=input_dirs,
+                splits=["val"],
+            )
+            importer.import_dataset(import_dir)
 
             # Export dataset
-            self.exporter.export_dataset(import_dir, export_dir)
+            exporter = COCOExporter(input_dir=import_dir)
+            exporter.export_dataset(export_dir)
 
             # Annotations files
             imported_ann_fp = Path("tests/assets/coco_dataset") / "instances_val.json"
@@ -91,7 +90,7 @@ class COCOExporterTestCase(unittest.TestCase):
                             exported_ann["images"][i]["width"],
                         )
 
-                    # Compare image fields
+                    # Compare annnotation fields
                     self.assertEqual(
                         len(imported_ann["annotations"]),
                         len(exported_ann["annotations"]),
@@ -127,4 +126,23 @@ class COCOExporterTestCase(unittest.TestCase):
                         self.assertEqual(
                             imported_ann["annotations"][i]["category_name"],
                             exported_ann["annotations"][i]["category_name"],
+                        )
+
+                    # Compare category fields
+                    self.assertEqual(
+                        len(imported_ann["categories"]),
+                        len(exported_ann["categories"]),
+                    )
+                    for i in range(len(imported_ann["images"])):
+                        self.assertEqual(
+                            imported_ann["categories"][i]["id"],
+                            exported_ann["categories"][i]["id"],
+                        )
+                        self.assertEqual(
+                            imported_ann["categories"][i]["name"],
+                            exported_ann["categories"][i]["name"],
+                        )
+                        self.assertEqual(
+                            imported_ann["categories"][i]["supercategory"],
+                            exported_ann["categories"][i]["supercategory"],
                         )

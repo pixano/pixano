@@ -46,9 +46,10 @@ class DatasetTestCase(unittest.TestCase):
         importer = COCOImporter(
             name="coco",
             description="COCO dataset",
+            input_dirs=input_dirs,
             splits=["val"],
         )
-        dataset = importer.import_dataset(input_dirs, self.import_dir, copy=True)
+        dataset = importer.import_dataset(self.import_dir, copy=True)
 
         # Set dataset ID
         dataset.info.id = "coco_dataset"

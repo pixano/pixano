@@ -23,13 +23,14 @@ from pixano.data import COCOImporter
 
 class COCOImporterTestCase(unittest.TestCase):
     def setUp(self):
-        self.input_dirs = {
+        input_dirs = {
             "image": Path("tests/assets/coco_dataset/image"),
             "objects": Path("tests/assets/coco_dataset"),
         }
         self.importer = COCOImporter(
             name="COCO",
             description="COCO dataset",
+            input_dirs=input_dirs,
             splits=["val"],
         )
 
@@ -39,11 +40,7 @@ class COCOImporterTestCase(unittest.TestCase):
             import_dir = Path(temp_dir) / "coco"
 
             # Import dataset
-            dataset = self.importer.import_dataset(
-                self.input_dirs,
-                import_dir,
-                copy=True,
-            )
+            dataset = self.importer.import_dataset(import_dir, copy=True)
 
             # Check that db.json exists
             spec_json_path = import_dir / "db.json"
@@ -52,6 +49,7 @@ class COCOImporterTestCase(unittest.TestCase):
             # Check db.json content
             self.assertEqual("COCO", dataset.info.name)
             self.assertEqual(3, dataset.info.num_elements)
+            self.assertEqual(91, len(dataset.info.categories))
 
             # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"

@@ -18,6 +18,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from pixano.core import Image
+from pixano.data.dataset.dataset_category import DatasetCategory
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 
@@ -33,7 +34,7 @@ class DatasetInfo(BaseModel):
         num_elements (int): Number of elements in dataset
         splits (list[str]): Dataset splits
         tables (dict[str, list[DatasetTable]]): Dataset tables
-        categories (list[dict[str, str]], optional): Dataset categories
+        categories (list[DatasetCategory], optional): Dataset categories
         preview (str, optional): Dataset preview
         stats (list[DatasetStat], optional): Dataset stats
     """
@@ -45,7 +46,7 @@ class DatasetInfo(BaseModel):
     num_elements: int
     splits: list[str]
     tables: dict[str, list[DatasetTable]]
-    categories: Optional[list[dict[str, str]]] = None
+    categories: Optional[list[DatasetCategory]] = None
     preview: Optional[str] = None
     stats: Optional[list[DatasetStat]] = None
 

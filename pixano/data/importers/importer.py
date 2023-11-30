@@ -27,7 +27,7 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetInfo, DatasetTable, Fields
+from pixano.data import Dataset, DatasetCategory, DatasetInfo, DatasetTable, Fields
 from pixano.utils import estimate_size
 
 
@@ -36,6 +36,7 @@ class Importer(ABC):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
@@ -44,6 +45,7 @@ class Importer(ABC):
         description: str,
         tables: dict[str, list[DatasetTable]],
         splits: list[str],
+        categories: list[DatasetCategory] = None,
     ):
         """Initialize Importer
 
@@ -52,6 +54,7 @@ class Importer(ABC):
             description (str): Dataset description
             tables (dict[str, list[DatasetTable]]): Dataset fields
             splits (list[str]): Dataset splits
+            categories (list[DatasetCategory], optional): Dataset categories
         """
 
         # Dataset info
@@ -63,6 +66,7 @@ class Importer(ABC):
             num_elements=0,
             splits=splits,
             tables=tables,
+            categories=categories,
         )
 
     def create_info(
@@ -117,14 +121,8 @@ class Importer(ABC):
                         progress.update(1)
 
     @abstractmethod
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
 
         Yields:
             Iterator: Processed rows
@@ -132,27 +130,18 @@ class Importer(ABC):
 
     def import_dataset(
         self,
-        input_dirs: dict[str, Path],
         import_dir: Path,
         copy: bool = True,
     ) -> Dataset:
         """Import dataset to Pixano format
 
         Args:
-            input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
             copy (bool, optional): True to copy files to the import directory, False to move them. Defaults to True.
 
         Returns:
             Dataset: Imported dataset
         """
-
-        # Check input directories
-        for source_path in input_dirs.values():
-            if not source_path.exists():
-                raise FileNotFoundError(f"{source_path} does not exist.")
-            if not any(source_path.iterdir()):
-                raise FileNotFoundError(f"{source_path} is empty.")
 
         # Connect to dataset
         import_dir.mkdir(parents=True, exist_ok=True)
@@ -174,10 +163,7 @@ class Importer(ABC):
         save_batch_size = 1024
 
         # Add rows to tables
-        for rows in tqdm(
-            self.import_rows(input_dirs),
-            desc="Importing dataset",
-        ):
+        for rows in tqdm(self.import_rows(), desc="Importing dataset"):
             for group_name, table_group in self.info.tables.items():
                 for table in table_group:
                     # Store rows in a batch
@@ -236,12 +222,12 @@ class Importer(ABC):
                     ds_tables["media"].values(), desc="Copying media directories"
                 ):
                     for field in table.schema:
-                        if field.name in input_dirs:
+                        if field.name in self.input_dirs:
                             field_dir = import_dir / "media" / field.name
                             field_dir.mkdir(parents=True, exist_ok=True)
-                            if input_dirs[field.name] != field_dir:
+                            if self.input_dirs[field.name] != field_dir:
                                 shutil.copytree(
-                                    input_dirs[field.name],
+                                    self.input_dirs[field.name],
                                     field_dir,
                                     dirs_exist_ok=True,
                                 )
@@ -250,10 +236,10 @@ class Importer(ABC):
                     ds_tables["media"].values(), desc="Moving media directories"
                 ):
                     for field in table.schema:
-                        if field.name in input_dirs:
+                        if field.name in self.input_dirs:
                             field_dir = import_dir / "media" / field.name
-                            if input_dirs[field.name] != field_dir:
-                                input_dirs[field.name].rename(field_dir)
+                            if self.input_dirs[field.name] != field_dir:
+                                self.input_dirs[field.name].rename(field_dir)
 
         # Create DatasetInfo
         self.info.num_elements = len(ds_tables["main"]["db"])

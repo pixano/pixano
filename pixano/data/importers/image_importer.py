@@ -16,7 +16,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from pixano.core import Image
-from pixano.data.dataset.dataset_table import DatasetTable
+from pixano.data.dataset import DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -26,12 +26,14 @@ class ImageImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str] = None,
         media_fields: dict[str, str] = {"image": "image"},
     ):
@@ -40,6 +42,7 @@ class ImageImporter(Importer):
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str], optional): Dataset splits. Defaults to None for datasets with no subfolders for splits.
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
@@ -82,17 +85,19 @@ class ImageImporter(Importer):
         if not splits:
             splits = ["dataset"]
 
+        # Check input directories
+        self.input_dirs = input_dirs
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
         # Initialize Importer
         super().__init__(name, description, tables, splits)
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
 
         Yields:
             Iterator: Processed rows
@@ -103,10 +108,10 @@ class ImageImporter(Importer):
             image_paths = []
             for ftype in ["*.png", "*.jpg", "*.jpeg"]:
                 if split == "dataset":
-                    image_paths.extend(glob.glob(str(input_dirs["image"] / ftype)))
+                    image_paths.extend(glob.glob(str(self.input_dirs["image"] / ftype)))
                 else:
                     image_paths.extend(
-                        glob.glob(str(input_dirs["image"] / split / ftype))
+                        glob.glob(str(self.input_dirs["image"] / split / ftype))
                     )
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 

@@ -13,6 +13,7 @@
 
 from pixano.data.dataset import (
     Dataset,
+    DatasetCategory,
     DatasetInfo,
     DatasetItem,
     DatasetStat,
@@ -26,6 +27,7 @@ from pixano.data.settings import Settings
 
 __all__ = [
     "Dataset",
+    "DatasetCategory",
     "DatasetInfo",
     "DatasetItem",
     "DatasetStat",
