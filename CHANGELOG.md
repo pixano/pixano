@@ -9,10 +9,21 @@ All notable changes to Pixano will be documented in this file.
 - Add Prettier and eslint packages and scripts for formatting and linting frontend code
 - Add GitHub actions to format frontend and backend code
 - Add GitHub action to test backend code
+- Add new classes related to DatasetInfo for new API (DatasetStat, DatasetCategory, DatasetTable)
+- Add new classes related to Dataset for new API (DatasetItem, DatasetCategory, DatasetStat, DatasetTable)
+- Add new classes related to DatasetItem for new API (ItemEmbedding, ItemFeature, ItemObject, ItemView)
+- Add from_rle method to BBox
+- Add file_name, width, and height properties to Image
+- Add option to load a list of DatasetCategory (category id and name pairs) in Importers
+- Export the complete list of DatasetCategory (category id and name pairs) in Exporters
+- Add new unit tests and refactor existing unit tests
 
 ### Changed
 
-- **Breaking:** Send media files as URI instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
+- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
+- Completely **refactor API** with new endpoints, new methods, new data types, and new unit tests
+- Update Dataset and DatasetInfo classes for new API
+- Update Exporters, Importers, and InferenceModels using refactored API
 - Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
 - Update README with a small header description listing main features
 - Update documentation website accent color to match with the new theme of the Pixano apps
@@ -22,6 +33,8 @@ All notable changes to Pixano will be documented in this file.
 
 ### Fixed
 
+- Fix type hints in CompressedRLE and RLE related utils functions
+- Fix pip install commands in notebooks for Google Colab
 - Fix broken link in CHANGELOG.md
 - Fix internal cross-references in the API reference of the documentation website
 - Fix eslint and TypeScript errors
