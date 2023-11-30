@@ -48,6 +48,7 @@
     findOrCreateCurrentMask,
     clearCurrentAnn,
     toggleIsEditingBBox,
+    toggleBBoxIsLocked,
   } from "./api/boundingBoxesApi";
 
   // Exports
@@ -306,8 +307,8 @@
               },
             );
           } else {
-            // create a function for that
             toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
+            toggleBBoxIsLocked(stage, bboxes[i]);
             //update visibility & opacity
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);

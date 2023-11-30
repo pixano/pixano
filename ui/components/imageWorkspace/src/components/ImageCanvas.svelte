@@ -24,7 +24,7 @@
   export let embeddings = { view: [] };
   export let colorScale = (value: string) => {
     console.log("temp function, TODO100", value);
-    return "red";
+    return "lightblue";
   };
   export let selectedTool: tools.Tool | null;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;

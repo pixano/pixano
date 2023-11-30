@@ -72,6 +72,7 @@ export interface BBox {
   visible: boolean;
   opacity: number;
   editing?: boolean;
+  locked?: boolean;
 }
 
 export type ItemLabels = Dict<SourceLabels>;

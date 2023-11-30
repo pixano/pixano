@@ -32,7 +32,14 @@
     }
   };
 
+  const handleLockIconClick = () => {
+    if (objectContent.type === "box") {
+      objectContent.boundingBox.locked = !objectContent.boundingBox.locked;
+    }
+  };
+
   $: isEditing = objectContent.type === "box" && objectContent.boundingBox.editing;
+  $: isLocked = objectContent.type === "box" && objectContent.boundingBox.locked;
 </script>
 
 <div
@@ -49,7 +56,7 @@
     <IconButton selected={isEditing} on:click={handleEditIconClick}
       ><Pencil class="h-4" /></IconButton
     >
-    <IconButton><Lock class="h-4" /></IconButton>
+    <IconButton selected={isLocked} on:click={handleLockIconClick}><Lock class="h-4" /></IconButton>
     <IconButton><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}
       ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton

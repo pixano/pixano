@@ -4,6 +4,13 @@ import type { Mask, BBox } from "@pixano/core";
 import { BBOX_STROKEWIDTH, MASK_STROKEWIDTH } from "../lib/constants";
 import type { Tool } from "../tools";
 
+const stickLabelsToRectangle = (tooltip: Konva.Label, lockIcon: Konva.Label, rect: Konva.Rect) => {
+  tooltip.x(rect.x());
+  tooltip.y(rect.y());
+  lockIcon.x(rect.x());
+  lockIcon.y(rect.y() + rect.height());
+};
+
 export const toggleIsEditingBBox = (
   value: "on" | "off",
   stage: Konva.Stage,
@@ -12,12 +19,6 @@ export const toggleIsEditingBBox = (
 ) => {
   const rect = stage.findOne(`#rect${currentBox.id}`);
   rect.draggable(value === "on");
-  const tooltip = stage.findOne(`#tooltip${currentBox.id}`);
-  tooltip.opacity(value === "on" ? 0 : 1);
-  if (value === "off") {
-    tooltip.x(rect.x());
-    tooltip.y(rect.y());
-  }
   const transformer: Konva.Transformer = stage.findOne("#transformer");
   transformer.nodes(value === "on" ? [rect] : []);
   return bboxes.map((bbox) => {
@@ -26,6 +27,16 @@ export const toggleIsEditingBBox = (
     }
     return bbox;
   });
+};
+
+export const toggleBBoxIsLocked = (stage: Konva.Stage, currentBox: BBox) => {
+  const rect: Konva.Rect = stage.findOne(`#rect${currentBox.id}`);
+  const lockIcon = stage.findOne(`#lockTooltip${currentBox.id}`);
+  lockIcon.opacity(currentBox.locked ? 1 : 0);
+  const isLocked = currentBox.locked;
+  rect.draggable(!isLocked);
+  rect.listening(!isLocked);
+  return currentBox;
 };
 
 export function addBBox(
@@ -64,6 +75,8 @@ export function addBBox(
     id: `tooltip${bbox.id}`,
     x,
     y,
+    width: 500,
+    height: 50,
     offsetY: 18,
     scale: {
       x: 1 / zoomFactor[viewId],
@@ -82,17 +95,58 @@ export function addBBox(
   // Add text
   tooltip.add(
     new Konva.Text({
-      x: x,
-      y: y,
+      id: `text${bbox.id}`,
+      x: 24,
+      y: 50,
       text: bbox.tooltip,
       fontSize: 18,
       fontFamily: "DM Sans",
-      padding: 0,
     }),
   );
 
+  // Create lock icon hidden by default
+  const lockTooltip = new Konva.Label({
+    id: `lockTooltip${bbox.id}`,
+    x,
+    y: y + rect_height,
+    opacity: 0,
+    offsetY: 24,
+    width: 24,
+    height: 24,
+    scale: {
+      x: 1 / zoomFactor[viewId],
+      y: 1 / zoomFactor[viewId],
+    },
+  });
+
+  lockTooltip.add(
+    new Konva.Tag({
+      fill: color,
+      stroke: color,
+    }),
+  );
+
+  const imageObj = new Image();
+  imageObj.onload = function () {
+    const icon = new Konva.Image({
+      x: 0,
+      y: 0,
+      image: imageObj,
+      width: 24,
+      height: 24,
+      fill: color,
+    });
+
+    // add the shape to the layer
+    lockTooltip.add(icon);
+  };
+
+  // TODO: path to lock icon should be improved
+  imageObj.src = "./assets/lockIcon.svg";
+
   // Add to group
   bboxKonva.add(tooltip);
+  bboxKonva.add(lockTooltip);
   bboxGroup.add(bboxKonva);
 
   bboxRect.on("click", function (e) {
@@ -101,6 +155,14 @@ export function addBBox(
   });
   bboxRect.on("transformend", function () {
     mutateBboxes("off");
+  });
+
+  bboxRect.on("transform", function () {
+    stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
+  });
+
+  bboxRect.on("dragmove", function () {
+    stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
   });
 }
 
