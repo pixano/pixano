@@ -89,7 +89,7 @@ class ItemBBox(BaseModel):
         """
 
         return (
-            ItemBBox.model_validate(bbox.to_dict())
+            ItemBBox.model_validate(bbox.to_xywh().to_dict())
             if bbox.coords != [0.0, 0.0, 0.0, 0.0]
             else None
         )
