@@ -27,7 +27,7 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetInfo, Fields
+from pixano.data import Dataset, DatasetInfo, DatasetTable, Fields
 from pixano.utils import estimate_size
 
 
@@ -42,7 +42,7 @@ class Importer(ABC):
         self,
         name: str,
         description: str,
-        tables: dict[str, list],
+        tables: dict[str, list[DatasetTable]],
         splits: list[str],
     ):
         """Initialize Importer
@@ -50,7 +50,7 @@ class Importer(ABC):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            tables (dict[str, list]): Dataset fields
+            tables (dict[str, list[DatasetTable]]): Dataset fields
             splits (list[str]): Dataset splits
         """
 
@@ -61,26 +61,19 @@ class Importer(ABC):
             description=description,
             estimated_size="N/A",
             num_elements=0,
-            preview=None,
             splits=splits,
             tables=tables,
-            categories=[],
         )
 
-    def create_json(
+    def create_info(
         self,
         import_dir: Path,
-        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
     ):
-        """Create dataset spec.json
+        """Create dataset info file
 
         Args:
             import_dir (Path): Import directory
-            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
         """
-
-        self.info.num_elements = len(ds_tables["main"]["db"])
-        self.info.estimated_size = estimate_size(import_dir)
 
         # Save DatasetInfo
         with tqdm(desc="Creating dataset info file", total=1) as progress:
@@ -170,14 +163,14 @@ class Importer(ABC):
         ds_batches: dict[str, dict[str, list]] = defaultdict(dict)
 
         # Create tables
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                ds_tables[table_group][table["name"]] = ds.create_table(
-                    table["name"],
-                    schema=Fields(table["fields"]).to_schema(),
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
+                ds_tables[group_name][table.name] = ds.create_table(
+                    table.name,
+                    schema=Fields(table.fields).to_schema(),
                     mode="overwrite",
                 )
-                ds_batches[table_group][table["name"]] = []
+                ds_batches[group_name][table.name] = []
         save_batch_size = 1024
 
         # Add rows to tables
@@ -185,39 +178,39 @@ class Importer(ABC):
             self.import_rows(input_dirs),
             desc="Importing dataset",
         ):
-            for table_group, tables in self.info.tables.items():
-                for table in tables:
+            for group_name, table_group in self.info.tables.items():
+                for table in table_group:
                     # Store rows in a batch
-                    ds_batches[table_group][table["name"]].extend(
-                        rows[table_group][table["name"]]
+                    ds_batches[group_name][table.name].extend(
+                        rows[group_name][table.name]
                     )
                     # If batch reaches 1024 rows, store in table
-                    if len(ds_batches[table_group][table["name"]]) >= save_batch_size:
+                    if len(ds_batches[group_name][table.name]) >= save_batch_size:
                         pa_batch = pa.Table.from_pylist(
-                            ds_batches[table_group][table["name"]],
-                            schema=Fields(table["fields"]).to_schema(),
+                            ds_batches[group_name][table.name],
+                            schema=Fields(table.fields).to_schema(),
                         )
                         lance.write_dataset(
                             pa_batch,
-                            uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                            uri=ds_tables[group_name][table.name].to_lance().uri,
                             mode="append",
                         )
-                        ds_batches[table_group][table["name"]] = []
+                        ds_batches[group_name][table.name] = []
 
         # Store final batches
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                if len(ds_batches[table_group][table["name"]]) > 0:
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
+                if len(ds_batches[group_name][table.name]) > 0:
                     pa_batch = pa.Table.from_pylist(
-                        ds_batches[table_group][table["name"]],
-                        schema=Fields(table["fields"]).to_schema(),
+                        ds_batches[group_name][table.name],
+                        schema=Fields(table.fields).to_schema(),
                     )
                     lance.write_dataset(
                         pa_batch,
-                        uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                        uri=ds_tables[group_name][table.name].to_lance().uri,
                         mode="append",
                     )
-                    ds_batches[table_group][table["name"]] = []
+                    ds_batches[group_name][table.name] = []
 
         # Optimize and clear creation history
         for tables in ds_tables.values():
@@ -226,9 +219,9 @@ class Importer(ABC):
                 table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         # Refresh tables
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                ds_tables[table_group][table["name"]] = ds.open_table(table["name"])
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
+                ds_tables[group_name][table.name] = ds.open_table(table.name)
 
         # Raise error if generated dataset is empty
         if len(ds_tables["main"]["db"]) == 0:
@@ -262,10 +255,12 @@ class Importer(ABC):
                             if input_dirs[field.name] != field_dir:
                                 input_dirs[field.name].rename(field_dir)
 
-        # Create spec.json
-        self.create_json(import_dir, ds_tables)
+        # Create DatasetInfo
+        self.info.num_elements = len(ds_tables["main"]["db"])
+        self.info.estimated_size = estimate_size(import_dir)
+        self.create_info(import_dir)
 
-        # Create preview.png
+        # Create thumbnail
         self.create_preview(import_dir, ds_tables)
 
         return Dataset(import_dir)

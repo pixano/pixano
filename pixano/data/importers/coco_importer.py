@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from pixano.core import BBox, CompressedRLE, Image
+from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -45,22 +46,22 @@ class COCOImporter(Importer):
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
 
-        tables = {
+        tables: dict[str, list[DatasetTable]] = {
             "main": [
-                {
-                    "name": "db",
-                    "fields": {
+                DatasetTable(
+                    name="db",
+                    fields={
                         "id": "str",
                         "views": "[str]",
                         "split": "str",
                     },
-                }
+                )
             ],
             "media": [],
             "objects": [
-                {
-                    "name": "objects",
-                    "fields": {
+                DatasetTable(
+                    name="objects",
+                    fields={
                         "id": "str",
                         "item_id": "str",
                         "view_id": "str",
@@ -69,8 +70,8 @@ class COCOImporter(Importer):
                         "category_id": "int",
                         "category_name": "str",
                     },
-                    "source": "Ground Truth",
-                }
+                    source="Ground Truth",
+                )
             ],
         }
 
@@ -79,19 +80,19 @@ class COCOImporter(Importer):
             table_exists = False
             # If table for given field type exists
             for media_table in tables["media"]:
-                if field_type == media_table["name"] and not table_exists:
-                    media_table["fields"][field_name] = field_type
+                if field_type == media_table.name and not table_exists:
+                    media_table.fields[field_name] = field_type
                     table_exists = True
             # Else, create that table
             if not table_exists:
                 tables["media"].append(
-                    {
-                        "name": field_type,
-                        "fields": {
+                    DatasetTable(
+                        name=field_type,
+                        fields={
                             "id": "str",
                             field_name: field_type,
                         },
-                    }
+                    )
                 )
 
         # Initialize Importer

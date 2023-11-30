@@ -19,6 +19,7 @@ import shortuuid
 from PIL import Image as PILImage
 
 from pixano.core import BBox, Image
+from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
@@ -44,30 +45,30 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        tables = {
+        tables: dict[str, list[DatasetTable]] = {
             "main": [
-                {
-                    "name": "db",
-                    "fields": {
+                DatasetTable(
+                    name="db",
+                    fields={
                         "id": "str",
                         "views": "[str]",
                         "split": "str",
                     },
-                }
+                )
             ],
             "media": [
-                {
-                    "name": "image",
-                    "fields": {
+                DatasetTable(
+                    name="image",
+                    fields={
                         "id": "str",
                         "image": "image",
                     },
-                }
+                )
             ],
             "objects": [
-                {
-                    "name": "objects",
-                    "fields": {
+                DatasetTable(
+                    name="objects",
+                    fields={
                         "id": "str",
                         "item_id": "str",
                         "view_id": "str",
@@ -75,8 +76,8 @@ class DOTAImporter(Importer):
                         "category_id": "int",
                         "category_name": "str",
                     },
-                    "source": "Ground Truth",
-                }
+                    source="Ground Truth",
+                )
             ],
         }
 

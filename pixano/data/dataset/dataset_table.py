@@ -11,16 +11,23 @@
 #
 # http://www.cecill.info
 
-from pixano.data.dataset.dataset import Dataset
-from pixano.data.dataset.dataset_info import DatasetInfo
-from pixano.data.dataset.dataset_item import DatasetItem
-from pixano.data.dataset.dataset_stat import DatasetStat
-from pixano.data.dataset.dataset_table import DatasetTable
 
-__all__ = [
-    "Dataset",
-    "DatasetInfo",
-    "DatasetItem",
-    "DatasetStat",
-    "DatasetTable",
-]
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class DatasetTable(BaseModel):
+    """DatasetTable
+
+    Attributes:
+        name (str): Table name
+        fields (dict[str, str]): Table fields
+        source (str, optional): Table source
+        type (str, optional): Table type
+    """
+
+    name: str
+    fields: dict[str, str]
+    source: Optional[str] = None
+    type: Optional[str] = None

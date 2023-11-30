@@ -16,6 +16,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from pixano.core import Image
+from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -43,16 +44,16 @@ class ImageImporter(Importer):
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
         """
 
-        tables = {
+        tables: dict[str, list[DatasetTable]] = {
             "main": [
-                {
-                    "name": "db",
-                    "fields": {
+                DatasetTable(
+                    name="db",
+                    fields={
                         "id": "str",
                         "views": "[str]",
                         "split": "str",
                     },
-                }
+                )
             ],
             "media": [],
         }
@@ -62,19 +63,19 @@ class ImageImporter(Importer):
             table_exists = False
             # If table for given field type exists
             for media_table in tables["media"]:
-                if field_type == media_table["name"] and not table_exists:
-                    media_table["fields"][field_name] = field_type
+                if field_type == media_table.name and not table_exists:
+                    media_table.fields[field_name] = field_type
                     table_exists = True
             # Else, create that table
             if not table_exists:
                 tables["media"].append(
-                    {
-                        "name": field_type,
-                        "fields": {
+                    DatasetTable(
+                        name=field_type,
+                        fields={
                             "id": "str",
                             field_name: field_type,
                         },
-                    }
+                    )
                 )
 
         # If no splits given, define a default single dataset split

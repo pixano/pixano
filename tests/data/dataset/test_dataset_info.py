@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pixano.data import DatasetInfo
+from pixano.data import DatasetInfo, DatasetTable
 
 
 class DatasetInfoTestCase(unittest.TestCase):
@@ -24,6 +24,44 @@ class DatasetInfoTestCase(unittest.TestCase):
             id="datasetid001",
             name="My dataset",
             description="Dataset from a great AI project",
+            estimated_size="N/A",
+            num_elements=0,
+            splits=["train", "val"],
+            tables={
+                "main": [
+                    DatasetTable(
+                        name="db",
+                        fields={
+                            "id": "str",
+                            "views": "[str]",
+                            "split": "str",
+                        },
+                    )
+                ],
+                "media": [
+                    DatasetTable(
+                        name="image",
+                        fields={
+                            "id": "str",
+                            "image": "image",
+                        },
+                    )
+                ],
+                "objects": [
+                    DatasetTable(
+                        name="objects",
+                        fields={
+                            "id": "str",
+                            "item_id": "str",
+                            "view_id": "str",
+                            "bbox": "bbox",
+                            "category_id": "int",
+                            "category_name": "str",
+                        },
+                        source="Ground Truth",
+                    )
+                ],
+            },
         )
 
     def test_save(self):
@@ -32,24 +70,17 @@ class DatasetInfoTestCase(unittest.TestCase):
             saved_info = DatasetInfo.from_json(Path(temp_dir) / "db.json")
 
             self.assertIsInstance(saved_info, DatasetInfo)
-            self.assertEqual(self.info.id, saved_info.id)
-            self.assertEqual(self.info.name, saved_info.name)
-            self.assertEqual(self.info.description, saved_info.description)
+            self.assertEqual(self.info, saved_info)
 
     def test_dict(self):
         info_to_dict = self.info.model_dump()
 
         self.assertIsInstance(info_to_dict, dict)
-        self.assertEqual(self.info.id, info_to_dict["id"])
-        self.assertEqual(self.info.name, info_to_dict["name"])
-        self.assertEqual(self.info.description, info_to_dict["description"])
 
         info_from_dict = DatasetInfo(**info_to_dict)
 
         self.assertIsInstance(info_from_dict, DatasetInfo)
-        self.assertEqual(self.info.id, info_from_dict.id)
-        self.assertEqual(self.info.name, info_from_dict.name)
-        self.assertEqual(self.info.description, info_from_dict.description)
+        self.assertEqual(self.info, info_from_dict)
 
     def test_load_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -72,6 +103,4 @@ class DatasetInfoTestCase(unittest.TestCase):
 
             for info in saved_infos:
                 self.assertIsInstance(info, DatasetInfo)
-                self.assertEqual(info.id, self.info.id)
-                self.assertEqual(info.name, self.info.name)
-                self.assertEqual(info.description, self.info.description)
+                self.assertEqual(info, self.info)

@@ -68,54 +68,54 @@ class DatasetItem(BaseModel):
             split=item_info["split"],
         )
 
-        for table_type, table_group in info.tables.items():
+        for group_name, table_group in info.tables.items():
             # Main table
-            if table_type == "main":
+            if group_name == "main":
                 for table in table_group:
-                    if table["name"] == "db":
+                    if table.name == "db":
                         # Item features
                         item.features = ItemFeature.from_pyarrow(
                             pyarrow_item["main"]["db"],
-                            Fields(table["fields"]).to_schema(),
+                            Fields(table.fields).to_schema(),
                         )
 
             # Media tables
-            if table_type == "media" and "media" in pyarrow_item:
+            if group_name == "media" and "media" in pyarrow_item:
                 item.views = {}
                 for table in table_group:
                     item.views = item.views | ItemView.from_pyarrow(
-                        pyarrow_item["media"][table["name"]],
-                        Fields(table["fields"]).to_schema(),
+                        pyarrow_item["media"][table.name],
+                        Fields(table.fields).to_schema(),
                         media_dir,
                     )
 
             # Objects
-            if table_type == "objects" and "objects" in pyarrow_item:
+            if group_name == "objects" and "objects" in pyarrow_item:
                 item.objects = {}
                 for table in table_group:
                     item.objects = item.objects | ItemObject.from_pyarrow(
-                        pyarrow_item["objects"][table["source"]],
-                        Fields(table["fields"]).to_schema(),
-                        table["source"],
+                        pyarrow_item["objects"][table.source],
+                        Fields(table.fields).to_schema(),
+                        table.source,
                     )
 
             # Active Learning
-            if table_type == "active_learning" and "active_learning" in pyarrow_item:
+            if group_name == "active_learning" and "active_learning" in pyarrow_item:
                 for table in table_group:
                     al_features = ItemFeature.from_pyarrow(
-                        pyarrow_item["active_learning"][table["source"]],
-                        Fields(table["fields"]).to_schema(),
+                        pyarrow_item["active_learning"][table.source],
+                        Fields(table.fields).to_schema(),
                     )
                     item.features = item.features | al_features
 
             # Segmentation embeddings
-            if table_type == "embeddings" and "embeddings" in pyarrow_item:
+            if group_name == "embeddings" and "embeddings" in pyarrow_item:
                 item.embeddings = {}
                 for table in table_group:
-                    if model_id in table["source"]:
+                    if model_id in table.source:
                         item.embeddings = item.embeddings | ItemEmbedding.from_pyarrow(
-                            pyarrow_item["embeddings"][table["source"]],
-                            Fields(table["fields"]).to_schema(),
+                            pyarrow_item["embeddings"][table.source],
+                            Fields(table.fields).to_schema(),
                         )
 
         return item

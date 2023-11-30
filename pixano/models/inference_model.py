@@ -22,7 +22,7 @@ import lancedb
 import pyarrow as pa
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, Fields
+from pixano.data import Dataset, DatasetTable, Fields
 
 
 class InferenceModel(ABC):
@@ -138,11 +138,7 @@ class InferenceModel(ABC):
         ds = dataset.connect()
 
         # Load dataset tables
-        main_table: lancedb.db.LanceTable = ds.open_table("db")
-        media_tables: dict[str, lancedb.db.LanceTable] = {}
-        if "media" in dataset.info.tables:
-            for md_info in dataset.info.tables["media"]:
-                media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+        ds_tables = dataset.open_tables()
 
         # Create URI prefix
         uri_prefix = dataset.media_dir.absolute().as_uri()
@@ -150,6 +146,7 @@ class InferenceModel(ABC):
         # Objects preannotation schema
         if process_type == "obj":
             table_group = "objects"
+            table_type = None
             table_fields = {
                 "id": "str",
                 "item_id": "str",
@@ -162,6 +159,7 @@ class InferenceModel(ABC):
         # Segmentation Embedding precomputing schema
         elif process_type == "segment_emb":
             table_group = "embeddings"
+            table_type = "segment"
             table_fields = {"id": "str"}
             # Add embedding column for each selected view
             for view in views:
@@ -169,49 +167,46 @@ class InferenceModel(ABC):
         # Semantic Search Embedding precomputing schema
         elif process_type == "search_emb":
             table_group = "embeddings"
+            table_type = "search"
             table_fields = {"id": "str"}
             # Add vector column for each selected view
             for view in views:
                 table_fields[view] = "vector(512)"
 
-        # Create new table
-        table: lancedb.db.LanceTable = ds.create_table(
+        # Add new table to DatasetInfo
+        table = DatasetTable(
+            name=output_filename,
+            fields=table_fields,
+            source=self.name,
+            type=table_type,
+        )
+
+        if table_group in dataset.info.tables:
+            dataset.info.tables[table_group].append(table)
+        else:
+            dataset.info.tables[table_group] = [table]
+        dataset.save_info()
+
+        # Create new Lance table
+        ds_table: lancedb.db.LanceTable = ds.create_table(
             output_filename,
             schema=Fields(table_fields).to_schema(),
             mode="overwrite",
         )
-        table_ds = table.to_lance()
         output_batch = []
         save_batch_size = 1024
 
-        # Add new table to DatasetInfo
-        table_info = {
-            "name": output_filename,
-            "source": self.name,
-            "fields": table_fields,
-        }
-        if process_type == "segment_emb":
-            table_info["type"] = "segment"
-        elif process_type == "search_emb":
-            table_info["type"] = "search"
-
-        if table_group in dataset.info.tables:
-            dataset.info.tables[table_group].append(table_info)
-        else:
-            dataset.info.tables[table_group] = [table_info]
-        dataset.save_info()
-
         # Add rows to tables
-        with tqdm(desc="Processing dataset", total=len(main_table)) as progress:
-            for i in range(ceil(len(main_table) / save_batch_size)):
+        with tqdm(desc="Processing dataset", total=dataset.num_rows) as progress:
+            for i in range(ceil(dataset.num_rows / save_batch_size)):
                 # Load rows
                 offset = i * save_batch_size
-                limit = min(len(main_table), offset + save_batch_size)
-                pyarrow_table = main_table.to_lance()
+                limit = min(dataset.num_rows, offset + save_batch_size)
+                pyarrow_table = ds_tables["main"]["db"].to_lance()
                 pyarrow_table = duckdb.query(
                     f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
                 ).to_arrow_table()
-                for media_table in media_tables.values():
+                for media_table in ds_tables["media"].values():
                     pyarrow_media_table = media_table.to_lance().to_table(
                         limit=limit, offset=offset
                     )
@@ -244,11 +239,11 @@ class InferenceModel(ABC):
                 if len(output_batch) >= save_batch_size:
                     pa_batch = pa.Table.from_pylist(
                         output_batch,
-                        schema=Fields(table_info["fields"]).to_schema(),
+                        schema=Fields(table.fields).to_schema(),
                     )
                     lance.write_dataset(
                         pa_batch,
-                        uri=table_ds.uri,
+                        uri=ds_table.to_lance().uri,
                         mode="append",
                     )
                     output_batch = []
@@ -257,18 +252,18 @@ class InferenceModel(ABC):
         if len(output_batch) > 0:
             pa_batch = pa.Table.from_pylist(
                 output_batch,
-                schema=Fields(table_info["fields"]).to_schema(),
+                schema=Fields(table.fields).to_schema(),
             )
             lance.write_dataset(
                 pa_batch,
-                uri=table_ds.uri,
+                uri=ds_table.to_lance().uri,
                 mode="append",
             )
             output_batch = []
 
         # Optimize and clear creation history
-        table_ds.optimize.compact_files()
-        table_ds.cleanup_old_versions(older_than=timedelta(0))
+        ds_table.to_lance().optimize.compact_files()
+        ds_table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         return dataset
 

@@ -11,7 +11,13 @@
 #
 # http://www.cecill.info
 
-from pixano.data.dataset import Dataset, DatasetInfo, DatasetItem, DatasetStat
+from pixano.data.dataset import (
+    Dataset,
+    DatasetInfo,
+    DatasetItem,
+    DatasetStat,
+    DatasetTable,
+)
 from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields
 from pixano.data.importers import COCOImporter, DOTAImporter, ImageImporter, Importer
@@ -23,6 +29,7 @@ __all__ = [
     "DatasetInfo",
     "DatasetItem",
     "DatasetStat",
+    "DatasetTable",
     "ItemEmbedding",
     "ItemFeature",
     "ItemObject",

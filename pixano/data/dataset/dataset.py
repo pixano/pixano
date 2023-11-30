@@ -134,21 +134,21 @@ class Dataset(BaseModel):
 
         ds = self.connect()
 
-        tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
 
         # Open main table
-        tables["main"]["db"] = ds.open_table("db")
+        ds_tables["main"]["db"] = ds.open_table("db")
 
         # Open media tables
         if "media" in self.info.tables:
             for table in self.info.tables["media"]:
-                tables["media"][table["name"]] = ds.open_table(table["name"])
+                ds_tables["media"][table.name] = ds.open_table(table.name)
 
         # Open objects tables
         if "objects" in self.info.tables:
             for table in self.info.tables["objects"]:
                 try:
-                    tables["objects"][table["source"]] = ds.open_table(table["name"])
+                    ds_tables["objects"][table.source] = ds.open_table(table.name)
                 except FileNotFoundError:
                     # Remove missing objects tables from DatasetInfo
                     self.info.tables["objects"].remove(table)
@@ -158,8 +158,8 @@ class Dataset(BaseModel):
         if "active_learning" in self.info.tables:
             for table in self.info.tables["active_learning"]:
                 try:
-                    tables["active_learning"][table["source"]] = ds.open_table(
-                        table["name"]
+                    ds_tables["active_learning"][table.source] = ds.open_table(
+                        table.name
                     )
                 except FileNotFoundError:
                     # Remove missing Active Learning tables from DatasetInfo
@@ -170,13 +170,13 @@ class Dataset(BaseModel):
         if "embeddings" in self.info.tables:
             for table in self.info.tables["embeddings"]:
                 try:
-                    tables["embeddings"][table["source"]] = ds.open_table(table["name"])
+                    ds_tables["embeddings"][table.source] = ds.open_table(table.name)
                 except FileNotFoundError:
                     # Remove missing embeddings tables from DatasetInfo
                     self.info.tables["embeddings"].remove(table)
                     self.save_info()
 
-        return tables
+        return ds_tables
 
     def load_items(
         self,
@@ -289,11 +289,11 @@ class Dataset(BaseModel):
         # Return first embeddings for first table containing CLIP
         # TODO: Add embeddings table select option
         for table in self.info.tables["embeddings"]:
-            if table["type"] == "search" and "CLIP" in table["source"]:
-                sem_search_table = ds_tables["embeddings"][table["source"]]
+            if table.type == "search" and "CLIP" in table.source:
+                sem_search_table = ds_tables["embeddings"][table.source]
                 sem_search_views = [
                     field_name
-                    for field_name, field_type in table["fields"].items()
+                    for field_name, field_type in table.fields.items()
                     if field_type == "vector(512)"
                 ]
                 # Initialize CLIP model
@@ -493,7 +493,7 @@ class Dataset(BaseModel):
                 # Merge with main table
                 main_table_ds.merge(label_table, "id")
                 # Update DatasetInfo
-                self.info.tables["main"][0]["fields"]["label"] = "str"
+                self.info.tables["main"][0].fields["label"] = "str"
                 self.save_info()
 
             # Get item
@@ -512,18 +512,16 @@ class Dataset(BaseModel):
 
         # Get current item objects
         current_obj_tables = {}
-        for obj_source, obj_table in ds_tables["objects"].items():
-            media_scanner = obj_table.to_lance().scanner(
-                filter=f"item_id in ('{item.id}')"
-            )
-            current_obj_tables[obj_source] = media_scanner.to_table().to_pylist()
+        for source, table in ds_tables["objects"].items():
+            media_scanner = table.to_lance().scanner(filter=f"item_id in ('{item.id}')")
+            current_obj_tables[source] = media_scanner.to_table().to_pylist()
 
         # Save or update new item objects
         for obj in item.objects.values():
             source = obj.source_id
 
             # If objects table exists
-            if source in ds_tables["objects"]:
+            if source in ds_tables["objects"].keys():
                 # Remove keys not in schema
                 pyarrow_obj = obj.to_pyarrow()
                 for key in list(pyarrow_obj):

@@ -19,6 +19,7 @@ from pydantic import BaseModel
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_stat import DatasetStat
+from pixano.data.dataset.dataset_table import DatasetTable
 
 
 class DatasetInfo(BaseModel):
@@ -28,23 +29,24 @@ class DatasetInfo(BaseModel):
         id (str): Dataset ID
         name (str): Dataset name
         description (str): Dataset description
-        estimated_size (str, optional): Dataset estimated size
-        num_elements (int, optional): Number of elements in dataset
-        preview (str, optional): Dataset preview
+        estimated_size (str): Dataset estimated size
+        num_elements (int): Number of elements in dataset
         splits (list[str]): Dataset splits
-        tables (dict[str, list], optional): Dataset tables
-        categories (list[dict], optional): Dataset categories
+        tables (dict[str, list[DatasetTable]]): Dataset tables
+        categories (list[dict[str, str]], optional): Dataset categories
+        preview (str, optional): Dataset preview
+        stats (list[DatasetStat], optional): Dataset stats
     """
 
     id: str
     name: str
     description: str
-    estimated_size: Optional[str] = None
-    num_elements: Optional[int] = None
+    estimated_size: str
+    num_elements: int
+    splits: list[str]
+    tables: dict[str, list[DatasetTable]]
+    categories: Optional[list[dict[str, str]]] = None
     preview: Optional[str] = None
-    splits: Optional[list[str]] = None
-    tables: Optional[dict[str, list]] = None
-    categories: Optional[list[dict]] = None
     stats: Optional[list[DatasetStat]] = None
 
     def save(self, save_dir: Path):
