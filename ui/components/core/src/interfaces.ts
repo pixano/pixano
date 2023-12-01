@@ -29,9 +29,17 @@ export interface DatasetInfo {
   num_elements: number;
   preview: string;
   splits: Array<string>;
+  tables: Dict<Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
   stats: Array<DatasetStat>;
   page: DatasetItems;
+}
+
+export interface DatasetTable {
+  name: string;
+  fields: Dict<string>;
+  source?: string;
+  type?: string;
 }
 
 export interface DatasetCategory {

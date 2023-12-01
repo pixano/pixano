@@ -15,7 +15,7 @@
 
 // Imports
 
-import type { DatasetInfo, DatasetItems, DatasetItem } from "./interfaces";
+import type { DatasetInfo, DatasetItems, DatasetItem, Dict } from "./interfaces";
 
 // Exports
 
@@ -76,6 +76,38 @@ export async function getDatasetItems(
     console.log("api.getDatasetItems -", e);
   }
 
+  return datasetItems;
+}
+
+export async function searchDatasetItems(
+  datasetId: string,
+  query: Dict<string>,
+  page: number = 1,
+  size: number = 100,
+): Promise<DatasetItems> {
+  let datasetItems: DatasetItems;
+  try {
+    const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(query),
+      method: "POST",
+    });
+    if (response.ok) {
+      datasetItems = await response.json();
+    } else {
+      console.log(
+        "api.searchDatasetItems -",
+        response.status,
+        response.statusText,
+        await response.text(),
+      );
+    }
+  } catch (e) {
+    console.log("api.searchDatasetItems -", e);
+  }
   return datasetItems;
 }
 
@@ -146,38 +178,6 @@ export async function postDatasetItem(datasetId: string, item: DatasetItem) {
   } catch (e) {
     console.log("api.postItemDetails -", e);
   }
-}
-
-export async function searchDatasetItems(
-  datasetId: string,
-  query: string,
-  page: number = 1,
-  size: number = 100,
-): Promise<DatasetItems> {
-  let datasetItems: DatasetItems;
-  try {
-    const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query: query }),
-      method: "GET",
-    });
-    if (response.ok) {
-      datasetItems = await response.json();
-    } else {
-      console.log(
-        "api.searchDatasetItems -",
-        response.status,
-        response.statusText,
-        await response.text(),
-      );
-    }
-  } catch (e) {
-    console.log("api.searchDatasetItems -", e);
-  }
-  return datasetItems;
 }
 
 export async function getModels(): Promise<Array<string>> {

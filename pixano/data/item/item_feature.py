@@ -78,4 +78,13 @@ class ItemFeature(BaseModel):
                         value=item[field.name],
                     )
 
+        # Additional distance field in case of semantic search
+        for field_name in item.keys():
+            if field_name == "distance":
+                features["search distance"] = ItemFeature(
+                    name="search distance",
+                    dtype="number",
+                    value=round(item[field_name], 2),
+                )
+
         return features

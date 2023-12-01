@@ -17,11 +17,11 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, Dashboard } from "@pixano/core";
+  import { api, Dashboard, WarningModal } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
-  import type { DatasetInfo } from "@pixano/core";
+  import type { DatasetInfo, DatasetItems } from "@pixano/core";
   import {
     svg_filter,
     svg_first_page,
@@ -30,18 +30,34 @@
     svg_list,
     svg_next_page,
     svg_prev_page,
-    svg_search,
-    svg_quit,
   } from "@pixano/core/src/icons";
 
   // Exports
   export let selectedDataset: DatasetInfo;
   export let selectedTab: string;
   export let currentPage: number;
-  export let query: string;
+
+  // Semantic search
+  let search: string = "";
+  let selectedSearchModel: string;
+  const searchModels: Array<string> = [];
+  if ("embeddings" in selectedDataset.tables) {
+    for (const table of selectedDataset.tables["embeddings"]) {
+      if (table.type == "search") {
+        // Initialize selected search model
+        if (!selectedSearchModel) {
+          selectedSearchModel = table.source;
+        }
+        searchModels.push(table.source);
+      }
+    }
+  }
 
   // Page navigation
   const itemsPerPage = 100;
+
+  // Modals
+  let datasetErrorModal = false;
 
   const dispatch = createEventDispatcher();
 
@@ -52,35 +68,26 @@
   }
 
   async function loadPage() {
-    if (query == "") {
-      // no query, standard load
-      selectedDataset.page = null;
-      const start = Date.now();
-      selectedDataset.page = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage,
-      );
-      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
+    let res: DatasetItems;
+    let query = { model: selectedSearchModel, search: search };
 
-      // If no dataset page, return error message
-      if (selectedDataset.page == null) {
-        dispatch("datasetError");
-      }
+    // Load page
+    const start = Date.now();
+    if (search == "") {
+      // Standard page
+      res = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
+      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
     } else {
-      // query available, show query result
-      const start = Date.now();
-      let actual_page = selectedDataset.page;
-      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
-      let res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
+      // Search page
+      res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
       console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
-      // If no dataset page, return error message
-      if (res == null) {
-        selectedDataset.page = actual_page;
-        dispatch("searchError");
-      } else {
-        selectedDataset.page = res;
-      }
+    }
+
+    // Results
+    if (res == null) {
+      datasetErrorModal = true;
+    } else {
+      selectedDataset.page = res;
     }
   }
 
@@ -113,17 +120,13 @@
   }
 
   async function handleSearch() {
-    query = (document.getElementById("sem-search-input") as HTMLInputElement).value;
+    search = (document.getElementById("sem-search-input") as HTMLInputElement).value;
     currentPage = 1;
     await loadPage();
   }
 
-  async function handleClearSearch() {
-    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
-    await handleSearch();
-  }
-
   onMount(async () => {
+    search = "";
     await loadPage();
   });
 </script>
@@ -132,8 +135,8 @@
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-[87.5vh] flex flex-col">
-      <div class="py-4 flex space-x-2 items-center">
-        {#if selectedTab === "database"}
+      {#if selectedTab === "database"}
+        <div class="py-4 flex space-x-2 items-center">
           <button>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -156,58 +159,45 @@
               <path d={svg_grid} fill="currentcolor" />
             </svg>
           </button>
-        {/if}
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
-          >
-            <path d={svg_filter} fill="currentcolor" />
-          </svg>
-        </button>
-        <div class="flex-grow" />
-        <div class="relative flex items-center">
-          <input
-            id="sem-search-input"
-            type="text"
-            placeholder="Search"
-            value={query}
-            class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
-            on:change={handleSearch}
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="absolute left-2 h-4 w-4 pointer-events-none"
-          >
-            <path d={svg_search} />
-          </svg>
-          {#if query !== ""}
-            <button class="absolute right-2" on:click={() => handleClearSearch()}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="48"
-                viewBox="0 -960 960 960"
-                width="48"
-                class="h-4 w-4"
-              >
-                <path d={svg_quit} />
-              </svg>
-            </button>
-          {/if}
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+            >
+              <path d={svg_filter} fill="currentcolor" />
+            </svg>
+          </button>
+          <div class="flex-grow" />
+          <div class="relative flex items-center">
+            {#if searchModels.length > 0}
+              <select class="h-8 px-4 mx-4 border rounded-sm border-slate-300 bg-slate-200">
+                {#each searchModels as model}
+                  <option value={selectedSearchModel}>
+                    {model}
+                  </option>
+                {/each}
+              </select>
+
+              <input
+                id="sem-search-input"
+                type="text"
+                value={search}
+                placeholder="Semantic search using {selectedSearchModel}"
+                class="h-8 px-2 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
+                on:change={handleSearch}
+              />
+            {/if}
+          </div>
         </div>
-      </div>
-      {#if selectedTab === "database"}
         <Table
           items={selectedDataset.page.items}
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {:else if selectedTab === "dashboard"}
+        <div class="py-8 flex space-x-2 items-center" />
         <Dashboard {selectedDataset} />
       {/if}
     </div>
@@ -275,6 +265,13 @@
           </button>
         {/if}
       </div>
+    {/if}
+    {#if datasetErrorModal}
+      <WarningModal
+        message="Error while retrieving dataset items."
+        details="Please look at the application logs for more information, and report this issue if the error persists."
+        on:confirm={() => (datasetErrorModal = false)}
+      />
     {/if}
   {/if}
 </div>

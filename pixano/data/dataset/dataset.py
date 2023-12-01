@@ -286,10 +286,8 @@ class Dataset(BaseModel):
         if "embeddings" not in self.info.tables:
             return None
 
-        # Return first embeddings for first table containing CLIP
-        # TODO: Add embeddings table select option
         for table in self.info.tables["embeddings"]:
-            if table.type == "search" and "CLIP" in table.source:
+            if table.type == "search" and table.source == query["model"]:
                 sem_search_table = ds_tables["embeddings"][table.source]
                 sem_search_views = [
                     field_name
@@ -305,7 +303,7 @@ class Dataset(BaseModel):
                     ) from e
 
                 model = CLIP()
-                model_query = model.semantic_search(query["query"])
+                model_query = model.semantic_search(query["search"])
 
                 # Perform semantic search
                 stop = min(offset + limit, self.num_rows)
