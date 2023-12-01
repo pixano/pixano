@@ -68,23 +68,33 @@ class Image(PixanoType, BaseModel):
 
     @property
     def url(self) -> str:
-        """Return image URL
+        """Return image base 64 URL
 
         Returns:
-            str: Image URL
+            str: Image base 64 URL
         """
 
         return binary_to_url(self.get_bytes())
 
     @property
     def preview_url(self) -> str:
-        """Return image preview URL
+        """Return image preview base 64 URL
 
         Returns:
-            str: Image preview URL
+            str: Image preview base 64 URL
         """
 
         return binary_to_url(self.preview_bytes)
+
+    @property
+    def file_name(self) -> str:
+        """Return image file name from URI
+
+        Returns:
+            str: Image file name
+        """
+
+        return Path(urlparse(self.uri).path).name
 
     @property
     def size(self) -> list[int]:
@@ -95,6 +105,26 @@ class Image(PixanoType, BaseModel):
         """
 
         return self.as_pillow().size
+
+    @property
+    def width(self) -> int:
+        """Return image width
+
+        Returns:
+            int: Image width
+        """
+
+        return self.as_pillow().width
+
+    @property
+    def height(self) -> int:
+        """Return image height
+
+        Returns:
+            int: Image height
+        """
+
+        return self.as_pillow().height
 
     def get_uri(self) -> str:
         """Return complete image URI from URI and URI prefix

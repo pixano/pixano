@@ -104,13 +104,13 @@ def load_items(dataset: Dataset, params: AbstractParams = None) -> AbstractPage:
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
-            media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+            media_tables[md_info.name] = ds.open_table(md_info.name)
 
     # Open Active Learning tables
     al_tables: list[lancedb.db.LanceTable] = []
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
-            al_tables.append(ds.open_table(al_info["name"]))
+            al_tables.append(ds.open_table(al_info.name))
 
     # Get page parameters
     params = resolve_params(params)
@@ -208,14 +208,14 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
-            media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+            media_tables[md_info.name] = ds.open_table(md_info.name)
 
     # Open objects tables
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
             try:
-                obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
+                obj_tables[obj_info.source] = ds.open_table(obj_info.name)
             except FileNotFoundError:
                 # Remove missing objects tables from DatasetInfo
                 dataset.info.tables["objects"].remove(obj_info)
@@ -226,7 +226,7 @@ def load_item_details(dataset: Dataset, item_id: str) -> dict:
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
             try:
-                al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+                al_tables[al_info.source] = ds.open_table(al_info.name)
             except FileNotFoundError:
                 # Remove missing Active Learning tables from DatasetInfo
                 dataset.info.tables["active_learning"].remove(al_info)
@@ -348,7 +348,7 @@ def load_item_embeddings(dataset: Dataset, item_id: str) -> dict:
         for emb_info in dataset.info.tables["embeddings"]:
             if emb_info["type"] == "segment":
                 try:
-                    emb_tables[emb_info["source"]] = ds.open_table(emb_info["name"])
+                    emb_tables[emb_info.source] = ds.open_table(emb_info.name)
                 except FileNotFoundError:
                     # Remove missing embeddings tables from DatasetInfo
                     dataset.info.tables["embeddings"].remove(emb_info)
@@ -398,13 +398,13 @@ def save_item_details(
     obj_tables: dict[str, lancedb.db.LanceTable] = {}
     if "objects" in dataset.info.tables:
         for obj_info in dataset.info.tables["objects"]:
-            obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
+            obj_tables[obj_info.source] = ds.open_table(obj_info.name)
 
     # Open Active Learning tables
     al_tables: dict[str, lancedb.db.LanceTable] = {}
     if "active_learning" in dataset.info.tables:
         for al_info in dataset.info.tables["active_learning"]:
-            al_tables[al_info["source"]] = ds.open_table(al_info["name"])
+            al_tables[al_info.source] = ds.open_table(al_info.name)
 
     # Save item features (classification label)
     features = item_details["itemData"]
@@ -422,7 +422,7 @@ def save_item_details(
                 # Merge with main table
                 main_table_ds.merge(label_table, "id")
                 # Update DatasetInfo
-                dataset.info.tables["main"][0]["fields"]["label"] = "str"
+                dataset.info.tables["main"][0].fields["label"] = "str"
                 dataset.save_info()
 
             # Get item
@@ -552,7 +552,7 @@ def search_query(
     media_tables: dict[str, lancedb.db.LanceTable] = {}
     if "media" in dataset.info.tables:
         for md_info in dataset.info.tables["media"]:
-            media_tables[md_info["name"]] = ds.open_table(md_info["name"])
+            media_tables[md_info.name] = ds.open_table(md_info.name)
 
     # Open semantic search embeddings tables
     sem_search_tables: dict[str, lancedb.db.LanceTable] = {}
@@ -561,13 +561,11 @@ def search_query(
         for emb_info in dataset.info.tables["embeddings"]:
             if emb_info["type"] == "search":
                 try:
-                    sem_search_tables[emb_info["source"]] = ds.open_table(
-                        emb_info["name"]
-                    )
+                    sem_search_tables[emb_info.source] = ds.open_table(emb_info.name)
                     # List views in embedding table
                     sem_search_views = [
                         field_name
-                        for field_name, field_type in emb_info["fields"].items()
+                        for field_name, field_type in emb_info.fields.items()
                         if field_type == "vector(512)"
                     ]
                 except FileNotFoundError:
