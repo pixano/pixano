@@ -75,7 +75,7 @@ async def get_dataset_items(
         raise HTTPException(status_code=404, detail="Dataset not found")
 
 
-@router.get("/search", response_model=Page[DatasetItem])
+@router.post("/search", response_model=Page[DatasetItem])
 async def search_dataset_items(
     ds_id: str,
     query: dict[str, str],
