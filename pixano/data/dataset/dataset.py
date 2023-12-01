@@ -401,7 +401,7 @@ class Dataset(BaseModel):
             load_objects (bool, optional): Load item objects. Defaults to False.
             load_active_learning (bool, optional): Load item active learning info. Defaults to True.
             load_embeddings (bool, optional): Load item embeddings. Defaults to False.
-            model_id (str, optional): Model ID of embeddings to load. Defaults to None.
+            model_id (str, optional): Model ID (ONNX file path) of embeddings to load. Defaults to None.
         Returns:
             DatasetItem: Dataset item
         """
@@ -449,7 +449,7 @@ class Dataset(BaseModel):
         found_embeddings = False if load_embeddings else True
         if load_embeddings:
             for emb_source, emb_table in ds_tables["embeddings"].items():
-                if model_id in emb_source:
+                if emb_source.lower() in model_id.lower():
                     found_embeddings = True
                     lance_scanner = emb_table.to_lance().scanner(
                         filter=f"id in ('{item_id}')"

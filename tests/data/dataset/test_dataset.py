@@ -222,7 +222,9 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(item.views["image"], ItemView)
         self.assertEqual(len(item.objects.values()), 18)
 
-        item = self.dataset.load_item("632", load_embeddings=True, model_id="SAM")
+        item = self.dataset.load_item(
+            "632", load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
+        )
 
         self.assertEqual(item, None)
 

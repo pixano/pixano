@@ -202,7 +202,7 @@ async def get_item_embeddings(ds_id: str, item_id: str, model_id: str) -> Datase
     Args:
         ds_id (str): Dataset ID
         item_id (str): Item ID
-        model_id (str): Model ID
+        model_id (str): Model ID (ONNX file path)
     """
 
     # Load dataset

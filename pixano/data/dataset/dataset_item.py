@@ -54,7 +54,7 @@ class DatasetItem(BaseModel):
             pyarrow_item (dict[str, dict[str, pa.Table]]): PyArrow item
             info (DatasetInfo): Dataset info
             media_dir (Path): Dataset media directory
-            model_id (str, optional): Model ID of embeddings to load. Defaults to None.
+            model_id (str, optional): Model ID (ONNX file path) of embeddings to load. Defaults to None.
 
         Returns:
             DatasetItem: Formatted item
@@ -112,7 +112,7 @@ class DatasetItem(BaseModel):
             if group_name == "embeddings" and "embeddings" in pyarrow_item:
                 item.embeddings = {}
                 for table in table_group:
-                    if model_id in table.source:
+                    if table.source.lower() in model_id.lower():
                         item.embeddings = item.embeddings | ItemEmbedding.from_pyarrow(
                             pyarrow_item["embeddings"][table.source],
                             Fields(table.fields).to_schema(),
