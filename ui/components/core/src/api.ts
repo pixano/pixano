@@ -131,7 +131,7 @@ export async function postDatasetItem(datasetId: string, item: DatasetItem) {
       body: JSON.stringify(item),
       method: "POST",
     });
-    if (!response.ok) {
+    if (response.ok) {
       console.log(
         "api.postItemDetails -",
         response.status,
@@ -174,4 +174,21 @@ export async function searchDatasetItems(
     console.log("api.searchDatasetItems -", e);
   }
   return datasetItems;
+}
+
+export async function getModels(): Promise<Array<string>> {
+  let models: Array<string>;
+
+  try {
+    const response = await fetch("/models");
+    if (response.ok) {
+      models = await response.json();
+    } else {
+      console.log("api.getModels -", response.status, response.statusText, await response.text());
+    }
+  } catch (e) {
+    console.log("api.getModels -", e);
+  }
+
+  return models;
 }

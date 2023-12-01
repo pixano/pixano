@@ -18,19 +18,10 @@
   import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
-  import {
-    api,
-    ConfirmModal,
-    Header,
-    Library,
-    LoadingLibrary,
-    PromptModal,
-    WarningModal,
-  } from "@pixano/core";
-  import { mask_utils, npy, SAM } from "@pixano/models";
+  import { api, ConfirmModal, Header, Library, LoadingLibrary, WarningModal } from "@pixano/core";
+  import { mask_utils, npy } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
-  import { interactiveSegmenterModel } from "./stores";
 
   import type {
     BBox,
@@ -42,6 +33,7 @@
   } from "@pixano/core";
 
   // Dataset navigation
+  let models: Array<string>;
   let datasets: Array<DatasetInfo>;
   let selectedDataset: DatasetInfo;
   let currentPage = 1;
@@ -58,19 +50,19 @@
   let unselectItemModal = false;
   let datasetErrorModal = false;
 
-  const defaultModelName = "sam_vit_h_4b8939.onnx";
-  let inputModelName: string;
-  let modelPromptModal = false;
-  let modelNotFoundModal = false;
-
-  const sam = new SAM();
-
   function until(conditionFunction: () => boolean): Promise<() => void> {
     const poll = (resolve) => {
       if (conditionFunction()) resolve();
       else setTimeout(() => poll(resolve), 400);
     };
     return new Promise(poll);
+  }
+
+  async function handleGetModels() {
+    console.log("App.handleGetModels");
+    const start = Date.now();
+    models = await api.getModels();
+    console.log("App.handleGetModels - api.getModels in", Date.now() - start, "ms");
   }
 
   async function handleGetDatasets() {
@@ -392,28 +384,10 @@
     }
   }
 
-  async function handleModelPrompt() {
-    modelPromptModal = false;
-    // Try loading model name from user input
-    try {
-      await sam.init("/models/" + inputModelName);
-      interactiveSegmenterModel.set(sam);
-    } catch (e) {
-      modelNotFoundModal = false;
-    }
-  }
-
   onMount(async () => {
     console.log("App.onMount");
     await handleGetDatasets();
-    // Try loading default model
-    try {
-      await sam.init("/models/" + defaultModelName);
-      interactiveSegmenterModel.set(sam);
-    } catch (e) {
-      // If default not found, ask user for model
-      modelPromptModal = true;
-    }
+    await handleGetModels();
   });
 </script>
 
@@ -437,6 +411,7 @@
       bind:bboxes
       {embeddings}
       {currentPage}
+      {models}
       bind:activeLearningFlag
       bind:saveFlag
       on:selectItem={(event) => handleSelectItem(event.detail)}
@@ -452,22 +427,6 @@
   {/if}
 {:else}
   <LoadingLibrary app="Explorer" />
-{/if}
-{#if modelPromptModal}
-  <PromptModal
-    message="Please provide the name of your ONNX model for interactive segmentation."
-    placeholder={defaultModelName}
-    bind:input={inputModelName}
-    on:confirm={handleModelPrompt}
-  />
-{/if}
-{#if modelNotFoundModal}
-  <WarningModal
-    message="models/{inputModelName} was not found in your dataset library."
-    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    moreDetails="Please also check your internet connection, as it is currently required to initialize an ONNX model."
-    on:confirm={() => (modelNotFoundModal = false)}
-  />
 {/if}
 {#if unselectItemModal}
   <ConfirmModal

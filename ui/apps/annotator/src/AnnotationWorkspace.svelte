@@ -24,7 +24,8 @@
     LabelPanel,
     tools,
   } from "@pixano/canvas2d";
-  import { ConfirmModal, utils, WarningModal } from "@pixano/core";
+  import { ConfirmModal, utils, SelectModal, WarningModal } from "@pixano/core";
+  import { SAM } from "@pixano/models";
 
   import { interactiveSegmenterModel } from "./stores";
 
@@ -49,6 +50,7 @@
   export let bboxes: Array<BBox>;
   export let embeddings = {};
   export let currentPage: number;
+  export let models: Array<string>;
   export let saveFlag: boolean;
   export let activeLearningFlag: boolean;
 
@@ -71,6 +73,11 @@
   let currentAnn: InteractiveImageSegmenterOutput = null;
   let currentAnnCatName = "";
   const currentAnnSource = "Pixano Annotator";
+
+  // Models
+  let selectedModelName: string;
+  let modelLoaded = false;
+  const sam = new SAM();
 
   // Tools
   const tools_lists: Array<Array<tools.Tool>> = [];
@@ -96,16 +103,7 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = "label" in selectedItem.features ? classifTool : pointPlusTool;
-
-  // Segmentation model
-  interactiveSegmenterModel.subscribe((segmenter) => {
-    if (segmenter) {
-      pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-      pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-      rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
-    }
-  });
+  let selectedTool: tools.Tool = panTool;
 
   function until(conditionFunction: () => boolean): Promise<() => void> {
     const poll = (resolve) => {
@@ -117,6 +115,24 @@
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter") handleAddCurrentAnn();
+  }
+
+  async function loadModel() {
+    console.log("trying");
+    try {
+      await sam.init("/data/models/" + selectedModelName);
+      interactiveSegmenterModel.set(sam);
+      interactiveSegmenterModel.subscribe((segmenter) => {
+        if (segmenter) {
+          pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+          pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+          rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
+        }
+        modelLoaded = true;
+      });
+    } catch (e) {
+      // Couldn't load model
+    }
   }
 
   function handleAddClassification() {
@@ -340,10 +356,18 @@
     dispatch("loadNextPage");
   }
 
-  onMount(() => {
+  onMount(async () => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
       colorScale = handleLabelColors();
+    }
+    // If only one SAM model, load as default
+    if (models) {
+      let samModels = models.filter((m) => m.includes("sam"));
+      if (samModels.length == 1) {
+        selectedModelName = samModels[0];
+        loadModel();
+      }
     }
   });
 
@@ -400,6 +424,24 @@
         on:addCurrentAnn={handleAddClassification}
       />
     {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}
+      {#if !modelLoaded}
+        {#if models}
+          <SelectModal
+            message="Please select your model for semantic segmentation."
+            choices={models}
+            ifNoChoices={""}
+            bind:selected={selectedModelName}
+            on:confirm={loadModel}
+          />
+        {:else}
+          <WarningModal
+            message="It looks like there is no model for interactive segmentation in youre dataset library."
+            details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+            on:confirm={() => {
+              selectedTool = panTool;
+            }}
+          />{/if}
+      {/if}
       <CategoryToolbar
         bind:currentAnnCatName
         bind:classes
