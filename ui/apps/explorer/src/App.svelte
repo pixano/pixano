@@ -78,75 +78,38 @@
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    for (const obj of Object.values(selectedItem.objects)) {
-      const sourceId = obj.source_id;
-      const viewId = obj.view_id;
-      const catId =
-        "category_id" in obj.features ? (obj.features["category_id"].value as number) : null;
-      const catName =
-        "category_name" in obj.features ? (obj.features["category_name"].value as string) : null;
+    if (selectedItem.objects) {
+      for (const obj of Object.values(selectedItem.objects)) {
+        const sourceId = obj.source_id;
+        const viewId = obj.view_id;
+        const catId =
+          "category_id" in obj.features ? (obj.features["category_id"].value as number) : null;
+        const catName =
+          "category_name" in obj.features ? (obj.features["category_name"].value as string) : null;
 
-      // Initialize source annotations
-      if (!annotations[sourceId]) {
-        annotations[sourceId] = {
-          id: sourceId,
-          views: {},
-          numLabels: 0,
-          opened: false,
-          visible: true,
-        };
-      }
-
-      // Initialize view annotations
-      if (!annotations[sourceId].views[viewId]) {
-        annotations[sourceId].views[viewId] = {
-          id: viewId,
-          categories: {},
-          numLabels: 0,
-          opened: false,
-          visible: true,
-        };
-      }
-
-      // Initialize category annotations
-      if (!annotations[sourceId].views[viewId].categories[catId]) {
-        annotations[sourceId].views[viewId].categories[catId] = {
-          labels: {},
-          id: catId,
-          name: catName,
-          opened: false,
-          visible: true,
-        };
-      }
-
-      // Masks and bounding boxes
-      if (obj.mask || obj.bbox) {
-        // Add label
-        annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
-          id: obj.id,
-          categoryId: catId,
-          categoryName: catName,
-          sourceId: sourceId,
-          viewId: viewId,
-          confidence: obj.bbox && obj.bbox.confidence != 0.0 ? obj.bbox.confidence : null,
-          bboxOpacity: 1.0,
-          maskOpacity: 1.0,
-          visible: true,
-        };
-
-        // Update counters
-        annotations[sourceId].numLabels += 1;
-        annotations[sourceId].views[viewId].numLabels += 1;
-
-        // Add class if new
-        if (!classes.some((cls) => cls.id === catId)) {
-          classes.push({
-            id: catId,
-            name: catName,
-          });
+        // Initialize source annotations
+        if (!annotations[sourceId]) {
+          annotations[sourceId] = {
+            id: sourceId,
+            views: {},
+            numLabels: 0,
+            opened: false,
+            visible: true,
+          };
         }
 
-        // Add category if new
+        // Initialize view annotations
+        if (!annotations[sourceId].views[viewId]) {
+          annotations[sourceId].views[viewId] = {
+            id: viewId,
+            categories: {},
+            numLabels: 0,
+            opened: false,
+            visible: true,
+          };
+        }
+
+        // Initialize category annotations
         if (!annotations[sourceId].views[viewId].categories[catId]) {
           annotations[sourceId].views[viewId].categories[catId] = {
             labels: {},
@@ -157,62 +120,102 @@
           };
         }
 
-        // Add mask
-        if (obj.mask) {
-          const rle = obj.mask["counts"];
-          const size = obj.mask["size"];
-          const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-          const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
-
-          masks.push({
+        // Masks and bounding boxes
+        if (obj.mask || obj.bbox) {
+          // Add label
+          annotations[sourceId].views[viewId].categories[catId].labels[obj.id] = {
             id: obj.id,
+            categoryId: catId,
+            categoryName: catName,
+            sourceId: sourceId,
             viewId: viewId,
-            svg: masksSVG,
-            rle: obj.mask,
-            catId: catId,
+            confidence: obj.bbox && obj.bbox.confidence != 0.0 ? obj.bbox.confidence : null,
+            bboxOpacity: 1.0,
+            maskOpacity: 1.0,
             visible: true,
-            opacity: 1.0,
-          });
+          };
+
+          // Update counters
+          annotations[sourceId].numLabels += 1;
+          annotations[sourceId].views[viewId].numLabels += 1;
+
+          // Add class if new
+          if (!classes.some((cls) => cls.id === catId)) {
+            classes.push({
+              id: catId,
+              name: catName,
+            });
+          }
+
+          // Add category if new
+          if (!annotations[sourceId].views[viewId].categories[catId]) {
+            annotations[sourceId].views[viewId].categories[catId] = {
+              labels: {},
+              id: catId,
+              name: catName,
+              opened: false,
+              visible: true,
+            };
+          }
+
+          // Add mask
+          if (obj.mask) {
+            const rle = obj.mask["counts"];
+            const size = obj.mask["size"];
+            const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+            const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+            masks.push({
+              id: obj.id,
+              viewId: viewId,
+              svg: masksSVG,
+              rle: obj.mask,
+              catId: catId,
+              visible: true,
+              opacity: 1.0,
+            });
+          }
+
+          // Add bbox
+          const imageWidth = selectedItem.views[viewId].features["width"].value as number;
+          const imageHeight = selectedItem.views[viewId].features["height"].value as number;
+
+          if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
+            const x = obj.bbox.coords[0] * imageWidth;
+            const y = obj.bbox.coords[1] * imageHeight;
+            const w = obj.bbox.coords[2] * imageWidth;
+            const h = obj.bbox.coords[3] * imageHeight;
+            const confidence =
+              obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
+
+            bboxes.push({
+              id: obj.id,
+              viewId: viewId,
+              bbox: [x, y, w, h], // denormalized
+              tooltip: catName + confidence,
+              catId: catId,
+              visible: true,
+              opacity: 1.0,
+            });
+          }
+        } else {
+          console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
+          continue;
         }
-
-        // Add bbox
-        const imageWidth = selectedItem.views[viewId].features["width"].value as number;
-        const imageHeight = selectedItem.views[viewId].features["height"].value as number;
-
-        if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
-          const x = obj.bbox.coords[0] * imageWidth;
-          const y = obj.bbox.coords[1] * imageHeight;
-          const w = obj.bbox.coords[2] * imageWidth;
-          const h = obj.bbox.coords[3] * imageHeight;
-          const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
-
-          bboxes.push({
-            id: obj.id,
-            viewId: viewId,
-            bbox: [x, y, w, h], // denormalized
-            tooltip: catName + confidence,
-            catId: catId,
-            visible: true,
-            opacity: 1.0,
-          });
-        }
-      } else {
-        console.log("App.handleSelectItem - Warning: no mask nor bounding box for item", obj.id);
-        continue;
       }
-    }
 
-    // Open source annotations if only one source
-    const sources = Object.keys(annotations);
-    if (sources.length == 1) {
-      annotations[sources[0]].opened = true;
-    }
+      // Open source annotations if only one source
+      const sources = Object.keys(annotations);
+      if (sources.length == 1) {
+        annotations[sources[0]].opened = true;
+      }
 
-    // Open view annotations if only one view
-    for (const sourceId of sources) {
-      const views = Object.keys(annotations[sourceId].views);
-      if (views.length == 1) {
-        annotations[sourceId].views[views[0]].opened = true;
+      // Open view annotations if only one view
+      for (const sourceId of sources) {
+        const views = Object.keys(annotations[sourceId].views);
+        if (views.length == 1) {
+          annotations[sourceId].views[views[0]].opened = true;
+        }
       }
     }
   }
