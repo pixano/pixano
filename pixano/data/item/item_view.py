@@ -67,9 +67,9 @@ class ItemView(BaseModel):
             # Image
             if is_image_type(field.type):
                 im = (
-                    item["image"]
-                    if isinstance(item["image"], Image)
-                    else Image.from_dict(item["image"])
+                    item[field.name]
+                    if isinstance(item[field.name], Image)
+                    else Image.from_dict(item[field.name])
                 )
                 im.uri_prefix = media_dir.absolute().as_uri()
                 image_view = ItemView(
