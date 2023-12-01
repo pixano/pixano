@@ -19,6 +19,7 @@ import unittest
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from pixano_inference import transformers
 
 from pixano.apps import create_app
 from pixano.data import COCOImporter, DatasetInfo, DatasetItem, DatasetStat, Settings
@@ -121,55 +122,49 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_item, DatasetItem)
 
     def test_search_dataset_items(self):
+        # Without embeddings
         response = self.client.post(
             "/datasets/coco_dataset/search",
             headers={
                 "Accept": "application/json",
                 "Content-Type": "application/json",
             },
-            json={"query": "bear"},
+            json={"model": "CLIP", "search": "bear"},
         )
 
         self.assertEqual(response.status_code, 404)
 
-        try:
-            from pixano_inference import transformers
+        # With embeddings
+        model = transformers.CLIP()
+        model.process_dataset(
+            dataset_dir=self.temp_dir / "coco",
+            process_type="search_emb",
+            views=["image"],
+        )
 
-            model = transformers.CLIP()
-            model.process_dataset(
-                dataset_dir=self.temp_dir / "coco",
-                process_type="search_emb",
-                views=["image"],
-            )
+        response = self.client.post(
+            "/datasets/coco_dataset/search",
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            },
+            json={"model": "CLIP", "search": "bear"},
+        )
+        output = response.json()
 
-            response = self.client.post(
-                "/datasets/coco_dataset/search",
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                },
-                json={"query": "bear"},
-            )
-            output = response.json()
+        self.assertEqual(response.status_code, 200)
 
-            self.assertEqual(response.status_code, 200)
+        self.assertIn("items", output)
+        self.assertIn("total", output)
+        self.assertIn("page", output)
+        self.assertIn("size", output)
+        self.assertIn("pages", output)
 
-            self.assertIn("items", output)
-            self.assertIn("total", output)
-            self.assertIn("page", output)
-            self.assertIn("size", output)
-            self.assertIn("pages", output)
+        self.assertEqual(len(output["items"]), 3)
 
-            self.assertEqual(len(output["items"]), 3)
-
-            for item in output["items"]:
-                ds_item = DatasetItem.model_validate(item)
-                self.assertIsInstance(ds_item, DatasetItem)
-
-        except ImportError:
-            print(
-                "Can't test search_items() fully without pixano-inference for CLIP embeddings"
-            )
+        for item in output["items"]:
+            ds_item = DatasetItem.model_validate(item)
+            self.assertIsInstance(ds_item, DatasetItem)
 
     def test_get_dataset_item(self):
         response = self.client.get("/datasets/coco_dataset/items/139")
