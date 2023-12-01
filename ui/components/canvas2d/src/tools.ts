@@ -27,6 +27,28 @@ export enum ToolType {
   Classification = "CLASSIFICATION",
 }
 
+type RectangleShape = {
+  type: "rectangle";
+  attrs: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+};
+
+type Parameter = {
+  label: string;
+  multiple: boolean;
+  type: "string" | "number" | "checkbox";
+  value: string;
+};
+
+export type Shape = RectangleShape & {
+  status: "creating" | "editing" | "done";
+  parameters?: Parameter[];
+};
+
 interface Tool {
   name: string;
   type: ToolType;

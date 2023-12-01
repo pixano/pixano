@@ -15,7 +15,7 @@
 
 // Imports
 
-import type { Dataset, DatasetItems, ItemDetails, Dict, Stats } from "./interfaces";
+import type { Dataset, DatasetItems, ItemDetails, Dict, Stats } from "./lib/types/interfaces";
 
 // Exports
 

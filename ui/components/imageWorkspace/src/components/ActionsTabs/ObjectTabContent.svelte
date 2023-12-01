@@ -16,14 +16,19 @@
   import { SlidersHorizontal } from "lucide-svelte";
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+  import type { ObjectContent } from "@pixano/core";
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
   import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
-  import type { ObjectContent } from "../../lib/types/objects";
+  import { objects } from "../../lib/stores/stores";
 
   let value = "flat";
-  export let allObjects: ObjectContent[] = [];
+  let allObjects: ObjectContent[] = [];
+
+  objects.subscribe((value) => {
+    allObjects = value;
+  });
 </script>
 
 <div class="p-4">

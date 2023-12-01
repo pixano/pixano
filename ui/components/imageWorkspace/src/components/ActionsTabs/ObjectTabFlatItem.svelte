@@ -17,8 +17,9 @@
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import { cn } from "@pixano/core/src/lib/utils";
+  import type { ObjectContent } from "@pixano/core";
+
   import ArrowSvg from "./ArrowSvg.svelte";
-  import type { ObjectContent } from "../../lib/types/objects";
 
   export let objectContent: ObjectContent;
 
@@ -69,10 +70,20 @@
       <p class="font-medium mb-4">Display</p>
       <div class="my-2 flex flex-col gap-4 mb-4">
         <span>
-          <Checkbox bind:checked={boxChecked} /> Box
+          <Checkbox
+            handleClick={(checked) => {
+              boxChecked = checked;
+            }}
+            bind:checked={boxChecked}
+          /> Box
         </span>
         <span>
-          <Checkbox bind:checked={maskChecked} /> Mask
+          <Checkbox
+            handleClick={(checked) => {
+              maskChecked = checked;
+            }}
+            bind:checked={maskChecked}
+          /> Mask
         </span>
       </div>
       <p class="font-medium">Label</p>

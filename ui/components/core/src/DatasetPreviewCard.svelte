@@ -17,7 +17,7 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import type { Dataset } from "./interfaces";
+  import type { Dataset } from "./lib/types/interfaces";
   import { svg_right_arrow } from "./icons";
 
   // Exports

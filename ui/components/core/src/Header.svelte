@@ -18,7 +18,7 @@
   // Imports
   import { createEventDispatcher } from "svelte";
   import { svg_next_page, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
-  import type { Dataset, ItemData } from "./interfaces";
+  import type { Dataset, ItemData } from "./lib/types/interfaces";
   import pixanoLogo from "./assets/pixano.png";
 
   // Exports

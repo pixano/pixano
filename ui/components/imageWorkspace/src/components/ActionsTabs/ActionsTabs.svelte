@@ -20,9 +20,7 @@
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
   import SaveShapeForm from "../SaveShapeForm.svelte";
-  import type { ObjectContent } from "../../lib/types/objects";
   import { newShape } from "../../lib/stores/stores";
-  export let allObjects: ObjectContent[];
 
   let shape: tools.Shape | null;
 
@@ -31,7 +29,7 @@
   });
 </script>
 
-<div class="h-full shadow-md w-10 bg-popover flex-[2_0_auto]">
+<div class="h-full max-h-screen shadow-md w-10 bg-popover flex-[2_0_auto]">
   {#if shape}
     <SaveShapeForm />
   {:else}
@@ -43,7 +41,7 @@
       <Tabs.Content value="scene">
         <SceneTabContent />
       </Tabs.Content>
-      <Tabs.Content value="objects"><ObjectTabContent bind:allObjects /></Tabs.Content>
+      <Tabs.Content value="objects"><ObjectTabContent /></Tabs.Content>
     </Tabs.Root>
   {/if}
 </div>

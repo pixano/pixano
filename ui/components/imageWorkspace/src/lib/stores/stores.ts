@@ -15,7 +15,13 @@
 
 // Imports
 import { writable } from "svelte/store";
-import { tools } from "@pixano/canvas2d";
+import type { Shape, ObjectContent } from "@pixano/core";
+
+import { allObjects } from "../mock";
 
 // Exports
-export const newShape = writable<tools.Shape | null>();
+export const newShape = writable<Shape | null>();
+export const objects = writable<ObjectContent[]>([]);
+
+// add mock objects
+objects.set(allObjects);

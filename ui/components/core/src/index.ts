@@ -14,7 +14,7 @@
  */
 
 // Exports
-export * from "./interfaces";
+export * from "./lib/types";
 export * as api from "./api";
 export * as icons from "./icons";
 export * as utils from "./utils";

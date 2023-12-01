@@ -20,40 +20,23 @@
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
   import { mockImage } from "./lib/mock";
+  import { objects } from "./lib/stores/stores";
   import "./index.css";
-
-  import type { ObjectContent } from "./lib/types/objects";
 
   export let selectedTool: tools.Tool | null;
   export let selectedItem: ItemData = mockImage;
+  let bboxes: BBox[] = [];
 
-  export let allObjects: ObjectContent[] = [
-    {
-      name: "object 1",
-      id: "1",
-      type: "box",
-      properties: {
-        label: ["person", "car"],
-      },
-      boundingBox: {
-        id: "1",
-        viewId: "view",
-        bbox: [100, 100, 100, 100],
-        catId: 0.9,
-        opacity: 1,
-        visible: true,
-        tooltip: "tooltip  s",
-      },
-    },
-  ];
-  $: bboxes = allObjects.reduce((acc, val) => {
-    if (val.type === "box") acc.push(val.boundingBox);
-    return acc;
-  }, [] as BBox[]);
+  objects.subscribe((value) => {
+    bboxes = value.reduce((acc, val) => {
+      if (val.type === "box") acc.push(val.boundingBox);
+      return acc;
+    }, [] as BBox[]);
+  });
 </script>
 
-<div class="flex w-full h-screen bg-primary">
+<div class="flex w-full h-screen bg-primary relative">
   <Toolbar bind:selectedTool />
   <ImageCanvas {selectedTool} {selectedItem} bind:bboxes />
-  <ActionsTabs bind:allObjects />
+  <ActionsTabs />
 </div>

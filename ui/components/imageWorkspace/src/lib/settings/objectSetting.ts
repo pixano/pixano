@@ -1,11 +1,8 @@
-type ObjectParameters = {
-  label: string;
-  type: "text" | "number" | "checkbox";
-  multiple: boolean;
-  mandatory: boolean;
-};
+import { z } from "zod";
 
-export const objectSetup: ObjectParameters[] = [
+import type { ObjectProperty } from "@pixano/core";
+
+export const objectSetup: ObjectProperty[] = [
   {
     label: "name",
     type: "text",
@@ -21,13 +18,51 @@ export const objectSetup: ObjectParameters[] = [
   {
     label: "age",
     type: "number",
-    multiple: false,
     mandatory: false,
   },
   {
     label: "enfant",
     type: "checkbox",
-    multiple: false,
     mandatory: false,
   },
 ];
+
+const otherSchema: z.ZodTypeAny[] = objectSetup.map((object) => {
+  if (object.type === "text") {
+    return z.array(z.string());
+  } else if (object.type === "number") {
+    return z.number().optional();
+  } else if (object.type === "checkbox") {
+    return z.boolean().optional();
+  }
+  return z.array(z.string());
+});
+
+export const schema = objectSetup.reduce(
+  (acc, cur) => {
+    if (cur.type === "text") {
+      acc[cur.label] = z.array(z.string());
+      if (!cur.multiple) {
+        acc[cur.label] = z.array(z.string().length(1));
+      }
+    } else if (cur.type === "number") {
+      acc[cur.label] = z.number().optional();
+    } else if (cur.type === "checkbox") {
+      acc[cur.label] = z.boolean().optional();
+    }
+    if (!cur.mandatory) {
+      acc[cur.label] = acc[cur.label].optional();
+    }
+    return acc;
+  },
+  {} as Record<string, z.ZodTypeAny>,
+);
+
+export const objectCreationFormSchema = z.tuple([otherSchema[0], ...otherSchema.slice(1)]);
+
+// export const objectCreationFormSchema = z.object({
+//   name: z.array(z.string().length(1)),
+//   actions: z.array(z.string()),
+//   age: z.number().optional(),
+//   enfant: z.boolean().optional(),
+// });

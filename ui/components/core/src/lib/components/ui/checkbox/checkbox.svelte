@@ -3,12 +3,16 @@
   import { Check, Minus } from "lucide-svelte";
   import { cn } from "../../../utils";
 
-  type $$Props = CheckboxPrimitive.Props;
-  type $$Events = CheckboxPrimitive.Events;
+  type $$Props = CheckboxPrimitive.Props & { handleClick: (checked: boolean) => void };
+  type $$Events = CheckboxPrimitive.Events & {
+    keydown: KeyboardEvent & { detail: { originalEvent: KeyboardEvent } };
+  };
 
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = false;
   export { className as class };
+
+  export let handleClick: (checked: $$Props["checked"]) => void = () => {};
 </script>
 
 <CheckboxPrimitive.Root
@@ -18,7 +22,13 @@
   )}
   bind:checked
   {...$$restProps}
-  on:click
+  on:click={() => handleClick(!checked)}
+  on:keydown={(event) => {
+    if (event.detail.originalEvent.key === "Enter") {
+      handleClick(!checked);
+      checked = !checked;
+    }
+  }}
 >
   <CheckboxPrimitive.Indicator
     class={cn("flex items-center justify-center text-current h-4 w-4")}

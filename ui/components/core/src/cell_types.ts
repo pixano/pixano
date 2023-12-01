@@ -13,7 +13,7 @@
  * http://www.cecill.info
  */
 
-import type { Stats } from "./interfaces";
+import type { Stats } from "./lib/types/interfaces";
 
 // Exports
 

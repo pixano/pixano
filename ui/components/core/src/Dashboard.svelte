@@ -17,7 +17,7 @@
   // Imports
   import Histogram from "./Histogram.svelte";
 
-  import type { Dataset, Stats } from "./interfaces";
+  import type { Dataset, Stats } from "./lib/types/interfaces";
 
   // Exports
   export let selectedDataset: Dataset = null;

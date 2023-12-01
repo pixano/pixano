@@ -16,7 +16,7 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import type { Dataset } from "./interfaces";
+  import type { Dataset } from "./lib/types/interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
   import pixanoLogoWhite from "./assets/pixano_white.png";
   import { svg_filter, svg_search } from "./icons";

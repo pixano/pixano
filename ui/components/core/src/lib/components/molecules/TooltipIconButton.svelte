@@ -23,7 +23,7 @@
 </script>
 
 <Tooltip.Root>
-  <Tooltip.Trigger>
+  <Tooltip.Trigger tabindex={-1}>
     <Button
       size="icon"
       class={cn("bg-transparent text-gray-800 hover:bg-primary-light relative", {

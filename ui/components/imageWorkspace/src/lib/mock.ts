@@ -1,4 +1,4 @@
-import type { ItemData } from "@pixano/core";
+import type { ItemData, ObjectContent } from "@pixano/core";
 
 export const mockImage: ItemData = {
   id: "fleurs.jpg",
@@ -38,3 +38,23 @@ export const mockImage: ItemData = {
     },
   ],
 };
+
+export const allObjects: ObjectContent[] = [
+  {
+    name: "object 1",
+    id: "1",
+    type: "box",
+    properties: {
+      label: ["person", "car"],
+    },
+    boundingBox: {
+      id: "1",
+      viewId: "view",
+      bbox: [100, 100, 100, 100],
+      catId: 0.9,
+      opacity: 1,
+      visible: true,
+      tooltip: "tooltip  content",
+    },
+  },
+];

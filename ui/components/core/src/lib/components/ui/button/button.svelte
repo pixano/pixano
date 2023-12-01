@@ -2,7 +2,6 @@
   import { Button as ButtonPrimitive } from "bits-ui";
   import { cn } from "../../../utils";
   import { buttonVariants, type Props } from ".";
-  // import { buttonVariants, type Props, type Events } from ".";
 
   type $$Props = Props;
   //   type $$Events = Events;
@@ -12,8 +11,6 @@
   export let size: $$Props["size"] = "default";
   export let builders: $$Props["builders"] = [];
   export { className as class };
-
-  //   class Button extends SvelteComponentTyped<{ /* your prop definitions */ }> {}
 </script>
 
 <div>

@@ -14,7 +14,6 @@
  */
 
 // Exports
-
 export interface Dict<Type> {
   [key: string]: Type;
 }
