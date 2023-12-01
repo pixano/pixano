@@ -283,12 +283,14 @@
   async function handleSaveItemDetails() {
     console.log("App.handleSaveItemDetails");
 
-    saveFlag = false;
-
-    let savedItem: DatasetItem;
-
-    // Return features
-    savedItem.features = selectedItem.features;
+    let savedItem: DatasetItem = {
+      id: selectedItem.id,
+      split: selectedItem.split,
+      views: {},
+      features: selectedItem.features,
+      objects: {},
+      embeddings: {},
+    };
 
     // Return annotations
     for (const sourceLabels of Object.values(annotations)) {
@@ -339,9 +341,10 @@
       }
     }
 
-    let start = Date.now();
+    const start = Date.now();
     await api.postDatasetItem(selectedDataset.id, savedItem);
     console.log("App.handleSaveItemDetails - api.postDatasetItem in", Date.now() - start, "ms");
+    saveFlag = false;
 
     // Reload item details
     await handleSelectItem(selectedItem.id);

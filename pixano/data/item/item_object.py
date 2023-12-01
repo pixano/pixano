@@ -94,11 +94,11 @@ class ItemBBox(BaseModel):
             else None
         )
 
-    def to_pyarrow(self, rle: CompressedRLE = None) -> BBox:
+    def to_pyarrow(self, mask: ItemURLE = None) -> BBox:
         """Return ItemBbox as BBox
 
         Args:
-            rle (CompressedRLE, optional): Mask to create BBox from in ItemBBox is empty. Defaults to None.
+            mask (ItemURLE, optional): Mask to create BBox from in ItemBBox is empty. Defaults to None.
 
 
         Returns:
@@ -108,8 +108,8 @@ class ItemBBox(BaseModel):
         return (
             BBox.from_dict(self.model_dump())
             if self.coords != [0.0, 0.0, 0.0, 0.0]
-            else BBox.from_rle(rle)
-            if rle
+            else BBox.from_rle(mask.to_pyarrow())
+            if mask
             else None
         )
 
@@ -194,9 +194,7 @@ class ItemObject(BaseModel):
         # BBox and Mask
         pyarrow_object["mask"] = self.mask.to_pyarrow().to_dict() if self.mask else None
         pyarrow_object["bbox"] = (
-            self.bbox.to_pyarrow(rle=pyarrow_object["mask"]).to_dict()
-            if self.bbox
-            else None
+            self.bbox.to_pyarrow(self.mask).to_dict() if self.bbox else None
         )
 
         # Features
