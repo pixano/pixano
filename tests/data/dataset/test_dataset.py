@@ -14,7 +14,6 @@
 import json
 import tempfile
 import unittest
-import warnings
 from pathlib import Path
 
 import lancedb
@@ -210,7 +209,7 @@ class DatasetTestCase(unittest.TestCase):
             self.assertEqual(items[0].id, "285")
 
         except ImportError:
-            warnings.warn(
+            print(
                 "Can't test search_items() fully without pixano-inference for CLIP embeddings"
             )
 
@@ -222,6 +221,10 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(item.split, "val")
         self.assertIsInstance(item.views["image"], ItemView)
         self.assertEqual(len(item.objects.values()), 18)
+
+        item = self.dataset.load_item("632", load_embeddings=True, model_id="SAM")
+
+        self.assertEqual(item, None)
 
     def test_save_item(self):
         # Original item has 18 objects

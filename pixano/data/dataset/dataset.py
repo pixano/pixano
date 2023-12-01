@@ -446,15 +446,17 @@ class Dataset(BaseModel):
                 pyarrow_item["active_learning"][al_source] = lance_scanner.to_table()
 
         # Load PyArrow item from segmentation embeddings tables
+        found_embeddings = False if load_embeddings else True
         if load_embeddings:
             for emb_source, emb_table in ds_tables["embeddings"].items():
                 if model_id in emb_source:
+                    found_embeddings = True
                     lance_scanner = emb_table.to_lance().scanner(
                         filter=f"id in ('{item_id}')"
                     )
                     pyarrow_item["embeddings"][emb_source] = lance_scanner.to_table()
 
-        if pyarrow_item["main"]["db"].num_rows > 0:
+        if pyarrow_item["main"]["db"].num_rows > 0 and found_embeddings:
             return DatasetItem.from_pyarrow(
                 pyarrow_item,
                 self.info,
