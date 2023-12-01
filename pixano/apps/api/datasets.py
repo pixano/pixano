@@ -51,7 +51,7 @@ async def get_datasets() -> list[DatasetInfo]:
     else:
         raise HTTPException(
             status_code=404,
-            detail=f"No dataset found in {get_settings().data_dir.absolute()}",
+            detail=f"No datasets found in {get_settings().data_dir.absolute()}",
         )
 
 

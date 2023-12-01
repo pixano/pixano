@@ -50,5 +50,5 @@ async def get_models() -> list[str]:
     else:
         raise HTTPException(
             status_code=404,
-            detail=f"No model found in {get_settings().data_dir.absolute()}",
+            detail=f"No models found in {get_settings().data_dir.absolute()}",
         )
