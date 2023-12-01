@@ -15,7 +15,6 @@
       */
 
   // Imports
-  import { select } from "d3";
   import { createEventDispatcher } from "svelte";
 
   // Exports

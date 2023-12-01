@@ -366,7 +366,7 @@
       let samModels = models.filter((m) => m.includes("sam"));
       if (samModels.length == 1) {
         selectedModelName = samModels[0];
-        loadModel();
+        await loadModel();
       }
     }
   });
