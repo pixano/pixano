@@ -192,10 +192,11 @@ class ItemObject(BaseModel):
         pyarrow_object["view_id"] = self.view_id
 
         # BBox and Mask
-        pyarrow_object["mask"] = self.mask.to_pyarrow().to_dict() if self.mask else None
-        pyarrow_object["bbox"] = (
-            self.bbox.to_pyarrow(self.mask).to_dict() if self.bbox else None
-        )
+        pyarrow_mask = self.mask.to_pyarrow() if self.mask else None
+        pyarrow_bbox = self.bbox.to_pyarrow(self.mask) if self.bbox else None
+
+        pyarrow_object["mask"] = pyarrow_mask.to_dict() if pyarrow_mask else None
+        pyarrow_object["bbox"] = pyarrow_bbox.to_dict() if pyarrow_bbox else None
 
         # Features
         if self.features:
