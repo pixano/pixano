@@ -77,7 +77,9 @@
           {#if item.views}
             {#each Object.values(item.views) as view}
               <td class="py-1 border-b border-slate-300">
-                <TableCell itemFeature={{ name: view.id, dtype: view.type, value: view.uri }} />
+                <TableCell
+                  itemFeature={{ name: view.id, dtype: view.type, value: view.thumbnail }}
+                />
               </td>
             {/each}
           {/if}
