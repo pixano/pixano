@@ -34,14 +34,16 @@
     <SaveShapeForm />
   {:else}
     <Tabs.Root value="objects">
-      <Tabs.List>
+      <Tabs.List class="h-[48px]">
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
         <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="scene">
+      <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-48px)] overflow-y-auto">
         <SceneTabContent />
       </Tabs.Content>
-      <Tabs.Content value="objects"><ObjectTabContent /></Tabs.Content>
+      <Tabs.Content value="objects" class="bg-red max-h-[calc(100vh-48px-10px)] overflow-y-auto"
+        ><ObjectTabContent /></Tabs.Content
+      >
     </Tabs.Root>
   {/if}
 </div>

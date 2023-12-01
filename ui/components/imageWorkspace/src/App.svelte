@@ -35,7 +35,7 @@
   });
 </script>
 
-<div class="flex w-full h-screen bg-primary relative">
+<div class="flex w-full h-screen">
   <Toolbar bind:selectedTool />
   <ImageCanvas {selectedTool} {selectedItem} bind:bboxes />
   <ActionsTabs />

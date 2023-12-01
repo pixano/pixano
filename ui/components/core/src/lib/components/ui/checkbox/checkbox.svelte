@@ -3,7 +3,7 @@
   import { Check, Minus } from "lucide-svelte";
   import { cn } from "../../../utils";
 
-  type $$Props = CheckboxPrimitive.Props & { handleClick: (checked: boolean) => void };
+  type $$Props = CheckboxPrimitive.Props & { handleClick?: (checked: boolean) => void };
   type $$Events = CheckboxPrimitive.Events & {
     keydown: KeyboardEvent & { detail: { originalEvent: KeyboardEvent } };
   };
@@ -12,7 +12,7 @@
   export let checked: $$Props["checked"] = false;
   export { className as class };
 
-  export let handleClick: (checked: $$Props["checked"]) => void = () => {};
+  export let handleClick: (checked: $$Props["checked"]) => void;
 </script>
 
 <CheckboxPrimitive.Root

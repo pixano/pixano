@@ -8,22 +8,26 @@ export const objectSetup: ObjectProperty[] = [
     type: "text",
     multiple: false,
     mandatory: true,
+    value: ["test"],
   },
   {
     label: "actions",
     type: "text",
     multiple: true,
     mandatory: false,
+    value: ["test"],
   },
   {
     label: "age",
     type: "number",
     mandatory: false,
+    value: 0,
   },
   {
     label: "enfant",
     type: "checkbox",
     mandatory: false,
+    value: false,
   },
 ];
 

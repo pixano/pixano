@@ -16,7 +16,9 @@
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-import type { MaskRLE, MaskSVG } from "@pixano/core/src/interfaces";
+export type { Tensor };
+
+import type { MaskRLE, MaskSVG } from "@pixano/core";
 
 // Exports
 export interface LabeledClick {

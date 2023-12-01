@@ -49,13 +49,15 @@
     </IconButton>
   </div>
   {#if value === "flat"}
-    <h3 class="uppercase font-extralight">Ground truth</h3>
-    <ActionsTabsSearchInput />
-    {#each allObjects as objectContent}
-      <ObjectTabFlatItem bind:objectContent />
-    {/each}
-    <h3 class="uppercase font-extralight mt-8">Model run</h3>
-    <ActionsTabsSearchInput />
+    <div>
+      <h3 class="uppercase font-extralight">Ground truth</h3>
+      <ActionsTabsSearchInput />
+      {#each allObjects as objectContent}
+        <ObjectTabFlatItem bind:objectContent />
+      {/each}
+      <h3 class="uppercase font-extralight mt-8">Model run</h3>
+      <ActionsTabsSearchInput />
+    </div>
   {/if}
   {#if value === "labels"}
     <ActionsTabsSearchInput />
