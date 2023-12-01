@@ -51,8 +51,8 @@
   const MASK_STROKEWIDTH: number = 2.0;
   const short = shortid;
 
-  let inferenceModelModal = false;
-  let embeddingDirectoryModal = false;
+  let viewEmbeddingModal = false;
+  let viewWithoutEmbeddings = "";
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
@@ -483,10 +483,10 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      inferenceModelModal = true;
       clearAnnotationAndInputs();
-    } else if (!(viewId in embeddings) || (viewId in embeddings && embeddings[viewId] == null)) {
-      embeddingDirectoryModal = true;
+    } else if (embeddings[viewId] == null) {
+      viewEmbeddingModal = true;
+      viewWithoutEmbeddings = viewId;
       clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
@@ -1153,18 +1153,10 @@
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
-{#if inferenceModelModal}
+{#if viewEmbeddingModal}
   <WarningModal
-    message="No interactive model set up, cannot segment."
-    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={() => (inferenceModelModal = false)}
-  />
-{/if}
-{#if embeddingDirectoryModal}
-  <WarningModal
-    message="No embedding directory found, cannot segment."
-    details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
-    on:confirm={() => (embeddingDirectoryModal = false)}
+    message="No embeddings found for view '{viewWithoutEmbeddings}'."
+    on:confirm={() => (viewEmbeddingModal = false)}
   />
 {/if}
 <svelte:window on:keydown={handleKeyDown} />

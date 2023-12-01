@@ -15,11 +15,10 @@
    */
 
   // Imports
-  import * as ort from "onnxruntime-web";
   import { onMount } from "svelte";
 
   import { api, ConfirmModal, Header, Library, LoadingLibrary, WarningModal } from "@pixano/core";
-  import { mask_utils, npy } from "@pixano/models";
+  import { mask_utils } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
 
@@ -43,10 +42,11 @@
   let classes: Array<DatasetCategory>;
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
-  let embeddings = {};
 
   let activeLearningFlag = false;
   let saveFlag = false;
+
+  // Modals
   let unselectItemModal = false;
   let datasetErrorModal = false;
 
@@ -113,9 +113,8 @@
     classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
     bboxes = [];
-    embeddings = {};
 
-    let start = Date.now();
+    const start = Date.now();
     selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
@@ -257,25 +256,6 @@
         annotations[sourceId].views[views[0]].opened = true;
       }
     }
-
-    // Embeddings
-    start = Date.now();
-    const item = await api.getItemEmbeddings(selectedDataset.id, selectedItem.id);
-    console.log("App.handleSelectItem - api.getItemEmbeddings in", Date.now() - start, "ms");
-    if (item.embeddings) {
-      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
-        try {
-          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
-          embeddings[viewId] = new ort.Tensor(
-            "float32",
-            viewEmbeddingArray.data,
-            viewEmbeddingArray.shape,
-          );
-        } catch (e) {
-          console.log("App.handleSelectItem - Error loading embeddings", e);
-        }
-      }
-    }
   }
 
   async function handleUnselectItem() {
@@ -298,7 +278,6 @@
     classes = [];
     masks = [];
     bboxes = [];
-    embeddings = {};
   }
 
   async function handleSaveItemDetails() {
@@ -409,7 +388,6 @@
       {classes}
       bind:masks
       bind:bboxes
-      {embeddings}
       {currentPage}
       {models}
       bind:activeLearningFlag

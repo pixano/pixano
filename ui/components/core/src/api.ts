@@ -100,11 +100,15 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   return item;
 }
 
-export async function getItemEmbeddings(datasetId: string, itemId: string): Promise<DatasetItem> {
+export async function getItemEmbeddings(
+  datasetId: string,
+  itemId: string,
+  modelId: string,
+): Promise<DatasetItem> {
   let item: DatasetItem;
 
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings`);
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings/${modelId}`);
     if (response.ok) {
       item = await response.json();
     } else {

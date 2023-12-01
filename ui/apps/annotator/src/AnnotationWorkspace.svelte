@@ -15,6 +15,8 @@
    */
 
   // Imports
+  import * as ort from "onnxruntime-web";
+
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
   import {
@@ -24,8 +26,8 @@
     LabelPanel,
     tools,
   } from "@pixano/canvas2d";
-  import { ConfirmModal, utils, SelectModal, WarningModal } from "@pixano/core";
-  import { SAM } from "@pixano/models";
+  import { api, ConfirmModal, utils, SelectModal, WarningModal } from "@pixano/core";
+  import { SAM, npy } from "@pixano/models";
 
   import { interactiveSegmenterModel } from "./stores";
 
@@ -34,6 +36,7 @@
     DatasetCategory,
     DatasetInfo,
     DatasetItem,
+    Dict,
     ItemLabels,
     Label,
     Mask,
@@ -48,7 +51,6 @@
   export let classes: Array<DatasetCategory>;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings = {};
   export let currentPage: number;
   export let models: Array<string>;
   export let saveFlag: boolean;
@@ -59,6 +61,7 @@
   // Modals
   let categoryNameModal = false;
   let selectItemModal = false;
+  let embeddingsErrorModal = false;
 
   // Category colors
   let colorMode = "category";
@@ -75,6 +78,7 @@
   const currentAnnSource = "Pixano Annotator";
 
   // Models
+  let embeddings: Dict<ort.Tensor> = {};
   let selectedModelName: string;
   let modelLoaded = false;
   const sam = new SAM();
@@ -119,19 +123,45 @@
 
   async function loadModel() {
     console.log("trying");
-    try {
-      await sam.init("/data/models/" + selectedModelName);
-      interactiveSegmenterModel.set(sam);
-      interactiveSegmenterModel.subscribe((segmenter) => {
-        if (segmenter) {
-          pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-          pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-          rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
+    await sam.init("/data/models/" + selectedModelName);
+    interactiveSegmenterModel.set(sam);
+    interactiveSegmenterModel.subscribe((segmenter) => {
+      if (segmenter) {
+        pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+        pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+        rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      }
+    });
+    // Embeddings
+    const start = Date.now();
+    const item = await api.getItemEmbeddings(
+      selectedDataset.id,
+      selectedItem.id,
+      selectedModelName,
+    );
+    console.log(
+      "AnnotationWorkspace.loadModel - api.getItemEmbeddings in",
+      Date.now() - start,
+      "ms",
+    );
+    if (item) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+        try {
+          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
+          embeddings[viewId] = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape,
+          );
+        } catch (e) {
+          console.log("AnnotationWorkspace.loadModel - Error loading embeddings", e);
         }
-        modelLoaded = true;
-      });
-    } catch (e) {
-      // Couldn't load model
+      }
+      modelLoaded = true;
+    } else {
+      embeddingsErrorModal = true;
+      selectedModelName = "";
+      selectedTool = panTool;
     }
   }
 
@@ -464,6 +494,13 @@
         confirm="Continue without saving"
         on:confirm={() => ((saveFlag = false), (selectItemModal = false))}
         on:cancel={() => (selectItemModal = !selectItemModal)}
+      />
+    {/if}
+    {#if embeddingsErrorModal}
+      <WarningModal
+        message="No embeddings found for model {selectedModelName}."
+        details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
+        on:confirm={() => (embeddingsErrorModal = false)}
       />
     {/if}
   {/if}
