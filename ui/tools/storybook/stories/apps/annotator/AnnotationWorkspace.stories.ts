@@ -37,66 +37,143 @@ export const Base: Story = {
   args: {
     selectedDataset: {
       id: "euHS4xM5SSvQKAhmv3sFcp",
-      name: "Dataset",
-      description: "Dataset description",
+      name: "Test dataset",
+      description: "Test dataset description",
+      estimated_size: "12.68 MB",
       num_elements: 4,
-      estimated_size: "N/A",
       preview: "",
+      splits: ["val"],
+      tables: {},
       categories: [],
+      stats: [],
       page: {
         items: [
-          [
-            { name: "id", dtype: "text", value: "1" },
-            { name: "view", dtype: "image", value: "img-02.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "2" },
-            { name: "view", dtype: "image", value: "img-03.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "3" },
-            { name: "view", dtype: "image", value: "img-05.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "4" },
-            { name: "view", dtype: "image", value: "img-07.jpg" },
-          ],
+          {
+            id: "1",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-01.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-02.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "2",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-03.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-04.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "3",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-05.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-06.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "4",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-07.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-08.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
         ],
         total: 4,
       },
     },
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
           uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
-    //sample for bear image "img-02.jpg"
-    //bear left eye...
     annotations: {
       "Ground truth": {
         id: "Ground truth",
         views: {
           view1: {
-            id: "view",
+            id: "view1",
             categories: {
               1: {
-                id: 1,
-                name: "eye",
+                id: 3,
+                name: "tv",
                 labels: {
-                  "245": {
-                    id: "245",
-                    categoryId: 1,
-                    categoryName: "eye",
+                  "34646": {
+                    id: "34646",
+                    categoryId: 3,
+                    categoryName: "tv",
                     sourceId: "Ground truth",
-                    viewId: "view",
+                    viewId: "view1",
                     bboxOpacity: 1.0,
                     maskOpacity: 1.0,
                     visible: true,
@@ -106,7 +183,33 @@ export const Base: Story = {
                 visible: true,
               },
             },
-            numLabels: 2,
+            numLabels: 1,
+            opened: true,
+            visible: true,
+          },
+          view2: {
+            id: "view2",
+            categories: {
+              1: {
+                id: 1,
+                name: "eye",
+                labels: {
+                  "587562": {
+                    id: "587562",
+                    categoryId: 1,
+                    categoryName: "eye",
+                    sourceId: "Ground truth",
+                    viewId: "view2",
+                    bboxOpacity: 1.0,
+                    maskOpacity: 1.0,
+                    visible: true,
+                  },
+                },
+                opened: true,
+                visible: true,
+              },
+            },
+            numLabels: 1,
             opened: true,
             visible: true,
           },
@@ -117,25 +220,55 @@ export const Base: Story = {
       },
     },
     classes: [
-      { id: 0, name: "Dog" },
+      { id: 0, name: "dog" },
       { id: 1, name: "eye" },
-      { id: 2, name: "Cat" },
+      { id: 2, name: "cat" },
+      { id: 3, name: "tv" },
     ],
     masks: [
       {
-        viewId: "view",
-        catId: 1,
-        id: "245",
+        id: "34646",
+        viewId: "view1",
+        svg: [
+          "M7 243 L7 261 36 261 36 262 78 262 78 263 84 263 84 262 95 262 95 261 107 261 107 260 118 260 118 259 130 259 130 258 141 258 141 257 153 257 153 256 154 234 155 202 156 202 156 173 142 173 142 172 114 172 114 171 86 171 86 170 58 170 58 169 29 169 29 168 10 168 9 171 8 207 7 243",
+        ],
+        catId: 3,
+        visible: true,
+        opacity: 1,
+      },
+      {
+        id: "587562",
+        viewId: "view2",
         svg: [
           "M158 290 L158 297 159 302 160 302 160 304 159 304 159 311 160 314 161 315 162 317 164 317 164 318 165 320 166 321 167 322 178 322 178 321 179 320 180 319 181 317 182 316 183 315 184 313 185 311 186 310 187 308 188 306 189 305 190 304 191 302 192 299 193 299 193 298 192 298 191 294 190 291 189 289 188 287 187 285 186 284 186 283 184 283 183 282 183 281 180 281 180 280 172 280 172 281 169 281 169 282 167 282 167 283 165 283 165 284 163 284 162 285 162 286 160 286 159 288 158 290",
         ],
+        catId: 1,
         visible: true,
         opacity: 1.0,
       },
     ],
-    bboxes: [],
-    embeddings: { view: [] }, //won't segment if embedding == null, so to let the mock "segment", give fake (unused) embedding
+    bboxes: [
+      {
+        id: "34646",
+        viewId: "view1",
+        bbox: [7.03000009059906, 167.76000201702118, 149.32000160217285, 94.87000313401222],
+        tooltip: "tv",
+        catId: 3,
+        visible: true,
+        opacity: 1,
+      },
+      {
+        id: "587562",
+        viewId: "view2",
+        bbox: [159.0000081062317, 278.99999618530273, 31.99999900907278, 45.999999046325684],
+        tooltip: "eye",
+        catId: 1,
+        visible: true,
+        opacity: 1,
+      },
+    ],
     currentPage: 1,
+    models: ["sam_vit_h_4b8939.onnx"],
     saveFlag: false,
     activeLearningFlag: false,
   },

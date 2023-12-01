@@ -32,7 +32,7 @@ export interface DatasetInfo {
   tables: Dict<Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
   stats: Array<DatasetStat>;
-  page: DatasetItems;
+  page?: DatasetItems;
 }
 
 export interface DatasetTable {
