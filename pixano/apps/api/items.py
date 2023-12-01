@@ -70,7 +70,7 @@ async def get_dataset_items(
         if items:
             return create_page(items, total=total, params=params)
         else:
-            raise HTTPException(status_code=404, detail="Dataset item not found")
+            raise HTTPException(status_code=404, detail="Dataset items not found")
     else:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -114,7 +114,7 @@ async def search_dataset_items(
         if items:
             return create_page(items, total=total, params=params)
         else:
-            raise HTTPException(status_code=404, detail="Dataset item not found")
+            raise HTTPException(status_code=404, detail="Dataset items not found")
     else:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -153,7 +153,7 @@ async def post_dataset_item(ds_id: str, item: DatasetItem):
 
     Args:
         ds_id (str): Dataset ID
-        item_id (str): Item ID
+        item (DatasetItem): Item to save
     """
 
     # Load dataset
