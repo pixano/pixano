@@ -515,7 +515,7 @@
         </div>
 
         <div class="p-4 flex flex-wrap justify-center">
-          {#each filterItems(selectedDataset.page.items) as item, i}
+          {#each filterItems(selectedDataset.page.items) as item}
             <button
               class="flex p-1 flex-col rounded h-min hover:bg-slate-100"
               on:click={() => handleSelectItem(item)}
@@ -524,7 +524,7 @@
                 {#each Object.values(item.views) as itemView}
                   <img
                     src={itemView.thumbnail}
-                    alt="#{itemView.id}-#{i}"
+                    alt="{item.id} - {itemView.id}"
                     class="w-24 h-24 p-1 object-cover rounded"
                   />
                 {/each}
@@ -535,9 +535,7 @@
                   {Object.values(item.views).length > 1 ? 'w-48' : 'w-24'}"
                   title={item.id}
                 >
-                  {item.id.length > 12
-                    ? item.id.substring(0, 6) + "..." + item.id.slice(-6)
-                    : item.id}
+                  {item.id}
                 </span>
               </div>
             </button>
