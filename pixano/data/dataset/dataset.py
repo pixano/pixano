@@ -459,7 +459,8 @@ class Dataset(BaseModel):
                 pyarrow_item,
                 self.info,
                 self.media_dir,
-                model_id,
+                media_features=True,
+                model_id=model_id,
             )
         else:
             return None

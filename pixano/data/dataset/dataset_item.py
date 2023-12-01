@@ -46,6 +46,7 @@ class DatasetItem(BaseModel):
         pyarrow_item: dict[str, dict[str, pa.Table]],
         info: DatasetInfo,
         media_dir: Path,
+        media_features: bool = False,
         model_id: str = None,
     ) -> "DatasetItem":
         """Format PyArrow item
@@ -54,6 +55,7 @@ class DatasetItem(BaseModel):
             pyarrow_item (dict[str, dict[str, pa.Table]]): PyArrow item
             info (DatasetInfo): Dataset info
             media_dir (Path): Dataset media directory
+            media_features (bool, optional): Load media features like image width and height (slow for large item batches)
             model_id (str, optional): Model ID (ONNX file path) of embeddings to load. Defaults to None.
 
         Returns:
@@ -87,6 +89,7 @@ class DatasetItem(BaseModel):
                         pyarrow_item["media"][table.name],
                         Fields(table.fields).to_schema(),
                         media_dir,
+                        media_features,
                     )
 
             # Objects
