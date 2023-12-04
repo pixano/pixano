@@ -16,7 +16,7 @@
 
   // Imports
   import Konva from "konva";
-  import shortid from "shortid";
+  import { nanoid } from "nanoid";
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
@@ -49,7 +49,6 @@
   const INPUTRECT_STROKEWIDTH: number = 1.5;
   const BBOX_STROKEWIDTH: number = 2.0;
   const MASK_STROKEWIDTH: number = 2.0;
-  const short = shortid;
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
@@ -463,9 +462,11 @@
 
   function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: Konva.Group) {
     // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-    const objectsToDestroy = []; // need to build a list to not destroy while looping children
+    const objectsToDestroy: Array<Konva.Group> = []; // need to build a list to not destroy while looping children
     for (const obj of objectsGroup.children) {
-      if (!objectsIds.includes(obj.id())) objectsToDestroy.push(obj);
+      if (!objectsIds.includes(obj.id()) && obj instanceof Konva.Group) {
+        objectsToDestroy.push(obj);
+      }
     }
     for (const obj of objectsToDestroy) obj.destroy();
   }
@@ -498,9 +499,8 @@
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
 
-        const new_id = short.generate();
         currentAnn = {
-          id: `${new_id}`,
+          id: nanoid(10),
           viewId: viewId,
           label: "",
           catId: -1,
