@@ -51,7 +51,7 @@
           id: `bbox${oldObjects.length + 1}`,
           viewId: "view",
           bbox: [shape.attrs.x, shape.attrs.y, shape.attrs.width, shape.attrs.height],
-          tooltip: "foo",
+          tooltip: `bbox${oldObjects.length + 1}`,
           catId: 1,
           visible: true,
           opacity: 1,

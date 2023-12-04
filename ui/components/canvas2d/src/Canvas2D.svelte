@@ -58,7 +58,8 @@
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  // export let newShape: Shape;
+  let numberOfBBoxes: number;
+
   export let createNewShape: (shape: Shape) => void;
 
   export let embeddings = {};
@@ -70,6 +71,14 @@
   let embeddingDirectoryModal = false;
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
+
+  $: {
+    if (stage && numberOfBBoxes !== bboxes?.length) {
+      const rect: Konva.Rect = stage?.findOne("#drag-rect");
+      rect.destroy();
+    }
+    numberOfBBoxes = bboxes.length;
+  }
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -144,6 +153,8 @@
     if (currentAnn && currentAnn.validated) {
       validateCurrentAnn();
     }
+
+    console.log({ bboxes });
 
     for (const viewId of Object.keys(selectedItem.views)) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
@@ -754,17 +765,14 @@
           rect.destroy();
         } else {
           //predict
-          // TODO100 : RECT : SAVE RECTANGLE HERE
           if (!selectedTool.isSmart) {
-            console.log(rect);
             createNewShape({
               attrs: rect.attrs,
               type: "rectangle",
               status: "creating",
             });
           }
-          // !selectedTool.isSmart && (rectangles = [...rectangles, { ...rect.attrs }]); // TODO100: better conditionning here
-          selectedTool.isSmart && (await updateCurrentMask(viewId)); // SMART RECTANGLE ONLY
+          selectedTool.isSmart && (await updateCurrentMask(viewId));
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");

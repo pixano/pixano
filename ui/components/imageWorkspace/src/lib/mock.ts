@@ -50,8 +50,8 @@ export const allObjects: ObjectContent[] = [
       age: 3,
       enfant: true,
     },
-
     boundingBox: {
+      objectId: "1",
       id: "1",
       viewId: "view",
       bbox: [100, 100, 100, 100],
