@@ -48,7 +48,7 @@
   class="h-full w-full overflow-y-auto overflow-x-auto
   rounded-sm bg-slate-50 border border-slate-300 shadow-sm shadow-slate-300"
 >
-  <table class="table-auto z-0 w-full text-center text-base">
+  <table class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->
     <thead>
       <tr class="sticky top-0 bg-slate-50 shadow-sm shadow-slate-300">
@@ -97,7 +97,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 mx-auto p-2 border rounded-full border-slate-300 hover:bg-slate-300"
+              class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 hover:bg-slate-300"
             >
               <title>Open</title>
               <path d={icons.svg_right_arrow} fill="currentcolor" />

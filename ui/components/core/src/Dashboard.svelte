@@ -38,7 +38,7 @@
   <div class="h-full flex flex-row">
     <div class="w-1/6 flex flex-col items-start">
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'overview'
+        class="w-full h-20 px-8 py-5 rounded-l-sm text-lg text-left {selectedTab === 'overview'
           ? ' text-main bg-slate-300'
           : 'hover:bg-slate-300'}"
         on:click={selectOverviewTab}
@@ -46,7 +46,7 @@
         Overview
       </button>
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'stats'
+        class="w-full h-20 px-8 py-5 rounded-l-sm text-lg text-left {selectedTab === 'stats'
           ? ' text-main bg-slate-300'
           : 'hover:bg-slate-300'}"
         on:click={selectStatsTab}

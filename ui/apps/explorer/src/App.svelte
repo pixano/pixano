@@ -268,6 +268,7 @@
       {datasets}
       app="Explorer"
       on:selectDataset={(event) => handleSelectDataset(event.detail)}
+      on:unselectDataset={handleUnselectDataset}
     />
   {/if}
 {:else}

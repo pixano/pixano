@@ -23,6 +23,7 @@
 
   import type { DatasetInfo, DatasetItems } from "@pixano/core";
   import {
+    svg_clear,
     svg_filter,
     svg_first_page,
     svg_grid,
@@ -30,6 +31,7 @@
     svg_list,
     svg_next_page,
     svg_prev_page,
+    svg_search,
   } from "@pixano/core/src/icons";
 
   // Exports
@@ -91,6 +93,11 @@
     }
   }
 
+  async function handleClearSearch() {
+    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
+    await handleSearch();
+  }
+
   async function handleGoToFirstPage() {
     if (currentPage > 1) {
       currentPage = 1;
@@ -131,12 +138,12 @@
   });
 </script>
 
-<div class="w-full h-full pt-20 px-20 flex flex-col bg-slate-100 text-slate-800">
+<div class="w-full h-full p-20 flex flex-col bg-slate-100 text-slate-800">
   {#if selectedDataset.page}
     <!-- Items list -->
-    <div class="w-full h-[87.5vh] flex flex-col">
+    <div class="w-full h-full flex flex-col">
       {#if selectedTab === "database"}
-        <div class="py-4 flex space-x-2 items-center">
+        <div class="py-5 h-20 flex space-x-2 items-center">
           <button>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -173,7 +180,7 @@
           <div class="flex-grow" />
           <div class="relative flex items-center">
             {#if searchModels.length > 0}
-              <select class="h-8 px-4 mx-4 border rounded-sm border-slate-300 bg-slate-200">
+              <select class="h-10 px-4 mx-4 border rounded border-slate-300 bg-slate-200">
                 {#each searchModels as model}
                   <option value={selectedSearchModel}>
                     {model}
@@ -181,14 +188,38 @@
                 {/each}
               </select>
 
-              <input
-                id="sem-search-input"
-                type="text"
-                value={search}
-                placeholder="Semantic search using {selectedSearchModel}"
-                class="h-8 px-2 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
-                on:change={handleSearch}
-              />
+              <div class="relative flex items-center text-slate-800">
+                <input
+                  id="sem-search-input"
+                  type="text"
+                  value={search}
+                  placeholder="Semantic search using {selectedSearchModel}"
+                  class="h-10 pl-10 pr-4 rounded border-2 border-slate-300 shadow-slate-300 accent-main"
+                  on:change={handleSearch}
+                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="absolute left-2 h-5 w-5 pointer-events-none"
+                >
+                  <path d={svg_search} fill="currentcolor" />
+                </svg>
+                {#if search !== ""}
+                  <button class="absolute right-2" on:click={handleClearSearch}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="h-5 w-5"
+                    >
+                      <path d={svg_clear} fill="currentcolor" />
+                    </svg>
+                  </button>
+                {/if}
+              </div>
             {/if}
           </div>
         </div>
@@ -197,14 +228,14 @@
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {:else if selectedTab === "dashboard"}
-        <div class="py-8 flex space-x-2 items-center" />
+        <div class="py-5 h-20 flex space-x-2 items-center" />
         <Dashboard {selectedDataset} />
       {/if}
     </div>
 
     <!-- Page navigation -->
     {#if selectedTab === "database"}
-      <div class="w-full my-3 flex justify-center items-center text-slate-800">
+      <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
         {#if selectedDataset.page.total > itemsPerPage}
           <button on:click={handleGoToFirstPage}>
             <svg

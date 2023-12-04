@@ -411,10 +411,11 @@
       {datasets}
       app="Annotator"
       on:selectDataset={(event) => handleSelectDataset(event.detail)}
+      on:unselectDataset={handleUnselectDataset}
     />
   {/if}
 {:else}
-  <LoadingLibrary app="Explorer" />
+  <LoadingLibrary app="Annotator" />
 {/if}
 {#if unselectItemModal}
   <ConfirmModal

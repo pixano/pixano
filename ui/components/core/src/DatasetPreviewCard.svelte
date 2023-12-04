@@ -56,7 +56,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="absolute right-5 h-8 w-8 mx-auto p-2 border rounded-full border-slate-300 hover:bg-slate-300"
+      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 hover:bg-slate-300"
     >
       <title>Open</title>
       <path d={svg_right_arrow} fill="currentcolor" />

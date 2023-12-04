@@ -220,8 +220,14 @@
         class="flex flex-col p-4 border-b-2
             border-slate-300"
       >
-        <span class="font-medium"> Item information : </span>
+        <span class="font-medium"> Item information: </span>
         <ul class="list-disc ml-6">
+          <li class="break-words">
+            id: {selectedItem.id}
+          </li>
+          <li class="break-words">
+            split: {selectedItem.split}
+          </li>
           {#each Object.values(selectedItem.features) as feature}
             {#if feature.dtype !== "image"}
               <li class="break-words">
@@ -299,7 +305,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6"
+                  class="h-5 w-5"
                 >
                   <title>{source.visible ? "Hide" : "Show"}</title>
                   <path d={source.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
@@ -314,7 +320,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6"
+                  class="h-5 w-5"
                 >
                   <title>{source.opened ? "Close" : "Open"}</title>
                   <path d={source.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
@@ -347,7 +353,7 @@
                     height="48"
                     viewBox="0 -960 960 960"
                     width="48"
-                    class="h-6 w-6"
+                    class="h-5 w-5"
                   >
                     <title>{view.visible ? "Hide" : "Show"}</title>
                     <path d={view.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
@@ -362,7 +368,7 @@
                     height="48"
                     viewBox="0 -960 960 960"
                     width="48"
-                    class="h-6 w-6"
+                    class="h-5 w-5"
                   >
                     <title>{view.opened ? "Close" : "Open"}</title>
                     <path d={view.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
@@ -398,7 +404,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6"
+                      class="h-5 w-5"
                     >
                       <title>{category.visible ? "Hide" : "Show"}</title>
                       <path
@@ -416,7 +422,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6"
+                      class="h-5 w-5"
                     >
                       <title>{category.opened ? "Close" : "Open"}</title>
                       <path
