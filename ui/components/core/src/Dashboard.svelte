@@ -57,7 +57,7 @@
     <div class="w-5/6 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300">
       {#if selectedTab === "overview"}
         <!-- Overview -->
-        <div class="w-full mb-16 flex flex-row justify-between">
+        <div class="w-full flex flex-row justify-between">
           <div>
             <span class="text-5xl font-bold font-Montserrat">
               {selectedDataset.name}
@@ -73,14 +73,18 @@
             <span class="ml-2 text-xl font-Montserrat"> items </span>
           </div>
         </div>
-        <div class="text-lg text-justify">
-          {selectedDataset.description}
+        <!-- Description -->
+        <div class="mt-8">
+          <p class="text-lg text-justify">
+            {selectedDataset.description}
+          </p>
         </div>
       {:else if selectedTab === "stats"}
         <!-- Stats -->
-        <span class="text-5xl font-bold font-Montserrat"> STATISTICS </span>
+        <span class="text-5xl font-bold font-Montserrat"> Statistics </span>
+
         {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
-          <div class="mt-16 grid grid-cols-3 gap-16">
+          <div class="mt-8 flex flex-wrap justify-center gap-6 mx-8">
             <!-- If charts are ready to be displayed, display them -->
             {#each selectedDataset.stats as chart}
               <Histogram hist={chart} />
@@ -88,9 +92,7 @@
           </div>
         {:else}
           <!-- Else show a message -->
-          <p class="mt-80 text-slate-500 italic text-center">
-            Sorry, no statistics are available for this dataset. Did you forget to include them ?
-          </p>
+          <p class="mt-80 text-slate-500 italic text-center">No statistics found.</p>
         {/if}
       {/if}
     </div>
