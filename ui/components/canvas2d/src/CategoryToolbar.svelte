@@ -55,7 +55,7 @@
     }
   }
 
-  function handleKeyPress(event) {
+  function handleKeyPress(event: KeyboardEvent) {
     if (event.key === "Enter") {
       dispatch("addCurrentAnn");
     }

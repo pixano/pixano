@@ -9,6 +9,7 @@ module.exports = {
   plugins: ["@typescript-eslint"],
   env: {
     es2022: true,
+    browser: true,
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -35,10 +36,7 @@ module.exports = {
     },
   ],
   rules: {
-    // TODO: Refactor code and remove rules if possible
-    "no-undef": "off",
-    "@typescript-eslint/no-unsafe-member-access": "off",
-    "@typescript-eslint/no-unsafe-assignment": "off",
-    "@typescript-eslint/no-unsafe-argument": "off", // can't add type annotations in Svelte code for variables like event.detail
+    "@typescript-eslint/no-unsafe-argument": "off", // no types for event.detail in Canvas2D, AnnotationWorkspace and App
+    "@typescript-eslint/no-unsafe-member-access": "off", // no types for event.detail.evt in Canvas2D
   },
 };

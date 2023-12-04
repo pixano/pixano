@@ -25,7 +25,7 @@ export async function getDatasets(): Promise<Array<DatasetInfo>> {
   try {
     const response = await fetch("/datasets");
     if (response.ok) {
-      datasets = await response.json();
+      datasets = (await response.json()) as Array<DatasetInfo>;
     } else {
       console.log("api.getDatasets -", response.status, response.statusText, await response.text());
     }
@@ -42,7 +42,7 @@ export async function getDataset(datasetId: string): Promise<DatasetInfo> {
   try {
     const response = await fetch(`/datasets/${datasetId}`);
     if (response.ok) {
-      dataset = await response.json();
+      dataset = (await response.json()) as DatasetInfo;
     } else {
       console.log("api.getDataset -", response.status, response.statusText, await response.text());
     }
@@ -63,7 +63,7 @@ export async function getDatasetItems(
   try {
     const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
     if (response.ok) {
-      datasetItems = await response.json();
+      datasetItems = (await response.json()) as DatasetItems;
     } else {
       console.log(
         "api.getDatasetItems -",
@@ -96,7 +96,7 @@ export async function searchDatasetItems(
       method: "POST",
     });
     if (response.ok) {
-      datasetItems = await response.json();
+      datasetItems = (await response.json()) as DatasetItems;
     } else {
       console.log(
         "api.searchDatasetItems -",
@@ -116,7 +116,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
-      item = await response.json();
+      item = (await response.json()) as DatasetItem;
     } else {
       console.log(
         "api.getDatasetItem -",
@@ -142,7 +142,7 @@ export async function getItemEmbeddings(
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings/${modelId}`);
     if (response.ok) {
-      item = await response.json();
+      item = (await response.json()) as DatasetItem;
     } else {
       console.log(
         "api.getItemEmbeddings -",
@@ -186,7 +186,7 @@ export async function getModels(): Promise<Array<string>> {
   try {
     const response = await fetch("/models");
     if (response.ok) {
-      models = await response.json();
+      models = (await response.json()) as Array<string>;
     } else {
       console.log("api.getModels -", response.status, response.statusText, await response.text());
     }

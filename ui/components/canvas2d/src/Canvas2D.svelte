@@ -15,6 +15,7 @@
    */
 
   // Imports
+  import * as ort from "onnxruntime-web";
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount } from "svelte";
@@ -33,7 +34,7 @@
     ClassificationTool,
   } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
+  import type { Mask, BBox, DatasetItem, Dict, ItemView } from "@pixano/core";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -41,7 +42,7 @@
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings = {};
+  export let embeddings: Dict<ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const INPUTPOINT_RADIUS: number = 6;
@@ -86,10 +87,11 @@
         let width: number;
         let height: number;
         if (entry.contentBoxSize) {
-          // Firefox implements `contentBoxSize` as a single content rect, rather than an array
-          const contentBoxSize = Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize;
+          // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
+          const contentBoxSize: ResizeObserverSize =
+            entry.contentBoxSize instanceof ResizeObserverSize
+              ? entry.contentBoxSize
+              : entry.contentBoxSize[0];
           width = contentBoxSize.inlineSize;
           height = contentBoxSize.blockSize;
         } else {
@@ -966,11 +968,11 @@
     toolsLayer.moveToTop();
   }
 
-  async function handleClickOnImage(event: CustomEvent, viewId: string) {
+  async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     // Perfome tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
-    if (selectedTool?.type == ToolType.Pan || event.detail.evt.which == 2) {
+    if (selectedTool?.type == ToolType.Pan || event.button == 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
@@ -1068,18 +1070,15 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event: CustomEvent, view: ItemView) {
-    // Get wheel event
-    const wheelEvt: WheelEvent = event.detail.evt;
-
+  function handleWheelOnImage(event: WheelEvent, view: ItemView) {
     // Prevent default scrolling
-    wheelEvt.preventDefault();
+    event.preventDefault();
 
     // Get zoom direction
-    let direction = wheelEvt.deltaY < 0 ? 1 : -1;
+    let direction = event.deltaY < 0 ? 1 : -1;
 
     // Revert direction for trackpad
-    if (wheelEvt.ctrlKey) direction = -direction;
+    if (event.ctrlKey) direction = -direction;
 
     // Zoom
     zoomFactor[view.id] = zoom(stage, direction, view.id);
@@ -1142,10 +1141,13 @@
   >
     {#each Object.values(selectedItem.views) as view}
       {#if images[view.id]}
-        <Layer config={{ id: view.id }} on:wheel={(event) => handleWheelOnImage(event, view)}>
+        <Layer
+          config={{ id: view.id }}
+          on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
+        >
           <KonvaImage
             config={{ image: images[view.id], id: "image" }}
-            on:pointerdown={(event) => handleClickOnImage(event, view.id)}
+            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
             on:pointerup={() => handlePointerUpOnImage(view.id)}
             on:dblclick={() => handleDoubleClickOnImage(view.id)}
           />
