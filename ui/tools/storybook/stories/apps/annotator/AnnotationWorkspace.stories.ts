@@ -268,7 +268,7 @@ export const Base: Story = {
       },
     ],
     currentPage: 1,
-    models: ["sam_vit_h_4b8939.onnx"],
+    models: [],
     saveFlag: false,
     activeLearningFlag: false,
   },

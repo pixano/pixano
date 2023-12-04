@@ -392,7 +392,7 @@
       colorScale = handleLabelColors();
     }
     // If only one SAM model, load as default
-    if (models) {
+    if (models.length > 0) {
       let samModels = models.filter((m) => m.includes("sam"));
       if (samModels.length == 1) {
         selectedModelName = samModels[0];
@@ -455,7 +455,7 @@
       />
     {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}
       {#if !modelLoaded}
-        {#if models}
+        {#if models.length > 0}
           <SelectModal
             message="Please select your model for semantic segmentation."
             choices={models}
