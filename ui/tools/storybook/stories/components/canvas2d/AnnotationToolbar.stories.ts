@@ -27,6 +27,7 @@ type Story = StoryObj<typeof meta>;
 
 const tools_lists = [
   [tools.createPanTool()],
+  [tools.createClassifTool()],
   [tools.createPointSelectionTool(), tools.createRectangleTool(), tools.createDeleteTool()],
 ];
 
