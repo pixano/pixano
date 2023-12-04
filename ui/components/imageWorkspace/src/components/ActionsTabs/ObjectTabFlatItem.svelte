@@ -17,15 +17,13 @@
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import { cn } from "@pixano/core/src/lib/utils";
-  import type { ObjectContent } from "@pixano/core";
+  import type { ObjectContent, ObjectProperty } from "@pixano/core";
 
-  // import ArrowSvg from "./ArrowSvg.svelte";
+  import { objectSetup } from "../../lib/settings/objectSetting";
 
   export let objectContent: ObjectContent;
 
   let open: boolean = true;
-  // let boxChecked: boolean = objectContent.type === "box";
-  // let maskChecked: boolean = objectContent.type === "mask";
 
   const handleEditIconClick = () => {
     if (objectContent.type === "box") {
@@ -38,6 +36,12 @@
       objectContent.boundingBox.locked = !objectContent.boundingBox.locked;
     }
   };
+
+  $: properties = Object.entries(objectContent.properties).map(([label, value]) => ({
+    label,
+    value,
+    ...objectSetup.find((p) => p.label === label),
+  })) as ObjectProperty[];
 
   $: isEditing = objectContent.type === "box" && objectContent.boundingBox.editing;
   $: isLocked = objectContent.type === "box" && objectContent.boundingBox.locked;
@@ -67,30 +71,13 @@
 {#if open}
   <div class="pl-5 border-b border-b-gray-600">
     <div class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4">
-      <!-- <p class="font-medium mb-4">Display</p>
-      <div class="my-2 flex flex-col gap-4 mb-4">
-        <span>
-          <Checkbox
-            handleClick={(checked) => {
-              boxChecked = checked;
-            }}
-            bind:checked={boxChecked}
-          /> Box
-        </span>
-        <span>
-          <Checkbox
-            handleClick={(checked) => {
-              maskChecked = checked;
-            }}
-            bind:checked={maskChecked}
-          /> Mask
-        </span>
-      </div> -->
-      {#each objectContent.properties as property}
+      {#each properties as property}
+        {#if !property.value}
+          <div>erreur. Merci de vous adresser aux administrateurs</div>
+        {/if}
         <p class="font-medium">{property.label}</p>
         {#if property.type === "checkbox"}
           <Checkbox checked={property.value} />
-          {property.label}
         {/if}
         {#if property.type === "text"}
           <div class="flex justify-start items-center gap-4">
@@ -109,13 +96,6 @@
           </span>
         {/if}
       {/each}
-      <!-- <p class="font-medium">Action</p>
-      <div class="flex items-center gap-4">
-        <span class="rounded border border-primary px-2 py-1">Touch</span>
-        <ArrowSvg />
-        <span class="rounded border border-primary px-2 py-1">Object 7</span>
-        <IconButton><PlusCircle class="w-8 h-8" strokeWidth={1} /></IconButton>
-      </div> -->
     </div>
   </div>
 {/if}

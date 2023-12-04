@@ -22,6 +22,7 @@ import { allObjects } from "../mock";
 // Exports
 export const newShape = writable<Shape | null>();
 export const objects = writable<ObjectContent[]>([]);
+export const interactiveSegmenterModel = writable(null);
 
 // add mock objects
 objects.set(allObjects);

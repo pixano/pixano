@@ -44,29 +44,13 @@ export const allObjects: ObjectContent[] = [
     name: "object 1",
     id: "1",
     type: "box",
-    properties: [
-      {
-        label: "prop 1",
-        type: "text",
-        value: ["foo"],
-      },
-      {
-        label: "prop 2",
-        type: "text",
-        multiple: true,
-        value: ["bar", "foo"],
-      },
-      {
-        label: "prop 3",
-        type: "number",
-        value: 3,
-      },
-      {
-        label: "prop 4",
-        type: "checkbox",
-        value: true,
-      },
-    ],
+    properties: {
+      name: ["foo"],
+      actions: ["bar", "foo"],
+      age: 3,
+      enfant: true,
+    },
+
     boundingBox: {
       id: "1",
       viewId: "view",

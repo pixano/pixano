@@ -19,7 +19,7 @@
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
-  import SaveShapeForm from "../SaveShapeForm.svelte";
+  import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { newShape } from "../../lib/stores/stores";
 
   let shape: tools.Shape | null;

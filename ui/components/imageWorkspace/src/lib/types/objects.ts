@@ -1,4 +1,8 @@
 import type { BBox, Mask } from "@pixano/core";
+import { textInputSchema } from "../settings/objectSetting";
+import type { z } from "zod";
+
+export type ObjectTextInput = z.infer<typeof textInputSchema>;
 
 type BaseObjectContent = {
   name: string;

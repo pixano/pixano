@@ -24,7 +24,7 @@
     smartMaskTool,
     type SelectionTool,
   } from "../lib/types/tools";
-  import { interactiveSegmenterModel } from "../lib/stores";
+  import { interactiveSegmenterModel, newShape } from "../lib/stores/stores";
 
   export let selectedTool: SelectionTool | null;
   const selectTool = (tool: SelectionTool | null) => {
@@ -38,6 +38,12 @@
       smartRectangleTool.postProcessor = segmenter;
     }
   });
+
+  $: {
+    if (selectedTool?.type !== tools.ToolType.Rectangle) {
+      newShape.set(null);
+    }
+  }
 </script>
 
 <div class="h-full shadow-md bg-popover p-1">

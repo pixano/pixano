@@ -727,6 +727,7 @@
 
   function dragInputRectMove(viewId: string) {
     if (selectedTool?.type == ToolType.Rectangle) {
+      createNewShape(null);
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       const rect: Konva.Rect = inputGroup.findOne("#drag-rect");

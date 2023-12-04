@@ -13,25 +13,25 @@ export type ObjectParameters = {
 
 // OBJECTS PROPERTIES
 
-type TextProperty = {
+export type TextProperty = {
   type: "text";
-  value?: string[];
-  multiple?: boolean;
+  multiple: boolean;
+  value: string[];
 };
 
 type NumberProperty = {
   type: "number";
-  value?: number;
+  value: number;
 };
 
 type CheckboxProperty = {
   type: "checkbox";
-  value?: boolean;
+  value: boolean;
 };
 
 export type ObjectProperty = (TextProperty | NumberProperty | CheckboxProperty) & {
   label: string;
-  mandatory?: boolean;
+  required: boolean;
 };
 
 // SHAPES: shapes drawn on the image to yet saved as objects
@@ -49,10 +49,12 @@ export type Shape = RectangleShape & {
   status: "creating" | "editing" | "done";
 };
 
+export type PropertiesValues = string[] | number | boolean;
+
 type BaseObjectContent = {
   name: string;
   id: string;
-  properties: ObjectProperty[];
+  properties: Record<string, PropertiesValues>;
   editing?: boolean;
 };
 
