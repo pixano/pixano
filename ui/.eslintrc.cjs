@@ -39,8 +39,6 @@ module.exports = {
     "no-undef": "off",
     "@typescript-eslint/no-unsafe-member-access": "off",
     "@typescript-eslint/no-unsafe-assignment": "off",
-    "@typescript-eslint/no-unsafe-call": "off",
-    "@typescript-eslint/no-base-to-string": "off", // can't add type annotations in Svelte Code for variables like DatasetItemFeature.value
     "@typescript-eslint/no-unsafe-argument": "off", // can't add type annotations in Svelte code for variables like event.detail
   },
 };

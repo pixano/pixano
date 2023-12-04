@@ -26,7 +26,7 @@
 
   import type {
     Tool,
-    LabeledPointTool,
+    PointSelectionModeTool,
     RectangleTool,
     DeleteTool,
     PanTool,
@@ -567,8 +567,8 @@
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case ToolType.LabeledPoint:
-        displayInputPointTool(selectedTool as LabeledPointTool);
+      case ToolType.PointSelection:
+        displayInputPointTool(selectedTool as PointSelectionModeTool);
         break;
       case ToolType.Rectangle:
         displayInputRectTool(selectedTool as RectangleTool);
@@ -604,7 +604,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -622,7 +622,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -636,7 +636,7 @@
 
   // ********** INPUT POINTS TOOL ********** //
 
-  function displayInputPointTool(tool: LabeledPointTool) {
+  function displayInputPointTool(tool: PointSelectionModeTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Point
@@ -765,7 +765,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Rectangle
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
 
       if (!highlighted_point) {
@@ -888,7 +888,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != DELETE
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -916,7 +916,7 @@
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type == ToolType.LabeledPoint) {
+    if (selectedTool?.type == ToolType.PointSelection) {
       updateInputPointStage(position);
     }
 
@@ -974,17 +974,17 @@
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
-    } else if (selectedTool?.type == ToolType.LabeledPoint) {
+    } else if (selectedTool?.type == ToolType.PointSelection) {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
       const input_point = new Konva.Circle({
-        name: `${(selectedTool as LabeledPointTool).label}`,
+        name: `${(selectedTool as PointSelectionModeTool).label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
         radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
         stroke: "white",
-        fill: (selectedTool as LabeledPointTool).label === 1 ? "green" : "red",
+        fill: (selectedTool as PointSelectionModeTool).label === 1 ? "green" : "red",
         strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
         visible: true,
         listening: true,
@@ -1069,18 +1069,24 @@
   }
 
   function handleWheelOnImage(event: CustomEvent, view: ItemView) {
-    event.detail.evt.preventDefault(); // Prevent default scrolling
-    let direction = event.detail.evt.deltaY < 0 ? 1 : -1; // Get zoom direction
-    // When we zoom on trackpad, e.evt.ctrlKey is true
-    // In that case lets revert direction.
-    if (event.detail.evt.ctrlKey) direction = -direction;
+    // Get wheel event
+    const wheelEvt: WheelEvent = event.detail.evt;
+
+    // Prevent default scrolling
+    wheelEvt.preventDefault();
+
+    // Get zoom direction
+    let direction = wheelEvt.deltaY < 0 ? 1 : -1;
+
+    // Revert direction for trackpad
+    if (wheelEvt.ctrlKey) direction = -direction;
+
+    // Zoom
     zoomFactor[view.id] = zoom(stage, direction, view.id);
     scaleElements(view);
 
-    //zoom reset highlighted point scaling
-    if (highlighted_point) {
-      highlightInputPoint(highlighted_point, view.id);
-    }
+    // Keep highlighted point scaling
+    if (highlighted_point) highlightInputPoint(highlighted_point, view.id);
   }
 
   // ********** KEY EVENTS ********** //

@@ -23,12 +23,13 @@
 
   function toggleHover() {
     isHovered = !isHovered;
-    if (isHovered) {
-      video.playbackRate = 4;
-      video.play();
-    } else {
-      video.pause();
-    }
+    // TODO
+    // if (isHovered) {
+    //   video.playbackRate = 4;
+    //   video.play();
+    // } else {
+    //   video.pause();
+    // }
   }
 </script>
 

@@ -50,12 +50,16 @@
   let unselectItemModal = false;
   let datasetErrorModal = false;
 
-  function until(conditionFunction: () => boolean): Promise<() => void> {
-    const poll = (resolve) => {
-      if (conditionFunction()) resolve();
-      else setTimeout(() => poll(resolve), 400);
-    };
-    return new Promise(poll);
+  function until(condition: () => boolean): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let i = setInterval(() => {
+        console.log("App.until - Waiting for user confirmation");
+        if (condition()) {
+          resolve();
+          clearInterval(i);
+        }
+      }, 500);
+    });
   }
 
   async function handleGetModels() {

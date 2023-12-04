@@ -69,7 +69,7 @@ export const CanvasWithoutSelectedTool: Story = {
 };
 
 const segmenter = new mocks.MockInteractiveImageSegmenter();
-let labeledPointCreator = tools.createLabeledPointTool(1);
+let labeledPointCreator = tools.createPointSelectionTool();
 labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
@@ -95,7 +95,7 @@ export const CanvasWithLabeledPointTool: Story = {
       objects: {},
       embeddings: {},
     },
-    selectedTool: labeledPointCreator,
+    selectedTool: labeledPointCreator.modes[0],
     colorScale: catCol,
     masks: [],
     bboxes: [],

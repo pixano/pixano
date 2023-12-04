@@ -88,18 +88,12 @@
   const imageTools: Array<tools.Tool> = [];
   const classificationTools: Array<tools.Tool> = [];
   const annotationTools: Array<tools.Tool> = [];
-  const pointPlusTool = tools.createLabeledPointTool(1);
-  const pointMinusTool = tools.createLabeledPointTool(0);
+  const pointSelectionTool = tools.createPointSelectionTool();
   const rectangleTool = tools.createRectangleTool();
   const deleteTool = tools.createDeleteTool();
   const panTool = tools.createPanTool();
   const classifTool = tools.createClassifTool();
-  annotationTools.push(
-    tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
-      pointPlusTool,
-      pointMinusTool,
-    ]),
-  );
+  annotationTools.push(pointSelectionTool);
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
   classificationTools.push(classifTool);
@@ -109,12 +103,16 @@
   tools_lists.push(annotationTools);
   let selectedTool: tools.Tool = panTool;
 
-  function until(conditionFunction: () => boolean): Promise<() => void> {
-    const poll = (resolve) => {
-      if (conditionFunction()) resolve();
-      else setTimeout(() => poll(resolve), 400);
-    };
-    return new Promise(poll);
+  function until(condition: () => boolean): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let i = setInterval(() => {
+        console.log("AnnotationWorkspace.until - Waiting for user confirmation");
+        if (condition()) {
+          resolve();
+          clearInterval(i);
+        }
+      }, 500);
+    });
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -127,8 +125,8 @@
     interactiveSegmenterModel.set(sam);
     interactiveSegmenterModel.subscribe((segmenter) => {
       if (segmenter) {
-        pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-        pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
+        pointSelectionTool.modes["plus"].postProcessor = segmenter as InteractiveImageSegmenter;
+        pointSelectionTool.modes["minus"].postProcessor = segmenter as InteractiveImageSegmenter;
         rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
       }
     });
@@ -165,8 +163,8 @@
     }
   }
 
-  function handleAddClassification() {
-    console.log("AnnotationWorkspace.handleAddClassification");
+  function handleAddCurrentFeatures() {
+    console.log("AnnotationWorkspace.handleAddCurrentFeatures");
     if (currentAnnCatName !== "") {
       addCurrentFeatures();
       dispatch("enableSaveFlag");
@@ -447,13 +445,12 @@
         bind:currentAnnCatName
         bind:classes
         bind:selectedTool
-        {pointPlusTool}
-        {pointMinusTool}
+        {pointSelectionTool}
         {colorScale}
         placeholder="Label name"
-        on:addCurrentAnn={handleAddClassification}
+        on:addCurrentAnn={handleAddCurrentFeatures}
       />
-    {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}
+    {:else if selectedTool && (selectedTool.type == tools.ToolType.PointSelection || selectedTool.type == tools.ToolType.Rectangle)}
       {#if !modelLoaded}
         {#if models.length > 0}
           <SelectModal
@@ -476,8 +473,7 @@
         bind:currentAnnCatName
         bind:classes
         bind:selectedTool
-        {pointPlusTool}
-        {pointMinusTool}
+        {pointSelectionTool}
         {colorScale}
         on:addCurrentAnn={handleAddCurrentAnn}
       />
