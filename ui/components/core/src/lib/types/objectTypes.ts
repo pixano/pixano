@@ -58,14 +58,14 @@ type BaseObjectContent = {
   editing?: boolean;
 };
 
-export type BoxObjectContent = {
+export type BoxObjectContent = BaseObjectContent & {
   type: "box";
   boundingBox: BBox;
 };
 
-export type MaskObjectContent = {
+export type MaskObjectContent = BaseObjectContent & {
   type: "mask";
   mask: Mask;
 };
 
-export type ObjectContent = BaseObjectContent & (BoxObjectContent | MaskObjectContent);
+export type ObjectContent = BoxObjectContent | MaskObjectContent;

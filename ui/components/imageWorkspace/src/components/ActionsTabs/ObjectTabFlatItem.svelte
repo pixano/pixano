@@ -20,21 +20,32 @@
   import type { ObjectContent, ObjectProperty } from "@pixano/core";
 
   import { objectSetup } from "../../lib/settings/objectSetting";
+  import { objects } from "../../lib/stores/stores";
 
   export let objectContent: ObjectContent;
 
   let open: boolean = true;
 
   const handleEditIconClick = () => {
-    if (objectContent.type === "box") {
-      objectContent.boundingBox.editing = !objectContent.boundingBox.editing;
-    }
+    objects.update((oldObjects) =>
+      oldObjects.map((o) => {
+        if (o.id === objectContent.id && o.type === "box") {
+          o.boundingBox.editing = !o.boundingBox.editing;
+        }
+        return o;
+      }),
+    );
   };
 
   const handleLockIconClick = () => {
-    if (objectContent.type === "box") {
-      objectContent.boundingBox.locked = !objectContent.boundingBox.locked;
-    }
+    objects.update((oldObjects) =>
+      oldObjects.map((o) => {
+        if (o.id === objectContent.id && o.type === "box") {
+          o.boundingBox.locked = !o.boundingBox.locked;
+        }
+        return o;
+      }),
+    );
   };
 
   $: properties = Object.entries(objectContent.properties).map(([label, value]) => ({

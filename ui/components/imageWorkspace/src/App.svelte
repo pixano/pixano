@@ -33,6 +33,18 @@
       return acc;
     }, [] as BBox[]);
   });
+
+  $: objects.update((old) =>
+    old.map((object) => {
+      if (object.type === "box") {
+        return {
+          ...object,
+          boundingBox: bboxes.find((bbox) => bbox.objectId === object.id) || object.boundingBox,
+        };
+      }
+      return object;
+    }),
+  );
 </script>
 
 <div class="flex w-full h-screen">

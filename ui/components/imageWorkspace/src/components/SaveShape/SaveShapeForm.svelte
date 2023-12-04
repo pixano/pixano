@@ -45,9 +45,10 @@
       {
         type: "box",
         name: `id ${oldObjects.length + 1}`,
-        id: `${oldObjects.length + 1}`,
+        id: `object${oldObjects.length + 1}`,
         boundingBox: {
-          id: "23",
+          objectId: `${oldObjects.length + 1}`,
+          id: `bbox${oldObjects.length + 1}`,
           viewId: "view",
           bbox: [shape.attrs.x, shape.attrs.y, shape.attrs.width, shape.attrs.height],
           tooltip: "foo",
@@ -58,6 +59,7 @@
         properties: objectProperties,
       },
     ]);
+    newShape.set(null);
   };
 
   const handleCheckboxClick = (checked: boolean, propertyLabel: string) => {
@@ -76,8 +78,6 @@
     const result = objectValidationSchema.safeParse(objectProperties);
     isFormValid = result.success;
   }
-
-  $: console.log({ objectProperties });
 </script>
 
 <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>

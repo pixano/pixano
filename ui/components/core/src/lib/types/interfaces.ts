@@ -63,6 +63,7 @@ export interface Mask {
 }
 
 export interface BBox {
+  objectId: string;
   id: string;
   viewId: string;
   bbox: Array<number>;
