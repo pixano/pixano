@@ -462,9 +462,9 @@
 
   function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: Konva.Group) {
     // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-    const objectsToDestroy: Array<Konva.Group> = []; // need to build a list to not destroy while looping children
+    const objectsToDestroy: Array<Konva.Group | Konva.Shape> = []; // need to build a list to not destroy while looping children
     for (const obj of objectsGroup.children) {
-      if (!objectsIds.includes(obj.id()) && obj instanceof Konva.Group) {
+      if (!objectsIds.includes(obj.id())) {
         objectsToDestroy.push(obj);
       }
     }
