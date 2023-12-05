@@ -511,14 +511,20 @@
         class="w-full h-full overflow-y-scroll {activeTab == 'dataset' ? '' : 'hidden'}"
         on:scroll={handleDatasetScroll}
       >
-        <!-- Details -->
-        <div class="flex flex-col p-4 border-b-2 border-slate-300">
-          <span class="font-medium"> Active learning : </span>
-          <label class="pt-1 flex items-center select-none cursor-pointer">
-            <input type="checkbox" class="cursor-pointer mx-2" bind:checked={activeLearningFlag} />
-            Show remaining items only
-          </label>
-        </div>
+        <!-- Active Learning (only show options if "round" found) -->
+        {#if "round" in selectedDataset.page.items[0].features}
+          <div class="flex flex-col p-4 border-b-2 border-slate-300">
+            <span class="font-medium"> Active learning: </span>
+            <label class="pt-1 flex items-center select-none cursor-pointer">
+              <input
+                type="checkbox"
+                class="cursor-pointer mx-2"
+                bind:checked={activeLearningFlag}
+              />
+              Show remaining items only
+            </label>
+          </div>
+        {/if}
 
         <div class="p-4 flex flex-wrap justify-center">
           {#each filterItems(selectedDataset.page.items) as item}
