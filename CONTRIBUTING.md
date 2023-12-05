@@ -70,16 +70,51 @@ Our frontend code is tested using Storybook, which you can launch with the follo
 pnpm -r run storybook
 ```
 
-## Formatting the code
+## Formatting and linting the code
 
-We use these extensions for formatting the Pixano source code:
+### Backend
 
-- Black: Python, Jupyter
-  - https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter
-- Prettier: Typescript, Javascript, Svelte, HTML, CSS, JSON, YAML, Markdown
-  - https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode
-  - https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode
+We format Python files and Jupyter notebooks with the **Black formatter**.
+
+You can install the <a href="https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter" target="_blank">Visual Studio Extension</a> and set it to format files automatically on save.
+
+Or you can use the Python package:
+
+```bash
+pip install black
+black pixano/
+black notebooks/
+```
+
+### Frontend
+
+We format frontend files (Typescript, Javascript, Svelte, HTML, CSS, JSON, YAML, Markdown) with the **Prettier formatter**.
+
+You can install the <a href="https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode" target="_blank">Visual Studio Extension</a> (and <a href="https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode
+" target="_blank">this Extension</a> for Svelte) and set them to format files automatically on save.
+
+Or you can use the command line we have set up:
+
+```bash
+cd ui
+pnpm format
+```
+
+We also lint frontend files with **eslint**.
+
+You can use the command line we have set up:
+
+```bash
+cd ui
+pnpm lint
+```
+
+## Formatting your commits
+
+We format our commit messages with **the <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary" target="_blank">Conventional Commits</a> guidelines.**
 
 ## Updating the changelog
 
 When you want to create a pull request with the changes you have made, please update the CHANGELOG.md accordingly.
+
+We format our changelog with **the <a href="https://keepachangelog.com/en/1.1.0/#how" target="_blank">Keep a Changelog</a> guidelines.**
