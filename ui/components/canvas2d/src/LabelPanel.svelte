@@ -330,7 +330,7 @@
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                  class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -378,7 +378,7 @@
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                    class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -442,7 +442,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                      class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}

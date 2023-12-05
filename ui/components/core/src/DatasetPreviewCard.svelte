@@ -32,7 +32,7 @@
 
 <button
   class="w-96 h-72 flex flex-col transition-all text-left
-  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-md"
+  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-xl"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -58,7 +58,6 @@
       width="48"
       class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 hover:bg-slate-300"
     >
-      <title>Open</title>
       <path d={svg_right_arrow} fill="currentcolor" />
     </svg>
   </div>

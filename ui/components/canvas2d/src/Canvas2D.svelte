@@ -42,7 +42,7 @@
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings: Dict<ort.Tensor>;
+  export let embeddings: Dict<ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const INPUTPOINT_RADIUS: number = 6;

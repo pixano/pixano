@@ -180,7 +180,7 @@
           <div class="flex-grow" />
           <div class="relative flex items-center">
             {#if searchModels.length > 0}
-              <select class="h-10 px-4 mx-4 border rounded border-slate-300 bg-slate-200">
+              <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
                 {#each searchModels as model}
                   <option value={selectedSearchModel}>
                     {model}
@@ -188,13 +188,13 @@
                 {/each}
               </select>
 
-              <div class="relative flex items-center text-slate-800">
+              <div class="relative flex items-center">
                 <input
                   id="sem-search-input"
                   type="text"
                   value={search}
                   placeholder="Semantic search using {selectedSearchModel}"
-                  class="h-10 pl-10 pr-4 rounded border-2 border-slate-300 shadow-slate-300 accent-main"
+                  class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
                   on:change={handleSearch}
                 />
                 <svg
@@ -202,7 +202,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="absolute left-2 h-5 w-5 pointer-events-none"
+                  class="absolute left-2 h-5 w-5 text-slate-500 pointer-events-none"
                 >
                   <path d={svg_search} fill="currentcolor" />
                 </svg>
@@ -213,7 +213,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-5 w-5"
+                      class="h-5 w-5 text-slate-500"
                     >
                       <path d={svg_clear} fill="currentcolor" />
                     </svg>

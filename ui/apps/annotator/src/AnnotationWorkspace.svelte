@@ -454,7 +454,7 @@
       {#if !modelLoaded}
         {#if models.length > 0}
           <SelectModal
-            message="Please select your model for semantic segmentation."
+            message="Please select your model for interactive segmentation."
             choices={models}
             ifNoChoices={""}
             bind:selected={selectedModelName}

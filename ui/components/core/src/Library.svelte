@@ -64,12 +64,12 @@
     </div>
     <div class="grow flex flex-row justify-end items-end">
       <div class="flex items-center space-x-2">
-        <div class="h-20 my-5 relative flex items-center text-slate-800">
+        <div class="h-20 my-5 relative flex items-center">
           <input
             id="search-input"
             type="text"
             placeholder="Search datasets"
-            class="h-10 pl-10 pr-4 rounded border-2 accent-main font-medium"
+            class="h-10 pl-10 pr-4 rounded-full border-2 accent-main text-slate-800 placeholder-slate-500 font-medium"
             on:input={handleSearch}
           />
           <svg
@@ -77,7 +77,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="absolute left-3 h-5 w-5 pointer-events-none"
+            class="absolute left-3 h-5 w-5 pointer-events-none text-slate-500"
           >
             <path d={svg_search} fill="currentcolor" />
           </svg>

@@ -36,25 +36,29 @@
 <!-- Dashboard -->
 {#if selectedDataset.page}
   <div class="h-full flex flex-row">
-    <div class="w-1/6 flex flex-col items-start">
+    <div class="w-64 h-fit z-10 flex flex-col items-start">
       <button
-        class="w-full h-20 px-8 py-5 rounded-l-sm text-lg text-left {selectedTab === 'overview'
-          ? ' text-main bg-slate-300'
-          : 'hover:bg-slate-300'}"
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+         {selectedTab === 'overview'
+          ? 'text-slate-50 bg-main hover:bg-secondary'
+          : 'text-main hover:bg-slate-300'}"
         on:click={selectOverviewTab}
       >
         Overview
       </button>
       <button
-        class="w-full h-20 px-8 py-5 rounded-l-sm text-lg text-left {selectedTab === 'stats'
-          ? ' text-main bg-slate-300'
-          : 'hover:bg-slate-300'}"
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+        {selectedTab === 'stats'
+          ? 'text-slate-50 bg-main hover:bg-secondary '
+          : 'text-main hover:bg-slate-300'}"
         on:click={selectStatsTab}
       >
         Statistics
       </button>
     </div>
-    <div class="w-5/6 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300">
+    <div
+      class="w-full z-10 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300"
+    >
       {#if selectedTab === "overview"}
         <!-- Overview -->
         <div class="w-full flex flex-row justify-between">
