@@ -23,7 +23,7 @@
   import { objects } from "./lib/stores/stores";
   import "./index.css";
 
-  export let selectedTool: tools.Tool | null;
+  export let selectedTool: tools.Tool | null = null;
   export let selectedItem: ItemData = mockImage;
   let bboxes: BBox[] = [];
 
@@ -47,7 +47,7 @@
   );
 </script>
 
-<div class="flex w-full h-screen">
+<div class="flex w-full pt-[81px] h-full">
   <Toolbar bind:selectedTool />
   <ImageCanvas {selectedTool} {selectedItem} bind:bboxes />
   <ActionsTabs />

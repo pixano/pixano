@@ -28,8 +28,8 @@
     WarningModal,
   } from "@pixano/core";
   import { mask_utils, npy, SAM } from "@pixano/models";
+  import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
 
-  import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
@@ -55,7 +55,7 @@
   let bboxes: Array<BBox>;
   let embeddings = {};
 
-  let activeLearningFlag = false;
+  // let activeLearningFlag = false;
   let saveFlag = false;
   let unselectItemModal = false;
   let datasetErrorModal = false;
@@ -96,9 +96,9 @@
 
       // Toggle active learning filtering if "round" found
       if (selectedDataset.page.items[0].find((feature) => feature.name === "round")) {
-        activeLearningFlag = true;
+        // activeLearningFlag = true;
       } else {
-        activeLearningFlag = false;
+        // activeLearningFlag = false;
       }
 
       await handleSelectItem(firstItemId);
@@ -369,21 +369,21 @@
     await handleSelectItem(selectedItem.id);
   }
 
-  async function handleLoadNextPage() {
-    console.log("App.handleLoadNextPage");
-    currentPage = currentPage + 1;
+  // async function handleLoadNextPage() {
+  //   console.log("App.handleLoadNextPage");
+  //   currentPage = currentPage + 1;
 
-    const start = Date.now();
-    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
-    console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
+  //   const start = Date.now();
+  //   const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
+  //   console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
 
-    if (new_dbImages) {
-      selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
-    } else {
-      // End of dataset: reset last page
-      currentPage = currentPage - 1;
-    }
-  }
+  //   if (new_dbImages) {
+  //     selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
+  //   } else {
+  //     // End of dataset: reset last page
+  //     currentPage = currentPage - 1;
+  //   }
+  // }
 
   async function handleModelPrompt() {
     modelPromptModal = false;
@@ -421,7 +421,8 @@
 />
 {#if datasets}
   {#if selectedItem}
-    <AnnotationWorkspace
+    <ImageWorkspace {selectedItem} />
+    <!-- <AnnotationWorkspace
       {selectedDataset}
       {selectedItem}
       bind:annotations
@@ -435,7 +436,7 @@
       on:selectItem={(event) => handleSelectItem(event.detail)}
       on:loadNextPage={handleLoadNextPage}
       on:enableSaveFlag={() => (saveFlag = true)}
-    />
+    /> -->
   {:else}
     <Library
       {datasets}

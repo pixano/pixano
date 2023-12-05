@@ -32,6 +32,7 @@ export interface ItemData {
 export interface ViewData {
   id: string;
   uri: string;
+  url?: string; // FOR LEGACY
   height?: number;
   width?: number;
 }
@@ -63,7 +64,7 @@ export interface Mask {
 }
 
 export interface BBox {
-  objectId: string;
+  objectId?: string; // TODO100: remove
   id: string;
   viewId: string;
   bbox: Array<number>;

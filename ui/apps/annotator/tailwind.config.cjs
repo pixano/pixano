@@ -1,3 +1,5 @@
+import { theme } from "@pixano/core/theme/tailwindTheme";
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -5,17 +7,16 @@ module.exports = {
     "./src/**/*.{svelte,js,ts}",
     "../../../ui/components/core/src/**/*.{svelte,js,ts}",
     "../../../ui/components/canvas2d/src/**/*.{svelte,js,ts}",
+    "../../components/imageWorkspace/src/**/*.{svelte,js,ts}",
   ],
   darkMode: "media", // or 'class'
   theme: {
     extend: {
-      fontFamily: {
-        "DM Sans": ["DM Sans", "sans-serif"],
-        Montserrat: ["Montserrat", "sans-serif"],
-      },
+      ...theme,
       colors: {
         main: "#771E5F",
         secondary: "#872f6e",
+        ...theme.colors,
       },
     },
   },
