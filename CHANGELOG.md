@@ -37,11 +37,11 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - Fix type hints in CompressedRLE and RLE related utils functions
-- Fix size and spacing of elements in frontend user interface
 - Fix pip install commands in notebooks for Google Colab
 - Fix broken link in CHANGELOG.md
 - Fix internal cross-references in the API reference of the documentation website
 - Fix eslint and TypeScript errors
+- Visual fixes in frontend user interface
 
 ## [0.4.1] - 2023-11-13
 
