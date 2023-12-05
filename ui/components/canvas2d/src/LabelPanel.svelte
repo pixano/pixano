@@ -73,6 +73,8 @@
     label: Label,
     visibility: boolean,
   ) {
+    // FIXME: Toggling label visibility sometimes does not work for sources other than Ground Truth
+
     // Toggle visibility
     label.visible = visibility;
     dispatch("labelVisibility", label);
@@ -472,12 +474,10 @@
                           class="h-5 w-5"
                         >
                           <title>
-                            {(category.visible && label.visible) || label.visible ? "Hide" : "Show"}
+                            {label.visible ? "Hide" : "Show"}
                           </title>
                           <path
-                            d={(category.visible && label.visible) || label.visible
-                              ? icons.svg_hide
-                              : icons.svg_show}
+                            d={label.visible ? icons.svg_hide : icons.svg_show}
                             fill="currentcolor"
                           />
                         </svg>
