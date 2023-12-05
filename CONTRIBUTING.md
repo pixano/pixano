@@ -30,43 +30,46 @@ pip install .
 
 #### Frontend
 
-You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, inside the `pixano/ui/` directory, run this command to install all the pnpm dependencies:
+You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, you will need to run this to install all the pnpm dependencies:
 
 ```bash
+cd ui/
 pnpm i
 ```
 
 ### Running the server and apps
 
-First, launch the backend server using this command:
+First, you will need to launch the backend server using this command:
 
 ```bash
 DATA_DIR=your_datasets_directory/ uvicorn pixano.apps:create_app --factory --reload
 ```
 
-Then, in another terminal, launch the frontend apps using:
+Then, in another terminal, you can launch the frontend apps using:
 
 ```bash
+cd ui/
 pnpm --parallel run dev
 ```
 
-This command should provide you with `http://localhost` links you can open in your browser to access the Explorer and Annotator apps.
+This command should provide you with two `http://localhost` links you can open in your browser to access both the Explorer and Annotator apps.
 
-Both the uvicorn server and the pnpm apps will refresh automatically when you make changes to the code.
+Both the backend server and the frontend apps should refresh automatically when you make changes to the code.
 
 ## Testing the code
 
-We test our backend code with Python's built-in `unittest` framework. All our unit testing files are in the `tests/` folder, with a `test_` prefix, so your settings file in VS Code should look like this:
+### Backend
 
-```json
-  "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
-  "python.testing.pytestEnabled": false,
-  "python.testing.unittestEnabled": true
-```
+We test our backend code with Python's built-in `unittest` framework.
+
+All our unit testing files are in the `tests/` folder, with a `test_` prefix.
+
+### Frontend
 
 Our frontend code is tested using Storybook, which you can launch with the following command:
 
 ```bash
+cd ui/
 pnpm -r run storybook
 ```
 
@@ -96,7 +99,7 @@ You can install the <a href="https://marketplace.visualstudio.com/items?itemName
 Or you can use the command line we have set up:
 
 ```bash
-cd ui
+cd ui/
 pnpm format
 ```
 
@@ -105,7 +108,7 @@ We also lint frontend files with **eslint**.
 You can use the command line we have set up:
 
 ```bash
-cd ui
+cd ui/
 pnpm lint
 ```
 
