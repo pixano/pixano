@@ -32,10 +32,12 @@ All notable changes to Pixano will be documented in this file.
 - Update API reference generation
 - Reformat GitHub actions
 - Reformat and refactor frontend code with Prettier and eslint
+- Replace deprecated frontend package shortid by nanoid
 
 ### Fixed
 
 - Fix type hints in CompressedRLE and RLE related utils functions
+- Fix size and spacing of elements in frontend user interface
 - Fix pip install commands in notebooks for Google Colab
 - Fix broken link in CHANGELOG.md
 - Fix internal cross-references in the API reference of the documentation website
