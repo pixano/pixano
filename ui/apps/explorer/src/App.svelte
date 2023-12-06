@@ -235,17 +235,17 @@
   });
 </script>
 
-<Header
-  app="Explorer"
-  bind:selectedDataset
-  bind:selectedItem
-  bind:selectedTab
-  saveFlag={false}
-  on:unselectDataset={handleUnselectDataset}
-  on:unselectItem={handleUnselectItem}
-/>
 {#if datasets}
   {#if selectedDataset}
+    <Header
+      app="Explorer"
+      bind:selectedDataset
+      bind:selectedItem
+      bind:selectedTab
+      saveFlag={false}
+      on:unselectDataset={handleUnselectDataset}
+      on:unselectItem={handleUnselectItem}
+    />
     {#if selectedItem}
       <ExplorationWorkspace
         {selectedItem}

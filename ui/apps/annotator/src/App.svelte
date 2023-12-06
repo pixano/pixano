@@ -380,32 +380,34 @@
   });
 </script>
 
-<Header
-  app="Annotator"
-  bind:selectedDataset
-  bind:selectedItem
-  {saveFlag}
-  on:unselectDataset={handleUnselectDataset}
-  on:unselectItem={handleUnselectItem}
-  on:saveItem={handleSaveItem}
-/>
 {#if datasets}
-  {#if selectedItem}
-    <AnnotationWorkspace
-      {selectedDataset}
-      {selectedItem}
-      bind:annotations
-      {classes}
-      bind:masks
-      bind:bboxes
-      {currentPage}
-      {models}
-      bind:activeLearningFlag
-      bind:saveFlag
-      on:selectItem={(event) => handleSelectItem(event.detail)}
-      on:loadNextPage={handleLoadNextPage}
-      on:enableSaveFlag={() => (saveFlag = true)}
+  {#if selectedDataset}
+    <Header
+      app="Annotator"
+      bind:selectedDataset
+      bind:selectedItem
+      {saveFlag}
+      on:unselectDataset={handleUnselectDataset}
+      on:unselectItem={handleUnselectItem}
+      on:saveItem={handleSaveItem}
     />
+    {#if selectedItem}
+      <AnnotationWorkspace
+        {selectedDataset}
+        {selectedItem}
+        bind:annotations
+        {classes}
+        bind:masks
+        bind:bboxes
+        {currentPage}
+        {models}
+        bind:activeLearningFlag
+        bind:saveFlag
+        on:selectItem={(event) => handleSelectItem(event.detail)}
+        on:loadNextPage={handleLoadNextPage}
+        on:enableSaveFlag={() => (saveFlag = true)}
+      />
+    {/if}
   {:else}
     <Library
       {datasets}
