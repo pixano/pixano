@@ -27,21 +27,6 @@ export enum ToolType {
   Classification = "CLASSIFICATION",
 }
 
-type RectangleShape = {
-  type: "rectangle";
-  attrs: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  };
-};
-
-export type Shape = RectangleShape & {
-  status: "creating" | "editing" | "done"; // TODO100 : remove?
-  viewId: string;
-};
-
 interface Tool {
   name: string;
   type: ToolType;

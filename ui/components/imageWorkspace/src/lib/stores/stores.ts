@@ -15,14 +15,14 @@
 
 // Imports
 import { writable } from "svelte/store";
-import type { Shape, ObjectContent } from "@pixano/core";
+import type { Shape, ObjectContent, InteractiveImageSegmenter } from "@pixano/core";
 
 import { allObjects } from "../mock";
 
 // Exports
 export const newShape = writable<Shape | null>();
 export const objects = writable<ObjectContent[]>([]);
-export const interactiveSegmenterModel = writable();
+export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 
 // add mock objects
 objects.set(allObjects);

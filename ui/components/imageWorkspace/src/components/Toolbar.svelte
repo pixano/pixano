@@ -16,14 +16,10 @@
   import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { tools } from "@pixano/canvas2d";
+  import type { SelectionTool } from "@pixano/core";
+
   import MagicIcon from "../assets/MagicIcon.svelte";
-  import {
-    panTool,
-    smartRectangleTool,
-    rectangleTool,
-    smartMaskTool,
-    type SelectionTool,
-  } from "../lib/types/tools";
+  import { panTool, smartRectangleTool, rectangleTool, smartMaskTool } from "../lib/settings/tools";
   import { interactiveSegmenterModel, newShape } from "../lib/stores/stores";
 
   export let selectedTool: SelectionTool | null;

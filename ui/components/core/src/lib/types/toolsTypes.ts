@@ -16,55 +16,23 @@
 // Imports
 import type { InteractiveImageSegmenter } from "./modelsTypes";
 
+export type ToolType = "LABELED_POINT" | "RECTANGLE" | "DELETE" | "PAN" | "CLASSIFICATION";
+
 // Exports
-export enum ToolType {
-  LabeledPoint = "LABELED_POINT",
-  Rectangle = "RECTANGLE",
-  Delete = "DELETE",
-  Pan = "PAN",
-  Classification = "CLASSIFICATION",
-}
-
-interface Tool {
+type BaseTool = {
   name: string;
-  type: ToolType;
-  icon: string;
   cursor: string;
-  onSelect: () => void;
-  postProcessor: InteractiveImageSegmenter;
+  postProcessor?: InteractiveImageSegmenter;
   isSmart?: boolean;
-}
-
-interface MultiModalTool extends Tool {
-  modes: Array<Tool>;
-}
-interface LabeledPointTool extends Tool {
-  type: ToolType.LabeledPoint;
-  label: number;
-}
-
-interface RectangleTool extends Tool {
-  type: ToolType.Rectangle;
-}
-
-interface DeleteTool extends Tool {
-  type: ToolType.Delete;
-}
-
-interface PanTool extends Tool {
-  type: ToolType.Pan;
-}
-
-interface ClassificationTool extends Tool {
-  type: ToolType.Classification;
-}
-
-export type {
-  Tool,
-  LabeledPointTool,
-  RectangleTool,
-  DeleteTool,
-  PanTool,
-  ClassificationTool,
-  MultiModalTool,
 };
+
+export type AllTool = BaseTool & {
+  type: "RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION";
+};
+
+export type LabeledPointTool = BaseTool & {
+  type: "LABELED_POINT";
+  label: number;
+};
+
+export type SelectionTool = AllTool | LabeledPointTool;

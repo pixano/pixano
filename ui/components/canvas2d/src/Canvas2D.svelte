@@ -20,19 +20,13 @@
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
-  import { WarningModal } from "@pixano/core";
+  import {
+    WarningModal,
+    type SelectionTool,
+    type LabeledPointTool,
+    type Shape,
+  } from "@pixano/core";
 
-  import { ToolType } from "./tools";
-
-  import type {
-    Tool,
-    LabeledPointTool,
-    RectangleTool,
-    DeleteTool,
-    PanTool,
-    ClassificationTool,
-    Shape,
-  } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { Mask, BBox, ItemData, ViewData } from "@pixano/core";
   import {
@@ -41,6 +35,7 @@
     INPUTPOINT_STROKEWIDTH,
     INPUTRECT_STROKEWIDTH,
     MASK_STROKEWIDTH,
+    LABELED_POINT,
   } from "./lib/constants";
   import {
     addBBox,
@@ -54,7 +49,7 @@
 
   // Exports
   export let selectedItem: ItemData;
-  export let selectedTool: Tool | null; // TODO100: refacto type here
+  export let selectedTool: SelectionTool; // TODO100: refacto type here
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
@@ -455,23 +450,23 @@
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case ToolType.LabeledPoint:
-        displayInputPointTool(selectedTool as LabeledPointTool);
+      case "LABELED_POINT":
+        displayInputPointTool(selectedTool);
         break;
-      case ToolType.Rectangle:
-        displayInputRectTool(selectedTool as RectangleTool);
+      case "RECTANGLE":
+        displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case ToolType.Delete:
+      case "DELETE":
         clearAnnotationAndInputs();
-        displayInputDeleteTool(selectedTool as DeleteTool);
+        displayInputDeleteTool(selectedTool);
         break;
-      case ToolType.Pan:
-        displayPanTool(selectedTool as PanTool);
+      case "PAN":
+        displayPanTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case ToolType.Classification:
-        displayClassificationTool(selectedTool as ClassificationTool);
+      case "CLASSIFICATION":
+        displayClassificationTool(selectedTool);
         break;
 
       default:
@@ -488,11 +483,11 @@
 
   // ********** PAN TOOL ********** //
 
-  function displayPanTool(tool: PanTool) {
+  function displayPanTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${LABELED_POINT}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -506,11 +501,11 @@
 
   // ********** CLASSIFICATION TOOL ********** //
 
-  function displayClassificationTool(tool: ClassificationTool) {
+  function displayClassificationTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${LABELED_POINT}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -649,11 +644,11 @@
 
   // ********** INPUT RECTANGLE TOOL ********** //
 
-  function displayInputRectTool(tool: RectangleTool) {
+  function displayInputRectTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Rectangle
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${LABELED_POINT}`);
       if (pointer) pointer.destroy();
 
       if (!highlighted_point) {
@@ -735,7 +730,7 @@
   }
 
   function dragInputRectMove(viewId: string) {
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type === "RECTANGLE") {
       createNewShape(null);
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
@@ -752,7 +747,7 @@
   }
 
   async function dragInputRectEnd(viewId: string) {
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type == "RECTANGLE") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
@@ -781,11 +776,11 @@
 
   // ********** INPUT DELETE TOOL ********** //
 
-  function displayInputDeleteTool(tool: DeleteTool) {
+  function displayInputDeleteTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != DELETE
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${LABELED_POINT}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -813,11 +808,11 @@
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type == ToolType.LabeledPoint) {
+    if (selectedTool?.type === "LABELED_POINT") {
       updateInputPointStage(position);
     }
 
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type === "RECTANGLE") {
       updateInputRectState(position);
     }
   }
@@ -867,21 +862,21 @@
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
-    if (selectedTool?.type == ToolType.Pan || event.detail.evt.which == 2) {
+    if (selectedTool?.type == "PAN" || event.detail.evt.which == 2) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
-    } else if (selectedTool?.type == ToolType.LabeledPoint) {
+    } else if (selectedTool?.type == "LABELED_POINT") {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
       const input_point = new Konva.Circle({
-        name: `${(selectedTool as LabeledPointTool).label}`,
+        name: `${selectedTool.label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
         radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
         stroke: "white",
-        fill: (selectedTool as LabeledPointTool).label === 1 ? "green" : "red",
+        fill: selectedTool.label === 1 ? "green" : "red",
         strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
         visible: true,
         listening: true,
@@ -904,7 +899,7 @@
       highlightInputPoint(input_point, viewId);
 
       await updateCurrentMask(viewId);
-    } else if (selectedTool?.type == ToolType.Rectangle) {
+    } else if (selectedTool?.type == "RECTANGLE") {
       const pos = viewLayer.getRelativePointerPosition();
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       //add RECT

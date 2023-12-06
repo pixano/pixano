@@ -1,9 +1,5 @@
 import type { BBox, Mask } from "./interfaces";
 
-// ObjectContent --> objet deja créé
-// Shape -> objet en cours de création
-// ObjectParameters --> paramètres d'une shape puis d'un objet
-
 export type ObjectParameters = {
   label: string;
   multiple: boolean;
