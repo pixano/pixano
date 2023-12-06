@@ -74,12 +74,12 @@
     bboxes = [];
 
     const start = Date.now();
-    selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
+    const loadedItem = await api.getDatasetItem(selectedDataset.id, itemId);
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    if (selectedItem.objects) {
-      for (const obj of Object.values(selectedItem.objects)) {
+    if (loadedItem.objects) {
+      for (const obj of Object.values(loadedItem.objects)) {
         const sourceId = obj.source_id;
         const viewId = obj.view_id;
         const catId =
@@ -177,8 +177,8 @@
           }
 
           // Add bbox
-          const imageWidth = selectedItem.views[viewId].features.width.value as number;
-          const imageHeight = selectedItem.views[viewId].features.heightw.value as number;
+          const imageWidth = loadedItem.views[viewId].features.width.value as number;
+          const imageHeight = loadedItem.views[viewId].features.height.value as number;
 
           if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
             const x = obj.bbox.coords[0] * imageWidth;
@@ -218,6 +218,7 @@
         }
       }
     }
+    selectedItem = loadedItem;
   }
 
   function handleUnselectItem() {
