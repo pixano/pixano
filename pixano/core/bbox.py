@@ -17,6 +17,7 @@ import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel, PrivateAttr
 
+from pixano.core.compressed_rle import CompressedRLE
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import (
     denormalize_coords,
@@ -231,6 +232,19 @@ class BBox(PixanoType, BaseModel):
         """
 
         return BBox.from_xywh(mask_to_bbox(mask))
+
+    @staticmethod
+    def from_rle(rle: CompressedRLE) -> "BBox":
+        """Create bounding box using a RLE mask
+
+        Args:
+            rle (CompressedRLE): RLE mask
+
+        Returns:
+            Bbox: Bounding box
+        """
+
+        return BBox.from_mask(rle.to_mask())
 
     @staticmethod
     def to_struct() -> pa.StructType:

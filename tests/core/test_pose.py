@@ -49,4 +49,4 @@ class TestParquetPose(unittest.TestCase):
 
         self.assertEqual(re_table.column_names, ["pose"])
         pose1 = re_table.take([1])["pose"][0].as_py()
-        self.assertTrue(isinstance(pose1, Pose))
+        self.assertIsInstance(pose1, Pose)

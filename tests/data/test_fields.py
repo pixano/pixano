@@ -32,15 +32,15 @@ class FieldsTestCase(unittest.TestCase):
         fields_from_base_dict = Fields(self.dict)
         fields_from_attr_dict = Fields(self.fields.field_dict)
 
-        self.assertTrue(isinstance(fields_from_base_dict, Fields))
-        self.assertTrue(isinstance(fields_from_attr_dict, Fields))
+        self.assertIsInstance(fields_from_base_dict, Fields)
+        self.assertIsInstance(fields_from_attr_dict, Fields)
         self.assertEqual(self.fields, fields_from_base_dict)
         self.assertEqual(self.fields, fields_from_attr_dict)
 
     def test_to_schema(self):
         schema = self.fields.to_schema()
 
-        self.assertTrue(isinstance(schema, pa.Schema))
+        self.assertIsInstance(schema, pa.Schema)
         for pyarrow_field in schema:
-            self.assertTrue(isinstance(pyarrow_field, pa.Field))
+            self.assertIsInstance(pyarrow_field, pa.Field)
         self.assertEqual(schema, pa.schema(self.pyarrow_list))

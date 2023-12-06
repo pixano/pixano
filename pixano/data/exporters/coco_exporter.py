@@ -18,8 +18,6 @@ from math import ceil
 from pathlib import Path
 from urllib.parse import urlparse
 
-import duckdb
-import lancedb
 from tqdm.auto import tqdm
 
 from pixano.core import Image
@@ -28,11 +26,14 @@ from pixano.data.exporters.exporter import Exporter
 
 
 class COCOExporter(Exporter):
-    """Exporter class for COCO instances dataset"""
+    """Exporter class for COCO instances dataset
+
+    Attributes:
+    dataset (Dataset): Dataset to export
+    """
 
     def export_dataset(
         self,
-        input_dir: Path,
         export_dir: Path,
         splits: list[str] = None,
         objects_sources: list[str] = None,
@@ -41,70 +42,40 @@ class COCOExporter(Exporter):
         """Export dataset back to original format
 
         Args:
-            input_dir (Path): Input directory
             export_dir (Path): Export directory
             splits (list[str], optional): Dataset splits to export, all if None. Defaults to None.
             objects_sources (list[str], optional): Objects sources to export, all if None. Defaults to None.
             copy (bool, optional): True to copy files to export directory. Defaults to True.
         """
 
-        # Load dataset
-        dataset = Dataset(input_dir)
-        ds = dataset.connect()
-
-        main_table: lancedb.db.LanceTable = ds.open_table("db")
-
-        image_table: dict[str, lancedb.db.LanceTable]
-        image_field_names = []
-        if "media" in dataset.info.tables:
-            for md_info in dataset.info.tables["media"]:
-                if md_info["name"] == "image":
-                    image_table = ds.open_table(md_info["name"])
-                    image_field_names.extend(
-                        [
-                            field_name
-                            for field_name, field_type in md_info["fields"].items()
-                            if field_type == "image"
-                        ]
-                    )
-
-        obj_tables: dict[str, lancedb.db.LanceTable] = {}
-        if "objects" in dataset.info.tables:
-            for obj_info in dataset.info.tables["objects"]:
-                # If no objects tables provided, select all objects tables
-                if not objects_sources or (
-                    objects_sources and obj_info["name"] in objects_sources
-                ):
-                    try:
-                        obj_tables[obj_info["source"]] = ds.open_table(obj_info["name"])
-                    except FileNotFoundError as e:
-                        raise FileNotFoundError(f"Objects table not found: {e}") from e
-        else:
-            raise Exception("No objects table to export")
-
-        # Create URI prefix
-        media_dir = dataset.media_dir
-        uri_prefix = (
-            (export_dir / "media").absolute().as_uri()
-            if copy
-            else media_dir.absolute().as_uri()
-        )
-
-        # Create export directory
-        ann_dir = export_dir / f"annotations [{', '.join(list(obj_tables.keys()))}]"
-        ann_dir.mkdir(parents=True, exist_ok=True)
+        # Load tables
+        ds_tables = self.dataset.open_tables()
 
         # If no splits provided, select all splits
         if not splits:
-            splits = dataset.info.splits
+            splits = self.dataset.info.splits
+            # If no splits, there is nothing to export
+            if not splits:
+                raise Exception("Dataset has no splits to export.")
+
+        # If no object sources provided, select all object tables
+        if not objects_sources:
+            objects_sources = list(ds_tables["objects"].keys())
+            # If no object tables, there is nothing to export
+            if not objects_sources:
+                raise Exception("Dataset has no objects tables to export.")
+
+        # Create export directory
+        ann_dir = export_dir / f"annotations [{', '.join(objects_sources)}]"
+        ann_dir.mkdir(parents=True, exist_ok=True)
 
         # Iterate on splits
-        with tqdm(desc="Processing dataset", total=len(main_table)) as progress:
+        with tqdm(desc="Processing dataset", total=self.dataset.num_rows) as progress:
             for split in splits:
                 # Create COCO json
                 coco_json = {
                     "info": {
-                        "description": dataset.info.name,
+                        "description": self.dataset.info.name,
                         "url": "N/A",
                         "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
                         "year": datetime.date.today().year,
@@ -120,97 +91,91 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": [],
+                    "categories": [
+                        cat.model_dump() for cat in self.dataset.info.categories
+                    ],
                 }
-                seen_category_ids = []
+                category_ids = [cat.id for cat in self.dataset.info.categories]
                 batch_size = 1024
 
-                for i in range(ceil(len(main_table) / batch_size)):
-                    # Load rows
+                for i in range(ceil(self.dataset.num_rows / batch_size)):
+                    # Load items
                     offset = i * batch_size
-                    limit = min(len(main_table), offset + batch_size)
-                    pyarrow_table = main_table.to_lance()
-                    pyarrow_table = duckdb.query(
-                        f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-                    ).to_arrow_table()
-                    pyarrow_image_table = image_table.to_lance().to_table(
-                        limit=limit, offset=offset
-                    )
-                    pyarrow_image_table = duckdb.query(
-                        f"SELECT * FROM pyarrow_image_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-                    ).to_arrow_table()
-                    pyarrow_table = duckdb.query(
-                        "SELECT * FROM pyarrow_table LEFT JOIN pyarrow_image_table USING (id) ORDER BY len(id), id"
-                    ).to_arrow_table()
-                    # Filter split
-                    if splits:
-                        pyarrow_table = duckdb.query(
-                            f"SELECT * FROM pyarrow_table WHERE split in ('{split}')"
-                        ).to_arrow_table()
+                    limit = min(self.dataset.num_rows, offset + batch_size)
+                    items = self.dataset.load_items(limit, offset)
 
-                    # Iterate on rows
-                    for row_id in range(pyarrow_table.num_rows):
-                        row = pyarrow_table.take([row_id]).to_pylist()[0]
-                        # Export images
-                        ims = {}
-                        for field_name in image_field_names:
-                            # Open image
-                            ims[field_name] = Image.from_dict(row[field_name])
-                            ims[field_name].uri_prefix = uri_prefix
-                            im_filename = Path(
-                                urlparse(ims[field_name].get_uri()).path
-                            ).name
-                            # Append image info
-                            coco_json["images"].append(
-                                {
-                                    "license": 1,
-                                    "coco_url": ims[field_name].get_uri(),
-                                    "file_name": im_filename,
-                                    "height": ims[field_name].size[1],
-                                    "width": ims[field_name].size[0],
-                                    "id": row["id"],
-                                }
-                            )
-                        # Export objects
-                        objects = {}
-                        for obj_source, obj_table in obj_tables.items():
-                            media_scanner = obj_table.to_lance().scanner(
-                                filter=f"item_id in ('{row['id']}')"
-                            )
-                            objects[obj_source] = media_scanner.to_table().to_pylist()
-                        for obj_source, obj_list in objects.items():
-                            for obj in obj_list:
-                                if obj["view_id"] in image_field_names:
-                                    # Object mask
-                                    mask = (
-                                        obj["mask"].to_urle() if "mask" in obj else None
+                    # Iterate on items
+                    for item in items:
+                        # Filter on split
+                        if item.split in splits:
+                            # Export images
+                            images: dict[str, Image] = {}
+                            for view in item.views.values():
+                                if view.type == "image":
+                                    # Reformat URI for export
+                                    uri = (
+                                        view.uri.replace(
+                                            f"data/{self.dataset.path.name}/media/", ""
+                                        )
+                                        if urlparse(view.uri).scheme == ""
+                                        else view.uri
                                     )
-                                    # Object bounding box
+                                    # Create image from URI
+                                    images[view.id] = Image(
+                                        uri=uri,
+                                        uri_prefix=self.dataset.media_dir.absolute().as_uri(),
+                                    )
+                                    # Append image info
+                                    coco_json["images"].append(
+                                        {
+                                            "license": 1,
+                                            "coco_url": images[view.id].uri,
+                                            "file_name": images[view.id].file_name,
+                                            "height": images[view.id].height,
+                                            "width": images[view.id].width,
+                                            "id": item.id,
+                                        }
+                                    )
+
+                            # Export objects
+                            item = self.dataset.load_item(item.id, load_objects=True)
+                            for obj in item.objects.values():
+                                # Filter by views and object sources
+                                if (
+                                    obj.view_id in images.keys()
+                                    and obj.source_id in objects_sources
+                                ):
+                                    # Bounding box
                                     bbox = (
-                                        obj["bbox"]
+                                        obj.bbox.to_pyarrow()
                                         .denormalize(
-                                            height=ims[obj["view_id"]].size[1],
-                                            width=ims[obj["view_id"]].size[0],
+                                            height=images[obj.view_id].height,
+                                            width=images[obj.view_id].width,
                                         )
                                         .xywh_coords
-                                        if "bbox" in obj
+                                        if obj.bbox
                                         else None
                                     )
-                                    # Object category
-                                    category = (
-                                        {
-                                            "id": obj["category_id"],
-                                            "name": obj["category_name"],
-                                        }
-                                        if "category_id" in obj
-                                        and "category_name" in obj
+                                    # Mask
+                                    mask = (
+                                        obj.mask.to_pyarrow().to_urle()
+                                        if obj.mask
                                         else None
                                     )
+                                    # Category
+                                    category = {
+                                        "id": obj.features["category_id"].value
+                                        if "category_id" in obj.features
+                                        else None,
+                                        "name": obj.features["category_name"].value
+                                        if "category_name" in obj.features
+                                        else None,
+                                    }
                                     # Add object
                                     coco_json["annotations"].append(
                                         {
-                                            "id": obj["id"],
-                                            "image_id": row["id"],
+                                            "id": obj.id,
+                                            "image_id": item.id,
                                             "segmentation": mask,
                                             "bbox": bbox,
                                             "area": 0,
@@ -219,11 +184,12 @@ class COCOExporter(Exporter):
                                             "category_name": category["name"],
                                         }
                                     )
-                                    # Append category if not seen yet
+                                    # Add category if not seen yet
                                     if (
-                                        category["id"] not in seen_category_ids
+                                        category["id"] not in category_ids
                                         and category["name"] is not None
                                     ):
+                                        category_ids.append(category["id"])
                                         coco_json["categories"].append(
                                             {
                                                 "supercategory": "N/A",
@@ -231,9 +197,9 @@ class COCOExporter(Exporter):
                                                 "name": category["name"],
                                             },
                                         )
-                                        seen_category_ids.append(category["id"])
-                        # Update progress bar after processing row
-                        progress.update(1)
+
+                            # Update progress bar after processing row
+                            progress.update(1)
 
                 # Sort categories
                 coco_json["categories"] = sorted(
@@ -245,5 +211,10 @@ class COCOExporter(Exporter):
 
         # Copy media directory
         if copy:
-            if media_dir.exists() and media_dir != export_dir / "media":
-                shutil.copytree(media_dir, export_dir / "media", dirs_exist_ok=True)
+            if (
+                self.dataset.media_dir.exists()
+                and self.dataset.media_dir != export_dir / "media"
+            ):
+                shutil.copytree(
+                    self.dataset.media_dir, export_dir / "media", dirs_exist_ok=True
+                )

@@ -11,8 +11,6 @@
 #
 # http://www.cecill.info
 
-from typing import Any
-
 import numpy as np
 import pyarrow as pa
 from PIL import Image
@@ -34,18 +32,18 @@ class CompressedRLE(PixanoType, BaseModel):
     """Compressed RLE mask type
 
     Attributes:
-        _size (list[float]): Mask size
+        _size (list[int]): Mask size
         _counts (bytes): Mask RLE encoding
     """
 
-    _size: list[float] = PrivateAttr()
+    _size: list[int] = PrivateAttr()
     _counts: bytes = PrivateAttr()
 
-    def __init__(self, size: list[float], counts: bytes):
+    def __init__(self, size: list[int], counts: bytes):
         """Initalize compressed RLE mask
 
         Args:
-            size (list[float]): Mask size
+            size (list[int]): Mask size
             counts (bytes): Mask RLE encoding
         """
 
@@ -57,11 +55,11 @@ class CompressedRLE(PixanoType, BaseModel):
         self._counts = counts
 
     @property
-    def size(self) -> list[float]:
+    def size(self) -> list[int]:
         """Return mask size
 
         Returns:
-            list[float]: Mask size
+            list[int]: Mask size
         """
 
         return self._size
@@ -85,11 +83,11 @@ class CompressedRLE(PixanoType, BaseModel):
 
         return rle_to_mask(self.to_dict())
 
-    def to_urle(self) -> dict[str, Any]:
+    def to_urle(self) -> dict[str, list[int]]:
         """Convert compressed RLE mask to uncompressed RLE
 
         Returns:
-            dict[str, Any]: Mask as uncompressed RLE
+            dict[str, list[int]]: Mask as uncompressed RLE
         """
 
         return rle_to_urle(self.to_dict())
@@ -117,11 +115,11 @@ class CompressedRLE(PixanoType, BaseModel):
         return CompressedRLE.from_dict(mask_to_rle(mask))
 
     @staticmethod
-    def from_urle(urle: dict[str, Any]) -> "CompressedRLE":
+    def from_urle(urle: dict[str, list[int]]) -> "CompressedRLE":
         """Create compressed RLE mask from uncompressed RLE
 
         Args:
-            urle (dict[str, Any]): Mask as uncompressed RLE
+            urle (dict[str, list[int]]): Mask as uncompressed RLE
 
         Returns:
             CompressedRLE: Compressed RLE mask
@@ -150,12 +148,12 @@ class CompressedRLE(PixanoType, BaseModel):
 
     @staticmethod
     def encode(
-        mask: list[list] | dict[str, Any], height: int, width: int
+        mask: list[list] | dict[str, list[int]], height: int, width: int
     ) -> "CompressedRLE":
         """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE
 
         Args:
-            mask (list[list] | dict[str, Any]): Mask as polygons / uncompressed RLE / compressed RLE
+            mask (list[list] | dict[str, list[int]]): Mask as polygons / uncompressed RLE / compressed RLE
             height (int): Image height
             width (int): Image width
 
