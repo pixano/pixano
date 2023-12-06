@@ -40,8 +40,8 @@
     dispatch("unselectItem");
   }
 
-  function handleSaveItemDetails() {
-    dispatch("saveItemDetails");
+  function handleSaveItem() {
+    dispatch("saveItem");
   }
 
   function selectDatabaseTab() {
@@ -153,7 +153,7 @@
 
       <!-- Save icon -->
       {#if selectedItem && app === "Annotator"}
-        <button class="w-30 h px-4 flex justify-end" on:click={handleSaveItemDetails}>
+        <button class="w-30 h px-4 flex justify-end" on:click={handleSaveItem}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="48"

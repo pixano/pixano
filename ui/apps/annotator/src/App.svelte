@@ -287,8 +287,8 @@
     bboxes = [];
   }
 
-  async function handleSaveItemDetails() {
-    console.log("App.handleSaveItemDetails");
+  async function handleSaveItem() {
+    console.log("App.handleSaveItem");
 
     let savedItem: DatasetItem = {
       id: selectedItem.id,
@@ -350,7 +350,7 @@
 
     const start = Date.now();
     await api.postDatasetItem(selectedDataset.id, savedItem);
-    console.log("App.handleSaveItemDetails - api.postDatasetItem in", Date.now() - start, "ms");
+    console.log("App.handleSaveItem - api.postDatasetItem in", Date.now() - start, "ms");
     saveFlag = false;
 
     // Reload item details
@@ -387,7 +387,7 @@
   {saveFlag}
   on:unselectDataset={handleUnselectDataset}
   on:unselectItem={handleUnselectItem}
-  on:saveItemDetails={handleSaveItemDetails}
+  on:saveItem={handleSaveItem}
 />
 {#if datasets}
   {#if selectedItem}

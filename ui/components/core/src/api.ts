@@ -169,14 +169,14 @@ export async function postDatasetItem(datasetId: string, item: DatasetItem) {
     });
     if (response.ok) {
       console.log(
-        "api.postItemDetails -",
+        "api.postDatasetItem -",
         response.status,
         response.statusText,
         await response.text(),
       );
     }
   } catch (e) {
-    console.log("api.postItemDetails -", e);
+    console.log("api.postDatasetItem -", e);
   }
 }
 
