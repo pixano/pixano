@@ -16,26 +16,49 @@
   import { Canvas2D, tools } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
 
-  import type { BBox, ItemData, Mask } from "@pixano/core";
+  import type { BBox, ItemData, Mask, CategoryData, ItemLabels } from "@pixano/core";
   import { newShape } from "../lib/stores/stores";
+  import { utils } from "@pixano/core";
 
   export let selectedItem: ItemData;
   export let masks: Array<Mask> = [];
   export let bboxes: Array<BBox> = [];
-  export let embeddings = { view: [] };
+  export let embeddings = { view: [] }; // TODO100
+  // utilisé par le modele. Permet la segmentation automatique.
+  // appelé dans l'API - getItemEmbedings
+  export let annotations: ItemLabels = {};
+  // infos sur la bbox
+  // pourrait changer. Fait doublon avec les bbox et les masks
+  export let classes: Array<CategoryData> = []; // TODO100 : what is that ?
   export let colorScale = (value: string) => {
     console.log("temp function, TODO100", value);
     return "lightblue";
   };
   export let selectedTool: tools.Tool | null;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  let colorMode = "category";
+
+  export function handleLabelColors() {
+    let range: Array<number>;
+    if (colorMode === "category") {
+      range = [
+        Math.min(...classes.map((cat) => cat.id)),
+        Math.max(...classes.map((cat) => cat.id)),
+      ];
+    } else if (colorMode === "source") {
+      range = [0, Object.keys(annotations).length];
+    } else {
+      range = [];
+    }
+    return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
+  }
 </script>
 
 <div class="flex-auto max-w-[70%]">
   <Canvas2D
     {selectedItem}
     {colorScale}
-    {masks}
+    bind:masks
     bind:bboxes
     {embeddings}
     bind:selectedTool

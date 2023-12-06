@@ -15,14 +15,14 @@
    */
 
   import * as Tabs from "@pixano/core/src/lib/components/ui/tabs";
-  import type { tools } from "@pixano/canvas2d";
+  import type { Shape } from "@pixano/core";
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { newShape } from "../../lib/stores/stores";
 
-  let shape: tools.Shape | null;
+  let shape: Shape | null;
 
   newShape.subscribe((value) => {
     shape = value;

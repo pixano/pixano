@@ -34,7 +34,7 @@ export type ObjectProperty = (TextProperty | NumberProperty | CheckboxProperty) 
   required: boolean;
 };
 
-// SHAPES: shapes drawn on the image to yet saved as objects
+// SHAPES: shapes drawn on the image not yet saved as objects
 type RectangleShape = {
   type: "rectangle";
   attrs: {
@@ -47,6 +47,7 @@ type RectangleShape = {
 
 export type Shape = RectangleShape & {
   status: "creating" | "editing" | "done";
+  viewId: string;
 };
 
 export type PropertiesValues = string[] | number | boolean;

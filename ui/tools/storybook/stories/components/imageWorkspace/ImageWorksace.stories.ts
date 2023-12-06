@@ -16,9 +16,10 @@
 import type { Meta, StoryObj } from "@storybook/svelte";
 
 import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
-import { interactiveSegmenterModel } from "@pixano/imageworkspace/src/lib/stores";
+import { interactiveSegmenterModel } from "@pixano/imageworkspace/src/lib/stores/stores";
 
 import { MockInteractiveImageSegmenter } from "../../components/canvas2d/mocks";
+import { mockImage } from "./imagerWorkspaceMock";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
@@ -37,5 +38,6 @@ interactiveSegmenterModel.set(mock);
 export const SimpleImage: Story = {
   args: {
     selectedTool: null,
+    selectedItem: mockImage,
   },
 };

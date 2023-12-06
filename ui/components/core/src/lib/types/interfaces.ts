@@ -64,7 +64,6 @@ export interface Mask {
 }
 
 export interface BBox {
-  objectId?: string; // TODO100: remove
   id: string;
   viewId: string;
   bbox: Array<number>;

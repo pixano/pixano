@@ -9,6 +9,7 @@
   };
 
   let className: $$Props["class"] = undefined;
+  export let disabled: $$Props["disabled"] = false;
   export let checked: $$Props["checked"] = false;
   export { className as class };
 
@@ -22,6 +23,7 @@
   )}
   bind:checked
   {...$$restProps}
+  {disabled}
   on:click={() => handleClick(!checked)}
   on:keydown={(event) => {
     if (event.detail.originalEvent.key === "Enter") {

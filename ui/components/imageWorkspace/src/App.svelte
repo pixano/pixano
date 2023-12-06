@@ -14,18 +14,18 @@
    * http://www.cecill.info
    */
   import { tools } from "@pixano/canvas2d";
-  import type { ItemData, BBox } from "@pixano/core";
+  import type { ItemData, BBox, Mask } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
-  import { mockImage } from "./lib/mock";
   import { objects } from "./lib/stores/stores";
   import "./index.css";
 
   export let selectedTool: tools.Tool | null = null;
-  export let selectedItem: ItemData = mockImage;
-  let bboxes: BBox[] = [];
+  export let selectedItem: ItemData;
+  export let bboxes: BBox[] = [];
+  export let masks: Mask[] = [];
 
   objects.subscribe((value) => {
     bboxes = value.reduce((acc, val) => {
@@ -39,16 +39,18 @@
       if (object.type === "box") {
         return {
           ...object,
-          boundingBox: bboxes.find((bbox) => bbox.objectId === object.id) || object.boundingBox,
+          boundingBox: bboxes.find((bbox) => bbox.viewId === object.id) || object.boundingBox,
         };
       }
       return object;
     }),
   );
+
+  $: objects.subscribe((value) => console.log({ value, selectedItem }));
 </script>
 
 <div class="flex w-full pt-[81px] h-full">
   <Toolbar bind:selectedTool />
-  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes />
+  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes bind:masks />
   <ActionsTabs />
 </div>

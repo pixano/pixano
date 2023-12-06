@@ -1,5 +1,6 @@
 import Konva from "konva";
 import type { Mask, BBox } from "@pixano/core";
+import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 
 import { BBOX_STROKEWIDTH, MASK_STROKEWIDTH } from "../lib/constants";
 import type { Tool } from "../tools";
@@ -142,7 +143,7 @@ export function addBBox(
   };
 
   // TODO: path to lock icon should be improved
-  imageObj.src = "./assets/lockIcon.svg";
+  imageObj.src = LockIcon;
 
   // Add to group
   bboxKonva.add(tooltip);

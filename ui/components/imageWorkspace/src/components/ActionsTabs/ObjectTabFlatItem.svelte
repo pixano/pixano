@@ -88,7 +88,7 @@
         {/if}
         <p class="font-medium">{property.label}</p>
         {#if property.type === "checkbox"}
-          <Checkbox checked={property.value} />
+          <Checkbox checked={property.value} disabled />
         {/if}
         {#if property.type === "text"}
           <div class="flex justify-start items-center gap-4">

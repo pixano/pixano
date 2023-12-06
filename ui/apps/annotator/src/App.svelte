@@ -421,7 +421,7 @@
 />
 {#if datasets}
   {#if selectedItem}
-    <ImageWorkspace {selectedItem} />
+    <ImageWorkspace {selectedItem} bind:masks bind:bboxes />
     <!-- <AnnotationWorkspace
       {selectedDataset}
       {selectedItem}

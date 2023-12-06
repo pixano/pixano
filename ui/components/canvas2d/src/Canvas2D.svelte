@@ -768,6 +768,7 @@
               attrs: rect.attrs,
               type: "rectangle",
               status: "creating",
+              viewId,
             });
           }
           selectedTool.isSmart && (await updateCurrentMask(viewId));

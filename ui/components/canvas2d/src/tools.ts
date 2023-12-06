@@ -37,16 +37,9 @@ type RectangleShape = {
   };
 };
 
-type Parameter = {
-  label: string;
-  multiple: boolean;
-  type: "string" | "number" | "checkbox";
-  value: string;
-};
-
 export type Shape = RectangleShape & {
-  status: "creating" | "editing" | "done";
-  parameters?: Parameter[];
+  status: "creating" | "editing" | "done"; // TODO100 : remove?
+  viewId: string;
 };
 
 interface Tool {

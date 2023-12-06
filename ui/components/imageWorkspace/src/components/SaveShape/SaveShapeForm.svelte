@@ -17,11 +17,11 @@
   // import { PlusCircle } from "lucide-svelte";
   // import { z } from "zod";
 
-  import type { tools } from "@pixano/canvas2d";
   import { Button } from "@pixano/core/src/lib/components/ui/button";
   import { Input } from "@pixano/core/src/lib/components/ui/input";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  import type { PropertiesValues } from "@pixano/core";
+  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
+  import type { PropertiesValues, Shape } from "@pixano/core";
 
   import { newShape, objects } from "../../lib/stores/stores";
   import {
@@ -30,10 +30,11 @@
   } from "../../lib/settings/objectSetting";
   import SaveShapeTextInput from "./SaveShapeTextInput.svelte";
 
-  let shape: tools.Shape;
+  let shape: Shape;
   let isFormValid: boolean = false;
 
   let objectProperties: { [key: string]: PropertiesValues } = {};
+  let objectCategory: string;
 
   newShape.subscribe((value) => {
     if (value) shape = value;
@@ -47,9 +48,8 @@
         name: `id ${oldObjects.length + 1}`,
         id: `object${oldObjects.length + 1}`,
         boundingBox: {
-          objectId: `${oldObjects.length + 1}`,
           id: `bbox${oldObjects.length + 1}`,
-          viewId: "view",
+          viewId: shape.viewId,
           bbox: [shape.attrs.x, shape.attrs.y, shape.attrs.width, shape.attrs.height],
           tooltip: `bbox${oldObjects.length + 1}`,
           catId: 1,
@@ -81,7 +81,15 @@
 </script>
 
 <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-  <p>Sauvegarde{shape.type}</p>
+  <p>Sauvegarde {shape.type}</p>
+  <Combobox
+    placeholder="Select a category"
+    bind:value={objectCategory}
+    listItems={[
+      { value: "category_1", label: "category 1" },
+      { value: "category_2", label: "category 2" },
+    ]}
+  />
   {#each objectSetup as property}
     {#if property.type === "checkbox"}
       <div class="flex gap-4">

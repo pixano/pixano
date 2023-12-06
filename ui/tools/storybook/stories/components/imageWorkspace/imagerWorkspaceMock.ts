@@ -9,10 +9,6 @@ export const mockImage: ItemData = {
       height: 513,
       width: 770,
     },
-    // view: {
-    //   id: "view",
-    //   url: "img-02.jpg",
-    // },
   },
   features: [
     {
@@ -40,24 +36,24 @@ export const mockImage: ItemData = {
 };
 
 export const allObjects: ObjectContent[] = [
-  // {
-  //   name: "object 1",
-  //   id: "1",
-  //   type: "box",
-  //   properties: {
-  //     name: ["foo"],
-  //     actions: ["bar", "foo"],
-  //     age: 3,
-  //     enfant: true,
-  //   },
-  //   boundingBox: {
-  //     id: "1",
-  //     viewId: "view",
-  //     bbox: [100, 100, 100, 100],
-  //     catId: 0.9,
-  //     opacity: 1,
-  //     visible: true,
-  //     tooltip: "tooltip  content",
-  //   },
-  // },
+  {
+    name: "object 1",
+    id: "1",
+    type: "box",
+    properties: {
+      name: ["foo"],
+      actions: ["bar", "foo"],
+      age: 3,
+      enfant: true,
+    },
+    boundingBox: {
+      id: "1",
+      viewId: "view",
+      bbox: [100, 100, 100, 100],
+      catId: 0.9,
+      opacity: 1,
+      visible: true,
+      tooltip: "tooltip  content",
+    },
+  },
 ];
