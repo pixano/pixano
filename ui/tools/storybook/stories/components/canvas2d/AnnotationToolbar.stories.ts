@@ -25,18 +25,15 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const tools_lists = [
+  [tools.createPanTool()],
+  [tools.createClassifTool()],
+  [tools.createPointSelectionTool(), tools.createRectangleTool(), tools.createDeleteTool()],
+];
+
 export const BasicToolbar: Story = {
   args: {
-    tools_lists: [
-      [tools.createPanTool()],
-      [
-        tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
-          tools.createLabeledPointTool(1),
-          tools.createLabeledPointTool(0),
-        ]),
-        tools.createRectangleTool(),
-        tools.createDeleteTool(),
-      ],
-    ],
+    tools_lists: tools_lists,
+    selectedTool: tools_lists[0][0],
   },
 };

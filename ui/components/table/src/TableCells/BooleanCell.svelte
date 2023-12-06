@@ -14,15 +14,12 @@
    * http://www.cecill.info
    */
 
-  // Imports
-  import { Histogram } from "@pixano/core";
-
-  import type { DatasetStat } from "@pixano/core";
-
   // Exports
-  export let value: DatasetStat;
+  export let value: boolean;
 </script>
 
-<div class="w-full flex flex-row items-center overflow-y-scroll">
-  <Histogram hist={value} maxHeight={20} hideTitle />
-</div>
+{#if value}
+  <input type="checkbox" class="pointer-events: none;" checked />
+{:else}
+  <input type="checkbox" class="pointer-events: none;" />
+{/if}

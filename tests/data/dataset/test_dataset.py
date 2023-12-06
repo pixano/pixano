@@ -14,10 +14,10 @@
 import json
 import tempfile
 import unittest
-import warnings
 from pathlib import Path
 
 import lancedb
+from pixano_inference import transformers
 
 from pixano.core import Image
 from pixano.data import (
@@ -189,30 +189,24 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(items[0].views["image"], ItemView)
 
     def test_search_items(self):
+        # Without embeddings
         items = self.dataset.search_items(limit=1, offset=0, query={"query": "bear"})
 
         self.assertEqual(items, None)
 
-        try:
-            from pixano_inference import transformers
-
-            model = transformers.CLIP()
-            model.process_dataset(
-                dataset_dir=self.import_dir,
-                process_type="search_emb",
-                views=["image"],
-            )
-            items = self.dataset.search_items(
-                limit=1, offset=0, query={"query": "bear"}
-            )
-            self.assertIsInstance(items, list)
-            self.assertEqual(len(items), 1)
-            self.assertEqual(items[0].id, "285")
-
-        except ImportError:
-            warnings.warn(
-                "Can't test search_items() fully without pixano-inference for CLIP embeddings"
-            )
+        # With embeddings
+        model = transformers.CLIP()
+        model.process_dataset(
+            dataset_dir=self.import_dir,
+            process_type="search_emb",
+            views=["image"],
+        )
+        items = self.dataset.search_items(
+            limit=1, offset=0, query={"model": "CLIP", "search": "bear"}
+        )
+        self.assertIsInstance(items, list)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].id, "285")
 
     def test_load_item(self):
         item = self.dataset.load_item("632", load_objects=True)
@@ -222,6 +216,12 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(item.split, "val")
         self.assertIsInstance(item.views["image"], ItemView)
         self.assertEqual(len(item.objects.values()), 18)
+
+        item = self.dataset.load_item(
+            "632", load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
+        )
+
+        self.assertEqual(item, None)
 
     def test_save_item(self):
         # Original item has 18 objects

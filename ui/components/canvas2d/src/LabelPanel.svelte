@@ -21,9 +21,8 @@
 
   import type {
     CategoryLabels,
-    Dataset,
+    DatasetInfo,
     DatasetItem,
-    ItemData,
     ItemLabels,
     Label,
     SourceLabels,
@@ -31,14 +30,14 @@
   } from "@pixano/core";
 
   // Exports
-  export let selectedItem: ItemData;
+  export let selectedItem: DatasetItem;
   export let annotations: ItemLabels;
   export let colorScale: (id: string) => string;
   export let maskOpacity: number;
   export let bboxOpacity: number;
   export let confidenceThreshold: number;
   // Optional dataset navigation
-  export let selectedDataset: Dataset = null;
+  export let selectedDataset: DatasetInfo = null;
   export let currentPage: number = 1;
   export let activeLearningFlag: boolean = false;
 
@@ -49,10 +48,10 @@
 
   function filterItems(items: Array<DatasetItem>): Array<DatasetItem> {
     // Only filter if round column exists and active learning is on
-    if (items[0].find((obj) => obj.name === "round") && activeLearningFlag) {
+    if ("round" in items[0].features && activeLearningFlag) {
       return items.filter((subArray) => {
-        const round = subArray.find((obj) => obj.name === "round").value as number;
-        const label = subArray.find((obj) => obj.name === "label").value as string;
+        const round = subArray.features.round.value as number;
+        const label = subArray.features.label.value;
         return round >= 0 && label === null;
       });
     } else return items;
@@ -60,7 +59,7 @@
 
   // Change selected image
   function handleSelectItem(item: DatasetItem) {
-    dispatch("selectItem", item);
+    dispatch("selectItem", item.id);
   }
 
   function handleDeleteLabel(label: Label) {
@@ -74,6 +73,8 @@
     label: Label,
     visibility: boolean,
   ) {
+    // FIXME: Toggling label visibility sometimes does not work for sources other than Ground Truth
+
     // Toggle visibility
     label.visible = visibility;
     dispatch("labelVisibility", label);
@@ -221,9 +222,15 @@
         class="flex flex-col p-4 border-b-2
             border-slate-300"
       >
-        <span class="font-medium"> Item information : </span>
+        <span class="font-medium"> Item information: </span>
         <ul class="list-disc ml-6">
-          {#each selectedItem.features as feature}
+          <li class="break-words">
+            id: {selectedItem.id}
+          </li>
+          <li class="break-words">
+            split: {selectedItem.split}
+          </li>
+          {#each Object.values(selectedItem.features) as feature}
             {#if feature.dtype !== "image"}
               <li class="break-words">
                 {feature.name}: {feature.value}
@@ -300,7 +307,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6"
+                  class="h-5 w-5"
                 >
                   <title>{source.visible ? "Hide" : "Show"}</title>
                   <path d={source.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
@@ -315,7 +322,7 @@
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-6 w-6"
+                  class="h-5 w-5"
                 >
                   <title>{source.opened ? "Close" : "Open"}</title>
                   <path d={source.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
@@ -325,7 +332,7 @@
                   {source.id}
                 </span>
                 <span
-                  class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                  class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                   title="{source.numLabels} labels"
                 >
                   {source.numLabels}
@@ -348,7 +355,7 @@
                     height="48"
                     viewBox="0 -960 960 960"
                     width="48"
-                    class="h-6 w-6"
+                    class="h-5 w-5"
                   >
                     <title>{view.visible ? "Hide" : "Show"}</title>
                     <path d={view.visible ? icons.svg_hide : icons.svg_show} fill="currentcolor" />
@@ -363,7 +370,7 @@
                     height="48"
                     viewBox="0 -960 960 960"
                     width="48"
-                    class="h-6 w-6"
+                    class="h-5 w-5"
                   >
                     <title>{view.opened ? "Close" : "Open"}</title>
                     <path d={view.opened ? icons.svg_close : icons.svg_open} fill="currentcolor" />
@@ -373,7 +380,7 @@
                     {view.id}
                   </span>
                   <span
-                    class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                    class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                     title="{view.numLabels} labels"
                   >
                     {view.numLabels}
@@ -399,7 +406,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6"
+                      class="h-5 w-5"
                     >
                       <title>{category.visible ? "Hide" : "Show"}</title>
                       <path
@@ -417,7 +424,7 @@
                       height="48"
                       viewBox="0 -960 960 960"
                       width="48"
-                      class="h-6 w-6"
+                      class="h-5 w-5"
                     >
                       <title>{category.opened ? "Close" : "Open"}</title>
                       <path
@@ -437,7 +444,7 @@
                       </button>
                     </span>
                     <span
-                      class="h-5 w-5 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
+                      class="h-5 min-w-[1.25rem] px-1 flex items-center justify-center bg-main rounded-full text-xs text-slate-50 font-medium"
                       title="{Object.keys(category.labels).length} labels"
                     >
                       {Object.keys(category.labels).length}
@@ -467,12 +474,10 @@
                           class="h-5 w-5"
                         >
                           <title>
-                            {(category.visible && label.visible) || label.visible ? "Hide" : "Show"}
+                            {label.visible ? "Hide" : "Show"}
                           </title>
                           <path
-                            d={(category.visible && label.visible) || label.visible
-                              ? icons.svg_hide
-                              : icons.svg_show}
+                            d={label.visible ? icons.svg_hide : icons.svg_show}
                             fill="currentcolor"
                           />
                         </svg>
@@ -506,51 +511,43 @@
         class="w-full h-full overflow-y-scroll {activeTab == 'dataset' ? '' : 'hidden'}"
         on:scroll={handleDatasetScroll}
       >
-        <!-- Details -->
-        <div class="flex flex-col p-4 border-b-2 border-slate-300">
-          <span class="font-medium"> Active learning : </span>
-          <label class="pt-1 flex items-center select-none cursor-pointer">
-            <input type="checkbox" class="cursor-pointer mx-2" bind:checked={activeLearningFlag} />
-            Show remaining items only
-          </label>
-        </div>
+        <!-- Active Learning (only show options if "round" found) -->
+        {#if "round" in selectedDataset.page.items[0].features}
+          <div class="flex flex-col p-4 border-b-2 border-slate-300">
+            <span class="font-medium"> Active learning: </span>
+            <label class="pt-1 flex items-center select-none cursor-pointer">
+              <input
+                type="checkbox"
+                class="cursor-pointer mx-2"
+                bind:checked={activeLearningFlag}
+              />
+              Show remaining items only
+            </label>
+          </div>
+        {/if}
 
         <div class="p-4 flex flex-wrap justify-center">
-          {#each filterItems(selectedDataset.page.items) as item, i}
+          {#each filterItems(selectedDataset.page.items) as item}
             <button
               class="flex p-1 flex-col rounded h-min hover:bg-slate-100"
               on:click={() => handleSelectItem(item)}
             >
-              <div
-                class={item.filter((f) => f.dtype === "image").length > 1 ? "grid grid-cols-2" : ""}
-              >
-                {#each item as itemFeature}
-                  {#if itemFeature.dtype === "image"}
-                    <img
-                      src={itemFeature.value.toString()}
-                      alt="#{itemFeature.name}-#{i}"
-                      class="w-24 h-24 p-1 object-cover rounded"
-                    />
-                  {/if}
+              <div class={Object.values(item.views).length > 1 ? "grid grid-cols-2" : ""}>
+                {#each Object.values(item.views) as itemView}
+                  <img
+                    src={itemView.thumbnail}
+                    alt="{item.id} - {itemView.id}"
+                    class="w-24 h-24 p-1 object-cover rounded"
+                  />
                 {/each}
               </div>
               <div class="flex mx-auto">
                 <span
                   class="text-xs justify-center truncate grow
-                  {item.filter((f) => f.dtype === 'image').length > 1 ? 'w-48' : 'w-24'}"
-                  title={item.find((f) => f.name === "id").value.toString()}
+                  {Object.values(item.views).length > 1 ? 'w-48' : 'w-24'}"
+                  title={item.id}
                 >
-                  {item.find((f) => f.name === "id").value.toString().length > 12
-                    ? item
-                        .find((f) => f.name === "id")
-                        .value.toString()
-                        .substring(0, 6) +
-                      "..." +
-                      item
-                        .find((f) => f.name === "id")
-                        .value.toString()
-                        .slice(-6)
-                    : item.find((f) => f.name === "id").value.toString()}
+                  {item.id}
                 </span>
               </div>
             </button>

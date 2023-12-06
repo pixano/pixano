@@ -15,8 +15,9 @@
    */
 
   // Imports
+  import * as ort from "onnxruntime-web";
   import Konva from "konva";
-  import shortid from "shortid";
+  import { nanoid } from "nanoid";
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
@@ -26,22 +27,22 @@
 
   import type {
     Tool,
-    LabeledPointTool,
+    PointSelectionModeTool,
     RectangleTool,
     DeleteTool,
     PanTool,
     ClassificationTool,
   } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, ItemData, ViewData } from "@pixano/core";
+  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
 
   // Exports
-  export let selectedItem: ItemData;
+  export let selectedItem: DatasetItem;
   export let selectedTool: Tool | null;
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings = {};
+  export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const INPUTPOINT_RADIUS: number = 6;
@@ -49,10 +50,9 @@
   const INPUTRECT_STROKEWIDTH: number = 1.5;
   const BBOX_STROKEWIDTH: number = 2.0;
   const MASK_STROKEWIDTH: number = 2.0;
-  const short = shortid;
 
-  let inferenceModelModal = false;
-  let embeddingDirectoryModal = false;
+  let viewEmbeddingModal = false;
+  let viewWithoutEmbeddings = "";
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
@@ -87,10 +87,11 @@
         let width: number;
         let height: number;
         if (entry.contentBoxSize) {
-          // Firefox implements `contentBoxSize` as a single content rect, rather than an array
-          const contentBoxSize = Array.isArray(entry.contentBoxSize)
-            ? entry.contentBoxSize[0]
-            : entry.contentBoxSize;
+          // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
+          const contentBoxSize: ResizeObserverSize =
+            entry.contentBoxSize instanceof ResizeObserverSize
+              ? entry.contentBoxSize
+              : entry.contentBoxSize[0];
           width = contentBoxSize.inlineSize;
           height = contentBoxSize.blockSize;
         } else {
@@ -162,7 +163,7 @@
     currentId = selectedItem.id;
   }
 
-  function scaleView(view: ViewData) {
+  function scaleView(view: ItemView) {
     const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
     if (viewLayer) {
       // Calculate max dims for every image in the grid
@@ -200,7 +201,7 @@
     }
   }
 
-  function scaleElements(view: ViewData) {
+  function scaleElements(view: ItemView) {
     const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
 
     // Scale input points
@@ -463,9 +464,11 @@
 
   function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: Konva.Group) {
     // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-    const objectsToDestroy = []; // need to build a list to not destroy while looping children
+    const objectsToDestroy: Array<Konva.Group | Konva.Shape> = []; // need to build a list to not destroy while looping children
     for (const obj of objectsGroup.children) {
-      if (!objectsIds.includes(obj.id())) objectsToDestroy.push(obj);
+      if (!objectsIds.includes(obj.id())) {
+        objectsToDestroy.push(obj);
+      }
     }
     for (const obj of objectsToDestroy) obj.destroy();
   }
@@ -483,10 +486,10 @@
     };
 
     if (selectedTool.postProcessor == null) {
-      inferenceModelModal = true;
       clearAnnotationAndInputs();
-    } else if (!(viewId in embeddings) || (viewId in embeddings && embeddings[viewId] == null)) {
-      embeddingDirectoryModal = true;
+    } else if (embeddings[viewId] == null) {
+      viewEmbeddingModal = true;
+      viewWithoutEmbeddings = viewId;
       clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
@@ -498,9 +501,8 @@
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
 
-        const new_id = short.generate();
         currentAnn = {
-          id: `${new_id}`,
+          id: nanoid(10),
           viewId: viewId,
           label: "",
           catId: -1,
@@ -567,8 +569,8 @@
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case ToolType.LabeledPoint:
-        displayInputPointTool(selectedTool as LabeledPointTool);
+      case ToolType.PointSelection:
+        displayInputPointTool(selectedTool as PointSelectionModeTool);
         break;
       case ToolType.Rectangle:
         displayInputRectTool(selectedTool as RectangleTool);
@@ -604,7 +606,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -622,7 +624,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -636,7 +638,7 @@
 
   // ********** INPUT POINTS TOOL ********** //
 
-  function displayInputPointTool(tool: LabeledPointTool) {
+  function displayInputPointTool(tool: PointSelectionModeTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Point
@@ -765,7 +767,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Rectangle
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
 
       if (!highlighted_point) {
@@ -888,7 +890,7 @@
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != DELETE
-      const pointer = stage.findOne(`#${ToolType.LabeledPoint}`);
+      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -916,7 +918,7 @@
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type == ToolType.LabeledPoint) {
+    if (selectedTool?.type == ToolType.PointSelection) {
       updateInputPointStage(position);
     }
 
@@ -966,25 +968,25 @@
     toolsLayer.moveToTop();
   }
 
-  async function handleClickOnImage(event: CustomEvent, viewId: string) {
+  async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     // Perfome tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
-    if (selectedTool?.type == ToolType.Pan || event.detail.evt.which == 2) {
+    if (selectedTool?.type == ToolType.Pan || event.button == 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
-    } else if (selectedTool?.type == ToolType.LabeledPoint) {
+    } else if (selectedTool?.type == ToolType.PointSelection) {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
       const input_point = new Konva.Circle({
-        name: `${(selectedTool as LabeledPointTool).label}`,
+        name: `${(selectedTool as PointSelectionModeTool).label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
         radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
         stroke: "white",
-        fill: (selectedTool as LabeledPointTool).label === 1 ? "green" : "red",
+        fill: (selectedTool as PointSelectionModeTool).label === 1 ? "green" : "red",
         strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
         visible: true,
         listening: true,
@@ -1068,19 +1070,22 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event: CustomEvent, view: ViewData) {
-    event.detail.evt.preventDefault(); // Prevent default scrolling
-    let direction = event.detail.evt.deltaY < 0 ? 1 : -1; // Get zoom direction
-    // When we zoom on trackpad, e.evt.ctrlKey is true
-    // In that case lets revert direction.
-    if (event.detail.evt.ctrlKey) direction = -direction;
+  function handleWheelOnImage(event: WheelEvent, view: ItemView) {
+    // Prevent default scrolling
+    event.preventDefault();
+
+    // Get zoom direction
+    let direction = event.deltaY < 0 ? 1 : -1;
+
+    // Revert direction for trackpad
+    if (event.ctrlKey) direction = -direction;
+
+    // Zoom
     zoomFactor[view.id] = zoom(stage, direction, view.id);
     scaleElements(view);
 
-    //zoom reset highlighted point scaling
-    if (highlighted_point) {
-      highlightInputPoint(highlighted_point, view.id);
-    }
+    // Keep highlighted point scaling
+    if (highlighted_point) highlightInputPoint(highlighted_point, view.id);
   }
 
   // ********** KEY EVENTS ********** //
@@ -1136,10 +1141,13 @@
   >
     {#each Object.values(selectedItem.views) as view}
       {#if images[view.id]}
-        <Layer config={{ id: view.id }} on:wheel={(event) => handleWheelOnImage(event, view)}>
+        <Layer
+          config={{ id: view.id }}
+          on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
+        >
           <KonvaImage
             config={{ image: images[view.id], id: "image" }}
-            on:pointerdown={(event) => handleClickOnImage(event, view.id)}
+            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
             on:pointerup={() => handlePointerUpOnImage(view.id)}
             on:dblclick={() => handleDoubleClickOnImage(view.id)}
           />
@@ -1153,18 +1161,10 @@
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
-{#if inferenceModelModal}
+{#if viewEmbeddingModal}
   <WarningModal
-    message="No interactive model set up, cannot segment."
-    details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={() => (inferenceModelModal = false)}
-  />
-{/if}
-{#if embeddingDirectoryModal}
-  <WarningModal
-    message="No embedding directory found, cannot segment."
-    details="Please refer to our interactive annotation notebook for information on how to precompute embeddings on your dataset."
-    on:confirm={() => (embeddingDirectoryModal = false)}
+    message="No embeddings found for view '{viewWithoutEmbeddings}'."
+    on:confirm={() => (viewEmbeddingModal = false)}
   />
 {/if}
 <svelte:window on:keydown={handleKeyDown} />

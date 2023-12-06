@@ -35,43 +35,122 @@ export const Base: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
           uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
     selectedDataset: {
       id: "euHS4xM5SSvQKAhmv3sFcp",
-      name: "Dataset",
-      description: "Dataset description",
+      name: "Test dataset",
+      description: "Test dataset description",
+      estimated_size: "12.68 MB",
       num_elements: 4,
-      estimated_size: "N?A",
       preview: "",
+      splits: ["val"],
+      tables: {},
       categories: [],
+      stats: [],
       page: {
         items: [
-          [
-            { name: "id", dtype: "text", value: "1" },
-            { name: "view", dtype: "image", value: "img-02.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "2" },
-            { name: "view", dtype: "image", value: "img-03.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "3" },
-            { name: "view", dtype: "image", value: "img-05.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "4" },
-            { name: "view", dtype: "image", value: "img-07.jpg" },
-          ],
+          {
+            id: "1",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-01.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-02.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "2",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-03.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-04.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "3",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-05.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-06.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "4",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-07.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-08.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
         ],
         total: 4,
       },
@@ -81,18 +160,18 @@ export const Base: Story = {
         id: "Ground truth",
         views: {
           view1: {
-            id: "view",
+            id: "view1",
             categories: {
               1: {
-                id: 1,
-                name: "eye",
+                id: 3,
+                name: "tv",
                 labels: {
-                  "245": {
-                    id: "245",
-                    categoryId: 1,
-                    categoryName: "eye",
+                  "34646": {
+                    id: "34646",
+                    categoryId: 3,
+                    categoryName: "tv",
                     sourceId: "Ground truth",
-                    viewId: "view",
+                    viewId: "view1",
                     bboxOpacity: 1.0,
                     maskOpacity: 1.0,
                     visible: true,
@@ -102,7 +181,33 @@ export const Base: Story = {
                 visible: true,
               },
             },
-            numLabels: 2,
+            numLabels: 1,
+            opened: true,
+            visible: true,
+          },
+          view2: {
+            id: "view2",
+            categories: {
+              1: {
+                id: 1,
+                name: "eye",
+                labels: {
+                  "587562": {
+                    id: "587562",
+                    categoryId: 1,
+                    categoryName: "eye",
+                    sourceId: "Ground truth",
+                    viewId: "view2",
+                    bboxOpacity: 1.0,
+                    maskOpacity: 1.0,
+                    visible: true,
+                  },
+                },
+                opened: true,
+                visible: true,
+              },
+            },
+            numLabels: 1,
             opened: true,
             visible: true,
           },

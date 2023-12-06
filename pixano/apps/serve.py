@@ -20,9 +20,9 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from pixano.api import Settings
 from pixano.apps.display import display_cli, display_colab, display_ipython
 from pixano.apps.main import create_app
+from pixano.data import Settings
 
 
 class App:

@@ -73,7 +73,7 @@ jobs:
       - name: Lint Python code with black
         uses: psf/black@stable
         with:
-          options: "--check --verbose"
+          options: "--check --verbose --diff --color"
           src: "./pixano"
 
   # This job will lint notebooks code (Jupyter) with black
@@ -89,7 +89,7 @@ jobs:
       - name: Lint Jupyter notebooks with black
         uses: psf/black@stable
         with:
-          options: "--check --verbose"
+          options: "--check --verbose --diff --color"
           src: "./notebooks"
           jupyter: true
 

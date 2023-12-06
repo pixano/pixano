@@ -28,6 +28,7 @@ export { default as Dashboard } from "./Dashboard.svelte";
 // Modals
 export { default as ConfirmModal } from "./ConfirmModal.svelte";
 export { default as PromptModal } from "./PromptModal.svelte";
+export { default as SelectModal } from "./SelectModal.svelte";
 export { default as WarningModal } from "./WarningModal.svelte";
 // Exploration
 export { default as Histogram } from "./Histogram.svelte";

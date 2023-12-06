@@ -19,16 +19,18 @@
   import ImageCell from "./TableCells/ImageCell.svelte";
   import VideoCell from "./TableCells/VideoCell.svelte";
   import NumberCell from "./TableCells/NumberCell.svelte";
+  import BooleanCell from "./TableCells/BooleanCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
 
-  import type { DatasetItemFeature } from "@pixano/core";
+  import type { ItemFeature } from "@pixano/core";
 
   // Exports
-  export let itemFeature: DatasetItemFeature;
+  export let itemFeature: ItemFeature;
 
   // Map types to cell components
   const componentsMap = {
     number: NumberCell,
+    boolean: BooleanCell,
     text: TextCell,
     image: ImageCell,
     video: VideoCell,

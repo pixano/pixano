@@ -45,7 +45,10 @@ class ItemView(BaseModel):
 
     @staticmethod
     def from_pyarrow(
-        table: pa.Table, schema: pa.schema, media_dir: Path
+        table: pa.Table,
+        schema: pa.schema,
+        media_dir: Path,
+        media_features: bool = False,
     ) -> dict[str, "ItemView"]:
         """Create dictionary of ItemView from PyArrow Table
 
@@ -53,6 +56,7 @@ class ItemView(BaseModel):
             table (dict[str, Any]): PyArrow table
             schema (pa.schema): PyArrow schema
             media_dir (Path): Dataset media directory
+            media_features (bool, optional): Load media features like image width and height (slow for large item batches)
 
         Returns:
             dict[ItemView]: Dictionary of ItemView
@@ -67,9 +71,9 @@ class ItemView(BaseModel):
             # Image
             if is_image_type(field.type):
                 im = (
-                    item["image"]
-                    if isinstance(item["image"], Image)
-                    else Image.from_dict(item["image"])
+                    item[field.name]
+                    if isinstance(item[field.name], Image)
+                    else Image.from_dict(item[field.name])
                 )
                 im.uri_prefix = media_dir.absolute().as_uri()
                 image_view = ItemView(
@@ -81,17 +85,18 @@ class ItemView(BaseModel):
                     thumbnail=im.preview_url,
                 )
                 image_view.features = {}
-                image_view.features["width"] = ItemFeature(
-                    name="width",
-                    dtype="number",
-                    value=im.width,
-                )
+                if media_features:
+                    image_view.features["width"] = ItemFeature(
+                        name="width",
+                        dtype="number",
+                        value=im.width,
+                    )
 
-                image_view.features["height"] = ItemFeature(
-                    name="height",
-                    dtype="number",
-                    value=im.height,
-                )
+                    image_view.features["height"] = ItemFeature(
+                        name="height",
+                        dtype="number",
+                        value=im.height,
+                    )
                 views[field.name] = image_view
             # TODO: Video, Point cloud
 

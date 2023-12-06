@@ -6,6 +6,8 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
+- Select **interactive segmentation models** with **dropdown menu** based on ONNX files found in models folder
+- Select **semantic search models** with **dropdown menu** based on embeddings tables found in dataset
 - Add Prettier and eslint packages and scripts for formatting and linting frontend code
 - Add GitHub actions to format frontend and backend code
 - Add GitHub action to test backend code
@@ -16,12 +18,12 @@ All notable changes to Pixano will be documented in this file.
 - Add file_name, width, and height properties to Image
 - Add option to load a list of DatasetCategory (category id and name pairs) in Importers
 - Export the complete list of DatasetCategory (category id and name pairs) in Exporters
-- Add new unit tests and refactor existing unit tests
+- Add new unit tests and refactor existing tests
 
 ### Changed
 
 - **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
-- **Refactor API** with new endpoints, new methods, new data types, and new unit tests
+- **Refactor API** with new endpoints, new methods, new data types, and more explicit error messages
 - Update Dataset and DatasetInfo classes for new API
 - Update Exporters, Importers, and InferenceModels using updated API
 - Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
@@ -30,6 +32,7 @@ All notable changes to Pixano will be documented in this file.
 - Update API reference generation
 - Reformat GitHub actions
 - Reformat and refactor frontend code with Prettier and eslint
+- Replace deprecated frontend package shortid by nanoid
 
 ### Fixed
 
@@ -38,6 +41,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix broken link in CHANGELOG.md
 - Fix internal cross-references in the API reference of the documentation website
 - Fix eslint and TypeScript errors
+- Visual fixes in frontend user interface
 
 ## [0.4.1] - 2023-11-13
 

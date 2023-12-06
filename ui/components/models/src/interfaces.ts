@@ -16,7 +16,7 @@
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-import type { MaskRLE, MaskSVG } from "@pixano/core/src/interfaces";
+import type { ItemURLE, MaskSVG } from "@pixano/core/src/interfaces";
 
 // Exports
 export interface LabeledClick {
@@ -47,7 +47,7 @@ export interface InteractiveImageSegmenterInput {
 
 export interface SegmentationResult {
   masksImageSVG: MaskSVG;
-  rle: MaskRLE;
+  rle: ItemURLE;
   masks?: Tensor;
 }
 
