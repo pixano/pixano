@@ -6,42 +6,37 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Select **interactive segmentation models** with **dropdown menu** based on ONNX files found in models folder
-- Select **semantic search models** with **dropdown menu** based on embeddings tables found in dataset
-- Add Prettier and eslint packages and scripts for formatting and linting frontend code
-- Add GitHub actions to format frontend and backend code
-- Add GitHub action to test backend code
-- Add new classes related to DatasetInfo for updated API (DatasetCategory, DatasetStat, DatasetTable)
-- Add new class related to Dataset for updated API (DatasetItem)
-- Add new classes related to DatasetItem for updated API (ItemEmbedding, ItemFeature, ItemObject, ItemView)
-- Add from_rle method to BBox
-- Add file_name, width, and height properties to Image
-- Add option to load a list of DatasetCategory (category id and name pairs) in Importers
-- Export the complete list of DatasetCategory (category id and name pairs) in Exporters
-- Add new unit tests and refactor existing tests
+- Select **interactive segmentation models** with **dropdown menu** based on ONNX files found in models folder (pixano#12)
+- Select **semantic search models** with **dropdown menu** based on embeddings tables found in dataset (pixano#12)
+- Add loading animation in frontend UI when loading or saving takes time (pixano#15)
+- Add option to load a list of category id and name pairs in Importers and to save it with Exporters (pixano#11)
+- Add new methods and properties to PixanoTypes (from_rle() in BBox, file_name, width, and height in Image) (pixano#11)
+- Add GitHub actions to format, lint and test code (pixano#2, pixano#3, pixano#4)
+- Add new unit tests and refactor existing tests (pixano#11)
 
 ### Changed
 
-- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex dataset, but drops support for datasets imported without copying media files (`portable=False`)
-- **Refactor API** with new endpoints, new methods, new data types, and more explicit error messages
-- Update Dataset and DatasetInfo classes for new API
-- Update Exporters, Importers, and InferenceModels using updated API
-- Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
-- Update README with a small header description listing main features
-- Update documentation website accent color to match with the new theme of the Pixano apps
-- Update API reference generation
-- Reformat GitHub actions
-- Reformat and refactor frontend code with Prettier and eslint
-- Replace deprecated frontend package shortid by nanoid
+- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex datasets, but drops support for datasets imported without copying media files (`portable=False`) (pixano#8)
+  - Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
+- **Refactor API** with new endpoints, new methods, new data types, and more explicit error messages (pixano#11, pixano#12)
+  - Update Dataset and DatasetInfo classes with new methods for updated API
+  - Add new classes related to DatasetInfo for updated API (DatasetCategory, DatasetStat, DatasetTable)
+  - Add new class related to Dataset for updated API (DatasetItem)
+  - Add new classes related to DatasetItem for updated API (ItemEmbedding, ItemFeature, ItemObject, ItemView)
+  - Refactor Exporters, Importers, and InferenceModels using updated API
+- Reformat Jupyter notebooks with black (pixano#2) 
+- Reformat and refactor frontend code with Prettier and eslint (pixano#2, pixano#7, pixano#12)
+- Replace deprecated frontend package shortid by nanoid (pixano#12)
+- Update README with a header listing main features (pixano#2)
+- Update documentation website API accent color
 
 ### Fixed
 
-- Fix type hints in CompressedRLE and RLE related utils functions
-- Fix pip install commands in notebooks for Google Colab
-- Fix broken link in CHANGELOG.md
-- Fix internal cross-references in the API reference of the documentation website
-- Fix eslint and TypeScript errors
-- Visual fixes in frontend user interface
+- Multiple visual fixes in frontend UI (pixano#12, pixano#15)
+- Fix type hints in backend code (pixano#11) 
+- Fix pip commands in notebooks for Google Colab (pixano#11)
+- Fix broken link in CHANGELOG (pixano#4)
+- Fix documentation website API reference generation
 
 ## [0.4.1] - 2023-11-13
 
