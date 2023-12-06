@@ -27,6 +27,7 @@ export { default as LoadingLibrary } from "./LoadingLibrary.svelte";
 export { default as Dashboard } from "./Dashboard.svelte";
 // Modals
 export { default as ConfirmModal } from "./ConfirmModal.svelte";
+export { default as LoadingModal } from "./LoadingModal.svelte";
 export { default as PromptModal } from "./PromptModal.svelte";
 export { default as SelectModal } from "./SelectModal.svelte";
 export { default as WarningModal } from "./WarningModal.svelte";

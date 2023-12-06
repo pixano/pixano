@@ -17,7 +17,7 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, Dashboard, WarningModal } from "@pixano/core";
+  import { api, Dashboard, LoadingModal, WarningModal } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
@@ -59,6 +59,7 @@
   const itemsPerPage = 100;
 
   // Modals
+  let loadingResultsModal = false;
   let datasetErrorModal = false;
 
   const dispatch = createEventDispatcher();
@@ -81,11 +82,13 @@
       console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
     } else {
       // Search page
+      loadingResultsModal = true;
       res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
       console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
     }
 
     // Results
+    loadingResultsModal = false;
     if (res == null) {
       datasetErrorModal = true;
     } else {
@@ -303,6 +306,9 @@
         details="Please look at the application logs for more information, and report this issue if the error persists."
         on:confirm={() => (datasetErrorModal = false)}
       />
+    {/if}
+    {#if loadingResultsModal}
+      <LoadingModal />
     {/if}
   {/if}
 </div>

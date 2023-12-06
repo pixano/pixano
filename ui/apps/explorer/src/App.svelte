@@ -17,7 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, Header, Library, LoadingLibrary } from "@pixano/core";
+  import { api, Header, Library, LoadingLibrary, LoadingModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import DatasetExplorer from "./DatasetExplorer.svelte";
@@ -45,6 +45,9 @@
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
 
+  // Modals
+  let loadingItemModal = false;
+
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
     const start = Date.now();
@@ -68,6 +71,8 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    loadingItemModal = true;
+
     annotations = {};
     classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
@@ -218,6 +223,7 @@
         }
       }
     }
+    loadingItemModal = false;
     selectedItem = loadedItem;
   }
 
@@ -274,4 +280,7 @@
   {/if}
 {:else}
   <LoadingLibrary app="Explorer" />
+{/if}
+{#if loadingItemModal}
+  <LoadingModal />
 {/if}

@@ -17,7 +17,15 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, ConfirmModal, Header, Library, LoadingLibrary, WarningModal } from "@pixano/core";
+  import {
+    api,
+    ConfirmModal,
+    Header,
+    Library,
+    LoadingLibrary,
+    LoadingModal,
+    WarningModal,
+  } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
@@ -47,6 +55,8 @@
   let saveFlag = false;
 
   // Modals
+  let loadingItemModal = false;
+  let savingItemModal = false;
   let unselectItemModal = false;
   let datasetErrorModal = false;
 
@@ -113,6 +123,8 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    loadingItemModal = true;
+
     annotations = {};
     classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
@@ -263,6 +275,7 @@
         }
       }
     }
+    loadingItemModal = false;
     selectedItem = loadedItem;
   }
 
@@ -291,6 +304,7 @@
   async function handleSaveItem() {
     console.log("App.handleSaveItem");
 
+    savingItemModal = true;
     let savedItem: DatasetItem = {
       id: selectedItem.id,
       split: selectedItem.split,
@@ -356,6 +370,7 @@
 
     // Reload item details
     await handleSelectItem(selectedItem.id);
+    savingItemModal = false;
   }
 
   async function handleLoadNextPage() {
@@ -434,4 +449,7 @@
     details="Please look at the application logs for more information, and report this issue if the error persists."
     on:confirm={() => (datasetErrorModal = false)}
   />
+{/if}
+{#if loadingItemModal || savingItemModal}
+  <LoadingModal />
 {/if}
