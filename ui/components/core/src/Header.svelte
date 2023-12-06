@@ -77,7 +77,7 @@
                 height="48"
                 viewBox="0 -960 960 960"
                 width="48"
-                class="h-8 w-8 mx-2 p-1 border rounded-full text-slate-800 border-slate-300 hover:bg-slate-300"
+                class="h-8 w-8 mx-2 p-1 border rounded-full text-slate-800 border-slate-300 transition-colors hover:bg-slate-300"
               >
                 <path d={svg_left_arrow} fill="currentcolor" />
               </svg>
@@ -110,10 +110,10 @@
       {#if app === "Explorer"}
         <div class="relative h-10 mx-2 flex items-center">
           <button
-            class="font-medium h-10 pl-10 pr-6
+            class="font-medium h-10 pl-10 pr-6 border transition-colors
           {selectedTab === 'database'
-              ? 'bg-main rounded-full text-slate-50 hover:bg-secondary'
-              : 'bg-slate-50 border border-slate-300 rounded-full text-main hover:bg-slate-300'}"
+              ? 'bg-main border-main rounded-full text-slate-50  hover:bg-secondary'
+              : 'bg-slate-50 border-slate-300 rounded-full text-main hover:bg-slate-300'}"
             on:click={selectDatabaseTab}
           >
             Database
@@ -131,10 +131,10 @@
 
         <div class="relative h-10 mx-2 flex items-center">
           <button
-            class="font-medium h-10 pl-10 pr-6
+            class="font-medium h-10 pl-10 pr-6 border transition-colors
         {selectedTab === 'dashboard'
-              ? 'bg-main rounded-full text-slate-50 hover:bg-secondary'
-              : 'bg-slate-50 border border-slate-300 rounded-full text-main hover:bg-slate-300'}"
+              ? 'bg-main border-main rounded-full text-slate-50 hover:bg-secondary'
+              : 'bg-slate-50 border-slate-300 rounded-full text-main hover:bg-slate-300'}"
             on:click={selectDashboardTab}
           >
             Dashboard
@@ -159,7 +159,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-10 w-10 p-1
+            class="h-10 w-10 p-1 transition-colors
               {saveFlag ? 'text-main hover:text-secondary' : 'text-slate-500 cursor-default'}"
           >
             <title>Save</title>

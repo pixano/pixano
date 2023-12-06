@@ -153,7 +153,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_list} fill="currentcolor" />
             </svg>
@@ -164,7 +164,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_grid} fill="currentcolor" />
             </svg>
@@ -175,7 +175,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_filter} fill="currentcolor" />
             </svg>
@@ -210,7 +210,10 @@
                   <path d={svg_search} fill="currentcolor" />
                 </svg>
                 {#if search !== ""}
-                  <button class="absolute right-2" on:click={handleClearSearch}>
+                  <button
+                    class="absolute right-2 p-1 rounded-full transition-colors hover:bg-slate-300"
+                    on:click={handleClearSearch}
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       height="48"
@@ -246,7 +249,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_first_page} fill="currentcolor" />
             </svg>
@@ -258,7 +261,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_prev_page} fill="currentcolor" />
             </svg>
@@ -280,7 +283,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_next_page} fill="currentcolor" />
             </svg>
@@ -292,7 +295,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
             >
               <path d={svg_last_page} fill="currentcolor" />
             </svg>

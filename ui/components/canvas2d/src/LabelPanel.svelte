@@ -183,8 +183,10 @@
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tl-lg
-        hover:bg-slate-100
-        {activeTab == 'labels' ? 'bg-slate-100 border-main' : 'border-slate-300 '}"
+        transition-colors
+        {activeTab == 'labels'
+          ? 'bg-slate-100 border-main'
+          : 'border-slate-300 hover:bg-slate-300'}"
         on:click={() => {
           activeTab = "labels";
         }}
@@ -194,8 +196,10 @@
       {#if selectedDataset}
         <button
           class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-tr-lg
-        hover:bg-slate-100
-        {activeTab == 'dataset' ? 'bg-slate-100 border-main ' : 'border-slate-300'}"
+          transition-colors
+        {activeTab == 'dataset'
+            ? 'bg-slate-100 border-main '
+            : 'border-slate-300 hover:bg-slate-300'}"
           on:click={() => {
             activeTab = "dataset";
           }}
@@ -208,8 +212,10 @@
     <div class="h-12 fixed w-full flex items-center justify-evenly">
       <button
         class="w-full h-full flex justify-center items-center border-b-2 font-semibold uppercase rounded-t-lg
-          hover:bg-slate-100
-          {activeTab == 'labels' ? 'bg-slate-100 border-main ' : 'border-slate-300 '}"
+        transition-colors
+          {activeTab == 'labels'
+          ? 'bg-slate-100 border-main '
+          : 'border-slate-300 hover:bg-slate-300'}"
       >
         Labels
       </button>
@@ -529,7 +535,7 @@
         <div class="p-4 flex flex-wrap justify-center">
           {#each filterItems(selectedDataset.page.items) as item}
             <button
-              class="flex p-1 flex-col rounded h-min hover:bg-slate-100"
+              class="flex p-1 flex-col rounded h-min transition-colors hover:bg-slate-300"
               on:click={() => handleSelectItem(item)}
             >
               <div class={Object.values(item.views).length > 1 ? "grid grid-cols-2" : ""}>

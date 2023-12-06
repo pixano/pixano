@@ -70,7 +70,7 @@
             id="search-input"
             type="text"
             placeholder="Search datasets"
-            class="h-10 pl-10 pr-4 rounded-full border-2 accent-main text-slate-800 placeholder-slate-500 font-medium"
+            class="h-10 pl-10 pr-4 rounded-full border-2 accent-main border-main text-slate-800 placeholder-slate-500 font-medium"
             on:input={handleSearch}
           />
           <svg
@@ -106,7 +106,7 @@
             <a
               href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
               target="_blank"
-              class="text-main hover:text-secondary"
+              class="text-main transition-colors hover:text-secondary"
             >
               this Jupyter notebook
             </a>

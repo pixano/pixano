@@ -57,7 +57,7 @@
       <button
         type="button"
         class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-main hover:bg-secondary"
+        bg-main transition-colors hover:bg-secondary"
         on:click={handleConfirm}
       >
         Ok

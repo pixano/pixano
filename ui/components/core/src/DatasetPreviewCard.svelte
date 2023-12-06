@@ -31,8 +31,8 @@
 </script>
 
 <button
-  class="w-96 h-72 flex flex-col transition-all text-left
-  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-xl"
+  class="w-96 h-72 flex flex-col text-left
+  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 transition-shadow hover:shadow-xl"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -56,7 +56,7 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 hover:bg-slate-300"
+      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 transition-colors hover:bg-slate-300"
     >
       <path d={svg_right_arrow} fill="currentcolor" />
     </svg>
