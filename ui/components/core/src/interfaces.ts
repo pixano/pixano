@@ -15,10 +15,6 @@
 
 // Exports
 
-export interface Dict<Type> {
-  [key: string]: Type;
-}
-
 // DATASET
 
 export interface DatasetInfo {
@@ -29,7 +25,7 @@ export interface DatasetInfo {
   num_elements: number;
   preview: string;
   splits: Array<string>;
-  tables: Dict<Array<DatasetTable>>;
+  tables: Record<string, Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
@@ -37,7 +33,7 @@ export interface DatasetInfo {
 
 export interface DatasetTable {
   name: string;
-  fields: Dict<string>;
+  fields: Record<string, string>;
   source?: string;
   type?: string;
 }
@@ -50,7 +46,7 @@ export interface DatasetCategory {
 export interface DatasetStat {
   name: string;
   type: string;
-  histogram: Array<Dict<number | string | boolean>>;
+  histogram: Array<Record<string, number | string | boolean>>;
   range?: Array<number>;
 }
 
@@ -59,10 +55,10 @@ export interface DatasetStat {
 export interface DatasetItem {
   id: string;
   split: string;
-  views: Dict<ItemView>;
-  objects: Dict<ItemObject>;
-  features: Dict<ItemFeature>;
-  embeddings: Dict<ItemEmbedding>;
+  views: Record<string, ItemView>;
+  objects: Record<string, ItemObject>;
+  features: Record<string, ItemFeature>;
+  embeddings: Record<string, ItemEmbedding>;
 }
 
 export interface DatasetItems {
@@ -79,7 +75,7 @@ export interface ItemView {
   thumbnail?: string;
   frame_number?: number;
   total_frames?: number;
-  features: Dict<ItemFeature>;
+  features: Record<string, ItemFeature>;
 }
 
 // ITEM OBJECT
@@ -91,7 +87,7 @@ export interface ItemObject {
   view_id: string;
   mask: ItemURLE;
   bbox: ItemBBox;
-  features: Dict<ItemFeature>;
+  features: Record<string, ItemFeature>;
 }
 
 export interface ItemURLE {
@@ -147,11 +143,11 @@ export interface BBox {
 
 // LABELS DATA
 
-export type ItemLabels = Dict<SourceLabels>;
+export type ItemLabels = Record<string, SourceLabels>;
 
 export interface SourceLabels {
   id: string;
-  views: Dict<ViewLabels>;
+  views: Record<string, ViewLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -159,7 +155,7 @@ export interface SourceLabels {
 
 export interface ViewLabels {
   id: string;
-  categories: Dict<CategoryLabels>;
+  categories: Record<string, CategoryLabels>;
   numLabels: number;
   opened: boolean;
   visible: boolean;
@@ -168,7 +164,7 @@ export interface ViewLabels {
 export interface CategoryLabels {
   id: number;
   name: string;
-  labels: Dict<Label>;
+  labels: Record<string, Label>;
   opened: boolean;
   visible: boolean;
 }

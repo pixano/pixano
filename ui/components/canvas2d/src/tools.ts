@@ -15,7 +15,6 @@
 
 // Imports
 import { icons } from "@pixano/core";
-import type { Dict } from "@pixano/core";
 
 import type { InteractiveImageSegmenter } from "@pixano/models";
 
@@ -33,12 +32,12 @@ interface Tool {
   type: ToolType;
   icon: string;
   cursor: string;
-  modes?: Dict<Tool>;
+  modes?: Record<string, Tool>;
   postProcessor?: InteractiveImageSegmenter;
 }
 
 interface PointSelectionTool extends Tool {
-  modes: Dict<Tool>;
+  modes: Record<string, Tool>;
   type: ToolType.PointSelection;
 }
 

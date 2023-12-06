@@ -15,7 +15,7 @@
 
 // Imports
 
-import type { DatasetInfo, DatasetItems, DatasetItem, Dict } from "./interfaces";
+import type { DatasetInfo, DatasetItems, DatasetItem } from "./interfaces";
 
 // Exports
 
@@ -81,7 +81,7 @@ export async function getDatasetItems(
 
 export async function searchDatasetItems(
   datasetId: string,
-  query: Dict<string>,
+  query: Record<string, string>,
   page: number = 1,
   size: number = 100,
 ): Promise<DatasetItems> {

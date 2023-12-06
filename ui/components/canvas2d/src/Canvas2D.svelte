@@ -34,7 +34,7 @@
     ClassificationTool,
   } from "./tools";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, DatasetItem, Dict, ItemView } from "@pixano/core";
+  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -42,7 +42,7 @@
   export let colorScale: (id: string) => string;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings: Dict<ort.Tensor> = {};
+  export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   const INPUTPOINT_RADIUS: number = 6;

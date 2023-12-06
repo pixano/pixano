@@ -36,7 +36,6 @@
     DatasetCategory,
     DatasetInfo,
     DatasetItem,
-    Dict,
     ItemLabels,
     Label,
     Mask,
@@ -78,7 +77,7 @@
   const currentAnnSource = "Pixano Annotator";
 
   // Models
-  let embeddings: Dict<ort.Tensor> = {};
+  let embeddings: Record<string, ort.Tensor> = {};
   let selectedModelName: string;
   let modelLoaded = false;
   const sam = new SAM();
@@ -120,7 +119,7 @@
   }
 
   async function loadModel() {
-    console.log("trying");
+    console.log("AnnotationWorkspace.loadModel");
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
     interactiveSegmenterModel.subscribe((segmenter) => {
