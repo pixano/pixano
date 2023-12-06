@@ -24,7 +24,7 @@ All notable changes to Pixano will be documented in this file.
   - Add new class related to Dataset for updated API (DatasetItem)
   - Add new classes related to DatasetItem for updated API (ItemEmbedding, ItemFeature, ItemObject, ItemView)
   - Refactor Exporters, Importers, and InferenceModels using updated API
-- Reformat Jupyter notebooks with black (pixano#2) 
+- Reformat Jupyter notebooks with black (pixano#2)
 - Reformat and refactor frontend code with Prettier and eslint (pixano#2, pixano#7, pixano#12)
 - Replace deprecated frontend package shortid by nanoid (pixano#12)
 - Update README with a header listing main features (pixano#2)
@@ -33,7 +33,7 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - Multiple visual fixes in frontend UI (pixano#12, pixano#15)
-- Fix type hints in backend code (pixano#11) 
+- Fix type hints in backend code (pixano#11)
 - Fix pip commands in notebooks for Google Colab (pixano#11)
 - Fix broken link in CHANGELOG (pixano#4)
 - Fix documentation website API reference generation
