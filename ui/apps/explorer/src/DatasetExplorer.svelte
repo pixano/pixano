@@ -44,7 +44,7 @@
   let selectedSearchModel: string;
   const searchModels: Array<string> = [];
   if ("embeddings" in selectedDataset.tables) {
-    for (const table of selectedDataset.tables["embeddings"]) {
+    for (const table of selectedDataset.tables.embeddings) {
       if (table.type == "search") {
         // Initialize selected search model
         if (!selectedSearchModel) {

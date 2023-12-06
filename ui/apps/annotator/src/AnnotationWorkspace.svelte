@@ -124,8 +124,8 @@
     interactiveSegmenterModel.set(sam);
     interactiveSegmenterModel.subscribe((segmenter) => {
       if (segmenter) {
-        pointSelectionTool.modes["plus"].postProcessor = segmenter as InteractiveImageSegmenter;
-        pointSelectionTool.modes["minus"].postProcessor = segmenter as InteractiveImageSegmenter;
+        pointSelectionTool.modes.plus.postProcessor = segmenter as InteractiveImageSegmenter;
+        pointSelectionTool.modes.minus.postProcessor = segmenter as InteractiveImageSegmenter;
         rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
       }
     });
@@ -173,11 +173,11 @@
   function addCurrentFeatures() {
     if ("label" in selectedItem.features) {
       // TODO get label from "editables"(? - to define)
-      selectedItem.features["label"].value = currentAnnCatName;
+      selectedItem.features.label.value = currentAnnCatName;
       // Update visibility
       selectedItem = selectedItem;
     } else {
-      selectedItem.features["label"] = {
+      selectedItem.features.label = {
         name: "label",
         dtype: "text",
         value: currentAnnCatName,

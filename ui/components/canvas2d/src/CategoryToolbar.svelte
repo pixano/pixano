@@ -112,7 +112,7 @@
   {#if selectedTool.type === ToolType.PointSelection}
     <button
       on:click={() => {
-        selectedTool = pointSelectionTool.modes["plus"];
+        selectedTool = pointSelectionTool.modes.plus;
       }}
     >
       <svg
@@ -124,13 +124,13 @@
         bg-slate-50 hover:bg-slate-300
         {selectedTool === pointSelectionTool.modes['plus'] ? 'border-main' : 'border-transparent'}"
       >
-        <title>{pointSelectionTool.modes["plus"].name}</title>
-        <path d={pointSelectionTool.modes["plus"].icon} fill="currentcolor" />
+        <title>{pointSelectionTool.modes.plus.name}</title>
+        <path d={pointSelectionTool.modes.plus.icon} fill="currentcolor" />
       </svg>
     </button>
     <button
       on:click={() => {
-        selectedTool = pointSelectionTool.modes["minus"];
+        selectedTool = pointSelectionTool.modes.minus;
       }}
     >
       <svg
@@ -144,8 +144,8 @@
           ? 'border-main '
           : 'border-transparent'}"
       >
-        <title>{pointSelectionTool.modes["minus"].name}</title>
-        <path d={pointSelectionTool.modes["minus"].icon} fill="currentcolor" />
+        <title>{pointSelectionTool.modes.minus.name}</title>
+        <path d={pointSelectionTool.modes.minus.icon} fill="currentcolor" />
       </svg>
     </button>
   {/if}

@@ -50,8 +50,8 @@
     // Only filter if round column exists and active learning is on
     if ("round" in items[0].features && activeLearningFlag) {
       return items.filter((subArray) => {
-        const round = subArray.features["round"].value as number;
-        const label = subArray.features["label"].value;
+        const round = subArray.features.round.value as number;
+        const label = subArray.features.label.value;
         return round >= 0 && label === null;
       });
     } else return items;

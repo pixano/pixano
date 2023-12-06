@@ -128,9 +128,9 @@
         const sourceId = obj.source_id;
         const viewId = obj.view_id;
         const catId =
-          "category_id" in obj.features ? (obj.features["category_id"].value as number) : null;
+          "category_id" in obj.features ? (obj.features.category_id.value as number) : null;
         const catName =
-          "category_name" in obj.features ? (obj.features["category_name"].value as string) : null;
+          "category_name" in obj.features ? (obj.features.category_name.value as string) : null;
 
         // Initialize source annotations
         if (!annotations[sourceId]) {
@@ -205,8 +205,8 @@
 
           // Add mask
           if (obj.mask) {
-            const rle = obj.mask["counts"];
-            const size = obj.mask["size"];
+            const rle = obj.mask.counts;
+            const size = obj.mask.size;
             const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
             const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
@@ -222,8 +222,8 @@
           }
 
           // Add bbox
-          const imageWidth = selectedItem.views[viewId].features["width"].value as number;
-          const imageHeight = selectedItem.views[viewId].features["height"].value as number;
+          const imageWidth = selectedItem.views[viewId].features.width.value as number;
+          const imageHeight = selectedItem.views[viewId].features.height.value as number;
 
           if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
             const x = obj.bbox.coords[0] * imageWidth;
@@ -307,8 +307,8 @@
             const mask = masks.find((m) => m.id === label.id && m.viewId === label.viewId);
             const bbox = bboxes.find((b) => b.id === label.id && b.viewId === label.viewId);
 
-            const imageWidth = selectedItem.views[label.viewId].features["width"].value as number;
-            const imageHeight = selectedItem.views[label.viewId].features["height"].value as number;
+            const imageWidth = selectedItem.views[label.viewId].features.width.value as number;
+            const imageHeight = selectedItem.views[label.viewId].features.height.value as number;
 
             savedItem.objects[label.id] = {
               id: label.id,
