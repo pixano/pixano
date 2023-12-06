@@ -41,7 +41,7 @@
       {#if choices}
         <select
           class="py-1 px-2 border rounded focus:outline-none
-        bg-slate-100 bg-slate-50 border-slate-300 focus:border-main"
+        bg-slate-100 border-slate-300 focus:border-main"
           bind:value={selected}
         >
           {#each choices as choice}
