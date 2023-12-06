@@ -17,15 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import {
-    api,
-    ConfirmModal,
-    Header,
-    Library,
-    LoadingLibrary,
-    LoadingModal,
-    WarningModal,
-  } from "@pixano/core";
+  import { api, ConfirmModal, Header, Library, LoadingModal, WarningModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
@@ -41,7 +33,7 @@
 
   // Dataset navigation
   let models: Array<string>;
-  let datasets: Array<DatasetInfo>;
+  let datasets: Array<DatasetInfo> = [];
   let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
@@ -55,6 +47,7 @@
   let saveFlag = false;
 
   // Modals
+  let loadingDatasetsModal = false;
   let loadingItemModal = false;
   let savingItemModal = false;
   let unselectItemModal = false;
@@ -74,6 +67,7 @@
 
   async function handleGetModels() {
     console.log("App.handleGetModels");
+
     const start = Date.now();
     models = await api.getModels();
     console.log("App.handleGetModels - api.getModels in", Date.now() - start, "ms");
@@ -81,14 +75,23 @@
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
+
+    loadingDatasetsModal = true;
+
     const start = Date.now();
-    datasets = await api.getDatasets();
+    const loadedDatasets = await api.getDatasets();
     console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
+
+    datasets = loadedDatasets ? loadedDatasets : [];
+
+    loadingDatasetsModal = false;
   }
 
   async function handleSelectDataset(dataset: DatasetInfo) {
     console.log("App.handleSelectDataset");
+
     selectedDataset = dataset;
+
     const start = Date.now();
     selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage);
     console.log("App.handleSelectDataset - api.getDatasetItems in", Date.now() - start, "ms");
@@ -114,6 +117,7 @@
 
   async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
+
     await handleUnselectItem();
     if (!saveFlag) {
       selectedDataset = null;
@@ -123,6 +127,8 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    console.log("App.handleSelectItem");
+
     loadingItemModal = true;
 
     annotations = {};
@@ -281,6 +287,7 @@
 
   async function handleUnselectItem() {
     console.log("App.handleUnselectItem");
+
     if (!saveFlag) {
       unselectItem();
     } else {
@@ -375,6 +382,7 @@
 
   async function handleLoadNextPage() {
     console.log("App.handleLoadNextPage");
+
     currentPage = currentPage + 1;
 
     const start = Date.now();
@@ -396,44 +404,41 @@
   });
 </script>
 
-{#if datasets}
-  {#if selectedDataset}
-    <Header
-      app="Annotator"
-      bind:selectedDataset
-      bind:selectedItem
-      {saveFlag}
-      on:unselectDataset={handleUnselectDataset}
-      on:unselectItem={handleUnselectItem}
-      on:saveItem={handleSaveItem}
-    />
-    {#if selectedItem}
-      <AnnotationWorkspace
-        {selectedDataset}
-        {selectedItem}
-        bind:annotations
-        {classes}
-        bind:masks
-        bind:bboxes
-        {currentPage}
-        {models}
-        bind:activeLearningFlag
-        bind:saveFlag
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-        on:loadNextPage={handleLoadNextPage}
-        on:enableSaveFlag={() => (saveFlag = true)}
-      />
-    {/if}
-  {:else}
-    <Library
-      {datasets}
-      app="Annotator"
-      on:selectDataset={(event) => handleSelectDataset(event.detail)}
-      on:unselectDataset={handleUnselectDataset}
+{#if selectedDataset}
+  <Header
+    app="Annotator"
+    bind:selectedDataset
+    bind:selectedItem
+    {saveFlag}
+    on:unselectDataset={handleUnselectDataset}
+    on:unselectItem={handleUnselectItem}
+    on:saveItem={handleSaveItem}
+  />
+  {#if selectedItem}
+    <AnnotationWorkspace
+      {selectedDataset}
+      {selectedItem}
+      bind:annotations
+      {classes}
+      bind:masks
+      bind:bboxes
+      {currentPage}
+      {models}
+      bind:activeLearningFlag
+      bind:saveFlag
+      on:selectItem={(event) => handleSelectItem(event.detail)}
+      on:loadNextPage={handleLoadNextPage}
+      on:enableSaveFlag={() => (saveFlag = true)}
     />
   {/if}
 {:else}
-  <LoadingLibrary app="Annotator" />
+  <Library
+    {datasets}
+    app="Annotator"
+    {loadingDatasetsModal}
+    on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    on:unselectDataset={handleUnselectDataset}
+  />
 {/if}
 {#if unselectItemModal}
   <ConfirmModal

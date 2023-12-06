@@ -19,11 +19,12 @@
   import type { DatasetInfo } from "./interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
   import pixanoLogoWhite from "./assets/pixano_white.png";
-  import { svg_search } from "./icons";
+  import { svg_search, svg_loading } from "./icons";
 
   // Exports
   export let datasets: Array<DatasetInfo>;
-  export let app: string = "";
+  export let app: string;
+  export let loadingDatasetsModal: boolean;
 
   let filter = "";
 
@@ -87,30 +88,42 @@
   </div>
 </header>
 <div class="flex bg-slate-100 py-10">
-  {#if datasets.length != 0}
-    <div class="flex flex-wrap justify-center gap-6 mx-20">
-      {#each datasets as dataset}
-        {#if dataset.name.toUpperCase().includes(filter.toUpperCase())}
-          <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
-        {/if}
-      {/each}
-    </div>
+  {#if loadingDatasetsModal == false}
+    {#if datasets.length != 0}
+      <div class="flex flex-wrap justify-center gap-6 mx-20">
+        {#each datasets as dataset}
+          {#if dataset.name.toUpperCase().includes(filter.toUpperCase())}
+            <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+          {/if}
+        {/each}
+      </div>
+    {:else}
+      <div class="mt-4 py-8 flex w-full justify-center text-lg text-slate-500">
+        <span style="text-align: center">
+          No datasets found in this directory. <br /> <br />
+          Please refer to
+          <u>
+            <a
+              href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
+              target="_blank"
+              class="text-main hover:text-secondary"
+            >
+              this Jupyter notebook
+            </a>
+          </u>
+          for information on how to import your datasets.
+        </span>
+      </div>
+    {/if}
   {:else}
-    <div class="mt-4 py-8 flex w-full justify-center text-lg text-slate-500">
-      <span style="text-align: center;">
-        No datasets found in this directory. <br /> <br />
-        Please refer to
-        <u>
-          <a
-            href="https://github.com/pixano/pixano/tree/main/notebooks/datasets/import_dataset.ipynb"
-            target="_blank"
-            class="text-main hover:text-secondary"
-          >
-            this Jupyter notebook
-          </a>
-        </u>
-        for information on how to import your datasets.
-      </span>
-    </div>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      height="48"
+      viewBox="0 -960 960 960"
+      width="48"
+      class="h-10 w-10 p-1 text-slate-500 mx-auto animate-spin"
+    >
+      <path d={svg_loading} fill="currentcolor" />
+    </svg>
   {/if}
 </div>

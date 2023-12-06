@@ -17,7 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, Header, Library, LoadingLibrary, LoadingModal } from "@pixano/core";
+  import { api, Header, Library, LoadingModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import DatasetExplorer from "./DatasetExplorer.svelte";
@@ -33,7 +33,7 @@
   } from "@pixano/core";
 
   // Dataset navigation
-  let datasets: Array<DatasetInfo>;
+  let datasets: Array<DatasetInfo> = [];
   let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
@@ -47,12 +47,20 @@
 
   // Modals
   let loadingItemModal = false;
+  let loadingDatasetsModal = false;
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
+
+    loadingDatasetsModal = true;
+
     const start = Date.now();
-    datasets = await api.getDatasets();
+    const loadedDatasets = await api.getDatasets();
     console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
+
+    datasets = loadedDatasets ? loadedDatasets : [];
+
+    loadingDatasetsModal = false;
   }
 
   async function handleSelectDataset(dataset: DatasetInfo) {
@@ -64,6 +72,7 @@
 
   async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
+
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
@@ -71,6 +80,8 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    console.log("App.handleSelectItem");
+
     loadingItemModal = true;
 
     annotations = {};
@@ -229,6 +240,7 @@
 
   function handleUnselectItem() {
     console.log("App.handleUnselectItem");
+
     selectedItem = null;
     annotations = {};
     classes = [];
@@ -242,44 +254,41 @@
   });
 </script>
 
-{#if datasets}
-  {#if selectedDataset}
-    <Header
-      app="Explorer"
-      bind:selectedDataset
-      bind:selectedItem
-      bind:selectedTab
-      saveFlag={false}
-      on:unselectDataset={handleUnselectDataset}
+{#if selectedDataset}
+  <Header
+    app="Explorer"
+    bind:selectedDataset
+    bind:selectedItem
+    bind:selectedTab
+    saveFlag={false}
+    on:unselectDataset={handleUnselectDataset}
+    on:unselectItem={handleUnselectItem}
+  />
+  {#if selectedItem}
+    <ExplorationWorkspace
+      {selectedItem}
+      {annotations}
+      {classes}
+      {masks}
+      {bboxes}
       on:unselectItem={handleUnselectItem}
     />
-    {#if selectedItem}
-      <ExplorationWorkspace
-        {selectedItem}
-        {annotations}
-        {classes}
-        {masks}
-        {bboxes}
-        on:unselectItem={handleUnselectItem}
-      />
-    {:else}
-      <DatasetExplorer
-        bind:selectedTab
-        {selectedDataset}
-        {currentPage}
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-      />
-    {/if}
   {:else}
-    <Library
-      {datasets}
-      app="Explorer"
-      on:selectDataset={(event) => handleSelectDataset(event.detail)}
-      on:unselectDataset={handleUnselectDataset}
+    <DatasetExplorer
+      bind:selectedTab
+      {selectedDataset}
+      {currentPage}
+      on:selectItem={(event) => handleSelectItem(event.detail)}
     />
   {/if}
 {:else}
-  <LoadingLibrary app="Explorer" />
+  <Library
+    {datasets}
+    app="Explorer"
+    {loadingDatasetsModal}
+    on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    on:unselectDataset={handleUnselectDataset}
+  />
 {/if}
 {#if loadingItemModal}
   <LoadingModal />

@@ -68,7 +68,7 @@
       <img
         src={dataset.preview}
         alt="{dataset.name} thumbnail"
-        class="w-96 h-44 object-contain object-center"
+        class="w-[350px] h-[176px] rounded-sm object-contain object-center"
       />
     {/if}
   </div>
