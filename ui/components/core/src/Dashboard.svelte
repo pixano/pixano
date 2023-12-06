@@ -17,11 +17,10 @@
   // Imports
   import Histogram from "./Histogram.svelte";
 
-  import type { Dataset, Stats } from "./lib/types/interfaces";
+  import type { DatasetInfo } from "./lib/types/interfaces";
 
   // Exports
-  export let selectedDataset: Dataset = null;
-  export let datasetStats: Array<Stats> = null;
+  export let selectedDataset: DatasetInfo = null;
 
   let selectedTab: string = "overview";
 
@@ -37,28 +36,32 @@
 <!-- Dashboard -->
 {#if selectedDataset.page}
   <div class="h-full flex flex-row">
-    <div class="w-1/6 flex flex-col items-start">
+    <div class="w-64 h-fit z-10 flex flex-col items-start">
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'overview'
-          ? ' text-main bg-slate-300'
-          : 'hover:bg-slate-300'}"
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+         {selectedTab === 'overview'
+          ? 'text-slate-50 bg-main hover:bg-secondary'
+          : 'text-main hover:bg-slate-300'}"
         on:click={selectOverviewTab}
       >
         Overview
       </button>
       <button
-        class="w-full px-8 py-4 rounded-l-sm text-lg text-left {selectedTab === 'stats'
-          ? ' text-main bg-slate-300'
-          : 'hover:bg-slate-300'}"
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+        {selectedTab === 'stats'
+          ? 'text-slate-50 bg-main hover:bg-secondary '
+          : 'text-main hover:bg-slate-300'}"
         on:click={selectStatsTab}
       >
         Statistics
       </button>
     </div>
-    <div class="w-5/6 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300">
+    <div
+      class="w-full z-10 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300"
+    >
       {#if selectedTab === "overview"}
         <!-- Overview -->
-        <div class="w-full mb-16 flex flex-row justify-between">
+        <div class="w-full flex flex-row justify-between">
           <div>
             <span class="text-5xl font-bold font-Montserrat">
               {selectedDataset.name}
@@ -74,24 +77,26 @@
             <span class="ml-2 text-xl font-Montserrat"> items </span>
           </div>
         </div>
-        <div class="text-lg text-justify">
-          {selectedDataset.description}
+        <!-- Description -->
+        <div class="mt-8">
+          <p class="text-lg text-justify">
+            {selectedDataset.description}
+          </p>
         </div>
       {:else if selectedTab === "stats"}
         <!-- Stats -->
-        <span class="text-5xl font-bold font-Montserrat"> STATISTICS </span>
-        {#if datasetStats != null && datasetStats.length != 0}
-          <div class="mt-16 grid grid-cols-3 gap-16">
+        <span class="text-5xl font-bold font-Montserrat"> Statistics </span>
+
+        {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
+          <div class="mt-8 flex flex-wrap justify-center gap-6 mx-8">
             <!-- If charts are ready to be displayed, display them -->
-            {#each datasetStats as chart}
+            {#each selectedDataset.stats as chart}
               <Histogram hist={chart} />
             {/each}
           </div>
         {:else}
           <!-- Else show a message -->
-          <p class="mt-80 text-slate-500 italic text-center">
-            Sorry, no statistics are available for this dataset. Did you forget to include them ?
-          </p>
+          <p class="mt-80 text-slate-500 italic text-center">No statistics found.</p>
         {/if}
       {/if}
     </div>

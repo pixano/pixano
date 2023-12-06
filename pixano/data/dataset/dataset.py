@@ -286,10 +286,8 @@ class Dataset(BaseModel):
         if "embeddings" not in self.info.tables:
             return None
 
-        # Return first embeddings for first table containing CLIP
-        # TODO: Add embeddings table select option
         for table in self.info.tables["embeddings"]:
-            if table.type == "search" and "CLIP" in table.source:
+            if table.type == "search" and table.source == query["model"]:
                 sem_search_table = ds_tables["embeddings"][table.source]
                 sem_search_views = [
                     field_name
@@ -305,7 +303,7 @@ class Dataset(BaseModel):
                     ) from e
 
                 model = CLIP()
-                model_query = model.semantic_search(query["query"])
+                model_query = model.semantic_search(query["search"])
 
                 # Perform semantic search
                 stop = min(offset + limit, self.num_rows)
@@ -401,7 +399,7 @@ class Dataset(BaseModel):
             load_objects (bool, optional): Load item objects. Defaults to False.
             load_active_learning (bool, optional): Load item active learning info. Defaults to True.
             load_embeddings (bool, optional): Load item embeddings. Defaults to False.
-            model_id (str, optional): Model ID of embeddings to load. Defaults to None.
+            model_id (str, optional): Model ID (ONNX file path) of embeddings to load. Defaults to None.
         Returns:
             DatasetItem: Dataset item
         """
@@ -446,20 +444,23 @@ class Dataset(BaseModel):
                 pyarrow_item["active_learning"][al_source] = lance_scanner.to_table()
 
         # Load PyArrow item from segmentation embeddings tables
+        found_embeddings = False if load_embeddings else True
         if load_embeddings:
             for emb_source, emb_table in ds_tables["embeddings"].items():
-                if model_id in emb_source:
+                if emb_source.lower() in model_id.lower():
+                    found_embeddings = True
                     lance_scanner = emb_table.to_lance().scanner(
                         filter=f"id in ('{item_id}')"
                     )
                     pyarrow_item["embeddings"][emb_source] = lance_scanner.to_table()
 
-        if pyarrow_item["main"]["db"].num_rows > 0:
+        if pyarrow_item["main"]["db"].num_rows > 0 and found_embeddings:
             return DatasetItem.from_pyarrow(
                 pyarrow_item,
                 self.info,
                 self.media_dir,
-                model_id,
+                media_features=True,
+                model_id=model_id,
             )
         else:
             return None

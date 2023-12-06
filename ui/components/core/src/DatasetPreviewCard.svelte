@@ -17,11 +17,11 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import type { Dataset } from "./lib/types/interfaces";
+  import type { DatasetInfo } from "./lib/types/interfaces";
   import { svg_right_arrow } from "./icons";
 
   // Exports
-  export let dataset: Dataset;
+  export let dataset: DatasetInfo;
 
   const dispatch = createEventDispatcher();
 
@@ -32,7 +32,7 @@
 
 <button
   class="w-96 h-72 flex flex-col transition-all text-left
-  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-md"
+  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 hover:shadow-xl"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -56,9 +56,8 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="absolute right-5 h-8 w-8 mx-auto p-2 border rounded-full border-slate-300 hover:bg-slate-300"
+      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 hover:bg-slate-300"
     >
-      <title>Open</title>
       <path d={svg_right_arrow} fill="currentcolor" />
     </svg>
   </div>
@@ -73,9 +72,4 @@
       />
     {/if}
   </div>
-  <!-- <div class="h-3/5 mx-4 mb-4 grid grid-cols-4 gap-1">
-    {#each dataset.preview as preview}
-      <img src={dataset.preview} alt="{dataset.name} thumbnail" class="h-full w-full rounded object-cover object-center bg-slate-100" />
-    {/each}
-  </div> -->
 </button>

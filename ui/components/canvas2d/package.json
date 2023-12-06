@@ -27,7 +27,7 @@
     "@pixano/models": "workspace:^0.3.0",
     "konva": "^8.4.2",
     "svelte-konva": "^0.1.1",
-    "shortid": "^2.2.16",
+    "nanoid": "^5.0.0",
     "vite-plugin-externals": "^0.6.2"
   }
 }

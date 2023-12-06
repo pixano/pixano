@@ -16,21 +16,25 @@
 
   // Imports
   import { createEventDispatcher } from "svelte";
-  import type { Dataset } from "./lib/types/interfaces";
+  import type { DatasetInfo } from "./lib/types/interfaces";
   import DatasetPreviewCard from "./DatasetPreviewCard.svelte";
   import pixanoLogoWhite from "./assets/pixano_white.png";
-  import { svg_filter, svg_search } from "./icons";
+  import { svg_search } from "./icons";
 
   // Exports
-  export let datasets: Array<Dataset>;
+  export let datasets: Array<DatasetInfo>;
   export let app: string = "";
 
   let filter = "";
 
   const dispatch = createEventDispatcher();
 
-  function handleSelectDataset(dataset: Dataset) {
+  function handleSelectDataset(dataset: DatasetInfo) {
     dispatch("selectDataset", dataset);
+  }
+
+  function handleUnselectDataset() {
+    dispatch("unselectDataset");
   }
 
   function handleSearch() {
@@ -38,45 +42,34 @@
   }
 </script>
 
-<header class="w-full h-56 px-60 flex flex-col justify-evenly bg-main z-10">
+<header class="w-full h-fit px-20 xl:px-60 flex flex-col justify-evenly bg-main z-10">
   <!-- Logo & app name -->
-  <button class="flex w-max space-x-6">
-    <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10" />
+  <button on:click={handleUnselectDataset} class="flex w-full h-20 mt-10 items-center space-x-6">
+    <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10 h-10" />
     <span class="text-3xl font-bold text-slate-50 uppercase font-Montserrat">
       Pixano {app}
     </span>
   </button>
   <!-- Infos -->
-  <div class="flex flex-row text-slate-50">
-    <div class="py-5 px-8 border-2 rounded-lg border-secondary">
-      <span class="text-5xl"> {datasets.length} </span>
-      <span class="ml-2 text-2xl"> datasets </span>
+  <div class="flex my-5 w-full h-full items-center flex-wrap text-slate-50">
+    <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">
+      <span class="text-3xl"> {datasets.length} </span>
+      <span class="ml-2 text-xl"> datasets </span>
     </div>
-    <div class="ml-8 py-5 px-8 border-2 rounded-lg border-secondary">
-      <span class="text-5xl">
+    <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">
+      <span class="text-3xl">
         {datasets.reduce((sum, dataset) => sum + dataset.num_elements, 0)}
       </span>
-      <span class="ml-2 text-2xl"> items </span>
+      <span class="ml-2 text-xl"> items </span>
     </div>
     <div class="grow flex flex-row justify-end items-end">
       <div class="flex items-center space-x-2">
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-10 w-10 p-2 rounded-full hover:bg-secondary"
-          >
-            <path d={svg_filter} fill="currentcolor" />
-          </svg>
-        </button>
-        <div class="relative flex items-center">
+        <div class="h-20 my-5 relative flex items-center">
           <input
             id="search-input"
             type="text"
-            placeholder="Search"
-            class="h-10 pl-10 pr-4 rounded border-2 accent-main text-black font-medium"
+            placeholder="Search datasets"
+            class="h-10 pl-10 pr-4 rounded-full border-2 accent-main text-slate-800 placeholder-slate-500 font-medium"
             on:input={handleSearch}
           />
           <svg
@@ -84,9 +77,9 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="absolute left-3 h-5 w-5 pointer-events-none"
+            class="absolute left-3 h-5 w-5 pointer-events-none text-slate-500"
           >
-            <path d={svg_search} />
+            <path d={svg_search} fill="currentcolor" />
           </svg>
         </div>
       </div>

@@ -15,6 +15,8 @@
    */
 
   // Imports
+  import * as ort from "onnxruntime-web";
+
   import { afterUpdate, createEventDispatcher, onMount } from "svelte";
 
   import {
@@ -24,16 +26,16 @@
     LabelPanel,
     tools,
   } from "@pixano/canvas2d";
-  import { ConfirmModal, utils, WarningModal } from "@pixano/core";
+  import { api, ConfirmModal, utils, SelectModal, WarningModal } from "@pixano/core";
+  import { SAM, npy } from "@pixano/models";
 
   import { interactiveSegmenterModel } from "./stores";
 
   import type {
     BBox,
-    CategoryData,
-    Dataset,
+    DatasetCategory,
+    DatasetInfo,
     DatasetItem,
-    ItemData,
     ItemLabels,
     Label,
     Mask,
@@ -42,14 +44,14 @@
   import type { InteractiveImageSegmenter, InteractiveImageSegmenterOutput } from "@pixano/models";
 
   // Exports
-  export let selectedDataset: Dataset;
-  export let selectedItem: ItemData;
+  export let selectedDataset: DatasetInfo;
+  export let selectedItem: DatasetItem;
   export let annotations: ItemLabels;
-  export let classes: Array<CategoryData>;
+  export let classes: Array<DatasetCategory>;
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
-  export let embeddings = {};
   export let currentPage: number;
+  export let models: Array<string>;
   export let saveFlag: boolean;
   export let activeLearningFlag: boolean;
 
@@ -58,6 +60,7 @@
   // Modals
   let categoryNameModal = false;
   let selectItemModal = false;
+  let embeddingsErrorModal = false;
 
   // Category colors
   let colorMode = "category";
@@ -73,23 +76,23 @@
   let currentAnnCatName = "";
   const currentAnnSource = "Pixano Annotator";
 
+  // Models
+  let embeddings: Record<string, ort.Tensor> = {};
+  let selectedModelName: string;
+  let modelLoaded = false;
+  const sam = new SAM();
+
   // Tools
   const tools_lists: Array<Array<tools.Tool>> = [];
   const imageTools: Array<tools.Tool> = [];
   const classificationTools: Array<tools.Tool> = [];
   const annotationTools: Array<tools.Tool> = [];
-  const pointPlusTool = tools.createLabeledPointTool(1);
-  const pointMinusTool = tools.createLabeledPointTool(0);
+  const pointSelectionTool = tools.createPointSelectionTool();
   const rectangleTool = tools.createRectangleTool();
   const deleteTool = tools.createDeleteTool();
   const panTool = tools.createPanTool();
   const classifTool = tools.createClassifTool();
-  annotationTools.push(
-    tools.createMultiModalTool("Point selection", tools.ToolType.LabeledPoint, [
-      pointPlusTool,
-      pointMinusTool,
-    ]),
-  );
+  annotationTools.push(pointSelectionTool);
   annotationTools.push(rectangleTool);
   annotationTools.push(deleteTool);
   classificationTools.push(classifTool);
@@ -97,33 +100,70 @@
   tools_lists.push(imageTools);
   tools_lists.push(classificationTools);
   tools_lists.push(annotationTools);
-  let selectedTool: tools.Tool = selectedItem.features.find((f) => f.name === "label")
-    ? classifTool
-    : pointPlusTool;
+  let selectedTool: tools.Tool = panTool;
 
-  // Segmentation model
-  interactiveSegmenterModel.subscribe((segmenter) => {
-    if (segmenter) {
-      pointPlusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-      pointMinusTool.postProcessor = segmenter as InteractiveImageSegmenter;
-      rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
-    }
-  });
-
-  function until(conditionFunction: () => boolean): Promise<() => void> {
-    const poll = (resolve) => {
-      if (conditionFunction()) resolve();
-      else setTimeout(() => poll(resolve), 400);
-    };
-    return new Promise(poll);
+  function until(condition: () => boolean): Promise<void> {
+    return new Promise<void>((resolve) => {
+      let i = setInterval(() => {
+        console.log("AnnotationWorkspace.until - Waiting for user confirmation");
+        if (condition()) {
+          resolve();
+          clearInterval(i);
+        }
+      }, 500);
+    });
   }
 
   function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Enter") handleAddCurrentAnn();
   }
 
-  function handleAddClassification() {
-    console.log("AnnotationWorkspace.handleAddClassification");
+  async function loadModel() {
+    console.log("AnnotationWorkspace.loadModel");
+    await sam.init("/data/models/" + selectedModelName);
+    interactiveSegmenterModel.set(sam);
+    interactiveSegmenterModel.subscribe((segmenter) => {
+      if (segmenter) {
+        pointSelectionTool.modes.plus.postProcessor = segmenter as InteractiveImageSegmenter;
+        pointSelectionTool.modes.minus.postProcessor = segmenter as InteractiveImageSegmenter;
+        rectangleTool.postProcessor = segmenter as InteractiveImageSegmenter;
+      }
+    });
+    // Embeddings
+    const start = Date.now();
+    const item = await api.getItemEmbeddings(
+      selectedDataset.id,
+      selectedItem.id,
+      selectedModelName,
+    );
+    console.log(
+      "AnnotationWorkspace.loadModel - api.getItemEmbeddings in",
+      Date.now() - start,
+      "ms",
+    );
+    if (item) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+        try {
+          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
+          embeddings[viewId] = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape,
+          );
+        } catch (e) {
+          console.log("AnnotationWorkspace.loadModel - Error loading embeddings", e);
+        }
+      }
+      modelLoaded = true;
+    } else {
+      embeddingsErrorModal = true;
+      selectedModelName = "";
+      selectedTool = panTool;
+    }
+  }
+
+  function handleAddCurrentFeatures() {
+    console.log("AnnotationWorkspace.handleAddCurrentFeatures");
     if (currentAnnCatName !== "") {
       addCurrentFeatures();
       dispatch("enableSaveFlag");
@@ -131,22 +171,17 @@
   }
 
   function addCurrentFeatures() {
-    let labelExists = false;
-    for (let feat of selectedItem.features) {
-      if (feat["name"] === "label" && !labelExists) {
-        // TODO get label from "editables"(? - to define)
-        feat["value"] = currentAnnCatName;
-        // Update visibility
-        selectedItem = selectedItem;
-        labelExists = true;
-      }
-    }
-    if (!labelExists) {
-      selectedItem.features.push({
+    if ("label" in selectedItem.features) {
+      // TODO get label from "editables"(? - to define)
+      selectedItem.features.label.value = currentAnnCatName;
+      // Update visibility
+      selectedItem = selectedItem;
+    } else {
+      selectedItem.features.label = {
         name: "label",
         dtype: "text",
         value: currentAnnCatName,
-      });
+      };
     }
   }
 
@@ -248,37 +283,24 @@
     annotations = annotations;
   }
 
-  async function handleChangeSelectedItem(item: DatasetItem) {
+  async function handleChangeSelectedItem(itemId: string) {
     console.log("AnnotationWorkspace.handleChangeSelectedItem");
-    const newItemId = item.find((feature) => {
-      return feature.name === "id";
-    }).value as string;
-
-    if (newItemId !== selectedItem.id) {
+    if (itemId !== selectedItem.id) {
       if (!saveFlag) {
-        changeSelectedItem(newItemId, item);
+        changeSelectedItem(itemId);
       } else {
         selectItemModal = true;
         await until(() => selectItemModal == false);
         if (!saveFlag) {
-          changeSelectedItem(newItemId, item);
+          changeSelectedItem(itemId);
         }
       }
     }
   }
 
-  function changeSelectedItem(newItemId: string, item: DatasetItem) {
+  function changeSelectedItem(itemId: string) {
     currentAnnCatName = "";
-    for (const itemFeature of item) {
-      if (itemFeature.dtype === "image") {
-        selectedItem.views[itemFeature.name] = {
-          id: itemFeature.name,
-          uri: itemFeature.value as string,
-        };
-      }
-    }
-    selectedItem = selectedItem;
-    dispatch("selectItem", newItemId);
+    dispatch("selectItem", itemId);
   }
 
   function handleDeleteLabel(label: Label) {
@@ -361,10 +383,18 @@
     dispatch("loadNextPage");
   }
 
-  onMount(() => {
+  onMount(async () => {
     if (annotations) {
       console.log("AnnotationWorkspace.onMount");
       colorScale = handleLabelColors();
+    }
+    // If only one SAM model, load as default
+    if (models.length > 0) {
+      let samModels = models.filter((m) => m.includes("sam"));
+      if (samModels.length == 1) {
+        selectedModelName = samModels[0];
+        await loadModel();
+      }
     }
   });
 
@@ -414,19 +444,35 @@
         bind:currentAnnCatName
         bind:classes
         bind:selectedTool
-        {pointPlusTool}
-        {pointMinusTool}
+        {pointSelectionTool}
         {colorScale}
         placeholder="Label name"
-        on:addCurrentAnn={handleAddClassification}
+        on:addCurrentAnn={handleAddCurrentFeatures}
       />
-    {:else if selectedTool && (selectedTool.type == tools.ToolType.LabeledPoint || selectedTool.type == tools.ToolType.Rectangle)}
+    {:else if selectedTool && (selectedTool.type == tools.ToolType.PointSelection || selectedTool.type == tools.ToolType.Rectangle)}
+      {#if !modelLoaded}
+        {#if models.length > 0}
+          <SelectModal
+            message="Please select your model for interactive segmentation."
+            choices={models}
+            ifNoChoices={""}
+            bind:selected={selectedModelName}
+            on:confirm={loadModel}
+          />
+        {:else}
+          <WarningModal
+            message="It looks like there is no model for interactive segmentation in youre dataset library."
+            details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
+            on:confirm={() => {
+              selectedTool = panTool;
+            }}
+          />{/if}
+      {/if}
       <CategoryToolbar
         bind:currentAnnCatName
         bind:classes
         bind:selectedTool
-        {pointPlusTool}
-        {pointMinusTool}
+        {pointSelectionTool}
         {colorScale}
         on:addCurrentAnn={handleAddCurrentAnn}
       />
@@ -443,6 +489,13 @@
         confirm="Continue without saving"
         on:confirm={() => ((saveFlag = false), (selectItemModal = false))}
         on:cancel={() => (selectItemModal = !selectItemModal)}
+      />
+    {/if}
+    {#if embeddingsErrorModal}
+      <WarningModal
+        message="No embeddings found for model {selectedModelName}."
+        details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
+        on:confirm={() => (embeddingsErrorModal = false)}
       />
     {/if}
   {/if}

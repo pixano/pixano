@@ -21,15 +21,14 @@
 
   import { ToolType } from "./tools";
 
-  import type { CategoryData } from "@pixano/core";
-  import type { Tool } from "./tools";
+  import type { DatasetCategory } from "@pixano/core";
+  import type { PointSelectionTool, Tool } from "./tools";
 
   // Exports
   export let currentAnnCatName: string;
-  export let classes: Array<CategoryData>;
+  export let classes: Array<DatasetCategory>;
   export let selectedTool: Tool;
-  export let pointPlusTool: Tool;
-  export let pointMinusTool: Tool;
+  export let pointSelectionTool: PointSelectionTool;
   export let colorScale: (id: string) => string;
   export let placeholder: string = "Category name";
 
@@ -56,7 +55,7 @@
     }
   }
 
-  function handleKeyPress(event) {
+  function handleKeyPress(event: KeyboardEvent) {
     if (event.key === "Enter") {
       dispatch("addCurrentAnn");
     }
@@ -110,10 +109,10 @@
     </div>
   </div>
 
-  {#if selectedTool.type === ToolType.LabeledPoint}
+  {#if selectedTool.type === ToolType.PointSelection}
     <button
       on:click={() => {
-        selectedTool = pointPlusTool;
+        selectedTool = pointSelectionTool.modes.plus;
       }}
     >
       <svg
@@ -123,15 +122,15 @@
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
         bg-slate-50 hover:bg-slate-300
-        {selectedTool === pointPlusTool ? 'border-main' : 'border-transparent'}"
+        {selectedTool === pointSelectionTool.modes['plus'] ? 'border-main' : 'border-transparent'}"
       >
-        <title>Positive point</title>
-        <path d={icons.svg_point_plus} fill="currentcolor" />
+        <title>{pointSelectionTool.modes.plus.name}</title>
+        <path d={pointSelectionTool.modes.plus.icon} fill="currentcolor" />
       </svg>
     </button>
     <button
       on:click={() => {
-        selectedTool = pointMinusTool;
+        selectedTool = pointSelectionTool.modes.minus;
       }}
     >
       <svg
@@ -141,10 +140,12 @@
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
         bg-slate-50 hover:bg-slate-300
-        {selectedTool === pointMinusTool ? 'border-main ' : 'border-transparent'}"
+        {selectedTool === pointSelectionTool.modes['minus']
+          ? 'border-main '
+          : 'border-transparent'}"
       >
-        <title>Negative point</title>
-        <path d={icons.svg_point_minus} fill="currentcolor" />
+        <title>{pointSelectionTool.modes.minus.name}</title>
+        <path d={pointSelectionTool.modes.minus.icon} fill="currentcolor" />
       </svg>
     </button>
   {/if}

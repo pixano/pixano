@@ -17,10 +17,10 @@
   // Imports
   import { VegaLite, type VisualizationSpec } from "svelte-vega";
 
-  import type { Stats } from "./lib/types/interfaces";
+  import type { DatasetStat } from "./lib/types/interfaces";
 
   // Exports
-  export let hist: Stats;
+  export let hist: DatasetStat;
   export let maxHeight = 48;
   export let hideTitle = false;
 

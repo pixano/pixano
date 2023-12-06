@@ -33,43 +33,127 @@ export const Base: Story = {
     selectedTab: "dashboard",
     selectedDataset: {
       id: "euHS4xM5SSvQKAhmv3sFcp",
-      name: "Dataset",
-      description: "Dataset description",
+      name: "Test dataset",
+      description: "Test dataset description",
+      estimated_size: "12.68 MB",
       num_elements: 4,
-      estimated_size: "N/A",
       preview: "",
-      categories: [
-        { id: 0, name: "Dog" },
-        { id: 1, name: "eye" },
-        { id: 2, name: "Cat" },
+      splits: ["val"],
+      tables: {},
+      categories: [],
+      stats: [
+        {
+          name: "Some numerical statistics",
+          type: "numerical",
+          histogram: [
+            { bin_start: 0.0, bin_end: 1.0, counts: 2, split: "train" },
+            { bin_start: 1.0, bin_end: 2.0, counts: 4, split: "train" },
+            { bin_start: 2.0, bin_end: 3.0, counts: 6, split: "train" },
+            { bin_start: 3.0, bin_end: 4.0, counts: 8, split: "train" },
+          ],
+          range: [0.0, 10.0],
+        },
+        {
+          name: "Some categorical statistics",
+          type: "categorical",
+          histogram: [
+            { "Some categorical statistics": "a", counts: 2, split: "train" },
+            { "Some categorical statistics": "b", counts: 4, split: "train" },
+            { "Some categorical statistics": "c", counts: 6, split: "train" },
+            { "Some categorical statistics": "d", counts: 8, split: "train" },
+          ],
+        },
       ],
       page: {
         items: [
-          [
-            { name: "id", dtype: "text", value: "1" },
-            { name: "view1", dtype: "image", value: "img-01.jpg" },
-            { name: "view2", dtype: "image", value: "img-02.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "2" },
-            { name: "view1", dtype: "image", value: "img-03.jpg" },
-            { name: "view2", dtype: "image", value: "img-04.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "3" },
-            { name: "view1", dtype: "image", value: "img-05.jpg" },
-            { name: "view2", dtype: "image", value: "img-06.jpg" },
-          ],
-          [
-            { name: "id", dtype: "text", value: "4" },
-            { name: "view1", dtype: "image", value: "img-07.jpg" },
-            { name: "view2", dtype: "image", value: "img-08.jpg" },
-          ],
+          {
+            id: "1",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-01.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-02.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "2",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-03.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-04.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "3",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-05.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-06.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
+          {
+            id: "4",
+            split: "val",
+            views: {
+              view1: {
+                id: "view1",
+                uri: "img-07.jpg",
+                type: "image",
+                features: {},
+              },
+              view2: {
+                id: "view2",
+                uri: "img-08.jpg",
+                type: "image",
+                features: {},
+              },
+            },
+            features: {},
+            objects: {},
+            embeddings: {},
+          },
         ],
         total: 4,
       },
     }, // storybook has no access to REST API...
     currentPage: 1,
-    query: "",
   },
 };

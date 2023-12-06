@@ -40,16 +40,24 @@ export const CanvasWithoutSelectedTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
           uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
     selectedTool: null,
     colorScale: catCol,
@@ -61,25 +69,33 @@ export const CanvasWithoutSelectedTool: Story = {
 };
 
 const segmenter = new mocks.MockInteractiveImageSegmenter();
-let labeledPointCreator = tools.createLabeledPointTool(1);
+let labeledPointCreator = tools.createPointSelectionTool();
 labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
           uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
-    selectedTool: labeledPointCreator,
+    selectedTool: labeledPointCreator.modes[0],
     colorScale: catCol,
     masks: [],
     bboxes: [],
@@ -95,16 +111,24 @@ export const CanvasWithRectangleTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
           uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
     selectedTool: rectangleCreator,
     colorScale: catCol,

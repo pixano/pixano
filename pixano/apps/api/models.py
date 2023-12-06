@@ -33,10 +33,10 @@ def get_settings():
 
 @router.get("/models", response_model=list[str])
 async def get_models() -> list[str]:
-    """Load dataset list
+    """Load models
 
     Returns:
-        list[DatasetInfo]: List of dataset infos
+        list[str]: List of models
     """
 
     # Load list of models
@@ -48,4 +48,7 @@ async def get_models() -> list[str]:
     if models:
         return models
     else:
-        raise HTTPException(status_code=404, detail="No model found")
+        raise HTTPException(
+            status_code=404,
+            detail=f"No models found in {get_settings().data_dir.absolute()}",
+        )

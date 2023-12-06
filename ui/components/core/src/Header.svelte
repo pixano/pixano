@@ -18,13 +18,13 @@
   // Imports
   import { createEventDispatcher } from "svelte";
   import { svg_next_page, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
-  import type { Dataset, ItemData } from "./lib/types/interfaces";
+  import type { DatasetInfo, DatasetItem } from "./lib/types/interfaces.ts";
   import pixanoLogo from "./assets/pixano.png";
 
   // Exports
   export let app: string = "";
-  export let selectedDataset: Dataset = null;
-  export let selectedItem: ItemData;
+  export let selectedDataset: DatasetInfo = null;
+  export let selectedItem: DatasetItem;
   export let saveFlag: boolean;
   export let selectedTab: string = null;
 
@@ -61,59 +61,59 @@
 {#if selectedDataset}
   <header class="w-full fixed z-40">
     <div
-      class="p-6 flex justify-start items-center shrink-0
-      bg-slate-50 border-b border-slate-300"
+      class="h-20 p-5 flex justify-start items-center shrink-0
+      bg-slate-50 border-b border-slate-300 text-slate-800"
     >
       <!-- Navigation -->
-      <div class="flex items-center grow font-semibold text-2xl">
-        <button on:click={handleUnselectDataset}>
-          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mr-6" />
+      <div class="h-10 flex items-center grow font-semibold text-2xl">
+        <button on:click={handleUnselectDataset} class="h-10 w-10">
+          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
         </button>
-        {#if !selectedItem}
-          <button on:click={handleUnselectDataset}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="48"
-              viewBox="0 -960 960 960"
-              width="48"
-              class="h-8 w-8 mr-4 p-2 border rounded-full border-slate-300 hover:bg-slate-100"
-            >
-              <path d={svg_left_arrow} />
-            </svg>
-          </button>
-        {/if}
-        <button on:click={app === "Explorer" ? selectDatabaseTab : handleUnselectDataset}>
-          <span class="transition-colors">
-            {selectedDataset.name}
-          </span>
-        </button>
+        <div class="h-10 flex mx-2 items-center">
+          {#if selectedDataset}
+            <button on:click={handleUnselectDataset}>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="48"
+                viewBox="0 -960 960 960"
+                width="48"
+                class="h-8 w-8 mx-2 p-1 border rounded-full text-slate-800 border-slate-300 hover:bg-slate-300"
+              >
+                <path d={svg_left_arrow} fill="currentcolor" />
+              </svg>
+            </button>
+            <button on:click={app === "Explorer" ? selectDatabaseTab : handleUnselectDataset}>
+              <span class="ml-2">
+                {selectedDataset.name}
+              </span>
+            </button>
 
-        {#if selectedDataset}
-          {#if selectedItem}
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="48"
-              viewBox="0 -960 960 960"
-              width="48"
-              class="h-6 w-6"
-            >
-              <path d={svg_next_page} fill="currentcolor" />
-            </svg>
-            <span class="truncate">
-              {selectedItem.id}
-            </span>
+            {#if selectedItem}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="48"
+                viewBox="0 -960 960 960"
+                width="48"
+                class="h-5 w-5 mx-1"
+              >
+                <path d={svg_next_page} fill="currentcolor" />
+              </svg>
+              <span class="truncate">
+                {selectedItem.id}
+              </span>
+            {/if}
           {/if}
-        {/if}
+        </div>
       </div>
 
       <!-- Database / Dashboard links -->
       {#if app === "Explorer"}
-        <div class="relative flex items-center">
+        <div class="relative h-10 mx-2 flex items-center">
           <button
-            class="font-medium pl-10 pr-6 py-1
+            class="font-medium h-10 pl-10 pr-6
           {selectedTab === 'database'
-              ? 'bg-main rounded-full text-slate-50 '
-              : 'bg-slate-50 border border-slate-300 rounded-full text-main '}"
+              ? 'bg-main rounded-full text-slate-50 hover:bg-secondary'
+              : 'bg-slate-50 border border-slate-300 rounded-full text-main hover:bg-slate-300'}"
             on:click={selectDatabaseTab}
           >
             Database
@@ -129,12 +129,12 @@
           </svg>
         </div>
 
-        <div class="relative ml-4 flex items-center">
+        <div class="relative h-10 mx-2 flex items-center">
           <button
-            class="font-medium pl-10 pr-6 py-1
+            class="font-medium h-10 pl-10 pr-6
         {selectedTab === 'dashboard'
-              ? 'bg-main rounded-full text-slate-50 '
-              : 'bg-slate-50 border border-slate-300 rounded-full text-main'}"
+              ? 'bg-main rounded-full text-slate-50 hover:bg-secondary'
+              : 'bg-slate-50 border border-slate-300 rounded-full text-main hover:bg-slate-300'}"
             on:click={selectDashboardTab}
           >
             Dashboard
@@ -159,7 +159,7 @@
             height="48"
             viewBox="0 -960 960 960"
             width="48"
-            class="h-8 w-8
+            class="h-10 w-10 p-1
               {saveFlag ? 'text-main hover:text-secondary' : 'text-slate-500 cursor-default'}"
           >
             <title>Save</title>

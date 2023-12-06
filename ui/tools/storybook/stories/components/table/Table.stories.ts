@@ -29,27 +29,91 @@ type Story = StoryObj<typeof meta>;
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const ImageTable: Story = {
   args: {
-    data: [
-      [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view1", dtype: "image", value: "img-01.jpg" },
-        { name: "view2", dtype: "image", value: "img-02.jpg" },
-      ],
-      [
-        { name: "id", dtype: "text", value: "2" },
-        { name: "view1", dtype: "image", value: "img-03.jpg" },
-        { name: "view2", dtype: "image", value: "img-04.jpg" },
-      ],
-      [
-        { name: "id", dtype: "text", value: "3" },
-        { name: "view1", dtype: "image", value: "img-05.jpg" },
-        { name: "view2", dtype: "image", value: "img-06.jpg" },
-      ],
-      [
-        { name: "id", dtype: "text", value: "4" },
-        { name: "view1", dtype: "image", value: "img-07.jpg" },
-        { name: "view2", dtype: "image", value: "img-08.jpg" },
-      ],
+    items: [
+      {
+        id: "1",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-01.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-02.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {},
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "2",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-03.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-04.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {},
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "3",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-05.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-06.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {},
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "4",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-07.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-08.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {},
+        objects: {},
+        embeddings: {},
+      },
     ],
   },
 };
@@ -57,36 +121,155 @@ export const ImageTable: Story = {
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 export const AllFeaturesTable: Story = {
   args: {
-    data: [
-      [
-        { name: "number", dtype: "number", value: "1" },
-        { name: "image", dtype: "image", value: "img-03.jpg" },
-        {
-          name: "video",
-          dtype: "video",
-          value: "https://www.w3schools.com/html/mov_bbb.mp4",
-        },
-        {
-          name: "text",
-          dtype: "text",
-          value: "This is a sample text.",
-        },
-        {
-          name: "histogram cell",
-          dtype: "histogram",
-          value: {
-            name: "categories",
-            type: "categorical",
-            histogram: [
-              { categories: "woman", counts: 838421, split: "train" },
-              { categories: "man", counts: 738421, split: "train" },
-              { categories: "car", counts: 19901, split: "train" },
-              { categories: "dog", counts: 300000, split: "train" },
-              { categories: "cat", counts: 150000, split: "train" },
-            ],
+    items: [
+      {
+        id: "1",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-01.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-02.jpg",
+            type: "image",
+            features: {},
           },
         },
-      ],
+        features: {
+          hist1: {
+            name: "hist1",
+            dtype: "histogram",
+            value: {
+              name: "categories",
+              type: "categorical",
+              histogram: [
+                { categories: "woman", counts: 838421, split: "train" },
+                { categories: "man", counts: 738421, split: "train" },
+                { categories: "car", counts: 19901, split: "train" },
+                { categories: "dog", counts: 300000, split: "train" },
+                { categories: "cat", counts: 150000, split: "train" },
+              ],
+            },
+          },
+        },
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "2",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-03.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-04.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {
+          hist1: {
+            name: "hist1",
+            dtype: "histogram",
+            value: {
+              name: "categories",
+              type: "categorical",
+              histogram: [
+                { categories: "woman", counts: 838421, split: "train" },
+                { categories: "man", counts: 738421, split: "train" },
+                { categories: "car", counts: 19901, split: "train" },
+                { categories: "dog", counts: 300000, split: "train" },
+                { categories: "cat", counts: 150000, split: "train" },
+              ],
+            },
+          },
+        },
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "3",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-05.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-06.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {
+          hist1: {
+            name: "hist1",
+            dtype: "histogram",
+            value: {
+              name: "categories",
+              type: "categorical",
+              histogram: [
+                { categories: "woman", counts: 838421, split: "train" },
+                { categories: "man", counts: 738421, split: "train" },
+                { categories: "car", counts: 19901, split: "train" },
+                { categories: "dog", counts: 300000, split: "train" },
+                { categories: "cat", counts: 150000, split: "train" },
+              ],
+            },
+          },
+        },
+        objects: {},
+        embeddings: {},
+      },
+      {
+        id: "4",
+        split: "val",
+        views: {
+          view1: {
+            id: "view1",
+            uri: "img-07.jpg",
+            type: "image",
+            features: {},
+          },
+          view2: {
+            id: "view2",
+            uri: "img-08.jpg",
+            type: "image",
+            features: {},
+          },
+        },
+        features: {
+          hist1: {
+            name: "hist1",
+            dtype: "histogram",
+            value: {
+              name: "categories",
+              type: "categorical",
+              histogram: [
+                { categories: "woman", counts: 838421, split: "train" },
+                { categories: "man", counts: 738421, split: "train" },
+                { categories: "car", counts: 19901, split: "train" },
+                { categories: "dog", counts: 300000, split: "train" },
+                { categories: "cat", counts: 150000, split: "train" },
+              ],
+            },
+          },
+        },
+        objects: {},
+        embeddings: {},
+      },
     ],
   },
 };

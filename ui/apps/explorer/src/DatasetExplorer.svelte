@@ -17,12 +17,13 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, Dashboard } from "@pixano/core";
+  import { api, Dashboard, WarningModal } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
-  import type { Dataset, Stats } from "@pixano/core";
+  import type { DatasetInfo, DatasetItems } from "@pixano/core";
   import {
+    svg_clear,
     svg_filter,
     svg_first_page,
     svg_grid,
@@ -31,19 +32,34 @@
     svg_next_page,
     svg_prev_page,
     svg_search,
-    svg_quit,
   } from "@pixano/core/src/icons";
 
   // Exports
-  export let selectedDataset: Dataset;
+  export let selectedDataset: DatasetInfo;
   export let selectedTab: string;
   export let currentPage: number;
-  export let query: string;
 
-  let datasetStats: Array<Stats>;
+  // Semantic search
+  let search: string = "";
+  let selectedSearchModel: string;
+  const searchModels: Array<string> = [];
+  if ("embeddings" in selectedDataset.tables) {
+    for (const table of selectedDataset.tables.embeddings) {
+      if (table.type == "search") {
+        // Initialize selected search model
+        if (!selectedSearchModel) {
+          selectedSearchModel = table.source;
+        }
+        searchModels.push(table.source);
+      }
+    }
+  }
 
   // Page navigation
   const itemsPerPage = 100;
+
+  // Modals
+  let datasetErrorModal = false;
 
   const dispatch = createEventDispatcher();
 
@@ -54,36 +70,32 @@
   }
 
   async function loadPage() {
-    if (query == "") {
-      // no query, standard load
-      selectedDataset.page = null;
-      const start = Date.now();
-      selectedDataset.page = await api.getDatasetItems(
-        selectedDataset.id,
-        currentPage,
-        itemsPerPage,
-      );
-      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
+    let res: DatasetItems;
+    let query = { model: selectedSearchModel, search: search };
 
-      // If no dataset page, return error message
-      if (selectedDataset.page == null) {
-        dispatch("datasetError");
-      }
+    // Load page
+    const start = Date.now();
+    if (search == "") {
+      // Standard page
+      res = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
+      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
     } else {
-      // query available, show query result
-      const start = Date.now();
-      let actual_page = selectedDataset.page;
-      selectedDataset.page = null; //required to refresh column names -- TODO: better refresh?
-      let res = await api.getSearchResult(selectedDataset.id, query, currentPage, itemsPerPage);
-      console.log("DatasetExplorer.loadPage - api.getSearchResult in", Date.now() - start, "ms");
-      // If no dataset page, return error message
-      if (res == null) {
-        selectedDataset.page = actual_page;
-        dispatch("searchError");
-      } else {
-        selectedDataset.page = res;
-      }
+      // Search page
+      res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
+      console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
     }
+
+    // Results
+    if (res == null) {
+      datasetErrorModal = true;
+    } else {
+      selectedDataset.page = res;
+    }
+  }
+
+  async function handleClearSearch() {
+    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
+    await handleSearch();
   }
 
   async function handleGoToFirstPage() {
@@ -115,28 +127,23 @@
   }
 
   async function handleSearch() {
-    query = (document.getElementById("sem-search-input") as HTMLInputElement).value;
+    search = (document.getElementById("sem-search-input") as HTMLInputElement).value;
     currentPage = 1;
     await loadPage();
   }
 
-  async function handleClearSearch() {
-    (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
-    await handleSearch();
-  }
-
   onMount(async () => {
+    search = "";
     await loadPage();
-    datasetStats = await api.getDatasetStats(selectedDataset.id);
   });
 </script>
 
-<div class="w-full h-full pt-20 px-20 flex flex-col bg-slate-100 text-slate-800">
+<div class="w-full h-full p-20 flex flex-col bg-slate-100 text-slate-800">
   {#if selectedDataset.page}
     <!-- Items list -->
-    <div class="w-full h-[87.5vh] flex flex-col">
-      <div class="py-4 flex space-x-2 items-center">
-        {#if selectedTab === "database"}
+    <div class="w-full h-full flex flex-col">
+      {#if selectedTab === "database"}
+        <div class="py-5 h-20 flex space-x-2 items-center">
           <button>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -159,65 +166,76 @@
               <path d={svg_grid} fill="currentcolor" />
             </svg>
           </button>
-        {/if}
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
-          >
-            <path d={svg_filter} fill="currentcolor" />
-          </svg>
-        </button>
-        <div class="flex-grow" />
-        <div class="relative flex items-center">
-          <input
-            id="sem-search-input"
-            type="text"
-            placeholder="Search"
-            value={query}
-            class="h-8 pl-8 pr-4 border rounded-sm border-slate-300 shadow-slate-300 accent-main"
-            on:change={handleSearch}
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="absolute left-2 h-4 w-4 pointer-events-none"
-          >
-            <path d={svg_search} />
-          </svg>
-          {#if query !== ""}
-            <button class="absolute right-2" on:click={() => handleClearSearch()}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                height="48"
-                viewBox="0 -960 960 960"
-                width="48"
-                class="h-4 w-4"
-              >
-                <path d={svg_quit} />
-              </svg>
-            </button>
-          {/if}
+          <button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full hover:bg-slate-300"
+            >
+              <path d={svg_filter} fill="currentcolor" />
+            </svg>
+          </button>
+          <div class="flex-grow" />
+          <div class="relative flex items-center">
+            {#if searchModels.length > 0}
+              <select class="h-10 px-4 mx-4 border rounded bg-slate-50 border-slate-300">
+                {#each searchModels as model}
+                  <option value={selectedSearchModel}>
+                    {model}
+                  </option>
+                {/each}
+              </select>
+
+              <div class="relative flex items-center">
+                <input
+                  id="sem-search-input"
+                  type="text"
+                  value={search}
+                  placeholder="Semantic search using {selectedSearchModel}"
+                  class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
+                  on:change={handleSearch}
+                />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="48"
+                  viewBox="0 -960 960 960"
+                  width="48"
+                  class="absolute left-2 h-5 w-5 text-slate-500 pointer-events-none"
+                >
+                  <path d={svg_search} fill="currentcolor" />
+                </svg>
+                {#if search !== ""}
+                  <button class="absolute right-2" on:click={handleClearSearch}>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="h-5 w-5 text-slate-500"
+                    >
+                      <path d={svg_clear} fill="currentcolor" />
+                    </svg>
+                  </button>
+                {/if}
+              </div>
+            {/if}
+          </div>
         </div>
-      </div>
-      {#if selectedTab === "database"}
         <Table
-          data={selectedDataset.page.items}
+          items={selectedDataset.page.items}
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {:else if selectedTab === "dashboard"}
-        <Dashboard {selectedDataset} {datasetStats} />
+        <div class="py-5 h-20 flex space-x-2 items-center" />
+        <Dashboard {selectedDataset} />
       {/if}
     </div>
 
     <!-- Page navigation -->
     {#if selectedTab === "database"}
-      <div class="w-full my-3 flex justify-center items-center text-slate-800">
+      <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
         {#if selectedDataset.page.total > itemsPerPage}
           <button on:click={handleGoToFirstPage}>
             <svg
@@ -278,6 +296,13 @@
           </button>
         {/if}
       </div>
+    {/if}
+    {#if datasetErrorModal}
+      <WarningModal
+        message="Error while retrieving dataset items."
+        details="Please look at the application logs for more information, and report this issue if the error persists."
+        on:confirm={() => (datasetErrorModal = false)}
+      />
     {/if}
   {/if}
 </div>
