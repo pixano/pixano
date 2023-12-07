@@ -72,6 +72,7 @@ export interface ItemView {
   id: string;
   type: string;
   uri: string;
+  url?: string; // here for legacy reasons
   thumbnail?: string;
   frame_number?: number;
   total_frames?: number;
@@ -80,19 +81,27 @@ export interface ItemView {
 
 // ITEM OBJECT
 
+export interface DisplayControl {
+  hidden?: boolean;
+  editing?: boolean;
+  locked?: boolean;
+}
+
 export interface ItemObject {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  mask: ItemURLE;
+  mask?: ItemURLE;
   bbox: ItemBBox;
   features: Record<string, ItemFeature>;
+  displayControl?: DisplayControl;
 }
 
 export interface ItemURLE {
   counts: Array<number>;
   size: Array<number>;
+  displayControl?: DisplayControl;
 }
 
 export interface ItemBBox {
@@ -100,6 +109,7 @@ export interface ItemBBox {
   format: string;
   is_normalized: boolean;
   confidence: number;
+  displayControl?: DisplayControl;
 }
 
 // ITEM EMBEDDING

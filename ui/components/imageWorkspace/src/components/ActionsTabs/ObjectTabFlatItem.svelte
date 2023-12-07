@@ -13,49 +13,53 @@
    *
    * http://www.cecill.info
    */
-  import { Eye, Trash2, Lock, Pencil, ChevronRight } from "lucide-svelte";
+  import { Eye, EyeOff, Trash2, Lock, Pencil, ChevronRight } from "lucide-svelte";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import { cn } from "@pixano/core/src/lib/utils";
-  import type { ObjectContent, ObjectProperty } from "@pixano/core";
+  import type { DisplayControl, ItemObject, ObjectProperty } from "@pixano/core";
 
+  import { itemObjects } from "../../lib/stores/stores";
   import { objectSetup } from "../../lib/settings/objectSetting";
-  import { objects } from "../../lib/stores/stores";
+  import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
-  export let objectContent: ObjectContent;
+  export let itemObject: ItemObject;
 
   let open: boolean = true;
 
-  const handleEditIconClick = () => {
-    objects.update((oldObjects) =>
-      oldObjects.map((o) => {
-        if (o.id === objectContent.id && o.type === "box") {
-          o.boundingBox.editing = !o.boundingBox.editing;
+  const handleIconClick = (
+    displayControlProperty: keyof DisplayControl,
+    properties: ("bbox" | "mask")[] = ["bbox", "mask"],
+  ) => {
+    itemObjects.update((oldObjects) =>
+      oldObjects.map((object) => {
+        if (object.id === itemObject.id) {
+          return toggleObjectDisplayControl(object, displayControlProperty, properties);
         }
-        return o;
+        return object;
       }),
     );
   };
 
-  const handleLockIconClick = () => {
-    objects.update((oldObjects) =>
-      oldObjects.map((o) => {
-        if (o.id === objectContent.id && o.type === "box") {
-          o.boundingBox.locked = !o.boundingBox.locked;
-        }
-        return o;
-      }),
-    );
-  };
+  $: properties = objectSetup
+    .map((property) => {
+      const value = itemObject.features[property.name]?.value;
+      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+        return;
+      }
+      return {
+        ...property,
+        label: property.label,
+        value: typeof value === "string" ? [value] : value,
+      };
+    })
+    .filter(Boolean) as ObjectProperty[];
 
-  $: properties = Object.entries(objectContent.properties).map(([label, value]) => ({
-    label,
-    value,
-    ...objectSetup.find((p) => p.label === label),
-  })) as ObjectProperty[];
-
-  $: isEditing = objectContent.type === "box" && objectContent.boundingBox.editing;
-  $: isLocked = objectContent.type === "box" && objectContent.boundingBox.locked;
+  $: isLocked = itemObject.displayControl?.locked;
+  $: isEditing = itemObject.displayControl?.editing;
+  $: isVisible = !itemObject.displayControl?.hidden;
+  $: showBox = !itemObject.bbox.displayControl?.hidden;
+  $: showMask = !itemObject.mask?.displayControl?.hidden;
 </script>
 
 <div
@@ -63,16 +67,24 @@
     "bg-gray-100": open,
   })}
 >
-  <div class="flex items-center">
-    <IconButton><Eye class="h-4" /></IconButton>
-    <div class="rounded-full bg-red-400 border border-red-800 w-3 h-3 mr-2" />
-    <span>{objectContent.name}</span>
+  <div class="flex items-center flex-auto max-w-[50%]">
+    <IconButton on:click={() => handleIconClick("hidden")}>
+      {#if isVisible}
+        <Eye class="h-4" />
+      {:else}
+        <EyeOff class="h-4" />
+      {/if}
+    </IconButton>
+    <div class="rounded-full bg-red-400 border border-red-800 w-3 h-3 mr-2 flex-[0_0_0.75rem]" />
+    <span class="truncate w-max flex-auto">{itemObject.id}</span>
   </div>
   <div class="flex items-center">
-    <IconButton selected={isEditing} on:click={handleEditIconClick}
+    <IconButton selected={isEditing} on:click={() => handleIconClick("editing")}
       ><Pencil class="h-4" /></IconButton
     >
-    <IconButton selected={isLocked} on:click={handleLockIconClick}><Lock class="h-4" /></IconButton>
+    <IconButton selected={isLocked} on:click={() => handleIconClick("locked")}
+      ><Lock class="h-4" /></IconButton
+    >
     <IconButton><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}
       ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton
@@ -81,32 +93,56 @@
 </div>
 {#if open}
   <div class="pl-5 border-b border-b-gray-600">
-    <div class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4">
-      {#each properties as property}
-        {#if !property.value}
-          <div>erreur. Merci de vous adresser aux administrateurs</div>
-        {/if}
-        <p class="font-medium">{property.label}</p>
-        {#if property.type === "checkbox"}
-          <Checkbox checked={property.value} disabled />
-        {/if}
-        {#if property.type === "text"}
-          <div class="flex justify-start items-center gap-4">
-            {#each property.value as value}
-              <p
-                class="rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 p-1"
-              >
-                {value}
-              </p>
-            {/each}
-          </div>
-        {/if}
-        {#if property.type === "number"}
-          <span class="rounded-full bg-primary-light h-5 w-5 flex justify-center items-center">
-            {property.value}
-          </span>
-        {/if}
-      {/each}
+    <div class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4">
+      <div>
+        <p class="font-medium pb-1">Display</p>
+        <div class="flex flex-col gap-2">
+          {#if itemObject.bbox}
+            <div>
+              <Checkbox
+                handleClick={() => handleIconClick("hidden", ["bbox"])}
+                bind:checked={showBox}
+              />
+              <span class="font-medium">Box</span>
+            </div>
+          {/if}
+          {#if itemObject.mask}
+            <div>
+              <Checkbox
+                bind:checked={showMask}
+                handleClick={() => handleIconClick("hidden", ["mask"])}
+              /> <span class="font-medium">Mask</span>
+            </div>
+          {/if}
+        </div>
+      </div>
+      <div>
+        {#each properties as property}
+          {#if !property.value}
+            <div>erreur. Merci de vous adresser aux administrateurs</div>
+          {/if}
+          <p class="font-medium pb-1">{property.label}</p>
+          {#if property.type === "checkbox"}
+            <Checkbox checked={property.value} disabled />
+          {/if}
+          {#if property.type === "text"}
+            <div class="flex justify-start items-center gap-4">
+              {#each property.value as value}
+                <p
+                  class=" font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3"
+                >
+                  {value}
+                </p>
+              {/each}
+            </div>
+          {/if}
+          {#if property.type === "number"}
+            <span class="rounded-full bg-primary-light h-5 w-5 flex justify-center items-center">
+              {property.value}
+            </span>
+          {/if}
+        {/each}
+      </div>
     </div>
   </div>
 {/if}

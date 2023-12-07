@@ -23,7 +23,7 @@
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import type { PropertiesValues, Shape } from "@pixano/core";
 
-  import { newShape, objects } from "../../lib/stores/stores";
+  import { newShape, itemObjects } from "../../lib/stores/stores";
   import {
     userObjectSetup as objectSetup,
     objectValidationSchema,
@@ -34,6 +34,7 @@
   let isFormValid: boolean = false;
 
   let objectProperties: { [key: string]: PropertiesValues } = {};
+
   let objectCategory: string;
 
   newShape.subscribe((value) => {
@@ -41,23 +42,40 @@
   });
 
   const handleFormSubmit = () => {
-    objects.update((oldObjects) => [
-      ...oldObjects,
+    const imageHeight = 426; // TODO100 imageHeight
+    const imageWidth = 640; // TODO100
+
+    itemObjects.update((oldObjects) => [
       {
-        type: "box",
-        name: `id ${oldObjects.length + 1}`,
         id: `object${oldObjects.length + 1}`,
-        boundingBox: {
-          id: `bbox${oldObjects.length + 1}`,
-          viewId: shape.viewId,
-          bbox: [shape.attrs.x, shape.attrs.y, shape.attrs.width, shape.attrs.height],
-          tooltip: `bbox${oldObjects.length + 1}`,
-          catId: 1,
-          visible: true,
-          opacity: 1,
+        item_id: shape.viewId, // TODO100
+        source_id: shape.viewId, // TODO100
+        view_id: shape.viewId,
+        bbox: {
+          coords: [
+            shape.attrs.x / imageWidth,
+            shape.attrs.y / imageHeight,
+            shape.attrs.width / imageWidth,
+            shape.attrs.height / imageHeight,
+          ],
+          format: `bbox${oldObjects.length + 1}`,
+          is_normalized: true,
+          confidence: 1,
         },
-        properties: objectProperties,
+        features: {
+          category_id: {
+            name: "category_id",
+            dtype: "number",
+            value: 64,
+          },
+          category_name: {
+            name: "category_name",
+            dtype: "text",
+            value: (objectProperties.Label as string[])?.[0], // TODO100
+          },
+        },
       },
+      ...oldObjects,
     ]);
     newShape.set(null);
   };

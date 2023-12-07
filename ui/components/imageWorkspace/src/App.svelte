@@ -13,44 +13,29 @@
    *
    * http://www.cecill.info
    */
-  import { tools } from "@pixano/canvas2d";
-  import type { ItemData, BBox, Mask } from "@pixano/core";
+
+  import type { DatasetItem, BBox, Mask, SelectionTool } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
-  import { objects } from "./lib/stores/stores";
+  import { itemObjects, itemBboxes } from "./lib/stores/stores";
   import "./index.css";
 
-  export let selectedTool: tools.Tool | null = null;
-  export let selectedItem: ItemData;
-  export let bboxes: BBox[] = [];
+  let selectedTool: SelectionTool;
+  export let selectedItem: DatasetItem;
   export let masks: Mask[] = [];
 
-  objects.subscribe((value) => {
-    bboxes = value.reduce((acc, val) => {
-      if (val.type === "box") acc.push(val.boundingBox);
-      return acc;
-    }, [] as BBox[]);
-  });
+  let allBBoxes: BBox[] = [];
 
-  $: objects.update((old) =>
-    old.map((object) => {
-      if (object.type === "box") {
-        return {
-          ...object,
-          boundingBox: bboxes.find((bbox) => bbox.viewId === object.id) || object.boundingBox,
-        };
-      }
-      return object;
-    }),
-  );
+  $: itemBboxes.subscribe((b) => (allBBoxes = b));
+  $: console.log({ masks, selectedItem, allBBoxes });
 
-  $: objects.subscribe((value) => console.log({ value, selectedItem }));
+  $: itemObjects.set(Object.values(selectedItem.objects).flat());
 </script>
 
 <div class="flex w-full pt-[81px] h-full">
   <Toolbar bind:selectedTool />
-  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes bind:masks />
+  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes={allBBoxes} bind:masks />
   <ActionsTabs />
 </div>

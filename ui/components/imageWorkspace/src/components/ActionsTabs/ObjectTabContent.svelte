@@ -16,18 +16,18 @@
   import { SlidersHorizontal } from "lucide-svelte";
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import type { ObjectContent } from "@pixano/core";
+  import type { ItemObject } from "@pixano/core";
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
   import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
-  import { objects } from "../../lib/stores/stores";
+  import { itemObjects } from "../../lib/stores/stores";
 
   let value = "flat";
-  let allObjects: ObjectContent[] = [];
+  let allItemObjects: ItemObject[] = [];
 
-  objects.subscribe((value) => {
-    allObjects = value;
+  itemObjects.subscribe((value) => {
+    allItemObjects = value;
   });
 </script>
 
@@ -52,8 +52,8 @@
     <div>
       <h3 class="uppercase font-extralight">Ground truth</h3>
       <ActionsTabsSearchInput />
-      {#each allObjects as objectContent}
-        <ObjectTabFlatItem bind:objectContent />
+      {#each allItemObjects as itemObject}
+        <ObjectTabFlatItem bind:itemObject />
       {/each}
       <h3 class="uppercase font-extralight mt-8">Model run</h3>
       <ActionsTabsSearchInput />

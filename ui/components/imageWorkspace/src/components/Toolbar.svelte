@@ -68,7 +68,7 @@
     <TooltipIconButton
       tooltipContent="Smart mask"
       on:click={() => selectTool(smartMaskTool)}
-      selected={selectedTool?.type === tools.ToolType.LabeledPoint}
+      selected={selectedTool?.type === "LABELED_POINT"}
     >
       <BrushIcon />
       <MagicIcon />

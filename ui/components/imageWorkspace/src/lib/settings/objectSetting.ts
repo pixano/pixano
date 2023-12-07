@@ -3,24 +3,28 @@ import { z } from "zod";
 // create inputs to create a new object
 export const userObjectSetup = [
   {
-    label: "name",
+    label: "Label",
+    name: "category_name",
     type: "text",
     multiple: false,
     required: true,
   },
   {
     label: "actions",
+    name: "actions",
     type: "text",
     multiple: true,
     required: false,
   },
   {
     label: "age",
+    name: "age",
     type: "number",
     required: false,
   },
   {
     label: "enfant",
+    name: "hasChildren",
     type: "checkbox",
     required: false,
   },
@@ -28,6 +32,7 @@ export const userObjectSetup = [
 
 // validate that inputs are in the correct format
 export const textInputSchema = z.object({
+  name: z.string(),
   label: z.string(),
   type: z.literal("text"),
   multiple: z.boolean().optional(),
@@ -35,6 +40,7 @@ export const textInputSchema = z.object({
 });
 
 const otherInputSchema = z.object({
+  name: z.string(),
   label: z.string(),
   type: z.enum(["number", "checkbox"]),
   required: z.boolean().optional(),
