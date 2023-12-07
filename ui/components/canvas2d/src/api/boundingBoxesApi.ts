@@ -1,9 +1,8 @@
 import Konva from "konva";
-import type { Mask, BBox } from "@pixano/core";
+import type { Mask, BBox, SelectionTool } from "@pixano/core";
 import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 
 import { BBOX_STROKEWIDTH, MASK_STROKEWIDTH } from "../lib/constants";
-import type { Tool } from "../tools";
 
 const stickLabelsToRectangle = (tooltip: Konva.Label, lockIcon: Konva.Label, rect: Konva.Rect) => {
   tooltip.x(rect.x());
@@ -35,7 +34,7 @@ export const toggleBBoxIsLocked = (stage: Konva.Stage, currentBox: BBox) => {
   const lockIcon = stage.findOne(`#lockTooltip${currentBox.id}`);
   lockIcon.opacity(currentBox.locked ? 1 : 0);
   const isLocked = currentBox.locked;
-  rect.draggable(!isLocked);
+  // rect.draggable(!isLocked); // TODO100
   rect.listening(!isLocked);
   return currentBox;
 };
@@ -67,6 +66,7 @@ export function addBBox(
     width: rect_width,
     height: rect_height,
     stroke: color,
+    draggable: false,
     strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
   });
   bboxKonva.add(bboxRect);
@@ -142,7 +142,6 @@ export function addBBox(
     lockTooltip.add(icon);
   };
 
-  // TODO: path to lock icon should be improved
   imageObj.src = LockIcon;
 
   // Add to group
@@ -234,9 +233,9 @@ export function addMask(
 
 export function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: Konva.Group) {
   // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-  const objectsToDestroy = []; // need to build a list to not destroy while looping children
+  const objectsToDestroy: Konva.Group[] = []; // need to build a list to not destroy while looping children
   for (const obj of objectsGroup.children) {
-    if (!objectsIds.includes(obj.id())) objectsToDestroy.push(obj);
+    if (!objectsIds.includes(obj.id())) objectsToDestroy.push(obj as Konva.Group);
   }
   for (const obj of objectsToDestroy) obj.destroy();
 }
@@ -258,7 +257,7 @@ export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Kon
   return currentMaskGroup;
 }
 
-export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool: Tool) {
+export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool: SelectionTool) {
   const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
   const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
   const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");

@@ -4,4 +4,4 @@ export const INPUTRECT_STROKEWIDTH: number = 1.5;
 export const BBOX_STROKEWIDTH: number = 2.0;
 export const MASK_STROKEWIDTH: number = 2.0;
 
-export const LABELED_POINT = "LABELED_POINT";
+export const POINT_SELECTION = "POINT_SELECTION";
