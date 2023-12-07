@@ -6,23 +6,23 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Select **interactive segmentation models** with **dropdown menu** based on ONNX files found in models folder (pixano#12)
-- Select **semantic search models** with **dropdown menu** based on embeddings tables found in dataset (pixano#12)
+- Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
+- Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
 - Add option to load a list of category id and name pairs in Importers and to save it with Exporters (pixano#11)
-- Add new methods and properties to PixanoTypes (from_rle() in BBox, file_name, width, and height in Image) (pixano#11)
+- Add new methods to PixanoTypes (from_rle() in BBox, file_name, width, and height in Image) (pixano#11)
 - Add GitHub actions to format, lint and test code (pixano#2, pixano#3, pixano#4)
 - Add new unit tests and refactor existing tests (pixano#11)
 
 ### Changed
 
-- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex datasets, but drops support for datasets imported without copying media files (`portable=False`) (pixano#8)
-  - Remove the `portable=False` option from importers. Instead users can choose to either **copy or move the media files** to the dataset directory
+- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex datasets, but drops support for datasets imported without copying media files, i.e. using the `portable=False` option (pixano#8)
+  - Remove the `portable=False` option, users can now choose to either **copy or move the media files** to the dataset directory when using an Importer.
 - **Refactor API** with new endpoints, new methods, new data types, and more explicit error messages (pixano#11, pixano#12)
-  - Update Dataset and DatasetInfo classes with new methods for updated API
-  - Add new classes related to DatasetInfo for updated API (DatasetCategory, DatasetStat, DatasetTable)
-  - Add new class related to Dataset for updated API (DatasetItem)
-  - Add new classes related to DatasetItem for updated API (ItemEmbedding, ItemFeature, ItemObject, ItemView)
+  - Update Dataset and DatasetInfo classes with new methods
+  - Add new classes related to DatasetInfo (DatasetCategory, DatasetStat, DatasetTable)
+  - Add new class related to Dataset (DatasetItem)
+  - Add new classes related to DatasetItem (ItemEmbedding, ItemFeature, ItemObject, ItemView)
   - Refactor Exporters, Importers, and InferenceModels using updated API
 - Reformat Jupyter notebooks with black (pixano#2)
 - Reformat and refactor frontend code with Prettier and eslint (pixano#2, pixano#7, pixano#12)
