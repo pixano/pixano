@@ -89,13 +89,13 @@
 
     <div
       id="category_list"
-      class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex hover:flex flex-col
+      class="absolute left-4 w-80 top-14 hidden rounded-lg py-1 group-focus-within:flex transition-all hover:flex flex-col
       shadow bg-slate-50"
       style="overflow-y:scroll; max-height: 500px;"
     >
       {#each classes as cls}
         <button
-          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-slate-800 font-medium hover:brightness-110"
+          class="relative my-1 mx-2 px-2 py-1 rounded-lg text-sm flex text-slate-800 font-medium transition-colors hover:brightness-110"
           style="background-color: {colorScale(cls.id.toString())}; text-align:left"
           title="{cls.name} (id #{cls.id})"
           on:click={() => {
@@ -121,7 +121,7 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-slate-50 hover:bg-slate-300
+        bg-slate-50 transition-colors hover:bg-slate-300
         {selectedTool === pointSelectionTool.modes['plus'] ? 'border-main' : 'border-transparent'}"
       >
         <title>{pointSelectionTool.modes.plus.name}</title>
@@ -139,7 +139,7 @@
         viewBox="0 -960 960 960"
         width="48"
         class="h-10 w-10 p-1 border-2 rounded
-        bg-slate-50 hover:bg-slate-300
+        bg-slate-50 transition-colors hover:bg-slate-300
         {selectedTool === pointSelectionTool.modes['minus']
           ? 'border-main '
           : 'border-transparent'}"
@@ -156,7 +156,7 @@
       viewBox="0 -960 960 960"
       width="48"
       class="h-10 w-10 p-1 rounded border border-transparent text-slate-50
-      bg-main hover:bg-secondary"
+      bg-main transition-colors hover:bg-secondary"
     >
       <title>Validate</title>
       <path d={icons.svg_validate} fill="currentcolor" />

@@ -41,7 +41,7 @@
       {#if choices}
         <select
           class="py-1 px-2 border rounded focus:outline-none
-        bg-slate-100 bg-slate-50 border-slate-300 focus:border-main"
+        bg-slate-100 border-slate-300 focus:border-main"
           bind:value={selected}
         >
           {#each choices as choice}
@@ -57,7 +57,7 @@
       <button
         type="button"
         class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-main hover:bg-secondary"
+        bg-main transition-colors hover:bg-secondary"
         on:click={handleConfirm}
       >
         Ok

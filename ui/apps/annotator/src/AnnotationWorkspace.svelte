@@ -26,7 +26,7 @@
     LabelPanel,
     tools,
   } from "@pixano/canvas2d";
-  import { api, ConfirmModal, utils, SelectModal, WarningModal } from "@pixano/core";
+  import { api, ConfirmModal, utils, LoadingModal, SelectModal, WarningModal } from "@pixano/core";
   import { SAM, npy } from "@pixano/models";
 
   import { interactiveSegmenterModel } from "./stores";
@@ -58,6 +58,7 @@
   const dispatch = createEventDispatcher();
 
   // Modals
+  let loadingModelModal = false;
   let categoryNameModal = false;
   let selectItemModal = false;
   let embeddingsErrorModal = false;
@@ -119,6 +120,7 @@
   }
 
   async function loadModel() {
+    loadingModelModal = true;
     console.log("AnnotationWorkspace.loadModel");
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
@@ -160,6 +162,7 @@
       selectedModelName = "";
       selectedTool = panTool;
     }
+    loadingModelModal = false;
   }
 
   function handleAddCurrentFeatures() {
@@ -497,6 +500,9 @@
         details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
         on:confirm={() => (embeddingsErrorModal = false)}
       />
+    {/if}
+    {#if loadingModelModal}
+      <LoadingModal />
     {/if}
   {/if}
 </div>

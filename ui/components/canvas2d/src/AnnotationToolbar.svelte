@@ -44,7 +44,7 @@
                   viewBox="0 -960 960 960"
                   width="48"
                   class="h-10 w-10 p-1 border-2 rounded
-                  bg-slate-50 hover:bg-slate-300
+                  bg-slate-50 transition-colors hover:bg-slate-300
                   {Object.values(tool.modes).includes(selectedTool)
                     ? 'border-main'
                     : 'border-transparent'}"
@@ -55,7 +55,7 @@
               </button>
 
               <div
-                class="absolute inset-y-0 left-16 border rounded-lg z-10 hidden group-hover:flex
+                class="absolute inset-y-0 left-16 border rounded-lg z-10 hidden transition-all group-hover:flex
                 shadow bg-slate-50 border-slate-300"
               >
                 {#each Object.values(tool.modes) as mode}
@@ -66,7 +66,7 @@
                       viewBox="0 -960 960 960"
                       width="48"
                       class="h-10 w-10 p-1 border-2 rounded
-                      bg-slate-50 hover:bg-slate-300
+                      bg-slate-50 transition-colors hover:bg-slate-300
                       {mode === selectedTool ? 'border-main' : 'border-transparent'}"
                     >
                       <title>{mode.name}</title>
@@ -84,7 +84,7 @@
                 viewBox="0 -960 960 960"
                 width="48"
                 class="h-10 w-10 p-1 border-2 rounded
-                bg-slate-50 hover:bg-slate-300
+                bg-slate-50 transition-colors hover:bg-slate-300
                 {selectedTool === tool ? 'border-main' : 'border-transparent'}"
               >
                 <title>{tool.name}</title>

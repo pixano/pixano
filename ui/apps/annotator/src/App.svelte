@@ -17,7 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, ConfirmModal, Header, Library, LoadingLibrary, WarningModal } from "@pixano/core";
+  import { api, ConfirmModal, Header, Library, LoadingModal, WarningModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import AnnotationWorkspace from "./AnnotationWorkspace.svelte";
@@ -33,7 +33,7 @@
 
   // Dataset navigation
   let models: Array<string>;
-  let datasets: Array<DatasetInfo>;
+  let datasets: Array<DatasetInfo> = [];
   let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
@@ -47,6 +47,9 @@
   let saveFlag = false;
 
   // Modals
+  let loadingDatasetsModal = false;
+  let loadingItemModal = false;
+  let savingItemModal = false;
   let unselectItemModal = false;
   let datasetErrorModal = false;
 
@@ -64,6 +67,7 @@
 
   async function handleGetModels() {
     console.log("App.handleGetModels");
+
     const start = Date.now();
     models = await api.getModels();
     console.log("App.handleGetModels - api.getModels in", Date.now() - start, "ms");
@@ -71,14 +75,23 @@
 
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
+
+    loadingDatasetsModal = true;
+
     const start = Date.now();
-    datasets = await api.getDatasets();
+    const loadedDatasets = await api.getDatasets();
     console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
+
+    datasets = loadedDatasets ? loadedDatasets : [];
+
+    loadingDatasetsModal = false;
   }
 
   async function handleSelectDataset(dataset: DatasetInfo) {
     console.log("App.handleSelectDataset");
+
     selectedDataset = dataset;
+
     const start = Date.now();
     selectedDataset.page = await api.getDatasetItems(selectedDataset.id, currentPage);
     console.log("App.handleSelectDataset - api.getDatasetItems in", Date.now() - start, "ms");
@@ -104,6 +117,7 @@
 
   async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
+
     await handleUnselectItem();
     if (!saveFlag) {
       selectedDataset = null;
@@ -113,18 +127,22 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    console.log("App.handleSelectItem");
+
+    loadingItemModal = true;
+
     annotations = {};
     classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
     bboxes = [];
 
     const start = Date.now();
-    selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
+    const loadedItem = await api.getDatasetItem(selectedDataset.id, itemId);
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    if (selectedItem.objects) {
-      for (const obj of Object.values(selectedItem.objects)) {
+    if (loadedItem.objects) {
+      for (const obj of Object.values(loadedItem.objects)) {
         const sourceId = obj.source_id;
         const viewId = obj.view_id;
         const catId =
@@ -222,8 +240,8 @@
           }
 
           // Add bbox
-          const imageWidth = selectedItem.views[viewId].features.width.value as number;
-          const imageHeight = selectedItem.views[viewId].features.height.value as number;
+          const imageWidth = loadedItem.views[viewId].features.width.value as number;
+          const imageHeight = loadedItem.views[viewId].features.height.value as number;
 
           if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
             const x = obj.bbox.coords[0] * imageWidth;
@@ -263,10 +281,13 @@
         }
       }
     }
+    loadingItemModal = false;
+    selectedItem = loadedItem;
   }
 
   async function handleUnselectItem() {
     console.log("App.handleUnselectItem");
+
     if (!saveFlag) {
       unselectItem();
     } else {
@@ -287,9 +308,10 @@
     bboxes = [];
   }
 
-  async function handleSaveItemDetails() {
-    console.log("App.handleSaveItemDetails");
+  async function handleSaveItem() {
+    console.log("App.handleSaveItem");
 
+    savingItemModal = true;
     let savedItem: DatasetItem = {
       id: selectedItem.id,
       split: selectedItem.split,
@@ -350,15 +372,17 @@
 
     const start = Date.now();
     await api.postDatasetItem(selectedDataset.id, savedItem);
-    console.log("App.handleSaveItemDetails - api.postDatasetItem in", Date.now() - start, "ms");
+    console.log("App.handleSaveItem - api.postDatasetItem in", Date.now() - start, "ms");
     saveFlag = false;
 
     // Reload item details
     await handleSelectItem(selectedItem.id);
+    savingItemModal = false;
   }
 
   async function handleLoadNextPage() {
     console.log("App.handleLoadNextPage");
+
     currentPage = currentPage + 1;
 
     const start = Date.now();
@@ -380,16 +404,16 @@
   });
 </script>
 
-<Header
-  app="Annotator"
-  bind:selectedDataset
-  bind:selectedItem
-  {saveFlag}
-  on:unselectDataset={handleUnselectDataset}
-  on:unselectItem={handleUnselectItem}
-  on:saveItemDetails={handleSaveItemDetails}
-/>
-{#if datasets}
+{#if selectedDataset}
+  <Header
+    app="Annotator"
+    bind:selectedDataset
+    bind:selectedItem
+    {saveFlag}
+    on:unselectDataset={handleUnselectDataset}
+    on:unselectItem={handleUnselectItem}
+    on:saveItem={handleSaveItem}
+  />
   {#if selectedItem}
     <AnnotationWorkspace
       {selectedDataset}
@@ -406,16 +430,15 @@
       on:loadNextPage={handleLoadNextPage}
       on:enableSaveFlag={() => (saveFlag = true)}
     />
-  {:else}
-    <Library
-      {datasets}
-      app="Annotator"
-      on:selectDataset={(event) => handleSelectDataset(event.detail)}
-      on:unselectDataset={handleUnselectDataset}
-    />
   {/if}
 {:else}
-  <LoadingLibrary app="Annotator" />
+  <Library
+    {datasets}
+    app="Annotator"
+    {loadingDatasetsModal}
+    on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    on:unselectDataset={handleUnselectDataset}
+  />
 {/if}
 {#if unselectItemModal}
   <ConfirmModal
@@ -431,4 +454,7 @@
     details="Please look at the application logs for more information, and report this issue if the error persists."
     on:confirm={() => (datasetErrorModal = false)}
   />
+{/if}
+{#if loadingItemModal || savingItemModal}
+  <LoadingModal />
 {/if}

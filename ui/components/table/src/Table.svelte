@@ -97,7 +97,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 hover:bg-slate-300"
+              class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 transition-colors hover:bg-slate-300"
             >
               <title>Open</title>
               <path d={icons.svg_right_arrow} fill="currentcolor" />
