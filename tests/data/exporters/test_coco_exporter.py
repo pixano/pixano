@@ -52,8 +52,8 @@ class COCOExporterTestCase(unittest.TestCase):
             # Check that exported annotation JSON file exists
             self.assertTrue(exported_ann_fp.exists())
 
-            with open(imported_ann_fp) as imported_ann_file:
-                with open(exported_ann_fp) as exported_ann_file:
+            with open(imported_ann_fp, encoding="utf-8") as imported_ann_file:
+                with open(exported_ann_fp, encoding="utf-8") as exported_ann_file:
                     imported_ann = json.load(imported_ann_file)
                     exported_ann = json.load(exported_ann_file)
 

@@ -34,8 +34,8 @@ class DepthImageTestCase(unittest.TestCase):
         )
 
     def test_bytes_property(self):
-        bytes = self.depth_image.bytes
-        self.assertEqual(bytes, self.bytes)
+        depth_image_bytes = self.depth_image.bytes
+        self.assertEqual(depth_image_bytes, self.bytes)
 
     def test_depth_map_property(self):
         depth_map = self.depth_image.depth_map

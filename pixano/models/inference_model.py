@@ -24,6 +24,10 @@ from tqdm.auto import tqdm
 
 from pixano.data import Dataset, DatasetTable, Fields
 
+# Disable warning for InferenceModel "id" attribute
+# NOTE: Rename attribute? Will need to update Pixano Inference
+# pylint: disable=redefined-builtin
+
 
 class InferenceModel(ABC):
     """Abstract parent class for OfflineModel and OnlineModel
@@ -124,7 +128,7 @@ class InferenceModel(ABC):
         if splits:
             split_ids = "'" + "', '".join(splits) + "'"
         if process_type not in ["obj", "segment_emb", "search_emb"]:
-            raise Exception(
+            raise ValueError(
                 "Please choose a valid process type ('obj' for preannotation, 'segment_emb' or 'search_emb'"
                 "for segmentation or semantic search embedding precomputing)"
             )
@@ -188,6 +192,8 @@ class InferenceModel(ABC):
         dataset.save_info()
 
         # Create new Lance table
+        # Disable warning for create_table() "mode" argument
+        # pylint: disable=unexpected-keyword-arg
         ds_table: lancedb.db.LanceTable = ds.create_table(
             output_filename,
             schema=Fields(table_fields).to_schema(),
@@ -230,7 +236,7 @@ class InferenceModel(ABC):
                         self.preannotate(input_batch, views, uri_prefix, threshold)
                         if process_type == "obj"
                         else self.precompute_embeddings(input_batch, views, uri_prefix)
-                        if process_type == "segment_emb" or process_type == "search_emb"
+                        if process_type in ["segment_emb", "search_emb"]
                         else []
                     )
                     progress.update(batch_size)

@@ -27,7 +27,8 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetCategory, DatasetInfo, DatasetTable, Fields
+from pixano.data.dataset import Dataset, DatasetCategory, DatasetInfo, DatasetTable
+from pixano.data.fields import Fields
 from pixano.utils import estimate_size
 
 
@@ -38,6 +39,9 @@ class Importer(ABC):
         info (DatasetInfo): Dataset information
         input_dirs (dict[str, Path]): Dataset input directories
     """
+
+    info: DatasetInfo
+    input_dirs: dict[str, Path]
 
     def __init__(
         self,
@@ -52,12 +56,19 @@ class Importer(ABC):
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            tables (dict[str, list[DatasetTable]]): Dataset fields
+            tables (dict[str, list[DatasetTable]]): Dataset tables
             splits (list[str]): Dataset splits
             categories (list[DatasetCategory], optional): Dataset categories
         """
 
-        # Dataset info
+        # Check input directories
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
+        # Create DatasetInfo
         self.info = DatasetInfo(
             id=shortuuid.uuid(),
             name=name,
@@ -68,6 +79,69 @@ class Importer(ABC):
             tables=tables,
             categories=categories,
         )
+
+    def create_tables(
+        self, media_fields: dict[str, str] = None, object_fields: dict[str, str] = None
+    ):
+        """Create dataset tables
+
+        Args:
+            media_fields (dict[str, str], optional): Media fields. Defaults to None.
+            object_fields (dict[str, str], optional): Object fields. Defaults to None.
+
+        Returns:
+            dict[str, list[DatasetTable]]: Tables
+        """
+
+        if media_fields is None:
+            media_fields = {"image": "image"}
+
+        tables: dict[str, list[DatasetTable]] = {
+            "main": [
+                DatasetTable(
+                    name="db",
+                    fields={
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                )
+            ],
+            "media": [],
+        }
+
+        # Add media fields
+        for field_name, field_type in media_fields.items():
+            table_exists = False
+            # If table for given field type exists
+            for media_table in tables["media"]:
+                if field_type == media_table.name and not table_exists:
+                    media_table.fields[field_name] = field_type
+                    table_exists = True
+            # Else, create that table
+            if not table_exists:
+                tables["media"].append(
+                    DatasetTable(
+                        name=field_type,
+                        fields={
+                            "id": "str",
+                            field_name: field_type,
+                        },
+                    )
+                )
+
+        # Add object fields
+        if object_fields is not None:
+            tables["objects"]: [
+                DatasetTable(
+                    name="objects",
+                    fields={"id": "str", "item_id": "str", "view_id": "str"}
+                    | object_fields,
+                    source="Ground Truth",
+                )
+            ]
+
+        return tables
 
     def create_info(
         self,
@@ -154,6 +228,8 @@ class Importer(ABC):
         # Create tables
         for group_name, table_group in self.info.tables.items():
             for table in table_group:
+                # Disable warning for create_table() "mode" argument
+                # pylint: disable=unexpected-keyword-arg
                 ds_tables[group_name][table.name] = ds.create_table(
                     table.name,
                     schema=Fields(table.fields).to_schema(),

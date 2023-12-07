@@ -14,7 +14,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from pixano.data import Dataset
+from pixano.data.dataset import Dataset
 
 
 class Exporter(ABC):

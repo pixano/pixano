@@ -195,7 +195,7 @@ class AppTestCase(unittest.TestCase):
     def test_get_dataset_item_embeddings(self):
         response = self.client.get("/datasets/coco_dataset/items/139/embeddings/SAM")
 
-        # TODO: Can't test embeddings without model weights
+        # NOTE: Can't test embeddings without model weights
         self.assertEqual(response.status_code, 404)
 
     def test_get_models(self):

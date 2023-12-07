@@ -26,10 +26,10 @@ class PoseTestCase(unittest.TestCase):
 
 class TestParquetPose(unittest.TestCase):
     def setUp(self) -> None:
-        cam_R_m2c0, cam_t_m2c0 = [1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 1, 1]
-        cam_R_m2c1, cam_t_m2c1 = [2, 4, 6, 8, 1, 3, 5, 7, 9], [2, 2, 2]
+        cam_r_m2c0, cam_t_m2c0 = [1, 2, 3, 4, 5, 6, 7, 8, 9], [1, 1, 1]
+        cam_r_m2c1, cam_t_m2c1 = [2, 4, 6, 8, 1, 3, 5, 7, 9], [2, 2, 2]
 
-        self.pose_list = [Pose(cam_R_m2c0, cam_t_m2c0), Pose(cam_R_m2c1, cam_t_m2c1)]
+        self.pose_list = [Pose(cam_r_m2c0, cam_t_m2c0), Pose(cam_r_m2c1, cam_t_m2c1)]
 
     def test_pose_table(self):
         pose_array = PoseType.Array.from_pylist(self.pose_list)

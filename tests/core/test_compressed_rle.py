@@ -90,15 +90,13 @@ class CompressedRLETestCase(unittest.TestCase):
 
 class TestParquetCompressedRLE(unittest.TestCase):
     def setUp(self) -> None:
-        self.compressedRLE_list = [
+        self.rle_list = [
             CompressedRLE([1, 2], None),
             CompressedRLE([1, 2], None),
         ]
 
-    def test_compressedRLE_table(self):
-        compressedRLE_array = CompressedRLEType.Array.from_pylist(
-            self.compressedRLE_list
-        )
+    def test_compressed_rle_table(self):
+        rle_array = CompressedRLEType.Array.from_pylist(self.rle_list)
 
         schema = pa.schema(
             [
@@ -106,7 +104,7 @@ class TestParquetCompressedRLE(unittest.TestCase):
             ]
         )
 
-        table = pa.Table.from_arrays([compressedRLE_array], schema=schema)
+        table = pa.Table.from_arrays([rle_array], schema=schema)
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name
@@ -114,5 +112,5 @@ class TestParquetCompressedRLE(unittest.TestCase):
             re_table = pq.read_table(temp_file_path)
 
         self.assertEqual(re_table.column_names, ["compressedRLE"])
-        compressedRLE1 = re_table.take([0])["compressedRLE"][0].as_py()
-        self.assertIsInstance(compressedRLE1, CompressedRLE)
+        rle_1 = re_table.take([0])["compressedRLE"][0].as_py()
+        self.assertIsInstance(rle_1, CompressedRLE)

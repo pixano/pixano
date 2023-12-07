@@ -39,8 +39,8 @@ class Annotator(App):
     Attributes:
         config (uvicorn.Config): App config
         server (uvicorn.Server): App server
-        task_function (typing.Callable): Run task function for running environment
-        display_function (typing.Callable): Display function for running environment
+        assets_path (str): Path to App assets directory
+        template_path (str): Path to App template directory
     """
 
     def __init__(
@@ -57,7 +57,10 @@ class Annotator(App):
             port (int, optional): App port. Defaults to 0.
         """
 
-        super().__init__(library_dir, ASSETS_PATH, TEMPLATE_PATH, host, port)
+        self.assets_path = ASSETS_PATH
+        self.template_path = TEMPLATE_PATH
+
+        super().__init__(library_dir, host, port)
 
 
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})

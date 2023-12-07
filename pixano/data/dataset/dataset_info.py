@@ -73,7 +73,7 @@ class DatasetInfo(BaseModel):
             DatasetInfo: DatasetInfo
         """
 
-        with open(json_fp) as json_file:
+        with open(json_fp, encoding="utf-8") as json_file:
             info_json = json.load(json_file)
 
         info = DatasetInfo.model_validate(info_json)

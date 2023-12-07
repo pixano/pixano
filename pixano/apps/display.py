@@ -46,8 +46,8 @@ def display_colab(url: str, port: int, height: int):
 
     # Replace variables in template
     replacements = [
-        ("%HEIGHT%", "%d" % height),
-        ("%PORT%", "%d" % port),
+        ("%HEIGHT%", f"{height}"),
+        ("%PORT%", f"{port}"),
         ("%URL%", json.dumps(url)),
     ]
     for k, v in replacements:
@@ -89,8 +89,8 @@ def display_ipython(url: str, port: int, height: int):
     replacements = [
         ("%HTML_ID%", html.escape(frame_id, quote=True)),
         ("%JSON_ID%", json.dumps(frame_id)),
-        ("%HEIGHT%", "%d" % height),
-        ("%PORT%", "%d" % port),
+        ("%HEIGHT%", f"{height}"),
+        ("%PORT%", f"{port}"),
         ("%URL%", json.dumps(url)),
     ]
     for k, v in replacements:
@@ -101,13 +101,12 @@ def display_ipython(url: str, port: int, height: int):
     IPython.display.display(iframe)
 
 
-def display_cli(url: str, port: int, height: int):
+def display_cli(url: str, port: int):
     """Display a Pixano app inside a command line interface
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
-        height (int): Frame height
     """
 
     print(f"Please visit {url}:{port} in a web browser.")

@@ -22,6 +22,10 @@ from pydantic import BaseModel, PrivateAttr
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
+# Disable warning for DepthImage "bytes" attribute
+# NOTE: Rename attribute? Breaking change for Pixano datasets using DepthImage
+# pylint: disable=redefined-builtin, used-before-assignment
+
 
 class DepthImage(PixanoType, BaseModel):
     """Depth image type
@@ -103,8 +107,8 @@ class DepthImage(PixanoType, BaseModel):
             DepthImage: Depth image
         """
 
-        map = np.load(path)
-        return DepthImage(depth_map=map, shape=map.shape)
+        depth_map = np.load(path)
+        return DepthImage(depth_map=depth_map, shape=depth_map.shape)
 
     @staticmethod
     def load(path: str) -> "DepthImage":
@@ -117,8 +121,8 @@ class DepthImage(PixanoType, BaseModel):
             DepthImage: Depth image
         """
 
-        map = imageio.v3.imread(path).astype(np.uint16)
-        return DepthImage(depth_map=map, shape=map.shape)
+        depth_map = imageio.v3.imread(path).astype(np.uint16)
+        return DepthImage(depth_map=depth_map, shape=depth_map.shape)
 
     def save(self, path):
         """Save depth image to .png file.
@@ -131,6 +135,12 @@ class DepthImage(PixanoType, BaseModel):
         imageio.v3.imwrite(path, depth_image)
 
     def open(self) -> IO:
+        """Open depth image
+
+        Returns:
+            IO: Opened depth image
+        """
+
         return io.BytesIO(self.bytes)
 
     def to_grayscale(
@@ -143,8 +153,8 @@ class DepthImage(PixanoType, BaseModel):
         """
 
         depth = self.depth_map
-        min, max = depth.min(), depth.max()
-        depth_n: np.ndarray = ((depth - min) / (max - min)) * 255
+        d_min, d_max = depth.min(), depth.max()
+        depth_n: np.ndarray = ((depth - d_min) / (d_max - d_min)) * 255
         return DepthImage(depth_map=depth_n.astype(np.uint8), shape=depth.shape)
 
     def display(self):

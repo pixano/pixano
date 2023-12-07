@@ -31,7 +31,8 @@ class ImageTestCase(unittest.TestCase):
     def setUp(self):
         self.file_name = "6805092802_551636b55d_z.jpg"
         self.uri = "https://farm8.staticflickr.com/7051/6805092802_551636b55d_z.jpg"
-        self.bytes = urlopen(self.uri).read()
+        with urlopen(self.uri) as opened_file:
+            self.bytes = opened_file.read()
         self.preview_bytes = b"preview bytes"
 
         self.image = Image(self.uri, self.bytes, self.preview_bytes)

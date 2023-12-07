@@ -72,16 +72,14 @@ async def get_dataset_items(
         # Return dataset items
         if items:
             return create_page(items, total=total, params=params)
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No items found with page parameters (start {start}, stop {stop}) in dataset",
-            )
-    else:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+            detail=f"No items found with page parameters (start {start}, stop {stop}) in dataset",
         )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )
 
 
 @router.post("/search", response_model=Page[DatasetItem])
@@ -122,15 +120,13 @@ async def search_dataset_items(
         # Return dataset items
         if items:
             return create_page(items, total=total, params=params)
-        else:
-            raise HTTPException(
-                status_code=404, detail=f"No items found for query '{query}' in dataset"
-            )
-    else:
         raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+            status_code=404, detail=f"No items found for query '{query}' in dataset"
         )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )
 
 
 @router.get("/items/{item_id}", response_model=DatasetItem)
@@ -155,16 +151,14 @@ async def get_dataset_item(ds_id: str, item_id: str) -> DatasetItem:
         # Return dataset item
         if item:
             return item
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Item '{item_id}' not found in dataset",
-            )
-    else:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+            detail=f"Item '{item_id}' not found in dataset",
         )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )
 
 
 @router.post("/items/{item_id}", response_model=DatasetItem)
@@ -185,11 +179,10 @@ async def post_dataset_item(ds_id: str, item: DatasetItem):
 
         # Return response
         return Response()
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )
 
 
 @router.get(
@@ -220,13 +213,11 @@ async def get_item_embeddings(ds_id: str, item_id: str, model_id: str) -> Datase
         # Return dataset item embeddings
         if item:
             return item
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No embeddings found for item '{item_id}' with model '{model_id}' in dataset",
-            )
-    else:
         raise HTTPException(
             status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+            detail=f"No embeddings found for item '{item_id}' with model '{model_id}' in dataset",
         )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )

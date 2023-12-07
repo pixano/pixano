@@ -152,6 +152,8 @@ class DatasetTestCase(unittest.TestCase):
         ds = self.dataset.connect()
 
         self.assertIsInstance(ds, lancedb.db.DBConnection)
+        # Disable warning for table_names() "no-value-for-parameter"
+        # pylint: disable=no-value-for-parameter
         self.assertIn("db", ds.table_names())
         self.assertIn("image", ds.table_names())
 
@@ -234,7 +236,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Ground Truth",
-            bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
+            bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
         )
         item_1.objects["added_object"] = added_object_1
         self.dataset.save_item(item_1)
@@ -253,7 +255,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Ground Truth",
-            bbox=dict(coords=[0.2, 0.2, 0.4, 0.4], format="xywh"),
+            bbox={"coords": [0.2, 0.2, 0.4, 0.4], "format": "xywh"},
         )
         item_2.objects["added_object"] = added_object_2
         self.dataset.save_item(item_2)
@@ -280,7 +282,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Pixano Annotator",
-            bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
+            bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
         )
         item_4.objects["added_object"] = added_object_3
         self.dataset.save_item(item_4)

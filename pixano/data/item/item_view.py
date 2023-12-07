@@ -62,7 +62,7 @@ class ItemView(BaseModel):
             dict[ItemView]: Dictionary of ItemView
         """
 
-        # TODO: Flattened view fields with one row per view?
+        # NOTE: Potential change to flattened view fields with one row per view
         item = table.to_pylist()[0]
         views = {}
 
@@ -98,6 +98,7 @@ class ItemView(BaseModel):
                         value=im.height,
                     )
                 views[field.name] = image_view
-            # TODO: Video, Point cloud
+
+            # NOTE: Future support for videos and 3D point clouds
 
         return views

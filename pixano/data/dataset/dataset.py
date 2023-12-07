@@ -116,11 +116,11 @@ class Dataset(BaseModel):
 
         self.info.save(self.path)
 
-    def connect(self) -> lancedb.DBConnection:
+    def connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB
 
         Returns:
-            lancedb.DBConnection: Dataset LanceDB connection
+            lancedb.db.DBConnection: Dataset LanceDB connection
         """
 
         return lancedb.connect(self.path)
@@ -253,8 +253,7 @@ class Dataset(BaseModel):
                 DatasetItem.from_pyarrow(pyarrow_item, self.info, self.media_dir)
                 for pyarrow_item in pyarrow_item_list
             ]
-        else:
-            return None
+        return None
 
     def search_items(
         self,
@@ -296,6 +295,7 @@ class Dataset(BaseModel):
                 ]
                 # Initialize CLIP model
                 try:
+                    # pylint: disable=import-outside-toplevel
                     from pixano_inference.transformers import CLIP
                 except ImportError as e:
                     raise ImportError(
@@ -379,8 +379,8 @@ class Dataset(BaseModel):
                         )
                         for pyarrow_item in pyarrow_item_list
                     ]
-                else:
-                    return None
+                return None
+        return None
 
     def load_item(
         self,
@@ -444,7 +444,7 @@ class Dataset(BaseModel):
                 pyarrow_item["active_learning"][al_source] = lance_scanner.to_table()
 
         # Load PyArrow item from segmentation embeddings tables
-        found_embeddings = False if load_embeddings else True
+        found_embeddings = not load_embeddings
         if load_embeddings:
             for emb_source, emb_table in ds_tables["embeddings"].items():
                 if emb_source.lower() in model_id.lower():
@@ -462,8 +462,7 @@ class Dataset(BaseModel):
                 media_features=True,
                 model_id=model_id,
             )
-        else:
-            return None
+        return None
 
     def save_item(self, item: DatasetItem):
         """Save dataset item features and objects
@@ -574,6 +573,8 @@ class Dataset(BaseModel):
 
                     # Create new objects table
                     ds = self.connect()
+                    # Disable warning for create_table() "mode" argument
+                    # pylint: disable=unexpected-keyword-arg
                     ds_tables["objects"][source] = ds.create_table(
                         "obj_annotator",
                         schema=Fields(annnotator_fields).to_schema(),
@@ -617,13 +618,13 @@ class Dataset(BaseModel):
 
     @staticmethod
     def find(
-        id: str,
+        dataset_id: str,
         directory: Path,
     ) -> "Dataset":
         """Find Dataset in directory
 
         Args:
-            id (str): Dataset ID
+            dataset_id (str): Dataset ID
             directory (Path): Directory to search in
 
         Returns:
@@ -633,6 +634,7 @@ class Dataset(BaseModel):
         # Browse directory
         for json_fp in directory.glob("*/db.json"):
             info = DatasetInfo.from_json(json_fp)
-            if info.id == id:
+            if info.id == dataset_id:
                 # Return dataset
                 return Dataset(json_fp.parent)
+        return None

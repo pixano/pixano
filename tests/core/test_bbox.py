@@ -88,6 +88,6 @@ class TestParquetBBox(unittest.TestCase):
             pq.write_table(table, temp_file_path, store_schema=True)
             re_table = pq.read_table(temp_file_path)
         self.assertEqual(re_table.column_names, ["bbox"])
-        Bbox0 = re_table.to_pylist()[0]["bbox"]
-        self.assertTrue(isinstance(Bbox0, BBox))
-        self.assertTrue(np.allclose(self.bbox_list[0].xyxy_coords, Bbox0.xyxy_coords))
+        bbox_0 = re_table.to_pylist()[0]["bbox"]
+        self.assertTrue(isinstance(bbox_0, BBox))
+        self.assertTrue(np.allclose(self.bbox_list[0].xyxy_coords, bbox_0.xyxy_coords))

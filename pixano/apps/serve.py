@@ -24,6 +24,17 @@ from pixano.apps.display import display_cli, display_colab, display_ipython
 from pixano.apps.main import create_app
 from pixano.data import Settings
 
+task_functions = {
+    "colab": asyncio.get_event_loop().create_task,
+    "ipython": asyncio.get_event_loop().create_task,
+    "none": asyncio.run,
+}
+display_functions = {
+    "colab": display_colab,
+    "ipython": display_ipython,
+    "none": display_cli,
+}
+
 
 class App:
     """Base class for Annotator and Explorer apps
@@ -31,15 +42,16 @@ class App:
     Attributes:
         config (uvicorn.Config): App config
         server (uvicorn.Server): App server
-        task_function (typing.Callable): Run task function for running environment
-        display_function (typing.Callable): Display function for running environment
+        assets_path (str): Path to App assets directory
+        template_path (str): Path to App template directory
     """
+
+    assets_path: str
+    template_path: str
 
     def __init__(
         self,
         library_dir: str,
-        assets_path: str,
-        template_path: str,
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
@@ -52,7 +64,7 @@ class App:
         """
 
         # Create app
-        templates = Jinja2Templates(directory=template_path)
+        templates = Jinja2Templates(directory=self.template_path)
         settings = Settings(data_dir=Path(library_dir))
         app = create_app(settings)
 
@@ -60,24 +72,12 @@ class App:
         def main(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
+        app.mount("/assets", StaticFiles(directory=self.assets_path), name="assets")
         self.config = uvicorn.Config(app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 
-        # Get environmennt
-        self.task_function = {
-            "colab": asyncio.get_event_loop().create_task,
-            "ipython": asyncio.get_event_loop().create_task,
-            "none": asyncio.run,
-        }[self.get_env()]
-        self.display_function = {
-            "colab": display_colab,
-            "ipython": display_ipython,
-            "none": display_cli,
-        }[self.get_env()]
-
         # Serve app
-        self.task_function(self.server.serve())
+        task_functions[self.get_env()](self.server.serve())
 
     def display(self, height: int = 1000) -> None:
         """Display Pixano app
@@ -88,13 +88,13 @@ class App:
 
         # Wait for app to be online
         while not self.server.started:
-            self.task_function(asyncio.wait(0.1))
+            task_functions[self.get_env()](asyncio.wait(0.1))
 
         # Display app
         for server in self.server.servers:
             for socket in server.sockets:
                 address = socket.getsockname()
-                self.display_function(
+                display_functions[self.get_env()](
                     url=f"http://{address[0]}", port=address[1], height=height
                 )
 
@@ -107,6 +107,7 @@ class App:
 
         # If Google colab import succeeds
         try:
+            # pylint: disable=import-outside-toplevel, unused-import
             import google.colab
             import IPython
         except ImportError:
@@ -117,6 +118,7 @@ class App:
 
         # If IPython import succeeds
         try:
+            # pylint: disable=import-outside-toplevel
             import IPython
         except ImportError:
             pass

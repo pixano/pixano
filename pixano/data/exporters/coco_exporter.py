@@ -21,7 +21,6 @@ from urllib.parse import urlparse
 from tqdm.auto import tqdm
 
 from pixano.core import Image
-from pixano.data import Dataset
 from pixano.data.exporters.exporter import Exporter
 
 
@@ -56,14 +55,14 @@ class COCOExporter(Exporter):
             splits = self.dataset.info.splits
             # If no splits, there is nothing to export
             if not splits:
-                raise Exception("Dataset has no splits to export.")
+                raise ValueError("Dataset has no splits to export.")
 
         # If no object sources provided, select all object tables
         if not objects_sources:
             objects_sources = list(ds_tables["objects"].keys())
             # If no object tables, there is nothing to export
             if not objects_sources:
-                raise Exception("Dataset has no objects tables to export.")
+                raise ValueError("Dataset has no objects tables to export.")
 
         # Create export directory
         ann_dir = export_dir / f"annotations [{', '.join(objects_sources)}]"
@@ -142,7 +141,7 @@ class COCOExporter(Exporter):
                             for obj in item.objects.values():
                                 # Filter by views and object sources
                                 if (
-                                    obj.view_id in images.keys()
+                                    obj.view_id in images
                                     and obj.source_id in objects_sources
                                 ):
                                     # Bounding box
@@ -206,7 +205,9 @@ class COCOExporter(Exporter):
                     coco_json["categories"], key=lambda c: c["id"]
                 )
                 # Save COCO format .json file
-                with open(ann_dir / f"instances_{split}.json", "w") as f:
+                with open(
+                    ann_dir / f"instances_{split}.json", "w", encoding="utf-8"
+                ) as f:
                     json.dump(coco_json, f)
 
         # Copy media directory
