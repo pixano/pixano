@@ -1,0 +1,18 @@
+[MASTER]
+disable=
+    C0114, # missing-module-docstring
+    C0301, # line-too-long (already set by black formatter)
+    R0903, # too-few-public-methods (TODO: Temporary)
+    R0914, # too-many-locals (TODO: Temporary)
+    R1702, # too-many-nested-blocks (TODO: Temporary)
+    R0912, # too-many-branches (TODO: Temporary)
+    R0913, # too-many-arguments (TODO: Temporary)
+    R0915, # too-many-statements (TODO: Temporary)
+    W0612, # unused-variable (TODO: Temporary)
+generated-members=
+    cv2.*,
+    duckdb.*,
+    lancedb.db.DBConnection.create_table,
+
+[SIMILARITIES]
+min-similarity-lines=10
