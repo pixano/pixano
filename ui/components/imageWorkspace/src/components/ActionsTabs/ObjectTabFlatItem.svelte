@@ -34,6 +34,12 @@
   ) => {
     itemObjects.update((oldObjects) =>
       oldObjects.map((object) => {
+        if (displayControlProperty === "editing") {
+          object.displayControl = {
+            ...object.displayControl,
+            editing: false,
+          };
+        }
         if (object.id === itemObject.id) {
           return toggleObjectDisplayControl(object, displayControlProperty, properties, value);
         }
@@ -80,10 +86,10 @@
     <span class="truncate w-max flex-auto">{itemObject.id}</span>
   </div>
   <div class="flex items-center">
-    <IconButton selected={isEditing} on:click={() => handleIconClick("editing", isEditing)}
+    <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
       ><Pencil class="h-4" /></IconButton
     >
-    <IconButton selected={isLocked} on:click={() => handleIconClick("locked", isLocked)}
+    <IconButton selected={isLocked} on:click={() => handleIconClick("locked", !isLocked)}
       ><Lock class="h-4" /></IconButton
     >
     <IconButton><Trash2 class="h-4" /></IconButton>

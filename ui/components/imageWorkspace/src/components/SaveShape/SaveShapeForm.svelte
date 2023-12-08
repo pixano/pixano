@@ -18,9 +18,9 @@
   // import { z } from "zod";
 
   import { Button } from "@pixano/core/src/lib/components/ui/button";
-  import { Input } from "@pixano/core/src/lib/components/ui/input";
-  import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
+  // import { Input } from "@pixano/core/src/lib/components/ui/input";
+  // import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
+  // import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import type { PropertiesValues, Shape } from "@pixano/core";
 
   import { newShape, itemObjects } from "../../lib/stores/stores";
@@ -35,7 +35,7 @@
 
   let objectProperties: { [key: string]: PropertiesValues } = {};
 
-  let objectCategory: string;
+  // let objectCategory: string;
 
   newShape.subscribe((value) => {
     if (value) shape = value;
@@ -80,13 +80,13 @@
     newShape.set(null);
   };
 
-  const handleCheckboxClick = (checked: boolean, propertyLabel: string) => {
-    objectProperties[propertyLabel] = checked;
-  };
+  // const handleCheckboxClick = (checked: boolean, propertyLabel: string) => {
+  //   objectProperties[propertyLabel] = checked;
+  // };
 
-  const handleNumberInputChange = (value: string, propertyLabel: string) => {
-    objectProperties[propertyLabel] = Number(value);
-  };
+  // const handleNumberInputChange = (value: string, propertyLabel: string) => {
+  //   objectProperties[propertyLabel] = Number(value);
+  // };
 
   const handleTextInputChange = (value: string[], propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
@@ -100,25 +100,25 @@
 
 <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
   <p>Sauvegarde {shape.type}</p>
-  <Combobox
+  <!-- <Combobox
     placeholder="Select a category"
     bind:value={objectCategory}
     listItems={[
       { value: "category_1", label: "category 1" },
       { value: "category_2", label: "category 2" },
     ]}
-  />
+  /> -->
   {#each objectSetup as property}
-    {#if property.type === "checkbox"}
+    <!-- {#if property.type === "checkbox"}
       <div class="flex gap-4">
         <Checkbox handleClick={(checked) => handleCheckboxClick(checked, property.label)} />
         <span>{property.label}</span>
       </div>
-    {/if}
+    {/if} -->
     {#if property.type === "text"}
       <SaveShapeTextInput textProperty={property} {handleTextInputChange} />
     {/if}
-    {#if property.type === "number"}
+    <!-- {#if property.type === "number"}
       <div>
         <span>{property.label}</span>
         <Input
@@ -126,7 +126,7 @@
           on:change={(e) => handleNumberInputChange(e.currentTarget.value, property.label)}
         />
       </div>
-    {/if}
+    {/if} -->
   {/each}
   <div class="flex gap-4">
     <Button class="text-white" on:click={() => newShape.set(null)}>cancel</Button>

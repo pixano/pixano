@@ -309,9 +309,6 @@
               image,
               viewId,
               zoomFactor,
-              (val) => {
-                bboxes = toggleIsEditingBBox(val, stage, bboxes[i], bboxes);
-              },
             );
           } else {
             toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
@@ -984,19 +981,6 @@
     if (highlighted_point) highlightInputPoint(highlighted_point, view.id);
   }
 
-  function handleLayerClick(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const allBBoxes: Konva.Group = viewLayer.findOne("#bboxes");
-    allBBoxes.children.forEach((bbox) => {
-      bboxes = toggleIsEditingBBox(
-        "off",
-        stage,
-        bboxes.find((b) => b.id === bbox.id()),
-        bboxes,
-      );
-    });
-  }
-
   // ********** KEY EVENTS ********** //
 
   async function handleKeyDown(event: KeyboardEvent) {
@@ -1053,7 +1037,6 @@
         <Layer
           config={{ id: view.id }}
           on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
-          on:click={() => handleLayerClick(view.id)}
         >
           <KonvaImage
             config={{ image: images[view.id], id: "image" }}

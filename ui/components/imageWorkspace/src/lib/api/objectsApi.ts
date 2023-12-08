@@ -69,6 +69,5 @@ export const toggleObjectDisplayControl = (
       [displayControlProperty]: value,
     };
   }
-  console.log({ object });
   return object;
 };

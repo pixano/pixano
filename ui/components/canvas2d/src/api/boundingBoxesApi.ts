@@ -21,7 +21,7 @@ export const toggleIsEditingBBox = (
   rect.draggable(value === "on");
   const transformer: Konva.Transformer = stage.findOne("#transformer");
   const nodes = transformer.nodes();
-  transformer.nodes(value === "on" ? [rect] : [...nodes]);
+  transformer.nodes(value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())]);
   return bboxes.map((bbox) => {
     if (bbox.id === currentBox.id) {
       bbox.editing = value === "on";
@@ -47,7 +47,6 @@ export function addBBox(
   image: Konva.Image,
   viewId: string,
   zoomFactor: Record<string, number>,
-  mutateBboxes: (val: "on" | "off") => void,
 ) {
   const x = image.x() + bbox.bbox[0];
   const y = image.y() + bbox.bbox[1];
@@ -149,14 +148,6 @@ export function addBBox(
   bboxKonva.add(tooltip);
   bboxKonva.add(lockTooltip);
   bboxGroup.add(bboxKonva);
-
-  bboxRect.on("click", function (e) {
-    e.cancelBubble = true;
-    mutateBboxes("on");
-  });
-  bboxRect.on("transformend", function () {
-    mutateBboxes("off");
-  });
 
   bboxRect.on("transform", function () {
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
