@@ -40,14 +40,20 @@ class App:
     """Base class for Annotator and Explorer apps
 
     Attributes:
-        config (uvicorn.Config): App config
-        server (uvicorn.Server): App server
+        settings (Settings): App settings
         assets_path (str): Path to App assets directory
         template_path (str): Path to App template directory
+        app (fastapi.FastAPI): FastAPI App
+        config (uvicorn.Config): App config
+        server (uvicorn.Server): App server
     """
 
+    settings: Settings
     assets_path: str
     template_path: str
+    app: fastapi.FastAPI
+    config: uvicorn.Config
+    server: uvicorn.Server
 
     def __init__(
         self,
