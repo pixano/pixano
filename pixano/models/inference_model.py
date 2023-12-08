@@ -89,6 +89,7 @@ class InferenceModel(ABC):
         # Objects preannotation schema
         if process_type == "obj":
             table_group = "objects"
+            # Create table
             table = DatasetTable(
                 name=table_filename,
                 fields={
@@ -106,27 +107,32 @@ class InferenceModel(ABC):
         # Segmentation Embedding precomputing schema
         elif process_type == "segment_emb":
             table_group = "embeddings"
+            # Add embedding column for each selected view
+            fields = {"id": "str"}
+            for view in views:
+                fields[view] = "bytes"
+            # Create table
             table = DatasetTable(
                 name=table_filename,
-                fields={"id": "str"},
+                fields=fields,
                 source=self.name,
                 type="segment",
             )
-            # Add embedding column for each selected view
-            for view in views:
-                table.fields[view] = "bytes"
+
         # Semantic Search Embedding precomputing schema
         elif process_type == "search_emb":
             table_group = "embeddings"
+            # Add vector column for each selected view
+            fields = {"id": "str"}
+            for view in views:
+                fields[view] = "vector(512)"
+            # Create table
             table = DatasetTable(
                 name=table_filename,
-                fields={"id": "str"},
+                fields=fields,
                 source=self.name,
                 type="search",
             )
-            # Add vector column for each selected view
-            for view in views:
-                table.fields[view] = "vector(512)"
 
         # Create table
         dataset.create_table(table, table_group)
@@ -200,6 +206,9 @@ class InferenceModel(ABC):
                 "Please choose a valid process type ('obj' for preannotation, 'segment_emb' or 'search_emb'"
                 "for segmentation or semantic search embedding precomputing)"
             )
+
+        if not views:
+            raise ValueError("Please select which views you want to process on.")
 
         # Load dataset
         dataset = Dataset(dataset_dir)
@@ -298,9 +307,11 @@ class InferenceModel(ABC):
 
         # Media tables
         for media_table in ds_tables["media"].values():
+            # pylint: disable=unused-variable
             pyarrow_media_table = media_table.to_lance().to_table(
                 limit=limit, offset=offset
             )
+            # pylint: disable=unused-variable
             pyarrow_media_batch = duckdb.query(
                 f"SELECT * FROM pyarrow_media_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
             ).to_arrow_table()
