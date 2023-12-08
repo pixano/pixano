@@ -14,30 +14,89 @@
    * http://www.cecill.info
    */
 
-  import type { DatasetItem, BBox, Mask, SelectionTool } from "@pixano/core";
+  import { onMount } from "svelte";
+  import * as ort from "onnxruntime-web";
+  import { api } from "@pixano/core";
+  import type { DatasetItem, BBox, Mask, SelectionTool, DatasetInfo } from "@pixano/core";
+  import { SAM, npy } from "@pixano/models";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
-  import { itemObjects, itemBboxes, itemMasks } from "./lib/stores/stores";
+  import {
+    itemObjects,
+    itemBboxes,
+    itemMasks,
+    interactiveSegmenterModel,
+  } from "./lib/stores/stores";
   import "./index.css";
 
-  let selectedTool: SelectionTool;
+  export let selectedDataset: DatasetInfo;
   export let selectedItem: DatasetItem;
-  export let masks: Mask[] = [];
+  export let models: string[] = [];
 
+  let selectedTool: SelectionTool;
   let allBBoxes: BBox[] = [];
   let allMasks: Mask[] = [];
+  let selectedModelName: string;
+  let embeddings: Record<string, ort.Tensor> = {};
 
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
-  $: console.log({ masks, selectedItem, allBBoxes });
+  $: console.log({ selectedDataset, selectedItem, allBBoxes });
 
   $: itemObjects.set(Object.values(selectedItem.objects).flat());
+
+  const sam = new SAM();
+
+  async function loadModel() {
+    await sam.init("/data/models/" + selectedModelName);
+    interactiveSegmenterModel.set(sam);
+
+    // Embeddings
+
+    const item = await api.getItemEmbeddings(
+      selectedDataset.id,
+      selectedItem.id,
+      selectedModelName,
+    );
+    if (item) {
+      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+        try {
+          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
+          embeddings[viewId] = new ort.Tensor(
+            "float32",
+            viewEmbeddingArray.data,
+            viewEmbeddingArray.shape,
+          );
+        } catch (e) {
+          console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);
+        }
+      }
+    } else {
+      selectedModelName = "";
+    }
+  }
+
+  onMount(async () => {
+    if (models.length > 0) {
+      let samModels = models.filter((m) => m.includes("sam"));
+      if (samModels.length == 1) {
+        selectedModelName = samModels[0];
+        await loadModel();
+      }
+    }
+  });
 </script>
 
 <div class="flex w-full pt-[81px] h-full">
   <Toolbar bind:selectedTool />
-  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes={allBBoxes} bind:masks={allMasks} />
+  <ImageCanvas
+    {selectedTool}
+    {selectedItem}
+    bind:bboxes={allBBoxes}
+    bind:masks={allMasks}
+    {embeddings}
+  />
   <ActionsTabs />
 </div>
