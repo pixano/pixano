@@ -4,8 +4,6 @@ export const theme = {
     Montserrat: ["Montserrat", "sans-serif"],
   },
   colors: {
-    main: "blue",
-    secondary: "#872f6e",
     border: "hsl(var(--border) / <alpha-value>)",
     input: "hsl(var(--input) / <alpha-value>)",
     ring: "hsl(var(--ring) / <alpha-value>)",
@@ -16,10 +14,10 @@ export const theme = {
       foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
       light: "hsl(var(--primary-light) / <alpha-value>)",
     },
-    // secondary: {
-    //   DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
-    //   foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
-    // },
+    secondary: {
+      DEFAULT: "hsl(var(--secondary) / <alpha-value>)",
+      foreground: "hsl(var(--secondary-foreground) / <alpha-value>)",
+    },
     destructive: {
       DEFAULT: "hsl(var(--destructive) / <alpha-value>)",
       foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",

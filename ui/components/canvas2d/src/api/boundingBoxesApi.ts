@@ -20,7 +20,8 @@ export const toggleIsEditingBBox = (
   const rect = stage.findOne(`#rect${currentBox.id}`);
   rect.draggable(value === "on");
   const transformer: Konva.Transformer = stage.findOne("#transformer");
-  transformer.nodes(value === "on" ? [rect] : []);
+  const nodes = transformer.nodes();
+  transformer.nodes(value === "on" ? [rect] : [...nodes]);
   return bboxes.map((bbox) => {
     if (bbox.id === currentBox.id) {
       bbox.editing = value === "on";

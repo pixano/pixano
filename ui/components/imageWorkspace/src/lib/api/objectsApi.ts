@@ -1,4 +1,5 @@
-import type { ItemObject, BBox, DisplayControl } from "@pixano/core";
+import type { ItemObject, BBox, DisplayControl, Mask } from "@pixano/core";
+import { mask_utils } from "@pixano/models";
 
 export const mapObjectToBBox = (obj: ItemObject) => {
   const imageHeight = 426; // TODO100 imageHeight
@@ -21,6 +22,25 @@ export const mapObjectToBBox = (obj: ItemObject) => {
     editing: obj.displayControl?.editing,
     locked: obj.displayControl?.locked,
   } as BBox;
+};
+
+export const mapObjectToMasks = (obj: ItemObject) => {
+  if (!obj.mask) return;
+  const rle = obj.mask.counts;
+  const size = obj.mask.size;
+
+  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+  return {
+    id: obj.id,
+    viewId: obj.view_id,
+    svg: masksSVG,
+    rle: obj.mask,
+    catId: obj.features.category_id.value as number,
+    visible: !obj.mask.displayControl?.hidden,
+    opacity: 1.0,
+  } as Mask;
 };
 
 export const toggleObjectDisplayControl = (

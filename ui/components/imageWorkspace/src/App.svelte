@@ -19,7 +19,7 @@
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
-  import { itemObjects, itemBboxes } from "./lib/stores/stores";
+  import { itemObjects, itemBboxes, itemMasks } from "./lib/stores/stores";
   import "./index.css";
 
   let selectedTool: SelectionTool;
@@ -27,8 +27,10 @@
   export let masks: Mask[] = [];
 
   let allBBoxes: BBox[] = [];
+  let allMasks: Mask[] = [];
 
-  $: itemBboxes.subscribe((b) => (allBBoxes = b));
+  $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
+  $: itemMasks.subscribe((masks) => (allMasks = masks));
   $: console.log({ masks, selectedItem, allBBoxes });
 
   $: itemObjects.set(Object.values(selectedItem.objects).flat());
@@ -36,6 +38,6 @@
 
 <div class="flex w-full pt-[81px] h-full">
   <Toolbar bind:selectedTool />
-  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes={allBBoxes} bind:masks />
+  <ImageCanvas {selectedTool} {selectedItem} bind:bboxes={allBBoxes} bind:masks={allMasks} />
   <ActionsTabs />
 </div>
