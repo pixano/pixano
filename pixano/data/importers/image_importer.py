@@ -50,7 +50,7 @@ class ImageImporter(Importer):
         tables = super().create_tables(media_fields)
 
         # Create splits
-        if not splits:
+        if splits is None:
             splits = ["dataset"]
 
         # Initialize Importer

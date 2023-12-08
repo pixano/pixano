@@ -51,14 +51,14 @@ class COCOExporter(Exporter):
         ds_tables = self.dataset.open_tables()
 
         # If no splits provided, select all splits
-        if not splits:
+        if splits is None:
             splits = self.dataset.info.splits
             # If no splits, there is nothing to export
             if not splits:
                 raise ValueError("Dataset has no splits to export.")
 
         # If no object sources provided, select all object tables
-        if not objects_sources:
+        if objects_sources is None:
             objects_sources = list(ds_tables["objects"].keys())
             # If no object tables, there is nothing to export
             if not objects_sources:
