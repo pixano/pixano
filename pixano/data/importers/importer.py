@@ -132,7 +132,7 @@ class Importer(ABC):
 
         # Add object fields
         if object_fields is not None:
-            tables["objects"]: [
+            tables["objects"] = [
                 DatasetTable(
                     name="objects",
                     fields={"id": "str", "item_id": "str", "view_id": "str"}
