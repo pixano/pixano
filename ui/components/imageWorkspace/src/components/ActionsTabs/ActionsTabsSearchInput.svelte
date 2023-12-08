@@ -18,13 +18,13 @@
   import { Input } from "@pixano/core/src/lib/components/ui/input";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 
-  export let showAllObjects: boolean = true;
-  let tooltipContent: string = showAllObjects ? "show all" : "hide all";
+  export let hideAllObjects: boolean = true;
+  let tooltipContent: string = hideAllObjects ? "show all" : "hide all";
 </script>
 
 <div class="flex mt-4 items-center gap-3">
   <IconButton {tooltipContent} on:click>
-    {#if showAllObjects}
+    {#if hideAllObjects}
       <EyeOff class="h-4" />
     {:else}
       <Eye class="h-4" />

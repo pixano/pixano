@@ -24,6 +24,12 @@
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
   export let itemObject: ItemObject;
+  export let colorScale: (id: string) => string;
+
+  let color: string;
+  $: {
+    color = colorScale(`${itemObject.features.category_id.value as number}`);
+  }
 
   let open: boolean = true;
 
@@ -86,7 +92,7 @@
         <EyeOff class="h-4" />
       {/if}
     </IconButton>
-    <div class="rounded-full bg-red-400 border border-red-800 w-3 h-3 mr-2 flex-[0_0_0.75rem]" />
+    <div class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]" style="background:{color}" />
     <span class="truncate w-max flex-auto">{itemObject.id}</span>
   </div>
   <div class="flex items-center">
@@ -104,7 +110,10 @@
 </div>
 {#if open}
   <div class="pl-5 border-b border-b-gray-600">
-    <div class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4">
+    <div
+      class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
+      style="border-color:{color}"
+    >
       <div>
         <p class="font-medium pb-1">Display</p>
         <div class="flex flex-col gap-2">

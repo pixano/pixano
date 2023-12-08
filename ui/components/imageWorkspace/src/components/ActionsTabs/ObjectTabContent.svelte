@@ -16,18 +16,18 @@
   import { SlidersHorizontal } from "lucide-svelte";
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import type { ItemObject } from "@pixano/core";
+  import { utils, type ItemObject } from "@pixano/core";
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
   import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
-  import { itemObjects } from "../../lib/stores/stores";
+  import { itemObjects, colorRange } from "../../lib/stores/stores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
   let value = "flat";
   let allItemObjects: ItemObject[] = [];
-  let showAllGroundTruthObjects = true;
+  let hideAllGroundTruthObjects = false;
 
   itemObjects.subscribe((value) => {
     allItemObjects = value;
@@ -40,7 +40,7 @@
           item,
           "hidden",
           ["bbox", "mask"],
-          showAllGroundTruthObjects,
+          hideAllGroundTruthObjects,
         );
       }
       return item;
@@ -48,8 +48,12 @@
   });
 
   const handleVisibilityIconClick = () => {
-    showAllGroundTruthObjects = !showAllGroundTruthObjects;
+    hideAllGroundTruthObjects = !hideAllGroundTruthObjects;
   };
+
+  let colorRangeValue: string[] = [];
+  colorRange.subscribe((value) => (colorRangeValue = value));
+  let colorScale = utils.ordinalColorScale(colorRangeValue);
 </script>
 
 <div class="p-4">
@@ -74,11 +78,11 @@
       <h3 class="uppercase font-extralight">Ground truth</h3>
       <ActionsTabsSearchInput
         on:click={handleVisibilityIconClick}
-        bind:showAllObjects={showAllGroundTruthObjects}
+        bind:hideAllObjects={hideAllGroundTruthObjects}
       />
       {#each allItemObjects as itemObject}
         {#if itemObject.source_id === GROUND_TRUTH}
-          <ObjectTabFlatItem bind:itemObject />
+          <ObjectTabFlatItem bind:itemObject {colorScale} />
         {/if}
       {/each}
       <h3 class="uppercase font-extralight mt-8">Model run</h3>

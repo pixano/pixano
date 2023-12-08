@@ -19,44 +19,25 @@
 
   import type { BBox, DatasetItem, Mask, SelectionTool } from "@pixano/core";
 
-  import { newShape } from "../lib/stores/stores";
-  // import { utils } from "@pixano/core";
+  import { newShape, colorRange } from "../lib/stores/stores";
 
   export let selectedItem: DatasetItem;
   export let masks: Array<Mask> = [];
   export let bboxes: Array<BBox> = [];
-  let embeddings: Record<string, ort.Tensor> = {};
+  export let embeddings: Record<string, ort.Tensor>;
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  export let colorScale = (value: string) => {
-    // console.log("temp function, TODO100", value);
-    return "#999";
-  };
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  // let colorMode = "category";
+  let colorRangeValue: string[] = [];
 
-  // export function handleLabelColors() {
-  //   let range: Array<number>;
-  //   if (colorMode === "category") {
-  //     range = [
-  //       Math.min(...classes.map((cat) => cat.id)),
-  //       Math.max(...classes.map((cat) => cat.id)),
-  //     ];
-  //   } else if (colorMode === "source") {
-  //     range = [0, Object.keys(annotations).length];
-  //   } else {
-  //     range = [];
-  //   }
-  //   return utils.ordinalColorScale(range.map((i) => i.toString())) as (id: string) => string;
-  // }
+  colorRange.subscribe((value) => (colorRangeValue = value));
 </script>
 
 <div class="flex-auto max-w-[70%]">
   <Canvas2D
     {selectedItem}
-    {colorScale}
+    colorRange={colorRangeValue}
     bind:masks
     bind:bboxes
     {embeddings}

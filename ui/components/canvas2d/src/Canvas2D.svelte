@@ -21,11 +21,16 @@
   import { afterUpdate, onMount } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
-  import {
-    // WarningModal,
-    type SelectionTool,
-    type LabeledPointTool,
-    type Shape,
+  import { WarningModal, utils } from "@pixano/core";
+  import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
+  import type {
+    Mask,
+    BBox,
+    DatasetItem,
+    ItemView,
+    SelectionTool,
+    LabeledPointTool,
+    Shape,
   } from "@pixano/core";
 
   import {
@@ -46,14 +51,9 @@
     toggleBBoxIsLocked,
   } from "./api/boundingBoxesApi";
 
-  import { WarningModal } from "@pixano/core";
-
-  import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
-
   // Exports
   export let selectedItem: DatasetItem;
-  export let colorScale: (id: string) => string;
+  export let colorRange: string[] = ["0", "10"];
   export let masks: Array<Mask>;
   export let bboxes: Array<BBox>;
   export let embeddings: Record<string, ort.Tensor> = {};
@@ -61,10 +61,16 @@
   export let selectedTool: SelectionTool;
   export let createNewShape: (shape: Shape) => void;
 
+  let colorScale: (id: string) => string;
+
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
   let numberOfBBoxes: number;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
+
+  $: {
+    colorScale = utils.ordinalColorScale(colorRange);
+  }
 
   $: {
     if (stage && numberOfBBoxes !== bboxes?.length) {
