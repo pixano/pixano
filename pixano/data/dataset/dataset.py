@@ -501,38 +501,39 @@ class Dataset(BaseModel):
 
         # Load PyArrow item from media tables
         if load_media:
-            for media_source, media_table in ds_tables["media"].items():
+            for table_name, media_table in ds_tables["media"].items():
                 lance_scanner = media_table.to_lance().scanner(
                     filter=f"id in ('{item_id}')"
                 )
-                pyarrow_item["media"][media_source] = lance_scanner.to_table()
+                pyarrow_item["media"][table_name] = lance_scanner.to_table()
 
         # Load PyArrow item from objects tables
         if load_objects:
-            for obj_source, obj_table in ds_tables["objects"].items():
+            for table_name, obj_table in ds_tables["objects"].items():
                 lance_scanner = obj_table.to_lance().scanner(
                     filter=f"item_id in ('{item_id}')"
                 )
-                pyarrow_item["objects"][obj_source] = lance_scanner.to_table()
+                pyarrow_item["objects"][table_name] = lance_scanner.to_table()
 
         # Load PyArrow item from active learning tables
         if load_active_learning:
-            for al_source, al_table in ds_tables["active_learning"].items():
+            for table_name, al_table in ds_tables["active_learning"].items():
                 lance_scanner = al_table.to_lance().scanner(
                     filter=f"id in ('{item_id}')"
                 )
-                pyarrow_item["active_learning"][al_source] = lance_scanner.to_table()
+                pyarrow_item["active_learning"][table_name] = lance_scanner.to_table()
 
         # Load PyArrow item from segmentation embeddings tables
         found_embeddings = not load_embeddings
         if load_embeddings:
-            for emb_source, emb_table in ds_tables["embeddings"].items():
-                if emb_source.lower() in model_id.lower():
+            for table in self.info.tables["embeddings"]:
+                if table.source.lower() in model_id.lower():
                     found_embeddings = True
+                    emb_table = ds_tables["embeddings"][table.name]
                     lance_scanner = emb_table.to_lance().scanner(
                         filter=f"id in ('{item_id}')"
                     )
-                    pyarrow_item["embeddings"][emb_source] = lance_scanner.to_table()
+                    pyarrow_item["embeddings"][table.name] = lance_scanner.to_table()
 
         if pyarrow_item["main"]["db"].num_rows > 0 and found_embeddings:
             return DatasetItem.from_pyarrow(
