@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-name: Lint code
+name: Lint
 
 on:
   push:
