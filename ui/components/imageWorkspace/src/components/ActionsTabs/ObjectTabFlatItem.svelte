@@ -48,6 +48,10 @@
     );
   };
 
+  const deleteObject = () => {
+    itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
+  };
+
   $: properties = objectSetup
     .map((property) => {
       const value = itemObject.features[property.name]?.value;
@@ -92,7 +96,7 @@
     <IconButton selected={isLocked} on:click={() => handleIconClick("locked", !isLocked)}
       ><Lock class="h-4" /></IconButton
     >
-    <IconButton><Trash2 class="h-4" /></IconButton>
+    <IconButton on:click={deleteObject}><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}
       ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton
     >

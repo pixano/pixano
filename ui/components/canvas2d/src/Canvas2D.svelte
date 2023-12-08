@@ -69,7 +69,9 @@
   $: {
     if (stage && numberOfBBoxes !== bboxes?.length) {
       const rect: Konva.Rect = stage?.findOne("#drag-rect");
-      rect.destroy();
+      if (rect) {
+        rect.destroy();
+      }
     }
     numberOfBBoxes = bboxes.length;
   }
