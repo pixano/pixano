@@ -143,21 +143,6 @@ class Importer(ABC):
 
         return tables
 
-    def create_info(
-        self,
-        import_dir: Path,
-    ):
-        """Create dataset info file
-
-        Args:
-            import_dir (Path): Import directory
-        """
-
-        # Save DatasetInfo
-        with tqdm(desc="Creating dataset info file", total=1) as progress:
-            self.info.save(import_dir)
-            progress.update(1)
-
     def create_preview(
         self,
         import_dir: Path,
@@ -194,6 +179,44 @@ class Importer(ABC):
                         preview.save(import_dir / "preview.png")
                         progress.update(1)
 
+    def copy_or_move_files(
+        self,
+        import_dir: Path,
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
+        copy: bool,
+    ):
+        """Copy or move dataset files
+
+        Args:
+            import_dir (Path): Import directory
+            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
+            copy (bool): True to copy files, False to move them
+        """
+
+        if copy:
+            for table in tqdm(
+                ds_tables["media"].values(), desc="Copying media directories"
+            ):
+                for field in table.schema:
+                    if field.name in self.input_dirs:
+                        field_dir = import_dir / "media" / field.name
+                        field_dir.mkdir(parents=True, exist_ok=True)
+                        if self.input_dirs[field.name] != field_dir:
+                            shutil.copytree(
+                                self.input_dirs[field.name],
+                                field_dir,
+                                dirs_exist_ok=True,
+                            )
+        else:
+            for table in tqdm(
+                ds_tables["media"].values(), desc="Moving media directories"
+            ):
+                for field in table.schema:
+                    if field.name in self.input_dirs:
+                        field_dir = import_dir / "media" / field.name
+                        if self.input_dirs[field.name] != field_dir:
+                            self.input_dirs[field.name].rename(field_dir)
+
     @abstractmethod
     def import_rows(self) -> Iterator:
         """Process dataset rows for import
@@ -217,28 +240,22 @@ class Importer(ABC):
             Dataset: Imported dataset
         """
 
-        # Connect to dataset
-        import_dir.mkdir(parents=True, exist_ok=True)
-        ds = lancedb.connect(import_dir)
+        # Create dataset
+        dataset = Dataset.create(import_dir, self.info)
 
-        # Initialize dataset tables
-        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
+        # Load dataset tables
+        ds_tables = dataset.open_tables()
+
+        print(ds_tables)
+
+        # Initalize batches
         ds_batches: dict[str, dict[str, list]] = defaultdict(dict)
-
-        # Create tables
         for group_name, table_group in self.info.tables.items():
             for table in table_group:
-                # Disable warning for create_table() "mode" argument
-                # pylint: disable=unexpected-keyword-arg
-                ds_tables[group_name][table.name] = ds.create_table(
-                    table.name,
-                    schema=Fields(table.fields).to_schema(),
-                    mode="overwrite",
-                )
                 ds_batches[group_name][table.name] = []
-        save_batch_size = 1024
 
         # Add rows to tables
+        save_batch_size = 1024
         for rows in tqdm(self.import_rows(), desc="Importing dataset"):
             for group_name, table_group in self.info.tables.items():
                 for table in table_group:
@@ -281,9 +298,7 @@ class Importer(ABC):
                 table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         # Refresh tables
-        for group_name, table_group in self.info.tables.items():
-            for table in table_group:
-                ds_tables[group_name][table.name] = ds.open_table(table.name)
+        ds_tables = dataset.open_tables()
 
         # Raise error if generated dataset is empty
         if len(ds_tables["main"]["db"]) == 0:
@@ -291,38 +306,15 @@ class Importer(ABC):
                 "Generated dataset is empty. Please make sure that the paths to your media files are correct, and that they each contain subfolders for your splits."
             )
 
-        # Copy or move media directories
-        if "media" in ds_tables:
-            if copy:
-                for table in tqdm(
-                    ds_tables["media"].values(), desc="Copying media directories"
-                ):
-                    for field in table.schema:
-                        if field.name in self.input_dirs:
-                            field_dir = import_dir / "media" / field.name
-                            field_dir.mkdir(parents=True, exist_ok=True)
-                            if self.input_dirs[field.name] != field_dir:
-                                shutil.copytree(
-                                    self.input_dirs[field.name],
-                                    field_dir,
-                                    dirs_exist_ok=True,
-                                )
-            else:
-                for table in tqdm(
-                    ds_tables["media"].values(), desc="Moving media directories"
-                ):
-                    for field in table.schema:
-                        if field.name in self.input_dirs:
-                            field_dir = import_dir / "media" / field.name
-                            if self.input_dirs[field.name] != field_dir:
-                                self.input_dirs[field.name].rename(field_dir)
-
         # Create DatasetInfo
-        self.info.num_elements = len(ds_tables["main"]["db"])
-        self.info.estimated_size = estimate_size(import_dir)
-        self.create_info(import_dir)
+        dataset.info.num_elements = len(ds_tables["main"]["db"])
+        dataset.info.estimated_size = estimate_size(import_dir)
+        dataset.save_info()
 
         # Create thumbnail
         self.create_preview(import_dir, ds_tables)
+
+        # Copy or move media directories
+        self.copy_or_move_files(import_dir, ds_tables, copy)
 
         return Dataset(import_dir)

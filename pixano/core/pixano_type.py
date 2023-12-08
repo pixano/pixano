@@ -17,9 +17,6 @@ from typing import Any, Type
 import pyarrow as pa
 from pydantic import BaseModel
 
-# Disable warning for CustomExtensionType and ExtensionArray of PixanoType
-# pylint: disable=too-few-public-methods, unused-argument
-
 
 class PixanoType(ABC, BaseModel):
     """Base class for all Pixano custom types"""
@@ -140,6 +137,7 @@ def create_pyarrow_type(
     class CustomExtensionType(pa.ExtensionType):
         """PyArrow CustomExtensionType"""
 
+        # pylint: disable=unused-argument
         @classmethod
         def __arrow_ext_deserialize__(cls, storage_type, serialized):
             return cls(struct_type, name)

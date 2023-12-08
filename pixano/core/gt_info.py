@@ -17,10 +17,6 @@ from pydantic import BaseModel
 from pixano.core.bbox import BBox, BBoxType
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
-# Disable warning for GtInfo
-# NOTE: Redefine GtInfo? Breaking change for Pixano datasets using GtInfo
-# pylint: disable=too-many-arguments
-
 
 class GtInfo(PixanoType, BaseModel):
     """GtInfo type

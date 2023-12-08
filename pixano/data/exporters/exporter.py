@@ -24,6 +24,8 @@ class Exporter(ABC):
         dataset (Dataset): Dataset to export
     """
 
+    dataset: Dataset
+
     def __init__(
         self,
         input_dir: Path,

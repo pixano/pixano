@@ -25,6 +25,7 @@ from pixano.core import Image
 from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
+from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.fields import Fields
 
 
@@ -116,6 +117,32 @@ class Dataset(BaseModel):
 
         self.info.save(self.path)
 
+    @staticmethod
+    def create(path: Path, info: DatasetInfo) -> "Dataset":
+        """Create dataset
+
+        Args:
+            path (Path): Path to create dataset in
+            info (DatasetInfo): Dataset info
+
+        Returns:
+            Dataset: Created dataset
+        """
+
+        # Create DatasetInfo file
+        path.mkdir(parents=True, exist_ok=True)
+        info.save(path)
+
+        # Load dataset
+        dataset = Dataset(path)
+
+        # Create dataset tables
+        for group_name, table_group in dataset.info.tables.items():
+            for table in table_group:
+                dataset.create_table(table, group_name, add_to_info=False)
+
+        return dataset
+
     def connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB
 
@@ -136,47 +163,50 @@ class Dataset(BaseModel):
 
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
 
-        # Open main table
-        ds_tables["main"]["db"] = ds.open_table("db")
-
-        # Open media tables
-        if "media" in self.info.tables:
-            for table in self.info.tables["media"]:
-                ds_tables["media"][table.name] = ds.open_table(table.name)
-
-        # Open objects tables
-        if "objects" in self.info.tables:
-            for table in self.info.tables["objects"]:
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
                 try:
-                    ds_tables["objects"][table.source] = ds.open_table(table.name)
-                except FileNotFoundError:
-                    # Remove missing objects tables from DatasetInfo
-                    self.info.tables["objects"].remove(table)
-                    self.save_info()
-
-        # Open active learning tables
-        if "active_learning" in self.info.tables:
-            for table in self.info.tables["active_learning"]:
-                try:
-                    ds_tables["active_learning"][table.source] = ds.open_table(
-                        table.name
-                    )
-                except FileNotFoundError:
-                    # Remove missing Active Learning tables from DatasetInfo
-                    self.info.tables["active_learning"].remove(table)
-                    self.save_info()
-
-        # Open embeddings tables
-        if "embeddings" in self.info.tables:
-            for table in self.info.tables["embeddings"]:
-                try:
-                    ds_tables["embeddings"][table.source] = ds.open_table(table.name)
-                except FileNotFoundError:
-                    # Remove missing embeddings tables from DatasetInfo
-                    self.info.tables["embeddings"].remove(table)
-                    self.save_info()
+                    ds_tables[group_name][table.name] = ds.open_table(table.name)
+                except FileNotFoundError as e:
+                    # If optional table, remove from DatasetInfo
+                    if group_name in ["objects", "embeddings", "active_learning"]:
+                        self.info.tables[group_name].remove(table)
+                        self.save_info()
+                    else:
+                        raise FileNotFoundError from e
 
         return ds_tables
+
+    def create_table(
+        self,
+        table: DatasetTable,
+        table_group: str,
+        add_to_info: bool = True,
+    ):
+        """Create a new table in the dataset
+
+        Args:
+            table (DatasetTable): Table to create
+            table_group (str): Table group
+            add_to_info (bool, optional): Add table to DatasetInfo. Defaults to True.
+        """
+
+        # Create Lance table
+        ds = self.connect()
+        # pylint: disable=unexpected-keyword-arg
+        ds.create_table(
+            table.name,
+            schema=Fields(table.fields).to_schema(),
+            mode="overwrite",
+        )
+
+        # Save table to DatasetInfo
+        if add_to_info:
+            if table_group in self.info.tables:
+                self.info.tables[table_group].append(table)
+            else:
+                self.info.tables[table_group] = [table]
+            self.save_info()
 
     def load_items(
         self,
@@ -189,7 +219,7 @@ class Dataset(BaseModel):
         Args:
             limit (int): Items limit
             offset (int): Items offset
-            load_active_learning (bool, optional): Load item active learning info. Defaults to True.
+            load_active_learning (bool, optional): Load items active learning info. Defaults to True.
         Returns:
             list[DatasetItem]: List of dataset items
         """
@@ -204,6 +234,7 @@ class Dataset(BaseModel):
         pyarrow_items: dict[str, dict[str, pa.Table]] = defaultdict(dict)
 
         # Load PyArrow items from main table
+        # pylint: disable=unused-variable
         lance_table = ds_tables["main"]["db"].to_lance()
         pyarrow_items["main"]["db"] = duckdb.query(
             f"SELECT * FROM lance_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
@@ -226,29 +257,8 @@ class Dataset(BaseModel):
 
         if pyarrow_items["main"]["db"].num_rows > 0:
             # Split results
-            pyarrow_item_list: list[dict[str, dict[str, pa.Table]]] = []
-            for index in range(pyarrow_items["main"]["db"].num_rows):
-                pyarrow_item_list.append(defaultdict(dict))
-                # Main table
-                pyarrow_item_list[index]["main"]["db"] = pyarrow_items["main"][
-                    "db"
-                ].take([index])
-                item_id = pyarrow_item_list[index]["main"]["db"].to_pylist()[0]["id"]
-                # Media tables
-                for media_source in ds_tables["media"].keys():
-                    pyarrow_item_list[index]["media"][media_source] = (
-                        pa_ds.dataset(pyarrow_items["media"][media_source])
-                        .scanner(filter=pa_ds.field("id") == item_id)
-                        .to_table()
-                    )
-                # Active Learning tables
-                if load_active_learning:
-                    for al_source in ds_tables["active_learning"].keys():
-                        pyarrow_item_list[index]["active_learning"][al_source] = (
-                            pa_ds.dataset(pyarrow_items["active_learning"][al_source])
-                            .scanner(filter=pa_ds.field("id") == item_id)
-                            .to_table()
-                        )
+            pyarrow_item_list = self._split_items(pyarrow_items, load_active_learning)
+
             return [
                 DatasetItem.from_pyarrow(pyarrow_item, self.info, self.media_dir)
                 for pyarrow_item in pyarrow_item_list
@@ -268,7 +278,7 @@ class Dataset(BaseModel):
             limit (int): Items limit
             offset (int): Items offset
             query (dict[str, str]): Search query
-            load_active_learning (bool, optional): Load item active learning info. Defaults to True.
+            load_active_learning (bool, optional): Load items active learning info. Defaults to True.
         Returns:
             list[DatasetItem]: List of dataset items
         """
@@ -276,111 +286,181 @@ class Dataset(BaseModel):
         # Update info in case of change
         self.info = self.load_info()
 
-        # Load tables
-        ds_tables = self.open_tables()
-
         # Load PyArrow items from tables
         pyarrow_items: dict[str, dict[str, pa.Table]] = defaultdict(dict)
 
+        # Search items with selected method
+        if query["model"] in ["CLIP"]:
+            pyarrow_items = self._embeddings_search(limit, offset, query)
+        # NOTE: metadata search could go here
+
+        if pyarrow_items is not None and pyarrow_items["main"]["db"].num_rows > 0:
+            # Split results
+            pyarrow_item_list = self._split_items(pyarrow_items, load_active_learning)
+
+            return [
+                DatasetItem.from_pyarrow(pyarrow_item, self.info, self.media_dir)
+                for pyarrow_item in pyarrow_item_list
+            ]
+        return None
+
+    def _embeddings_search(
+        self,
+        limit: int,
+        offset: int,
+        query: dict[str, str],
+    ) -> dict[str, dict[str, pa.Table]]:
+        """Perform item semantic search with embeddings
+
+        Args:
+            limit (int): Items limit
+            offset (int): Items offset
+            query (dict[str, str]): Search query
+
+        Raises:
+            ImportError: Required pixano-inference module could not be imported
+
+        Returns:
+            dict[str, dict[str, pa.Table]]: Search results
+        """
+
+        # Load tables
+        ds_tables = self.open_tables()
+
+        # Create PyArrow items
+        pyarrow_items: dict[str, dict[str, pa.Table]] = defaultdict(dict)
+
+        # Find CLIP embeddings
         if "embeddings" not in self.info.tables:
             return None
-
         for table in self.info.tables["embeddings"]:
             if table.type == "search" and table.source == query["model"]:
-                sem_search_table = ds_tables["embeddings"][table.source]
+                sem_search_table = ds_tables["embeddings"][table.name]
                 sem_search_views = [
                     field_name
                     for field_name, field_type in table.fields.items()
                     if field_type == "vector(512)"
                 ]
-                # Initialize CLIP model
-                try:
-                    # pylint: disable=import-outside-toplevel
-                    from pixano_inference.transformers import CLIP
-                except ImportError as e:
-                    raise ImportError(
-                        "Please install the pixano-inference module to perform semantic search with CLIP"
-                    ) from e
 
-                model = CLIP()
-                model_query = model.semantic_search(query["search"])
+        if query["model"] == "CLIP":
+            # Initialize CLIP model
+            try:
+                # pylint: disable=import-outside-toplevel
+                from pixano_inference.transformers import CLIP
+            except ImportError as e:
+                raise ImportError(
+                    "Please install the pixano-inference module to perform semantic search with CLIP"
+                ) from e
 
-                # Perform semantic search
-                stop = min(offset + limit, self.num_rows)
-                results_table = (
-                    sem_search_table.search(model_query, sem_search_views[0])
-                    .limit(stop)
+            model = CLIP()
+
+        model_query = model.semantic_search(query["search"])
+
+        # Perform semantic search
+        # pylint: disable=unused-variable
+        results_table = (
+            sem_search_table.search(model_query, sem_search_views[0])
+            .limit(min(offset + limit, self.num_rows))
+            .to_arrow()
+        )
+
+        # If more than one view, search on all views and select the best results based on distance
+        if len(sem_search_views) > 1:
+            for view in sem_search_views[1:]:
+                view_results_table = (
+                    sem_search_table.search(model_query, view)
+                    .limit(min(offset + limit, self.num_rows))
                     .to_arrow()
                 )
-
-                # If more than one view, search on all views and select the best results based on distance
-                if len(sem_search_views) > 1:
-                    for view in sem_search_views[1:]:
-                        view_results_table = (
-                            sem_search_table.search(model_query, view)
-                            .limit(stop)
-                            .to_arrow()
-                        )
-                        results_table = duckdb.query(
-                            "SELECT id, results_table._distance as distance_1, view_results_table._distance as distance_2 FROM results_table LEFT JOIN view_results_table USING (id)"
-                        ).to_arrow_table()
-
-                        results_table = duckdb.query(
-                            "SELECT (id), (SELECT Min(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
-                        ).to_arrow_table()
-
-                # Filter results to page
                 results_table = duckdb.query(
-                    f"SELECT id, _distance as distance FROM results_table ORDER BY _distance ASC LIMIT {limit} OFFSET {offset}"
+                    "SELECT id, results_table._distance as distance_1, view_results_table._distance as distance_2 FROM results_table LEFT JOIN view_results_table USING (id)"
                 ).to_arrow_table()
 
-                # Join with main table
-                main_table = ds_tables["main"]["db"].to_lance()
-                pyarrow_items["main"]["db"] = duckdb.query(
-                    "SELECT * FROM results_table LEFT JOIN main_table USING (id) ORDER BY distance ASC"
+                results_table = duckdb.query(
+                    "SELECT (id), (SELECT Min(v) FROM (VALUES (distance_1), (distance_2)) AS value(v)) as _distance FROM results_table"
                 ).to_arrow_table()
 
-                if pyarrow_items["main"]["db"].num_rows > 0:
-                    # Split results
-                    pyarrow_item_list: list[dict[str, dict[str, pa.Table]]] = []
-                    for index in range(pyarrow_items["main"]["db"].num_rows):
-                        pyarrow_item_list.append(defaultdict(dict))
-                        # Main table
-                        pyarrow_item_list[index]["main"]["db"] = pyarrow_items["main"][
-                            "db"
-                        ].take([index])
-                        item_id = pyarrow_item_list[index]["main"]["db"].to_pylist()[0][
-                            "id"
-                        ]
-                        # Media tables
-                        for media_source, media_table in ds_tables["media"].items():
-                            lance_scanner = media_table.to_lance().scanner(
-                                filter=f"id in ('{item_id}')"
-                            )
-                            pyarrow_item_list[index]["media"][
-                                media_source
-                            ] = lance_scanner.to_table()
+        # Filter results to page
+        results_table = duckdb.query(
+            f"SELECT id, _distance as distance FROM results_table ORDER BY _distance ASC LIMIT {limit} OFFSET {offset}"
+        ).to_arrow_table()
 
-                        # Active learning tables
-                        if load_active_learning:
-                            for al_source, al_table in ds_tables[
-                                "active_learning"
-                            ].items():
-                                lance_scanner = al_table.to_lance().scanner(
-                                    filter=f"id in ('{item_id}')"
-                                )
-                                pyarrow_item_list[index]["active_learning"][
-                                    al_source
-                                ] = lance_scanner.to_table()
+        # Join with main table
+        main_table = ds_tables["main"]["db"].to_lance()
+        pyarrow_items["main"]["db"] = duckdb.query(
+            "SELECT * FROM results_table LEFT JOIN main_table USING (id) ORDER BY distance ASC"
+        ).to_arrow_table()
 
-                    return [
-                        DatasetItem.from_pyarrow(
-                            pyarrow_item, self.info, self.media_dir
+        return pyarrow_items
+
+    def _split_items(
+        self,
+        pyarrow_items: dict[str, dict[str, pa.Table]],
+        load_active_learning: bool,
+    ) -> list[dict[str, dict[str, pa.Table]]]:
+        """Split PyArrow tables into list of PyArrow tables
+
+        Args:
+            pyarrow_items (dict[str, dict[str, pa.Table]]): PyArrow tables
+            load_active_learning (bool): Load items active learning info
+
+        Returns:
+            list[dict[str, dict[str, pa.Table]]]: List of PyArrow tables
+        """
+
+        # Load tables
+        ds_tables = self.open_tables()
+
+        # Create list of PyArrow tables
+        pyarrow_item_list: list[dict[str, dict[str, pa.Table]]] = []
+
+        for index in range(pyarrow_items["main"]["db"].num_rows):
+            pyarrow_item_list.append(defaultdict(dict))
+            # Main table
+            pyarrow_item_list[index]["main"]["db"] = pyarrow_items["main"]["db"].take(
+                [index]
+            )
+            item_id = pyarrow_item_list[index]["main"]["db"].to_pylist()[0]["id"]
+
+            # Media tables
+            for media_source, media_table in ds_tables["media"].items():
+                # If media table already created
+                if "media" in pyarrow_items:
+                    pyarrow_item_list[index]["media"][media_source] = (
+                        pa_ds.dataset(pyarrow_items["media"][media_source])
+                        .scanner(filter=pa_ds.field("id") == item_id)
+                        .to_table()
+                    )
+                # Else, retrieve media items individually
+                else:
+                    lance_scanner = media_table.to_lance().scanner(
+                        filter=f"id in ('{item_id}')"
+                    )
+                    pyarrow_item_list[index]["media"][
+                        media_source
+                    ] = lance_scanner.to_table()
+
+            # Active learning tables
+            if load_active_learning:
+                # If active learning table already created
+                if "active_learning" in pyarrow_items:
+                    for al_source in ds_tables["active_learning"].keys():
+                        pyarrow_item_list[index]["active_learning"][al_source] = (
+                            pa_ds.dataset(pyarrow_items["active_learning"][al_source])
+                            .scanner(filter=pa_ds.field("id") == item_id)
+                            .to_table()
                         )
-                        for pyarrow_item in pyarrow_item_list
-                    ]
-                return None
-        return None
+                # Else, retrieve active learning items individually
+                else:
+                    for al_source, al_table in ds_tables["active_learning"].items():
+                        lance_scanner = al_table.to_lance().scanner(
+                            filter=f"id in ('{item_id}')"
+                        )
+                        pyarrow_item_list[index]["active_learning"][
+                            al_source
+                        ] = lance_scanner.to_table()
+
+        return pyarrow_item_list
 
     def load_item(
         self,
@@ -474,7 +554,7 @@ class Dataset(BaseModel):
         # Update info in case of change
         self.info = self.load_info()
 
-        # Load dataset
+        # Load dataset tables
         ds_tables = self.open_tables()
 
         # Save item label if it exists
@@ -510,53 +590,20 @@ class Dataset(BaseModel):
             # Clear change history to prevent dataset from becoming too large
             ds_tables["main"]["db"].to_lance().cleanup_old_versions()
 
-        # Get current item objects
-        current_obj_tables = {}
-        for source, table in ds_tables["objects"].items():
-            media_scanner = table.to_lance().scanner(filter=f"item_id in ('{item.id}')")
-            current_obj_tables[source] = media_scanner.to_table().to_pylist()
-
-        # Save or update new item objects
+        # Add or update item objects
         for obj in item.objects.values():
-            source = obj.source_id
-
-            # If objects table exists
-            if source in ds_tables["objects"].keys():
-                # Remove keys not in schema
-                pyarrow_obj = obj.to_pyarrow()
-                for key in list(pyarrow_obj):
-                    if key not in ds_tables["objects"][source].schema.names:
-                        pyarrow_obj.pop(key)
-
-                # Look for existing object
-                scanner = (
-                    ds_tables["objects"][source]
-                    .to_lance()
-                    .scanner(filter=f"id in ('{obj.id}')")
-                )
-                existing_obj = scanner.to_table()
-
-                # If object exists
-                if existing_obj.num_rows > 0:
-                    ds_tables["objects"][source].update(
-                        f"id in ('{obj.id}')", pyarrow_obj
-                    )
-
-                # If object does not exists
-                else:
-                    table_obj = pa.Table.from_pylist(
-                        [pyarrow_obj],
-                        schema=ds_tables["objects"][source].schema,
-                    )
-                    ds_tables["objects"][source].add(table_obj)
-
-                # Clear change history to prevent dataset from becoming too large
-                ds_tables["objects"][source].to_lance().cleanup_old_versions()
-
-            # If objects table does not exist
-            else:
-                if source == "Pixano Annotator":
-                    annnotator_fields = {
+            table_found = False
+            for table in self.info.tables["objects"]:
+                if table.source == obj.source_id:
+                    table_found = True
+                    item.add_or_update_object(ds_tables["objects"][table.name], obj)
+            # If first object from Annotator
+            if not table_found and obj.source_id == "Pixano Annotator":
+                # Create Annotator table
+                table = DatasetTable(
+                    name="obj_annotator",
+                    source="Pixano Annotator",
+                    fields={
                         "id": "str",
                         "item_id": "str",
                         "view_id": "str",
@@ -564,57 +611,25 @@ class Dataset(BaseModel):
                         "mask": "compressedrle",
                         "category_id": "int",
                         "category_name": "str",
-                    }
-                    annotator_table = {
-                        "name": "obj_annotator",
-                        "source": source,
-                        "fields": annnotator_fields,
-                    }
+                    },
+                )
+                self.create_table(
+                    table,
+                    "objects",
+                )
+                # Reload dataset tables
+                ds_tables = self.open_tables()
+                # Add object
+                item.add_or_update_object(ds_tables["objects"][table.name], obj)
 
-                    # Create new objects table
-                    ds = self.connect()
-                    # Disable warning for create_table() "mode" argument
-                    # pylint: disable=unexpected-keyword-arg
-                    ds_tables["objects"][source] = ds.create_table(
-                        "obj_annotator",
-                        schema=Fields(annnotator_fields).to_schema(),
-                        mode="overwrite",
-                    )
-
-                    # Add new objects table to DatasetInfo
-                    if "objects" in self.info.tables:
-                        self.info.tables["objects"].append(annotator_table)
-                    else:
-                        self.info.tables["objects"] = [annotator_table]
-                    self.save_info()
-
-                    # Remove keys not in schema
-                    pyarrow_obj = obj.to_pyarrow()
-                    for key in list(pyarrow_obj):
-                        if key not in ds_tables["objects"][source].schema.names:
-                            pyarrow_obj.pop(key)
-
-                    # Add object
-                    table_obj = pa.Table.from_pylist(
-                        [pyarrow_obj],
-                        schema=ds_tables["objects"][source].schema,
-                    )
-                    ds_tables["objects"][source].add(table_obj)
-
-                    # Clear change history to prevent dataset from becoming too large
-                    ds_tables["objects"][source].to_lance().cleanup_old_versions()
+        # Get current item objects
+        current_obj_tables = {}
+        for table_name, table in ds_tables["objects"].items():
+            media_scanner = table.to_lance().scanner(filter=f"item_id in ('{item.id}')")
+            current_obj_tables[table_name] = media_scanner.to_table().to_pylist()
 
         # Delete removed item objects
-        for obj_source, current_obj_table in current_obj_tables.items():
-            for current_obj in current_obj_table:
-                # If object has been deleted
-                if not any(
-                    obj_id == current_obj["id"] for obj_id in item.objects.keys()
-                ):
-                    # Remove object from table
-                    ds_tables["objects"][obj_source].delete(
-                        f"id in ('{current_obj['id']}')"
-                    )
+        item.delete_objects(ds_tables, current_obj_tables)
 
     @staticmethod
     def find(

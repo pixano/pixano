@@ -152,7 +152,6 @@ class DatasetTestCase(unittest.TestCase):
         ds = self.dataset.connect()
 
         self.assertIsInstance(ds, lancedb.db.DBConnection)
-        # Disable warning for table_names() "no-value-for-parameter"
         # pylint: disable=no-value-for-parameter
         self.assertIn("db", ds.table_names())
         self.assertIn("image", ds.table_names())
@@ -192,7 +191,9 @@ class DatasetTestCase(unittest.TestCase):
 
     def test_search_items(self):
         # Without embeddings
-        items = self.dataset.search_items(limit=1, offset=0, query={"query": "bear"})
+        items = self.dataset.search_items(
+            limit=1, offset=0, query={"model": "CLIP", "query": "bear"}
+        )
 
         self.assertEqual(items, None)
 
