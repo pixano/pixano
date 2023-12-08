@@ -47,25 +47,26 @@ export const toggleObjectDisplayControl = (
   object: ItemObject,
   displayControlProperty: keyof DisplayControl,
   properties: ("bbox" | "mask")[],
+  value: boolean,
 ) => {
   if (properties.includes("bbox")) {
     object.bbox.displayControl = {
       ...object.bbox.displayControl,
-      [displayControlProperty]: !object.bbox.displayControl?.[displayControlProperty],
+      [displayControlProperty]: value,
     };
   }
   if (properties.includes("mask")) {
     if (object.mask) {
       object.mask.displayControl = {
         ...object.mask.displayControl,
-        [displayControlProperty]: !object.displayControl?.[displayControlProperty],
+        [displayControlProperty]: value,
       };
     }
   }
   if (properties.includes("bbox") && properties.includes("mask")) {
     object.displayControl = {
       ...object.displayControl,
-      [displayControlProperty]: !object.displayControl?.[displayControlProperty],
+      [displayControlProperty]: value,
     };
   }
   console.log({ object });

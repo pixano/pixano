@@ -13,15 +13,22 @@
    *
    * http://www.cecill.info
    */
-  import { Eye, Filter, Search } from "lucide-svelte";
+  import { Eye, Filter, Search, EyeOff } from "lucide-svelte";
 
   import { Input } from "@pixano/core/src/lib/components/ui/input";
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+
+  export let showAllObjects: boolean = true;
+  let tooltipContent: string = showAllObjects ? "show all" : "hide all";
 </script>
 
 <div class="flex mt-4 items-center gap-3">
-  <IconButton tooltipContent="see more">
-    <Eye class="h-4" />
+  <IconButton {tooltipContent} on:click>
+    {#if showAllObjects}
+      <EyeOff class="h-4" />
+    {:else}
+      <Eye class="h-4" />
+    {/if}
   </IconButton>
   <IconButton>
     <Filter class="h-4" />

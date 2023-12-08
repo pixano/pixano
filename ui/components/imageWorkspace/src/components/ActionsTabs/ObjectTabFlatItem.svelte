@@ -29,12 +29,13 @@
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
+    value: boolean,
     properties: ("bbox" | "mask")[] = ["bbox", "mask"],
   ) => {
     itemObjects.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object.id === itemObject.id) {
-          return toggleObjectDisplayControl(object, displayControlProperty, properties);
+          return toggleObjectDisplayControl(object, displayControlProperty, properties, value);
         }
         return object;
       }),
@@ -55,11 +56,11 @@
     })
     .filter(Boolean) as ObjectProperty[];
 
-  $: isLocked = itemObject.displayControl?.locked;
-  $: isEditing = itemObject.displayControl?.editing;
+  $: isLocked = itemObject.displayControl?.locked || false;
+  $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
-  $: showBox = !itemObject.bbox.displayControl?.hidden;
-  $: showMask = !itemObject.mask?.displayControl?.hidden;
+  $: boxIsVisible = !itemObject.bbox.displayControl?.hidden;
+  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 </script>
 
 <div
@@ -68,7 +69,7 @@
   })}
 >
   <div class="flex items-center flex-auto max-w-[50%]">
-    <IconButton on:click={() => handleIconClick("hidden")}>
+    <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
       {#if isVisible}
         <Eye class="h-4" />
       {:else}
@@ -79,10 +80,10 @@
     <span class="truncate w-max flex-auto">{itemObject.id}</span>
   </div>
   <div class="flex items-center">
-    <IconButton selected={isEditing} on:click={() => handleIconClick("editing")}
+    <IconButton selected={isEditing} on:click={() => handleIconClick("editing", isEditing)}
       ><Pencil class="h-4" /></IconButton
     >
-    <IconButton selected={isLocked} on:click={() => handleIconClick("locked")}
+    <IconButton selected={isLocked} on:click={() => handleIconClick("locked", isLocked)}
       ><Lock class="h-4" /></IconButton
     >
     <IconButton><Trash2 class="h-4" /></IconButton>
@@ -100,8 +101,8 @@
           {#if itemObject.bbox}
             <div>
               <Checkbox
-                handleClick={() => handleIconClick("hidden", ["bbox"])}
-                bind:checked={showBox}
+                handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                bind:checked={boxIsVisible}
               />
               <span class="font-medium">Box</span>
             </div>
@@ -109,8 +110,8 @@
           {#if itemObject.mask}
             <div>
               <Checkbox
-                bind:checked={showMask}
-                handleClick={() => handleIconClick("hidden", ["mask"])}
+                bind:checked={maskIsVisible}
+                handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
               /> <span class="font-medium">Mask</span>
             </div>
           {/if}

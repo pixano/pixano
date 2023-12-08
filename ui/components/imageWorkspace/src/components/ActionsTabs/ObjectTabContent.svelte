@@ -22,13 +22,34 @@
   import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
   import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
   import { itemObjects } from "../../lib/stores/stores";
+  import { GROUND_TRUTH } from "../../lib/constants";
+  import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
   let value = "flat";
   let allItemObjects: ItemObject[] = [];
+  let showAllGroundTruthObjects = true;
 
   itemObjects.subscribe((value) => {
     allItemObjects = value;
   });
+
+  $: itemObjects.update((items) => {
+    return items.map((item) => {
+      if (item.source_id === GROUND_TRUTH) {
+        return toggleObjectDisplayControl(
+          item,
+          "hidden",
+          ["bbox", "mask"],
+          showAllGroundTruthObjects,
+        );
+      }
+      return item;
+    });
+  });
+
+  const handleVisibilityIconClick = () => {
+    showAllGroundTruthObjects = !showAllGroundTruthObjects;
+  };
 </script>
 
 <div class="p-4">
@@ -51,9 +72,14 @@
   {#if value === "flat"}
     <div>
       <h3 class="uppercase font-extralight">Ground truth</h3>
-      <ActionsTabsSearchInput />
+      <ActionsTabsSearchInput
+        on:click={handleVisibilityIconClick}
+        bind:showAllObjects={showAllGroundTruthObjects}
+      />
       {#each allItemObjects as itemObject}
-        <ObjectTabFlatItem bind:itemObject />
+        {#if itemObject.source_id === GROUND_TRUTH}
+          <ObjectTabFlatItem bind:itemObject />
+        {/if}
       {/each}
       <h3 class="uppercase font-extralight mt-8">Model run</h3>
       <ActionsTabsSearchInput />

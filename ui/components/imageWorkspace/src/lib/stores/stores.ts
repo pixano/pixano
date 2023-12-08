@@ -15,10 +15,16 @@
 
 // Imports
 import { writable, derived } from "svelte/store";
-import type { Shape, ObjectContent, InteractiveImageSegmenter, ItemObject } from "@pixano/core";
+import type {
+  Shape,
+  ObjectContent,
+  InteractiveImageSegmenter,
+  ItemObject,
+  Mask,
+} from "@pixano/core";
 
 import { allObjects } from "../mock";
-import { mapObjectToBBox } from "../api/objectsApi";
+import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
 
 // Exports
 export const newShape = writable<Shape | null>();
@@ -28,6 +34,11 @@ export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 
 export const itemBboxes = derived(itemObjects, ($itemObjects) =>
   $itemObjects.map((obj) => mapObjectToBBox(obj)),
+);
+
+export const itemMasks = derived(
+  itemObjects,
+  ($itemObjects) => $itemObjects.map((obj) => mapObjectToMasks(obj)).filter(Boolean) as Mask[],
 );
 
 // add mock objects
