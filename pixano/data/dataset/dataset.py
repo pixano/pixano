@@ -525,7 +525,7 @@ class Dataset(BaseModel):
 
         # Load PyArrow item from segmentation embeddings tables
         found_embeddings = not load_embeddings
-        if load_embeddings:
+        if load_embeddings and "embeddings" in self.info.tables:
             for table in self.info.tables["embeddings"]:
                 if table.source.lower() in model_id.lower():
                     found_embeddings = True
