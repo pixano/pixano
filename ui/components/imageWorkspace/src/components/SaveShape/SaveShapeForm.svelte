@@ -29,6 +29,7 @@
     objectValidationSchema,
   } from "../../lib/settings/objectSetting";
   import SaveShapeTextInput from "./SaveShapeTextInput.svelte";
+  import { GROUND_TRUTH } from "../../lib/constants";
 
   let shape: Shape;
   let isFormValid: boolean = false;
@@ -49,7 +50,7 @@
       {
         id: `object${oldObjects.length + 1}`,
         item_id: shape.viewId, // TODO100
-        source_id: shape.viewId, // TODO100
+        source_id: GROUND_TRUTH, // TODO100
         view_id: shape.viewId,
         bbox: {
           coords: [

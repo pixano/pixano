@@ -26,7 +26,6 @@ import type {
 
 import { allObjects } from "../mock";
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
-import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 
 // Exports
 export const newShape = writable<Shape | null>();
@@ -37,19 +36,15 @@ export const colorRange = writable<string[]>(["0", "10"]);
 
 export const itemBboxes = derived(itemObjects, ($itemObjects) =>
   $itemObjects.reduce((acc, object) => {
-    if (object.source_id === GROUND_TRUTH || object.source_id === MODEL_RUN) {
-      acc = [...acc, mapObjectToBBox(object)];
-    }
+    acc = [...acc, mapObjectToBBox(object)];
     return acc;
   }, [] as BBox[]),
 );
 
 export const itemMasks = derived(itemObjects, ($itemObjects) =>
   $itemObjects.reduce((acc, object) => {
-    if (object.source_id === GROUND_TRUTH || object.source_id === MODEL_RUN) {
-      const mask = mapObjectToMasks(object);
-      acc = [...acc, ...(mask ? [mask] : [])];
-    }
+    const mask = mapObjectToMasks(object);
+    acc = [...acc, ...(mask ? [mask] : [])];
     return acc;
   }, [] as Mask[]),
 );

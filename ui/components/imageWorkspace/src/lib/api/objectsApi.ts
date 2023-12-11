@@ -1,6 +1,9 @@
 import type { ItemObject, BBox, DisplayControl, Mask } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
 
+import { GROUND_TRUTH, MODEL_RUN } from "../constants";
+import type { ObjectsSortedByModelType } from "../types/objects";
+
 export const mapObjectToBBox = (obj: ItemObject) => {
   const imageHeight = 426; // TODO100 imageHeight
   const imageWidth = 640; // TODO100
@@ -71,3 +74,38 @@ export const toggleObjectDisplayControl = (
   }
   return object;
 };
+
+export const sortObjectsByModel = (objects: ItemObject[]) =>
+  objects.reduce(
+    (acc, object) => {
+      if (object.source_id === GROUND_TRUTH) {
+        acc[GROUND_TRUTH] = [...acc[GROUND_TRUTH], object];
+      } else {
+        const modelAlreadyExists = acc[MODEL_RUN].some(
+          (model) => model.modelName === object.source_id,
+        );
+        if (!modelAlreadyExists) {
+          acc[MODEL_RUN] = [
+            ...acc[MODEL_RUN],
+            {
+              modelName: object.source_id,
+              objects: [object],
+            },
+          ];
+        }
+        if (modelAlreadyExists) {
+          acc[MODEL_RUN] = acc[MODEL_RUN].map((model) => {
+            if (model.modelName === object.source_id) {
+              return {
+                ...model,
+                objects: [...model.objects, object],
+              };
+            }
+            return model;
+          });
+        }
+      }
+      return acc;
+    },
+    { [GROUND_TRUTH]: [], [MODEL_RUN]: [] } as ObjectsSortedByModelType,
+  );

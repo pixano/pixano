@@ -13,86 +13,45 @@
    *
    * http://www.cecill.info
    */
-  import { SlidersHorizontal } from "lucide-svelte";
-  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
-  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import { utils, type ItemObject } from "@pixano/core";
+
+  import { utils } from "@pixano/core";
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
-  import ObjectTabLabelItem from "./ObjectTabLabelsItem.svelte";
-  import ActionsTabsSearchInput from "./ActionsTabsSearchInput.svelte";
+  import ActionsTabsSearchInput from "./ObjectTabModelContent.svelte";
   import { itemObjects, colorRange } from "../../lib/stores/stores";
-  import { GROUND_TRUTH } from "../../lib/constants";
-  import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { sortObjectsByModel } from "../../lib/api/objectsApi";
+  import type { ObjectsSortedByModelType } from "../../lib/types/objects";
 
-  let value = "flat";
-  let allItemObjects: ItemObject[] = [];
-  let hideAllGroundTruthObjects = false;
+  let allItemsSortedByModel: ObjectsSortedByModelType = {
+    [GROUND_TRUTH]: [],
+    [MODEL_RUN]: [],
+  };
 
   itemObjects.subscribe((value) => {
-    allItemObjects = value;
+    allItemsSortedByModel = sortObjectsByModel(value);
   });
-
-  $: itemObjects.update((items) => {
-    return items.map((item) => {
-      if (item.source_id === GROUND_TRUTH) {
-        return toggleObjectDisplayControl(
-          item,
-          "hidden",
-          ["bbox", "mask"],
-          hideAllGroundTruthObjects,
-        );
-      }
-      return item;
-    });
-  });
-
-  const handleVisibilityIconClick = () => {
-    hideAllGroundTruthObjects = !hideAllGroundTruthObjects;
-  };
 
   let colorRangeValue: string[] = [];
   colorRange.subscribe((value) => (colorRangeValue = value));
   let colorScale = utils.ordinalColorScale(colorRangeValue);
 </script>
 
-<div class="p-4">
-  <div class="flex justify-between items-center mb-4">
-    <div class="flex gap-2">
-      <span class="flex items-center">view</span>
-      <Combobox
-        placeholder="Select a view"
-        bind:value
-        listItems={[
-          { value: "flat", label: "flat" },
-          { value: "labels", label: "labels" },
-        ]}
-      />
-    </div>
-    <IconButton>
-      <SlidersHorizontal class="h-4" />
-    </IconButton>
-  </div>
-  {#if value === "flat"}
-    <div>
-      <h3 class="uppercase font-extralight">Ground truth</h3>
-      <ActionsTabsSearchInput
-        on:click={handleVisibilityIconClick}
-        bind:hideAllObjects={hideAllGroundTruthObjects}
-      />
-      {#each allItemObjects as itemObject}
-        {#if itemObject.source_id === GROUND_TRUTH}
-          <ObjectTabFlatItem bind:itemObject {colorScale} />
-        {/if}
+<div class="p-2">
+  <div>
+    <ActionsTabsSearchInput sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
+      {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
+        <ObjectTabFlatItem bind:itemObject {colorScale} />
       {/each}
-      <h3 class="uppercase font-extralight mt-8">Model run</h3>
-      <ActionsTabsSearchInput />
-    </div>
-  {/if}
-  {#if value === "labels"}
-    <ActionsTabsSearchInput />
-    <ObjectTabLabelItem open />
-    <ObjectTabLabelItem name="Girl" />
-    <ObjectTabLabelItem name="Goat" />
-  {/if}
+    </ActionsTabsSearchInput>
+  </div>
+  <ActionsTabsSearchInput sectionTitle={"Model run"} modelName={MODEL_RUN}>
+    {#each allItemsSortedByModel[MODEL_RUN] as model}
+      <ActionsTabsSearchInput sectionTitle={model.modelName} modelName={model.modelName}>
+        {#each model.objects as itemObject}
+          <ObjectTabFlatItem bind:itemObject {colorScale} />
+        {/each}
+      </ActionsTabsSearchInput>
+    {/each}
+  </ActionsTabsSearchInput>
 </div>
