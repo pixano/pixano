@@ -8,26 +8,26 @@ export type ObjectParameters = {
 };
 
 // OBJECTS PROPERTIES
-
-export type TextProperty = {
+export type TextFeature = {
   type: "text";
   multiple: boolean;
   value: string[];
 };
 
-type NumberProperty = {
+type NumberFeature = {
   type: "number";
   value: number;
 };
 
-type CheckboxProperty = {
+type CheckboxFeature = {
   type: "checkbox";
   value: boolean;
 };
 
-export type ObjectProperty = (TextProperty | NumberProperty | CheckboxProperty) & {
+export type ObjectFeature = (TextFeature | NumberFeature | CheckboxFeature) & {
   label: string;
   required: boolean;
+  name: string;
 };
 
 // SHAPES: shapes drawn on the image not yet saved as objects

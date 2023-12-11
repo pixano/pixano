@@ -327,6 +327,10 @@
             //update color
             const style = new Option().style;
             style.color = colorScale(bboxes[i].catId.toString());
+            const bboxText = bboxGroup.findOne(`#text${bboxes[i].id}`);
+            if (bboxText) {
+              bboxText.setAttr("text", bboxes[i].tooltip);
+            }
             for (const bboxElement of bboxKonva.children) {
               if (bboxElement instanceof Konva.Rect) {
                 bboxElement.stroke(style.color);

@@ -17,11 +17,12 @@
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import { cn } from "@pixano/core/src/lib/utils";
-  import type { DisplayControl, ItemObject, ObjectProperty } from "@pixano/core";
+  import type { DisplayControl, ItemObject } from "@pixano/core";
 
   import { itemObjects } from "../../lib/stores/stores";
-  import { objectSetup } from "../../lib/settings/objectSetting";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+
+  import ItemFeatures from "./ObjectTabFlatItemFeatures.svelte";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
@@ -57,20 +58,6 @@
   const deleteObject = () => {
     itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
   };
-
-  $: properties = objectSetup
-    .map((property) => {
-      const value = itemObject.features[property.name]?.value;
-      if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
-        return;
-      }
-      return {
-        ...property,
-        label: property.label,
-        value: typeof value === "string" ? [value] : value,
-      };
-    })
-    .filter(Boolean) as ObjectProperty[];
 
   $: isLocked = itemObject.displayControl?.locked || false;
   $: isEditing = itemObject.displayControl?.editing || false;
@@ -137,31 +124,7 @@
         </div>
       </div>
       <div>
-        {#each properties as property}
-          {#if !property.value}
-            <div>erreur. Merci de vous adresser aux administrateurs</div>
-          {/if}
-          <p class="font-medium pb-1">{property.label}</p>
-          {#if property.type === "checkbox"}
-            <Checkbox checked={property.value} disabled />
-          {/if}
-          {#if property.type === "text"}
-            <div class="flex justify-start items-center gap-4">
-              {#each property.value as value}
-                <p
-                  class=" font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3"
-                >
-                  {value}
-                </p>
-              {/each}
-            </div>
-          {/if}
-          {#if property.type === "number"}
-            <span class="rounded-full bg-primary-light h-5 w-5 flex justify-center items-center">
-              {property.value}
-            </span>
-          {/if}
-        {/each}
+        <ItemFeatures {itemObject} {isEditing} />
       </div>
     </div>
   </div>
