@@ -28,6 +28,7 @@
     itemBboxes,
     itemMasks,
     interactiveSegmenterModel,
+    itemMetas,
   } from "./lib/stores/stores";
   import "./index.css";
 
@@ -45,7 +46,8 @@
   $: itemMasks.subscribe((masks) => (allMasks = masks));
   $: console.log({ selectedDataset, selectedItem, allBBoxes });
 
-  $: itemObjects.set(Object.values(selectedItem.objects).flat());
+  $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
+  $: itemMetas.set({ features: selectedItem.features, views: selectedItem.views });
 
   const sam = new SAM();
 

@@ -20,6 +20,7 @@ import type {
   ObjectContent,
   InteractiveImageSegmenter,
   ItemObject,
+  DatasetItem,
   Mask,
   BBox,
 } from "@pixano/core";
@@ -33,6 +34,10 @@ export const objects = writable<ObjectContent[]>([]);
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const colorRange = writable<string[]>(["0", "10"]);
+export const itemMetas = writable<{
+  features: DatasetItem["features"];
+  views: DatasetItem["views"];
+}>();
 
 export const itemBboxes = derived(itemObjects, ($itemObjects) =>
   $itemObjects.reduce((acc, object) => {

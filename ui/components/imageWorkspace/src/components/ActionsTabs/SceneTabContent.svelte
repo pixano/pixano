@@ -13,84 +13,65 @@
    *
    * http://www.cecill.info
    */
+
+  import { itemMetas } from "../../lib/stores/stores";
+  import type { ItemFeature } from "@pixano/core";
+
+  type ImageMeta = {
+    width: number;
+    height: number;
+    format: string;
+    id: string;
+  };
+
+  let features: ItemFeature[];
+  let imageMeta: ImageMeta[] = [];
+
+  itemMetas.subscribe((metas) => {
+    imageMeta = Object.values(metas.views).map((view) => ({
+      width: view.features.width.value as number,
+      height: view.features.height.value as number,
+      format: view.uri.split(".").at(-1) as string,
+      id: view.id,
+    }));
+    features = Object.values(metas.features).map((feature) => ({
+      ...feature,
+      name: feature.name.replace(/_/g, " "),
+    }));
+  });
 </script>
 
-<div class="border-b-2 border-b-gray-500 p-4">
-  <h3 class="uppercase font-extralight">context</h3>
-  <p class="font-extralight pt-4 pb-8">
-    Lorem ipsum dolor sit amet consectetur adipisicing elit. Provident, sit delectus!
-  </p>
-</div>
-<div class="border-b-2 border-b-gray-500 p-4">
-  <h3 class="uppercase font-extralight">Annotations</h3>
+<div class="border-b-2 border-b-gray-500 p-4 mb-4">
+  <h3 class="uppercase font-extralight">Features</h3>
   <div class="mt-4 pb-8">
-    <p class="mb-2">
-      Labels
-      <span
-        class="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-extralight text-white bg-primary rounded-full"
-      >
-        3</span
-      >
-    </p>
-    <div class="flex gap-1 flex-wrap">
-      <div
-        class="flex items-center rounded-2xl bg-primary-light py-1 pr-1 px-4 first-letter:uppercase w-fit"
-      >
-        <p class="font-extralight first-letter:uppercase">rose</p>
-        <span
-          class="ml-4 inline-flex items-center justify-center w-5 h-5 text-xs font-extralight text-primary bg-white rounded-full"
+    {#each features as feature}
+      <p class="mb-1 mt-3">{feature.name}</p>
+      <div class="flex gap-1 flex-wrap">
+        <div
+          class="flex items-center rounded-2xl bg-primary-light py-1 px-4 first-letter:uppercase w-fit"
         >
-          2</span
-        >
+          <p class="font-extralight first-letter:uppercase">{feature.value}</p>
+        </div>
       </div>
-      <div
-        class="flex items-center rounded-2xl bg-primary-light py-1 pr-1 px-4 first-letter:uppercase w-fit"
-      >
-        <p class="font-extralight first-letter:uppercase">Sheep</p>
-        <span
-          class="ml-4 inline-flex items-center justify-center w-5 h-5 text-xs font-extralight text-primary bg-white rounded-full"
-        >
-          3</span
-        >
+    {/each}
+  </div>
+</div>
+{#each imageMeta as meta}
+  <div class="p-4">
+    <h3 class="uppercase font-extralight">File {meta.id}</h3>
+    <div class="font-extralight mt-4 pb-4">
+      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
+        <p class="font-light first-letter:uppercase">Width</p>
+        <p>{meta.width}</p>
+      </div>
+      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
+        <p class="font-light first-letter:uppercase">Height</p>
+        <p>{meta.height}</p>
+      </div>
+      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
+        <p class="font-light first-letter:uppercase">Format</p>
+        <p>{meta.format}</p>
       </div>
     </div>
   </div>
-</div>
-<div class="border-b-2 border-b-gray-500 p-4">
-  <h3 class="uppercase font-extralight">Properties</h3>
-  <div class="font-extralight mt-4 pb-8">
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">color</p>
-      <p>RGB</p>
-    </div>
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">IR</p>
-      <p>00</p>
-    </div>
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">Depth</p>
-      <p>00</p>
-    </div>
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">Spectral</p>
-      <p>00</p>
-    </div>
-  </div>
-</div>
-<div class=" p-4">
-  <h3 class="uppercase font-extralight">File</h3>
-  <div class="font-extralight mt-4 pb-8">
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">Created</p>
-      <p>21/11/2023</p>
-    </div>
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">Modified</p>
-      <p>21/11/2023</p>
-    </div>
-    <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-      <p class="font-light first-letter:uppercase">By</p>
-      <p>John Doe</p>
-    </div>
-  </div>
-</div>
+{/each}

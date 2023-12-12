@@ -33,7 +33,7 @@
   {#if shape}
     <SaveShapeForm />
   {:else}
-    <Tabs.Root value="objects">
+    <Tabs.Root value="scene">
       <Tabs.List class="h-[48px]">
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
         <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
