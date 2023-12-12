@@ -17,32 +17,17 @@
   import { CheckCheckIcon } from "lucide-svelte";
 
   import { Input } from "@pixano/core/src/lib/components/ui/input";
-  import type { ObjectFeature, ItemObject } from "@pixano/core";
+  import type { TextInputItemFeature } from "@pixano/core";
 
-  import { itemObjects } from "../../lib/stores/stores";
-
-  export let itemObjectId: ItemObject["id"];
-  export let textFeature: ObjectFeature & { type: "text" };
+  export let textFeature: TextInputItemFeature;
   export let isEditing: boolean;
+  export let saveInputChange: (value: string, propertyName: string) => void;
 
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((object) => {
-        if (object.id === itemObjectId) {
-          object.features = {
-            ...object.features,
-            [propertyName]: {
-              ...object.features[propertyName],
-              value,
-            },
-          };
-        }
-        isSaved = true;
-        return object;
-      }),
-    );
+    saveInputChange(value, propertyName);
+    isSaved = true;
   };
 </script>
 

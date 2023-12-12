@@ -19,7 +19,8 @@
 
   import { objectSetup } from "../../lib/settings/objectSetting";
 
-  import FeatureTextInput from "./ObjectTabFlatItemFeatureInput.svelte";
+  import FeatureTextInput from "./ActionsTabFeatureInput.svelte";
+  import { itemObjects } from "../../lib/stores/stores";
 
   export let itemObject: ItemObject;
   export let isEditing: boolean;
@@ -38,6 +39,23 @@
       };
     })
     .filter(Boolean) as ObjectFeature[];
+
+  const saveInputChange = (value: string, propertyName: string, itemObjectId: string) => {
+    itemObjects.update((oldObjects) =>
+      oldObjects.map((object) => {
+        if (object.id === itemObjectId) {
+          object.features = {
+            ...object.features,
+            [propertyName]: {
+              ...object.features[propertyName],
+              value,
+            },
+          };
+        }
+        return object;
+      }),
+    );
+  };
 </script>
 
 {#each features as feature}
@@ -49,7 +67,11 @@
     <Checkbox checked={feature.value} disabled />
   {/if}
   {#if feature.type === "text"}
-    <FeatureTextInput itemObjectId={itemObject.id} textFeature={feature} {isEditing} />
+    <FeatureTextInput
+      saveInputChange={(value, name) => saveInputChange(value, name, itemObject.id)}
+      textFeature={feature}
+      {isEditing}
+    />
   {/if}
   {#if feature.type === "number"}
     <span class="rounded-full bg-primary-light h-5 w-5 flex justify-center items-center">

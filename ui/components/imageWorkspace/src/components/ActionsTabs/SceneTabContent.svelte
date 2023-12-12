@@ -14,8 +14,13 @@
    * http://www.cecill.info
    */
 
+  import { Pencil } from "lucide-svelte";
+
+  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+  import type { TextInputItemFeature } from "@pixano/core";
+
   import { itemMetas } from "../../lib/stores/stores";
-  import type { ItemFeature } from "@pixano/core";
+  import FeatureInput from "./ActionsTabFeatureInput.svelte";
 
   type ImageMeta = {
     width: number;
@@ -24,8 +29,9 @@
     id: string;
   };
 
-  let features: ItemFeature[];
+  let features: TextInputItemFeature[];
   let imageMeta: ImageMeta[] = [];
+  let isEditing: boolean = false;
 
   itemMetas.subscribe((metas) => {
     imageMeta = Object.values(metas.views).map((view) => ({
@@ -34,25 +40,48 @@
       format: view.uri.split(".").at(-1) as string,
       id: view.id,
     }));
-    features = Object.values(metas.features).map((feature) => ({
-      ...feature,
-      name: feature.name.replace(/_/g, " "),
-    }));
+    features = Object.values(metas.features).map((feature) => {
+      let value: string =
+        typeof feature.value === "object" ? feature.value.name : feature.value.toString();
+      return {
+        value: [value],
+        name: feature.name,
+      };
+    });
   });
+
+  const handleEditIconClick = () => {
+    isEditing = !isEditing;
+  };
+
+  const handleTextInputChange = (value: string, propertyName: string) => {
+    itemMetas.update((oldMetas) => {
+      const newMetas = { ...oldMetas };
+      newMetas.features = {
+        ...newMetas.features,
+        [propertyName]: {
+          ...newMetas.features[propertyName],
+          value,
+        },
+      };
+
+      return newMetas;
+    });
+  };
 </script>
 
 <div class="border-b-2 border-b-gray-500 p-4 mb-4">
-  <h3 class="uppercase font-extralight">Features</h3>
+  <h3 class="uppercase font-extralight">
+    <span class="mr-4">Features</span>
+    <IconButton selected={isEditing} on:click={handleEditIconClick}
+      ><Pencil class="h-4" /></IconButton
+    >
+  </h3>
+
   <div class="mt-4 pb-8">
     {#each features as feature}
-      <p class="mb-1 mt-3">{feature.name}</p>
-      <div class="flex gap-1 flex-wrap">
-        <div
-          class="flex items-center rounded-2xl bg-primary-light py-1 px-4 first-letter:uppercase w-fit"
-        >
-          <p class="font-extralight first-letter:uppercase">{feature.value}</p>
-        </div>
-      </div>
+      <p class="mb-1 mt-3">{feature.name.replace(/_/g, " ")}</p>
+      <FeatureInput {isEditing} textFeature={feature} saveInputChange={handleTextInputChange} />
     {/each}
   </div>
 </div>
