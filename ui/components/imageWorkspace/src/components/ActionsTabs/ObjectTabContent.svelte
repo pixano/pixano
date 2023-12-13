@@ -18,7 +18,7 @@
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ActionsTabsSearchInput from "./ObjectTabModelContent.svelte";
-  import { itemObjects, colorRange } from "../../lib/stores/stores";
+  import { itemObjects } from "../../lib/stores/stores";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
   import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
@@ -27,14 +27,14 @@
     [GROUND_TRUTH]: [],
     [MODEL_RUN]: [],
   };
+  let allIds: string[] = [];
 
   itemObjects.subscribe((value) => {
+    allIds = value.map((item) => item.id);
     allItemsSortedByModel = sortObjectsByModel(value);
   });
 
-  let colorRangeValue: string[] = [];
-  colorRange.subscribe((value) => (colorRangeValue = value));
-  let colorScale = utils.ordinalColorScale(colorRangeValue);
+  let colorScale = utils.ordinalColorScale(allIds);
 </script>
 
 <div class="p-2">

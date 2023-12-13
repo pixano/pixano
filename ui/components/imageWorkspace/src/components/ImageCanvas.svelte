@@ -16,10 +16,9 @@
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-
   import type { BBox, DatasetItem, Mask, SelectionTool } from "@pixano/core";
 
-  import { newShape, colorRange } from "../lib/stores/stores";
+  import { newShape, itemObjects } from "../lib/stores/stores";
 
   export let selectedItem: DatasetItem;
   export let masks: Array<Mask> = [];
@@ -29,15 +28,17 @@
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  let colorRangeValue: string[] = [];
+  let allIds: string[] = [];
 
-  colorRange.subscribe((value) => (colorRangeValue = value));
+  itemObjects.subscribe((value) => {
+    allIds = value.map((item) => item.id);
+  });
 </script>
 
 <div class="flex-auto max-w-[70%]">
   <Canvas2D
     {selectedItem}
-    colorRange={colorRangeValue}
+    colorRange={allIds}
     bind:masks
     bind:bboxes
     {embeddings}

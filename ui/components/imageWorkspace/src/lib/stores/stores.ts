@@ -30,7 +30,6 @@ import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
 export const newShape = writable<Shape | null>();
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
-export const colorRange = writable<string[]>(["0", "10"]);
 export const itemMetas = writable<{
   features: DatasetItem["features"];
   views: DatasetItem["views"];

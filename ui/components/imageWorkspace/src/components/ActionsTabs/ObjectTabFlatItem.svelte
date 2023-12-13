@@ -29,7 +29,7 @@
 
   let color: string;
   $: {
-    color = colorScale(`${(itemObject.features.category_id?.value || 1) as number}`);
+    color = colorScale(itemObject.id);
   }
 
   let open: boolean = true;

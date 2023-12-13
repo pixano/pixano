@@ -310,14 +310,7 @@
           //don't add a bbox that already exist
           const bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bboxKonva) {
-            addBBox(
-              bboxes[i],
-              colorScale(bboxes[i].catId.toString()),
-              bboxGroup,
-              image,
-              viewId,
-              zoomFactor,
-            );
+            addBBox(bboxes[i], colorScale(bboxes[i].id), bboxGroup, image, viewId, zoomFactor);
           } else {
             toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
             toggleBBoxIsLocked(stage, bboxes[i]);
@@ -326,7 +319,7 @@
             bboxKonva.opacity(bboxes[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = colorScale(bboxes[i].catId.toString());
+            style.color = colorScale(bboxes[i].id);
             const bboxText = bboxGroup.findOne(`#text${bboxes[i].id}`);
             if (bboxText) {
               bboxText.setAttr("text", bboxes[i].tooltip);
@@ -363,22 +356,14 @@
           //don't add a mask that already exist
           const maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
           if (!maskKonva) {
-            addMask(
-              masks[i],
-              colorScale(masks[i].catId.toString()),
-              maskGroup,
-              image,
-              viewId,
-              stage,
-              zoomFactor,
-            );
+            addMask(masks[i], colorScale(masks[i].id), maskGroup, image, viewId, stage, zoomFactor);
           } else {
             //update visibility & opacity
             maskKonva.visible(masks[i].visible);
             maskKonva.opacity(masks[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = colorScale(masks[i].catId.toString());
+            style.color = colorScale(masks[i].id);
             maskKonva.stroke(style.color);
             maskKonva.fill(`rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`);
           }
