@@ -135,6 +135,11 @@ class COCOImporter(Importer):
             for ann in coco_instances["annotations"]:
                 annotations[ann["image_id"]].append(ann)
 
+            # Create a COCO category id to COCO category dictionary
+            categories = {}
+            for cat in coco_instances["categories"]:
+                categories[cat["id"]] = cat
+
             # Process rows
             for im in sorted(
                 coco_instances["images"], key=lambda x: natural_key(str(x["id"]))
@@ -190,7 +195,9 @@ class COCOImporter(Importer):
                                 if ann["segmentation"]
                                 else None,
                                 "category_id": int(ann["category_id"]),
-                                "category_name": str(ann["category_name"]),
+                                "category_name": str(
+                                    categories[ann["category_id"]]["name"]
+                                ),
                             }
                             for ann in im_anns
                         ]

@@ -37,6 +37,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix pip commands in notebooks for Google Colab (pixano#11)
 - Fix broken link in CHANGELOG (pixano#4)
 - Fix documentation website API reference generation
+- Fix the COCO Importer to get the category name from the "categories" field as it does not always exist in the "annotations" field.
 
 ## [0.4.1] - 2023-11-13
 
