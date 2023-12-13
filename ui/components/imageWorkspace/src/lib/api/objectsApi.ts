@@ -2,7 +2,7 @@ import type { ItemObject, BBox, DisplayControl, Mask } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
-import type { ObjectsSortedByModelType } from "../types/objects";
+import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 
 export const mapObjectToBBox = (obj: ItemObject) => {
   const imageHeight = 426; // TODO100 imageHeight
@@ -17,7 +17,7 @@ export const mapObjectToBBox = (obj: ItemObject) => {
   return {
     id: obj.id,
     viewId: obj.view_id,
-    catId: obj.features.category_id.value as number,
+    catId: (obj.features.category_id?.value || 1) as number,
     bbox: [x, y, w, h],
     tooltip: catName + confidence,
     opacity: 1.0,

@@ -22,14 +22,14 @@
   import { itemObjects } from "../../lib/stores/stores";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
-  import ItemFeatures from "./ObjectTabFlatItemFeatures.svelte";
+  import ItemFeatures from "../Features/FeatureInputs.svelte";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
 
   let color: string;
   $: {
-    color = colorScale(`${itemObject.features.category_id.value as number}`);
+    color = colorScale(`${(itemObject.features.category_id?.value || 1) as number}`);
   }
 
   let open: boolean = true;
@@ -64,6 +64,23 @@
   $: isVisible = !itemObject.displayControl?.hidden;
   $: boxIsVisible = !itemObject.bbox.displayControl?.hidden;
   $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
+
+  const saveInputChange = (value: string | boolean, propertyName: string) => {
+    itemObjects.update((oldObjects) =>
+      oldObjects.map((object) => {
+        if (object.id === itemObject.id) {
+          object.features = {
+            ...object.features,
+            [propertyName]: {
+              ...object.features[propertyName],
+              value,
+            },
+          };
+        }
+        return object;
+      }),
+    );
+  };
 </script>
 
 <div
@@ -124,7 +141,7 @@
         </div>
       </div>
       <div>
-        <ItemFeatures {itemObject} {isEditing} />
+        <ItemFeatures features={itemObject.features} {isEditing} {saveInputChange} />
       </div>
     </div>
   </div>

@@ -17,11 +17,13 @@
   import { CheckCheckIcon } from "lucide-svelte";
 
   import { Input } from "@pixano/core/src/lib/components/ui/input";
-  import type { TextInputItemFeature } from "@pixano/core";
 
-  export let textFeature: TextInputItemFeature;
+  import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
+
+  export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
   export let saveInputChange: (value: string, propertyName: string) => void;
+  export let inputType: "text" | "number" = "text";
 
   let isSaved = false;
 
@@ -32,24 +34,23 @@
 </script>
 
 <div class="flex justify-start items-center gap-4">
-  {#each textFeature.value as value}
-    {#if isEditing}
-      <Input
-        {value}
-        on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
-        on:input={() => (isSaved = false)}
-      />
-      {#if isSaved}
-        <span class="text-green-700">
-          <CheckCheckIcon />
-        </span>
-      {/if}
-    {:else}
-      <p
-        class=" font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3"
-      >
-        {value}
-      </p>
+  {#if isEditing}
+    <Input
+      value={textFeature.value}
+      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
+      on:input={() => (isSaved = false)}
+      type={inputType}
+    />
+    {#if isSaved}
+      <span class="text-green-700">
+        <CheckCheckIcon />
+      </span>
     {/if}
-  {/each}
+  {:else if textFeature.value}
+    <p
+      class="font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3"
+    >
+      {textFeature.value}
+    </p>
+  {/if}
 </div>

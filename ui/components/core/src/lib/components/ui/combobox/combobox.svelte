@@ -11,8 +11,13 @@
 
   let open = false;
   export let value: string = "";
+  export let saveValue: (value: string) => void = () => {};
 
   $: selectedValue = listItems.find((f) => f.value === value)?.label ?? placeholder;
+
+  $: {
+    if (value) saveValue(value);
+  }
 
   // We want to refocus the trigger button when the user selects
   // an item from the list so users can continue navigating the

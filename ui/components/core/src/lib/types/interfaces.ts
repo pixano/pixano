@@ -127,11 +127,6 @@ export interface ItemFeature {
   value: number | string | boolean | DatasetStat;
 }
 
-export type TextInputItemFeature = {
-  value: string[];
-  name: ItemFeature["name"];
-};
-
 // UI DATA
 
 export interface Mask {

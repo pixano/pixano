@@ -7,27 +7,11 @@ export type ObjectParameters = {
   mandatory: boolean;
 };
 
-// OBJECTS PROPERTIES
+// OBJECTS FEATURES
 export type TextFeature = {
   type: "text";
   multiple: boolean;
-  value: string[];
-};
-
-type NumberFeature = {
-  type: "number";
-  value: number;
-};
-
-type CheckboxFeature = {
-  type: "checkbox";
-  value: boolean;
-};
-
-export type ObjectFeature = (TextFeature | NumberFeature | CheckboxFeature) & {
-  label: string;
-  required: boolean;
-  name: string;
+  value: string;
 };
 
 // SHAPES: shapes drawn on the image not yet saved as objects
@@ -44,14 +28,17 @@ type RectangleShape = {
 export type Shape = RectangleShape & {
   status: "creating" | "editing" | "done";
   viewId: string;
+  itemId?: string;
+  imageWidth?: number;
+  imageHeight?: number;
 };
 
-export type PropertiesValues = string[] | number | boolean;
+export type FeatureValues = string | number | boolean;
 
 type BaseObjectContent = {
   name: string;
   id: string;
-  properties: Record<string, PropertiesValues>;
+  properties: Record<string, FeatureValues>;
   editing?: boolean;
 };
 

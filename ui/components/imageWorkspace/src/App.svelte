@@ -47,7 +47,11 @@
   $: console.log({ selectedDataset, selectedItem, allBBoxes });
 
   $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
-  $: itemMetas.set({ features: selectedItem.features, views: selectedItem.views });
+  $: itemMetas.set({
+    features: selectedItem.features,
+    views: selectedItem.views,
+    id: selectedItem.id,
+  });
 
   const sam = new SAM();
 

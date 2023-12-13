@@ -21,7 +21,7 @@
   import { itemObjects, colorRange } from "../../lib/stores/stores";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
-  import type { ObjectsSortedByModelType } from "../../lib/types/objects";
+  import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
 
   let allItemsSortedByModel: ObjectsSortedByModelType = {
     [GROUND_TRUTH]: [],

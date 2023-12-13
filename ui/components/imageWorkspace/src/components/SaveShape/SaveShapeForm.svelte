@@ -14,29 +14,23 @@
    * http://www.cecill.info
    */
 
-  // import { PlusCircle } from "lucide-svelte";
-  // import { z } from "zod";
-
   import { Button } from "@pixano/core/src/lib/components/ui/button";
-  // import { Input } from "@pixano/core/src/lib/components/ui/input";
-  // import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  // import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
-  import type { PropertiesValues, Shape } from "@pixano/core";
+  import { Input } from "@pixano/core/src/lib/components/ui/input";
+  import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
+  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
+  import type { FeatureValues, ItemFeature, Shape } from "@pixano/core";
 
   import { newShape, itemObjects } from "../../lib/stores/stores";
   import {
     userObjectSetup as objectSetup,
     objectValidationSchema,
-  } from "../../lib/settings/objectSetting";
-  import SaveShapeTextInput from "./SaveShapeTextInput.svelte";
+  } from "../../lib/settings/objectValidationSchemas";
   import { GROUND_TRUTH } from "../../lib/constants";
 
   let shape: Shape;
   let isFormValid: boolean = false;
 
-  let objectProperties: { [key: string]: PropertiesValues } = {};
-
-  // let objectCategory: string;
+  let objectProperties: { [key: string]: FeatureValues } = {};
 
   newShape.subscribe((value) => {
     if (value) shape = value;
@@ -44,52 +38,43 @@
 
   const handleFormSubmit = () => {
     const imageHeight = 426; // TODO100 imageHeight
-    const imageWidth = 640; // TODO100
-
+    const imageWidth = 640;
+    const features = Object.entries(objectProperties).reduce(
+      (acc, [key, value]) => {
+        acc[key] = {
+          name: key,
+          dtype: objectSetup.find((o) => o.name === key)?.type as ItemFeature["dtype"],
+          value,
+        };
+        return acc;
+      },
+      {} as { [key: string]: ItemFeature },
+    );
     itemObjects.update((oldObjects) => [
       {
         id: `object${oldObjects.length + 1}`,
-        item_id: shape.viewId, // TODO100
-        source_id: GROUND_TRUTH, // TODO100
+        item_id: shape.viewId || "todo", // TODO100
+        source_id: GROUND_TRUTH, // OK
         view_id: shape.viewId,
         bbox: {
           coords: [
-            shape.attrs.x / imageWidth,
-            shape.attrs.y / imageHeight,
-            shape.attrs.width / imageWidth,
-            shape.attrs.height / imageHeight,
+            shape.attrs.x / (shape.imageWidth || imageWidth),
+            shape.attrs.y / (shape.imageHeight || imageHeight),
+            shape.attrs.width / (shape.imageWidth || imageWidth),
+            shape.attrs.height / (shape.imageHeight || imageHeight),
           ],
-          format: `bbox${oldObjects.length + 1}`,
+          format: "xywh",
           is_normalized: true,
           confidence: 1,
         },
-        features: {
-          category_id: {
-            name: "category_id",
-            dtype: "number",
-            value: 64,
-          },
-          category_name: {
-            name: "category_name",
-            dtype: "text",
-            value: (objectProperties.Label as string[])?.[0], // TODO100
-          },
-        },
+        features,
       },
       ...oldObjects,
     ]);
     newShape.set(null);
   };
 
-  // const handleCheckboxClick = (checked: boolean, propertyLabel: string) => {
-  //   objectProperties[propertyLabel] = checked;
-  // };
-
-  // const handleNumberInputChange = (value: string, propertyLabel: string) => {
-  //   objectProperties[propertyLabel] = Number(value);
-  // };
-
-  const handleTextInputChange = (value: string[], propertyLabel: string) => {
+  const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
   };
 
@@ -101,33 +86,50 @@
 
 <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
   <p>Sauvegarde {shape.type}</p>
-  <!-- <Combobox
-    placeholder="Select a category"
-    bind:value={objectCategory}
-    listItems={[
-      { value: "category_1", label: "category 1" },
-      { value: "category_2", label: "category 2" },
-    ]}
-  /> -->
-  {#each objectSetup as property}
-    <!-- {#if property.type === "checkbox"}
-      <div class="flex gap-4">
-        <Checkbox handleClick={(checked) => handleCheckboxClick(checked, property.label)} />
-        <span>{property.label}</span>
+  {#each objectSetup as feature}
+    {#if feature.type === "boolean"}
+      <div class="flex gap-4 items-center">
+        <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
+        <span
+          >{feature.label}
+          {#if feature.required}
+            <span>*</span>
+          {/if}
+        </span>
       </div>
-    {/if} -->
-    {#if property.type === "text"}
-      <SaveShapeTextInput textProperty={property} {handleTextInputChange} />
     {/if}
-    <!-- {#if property.type === "number"}
+    {#if feature.type === "list"}
+      <Combobox
+        placeholder={`Select a ${feature.label}`}
+        listItems={feature.options}
+        saveValue={(value) => handleInputChange(value, feature.name)}
+      />
+    {/if}
+    {#if feature.type === "text"}
       <div>
-        <span>{property.label}</span>
+        <span
+          >{feature.label}
+          {#if feature.required}
+            <span>*</span>
+          {/if}
+        </span>
+        <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
+      </div>
+    {/if}
+    {#if feature.type === "number"}
+      <div>
+        <span
+          >{feature.label}
+          {#if feature.required}
+            <span>*</span>
+          {/if}
+        </span>
         <Input
           type="number"
-          on:change={(e) => handleNumberInputChange(e.currentTarget.value, property.label)}
+          on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
         />
       </div>
-    {/if} -->
+    {/if}
   {/each}
   <div class="flex gap-4">
     <Button class="text-white" on:click={() => newShape.set(null)}>cancel</Button>

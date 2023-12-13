@@ -17,10 +17,10 @@
   import { Pencil } from "lucide-svelte";
 
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import type { TextInputItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/stores";
-  import FeatureInput from "./ActionsTabFeatureInput.svelte";
+  import SceneFeatures from "../Features/FeatureInputs.svelte";
+  import type { DatasetItem } from "@pixano/core";
 
   type ImageMeta = {
     width: number;
@@ -29,7 +29,7 @@
     id: string;
   };
 
-  let features: TextInputItemFeature[];
+  let features: DatasetItem["features"];
   let imageMeta: ImageMeta[] = [];
   let isEditing: boolean = false;
 
@@ -40,21 +40,14 @@
       format: view.uri.split(".").at(-1) as string,
       id: view.id,
     }));
-    features = Object.values(metas.features).map((feature) => {
-      let value: string =
-        typeof feature.value === "object" ? feature.value.name : feature.value.toString();
-      return {
-        value: [value],
-        name: feature.name,
-      };
-    });
+    features = metas.features;
   });
 
   const handleEditIconClick = () => {
     isEditing = !isEditing;
   };
 
-  const handleTextInputChange = (value: string, propertyName: string) => {
+  const handleTextInputChange = (value: string | boolean, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
       newMetas.features = {
@@ -64,7 +57,6 @@
           value,
         },
       };
-
       return newMetas;
     });
   };
@@ -77,13 +69,7 @@
       ><Pencil class="h-4" /></IconButton
     >
   </h3>
-
-  <div class="mt-4 pb-8">
-    {#each features as feature}
-      <p class="mb-1 mt-3">{feature.name.replace(/_/g, " ")}</p>
-      <FeatureInput {isEditing} textFeature={feature} saveInputChange={handleTextInputChange} />
-    {/each}
-  </div>
+  <SceneFeatures {features} {isEditing} saveInputChange={handleTextInputChange} />
 </div>
 {#each imageMeta as meta}
   <div class="p-4">
