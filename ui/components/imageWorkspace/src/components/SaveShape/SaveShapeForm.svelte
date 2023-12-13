@@ -37,8 +37,6 @@
   });
 
   const handleFormSubmit = () => {
-    const imageHeight = 426; // TODO100 imageHeight
-    const imageWidth = 640;
     const features = Object.entries(objectProperties).reduce(
       (acc, [key, value]) => {
         acc[key] = {
@@ -48,20 +46,20 @@
         };
         return acc;
       },
-      {} as { [key: string]: ItemFeature },
+      {} as Record<string, ItemFeature>,
     );
     itemObjects.update((oldObjects) => [
       {
         id: `object${oldObjects.length + 1}`,
-        item_id: shape.viewId || "todo", // TODO100
-        source_id: GROUND_TRUTH, // OK
+        item_id: shape.itemId,
+        source_id: GROUND_TRUTH,
         view_id: shape.viewId,
         bbox: {
           coords: [
-            shape.attrs.x / (shape.imageWidth || imageWidth),
-            shape.attrs.y / (shape.imageHeight || imageHeight),
-            shape.attrs.width / (shape.imageWidth || imageWidth),
-            shape.attrs.height / (shape.imageHeight || imageHeight),
+            shape.attrs.x / shape.imageWidth,
+            shape.attrs.y / shape.imageHeight,
+            shape.attrs.width / shape.imageWidth,
+            shape.attrs.height / shape.imageHeight,
           ],
           format: "xywh",
           is_normalized: true,

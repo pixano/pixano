@@ -764,6 +764,9 @@
               type: "rectangle",
               status: "creating",
               viewId,
+              itemId: selectedItem.id,
+              imageWidth: images[viewId].width,
+              imageHeight: images[viewId].height,
             });
           }
           selectedTool.isSmart && (await updateCurrentMask(viewId));

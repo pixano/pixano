@@ -23,6 +23,7 @@
   import { newShape } from "../../lib/stores/stores";
 
   let shape: Shape | null;
+  let currentTab: "scene" | "objects" = "scene";
 
   newShape.subscribe((value) => {
     shape = value;
@@ -33,7 +34,7 @@
   {#if shape}
     <SaveShapeForm />
   {:else}
-    <Tabs.Root value="scene">
+    <Tabs.Root bind:value={currentTab}>
       <Tabs.List class="h-[48px]">
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
         <Tabs.Trigger value="objects">Objets</Tabs.Trigger>

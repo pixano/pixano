@@ -28,9 +28,9 @@ type RectangleShape = {
 export type Shape = RectangleShape & {
   status: "creating" | "editing" | "done";
   viewId: string;
-  itemId?: string;
-  imageWidth?: number;
-  imageHeight?: number;
+  itemId: string;
+  imageWidth: number;
+  imageHeight: number;
 };
 
 export type FeatureValues = string | number | boolean;
