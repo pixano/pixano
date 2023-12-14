@@ -17,7 +17,14 @@
   import { onMount } from "svelte";
   import * as ort from "onnxruntime-web";
   import { api } from "@pixano/core";
-  import type { DatasetItem, BBox, Mask, SelectionTool, DatasetInfo } from "@pixano/core";
+  import type {
+    DatasetItem,
+    BBox,
+    Mask,
+    SelectionTool,
+    DatasetInfo,
+    ItemObject,
+  } from "@pixano/core";
   import { SAM, npy } from "@pixano/models";
 
   import Toolbar from "./components/Toolbar.svelte";
@@ -35,6 +42,7 @@
   export let selectedDataset: DatasetInfo;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
+  export let handleSaveItem: (item: DatasetItem) => void;
 
   let selectedTool: SelectionTool;
   let allBBoxes: BBox[] = [];
@@ -84,6 +92,24 @@
     }
   }
 
+  const onSave = () => {
+    let savedItem = { ...selectedItem };
+
+    itemObjects.subscribe((value) => {
+      savedItem.objects = value.reduce(
+        (acc, obj) => {
+          acc[obj.id] = obj;
+          return acc;
+        },
+        {} as Record<string, ItemObject>,
+      );
+    });
+    itemMetas.subscribe((value) => {
+      savedItem.features = value.features;
+    });
+    handleSaveItem(savedItem);
+  };
+
   onMount(async () => {
     if (models.length > 0) {
       let samModels = models.filter((m) => m.includes("sam"));
@@ -104,5 +130,5 @@
     bind:masks={allMasks}
     {embeddings}
   />
-  <ActionsTabs />
+  <ActionsTabs on:click={onSave} />
 </div>

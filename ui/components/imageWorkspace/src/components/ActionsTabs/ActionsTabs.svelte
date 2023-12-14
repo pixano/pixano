@@ -34,17 +34,23 @@
   {#if shape}
     <SaveShapeForm />
   {:else}
-    <Tabs.Root bind:value={currentTab}>
+    <Tabs.Root bind:value={currentTab} class="h-full">
       <Tabs.List class="h-[48px]">
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
         <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
       </Tabs.List>
-      <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-140px)] overflow-y-auto">
-        <SceneTabContent />
-      </Tabs.Content>
-      <Tabs.Content value="objects" class="bg-red max-h-[calc(100vh-140px)] overflow-y-auto"
-        ><ObjectTabContent /></Tabs.Content
-      >
+      <div class="h-[calc(100%-48px)] flex flex-col justify-between">
+        <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto">
+          <SceneTabContent />
+        </Tabs.Content>
+        <Tabs.Content value="objects" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto"
+          ><ObjectTabContent /></Tabs.Content
+        >
+        <button
+          class="h-[48px] w-full border-t border-t-primary-ligth hover:bg-primary-light"
+          on:click>SAVE CHANGES</button
+        >
+      </div>
     </Tabs.Root>
   {/if}
 </div>

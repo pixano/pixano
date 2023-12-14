@@ -23,10 +23,11 @@
     Header,
     Library,
     LoadingLibrary,
-    PromptModal,
+    // PromptModal,
     WarningModal,
   } from "@pixano/core";
-  import { mask_utils, npy, SAM } from "@pixano/models";
+  import { mask_utils } from "@pixano/models";
+  // import { mask_utils, npy, SAM } from "@pixano/models";
   import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
 
   // import { interactiveSegmenterModel } from "./stores";
@@ -41,6 +42,7 @@
   } from "@pixano/core";
 
   // Dataset navigation
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let models: Array<string>;
   let datasets: Array<DatasetInfo>;
   let selectedDataset: DatasetInfo;
@@ -52,7 +54,8 @@
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
 
-  // let activeLearningFlag = false;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let activeLearningFlag = false;
   let saveFlag = false;
 
   // Modals
@@ -366,21 +369,33 @@
     await handleSelectItem(selectedItem.id);
   }
 
-  // async function handleLoadNextPage() {
-  //   console.log("App.handleLoadNextPage");
-  //   currentPage = currentPage + 1;
+  async function handleSaveItem(savedItem: DatasetItem) {
+    console.log("App.handleSaveItem");
 
-  //   const start = Date.now();
-  //   const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
-  //   console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
+    const start = Date.now();
+    await api.postDatasetItem(selectedDataset.id, savedItem);
+    console.log("App.handleSaveItemDetails - api.postDatasetItem in", Date.now() - start, "ms");
 
-  //   if (new_dbImages) {
-  //     selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
-  //   } else {
-  //     // End of dataset: reset last page
-  //     currentPage = currentPage - 1;
-  //   }
-  // }
+    // Reload item details
+    await handleSelectItem(selectedItem.id);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function handleLoadNextPage() {
+    console.log("App.handleLoadNextPage");
+    currentPage = currentPage + 1;
+
+    const start = Date.now();
+    const new_dbImages = await api.getDatasetItems(selectedDataset.id, currentPage);
+    console.log("App.handleLoadNextPage - api.getDatasetItems in", Date.now() - start, "ms");
+
+    if (new_dbImages) {
+      selectedDataset.page.items = selectedDataset.page.items.concat(new_dbImages.items);
+    } else {
+      // End of dataset: reset last page
+      currentPage = currentPage - 1;
+    }
+  }
 
   onMount(async () => {
     console.log("App.onMount");
@@ -400,7 +415,7 @@
 />
 {#if datasets}
   {#if selectedItem}
-    <ImageWorkspace {selectedItem} bind:masks bind:bboxes />
+    <ImageWorkspace {selectedItem} {selectedDataset} {models} {handleSaveItem} />
     <!-- <AnnotationWorkspace
       {selectedDataset}
       {selectedItem}

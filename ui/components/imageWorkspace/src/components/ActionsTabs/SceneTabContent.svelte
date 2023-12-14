@@ -55,6 +55,8 @@
         [propertyName]: {
           ...newMetas.features[propertyName],
           value,
+          dtype: typeof value,
+          name: propertyName,
         },
       };
       return newMetas;
