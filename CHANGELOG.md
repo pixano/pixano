@@ -6,6 +6,7 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
+- Add **S3** compatible storage access
 - Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
