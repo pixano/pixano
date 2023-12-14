@@ -84,7 +84,6 @@
       }
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
-
     newShape.set(null);
   };
 
@@ -100,7 +99,7 @@
 
 <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
   <p>Sauvegarde {shape.type}</p>
-  {#each objectSetup as feature}
+  {#each objectSetup as feature, i}
     {#if feature.type === "boolean"}
       <div class="flex gap-4 items-center">
         <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
@@ -127,7 +126,14 @@
             <span>*</span>
           {/if}
         </span>
-        <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
+        {#if i === 0}
+          <Input
+            on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
+            autofocus
+          />
+        {:else}
+          <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
+        {/if}
       </div>
     {/if}
     {#if feature.type === "number"}
