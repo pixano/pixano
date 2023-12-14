@@ -51,7 +51,7 @@
       <button
         type="button"
         class="rounded border mt-3 mx-1 py-1 px-3
-        bg-slate-50 hover:bg-slate-100 border-slate-300"
+        bg-slate-50 transition-colors hover:bg-slate-100 border-slate-300"
         on:click={handleCancel}
       >
         Cancel
@@ -59,7 +59,7 @@
       <button
         type="button"
         class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
-        bg-main hover:bg-secondary"
+        bg-main transition-colors hover:bg-secondary"
         on:click={handleConfirm}
       >
         {confirm}

@@ -17,7 +17,7 @@
   // Imports
   import { onMount } from "svelte";
 
-  import { api, Header, Library, LoadingLibrary } from "@pixano/core";
+  import { api, Header, Library, LoadingModal } from "@pixano/core";
   import { mask_utils } from "@pixano/models";
 
   import DatasetExplorer from "./DatasetExplorer.svelte";
@@ -33,7 +33,7 @@
   } from "@pixano/core";
 
   // Dataset navigation
-  let datasets: Array<DatasetInfo>;
+  let datasets: Array<DatasetInfo> = [];
   let selectedDataset: DatasetInfo;
   let currentPage = 1;
 
@@ -45,11 +45,22 @@
   let masks: Array<Mask>;
   let bboxes: Array<BBox>;
 
+  // Modals
+  let loadingItemModal = false;
+  let loadingDatasetsModal = false;
+
   async function handleGetDatasets() {
     console.log("App.handleGetDatasets");
+
+    loadingDatasetsModal = true;
+
     const start = Date.now();
-    datasets = await api.getDatasets();
+    const loadedDatasets = await api.getDatasets();
     console.log("App.handleGetDatasets - api.getDatasets in", Date.now() - start, "ms");
+
+    datasets = loadedDatasets ? loadedDatasets : [];
+
+    loadingDatasetsModal = false;
   }
 
   async function handleSelectDataset(dataset: DatasetInfo) {
@@ -61,6 +72,7 @@
 
   async function handleUnselectDataset() {
     console.log("App.handleUnselectDataset");
+
     handleUnselectItem();
     selectedDataset = null;
     currentPage = 1;
@@ -68,18 +80,22 @@
   }
 
   async function handleSelectItem(itemId: string) {
+    console.log("App.handleSelectItem");
+
+    loadingItemModal = true;
+
     annotations = {};
     classes = selectedDataset.categories ? selectedDataset.categories : [];
     masks = [];
     bboxes = [];
 
     const start = Date.now();
-    selectedItem = await api.getDatasetItem(selectedDataset.id, itemId);
+    const loadedItem = await api.getDatasetItem(selectedDataset.id, encodeURIComponent(itemId));
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 
-    if (selectedItem.objects) {
-      for (const obj of Object.values(selectedItem.objects)) {
+    if (loadedItem.objects) {
+      for (const obj of Object.values(loadedItem.objects)) {
         const sourceId = obj.source_id;
         const viewId = obj.view_id;
         const catId =
@@ -177,8 +193,8 @@
           }
 
           // Add bbox
-          const imageWidth = selectedItem.views[viewId].features.width.value as number;
-          const imageHeight = selectedItem.views[viewId].features.heightw.value as number;
+          const imageWidth = loadedItem.views[viewId].features.width.value as number;
+          const imageHeight = loadedItem.views[viewId].features.height.value as number;
 
           if (obj.bbox && !obj.bbox.coords.every((item) => item == 0)) {
             const x = obj.bbox.coords[0] * imageWidth;
@@ -218,10 +234,13 @@
         }
       }
     }
+    loadingItemModal = false;
+    selectedItem = loadedItem;
   }
 
   function handleUnselectItem() {
     console.log("App.handleUnselectItem");
+
     selectedItem = null;
     annotations = {};
     classes = [];
@@ -235,42 +254,42 @@
   });
 </script>
 
-<Header
-  app="Explorer"
-  bind:selectedDataset
-  bind:selectedItem
-  bind:selectedTab
-  saveFlag={false}
-  on:unselectDataset={handleUnselectDataset}
-  on:unselectItem={handleUnselectItem}
-/>
-{#if datasets}
-  {#if selectedDataset}
-    {#if selectedItem}
-      <ExplorationWorkspace
-        {selectedItem}
-        {annotations}
-        {classes}
-        {masks}
-        {bboxes}
-        on:unselectItem={handleUnselectItem}
-      />
-    {:else}
-      <DatasetExplorer
-        bind:selectedTab
-        {selectedDataset}
-        {currentPage}
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-      />
-    {/if}
+{#if selectedDataset}
+  <Header
+    app="Explorer"
+    bind:selectedDataset
+    bind:selectedItem
+    bind:selectedTab
+    saveFlag={false}
+    on:unselectDataset={handleUnselectDataset}
+    on:unselectItem={handleUnselectItem}
+  />
+  {#if selectedItem}
+    <ExplorationWorkspace
+      {selectedItem}
+      {annotations}
+      {classes}
+      {masks}
+      {bboxes}
+      on:unselectItem={handleUnselectItem}
+    />
   {:else}
-    <Library
-      {datasets}
-      app="Explorer"
-      on:selectDataset={(event) => handleSelectDataset(event.detail)}
-      on:unselectDataset={handleUnselectDataset}
+    <DatasetExplorer
+      bind:selectedTab
+      {selectedDataset}
+      {currentPage}
+      on:selectItem={(event) => handleSelectItem(event.detail)}
     />
   {/if}
 {:else}
-  <LoadingLibrary app="Explorer" />
+  <Library
+    {datasets}
+    app="Explorer"
+    {loadingDatasetsModal}
+    on:selectDataset={(event) => handleSelectDataset(event.detail)}
+    on:unselectDataset={handleUnselectDataset}
+  />
+{/if}
+{#if loadingItemModal}
+  <LoadingModal />
 {/if}

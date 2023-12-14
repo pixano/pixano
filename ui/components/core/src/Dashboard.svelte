@@ -38,7 +38,7 @@
   <div class="h-full flex flex-row">
     <div class="w-64 h-fit z-10 flex flex-col items-start">
       <button
-        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm transition-colors
          {selectedTab === 'overview'
           ? 'text-slate-50 bg-main hover:bg-secondary'
           : 'text-main hover:bg-slate-300'}"
@@ -47,7 +47,7 @@
         Overview
       </button>
       <button
-        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm
+        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm transition-colors
         {selectedTab === 'stats'
           ? 'text-slate-50 bg-main hover:bg-secondary '
           : 'text-main hover:bg-slate-300'}"
