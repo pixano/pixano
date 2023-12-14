@@ -90,7 +90,7 @@
     bboxes = [];
 
     const start = Date.now();
-    const loadedItem = await api.getDatasetItem(selectedDataset.id, itemId);
+    const loadedItem = await api.getDatasetItem(selectedDataset.id, encodeURIComponent(itemId));
 
     console.log("App.handleSelectItem - api.getDatasetItem in", Date.now() - start, "ms");
 

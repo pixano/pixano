@@ -135,8 +135,8 @@
     const start = Date.now();
     const item = await api.getItemEmbeddings(
       selectedDataset.id,
-      selectedItem.id,
-      selectedModelName,
+      encodeURIComponent(selectedItem.id),
+      encodeURIComponent(selectedModelName),
     );
     console.log(
       "AnnotationWorkspace.loadModel - api.getItemEmbeddings in",
