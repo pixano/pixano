@@ -69,6 +69,12 @@
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
   $: {
+    if (selectedTool) {
+      clearAnnotationAndInputs();
+    }
+  }
+
+  $: {
     colorScale = utils.ordinalColorScale(colorRange);
   }
 
