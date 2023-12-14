@@ -5,6 +5,7 @@ import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 
 export const mapObjectToBBox = (obj: ItemObject) => {
+  if (!obj.bbox) return;
   const imageHeight = 426; // TODO100 imageHeight
   const imageWidth = 640; // TODO100
   const x = obj.bbox.coords[0] * imageWidth;
@@ -40,7 +41,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     viewId: obj.view_id,
     svg: masksSVG,
     rle: obj.mask,
-    catId: obj.features.category_id.value as number,
+    catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
     opacity: 1.0,
   } as Mask;
@@ -53,10 +54,12 @@ export const toggleObjectDisplayControl = (
   value: boolean,
 ) => {
   if (properties.includes("bbox")) {
-    object.bbox.displayControl = {
-      ...object.bbox.displayControl,
-      [displayControlProperty]: value,
-    };
+    if (object.bbox) {
+      object.bbox.displayControl = {
+        ...object.bbox.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
   }
   if (properties.includes("mask")) {
     if (object.mask) {

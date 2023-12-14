@@ -16,7 +16,7 @@
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-import type { MaskRLE, MaskSVG } from "./interfaces";
+import type { ItemRLE, MaskSVG } from "./interfaces";
 
 // Exports
 export interface LabeledClick {
@@ -47,7 +47,7 @@ export interface InteractiveImageSegmenterInput {
 
 export interface SegmentationResult {
   masksImageSVG: MaskSVG;
-  rle: MaskRLE;
+  rle: ItemRLE;
   masks?: Tensor;
 }
 

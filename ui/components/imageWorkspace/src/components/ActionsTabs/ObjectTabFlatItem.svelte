@@ -62,7 +62,7 @@
   $: isLocked = itemObject.displayControl?.locked || false;
   $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox.displayControl?.hidden;
+  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
   const saveInputChange = (value: string | boolean, propertyName: string) => {

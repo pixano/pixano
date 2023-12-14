@@ -87,18 +87,26 @@ export interface DisplayControl {
   locked?: boolean;
 }
 
-export interface ItemObject {
+export interface BBoxObject {
+  bbox: ItemBBox;
+  mask?: ItemRLE;
+}
+
+export interface MaskObject {
+  bbox?: ItemBBox;
+  mask: ItemRLE;
+}
+
+export type ItemObject = (BBoxObject | MaskObject) & {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  mask?: ItemURLE;
-  bbox: ItemBBox;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
-}
+};
 
-export interface ItemURLE {
+export interface ItemRLE {
   counts: Array<number>;
   size: Array<number>;
   displayControl?: DisplayControl;
@@ -133,7 +141,7 @@ export interface Mask {
   id: string;
   viewId: string;
   svg: MaskSVG;
-  rle?: ItemURLE;
+  rle?: ItemRLE;
   catId: number;
   visible: boolean;
   opacity: number;

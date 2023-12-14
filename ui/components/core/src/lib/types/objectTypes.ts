@@ -1,3 +1,4 @@
+import type { SegmentationResult } from ".";
 import type { BBox, Mask } from "./interfaces";
 
 export type ObjectParameters = {
@@ -25,8 +26,11 @@ type RectangleShape = {
   };
 };
 
-export type Shape = RectangleShape & {
-  status: "creating" | "editing" | "done";
+type MaskShape = SegmentationResult & {
+  type: "mask";
+};
+
+export type Shape = (RectangleShape | MaskShape) & {
   viewId: string;
   itemId: string;
   imageWidth: number;

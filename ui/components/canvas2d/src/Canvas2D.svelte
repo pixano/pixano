@@ -393,6 +393,15 @@
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
+        createNewShape({
+          masksImageSVG: results.masksImageSVG,
+          rle: results.rle,
+          type: "mask",
+          viewId,
+          itemId: selectedItem.id,
+          imageWidth: images[viewId].width,
+          imageHeight: images[viewId].height,
+        });
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const image: Konva.Image = viewLayer.findOne("#image");
@@ -752,7 +761,6 @@
           //rect with area = 0 -> delete it
           rect.destroy();
         } else {
-          //predict
           if (!selectedTool.isSmart) {
             createNewShape({
               attrs: {
@@ -762,7 +770,6 @@
                 height: rect.height(),
               },
               type: "rectangle",
-              status: "creating",
               viewId,
               itemId: selectedItem.id,
               imageWidth: images[viewId].width,

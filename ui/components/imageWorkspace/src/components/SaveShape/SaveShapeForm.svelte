@@ -18,7 +18,7 @@
   import { Input } from "@pixano/core/src/lib/components/ui/input";
   import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
-  import type { FeatureValues, ItemFeature, Shape } from "@pixano/core";
+  import type { FeatureValues, ItemFeature, ItemObject, Shape } from "@pixano/core";
 
   import { newShape, itemObjects } from "../../lib/stores/stores";
   import {
@@ -48,27 +48,43 @@
       },
       {} as Record<string, ItemFeature>,
     );
-    itemObjects.update((oldObjects) => [
-      {
+    itemObjects.update((oldObjects) => {
+      let newObject: ItemObject | null = null;
+      const baseObject = {
         id: `object${oldObjects.length + 1}`,
         item_id: shape.itemId,
         source_id: GROUND_TRUTH,
         view_id: shape.viewId,
-        bbox: {
-          coords: [
-            shape.attrs.x / shape.imageWidth,
-            shape.attrs.y / shape.imageHeight,
-            shape.attrs.width / shape.imageWidth,
-            shape.attrs.height / shape.imageHeight,
-          ],
-          format: "xywh",
-          is_normalized: true,
-          confidence: 1,
-        },
         features,
-      },
-      ...oldObjects,
-    ]);
+      };
+      if (shape.type === "rectangle") {
+        newObject = {
+          ...baseObject,
+          bbox: {
+            coords: [
+              shape.attrs.x / shape.imageWidth,
+              shape.attrs.y / shape.imageHeight,
+              shape.attrs.width / shape.imageWidth,
+              shape.attrs.height / shape.imageHeight,
+            ],
+            format: "xywh",
+            is_normalized: true,
+            confidence: 1,
+          },
+        };
+      }
+      if (shape.type === "mask") {
+        newObject = {
+          ...baseObject,
+          mask: {
+            counts: shape.rle.counts,
+            size: shape.rle.size,
+          },
+        };
+      }
+      return [...(newObject ? [newObject] : []), ...oldObjects];
+    });
+
     newShape.set(null);
   };
 

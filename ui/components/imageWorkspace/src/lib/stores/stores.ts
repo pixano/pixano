@@ -38,7 +38,8 @@ export const itemMetas = writable<{
 
 export const itemBboxes = derived(itemObjects, ($itemObjects) =>
   $itemObjects.reduce((acc, object) => {
-    acc = [...acc, mapObjectToBBox(object)];
+    const box = mapObjectToBBox(object);
+    acc = [...acc, ...(box ? [box] : [])];
     return acc;
   }, [] as BBox[]),
 );
