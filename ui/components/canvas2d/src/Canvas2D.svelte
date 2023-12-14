@@ -55,7 +55,7 @@
   let viewWithoutEmbeddings = "";
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-  let timerId : number;
+  let timerId: number;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
