@@ -36,9 +36,9 @@ export const itemMetas = writable<{
   id: DatasetItem["id"];
 }>();
 
-export const itemBboxes = derived(itemObjects, ($itemObjects) =>
+export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {
-    const box = mapObjectToBBox(object);
+    const box = mapObjectToBBox(object, $itemMetas?.views);
     acc = [...acc, ...(box ? [box] : [])];
     return acc;
   }, [] as BBox[]),

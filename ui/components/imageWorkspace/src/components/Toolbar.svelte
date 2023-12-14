@@ -19,7 +19,12 @@
   import type { SelectionTool } from "@pixano/core";
 
   import MagicIcon from "../assets/MagicIcon.svelte";
-  import { panTool, smartRectangleTool, rectangleTool, smartMaskTool } from "../lib/settings/tools";
+  import {
+    panTool,
+    smartRectangleTool,
+    rectangleTool,
+    smartMaskTool,
+  } from "../lib/settings/selectionTools";
   import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
 
   export let selectedTool: SelectionTool | null;

@@ -1,13 +1,13 @@
-import type { ItemObject, BBox, DisplayControl, Mask } from "@pixano/core";
+import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 
-export const mapObjectToBBox = (obj: ItemObject) => {
+export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   if (!obj.bbox) return;
-  const imageHeight = 426; // TODO100 imageHeight
-  const imageWidth = 640; // TODO100
+  const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
+  const imageWidth = (views?.[obj.view_id]?.features.width.value as number) || 1;
   const x = obj.bbox.coords[0] * imageWidth;
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
