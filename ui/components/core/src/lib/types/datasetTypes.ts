@@ -80,7 +80,6 @@ export interface ItemView {
 }
 
 // ITEM OBJECT
-
 export interface DisplayControl {
   hidden?: boolean;
   editing?: boolean;

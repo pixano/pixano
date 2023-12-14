@@ -16,7 +16,7 @@
 // Imports
 import { Tensor } from "onnxruntime-web";
 
-import type { ItemRLE, MaskSVG } from "./interfaces";
+import type { ItemRLE, MaskSVG } from "./datasetTypes";
 
 // Exports
 export interface LabeledClick {

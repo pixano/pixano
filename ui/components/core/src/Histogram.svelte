@@ -17,7 +17,7 @@
   // Imports
   import { VegaLite, type VisualizationSpec } from "svelte-vega";
 
-  import type { DatasetStat } from "./lib/types/interfaces";
+  import type { DatasetStat } from "./lib/types/datasetTypes";
 
   // Exports
   export let hist: DatasetStat;

@@ -20,7 +20,7 @@
   import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
   import type { FeatureValues, ItemFeature, ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects } from "../../lib/stores/stores";
+  import { newShape, itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import {
     userObjectSetup as objectSetup,
     objectValidationSchema,

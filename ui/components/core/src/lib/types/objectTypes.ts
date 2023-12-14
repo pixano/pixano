@@ -1,5 +1,5 @@
 import type { SegmentationResult } from ".";
-import type { BBox, Mask } from "./interfaces";
+import type { BBox, Mask } from "./datasetTypes";
 
 export type ObjectParameters = {
   label: string;
