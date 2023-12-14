@@ -62,11 +62,13 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         # don't need to mount dataset, but still need to mount model
         if settings.local_model_dir is None:
             # try to get model from S3 /models
-            #TODO
+            # TODO
             # list models in settings.data_dir / "models"
             # dl them locally (where ??) and use this as mount point
             # settings.local_model_dir = (settings.data_dir / "models").open()
-            raise Exception("download models from S3 not implemented yet, please set LOCAL_MODEL_DIR env var to a path with /models/<sam_model.onnx>)")
+            raise Exception(
+                "download models from S3 not implemented yet, please set LOCAL_MODEL_DIR env var to a path with /models/<sam_model.onnx>)"
+            )
         else:
             # use local model
             app.mount(
