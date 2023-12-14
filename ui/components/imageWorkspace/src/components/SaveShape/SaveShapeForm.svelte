@@ -82,7 +82,7 @@
           },
         };
       }
-      return [...(newObject ? [newObject] : []), ...oldObjects];
+      return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
 
     newShape.set(null);

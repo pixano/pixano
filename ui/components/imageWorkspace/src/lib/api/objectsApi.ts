@@ -82,7 +82,7 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
   objects.reduce(
     (acc, object) => {
       if (object.source_id === GROUND_TRUTH) {
-        acc[GROUND_TRUTH] = [...acc[GROUND_TRUTH], object];
+        acc[GROUND_TRUTH] = [object, ...acc[GROUND_TRUTH]];
       } else {
         const modelAlreadyExists = acc[MODEL_RUN].some(
           (model) => model.modelName === object.source_id,
