@@ -18,7 +18,7 @@
 
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 
-  import { itemMetas } from "../../lib/stores/stores";
+  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import SceneFeatures from "../Features/FeatureInputs.svelte";
   import type { DatasetItem } from "@pixano/core";
 

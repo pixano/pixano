@@ -18,7 +18,7 @@
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import { cn } from "@pixano/core/src/lib/utils";
 
-  import { itemObjects } from "../../lib/stores/stores";
+  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
 

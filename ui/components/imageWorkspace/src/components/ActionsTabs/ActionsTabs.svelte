@@ -20,7 +20,7 @@
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
-  import { newShape } from "../../lib/stores/stores";
+  import { newShape } from "../../lib/stores/imageWorkspaceStores";
 
   let shape: Shape | null;
   let currentTab: "scene" | "objects" = "scene";

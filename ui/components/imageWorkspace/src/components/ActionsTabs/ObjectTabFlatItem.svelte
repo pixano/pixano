@@ -19,7 +19,7 @@
   import { cn } from "@pixano/core/src/lib/utils";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
-  import { itemObjects } from "../../lib/stores/stores";
+  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
 
   import ItemFeatures from "../Features/FeatureInputs.svelte";

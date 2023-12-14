@@ -36,7 +36,7 @@
     itemMasks,
     interactiveSegmenterModel,
     itemMetas,
-  } from "./lib/stores/stores";
+  } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
 
   export let selectedDataset: DatasetInfo;

@@ -18,7 +18,7 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { BBox, DatasetItem, Mask, SelectionTool } from "@pixano/core";
 
-  import { newShape, itemObjects } from "../lib/stores/stores";
+  import { newShape, itemObjects } from "../lib/stores/imageWorkspaceStores";
 
   export let selectedItem: DatasetItem;
   export let masks: Array<Mask> = [];

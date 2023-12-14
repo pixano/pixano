@@ -20,7 +20,7 @@
 
   import MagicIcon from "../assets/MagicIcon.svelte";
   import { panTool, smartRectangleTool, rectangleTool, smartMaskTool } from "../lib/settings/tools";
-  import { interactiveSegmenterModel, newShape } from "../lib/stores/stores";
+  import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
 
   export let selectedTool: SelectionTool | null;
   const selectTool = (tool: SelectionTool | null) => {
