@@ -721,7 +721,7 @@
     stage.container().style.cursor = "grab";
   }
 
-  async function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
+  function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
     stage.container().style.cursor = "grabbing";
 
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
