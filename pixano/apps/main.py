@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+from s3path import S3Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,12 +51,29 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     model_dir = settings.data_dir / "models"
     model_dir.mkdir(exist_ok=True)
 
-    # Mount data directory (datasets + models)
-    app.mount(
-        "/data",
-        StaticFiles(directory=settings.data_dir),
-        name="data",
-    )
+    if not isinstance(settings.data_dir, S3Path):
+        # Mount data directory (datasets + models)
+        app.mount(
+            "/data",
+            StaticFiles(directory=settings.data_dir),
+            name="data",
+        )
+    else:
+        # don't need to mount dataset, but still need to mount model
+        if settings.local_model_dir is None:
+            # try to get model from S3 /models
+            #TODO
+            # list models in settings.data_dir / "models"
+            # dl them locally (where ??) and use this as mount point
+            # settings.local_model_dir = (settings.data_dir / "models").open()
+            raise Exception("download models from S3 not implemented yet, please set LOCAL_MODEL_DIR env var to a path with /models/<sam_model.onnx>)")
+        else:
+            # use local model
+            app.mount(
+                "/data",
+                StaticFiles(directory=settings.local_model_dir),
+                name="data",
+            )
 
     app.include_router(datasets.router)
     app.include_router(items.router)

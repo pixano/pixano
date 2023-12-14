@@ -13,6 +13,7 @@
 
 import json
 from pathlib import Path
+from s3path import S3Path
 from typing import Optional
 
 from pydantic import BaseModel
@@ -73,8 +74,12 @@ class DatasetInfo(BaseModel):
             DatasetInfo: DatasetInfo
         """
 
-        with open(json_fp) as json_file:
-            info_json = json.load(json_file)
+        if isinstance(json_fp, S3Path):
+            with json_fp.open() as json_file:
+                info_json = json.load(json_file)
+        else:
+            with open(json_fp) as json_file:
+                info_json = json.load(json_file)
 
         info = DatasetInfo.model_validate(info_json)
 
@@ -88,8 +93,11 @@ class DatasetInfo(BaseModel):
         if load_thumbnail:
             thumb_fp = json_fp.parent / "preview.png"
             if thumb_fp.is_file():
-                im = Image(uri=thumb_fp.absolute().as_uri())
-                info.preview = im.url
+                if isinstance(json_fp, S3Path):
+                    info.preview = thumb_fp.get_presigned_url()
+                else:
+                    im = Image(uri=thumb_fp.absolute().as_uri())
+                    info.preview = im.url
 
         return info
 

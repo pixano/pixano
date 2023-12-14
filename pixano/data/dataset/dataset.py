@@ -13,6 +13,7 @@
 
 from collections import defaultdict
 from pathlib import Path
+from s3path import S3Path
 from typing import Optional
 
 import duckdb
@@ -123,7 +124,10 @@ class Dataset(BaseModel):
             lancedb.DBConnection: Dataset LanceDB connection
         """
 
-        return lancedb.connect(self.path)
+        if isinstance(self.path, S3Path):
+            return lancedb.connect(self.path.as_uri())
+        else:
+            return lancedb.connect(self.path)
 
     def open_tables(self) -> dict[str, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB

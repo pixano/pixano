@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 from pathlib import Path
+from s3path import S3Path
 from typing import IO, Optional
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -174,7 +175,12 @@ class Image(PixanoType, BaseModel):
             IO: Opened image
         """
 
-        return urlopen(self.get_uri())
+        uri = self.get_uri()
+        if urlparse(uri).scheme == "s3":
+            presigned_url = S3Path.from_uri(uri).get_presigned_url()
+            return urlopen(presigned_url)
+        else:
+            return urlopen(uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow
