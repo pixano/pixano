@@ -478,23 +478,55 @@ class Dataset(BaseModel):
         # Load dataset
         ds_tables = self.open_tables()
 
-        # Save item label if it exists
-        if "label" in item.features:
-            # If label not in main table, add label field
-            if "label" not in ds_tables["main"]["db"].schema.names:
+        # Save item features if exists
+        if len(item.features) > 0:
+            new_columns = [
+                feat
+                for feat in item.features
+                if feat not in ds_tables["main"]["db"].schema.names
+            ]
+            if len(new_columns) > 0:
                 main_table_ds = ds_tables["main"]["db"].to_lance()
-                # Create label table
-                label_table = main_table_ds.to_table(columns=["id"])
-                label_array = pa.array(
-                    [""] * len(ds_tables["main"]["db"]), type=pa.string()
-                )
-                label_table = label_table.append_column(
-                    pa.field("label", pa.string()), label_array
-                )
+                feat_table = main_table_ds.to_table(columns=["id"])
+
+                # Add new feats field in main table
+                for feat in new_columns:
+                    # detect data type
+                    if item.features[feat].dtype == "number":
+                        if isinstance(item.features[feat].value, int):
+                            feat_type = {
+                                "info": "int",
+                                "pa": pa.integer(),
+                                "empty_val": None,
+                            }
+                        elif isinstance(item.features[feat].value, float):
+                            feat_type = {
+                                "info": "float",
+                                "pa": pa.float32(),
+                                "empty_val": None,
+                            }
+                    elif item.features[feat].dtype == "boolean":
+                        feat_type = {
+                            "info": "bool",
+                            "pa": pa.bool_(),
+                            "empty_val": False,  # None is not supported for boolean yet by Lance, so we put False
+                        }
+                    else:
+                        feat_type = {"info": "str", "pa": pa.string(), "empty_val": ""}
+
+                    # Create empty feat column
+                    feat_array = pa.array(
+                        [feat_type["empty_val"]] * len(ds_tables["main"]["db"]),
+                        type=feat_type["pa"],
+                    )
+                    feat_table = feat_table.append_column(
+                        pa.field(feat, feat_type["pa"]), feat_array
+                    )
+                    # Update DatasetInfo
+                    self.info.tables["main"][0].fields[feat] = feat_type["info"]
+
                 # Merge with main table
-                main_table_ds.merge(label_table, "id")
-                # Update DatasetInfo
-                self.info.tables["main"][0].fields["label"] = "str"
+                main_table_ds.merge(feat_table, "id")
                 self.save_info()
 
             # Get item
@@ -504,8 +536,13 @@ class Dataset(BaseModel):
                 .scanner(filter=f"id in ('{item.id}')")
             )
             pyarrow_item = scanner.to_table().to_pylist()[0]
-            # Update item
-            pyarrow_item["label"] = item.features["label"].value
+            for feat in item.features:
+                # Update item
+                # special case for boolean as the are converted to 0/1 (#TODO investigate...)
+                if item.features[feat].dtype == "boolean":
+                    pyarrow_item[feat] = item.features[feat].value != 0
+                else:
+                    pyarrow_item[feat] = item.features[feat].value
             ds_tables["main"]["db"].update(f"id in ('{item.id}')", pyarrow_item)
 
             # Clear change history to prevent dataset from becoming too large
