@@ -37,7 +37,7 @@
     "lucide-svelte": "^0.292.0",
     "onnxruntime-web": "~1.16.0",
     "svelte-konva": "^0.1.1",
-    "svelte-vega": "^1.2.0",
+    "svelte-vega": "^2.1.0",
     "tailwind-merge": "^2.0.0",
     "tailwind-variants": "^0.1.18",
     "vega": "^5.22.1",

@@ -1,0 +1,65 @@
+<script lang="ts">
+  /// <reference types="svelte" />
+  /**
+   * @copyright CEA
+   * @author CEA
+   * @license CECILL
+   *
+   * This software is a collaborative computer program whose purpose is to
+   * generate and explore labeled data for computer vision applications.
+   * This software is governed by the CeCILL-C license under French law and
+   * abiding by the rules of distribution of free software. You can use,
+   * modify and/ or redistribute the software under the terms of the CeCILL-C
+   * license as circulated by CEA, CNRS and INRIA at the following URL
+   *
+   * http://www.cecill.info
+   */
+
+  // Imports
+  import { goto } from "$app/navigation";
+  import { ArrowLeftCircleIcon, Home, TrendingUp, Database } from "lucide-svelte";
+
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+  import PrimaryButton from "@pixano/core/src/lib/components/molecules/PrimaryButton.svelte";
+
+  export let datasetName: string;
+  export let pageId: string | null;
+
+  async function navigateToHome() {
+    await goto("/");
+  }
+</script>
+
+<header class="w-full fixed z-40">
+  <div
+    class="h-20 p-5 flex justify-start items-center shrink-0
+      bg-slate-50 border-b border-slate-300 text-slate-800"
+  >
+    <div class="h-10 flex items-center grow font-semibold text-2xl">
+      <div class="flex gap-4 items-center font-light">
+        <button on:click={navigateToHome} class="h-10 w-10">
+          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+        </button>
+        <TooltipIconButton on:click={navigateToHome}>
+          <ArrowLeftCircleIcon />
+        </TooltipIconButton>
+        <p>{datasetName}</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <PrimaryButton isSelected={pageId === "dashboard"}>
+        <Home strokeWidth={1} />
+        Dashboard</PrimaryButton
+      >
+      <PrimaryButton isSelected={pageId === "dataset"}>
+        <Database strokeWidth={1} />
+        Dataset</PrimaryButton
+      >
+      <PrimaryButton isSelected={pageId === "stats"}>
+        <TrendingUp strokeWidth={1} />
+        Stats</PrimaryButton
+      >
+    </div>
+  </div>
+</header>

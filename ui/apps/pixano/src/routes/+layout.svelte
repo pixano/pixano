@@ -1,92 +1,61 @@
 <script lang="ts">
-  import type { DatasetInfo, DatasetItem } from "@pixano/core";
-  import Header from "../components/Header.svelte";
+  import { onMount } from "svelte";
+  import { page } from "$app/stores";
+
+  import type { DatasetInfo } from "@pixano/core/src";
+
+  import { api } from "@pixano/core/src";
+
+  import MainHeader from "../components/layout/MainHeader.svelte";
+  import DatasetHeader from "../components/layout/DatasetHeader.svelte";
+  import { datasets as datasetsStore } from "../lib/stores/datasetStores";
+
   import "./styles.css";
 
-  let selectedDataset: DatasetInfo | undefined;
-  let selectedItem: DatasetItem = {
-    id: "string",
-    split: "string",
-    views: {},
-    objects: {},
-    features: {},
-    embeddings: {},
+  let datasets: DatasetInfo[] = [];
+  let models: Array<string>;
+  let pageId: string | null;
+  let datasetName: string;
+
+  async function handleGetModels() {
+    console.log("App.handleGetModels");
+
+    const start = Date.now();
+    models = await api.getModels();
+    console.log("App.handleGetModels - api.getModels in", Date.now() - start, "ms", models);
+  }
+
+  async function handleGetDatasets() {
+    const loadedDatasets = await api.getDatasets();
+    datasets = loadedDatasets ? loadedDatasets : [];
+
+    if (datasets?.length > 0) {
+      datasetsStore.set(datasets);
+    }
+  }
+
+  onMount(async () => {
+    await handleGetDatasets();
+    await handleGetModels();
+  });
+
+  const handleSearch = () => {
+    console.log("App.handleSearch");
   };
-  let saveFlag: boolean = false;
 
-  function handleUnselectDataset() {
-    selectedDataset = undefined;
-  }
-
-  function handleUnselectItem() {
-    selectedItem = {
-      id: "string",
-      split: "string",
-      views: {},
-      objects: {},
-      features: {},
-      embeddings: {},
-    };
-  }
-
-  function handleSaveItem() {
-    saveFlag = !saveFlag;
-  }
+  $: page.subscribe((value) => {
+    pageId = value.route.id;
+    datasetName = value.params.dataset;
+  });
 </script>
 
 <div class="app">
-  <Header
-    app="Annotator"
-    selectedTab={undefined}
-    bind:selectedDataset
-    bind:selectedItem
-    {saveFlag}
-    on:unselectDataset={handleUnselectDataset}
-    on:unselectItem={handleUnselectItem}
-    on:saveItem={handleSaveItem}
-  />
+  {#if pageId === "/"}
+    <MainHeader {datasets} on:input={handleSearch} />
+  {:else}
+    <DatasetHeader {datasetName} {pageId} />
+  {/if}
   <main>
     <slot />
   </main>
-
-  <footer>
-    <p>visit <a href="https://kit.svelte.dev">kit.svelte.dev</a> to learn SvelteKit</p>
-  </footer>
 </div>
-
-<style>
-  .app {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1rem;
-    width: 100%;
-    max-width: 64rem;
-    margin: 0 auto;
-    box-sizing: border-box;
-  }
-
-  footer {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 12px;
-  }
-
-  footer a {
-    font-weight: bold;
-  }
-
-  @media (min-width: 480px) {
-    footer {
-      padding: 12px 0;
-    }
-  }
-</style>
