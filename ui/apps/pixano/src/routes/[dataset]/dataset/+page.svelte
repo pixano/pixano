@@ -1,50 +1,39 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { api } from "@pixano/core/src";
+  import { goto } from "$app/navigation";
+
   import type { DatasetInfo } from "@pixano/core/src";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
 
-  import { datasets } from "../../../lib/stores/datasetStores";
+  import { datasetsStore } from "../../../lib/stores/datasetStores";
 
-  let currentDatasetInfos: DatasetInfo;
   let selectedDataset: DatasetInfo;
   let selectedTab: string = "database";
 
   $: {
     let currentDatasetName: string;
     page.subscribe((value) => (currentDatasetName = value.params.dataset));
-    datasets.subscribe((value) => {
+    datasetsStore.subscribe((value) => {
       const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
       if (foundDataset) {
-        currentDatasetInfos = foundDataset;
+        selectedDataset = foundDataset;
       }
     });
-    // console.log({ currentDatasetInfos });
   }
 
-  $: {
-    console.log("salut");
-  }
+  const handleSelectItem = async (event: CustomEvent) => {
+    await goto(`/${selectedDataset.name}/dataset/${event.detail}`);
+  };
 
-  $: {
-    if (currentDatasetInfos?.id) {
-      api
-        .getDatasetItems(currentDatasetInfos?.id, 1)
-        .then((datasetItems) => {
-          selectedDataset = { ...currentDatasetInfos, page: datasetItems };
-        })
-        .catch((e) => console.error("error", e));
-    }
-  }
+  $: console.log({ selectedDataset });
 </script>
 
-{#if selectedDataset}
+{#if selectedDataset?.page}
   <DatasetExplorer
     bind:selectedTab
     {selectedDataset}
     currentPage={1}
-    on:selectItem={(event) => console.log(event)}
+    on:selectItem={(event) => handleSelectItem(event)}
   />
-  <!-- on:selectItem={(event) => handleSelectItem(event.detail)} -->
 {/if}

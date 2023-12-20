@@ -3,7 +3,7 @@
 
   import type { DatasetInfo } from "@pixano/core/src";
   import DatasetPreviewCard from "@pixano/core/src/DatasetPreviewCard.svelte";
-  import { datasets as datasetsStore } from "../lib/stores/datasetStores";
+  import { datasetsStore as datasetsStore } from "../lib/stores/datasetStores";
 
   let datasets: DatasetInfo[] = [];
 

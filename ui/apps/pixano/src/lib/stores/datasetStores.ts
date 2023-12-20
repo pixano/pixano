@@ -18,4 +18,5 @@ import { writable } from "svelte/store";
 import type { DatasetInfo } from "@pixano/core/src";
 
 // Exports
-export const datasets = writable<DatasetInfo[]>();
+export const datasetsStore = writable<DatasetInfo[]>();
+export const modelsStore = writable<string[]>([]);

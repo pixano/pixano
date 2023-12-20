@@ -16,21 +16,12 @@
    */
 
   // Imports
-  import { createEventDispatcher } from "svelte";
+
   import { svg_search } from "@pixano/core/src/icons";
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
 
-  import {
-    svg_next_page,
-    svg_save,
-    svg_left_arrow,
-    svg_database,
-    svg_dashboard,
-  } from "@pixano/core/src/icons";
   //   import { svg_next_page, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
-  import type { DatasetInfo, DatasetItem } from "@pixano/core/src/lib/types/datasetTypes";
-  //   import type { DatasetInfo, DatasetItem } from "./lib/types/datasetTypes";
-  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
+  import type { DatasetInfo } from "@pixano/core/src/lib/types/datasetTypes";
 
   export let datasets: Array<DatasetInfo>;
 </script>
@@ -44,7 +35,7 @@
   </div>
   <div class="flex my-5 w-full h-full items-center flex-wrap text-slate-50">
     <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">
-      <span class="text-3xl"> {datasets.length} </span>
+      <span class="text-3xl"> {datasets?.length} </span>
       <span class="ml-2 text-xl"> datasets </span>
     </div>
     <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">

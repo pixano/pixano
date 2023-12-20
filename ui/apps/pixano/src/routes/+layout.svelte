@@ -8,29 +8,28 @@
 
   import MainHeader from "../components/layout/MainHeader.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import { datasets as datasetsStore } from "../lib/stores/datasetStores";
+  import { datasetsStore, modelsStore } from "../lib/stores/datasetStores";
 
   import "./styles.css";
 
   let datasets: DatasetInfo[] = [];
   let models: Array<string>;
   let pageId: string | null;
-  let datasetName: string;
+  let currentDatasetName: string;
 
   async function handleGetModels() {
     console.log("App.handleGetModels");
 
-    const start = Date.now();
     models = await api.getModels();
-    console.log("App.handleGetModels - api.getModels in", Date.now() - start, "ms", models);
+    modelsStore.set(models);
   }
 
   async function handleGetDatasets() {
     const loadedDatasets = await api.getDatasets();
     datasets = loadedDatasets ? loadedDatasets : [];
 
-    if (datasets?.length > 0) {
-      datasetsStore.set(datasets);
+    if (loadedDatasets?.length > 0) {
+      datasetsStore.set(loadedDatasets);
     }
   }
 
@@ -43,19 +42,34 @@
     console.log("App.handleSearch");
   };
 
+  const getDatasetItems = async (datasetId: string, page: number) => {
+    console.log("App.getDatasetItems", { datasetId, page });
+    const datasetItems = await api.getDatasetItems(datasetId, page);
+    datasetsStore.update((value = []) =>
+      value.map((dataset) =>
+        dataset.id === datasetId ? { ...dataset, page: datasetItems } : dataset,
+      ),
+    );
+  };
+
   $: page.subscribe((value) => {
     pageId = value.route.id;
-    datasetName = value.params.dataset;
+    currentDatasetName = value.params.dataset;
   });
+
+  $: {
+    const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
+    if (currentDatasetId) getDatasetItems(currentDatasetId, 1).catch((err) => console.error(err));
+  }
 </script>
 
 <div class="app">
   {#if pageId === "/"}
     <MainHeader {datasets} on:input={handleSearch} />
   {:else}
-    <DatasetHeader {datasetName} {pageId} />
+    <DatasetHeader datasetName={currentDatasetName} {pageId} {currentDatasetName} />
   {/if}
-  <main>
+  <main class="pt-20 h-1 min-h-screen">
     <slot />
   </main>
 </div>

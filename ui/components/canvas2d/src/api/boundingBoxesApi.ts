@@ -254,5 +254,5 @@ export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool
   const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
   const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
   if (currentMaskGroup) currentMaskGroup.destroy();
-  if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
+  if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
 }

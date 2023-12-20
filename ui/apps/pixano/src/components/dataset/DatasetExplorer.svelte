@@ -17,11 +17,13 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  import { api, LoadingModal, WarningModal } from "@pixano/core";
+  // import { api, LoadingModal, WarningModal } from "@pixano/core";
+  import { LoadingModal, WarningModal } from "@pixano/core";
 
   import { Table } from "@pixano/table";
 
-  import type { DatasetInfo, DatasetItems } from "@pixano/core";
+  import type { DatasetInfo } from "@pixano/core";
+  // import type { DatasetInfo, DatasetItems } from "@pixano/core";
   import {
     svg_clear,
     svg_filter,
@@ -70,78 +72,78 @@
     selectedTab = "";
   }
 
-  async function loadPage() {
-    let res: DatasetItems;
-    let query: Record<string, string> = { model: selectedSearchModel as string, search: search };
+  function loadPage() {
+    // let res: DatasetItems;
+    // let query: Record<string, string> = { model: selectedSearchModel as string, search: search };
 
     // Load page
-    const start = Date.now();
-    if (search == "") {
-      // Standard page
-      res = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
-      console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
-    } else {
-      // Search page
-      loadingResultsModal = true;
-      res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
-      console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
-    }
+    // const start = Date.now();
+    // if (search == "") {
+    //   // Standard page
+    //   res = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
+    //   console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
+    // } else {
+    //   // Search page
+    //   loadingResultsModal = true;
+    //   res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
+    //   console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
+    // }
 
     // Results
     loadingResultsModal = false;
-    if (res == null) {
-      datasetErrorModal = true;
-    } else {
-      selectedDataset.page = res;
-    }
+    // if (res == null) {
+    //   datasetErrorModal = true;
+    // } else {
+    //   selectedDataset.page = res;
+    // }
   }
 
-  async function handleClearSearch() {
+  function handleClearSearch() {
     (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
-    await handleSearch();
+    handleSearch();
   }
 
-  async function handleGoToFirstPage() {
+  function handleGoToFirstPage() {
     if (currentPage > 1) {
       currentPage = 1;
-      await loadPage();
+      loadPage();
     }
   }
 
-  async function handleGoToPreviousPage() {
+  function handleGoToPreviousPage() {
     if (currentPage > 1) {
       currentPage -= 1;
-      await loadPage();
+      loadPage();
     }
   }
 
-  async function handleGoToNextPage() {
+  function handleGoToNextPage() {
     if ((selectedDataset.page?.total || 1) > currentPage * itemsPerPage) {
       currentPage += 1;
-      await loadPage();
+      loadPage();
     }
   }
 
-  async function handleGoToLastPage() {
+  function handleGoToLastPage() {
     if ((selectedDataset.page?.total || 1) > currentPage * itemsPerPage) {
       currentPage = Math.ceil((selectedDataset.page?.total || 1) / itemsPerPage);
-      await loadPage();
+      loadPage();
     }
   }
 
-  async function handleSearch() {
+  function handleSearch() {
     search = (document.getElementById("sem-search-input") as HTMLInputElement).value;
     currentPage = 1;
-    await loadPage();
+    loadPage();
   }
 
-  onMount(async () => {
+  onMount(() => {
     search = "";
-    await loadPage();
+    loadPage();
   });
 </script>
 
-<div class="w-full h-full p-20 flex flex-col bg-slate-100 text-slate-800">
+<div class="w-full p-5 flex flex-col bg-slate-100 text-slate-800">
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-full flex flex-col">

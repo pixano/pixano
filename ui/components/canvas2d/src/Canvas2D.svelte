@@ -182,7 +182,7 @@
     for (const view of Object.values(selectedItem.views)) {
       zoomFactor[view.id] = 1;
       images[view.id] = new Image();
-      images[view.id].src = view.uri || view.url;
+      images[view.id].src = `/${view.uri}` || view.url;
       images[view.id].onload = () => {
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
@@ -814,7 +814,9 @@
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
     }
-    stage.container().style.cursor = selectedTool.cursor;
+    if (selectedTool) {
+      stage.container().style.cursor = selectedTool.cursor;
+    }
     currentAnn = null;
   }
 

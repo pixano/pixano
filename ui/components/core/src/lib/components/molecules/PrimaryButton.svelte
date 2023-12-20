@@ -23,9 +23,9 @@
 </script>
 
 <Button
-  class={cn("font-medium h-10 px-6 border transition-colors flex gap-2", {
-    "bg-primary border-primary rounded-full text-slate-50  hover:bg-secondary": isSelected,
-    "bg-slate-50 border-slate-300 rounded-full text-primary hover:bg-slate-300": !isSelected,
+  class={cn("font-medium h-10 px-6 border transition-colors flex gap-2 hover:bg-primary-light", {
+    "bg-primary border-primary rounded-full text-slate-50": isSelected,
+    "bg-slate-50 border-slate-300 rounded-full text-primary": !isSelected,
   })}
   on:click
 >

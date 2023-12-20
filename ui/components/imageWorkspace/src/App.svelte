@@ -52,7 +52,6 @@
 
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
-  $: console.log({ selectedDataset, selectedItem, allBBoxes });
 
   $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
   $: itemMetas.set({
@@ -119,9 +118,11 @@
       }
     }
   });
+
+  $: console.log({ selectedItem });
 </script>
 
-<div class="flex w-full pt-[81px] h-full">
+<div class="flex w-full h-full">
   <Toolbar bind:selectedTool />
   <ImageCanvas
     {selectedTool}
