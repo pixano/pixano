@@ -30,6 +30,7 @@
         "bg-primary text-white": selected,
       })}
       on:click
+      on:mouseover
     >
       <slot />
     </Button>

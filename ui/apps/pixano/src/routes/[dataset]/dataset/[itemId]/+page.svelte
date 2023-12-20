@@ -4,7 +4,11 @@
   import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
   import { api } from "@pixano/core/src";
 
-  import { datasetsStore, modelsStore } from "../../../../lib/stores/datasetStores";
+  import {
+    datasetsStore,
+    isLoadingNewItemStore,
+    modelsStore,
+  } from "../../../../lib/stores/datasetStores";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -23,7 +27,7 @@
       .then((item) => {
         selectedItem = item;
       })
-      .then(() => (isLoadingNewItem = false))
+      .then(() => isLoadingNewItemStore.set(false))
       .catch((err) => console.error(err));
   };
 
@@ -36,9 +40,13 @@
     const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
     if (foundDataset && currentItemId) {
       selectedDataset = foundDataset;
-      isLoadingNewItem = true;
+      isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
+  });
+
+  $: isLoadingNewItemStore.subscribe((value) => {
+    isLoadingNewItem = value;
   });
 
   async function handleSaveItem(savedItem: DatasetItem) {

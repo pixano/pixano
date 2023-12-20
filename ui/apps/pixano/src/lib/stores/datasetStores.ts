@@ -20,3 +20,4 @@ import type { DatasetInfo } from "@pixano/core/src";
 // Exports
 export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
+export const isLoadingNewItemStore = writable<boolean>(false);

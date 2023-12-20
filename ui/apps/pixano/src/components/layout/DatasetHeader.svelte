@@ -21,18 +21,19 @@
   import {
     ArrowLeftCircleIcon,
     Home,
-    TrendingUp,
     Database,
     ArrowRight,
     ArrowLeft,
+    Loader2Icon,
   } from "lucide-svelte";
-
-  import { datasetsStore } from "../../lib/stores/datasetStores";
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import PrimaryButton from "@pixano/core/src/lib/components/molecules/PrimaryButton.svelte";
-  import type { DatasetInfo, DatasetItem } from "@pixano/core/src";
+  import type { DatasetInfo } from "@pixano/core/src";
+  import { findSelectedItem } from "$lib/api/navigationApi";
+
+  import { datasetsStore, isLoadingNewItemStore } from "../../lib/stores/datasetStores";
 
   export let datasetName: string;
   export let pageId: string | null;
@@ -40,6 +41,11 @@
 
   let datasets: DatasetInfo[];
   let currentItemId: string;
+  let isLoading: boolean;
+
+  isLoadingNewItemStore.subscribe((value) => {
+    isLoading = value;
+  });
 
   datasetsStore.subscribe((value) => {
     datasets = value;
@@ -51,21 +57,21 @@
 
   const goToNeighborItem = async (direction: "previous" | "next") => {
     const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
-    console.log({ currentDataset });
-    if (currentDataset && currentDataset.page) {
-      const currentDatasetItems: DatasetItem[] = Object.values(currentDataset.page.items);
-      const currentIndex: number = currentDatasetItems.findIndex(
-        (item) => item.id === currentItemId,
-      );
-      if (currentIndex !== -1) {
-        const nextIndex = direction === "previous" ? currentIndex - 1 : currentIndex + 1;
-        if (nextIndex >= 0 && nextIndex < currentDatasetItems.length) {
-          const nextItemId = currentDatasetItems[nextIndex].id;
-          currentItemId = nextItemId;
-          await goto(`/${currentDatasetName}/dataset/${nextItemId}`);
-        }
-      }
+    const datasetItems = Object.values(currentDataset?.page?.items || {});
+    const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
+    if (selectedId) {
+      currentItemId = selectedId;
+      await goto(`/${currentDatasetName}/dataset/${selectedId}`);
     }
+  };
+
+  const onKeyDown = async (event: KeyboardEvent) => {
+    if (event.key === "ArrowLeft") {
+      await goToNeighborItem("previous");
+    } else if (event.key === "ArrowRight") {
+      await goToNeighborItem("next");
+    }
+    return event.key;
   };
 
   async function navigateTo(route: string) {
@@ -90,15 +96,19 @@
       </div>
     </div>
     {#if currentItemId}
-      <div class="flex items-center gap-4">
-        <TooltipIconButton on:click={() => goToNeighborItem("previous")}>
-          <ArrowLeft />
-        </TooltipIconButton>
-        {currentItemId}
-        <TooltipIconButton on:click={() => goToNeighborItem("next")}>
-          <ArrowRight />
-        </TooltipIconButton>
-      </div>
+      {#if isLoading}
+        <Loader2Icon class="animate-spin" />
+      {:else}
+        <div class="flex items-center gap-4">
+          <TooltipIconButton on:click={() => goToNeighborItem("previous")}>
+            <ArrowLeft />
+          </TooltipIconButton>
+          {currentItemId}
+          <TooltipIconButton on:click={() => goToNeighborItem("next")}>
+            <ArrowRight />
+          </TooltipIconButton>
+        </div>
+      {/if}
     {/if}
     <div class="flex gap-4">
       <PrimaryButton
@@ -115,13 +125,7 @@
         <Database strokeWidth={1} />
         Dataset</PrimaryButton
       >
-      <PrimaryButton
-        isSelected={pageId === "stats"}
-        on:click={() => navigateTo(`/${datasetName}/stats`)}
-      >
-        <TrendingUp strokeWidth={1} />
-        Stats</PrimaryButton
-      >
     </div>
   </div>
 </header>
+<svelte:window on:keyup={onKeyDown} />

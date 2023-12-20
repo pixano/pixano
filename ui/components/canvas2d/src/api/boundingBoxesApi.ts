@@ -250,9 +250,11 @@ export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Kon
 }
 
 export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool: SelectionTool) {
-  const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-  const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
-  const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
-  if (currentMaskGroup) currentMaskGroup.destroy();
-  if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
+  const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+  if (viewLayer) {
+    const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
+    const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
+    if (currentMaskGroup) currentMaskGroup.destroy();
+    if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
+  }
 }

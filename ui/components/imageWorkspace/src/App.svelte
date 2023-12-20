@@ -36,6 +36,7 @@
     itemMasks,
     interactiveSegmenterModel,
     itemMetas,
+    newShape,
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
 
@@ -60,6 +61,10 @@
     views: selectedItem.views,
     id: selectedItem.id,
   });
+
+  $: {
+    if (selectedItem) newShape.set(null);
+  }
 
   const sam = new SAM();
 
@@ -123,7 +128,7 @@
   $: console.log({ selectedItem });
 </script>
 
-<div class="w-full h-full grid grid-cols-[48px_calc(75%-48px)_25%]">
+<div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
   <Toolbar bind:selectedTool />
   <ImageCanvas
     {selectedTool}
@@ -133,5 +138,5 @@
     {embeddings}
     {isLoading}
   />
-  <ActionsTabs on:click={onSave} />
+  <ActionsTabs on:click={onSave} {isLoading} />
 </div>

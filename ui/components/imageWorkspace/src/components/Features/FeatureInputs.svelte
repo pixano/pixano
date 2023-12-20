@@ -47,7 +47,7 @@
     {/if}
     {#if feature.type === "boolean" && (feature.value !== undefined || isEditing)}
       <Checkbox
-        checked={feature.value}
+        checked={!!feature.value}
         disabled={!isEditing}
         handleClick={(checked) => saveInputChange(checked, feature.name)}
       />

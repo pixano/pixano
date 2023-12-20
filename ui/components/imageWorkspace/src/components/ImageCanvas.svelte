@@ -45,16 +45,17 @@
       <Loader2Icon class="animate-spin" />
     </div>
   {:else}
-    <Canvas2D
-      {selectedItem}
-      colorRange={allIds}
-      bind:masks
-      bind:bboxes
-      {embeddings}
-      bind:selectedTool
-      bind:currentAnn
-      createNewShape={(shape) => newShape.set(shape)}
-      {isLoading}
-    />
+    {#key selectedItem.id}
+      <Canvas2D
+        {selectedItem}
+        colorRange={allIds}
+        bind:masks
+        bind:bboxes
+        {embeddings}
+        bind:selectedTool
+        bind:currentAnn
+        createNewShape={(shape) => newShape.set(shape)}
+      />
+    {/key}
   {/if}
 </div>

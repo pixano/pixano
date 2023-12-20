@@ -18,7 +18,7 @@
   import * as ort from "onnxruntime-web";
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onMount } from "svelte";
+  import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal, utils } from "@pixano/core";
@@ -151,6 +151,10 @@
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
+  });
+
+  onDestroy(() => {
+    clearAnnotationAndInputs();
   });
 
   afterUpdate(() => {
@@ -490,9 +494,11 @@
   }
 
   function clearInputs(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    inputGroup.destroyChildren();
+    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+    if (viewLayer) {
+      const inputGroup: Konva.Group = viewLayer.findOne("#input");
+      inputGroup.destroyChildren();
+    }
   }
 
   // ********** PAN TOOL ********** //
@@ -814,6 +820,7 @@
   }
 
   function clearAnnotationAndInputs() {
+    if (!stage) return;
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
