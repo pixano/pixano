@@ -43,6 +43,7 @@
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => void;
+  export let isLoading: boolean;
 
   let selectedTool: SelectionTool;
   let allBBoxes: BBox[] = [];
@@ -122,7 +123,7 @@
   $: console.log({ selectedItem });
 </script>
 
-<div class="flex w-full h-full">
+<div class="w-full h-full grid grid-cols-[48px_calc(75%-48px)_25%]">
   <Toolbar bind:selectedTool />
   <ImageCanvas
     {selectedTool}
@@ -130,6 +131,7 @@
     bind:bboxes={allBBoxes}
     bind:masks={allMasks}
     {embeddings}
+    {isLoading}
   />
   <ActionsTabs on:click={onSave} />
 </div>

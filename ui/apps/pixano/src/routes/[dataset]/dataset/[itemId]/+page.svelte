@@ -11,6 +11,7 @@
   let models: Array<string>;
   let currentDatasetName: string;
   let currentItemId: string;
+  let isLoadingNewItem: boolean = false;
 
   modelsStore.subscribe((value) => {
     models = value;
@@ -22,21 +23,22 @@
       .then((item) => {
         selectedItem = item;
       })
+      .then(() => (isLoadingNewItem = false))
       .catch((err) => console.error(err));
   };
 
   $: page.subscribe((value) => {
     currentDatasetName = value.params.dataset;
     currentItemId = value.params.itemId;
+  });
 
-    datasetsStore.subscribe((value) => {
-      const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
-      if (foundDataset && currentItemId) {
-        selectedDataset = foundDataset;
-        console.log("about to save", { selectedDataset, currentItemId });
-        handleSelectItem(selectedDataset, currentItemId);
-      }
-    });
+  $: datasetsStore.subscribe((value) => {
+    const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
+    if (foundDataset && currentItemId) {
+      selectedDataset = foundDataset;
+      isLoadingNewItem = true;
+      handleSelectItem(selectedDataset, currentItemId);
+    }
   });
 
   async function handleSaveItem(savedItem: DatasetItem) {
@@ -46,5 +48,11 @@
 </script>
 
 {#if selectedItem}
-  <ImageWorkspace {selectedItem} {selectedDataset} {models} {handleSaveItem} />
+  <ImageWorkspace
+    {selectedItem}
+    {selectedDataset}
+    {models}
+    {handleSaveItem}
+    isLoading={isLoadingNewItem}
+  />
 {/if}

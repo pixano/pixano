@@ -22,6 +22,7 @@
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal, utils } from "@pixano/core";
+  import { cn } from "@pixano/core/src/lib/utils";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
     Mask,
@@ -60,6 +61,8 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let createNewShape: (shape: Shape) => void;
+
+  let isReady = false;
 
   let colorScale: (id: string) => string;
 
@@ -192,6 +195,7 @@
         }
         scaleView(view);
         scaleElements(view);
+        isReady = true;
         //hack to refresh view (display masks/bboxes)
         masks = masks;
         bboxes = bboxes;
@@ -1039,7 +1043,12 @@
   }
 </script>
 
-<div class="flex h-full w-full bg-slate-100" bind:this={stageContainer}>
+<div
+  class={cn("flex h-full w-full bg-slate-100 transition-opacity duration-300 delay-100", {
+    "opacity-0": !isReady,
+  })}
+  bind:this={stageContainer}
+>
   <Stage
     bind:config={stageConfig}
     bind:handle={stage}

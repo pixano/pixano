@@ -14,6 +14,7 @@
    * http://www.cecill.info
    */
   import * as ort from "onnxruntime-web";
+  import { Loader2Icon } from "lucide-svelte";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { BBox, DatasetItem, Mask, SelectionTool } from "@pixano/core";
@@ -27,6 +28,9 @@
 
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let isLoading: boolean;
+
+  // let loading = true;
 
   let allIds: string[] = [];
 
@@ -35,15 +39,22 @@
   });
 </script>
 
-<div class="flex-auto max-w-[70%]">
-  <Canvas2D
-    {selectedItem}
-    colorRange={allIds}
-    bind:masks
-    bind:bboxes
-    {embeddings}
-    bind:selectedTool
-    bind:currentAnn
-    createNewShape={(shape) => newShape.set(shape)}
-  />
+<div class="max-w-[100%]">
+  {#if isLoading}
+    <div class="h-full w-full flex justify-center items-center">
+      <Loader2Icon class="animate-spin" />
+    </div>
+  {:else}
+    <Canvas2D
+      {selectedItem}
+      colorRange={allIds}
+      bind:masks
+      bind:bboxes
+      {embeddings}
+      bind:selectedTool
+      bind:currentAnn
+      createNewShape={(shape) => newShape.set(shape)}
+      {isLoading}
+    />
+  {/if}
 </div>

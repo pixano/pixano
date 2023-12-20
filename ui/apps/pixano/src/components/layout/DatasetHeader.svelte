@@ -39,12 +39,11 @@
   export let currentDatasetName: string;
 
   let datasets: DatasetInfo[];
+  let currentItemId: string;
 
   datasetsStore.subscribe((value) => {
     datasets = value;
   });
-
-  let currentItemId: string;
 
   $: page.subscribe((value) => {
     currentItemId = value.params.itemId;
@@ -62,6 +61,7 @@
         const nextIndex = direction === "previous" ? currentIndex - 1 : currentIndex + 1;
         if (nextIndex >= 0 && nextIndex < currentDatasetItems.length) {
           const nextItemId = currentDatasetItems[nextIndex].id;
+          currentItemId = nextItemId;
           await goto(`/${currentDatasetName}/dataset/${nextItemId}`);
         }
       }

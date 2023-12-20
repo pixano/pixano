@@ -30,7 +30,7 @@
   });
 </script>
 
-<div class="h-full max-h-screen shadow-md w-10 bg-popover flex-[2_0_auto]">
+<div class="h-full max-h-screen shadow-md bg-popover flex-[2_0_auto]">
   {#if shape}
     <SaveShapeForm />
   {:else}
