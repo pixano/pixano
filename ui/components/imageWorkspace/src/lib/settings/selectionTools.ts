@@ -20,9 +20,18 @@ export const rectangleTool: SelectionTool = {
   isSmart: false,
 };
 
-export const smartMaskTool: SelectionTool = {
-  name: "point selection",
-  type: "LABELED_POINT",
+export const removeSmartPointTool: SelectionTool = {
+  name: "Negative point selection",
+  type: "POINT_SELECTION",
+  cursor: "crosshair",
+  label: 0,
+  isSmart: true,
+};
+
+export const addSmartPointTool: SelectionTool = {
+  name: "Positive point selection",
+  type: "POINT_SELECTION",
   cursor: "crosshair",
   label: 1,
+  isSmart: true,
 };

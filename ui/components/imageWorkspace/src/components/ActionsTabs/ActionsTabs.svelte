@@ -36,8 +36,6 @@
   newShape.subscribe((value) => {
     shape = value;
   });
-
-  $: console.log({ canSave, isButtonEnabled });
 </script>
 
 <div class="h-full max-h-screen shadow-md bg-popover">

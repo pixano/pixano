@@ -30,8 +30,6 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
 
-  // let loading = true;
-
   let allIds: string[] = [];
 
   itemObjects.subscribe((value) => {

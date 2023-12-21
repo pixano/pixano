@@ -16,22 +16,20 @@
 // Imports
 import type { InteractiveImageSegmenter } from "./modelsTypes";
 
-export type ToolType = "LABELED_POINT" | "RECTANGLE" | "DELETE" | "PAN" | "CLASSIFICATION";
+export type ToolType = "POINT_SELECTION" | "RECTANGLE" | "DELETE" | "PAN" | "CLASSIFICATION";
 
 // Exports
-type BaseTool = {
+type BaseTool<T extends ToolType> = {
   name: string;
   cursor: string;
   postProcessor?: InteractiveImageSegmenter;
   isSmart?: boolean;
+  type: T;
 };
 
-export type AllTool = BaseTool & {
-  type: "RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION";
-};
+export type AllTool = BaseTool<"RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION">;
 
-export type LabeledPointTool = BaseTool & {
-  type: "LABELED_POINT";
+export type LabeledPointTool = BaseTool<"POINT_SELECTION"> & {
   label: number;
 };
 

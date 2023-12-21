@@ -72,7 +72,7 @@
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
   $: {
-    if (selectedTool) {
+    if (!selectedTool?.isSmart) {
       clearAnnotationAndInputs();
     }
   }
@@ -200,7 +200,7 @@
         scaleView(view);
         scaleElements(view);
         isReady = true;
-        //hack to refresh view (display masks/bboxes)
+        // hack to refresh view (display masks/bboxes)
         masks = masks;
         bboxes = bboxes;
       };
@@ -350,7 +350,6 @@
           }
         }
       }
-
       destroyDeletedObjects(bboxIds, bboxGroup);
     }
   }
@@ -468,7 +467,7 @@
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case "LABELED_POINT":
+      case "POINT_SELECTION":
         displayInputPointTool(selectedTool);
         break;
       case "RECTANGLE":
@@ -837,7 +836,7 @@
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type === "LABELED_POINT") {
+    if (selectedTool?.type === "POINT_SELECTION") {
       updateInputPointStage(position);
     }
 
@@ -895,7 +894,7 @@
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
-    } else if (selectedTool?.type == "LABELED_POINT") {
+    } else if (selectedTool?.type == "POINT_SELECTION") {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point

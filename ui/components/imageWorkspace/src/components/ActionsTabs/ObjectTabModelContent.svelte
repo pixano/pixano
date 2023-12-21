@@ -22,20 +22,27 @@
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
 
-  export let hideAllObjects: boolean = false;
   export let sectionTitle: string;
   export let modelName: string;
+  let hideAllObjects: boolean | undefined;
 
   let tooltipContent: string = hideAllObjects ? "show all" : "hide all";
   let open: boolean = true;
 
+  itemObjects.subscribe((items) => {
+    const allItemsOfCurrentModelAreHidden = items
+      .filter((item) => item.source_id === modelName)
+      .every((item) => item.displayControl?.hidden);
+    hideAllObjects = allItemsOfCurrentModelAreHidden;
+  });
+
   $: itemObjects.update((items) => {
     return items.map((item) => {
       if (item.source_id === modelName) {
-        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], hideAllObjects);
+        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], !!hideAllObjects);
       }
       if (modelName === MODEL_RUN && item.source_id !== GROUND_TRUTH) {
-        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], hideAllObjects);
+        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], !!hideAllObjects);
       }
       return item;
     });

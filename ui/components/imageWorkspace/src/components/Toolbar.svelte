@@ -13,37 +13,58 @@
    *
    * http://www.cecill.info
    */
-  import { MousePointer, Square, Share2, BrushIcon } from "lucide-svelte";
+  import {
+    MousePointer,
+    Square,
+    Share2,
+    BrushIcon,
+    PlusCircleIcon,
+    MinusCircleIcon,
+  } from "lucide-svelte";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import { tools } from "@pixano/canvas2d";
+
   import type { SelectionTool } from "@pixano/core";
+  import { cn } from "@pixano/core/src/lib/utils";
 
   import MagicIcon from "../assets/MagicIcon.svelte";
   import {
     panTool,
     smartRectangleTool,
     rectangleTool,
-    smartMaskTool,
+    addSmartPointTool,
+    removeSmartPointTool,
   } from "../lib/settings/selectionTools";
   import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
 
   export let selectedTool: SelectionTool | null;
+  let previousSelectedTool: SelectionTool | null = null;
+  let showSmartTools: boolean = false;
+
   const selectTool = (tool: SelectionTool | null) => {
     if (tool !== selectedTool) selectedTool = tool;
   };
 
+  const handleSmartToolClick = () => {
+    if (!showSmartTools) {
+      selectTool(addSmartPointTool);
+    } else selectTool(null);
+    showSmartTools = !showSmartTools;
+  };
+
   interactiveSegmenterModel.subscribe((segmenter) => {
     if (segmenter) {
-      smartMaskTool.postProcessor = segmenter;
-      // pointMinusTool.postProcessor = segmenter;
+      addSmartPointTool.postProcessor = segmenter;
+      removeSmartPointTool.postProcessor = segmenter;
       smartRectangleTool.postProcessor = segmenter;
     }
   });
 
   $: {
-    if (selectedTool?.type !== tools.ToolType.Rectangle) {
+    console.log({ selectedTool, previousSelectedTool });
+    if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
       newShape.set(null);
     }
+    previousSelectedTool = selectedTool;
   }
 </script>
 
@@ -52,13 +73,13 @@
     <TooltipIconButton
       tooltipContent="Move your picture around"
       on:click={() => selectTool(panTool)}
-      selected={selectedTool?.type === tools.ToolType.Pan}
+      selected={selectedTool?.type === "PAN"}
     >
       <MousePointer />
     </TooltipIconButton>
     <TooltipIconButton
       on:click={() => selectTool(rectangleTool)}
-      selected={selectedTool?.type === tools.ToolType.Rectangle && !selectedTool.isSmart}
+      selected={selectedTool?.type === "RECTANGLE" && !selectedTool.isSmart}
     >
       <Square />
     </TooltipIconButton>
@@ -69,22 +90,40 @@
       <BrushIcon />
     </TooltipIconButton>
   </div>
-  <div class="flex items-center flex-col gap-4 mt-4">
-    <TooltipIconButton
-      tooltipContent="Smart mask"
-      on:click={() => selectTool(smartMaskTool)}
-      selected={selectedTool?.type === "LABELED_POINT"}
-    >
+  <div
+    class={cn("flex items-center flex-col gap-4 mt-4", {
+      "bg-primary-light rounded-sm": showSmartTools,
+    })}
+  >
+    <TooltipIconButton tooltipContent="Smart tools" on:click={handleSmartToolClick}>
       <BrushIcon />
       <MagicIcon />
     </TooltipIconButton>
-    <TooltipIconButton
-      tooltipContent="Smart rectangle"
-      on:click={() => selectTool(smartRectangleTool)}
-      selected={selectedTool?.type === tools.ToolType.Rectangle && selectedTool.isSmart}
-    >
-      <Square />
-      <MagicIcon />
-    </TooltipIconButton>
+    {#if showSmartTools}
+      <TooltipIconButton
+        tooltipContent={addSmartPointTool.name}
+        on:click={() => selectTool(addSmartPointTool)}
+        selected={selectedTool?.type === "POINT_SELECTION" && !!selectedTool.label}
+      >
+        <PlusCircleIcon />
+        <MagicIcon />
+      </TooltipIconButton>
+      <TooltipIconButton
+        tooltipContent={removeSmartPointTool.name}
+        on:click={() => selectTool(removeSmartPointTool)}
+        selected={selectedTool?.type === "POINT_SELECTION" && !selectedTool.label}
+      >
+        <MinusCircleIcon />
+        <MagicIcon />
+      </TooltipIconButton>
+      <TooltipIconButton
+        tooltipContent="Smart rectangle"
+        on:click={() => selectTool(smartRectangleTool)}
+        selected={selectedTool?.type === "RECTANGLE" && selectedTool.isSmart}
+      >
+        <Square />
+        <MagicIcon />
+      </TooltipIconButton>
+    {/if}
   </div>
 </div>

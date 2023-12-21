@@ -77,7 +77,6 @@
     interactiveSegmenterModel.set(sam);
 
     // Embeddings
-
     const item = await api.getItemEmbeddings(
       selectedDataset.id,
       selectedItem.id,
@@ -129,8 +128,6 @@
       }
     }
   });
-
-  $: console.log({ selectedItem });
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
