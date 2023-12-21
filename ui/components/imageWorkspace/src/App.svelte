@@ -14,9 +14,7 @@
    * http://www.cecill.info
    */
 
-  import { onMount } from "svelte";
   import * as ort from "onnxruntime-web";
-  import { api } from "@pixano/core";
   import type {
     DatasetItem,
     BBox,
@@ -25,11 +23,12 @@
     DatasetInfo,
     ItemObject,
   } from "@pixano/core";
-  import { SAM, npy } from "@pixano/models";
+  import { SAM } from "@pixano/models";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
+  import { loadEmbeddings } from "./lib/api/modelsApi";
   import {
     itemObjects,
     itemBboxes,
@@ -53,6 +52,8 @@
   let selectedModelName: string;
   let embeddings: Record<string, ort.Tensor> = {};
 
+  let embeddingAreLoaded: boolean = false;
+
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
 
@@ -65,45 +66,25 @@
 
   $: {
     if (selectedItem) {
+      embeddingAreLoaded = false;
       newShape.set(null);
       canSave.set(false);
     }
   }
-  $: loadEmbeddings(selectedItem, selectedModelName).catch((err) =>
-    console.error("cannot load embeddings", err),
-  );
-  //TODO? .then(()=>{/*<activate model tools>*/}})  *AND/OR* .catch(()=>{/*deactivate model tools*/});
+  $: {
+    if (!embeddingAreLoaded) {
+      loadEmbeddings(selectedItem, selectedModelName, selectedDataset)
+        .then((results) => (embeddings = results))
+        .then(() => (embeddingAreLoaded = true))
+        .catch((err) => console.error("cannot load Embeddings", err));
+    }
+  }
 
   const sam = new SAM();
 
   async function loadModel() {
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
-  }
-
-  async function loadEmbeddings(selectedItem: DatasetItem, selectedModelName: string) {
-    if (selectedModelName != undefined && selectedModelName != "") {
-      console.log("Load Embeddings", selectedItem.id, selectedModelName);
-      const item = await api.getItemEmbeddings(
-        selectedDataset.id,
-        selectedItem.id,
-        selectedModelName,
-      );
-      if (item) {
-        for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
-          try {
-            const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
-            embeddings[viewId] = new ort.Tensor(
-              "float32",
-              viewEmbeddingArray.data,
-              viewEmbeddingArray.shape,
-            );
-          } catch (e) {
-            console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);
-          }
-        }
-      }
-    }
   }
 
   const onSave = () => {
@@ -125,15 +106,17 @@
     canSave.set(false);
   };
 
-  onMount(async () => {
+  $: {
     if (models.length > 0) {
       let samModels = models.filter((m) => m.includes("sam"));
       if (samModels.length == 1) {
         selectedModelName = samModels[0];
-        await loadModel();
+        loadModel().catch((err) => console.error("cannot load model", err));
       }
     }
-  });
+  }
+
+  $: console.log({ embeddings });
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">

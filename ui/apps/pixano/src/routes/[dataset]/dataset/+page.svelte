@@ -25,8 +25,6 @@
   const handleSelectItem = async (event: CustomEvent) => {
     await goto(`/${selectedDataset.name}/dataset/${event.detail}`);
   };
-
-  $: console.log({ selectedDataset });
 </script>
 
 {#if selectedDataset?.page}

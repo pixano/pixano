@@ -69,12 +69,14 @@
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
   let numberOfBBoxes: number;
+  let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
   $: {
-    if (!selectedTool?.isSmart) {
+    if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
       clearAnnotationAndInputs();
     }
+    prevSelectedTool = selectedTool;
   }
 
   $: {
