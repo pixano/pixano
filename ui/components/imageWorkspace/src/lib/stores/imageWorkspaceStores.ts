@@ -35,6 +35,7 @@ export const itemMetas = writable<{
   views: DatasetItem["views"];
   id: DatasetItem["id"];
 }>();
+export const canSave = writable<boolean>(false);
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {

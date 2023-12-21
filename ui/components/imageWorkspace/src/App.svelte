@@ -37,6 +37,7 @@
     interactiveSegmenterModel,
     itemMetas,
     newShape,
+    canSave,
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
 
@@ -63,7 +64,10 @@
   });
 
   $: {
-    if (selectedItem) newShape.set(null);
+    if (selectedItem) {
+      newShape.set(null);
+      canSave.set(false);
+    }
   }
 
   const sam = new SAM();
@@ -113,6 +117,7 @@
       savedItem.features = value.features;
     });
     handleSaveItem(savedItem);
+    canSave.set(false);
   };
 
   onMount(async () => {

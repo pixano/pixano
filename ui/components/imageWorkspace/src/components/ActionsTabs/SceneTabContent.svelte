@@ -18,7 +18,7 @@
 
   import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 
-  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
+  import { canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import SceneFeatures from "../Features/FeatureInputs.svelte";
   import type { DatasetItem } from "@pixano/core";
 
@@ -61,6 +61,7 @@
       };
       return newMetas;
     });
+    canSave.set(true);
   };
 </script>
 

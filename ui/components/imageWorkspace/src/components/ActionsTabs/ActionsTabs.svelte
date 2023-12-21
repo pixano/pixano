@@ -17,19 +17,27 @@
   import * as Tabs from "@pixano/core/src/lib/components/ui/tabs";
   import type { Shape } from "@pixano/core";
   import { Skeleton } from "@pixano/core/src/lib/components/ui/skeleton";
+  import { cn } from "@pixano/core/src/lib/utils";
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
-  import { newShape } from "../../lib/stores/imageWorkspaceStores";
+  import { canSave, newShape } from "../../lib/stores/imageWorkspaceStores";
 
   export let isLoading: boolean;
   let shape: Shape | null;
   let currentTab: "scene" | "objects" = "scene";
+  let isButtonEnabled = false;
+
+  canSave.subscribe((value) => {
+    isButtonEnabled = value;
+  });
 
   newShape.subscribe((value) => {
     shape = value;
   });
+
+  $: console.log({ canSave, isButtonEnabled });
 </script>
 
 <div class="h-full max-h-screen shadow-md bg-popover">
@@ -65,7 +73,14 @@
           {/if}
         </Tabs.Content>
         <button
-          class="h-[48px] w-full border-t border-t-primary-ligth hover:bg-primary-light"
+          disabled={!isButtonEnabled}
+          class={cn(
+            "h-[48px] w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer",
+            {
+              "bg-slate-50 hover:bg-slate-50 pointer-events-none cursor-not-allowed text-slate-500":
+                !isButtonEnabled,
+            },
+          )}
           on:click>SAVE CHANGES</button
         >
       </div>
