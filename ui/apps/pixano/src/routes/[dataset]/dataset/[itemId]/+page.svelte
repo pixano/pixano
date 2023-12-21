@@ -31,7 +31,7 @@
       .catch((err) => console.error(err));
   };
 
-  $: page.subscribe((value) => {
+  page.subscribe((value) => {
     currentDatasetName = value.params.dataset;
     currentItemId = value.params.itemId;
   });

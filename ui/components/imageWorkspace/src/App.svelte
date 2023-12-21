@@ -69,34 +69,40 @@
       canSave.set(false);
     }
   }
+  $: loadEmbeddings(selectedItem, selectedModelName).catch((err) =>
+    console.error("cannot load embeddings", err),
+  );
+  //TODO? .then(()=>{/*<activate model tools>*/}})  *AND/OR* .catch(()=>{/*deactivate model tools*/});
 
   const sam = new SAM();
 
   async function loadModel() {
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
+  }
 
-    // Embeddings
-    const item = await api.getItemEmbeddings(
-      selectedDataset.id,
-      selectedItem.id,
-      selectedModelName,
-    );
-    if (item) {
-      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
-        try {
-          const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
-          embeddings[viewId] = new ort.Tensor(
-            "float32",
-            viewEmbeddingArray.data,
-            viewEmbeddingArray.shape,
-          );
-        } catch (e) {
-          console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);
+  async function loadEmbeddings(selectedItem: DatasetItem, selectedModelName: string) {
+    if (selectedModelName != undefined && selectedModelName != "") {
+      console.log("Load Embeddings", selectedItem.id, selectedModelName);
+      const item = await api.getItemEmbeddings(
+        selectedDataset.id,
+        selectedItem.id,
+        selectedModelName,
+      );
+      if (item) {
+        for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+          try {
+            const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
+            embeddings[viewId] = new ort.Tensor(
+              "float32",
+              viewEmbeddingArray.data,
+              viewEmbeddingArray.shape,
+            );
+          } catch (e) {
+            console.warn("AnnotationWorkspace.loadModel - Error loading embeddings", e);
+          }
         }
       }
-    } else {
-      selectedModelName = "";
     }
   }
 

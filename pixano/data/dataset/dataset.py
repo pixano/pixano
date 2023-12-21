@@ -593,14 +593,13 @@ class Dataset(BaseModel):
 
             # If objects table does not exist
             else:
-                if source == "Pixano Annotator":
+                if source == "Ground Truth":
                     annnotator_fields = {
                         "id": "str",
                         "item_id": "str",
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_id": "int",
                         "category_name": "str",
                     }
                     annotator_table = {
