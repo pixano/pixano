@@ -60,7 +60,6 @@
   });
 
   $: {
-    console.log({ selectedTool, previousSelectedTool });
     if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
       newShape.set(null);
     }
