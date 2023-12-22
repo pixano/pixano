@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import type { DatasetItem, DatasetInfo } from "@pixano/core/src";
-  import ImageWorkspace from "@pixano/imageworkspace/src/App.svelte";
+  import ImageWorkspace from "@pixano/imageworkspace/src/ImageWorkspace.svelte";
   import { api } from "@pixano/core/src";
 
   import {

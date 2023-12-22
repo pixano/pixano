@@ -115,8 +115,6 @@
       }
     }
   }
-
-  $: console.log({ embeddings });
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
