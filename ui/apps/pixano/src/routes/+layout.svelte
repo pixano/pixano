@@ -37,10 +37,6 @@
     await handleGetModels();
   });
 
-  const handleSearch = () => {
-    console.log("App.handleSearch");
-  };
-
   const getDatasetItems = async (datasetId: string, page?: number, size?: number) => {
     const datasetItems = await api.getDatasetItems(datasetId, page, size);
     datasetsStore.update((value = []) =>
@@ -71,7 +67,7 @@
 
 <div class="app">
   {#if pageId === "/"}
-    <MainHeader {datasets} on:input={handleSearch} />
+    <MainHeader {datasets} />
   {:else}
     <DatasetHeader datasetName={currentDatasetName} {pageId} {currentDatasetName} />
   {/if}

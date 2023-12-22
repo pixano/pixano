@@ -20,15 +20,23 @@
   import { svg_search } from "@pixano/core/src/icons";
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
 
-  //   import { svg_next_page, svg_save, svg_left_arrow, svg_database, svg_dashboard } from "./icons";
   import type { DatasetInfo } from "@pixano/core/src/lib/types/datasetTypes";
+  import { datasetsStore } from "$lib/stores/datasetStores";
 
   export let datasets: Array<DatasetInfo>;
+
+  const handleSearch = (e: Event) => {
+    const target = e.currentTarget as HTMLInputElement;
+    datasetsStore.update((value = []) =>
+      value.map((dataset) => ({
+        ...dataset,
+        isFiltered: !dataset.name.toLocaleLowerCase().includes(target.value.toLocaleLowerCase()),
+      })),
+    );
+  };
 </script>
 
-<!-- Header -->
-<!-- <header class="w-full h-fit px-20 xl:px-60 flex flex-col justify-evenly bg-main z-10"></header> -->
-<header class="p-4 w-full h-fit px-20 xl:px-60 flex flex-col justify-evenly bg-red-300 z-10">
+<header class="p-4 w-full h-fit px-20 xl:px-60 flex flex-col justify-evenly bg-primary z-10">
   <div class="flex gap-2">
     <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10 h-10" />
     <span class="text-3xl font-bold text-slate-50 uppercase font-Montserrat"> Pixano </span>
@@ -52,7 +60,7 @@
             type="text"
             placeholder="Search datasets"
             class="h-10 pl-10 pr-4 rounded-full border-2 accent-main border-main text-slate-800 placeholder-slate-500 font-medium"
-            on:input
+            on:input={handleSearch}
           />
           <svg
             xmlns="http://www.w3.org/2000/svg"

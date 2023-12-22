@@ -28,9 +28,9 @@
 <section class="p-8">
   <div class="flex flex-wrap justify-center gap-6 mx-20">
     {#each datasets as dataset}
-      <!-- {#if dataset.name.toUpperCase().includes(filter.toUpperCase())} -->
-      <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
-      <!-- {/if} -->
+      {#if !dataset.isFiltered}
+        <DatasetPreviewCard {dataset} on:selectDataset={() => handleSelectDataset(dataset)} />
+      {/if}
     {/each}
   </div>
 </section>

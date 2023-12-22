@@ -29,6 +29,7 @@ export interface DatasetInfo {
   categories: Array<DatasetCategory>;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
+  isFiltered?: boolean;
 }
 
 export interface DatasetTable {
