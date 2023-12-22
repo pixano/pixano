@@ -18,22 +18,16 @@
   // Imports
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
-  import {
-    ArrowLeftCircleIcon,
-    Home,
-    Database,
-    ArrowRight,
-    ArrowLeft,
-    Loader2Icon,
-  } from "lucide-svelte";
+  import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
   import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
   import PrimaryButton from "@pixano/core/src/lib/components/molecules/PrimaryButton.svelte";
   import type { DatasetInfo } from "@pixano/core/src";
-  import { findSelectedItem } from "$lib/api/navigationApi";
 
-  import { datasetsStore, isLoadingNewItemStore } from "../../lib/stores/datasetStores";
+  import { findSelectedItem } from "$lib/api/navigationApi";
+  import { datasetsStore, isLoadingNewItemStore } from "$lib/stores/datasetStores";
+  import { navItems } from "$lib/constants/headerConstants";
 
   export let datasetName: string;
   export let pageId: string | null;
@@ -52,6 +46,7 @@
   });
 
   $: page.subscribe((value) => {
+    console.log({ value });
     currentItemId = value.params.itemId;
   });
 
@@ -111,20 +106,15 @@
       {/if}
     {/if}
     <div class="flex gap-4">
-      <PrimaryButton
-        isSelected={pageId === "dashboard"}
-        on:click={() => navigateTo(`/${datasetName}/dashboard`)}
-      >
-        <Home strokeWidth={1} />
-        Dashboard</PrimaryButton
-      >
-      <PrimaryButton
-        isSelected={pageId === "dataset"}
-        on:click={() => navigateTo(`/${datasetName}/dataset`)}
-      >
-        <Database strokeWidth={1} />
-        Dataset</PrimaryButton
-      >
+      {#each navItems as { name, Icon }}
+        <PrimaryButton
+          isSelected={pageId?.includes(name.toLowerCase())}
+          on:click={() => navigateTo(`/${datasetName}/${name.toLocaleLowerCase()}`)}
+        >
+          <Icon strokeWidth={1} />
+          {name}
+        </PrimaryButton>
+      {/each}
     </div>
   </div>
 </header>

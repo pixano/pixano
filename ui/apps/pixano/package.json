@@ -12,12 +12,13 @@
     "lint": "tsc --noEmit && eslint ./src"
   },
   "dependencies": {
+    "@pixano/canvas2d": "workspace:^0.3.0",
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/imageworkspace": "workspace:^0.3.0",
-    "@pixano/table": "workspace:^0.3.0",
     "@pixano/models": "workspace:^0.3.0",
-    "@pixano/canvas2d": "workspace:^0.3.0",
-    "lucide-svelte": "^0.292.0"
+    "@pixano/table": "workspace:^0.3.0",
+    "lucide-svelte": "^0.292.0",
+    "svelte-vega": "^2.1.0"
   },
   "devDependencies": {
     "@fontsource/fira-mono": "^4.5.10",

@@ -15,51 +15,32 @@
    */
 
   // Imports
-  import Histogram from "./Histogram.svelte";
+  import type { DatasetInfo } from "@pixano/core/src";
+  import { cn } from "@pixano/core/src/lib/utils";
 
-  import type { DatasetInfo } from "./lib/types/datasetTypes";
+  import Histogram from "./Histogram.svelte";
+  import { dashboardTabs } from "../../lib/constants/dashboardsConstants";
 
   // Exports
-  export let selectedDataset: DatasetInfo = null;
+  export let selectedDataset: DatasetInfo;
 
-  let selectedTab: string = "overview";
-
-  function selectOverviewTab() {
-    selectedTab = "overview";
-  }
-
-  function selectStatsTab() {
-    selectedTab = "stats";
-  }
+  let selectedTab: (typeof dashboardTabs)[number] = dashboardTabs[0];
 </script>
 
-<!-- Dashboard -->
 {#if selectedDataset.page}
-  <div class="h-full flex flex-row">
-    <div class="w-64 h-fit z-10 flex flex-col items-start">
-      <button
-        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm transition-colors
-         {selectedTab === 'overview'
-          ? 'text-slate-50 bg-main hover:bg-secondary'
-          : 'text-main hover:bg-slate-300'}"
-        on:click={selectOverviewTab}
-      >
-        Overview
-      </button>
-      <button
-        class="w-full h-20 px-8 py-5 text-lg text-left rounded-l-sm transition-colors
-        {selectedTab === 'stats'
-          ? 'text-slate-50 bg-main hover:bg-secondary '
-          : 'text-main hover:bg-slate-300'}"
-        on:click={selectStatsTab}
-      >
-        Statistics
-      </button>
+  <div class="h-full flex flex-row bg-slate-50 p-8 gap-4">
+    <div class="bg-white min-h-[70%] shadow-md flex flex-col w-[30%]">
+      {#each dashboardTabs as tab}
+        <button
+          on:click={() => (selectedTab = tab)}
+          class={cn("p-4 text-left first-letter:capitalize hover:bg-slate-100", {
+            "bg-slate-200 text-primary hover:bg-slate-200": tab === selectedTab,
+          })}>{tab}</button
+        >
+      {/each}
     </div>
-    <div
-      class="w-full z-10 p-8 bg-slate-50 rounded-r-sm border border-slate-300 shadow shadow-slate-300"
-    >
-      {#if selectedTab === "overview"}
+    <div class="w-full z-10 p-8">
+      {#if selectedTab === "source feature"}
         <!-- Overview -->
         <div class="w-full flex flex-row justify-between">
           <div>
@@ -83,7 +64,7 @@
             {selectedDataset.description}
           </p>
         </div>
-      {:else if selectedTab === "stats"}
+      {:else if selectedTab === "derived source feature"}
         <!-- Stats -->
         <span class="text-5xl font-bold font-Montserrat"> Statistics </span>
 
