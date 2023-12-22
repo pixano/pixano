@@ -7,7 +7,7 @@
 
   import MainHeader from "../components/layout/MainHeader.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import { datasetsStore, modelsStore } from "../lib/stores/datasetStores";
+  import { datasetsStore, modelsStore, datasetTableStore } from "../lib/stores/datasetStores";
 
   import "./styles.css";
 
@@ -41,9 +41,8 @@
     console.log("App.handleSearch");
   };
 
-  const getDatasetItems = async (datasetId: string, page: number) => {
-    console.log("App.getDatasetItems", { datasetId, page });
-    const datasetItems = await api.getDatasetItems(datasetId, page);
+  const getDatasetItems = async (datasetId: string, page?: number, size?: number) => {
+    const datasetItems = await api.getDatasetItems(datasetId, page, size);
     datasetsStore.update((value = []) =>
       value.map((dataset) =>
         dataset.id === datasetId ? { ...dataset, page: datasetItems } : dataset,
@@ -58,8 +57,16 @@
 
   $: {
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId) getDatasetItems(currentDatasetId, 1).catch((err) => console.error(err));
+    if (currentDatasetId) getDatasetItems(currentDatasetId).catch((err) => console.error(err));
   }
+
+  datasetTableStore.subscribe((value) => {
+    const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
+    if (currentDatasetId && value)
+      getDatasetItems(currentDatasetId, value.currentPage, value.pageSize).catch((err) =>
+        console.error(err),
+      );
+  });
 </script>
 
 <div class="app">

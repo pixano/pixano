@@ -9,7 +9,6 @@
   import { datasetsStore } from "../../../lib/stores/datasetStores";
 
   let selectedDataset: DatasetInfo;
-  let selectedTab: string = "database";
 
   $: {
     let currentDatasetName: string;
@@ -28,10 +27,5 @@
 </script>
 
 {#if selectedDataset?.page}
-  <DatasetExplorer
-    bind:selectedTab
-    {selectedDataset}
-    currentPage={1}
-    on:selectItem={(event) => handleSelectItem(event)}
-  />
+  <DatasetExplorer {selectedDataset} on:selectItem={(event) => handleSelectItem(event)} />
 {/if}

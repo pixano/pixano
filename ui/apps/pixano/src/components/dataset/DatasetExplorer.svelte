@@ -18,9 +18,7 @@
   import { createEventDispatcher, onMount } from "svelte";
 
   import { LoadingModal, WarningModal } from "@pixano/core/src";
-
   import { Table } from "@pixano/table";
-
   import type { DatasetInfo } from "@pixano/core/src";
 
   import {
@@ -35,10 +33,27 @@
     svg_search,
   } from "@pixano/core/src/icons";
 
+  import { datasetTableStore } from "../../lib/stores/datasetStores";
+  import {
+    DEFAULT_DATASET_TABLE_PAGE,
+    DEFAULT_DATASET_TABLE_SIZE,
+  } from "$lib/constants/pixanoConstants";
+
   // Exports
   export let selectedDataset: DatasetInfo;
-  export let selectedTab: string;
-  export let currentPage: number;
+
+  // Page navigation
+  let currentPage: number;
+  let pageSize: number;
+
+  datasetTableStore.subscribe((value) => {
+    currentPage = value?.currentPage || DEFAULT_DATASET_TABLE_PAGE;
+    pageSize = value?.pageSize || DEFAULT_DATASET_TABLE_SIZE;
+  });
+
+  // Modals
+  let loadingResultsModal = false;
+  let datasetErrorModal = false;
 
   // Semantic search
   let search: string = "";
@@ -56,19 +71,10 @@
     }
   }
 
-  // Page navigation
-  const itemsPerPage = 100;
-
-  // Modals
-  let loadingResultsModal = false;
-  let datasetErrorModal = false;
-
   const dispatch = createEventDispatcher();
 
   function handleSelectItem(itemId: string) {
     dispatch("selectItem", itemId);
-
-    selectedTab = "";
   }
 
   function loadPage() {
@@ -104,28 +110,40 @@
 
   function handleGoToFirstPage() {
     if (currentPage > 1) {
-      currentPage = 1;
+      datasetTableStore.update((value) => ({
+        pageSize: value?.pageSize || pageSize,
+        currentPage: 1,
+      }));
       loadPage();
     }
   }
 
   function handleGoToPreviousPage() {
     if (currentPage > 1) {
-      currentPage -= 1;
+      datasetTableStore.update((value) => ({
+        pageSize: value?.pageSize || pageSize,
+        currentPage: currentPage - 1,
+      }));
       loadPage();
     }
   }
 
   function handleGoToNextPage() {
-    if ((selectedDataset.page?.total || 1) > currentPage * itemsPerPage) {
-      currentPage += 1;
+    if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+      datasetTableStore.update((value) => ({
+        pageSize: value?.pageSize || pageSize,
+        currentPage: currentPage + 1,
+      }));
       loadPage();
     }
   }
 
   function handleGoToLastPage() {
-    if ((selectedDataset.page?.total || 1) > currentPage * itemsPerPage) {
-      currentPage = Math.ceil((selectedDataset.page?.total || 1) / itemsPerPage);
+    if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+      datasetTableStore.update((value) => ({
+        pageSize: value?.pageSize || pageSize,
+        currentPage: Math.ceil((selectedDataset.page?.total || 1) / pageSize),
+      }));
       loadPage();
     }
   }
@@ -142,7 +160,7 @@
   });
 </script>
 
-<div class="w-full p-5 flex flex-col bg-slate-100 text-slate-800">
+<div class="w-full p-5 flex flex-col bg-slate-100 text-slate-800 min-h-[calc(100vh-80px)]">
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-full flex flex-col">
@@ -236,7 +254,7 @@
     </div>
 
     <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
-      {#if selectedDataset.page.total > itemsPerPage}
+      {#if selectedDataset.page.total > pageSize}
         <button on:click={handleGoToFirstPage}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -263,14 +281,14 @@
       {/if}
 
       <span class="mx-4">
-        {1 + itemsPerPage * (currentPage - 1)} - {Math.min(
-          itemsPerPage * currentPage,
+        {1 + pageSize * (currentPage - 1)} - {Math.min(
+          pageSize * currentPage,
           selectedDataset.page.total,
         )} of
         {selectedDataset.page.total}
       </span>
 
-      {#if selectedDataset.page.total > itemsPerPage}
+      {#if selectedDataset.page.total > pageSize}
         <button on:click={handleGoToNextPage}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
