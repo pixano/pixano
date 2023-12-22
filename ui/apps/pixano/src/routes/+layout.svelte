@@ -3,7 +3,6 @@
   import { page } from "$app/stores";
 
   import type { DatasetInfo } from "@pixano/core/src";
-
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";

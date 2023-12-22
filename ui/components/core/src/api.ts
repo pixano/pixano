@@ -14,11 +14,9 @@
  */
 
 // Imports
-
 import type { DatasetInfo, DatasetItems, DatasetItem } from "./lib/types/datasetTypes";
 
 // Exports
-
 export async function getDatasets(): Promise<Array<DatasetInfo>> {
   let datasets: Array<DatasetInfo>;
 
@@ -27,9 +25,11 @@ export async function getDatasets(): Promise<Array<DatasetInfo>> {
     if (response.ok) {
       datasets = (await response.json()) as Array<DatasetInfo>;
     } else {
+      datasets = [];
       console.log("api.getDatasets -", response.status, response.statusText, await response.text());
     }
   } catch (e) {
+    datasets = [];
     console.log("api.getDatasets -", e);
   }
 
@@ -44,9 +44,11 @@ export async function getDataset(datasetId: string): Promise<DatasetInfo> {
     if (response.ok) {
       dataset = (await response.json()) as DatasetInfo;
     } else {
+      dataset = {} as DatasetInfo;
       console.log("api.getDataset -", response.status, response.statusText, await response.text());
     }
   } catch (e) {
+    dataset = {} as DatasetInfo;
     console.log("api.getDataset -", e);
   }
 
@@ -65,6 +67,7 @@ export async function getDatasetItems(
     if (response.ok) {
       datasetItems = (await response.json()) as DatasetItems;
     } else {
+      datasetItems = {} as DatasetItems;
       console.log(
         "api.getDatasetItems -",
         response.status,
@@ -73,6 +76,7 @@ export async function getDatasetItems(
       );
     }
   } catch (e) {
+    datasetItems = {} as DatasetItems;
     console.log("api.getDatasetItems -", e);
   }
 
@@ -85,7 +89,7 @@ export async function searchDatasetItems(
   page: number = 1,
   size: number = 100,
 ): Promise<DatasetItems> {
-  let datasetItems: DatasetItems;
+  let datasetItems: DatasetItems | undefined;
   try {
     const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
       headers: {
@@ -98,6 +102,7 @@ export async function searchDatasetItems(
     if (response.ok) {
       datasetItems = (await response.json()) as DatasetItems;
     } else {
+      datasetItems = {} as DatasetItems;
       console.log(
         "api.searchDatasetItems -",
         response.status,
@@ -106,18 +111,20 @@ export async function searchDatasetItems(
       );
     }
   } catch (e) {
+    datasetItems = {} as DatasetItems;
     console.log("api.searchDatasetItems -", e);
   }
   return datasetItems;
 }
 
 export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
-  let item: DatasetItem;
+  let item: DatasetItem | undefined;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
     } else {
+      item = {} as DatasetItem;
       console.log(
         "api.getDatasetItem -",
         response.status,
@@ -126,6 +133,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
       );
     }
   } catch (e) {
+    item = {} as DatasetItem;
     console.log("api.getDatasetItem -", e);
   }
 
@@ -137,13 +145,14 @@ export async function getItemEmbeddings(
   itemId: string,
   modelId: string,
 ): Promise<DatasetItem> {
-  let item: DatasetItem;
+  let item: DatasetItem | undefined;
 
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings/${modelId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
     } else {
+      item = {} as DatasetItem;
       console.log(
         "api.getItemEmbeddings -",
         response.status,
@@ -152,6 +161,7 @@ export async function getItemEmbeddings(
       );
     }
   } catch (e) {
+    item = {} as DatasetItem;
     console.log("api.getItemEmbeddings -", e);
   }
   return item;
@@ -181,16 +191,18 @@ export async function postDatasetItem(datasetId: string, item: DatasetItem) {
 }
 
 export async function getModels(): Promise<Array<string>> {
-  let models: Array<string>;
+  let models: Array<string> | undefined;
 
   try {
     const response = await fetch("/models");
     if (response.ok) {
       models = (await response.json()) as Array<string>;
     } else {
+      models = [];
       console.log("api.getModels -", response.status, response.statusText, await response.text());
     }
   } catch (e) {
+    models = [];
     console.log("api.getModels -", e);
   }
 

@@ -1,8 +1,8 @@
 import * as ort from "onnxruntime-web";
 
 import type { DatasetItem, DatasetInfo } from "@pixano/core";
-import { api } from "@pixano/core";
-import { npy } from "@pixano/models";
+import { api } from "@pixano/core/src";
+import { npy } from "@pixano/models/src";
 
 export async function loadEmbeddings(
   selectedItem: DatasetItem,

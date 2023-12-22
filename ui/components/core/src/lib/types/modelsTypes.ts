@@ -14,7 +14,7 @@
  */
 
 // Imports
-import { Tensor } from "onnxruntime-web";
+import type { Tensor } from "onnxruntime-web";
 
 import type { ItemRLE, MaskSVG } from "./datasetTypes";
 

@@ -17,13 +17,12 @@
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
 
-  // import { api, LoadingModal, WarningModal } from "@pixano/core";
-  import { LoadingModal, WarningModal } from "@pixano/core";
+  import { LoadingModal, WarningModal } from "@pixano/core/src";
 
   import { Table } from "@pixano/table";
 
-  import type { DatasetInfo } from "@pixano/core";
-  // import type { DatasetInfo, DatasetItems } from "@pixano/core";
+  import type { DatasetInfo } from "@pixano/core/src";
+
   import {
     svg_clear,
     svg_filter,

@@ -13,7 +13,14 @@
   export let checked: $$Props["checked"] = false;
   export { className as class };
 
-  export let handleClick: (checked: $$Props["checked"]) => void;
+  export let handleClick: (checked: $$Props["checked"]) => void = () => {};
+
+  const onKeyDown = (event: $$Events["keydown"]) => {
+    if (event.detail.originalEvent.key === "Enter") {
+      handleClick(!checked);
+      checked = !checked;
+    }
+  };
 </script>
 
 <CheckboxPrimitive.Root
@@ -25,12 +32,7 @@
   {...$$restProps}
   {disabled}
   on:click={() => handleClick(!checked)}
-  on:keydown={(event) => {
-    if (event.detail.originalEvent.key === "Enter") {
-      handleClick(!checked);
-      checked = !checked;
-    }
-  }}
+  on:keydown={onKeyDown}
 >
   <CheckboxPrimitive.Indicator
     class={cn("flex items-center justify-center text-current h-4 w-4")}
