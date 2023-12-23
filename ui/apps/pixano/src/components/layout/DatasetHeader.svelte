@@ -46,7 +46,6 @@
   });
 
   $: page.subscribe((value) => {
-    console.log({ value });
     currentItemId = value.params.itemId;
   });
 
@@ -108,7 +107,7 @@
     <div class="flex gap-4">
       {#each navItems as { name, Icon }}
         <PrimaryButton
-          isSelected={pageId?.includes(name.toLowerCase())}
+          isSelected={pageId?.includes(`/${name}`.toLowerCase())}
           on:click={() => navigateTo(`/${datasetName}/${name.toLocaleLowerCase()}`)}
         >
           <Icon strokeWidth={1} />

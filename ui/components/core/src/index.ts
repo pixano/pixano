@@ -23,7 +23,7 @@ export { default as Header } from "./Header.svelte";
 // Library
 export { default as DatasetPreviewCard } from "./DatasetPreviewCard.svelte";
 export { default as Library } from "./Library.svelte";
-export { default as Dashboard } from "./Dashboard.svelte";
+
 // Modals
 export { default as ConfirmModal } from "./ConfirmModal.svelte";
 export { default as LoadingModal } from "./LoadingModal.svelte";
