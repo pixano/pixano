@@ -57,6 +57,7 @@ export function addBBox(
     id: bbox.id,
     visible: bbox.visible,
     opacity: bbox.opacity,
+    listening: false,
   });
 
   const bboxRect = new Konva.Rect({
