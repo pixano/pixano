@@ -31,7 +31,12 @@
 
   itemObjects.subscribe((items) => {
     const allItemsOfCurrentModelAreHidden = items
-      .filter((item) => item.source_id === modelName)
+      .filter((item) => {
+        if (modelName === MODEL_RUN) {
+          return item.source_id !== GROUND_TRUTH;
+        }
+        return item.source_id === modelName;
+      })
       .every((item) => item.displayControl?.hidden);
     hideAllObjects = allItemsOfCurrentModelAreHidden;
   });
