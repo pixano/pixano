@@ -31,6 +31,7 @@
     panTool,
     smartRectangleTool,
     rectangleTool,
+    polygoneTool,
     addSmartPointTool,
     removeSmartPointTool,
   } from "../lib/settings/selectionTools";
@@ -82,7 +83,11 @@
     >
       <Square />
     </TooltipIconButton>
-    <TooltipIconButton tooltipContent="TODO">
+    <TooltipIconButton
+      tooltipContent="Create a polygon"
+      on:click={() => selectTool(polygoneTool)}
+      selected={selectedTool?.type === "POLYGON"}
+    >
       <Share2 />
     </TooltipIconButton>
     <TooltipIconButton tooltipContent="TODO">

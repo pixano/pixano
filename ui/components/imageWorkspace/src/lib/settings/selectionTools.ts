@@ -35,3 +35,10 @@ export const addSmartPointTool: SelectionTool = {
   label: 1,
   isSmart: true,
 };
+
+export const polygoneTool: SelectionTool = {
+  name: "Polygone selection",
+  type: "POLYGON",
+  cursor: "crosshair",
+  isSmart: false,
+};

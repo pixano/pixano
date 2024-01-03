@@ -19,7 +19,7 @@
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
-  import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { Group, Image as KonvaImage, Layer, Stage, Line, Circle } from "svelte-konva";
 
   import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src/lib/utils";
@@ -71,6 +71,11 @@
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
+
+  // POLYGON STATE
+  let polygonPoints: { x: number; y: number; id: number }[] = [];
+  $: flatPolygonPoints = polygonPoints.reduce((acc, val) => [...acc, val.x, val.y], [] as number[]);
+  let isCurrentPolygonClosed = false;
 
   $: {
     if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
@@ -865,10 +870,23 @@
     viewLayer.off("dragend dragmove");
   }
 
+  function drawPolygonPoints(viewId: string) {
+    if (isCurrentPolygonClosed) return;
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
+    polygonPoints = [
+      ...polygonPoints,
+      { x: cursorPositionOnImage.x, y: cursorPositionOnImage.y, id: polygonPoints.length },
+    ];
+  }
+
   function handlePointerUpOnImage(viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
+    if (selectedTool?.type === "POLYGON") {
+      drawPolygonPoints(viewId);
+    }
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -1049,6 +1067,24 @@
       }
     }
   }
+
+  // ********** POLYGON ********** //
+
+  function handlePolygonPointsDragMove(id: number) {
+    const pos = stage.findOne(`#dot-${id}`).position();
+    polygonPoints = polygonPoints.map((point) => {
+      if (point.id === id) {
+        return { ...point, x: pos.x, y: pos.y };
+      }
+      return point;
+    });
+  }
+
+  function handlePolygonPointsClick(i: number) {
+    if (i === 0) {
+      isCurrentPolygonClosed = true;
+    }
+  }
 </script>
 
 <div
@@ -1080,6 +1116,33 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
+          <Group config={{ id: "polygon", draggable: true }}>
+            <Line
+              config={{
+                points: flatPolygonPoints,
+                stroke: "red",
+                strokeWidth: 2,
+                closed: isCurrentPolygonClosed,
+                fill: "rgb(0,128,0,0.5)",
+              }}
+            />
+            {#each polygonPoints as point, i}
+              <Circle
+                on:click={() => handlePolygonPointsClick(i)}
+                on:dragmove={() => handlePolygonPointsDragMove(point.id)}
+                config={{
+                  x: point.x,
+                  y: point.y,
+                  radius: 5,
+                  fill: "blue",
+                  stroke: "black",
+                  strokeWidth: 1,
+                  id: `dot-${point.id}`,
+                  draggable: true,
+                }}
+              />
+            {/each}
+          </Group>
         </Layer>
       {/if}
     {/each}
