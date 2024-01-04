@@ -11,12 +11,11 @@
 #
 # http://www.cecill.info
 
-from s3path import S3Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination.api import add_pagination
+from s3path import S3Path
 
 from pixano.apps.api import datasets, items, models
 from pixano.data import Settings

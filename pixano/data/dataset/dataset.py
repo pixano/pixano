@@ -13,7 +13,6 @@
 
 from collections import defaultdict
 from pathlib import Path
-from s3path import S3Path
 from typing import Optional
 
 import duckdb
@@ -21,6 +20,7 @@ import lancedb
 import pyarrow as pa
 import pyarrow.dataset as pa_ds
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_info import DatasetInfo

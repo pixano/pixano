@@ -13,10 +13,10 @@
 
 import json
 from pathlib import Path
-from s3path import S3Path
 from typing import Optional
 
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_category import DatasetCategory

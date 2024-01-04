@@ -12,7 +12,6 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from s3path import S3Path
 from typing import IO, Optional
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -23,6 +22,7 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import binary_to_url

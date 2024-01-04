@@ -12,12 +12,12 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from s3path import S3Path
 from typing import Optional
 from urllib.parse import urlparse
 
 import pyarrow as pa
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image, is_image_type
 from pixano.data.item.item_feature import ItemFeature
