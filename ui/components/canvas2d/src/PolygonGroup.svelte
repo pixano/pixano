@@ -31,7 +31,9 @@
   export let polygonDetails: PolygonGroupDetails;
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
-  const canEdit = polygonDetails.status === "creating";
+  let canEdit = false;
+
+  $: canEdit = polygonDetails.status === "creating" || polygonDetails.editing;
 
   // POLYGON STATE
   $: flatPolygonPoints = polygonDetails.points.reduce(
@@ -53,6 +55,16 @@
       }
       return point;
     });
+  }
+
+  function handlePolygonPointsDragEnd() {
+    if (polygonDetails.editing) {
+      newShape = {
+        status: "editingMask",
+        maskId: polygonDetails.id,
+        points: flatPolygonPoints,
+      };
+    }
   }
 
   function handlePolygonPointsClick(i: number, viewId: string) {
@@ -93,6 +105,7 @@
       <Circle
         on:click={() => handlePolygonPointsClick(i, viewId)}
         on:dragmove={() => handlePolygonPointsDragMove(point.id)}
+        on:dragend={handlePolygonPointsDragEnd}
         config={{
           x: point.x,
           y: point.y,

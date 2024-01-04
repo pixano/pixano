@@ -20,10 +20,11 @@
   import type { BBox, DatasetItem, Mask, SelectionTool, Shape } from "@pixano/core";
 
   import { newShape as newShapeStore, itemObjects } from "../lib/stores/imageWorkspaceStores";
+  import { updateManualMaskObject } from "../lib/api/objectsApi";
 
   export let selectedItem: DatasetItem;
-  export let masks: Array<Mask> = [];
-  export let bboxes: Array<BBox> = [];
+  export let masks: Mask[] = [];
+  export let bboxes: BBox[] = [];
   export let embeddings: Record<string, ort.Tensor>;
 
   export let selectedTool: SelectionTool;
@@ -32,7 +33,13 @@
 
   let newShape: Shape;
 
-  $: newShapeStore.set(newShape);
+  $: {
+    newShapeStore.set(newShape);
+    if (newShape?.status === "editingMask") {
+      itemObjects.update((oldObjects) => updateManualMaskObject(oldObjects, newShape));
+    }
+  }
+
   $: newShapeStore.subscribe((value) => {
     newShape = value;
   });

@@ -43,7 +43,13 @@ export type noShape = {
   status: "none";
 };
 
-export type Shape = inProgressShape | noShape;
+export type editMaskShape = {
+  status: "editingMask";
+  maskId: string;
+  points: number[];
+};
+
+export type Shape = inProgressShape | noShape | editMaskShape;
 
 export type FeatureValues = string | number | boolean;
 

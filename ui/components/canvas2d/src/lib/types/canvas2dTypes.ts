@@ -9,5 +9,7 @@ export type PolygonGroupStatus = "created" | "creating";
 export type PolygonGroupDetails = {
   points: PolygonGroupPoint[];
   visible: boolean;
+  editing: boolean;
   status: PolygonGroupStatus;
+  id: string;
 };

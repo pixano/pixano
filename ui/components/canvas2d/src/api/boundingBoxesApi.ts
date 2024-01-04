@@ -269,6 +269,8 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
       const points = mask.rle.counts;
       return {
         visible: mask.visible,
+        editing: mask.editing,
+        id: mask.id,
         status: mask?.id ? "created" : "creating",
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
@@ -282,7 +284,13 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
         }, [] as PolygonGroupPoint[]),
       };
     });
-  const emptyMask: PolygonGroupDetails = { visible: true, status: "creating", points: [] };
+  const emptyMask: PolygonGroupDetails = {
+    visible: true,
+    status: "creating",
+    points: [],
+    editing: false,
+    id: "creating",
+  };
   mappedMasks.push(emptyMask);
   return mappedMasks;
 }

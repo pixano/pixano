@@ -49,7 +49,7 @@
       {} as Record<string, ItemFeature>,
     );
     itemObjects.update((oldObjects) => {
-      if (shape.status === "none") return oldObjects;
+      if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;
       const baseObject = {
         id: `object${oldObjects.length + 1}`,

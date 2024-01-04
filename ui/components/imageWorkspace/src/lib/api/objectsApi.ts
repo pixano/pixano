@@ -1,4 +1,4 @@
-import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem } from "@pixano/core";
+import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
 import { mask_utils } from "@pixano/models";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
@@ -43,6 +43,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     rle: obj.mask,
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
+    editing: obj.displayControl?.editing,
     opacity: 1.0,
     isManual: !!obj.isManual,
   } as Mask;
@@ -113,3 +114,18 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     },
     { [GROUND_TRUTH]: [], [MODEL_RUN]: [] } as ObjectsSortedByModelType,
   );
+
+export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
+  old.map((object) => {
+    if (newShape?.status !== "editingMask") return object;
+    if (object.id === newShape.maskId && object.mask) {
+      return {
+        ...object,
+        mask: {
+          ...object.mask,
+          counts: newShape.points,
+        },
+      };
+    }
+    return object;
+  });

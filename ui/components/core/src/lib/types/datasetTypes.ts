@@ -145,11 +145,12 @@ export interface Mask {
   rle?: ItemRLE;
   catId: number;
   visible: boolean;
+  editing: boolean;
   opacity: number;
   isManual?: boolean;
 }
 
-export type MaskSVG = Array<string>;
+export type MaskSVG = string[];
 
 export interface BBox {
   id: string;
