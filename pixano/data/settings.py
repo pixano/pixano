@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     """Dataset library settings
 
     Attributes:
-        data_dir (Path): Dataset library directory, or url to S3 path (eg. "s3://<bucket>[/<key>]")
+        data_dir (Path | S3Path): Dataset library directory, or url to S3 path (eg. "s3://<bucket>[/<key>]")
 
         If data_dir is a S3 url, the following environment variables can be provided
             aws_endpoint (str, optional): S3 compatible storage url. Use AWS if not provided
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
             local_model_dir (str, optional): Path to model (local) if not on S3 storage (in data_dir / models)
     """
 
-    data_dir: Path = Path.cwd() / "library"
+    data_dir: Path | S3Path = Path.cwd() / "library"
 
     aws_access_key_id: Optional[str] = None
     aws_secret_access_key: Optional[str] = None
