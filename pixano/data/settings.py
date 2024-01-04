@@ -67,3 +67,8 @@ class Settings(BaseSettings):
                     "- AWS_REGION (optionnal)",
                     e,
                 )
+            # if S3, local_model_dir have to be set (maybe we could download it from S3 into a defined local dir?)
+            if self.local_model_dir is None:
+                raise Exception(
+                    "Runtime model (.onnx) must be local, LOCAL_MODEL_DIR must be provided"
+                )
