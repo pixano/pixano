@@ -11,14 +11,13 @@
 #
 # http://www.cecill.info
 
-
 from pathlib import Path
-from s3path import S3Path, register_configuration_parameter
-import boto3
+from typing import Optional
 from urllib.parse import urlparse
 
+import boto3
 from pydantic_settings import BaseSettings
-from typing import Optional
+from s3path import S3Path, register_configuration_parameter
 
 
 class Settings(BaseSettings):
