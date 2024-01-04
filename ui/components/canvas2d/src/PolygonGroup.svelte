@@ -29,13 +29,13 @@
   export let stage: Konva.Stage;
   export let images: Record<string, HTMLImageElement> = {};
   export let polygonDetails: PolygonGroupDetails;
+  export let color: string;
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
 
   $: canEdit = polygonDetails.status === "creating" || polygonDetails.editing;
 
-  // POLYGON STATE
   $: flatPolygonPoints = polygonDetails.points.reduce(
     (acc, val) => [...acc, val.x, val.y],
     [] as number[],
@@ -86,6 +86,13 @@
       };
     }
   }
+
+  const hexToRGBA = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
 </script>
 
 <Group config={{ id: "polygon", draggable: canEdit, visible: polygonDetails.visible }}>
@@ -93,10 +100,10 @@
     <Line
       config={{
         points: flatPolygonPoints,
-        stroke: "red",
-        strokeWidth: 2,
+        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
+        strokeWidth: polygonDetails.status === "created" ? 1 : 3,
         closed: isCurrentPolygonClosed,
-        fill: "rgb(0,128,0,0.5)",
+        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
       }}
     />
   {/if}
@@ -110,9 +117,9 @@
           x: point.x,
           y: point.y,
           radius: 5,
-          fill: "blue",
-          stroke: "black",
-          strokeWidth: 1,
+          fill: "rgb(0,128,0)",
+          stroke: "white",
+          strokeWidth: 2,
           id: `dot-${point.id}`,
           draggable: true,
         }}

@@ -1119,6 +1119,7 @@
                 {stage}
                 {images}
                 polygonDetails={manualMask}
+                color={colorScale(manualMask.id)}
               />
             {/key}
           {/each}
