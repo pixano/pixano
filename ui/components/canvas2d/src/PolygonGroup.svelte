@@ -20,29 +20,34 @@
   import { Group, Line, Circle } from "svelte-konva";
 
   import type { DatasetItem, Shape } from "@pixano/core";
+  import type { PolygonGroupDetails } from "./lib/types/canvas2dTypes";
 
   // Exports
   export let viewId: string;
   export let selectedItemId: DatasetItem["id"];
-  export let createNewShape: (shape: Shape) => void;
+  export let newShape: Shape;
   export let stage: Konva.Stage;
   export let images: Record<string, HTMLImageElement> = {};
-  export let polygonPoints: { x: number; y: number; id: number }[] = [];
-  export let isCurrentPolygonClosed = false;
-  export let canEdit = false;
+  export let polygonDetails: PolygonGroupDetails;
+
+  let isCurrentPolygonClosed = polygonDetails.status === "created";
+  const canEdit = polygonDetails.status === "creating";
 
   // POLYGON STATE
-  $: flatPolygonPoints = polygonPoints.reduce((acc, val) => [...acc, val.x, val.y], [] as number[]);
+  $: flatPolygonPoints = polygonDetails.points.reduce(
+    (acc, val) => [...acc, val.x, val.y],
+    [] as number[],
+  );
 
   $: {
-    if (polygonPoints.length === 0) {
+    if (polygonDetails.points.length === 0) {
       isCurrentPolygonClosed = false;
     }
   }
 
   function handlePolygonPointsDragMove(id: number) {
     const pos = stage.findOne(`#dot-${id}`).position();
-    polygonPoints = polygonPoints.map((point) => {
+    polygonDetails.points = polygonDetails.points.map((point) => {
       if (point.id === id) {
         return { ...point, x: pos.x, y: pos.y };
       }
@@ -53,7 +58,7 @@
   function handlePolygonPointsClick(i: number, viewId: string) {
     if (i === 0) {
       isCurrentPolygonClosed = true;
-      createNewShape({
+      newShape = {
         status: "inProgress",
         masksImageSVG: [],
         rle: {
@@ -66,13 +71,13 @@
         imageWidth: images[viewId].width,
         imageHeight: images[viewId].height,
         isManual: true,
-      });
+      };
     }
   }
 </script>
 
-<Group config={{ id: "polygon", draggable: canEdit }}>
-  {#if !!polygonPoints.length}
+<Group config={{ id: "polygon", draggable: canEdit, visible: polygonDetails.visible }}>
+  {#if !!polygonDetails.points.length}
     <Line
       config={{
         points: flatPolygonPoints,
@@ -84,7 +89,7 @@
     />
   {/if}
   {#if canEdit}
-    {#each polygonPoints as point, i}
+    {#each polygonDetails.points as point, i}
       <Circle
         on:click={() => handlePolygonPointsClick(i, viewId)}
         on:dragmove={() => handlePolygonPointsDragMove(point.id)}

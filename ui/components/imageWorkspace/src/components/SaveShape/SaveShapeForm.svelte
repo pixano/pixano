@@ -49,6 +49,7 @@
       {} as Record<string, ItemFeature>,
     );
     itemObjects.update((oldObjects) => {
+      if (shape.status === "none") return oldObjects;
       let newObject: ItemObject | null = null;
       const baseObject = {
         id: `object${oldObjects.length + 1}`,
@@ -86,7 +87,7 @@
 
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
-    newShape.update((old) => ({ ...old, status: "created" }));
+    newShape.set({ status: "none" });
     canSave.set(true);
   };
 
@@ -100,65 +101,67 @@
   }
 </script>
 
-<form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-  <p>Sauvegarde {shape.type}</p>
-  {#each objectSetup as feature, i}
-    {#if feature.type === "boolean"}
-      <div class="flex gap-4 items-center">
-        <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
-        <span
-          >{feature.label}
-          {#if feature.required}
-            <span>*</span>
-          {/if}
-        </span>
-      </div>
-    {/if}
-    {#if feature.type === "list"}
-      <Combobox
-        placeholder={`Select a ${feature.label}`}
-        listItems={feature.options}
-        saveValue={(value) => handleInputChange(value, feature.name)}
-      />
-    {/if}
-    {#if feature.type === "text"}
-      <div>
-        <span
-          >{feature.label}
-          {#if feature.required}
-            <span>*</span>
-          {/if}
-        </span>
-        {#if i === 0}
-          <Input
-            on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
-            autofocus
-          />
-        {:else}
-          <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
-        {/if}
-      </div>
-    {/if}
-    {#if feature.type === "number"}
-      <div>
-        <span
-          >{feature.label}
-          {#if feature.required}
-            <span>*</span>
-          {/if}
-        </span>
-        <Input
-          type="number"
-          on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+{#if shape.status === "inProgress"}
+  <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
+    <p>Sauvegarde {shape.type}</p>
+    {#each objectSetup as feature, i}
+      {#if feature.type === "boolean"}
+        <div class="flex gap-4 items-center">
+          <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
+          <span
+            >{feature.label}
+            {#if feature.required}
+              <span>*</span>
+            {/if}
+          </span>
+        </div>
+      {/if}
+      {#if feature.type === "list"}
+        <Combobox
+          placeholder={`Select a ${feature.label}`}
+          listItems={feature.options}
+          saveValue={(value) => handleInputChange(value, feature.name)}
         />
-      </div>
-    {/if}
-  {/each}
-  <div class="flex gap-4">
-    <Button
-      class="text-white"
-      on:click={() => newShape.update((old) => ({ ...old, status: "none" }))}>cancel</Button
-    >
-    <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
-  </div>
-</form>
+      {/if}
+      {#if feature.type === "text"}
+        <div>
+          <span
+            >{feature.label}
+            {#if feature.required}
+              <span>*</span>
+            {/if}
+          </span>
+          {#if i === 0}
+            <Input
+              on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
+              autofocus
+            />
+          {:else}
+            <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
+          {/if}
+        </div>
+      {/if}
+      {#if feature.type === "number"}
+        <div>
+          <span
+            >{feature.label}
+            {#if feature.required}
+              <span>*</span>
+            {/if}
+          </span>
+          <Input
+            type="number"
+            on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+          />
+        </div>
+      {/if}
+    {/each}
+    <div class="flex gap-4">
+      <Button
+        class="text-white"
+        on:click={() => newShape.update((old) => ({ ...old, status: "none" }))}>cancel</Button
+      >
+      <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
+    </div>
+  </form>
+{/if}

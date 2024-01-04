@@ -3,6 +3,7 @@ import type { Mask, BBox, SelectionTool } from "@pixano/core";
 import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 
 import { BBOX_STROKEWIDTH, MASK_STROKEWIDTH } from "../lib/constants";
+import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
 const stickLabelsToRectangle = (tooltip: Konva.Label, lockIcon: Konva.Label, rect: Konva.Rect) => {
   tooltip.x(rect.x());
@@ -261,13 +262,15 @@ export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool
   }
 }
 
-export function mapMaskPointsToLineCoordinates(masks: Mask[]) {
-  return masks
+export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetails[] {
+  const mappedMasks: PolygonGroupDetails[] = masks
     ?.filter((mask) => mask.isManual)
     .map((mask) => {
       const points = mask.rle.counts;
-      return points.reduce(
-        (acc, val, i) => {
+      return {
+        visible: mask.visible,
+        status: mask?.id ? "created" : "creating",
+        points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
             acc.push({
               x: val,
@@ -276,8 +279,10 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]) {
             });
           }
           return acc;
-        },
-        [] as { x: number; y: number; id: number }[],
-      );
+        }, [] as PolygonGroupPoint[]),
+      };
     });
+  const emptyMask: PolygonGroupDetails = { visible: true, status: "creating", points: [] };
+  mappedMasks.push(emptyMask);
+  return mappedMasks;
 }

@@ -42,6 +42,7 @@
     MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
+  import type { PolygonGroupDetails } from "./lib/types/canvas2dTypes";
   import {
     addBBox,
     addMask,
@@ -57,14 +58,12 @@
   // Exports
   export let selectedItem: DatasetItem;
   export let colorRange: string[] = ["0", "10"];
-  export let masks: Array<Mask>;
-  export let bboxes: Array<BBox>;
+  export let masks: Mask[];
+  export let bboxes: BBox[];
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
-  export let createNewShape: (shape: Shape) => void;
-
-  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
+  export let newShape: Shape;
 
   let isReady = false;
 
@@ -75,10 +74,8 @@
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-
-  // POLYGON STATE
-  let polygonPoints: { x: number; y: number; id: number }[] = [];
-  let isCurrentPolygonClosed = false;
+  let manualMasks: PolygonGroupDetails[];
+  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
 
   $: {
     if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
@@ -416,7 +413,7 @@
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
-        createNewShape({
+        newShape = {
           masksImageSVG: results.masksImageSVG,
           rle: results.rle,
           type: "mask",
@@ -425,7 +422,8 @@
           imageWidth: images[viewId].width,
           imageHeight: images[viewId].height,
           status: "inProgress",
-        });
+        };
+
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const image: Konva.Image = viewLayer.findOne("#image");
@@ -509,6 +507,22 @@
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.destroyChildren();
     }
+  }
+
+  // ********** POLYGON TOOL ********** //
+
+  function drawPolygonPoints(viewId: string) {
+    if (newShape?.status === "inProgress") return;
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
+    const x = Math.round(cursorPositionOnImage.x);
+    const y = Math.round(cursorPositionOnImage.y);
+
+    manualMasks = manualMasks.map((mask) =>
+      mask.status === "created"
+        ? mask
+        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }] },
+    );
   }
 
   // ********** PAN TOOL ********** //
@@ -761,7 +775,7 @@
 
   function dragInputRectMove(viewId: string) {
     if (selectedTool?.type === "RECTANGLE") {
-      createNewShape(null);
+      newShape = { status: "none" };
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
@@ -788,7 +802,7 @@
           rect.destroy();
         } else {
           if (!selectedTool.isSmart) {
-            createNewShape({
+            newShape = {
               status: "inProgress",
               attrs: {
                 x: rect.x(),
@@ -801,7 +815,7 @@
               itemId: selectedItem.id,
               imageWidth: images[viewId].width,
               imageHeight: images[viewId].height,
-            });
+            };
           }
           selectedTool.isSmart && (await updateCurrentMask(viewId));
         }
@@ -832,7 +846,9 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    polygonPoints = [];
+    manualMasks = manualMasks.map((mask) =>
+      mask.status === "created" ? mask : { ...mask, points: [] },
+    );
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
@@ -874,15 +890,6 @@
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
-  }
-
-  function drawPolygonPoints(viewId: string) {
-    if (isCurrentPolygonClosed) return;
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
-    const x = Math.round(cursorPositionOnImage.x);
-    const y = Math.round(cursorPositionOnImage.y);
-    polygonPoints = [...polygonPoints, { x, y, id: polygonPoints.length }];
   }
 
   function handlePointerUpOnImage(viewId: string) {
@@ -1103,26 +1110,17 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
-          <PolygonGroup
-            viewId={view.id}
-            selectedItemId={selectedItem.id}
-            {createNewShape}
-            {stage}
-            {images}
-            {polygonPoints}
-            bind:isCurrentPolygonClosed
-            canEdit
-          />
           {#each manualMasks as manualMask}
-            <PolygonGroup
-              viewId={view.id}
-              selectedItemId={selectedItem.id}
-              {createNewShape}
-              {stage}
-              {images}
-              polygonPoints={manualMask}
-              isCurrentPolygonClosed
-            />
+            {#key manualMask.status}
+              <PolygonGroup
+                viewId={view.id}
+                selectedItemId={selectedItem.id}
+                bind:newShape
+                {stage}
+                {images}
+                polygonDetails={manualMask}
+              />
+            {/key}
           {/each}
         </Layer>
       {/if}

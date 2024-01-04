@@ -31,13 +31,19 @@ type MaskShape = SegmentationResult & {
   isManual?: boolean;
 };
 
-export type Shape = (RectangleShape | MaskShape) & {
+export type inProgressShape = (RectangleShape | MaskShape) & {
   viewId: string;
   itemId: string;
   imageWidth: number;
   imageHeight: number;
-  status: "none" | "inProgress" | "created";
+  status: "inProgress";
 };
+
+export type noShape = {
+  status: "none";
+};
+
+export type Shape = inProgressShape | noShape;
 
 export type FeatureValues = string | number | boolean;
 

@@ -17,9 +17,9 @@
   import { Loader2Icon } from "lucide-svelte";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { BBox, DatasetItem, Mask, SelectionTool } from "@pixano/core";
+  import type { BBox, DatasetItem, Mask, SelectionTool, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects } from "../lib/stores/imageWorkspaceStores";
+  import { newShape as newShapeStore, itemObjects } from "../lib/stores/imageWorkspaceStores";
 
   export let selectedItem: DatasetItem;
   export let masks: Array<Mask> = [];
@@ -29,6 +29,13 @@
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
+
+  let newShape: Shape;
+
+  $: newShapeStore.set(newShape);
+  $: newShapeStore.subscribe((value) => {
+    newShape = value;
+  });
 
   let allIds: string[] = [];
 
@@ -52,7 +59,7 @@
         {embeddings}
         bind:selectedTool
         bind:currentAnn
-        createNewShape={(shape) => newShape.set(shape)}
+        bind:newShape
       />
     {/key}
   {/if}

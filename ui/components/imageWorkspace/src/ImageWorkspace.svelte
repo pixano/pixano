@@ -57,9 +57,6 @@
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
 
-  $: console.log({ selectedItem, allMasks, allBBoxes });
-  $: itemObjects.subscribe((objects) => console.log({ objects }));
-
   $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
   $: itemMetas.set({
     features: selectedItem.features,
