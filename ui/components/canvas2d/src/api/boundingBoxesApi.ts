@@ -168,6 +168,7 @@ export function addMask(
   stage: Konva.Stage,
   zoomFactor: Record<string, number>,
 ) {
+  if (mask.isManual) return;
   const x = image.x();
   const y = image.y();
   const scale = image.scale();
@@ -258,4 +259,25 @@ export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool
     if (currentMaskGroup) currentMaskGroup.destroy();
     if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
   }
+}
+
+export function mapMaskPointsToLineCoordinates(masks: Mask[]) {
+  return masks
+    ?.filter((mask) => mask.isManual)
+    .map((mask) => {
+      const points = mask.rle.counts;
+      return points.reduce(
+        (acc, val, i) => {
+          if (i % 2 === 0) {
+            acc.push({
+              x: val,
+              y: points[i + 1],
+              id: i / 2,
+            });
+          }
+          return acc;
+        },
+        [] as { x: number; y: number; id: number }[],
+      );
+    });
 }

@@ -25,7 +25,7 @@
   import { canSave, newShape } from "../../lib/stores/imageWorkspaceStores";
 
   export let isLoading: boolean;
-  let shape: Shape | null;
+  let shape: Shape;
   let currentTab: "scene" | "objects" = "scene";
   let isButtonEnabled = false;
 
@@ -39,7 +39,7 @@
 </script>
 
 <div class="h-full max-h-screen shadow-md bg-popover">
-  {#if shape}
+  {#if shape?.status === "inProgress"}
     <SaveShapeForm />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">

@@ -31,8 +31,8 @@
   import { loadEmbeddings } from "./lib/api/modelsApi";
   import {
     itemObjects,
-    // itemBboxes,
-    // itemMasks,
+    itemBboxes,
+    itemMasks,
     interactiveSegmenterModel,
     itemMetas,
     newShape,
@@ -54,8 +54,11 @@
 
   let embeddingAreLoaded: boolean = false;
 
-  // $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
-  // $: itemMasks.subscribe((masks) => (allMasks = masks));
+  $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
+  $: itemMasks.subscribe((masks) => (allMasks = masks));
+
+  $: console.log({ selectedItem, allMasks, allBBoxes });
+  $: itemObjects.subscribe((objects) => console.log({ objects }));
 
   $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
   $: itemMetas.set({
@@ -67,7 +70,7 @@
   $: {
     if (selectedItem) {
       embeddingAreLoaded = false;
-      newShape.set(null);
+      newShape.update((old) => ({ ...old, status: "none" }));
       canSave.set(false);
     }
   }

@@ -44,6 +44,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
     opacity: 1.0,
+    isManual: !!obj.isManual,
   } as Mask;
 };
 

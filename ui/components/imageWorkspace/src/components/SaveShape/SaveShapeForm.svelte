@@ -76,15 +76,17 @@
       if (shape.type === "mask") {
         newObject = {
           ...baseObject,
+          isManual: !!shape.isManual,
           mask: {
             counts: shape.rle.counts,
             size: shape.rle.size,
           },
         };
       }
+
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
-    newShape.set(null);
+    newShape.update((old) => ({ ...old, status: "created" }));
     canSave.set(true);
   };
 
@@ -153,7 +155,10 @@
     {/if}
   {/each}
   <div class="flex gap-4">
-    <Button class="text-white" on:click={() => newShape.set(null)}>cancel</Button>
+    <Button
+      class="text-white"
+      on:click={() => newShape.update((old) => ({ ...old, status: "none" }))}>cancel</Button
+    >
     <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
   </div>
 </form>

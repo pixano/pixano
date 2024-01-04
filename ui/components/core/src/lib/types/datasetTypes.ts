@@ -104,6 +104,7 @@ export type ItemObject = (BBoxObject | MaskObject) & {
   view_id: string;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
+  isManual?: boolean;
 };
 
 export interface ItemRLE {
@@ -145,6 +146,7 @@ export interface Mask {
   catId: number;
   visible: boolean;
   opacity: number;
+  isManual?: boolean;
 }
 
 export type MaskSVG = Array<string>;

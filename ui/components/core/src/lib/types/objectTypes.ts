@@ -28,6 +28,7 @@ type RectangleShape = {
 
 type MaskShape = SegmentationResult & {
   type: "mask";
+  isManual?: boolean;
 };
 
 export type Shape = (RectangleShape | MaskShape) & {
@@ -35,6 +36,7 @@ export type Shape = (RectangleShape | MaskShape) & {
   itemId: string;
   imageWidth: number;
   imageHeight: number;
+  status: "none" | "inProgress" | "created";
 };
 
 export type FeatureValues = string | number | boolean;

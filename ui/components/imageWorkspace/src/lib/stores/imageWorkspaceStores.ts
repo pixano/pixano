@@ -27,7 +27,7 @@ import type {
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
 
 // Exports
-export const newShape = writable<Shape | null>();
+export const newShape = writable<Shape>();
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<{

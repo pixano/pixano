@@ -19,7 +19,7 @@
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
-  import { Group, Image as KonvaImage, Layer, Stage, Line, Circle } from "svelte-konva";
+  import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src/lib/utils";
@@ -50,7 +50,9 @@
     clearCurrentAnn,
     toggleIsEditingBBox,
     toggleBBoxIsLocked,
+    mapMaskPointsToLineCoordinates,
   } from "./api/boundingBoxesApi";
+  import PolygonGroup from "./PolygonGroup.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -61,6 +63,8 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let createNewShape: (shape: Shape) => void;
+
+  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
 
   let isReady = false;
 
@@ -74,7 +78,6 @@
 
   // POLYGON STATE
   let polygonPoints: { x: number; y: number; id: number }[] = [];
-  $: flatPolygonPoints = polygonPoints.reduce((acc, val) => [...acc, val.x, val.y], [] as number[]);
   let isCurrentPolygonClosed = false;
 
   $: {
@@ -421,6 +424,7 @@
           itemId: selectedItem.id,
           imageWidth: images[viewId].width,
           imageHeight: images[viewId].height,
+          status: "inProgress",
         });
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
@@ -785,6 +789,7 @@
         } else {
           if (!selectedTool.isSmart) {
             createNewShape({
+              status: "inProgress",
               attrs: {
                 x: rect.x(),
                 y: rect.y(),
@@ -827,6 +832,7 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
+    polygonPoints = [];
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
@@ -874,10 +880,9 @@
     if (isCurrentPolygonClosed) return;
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
-    polygonPoints = [
-      ...polygonPoints,
-      { x: cursorPositionOnImage.x, y: cursorPositionOnImage.y, id: polygonPoints.length },
-    ];
+    const x = Math.round(cursorPositionOnImage.x);
+    const y = Math.round(cursorPositionOnImage.y);
+    polygonPoints = [...polygonPoints, { x, y, id: polygonPoints.length }];
   }
 
   function handlePointerUpOnImage(viewId: string) {
@@ -1067,24 +1072,6 @@
       }
     }
   }
-
-  // ********** POLYGON ********** //
-
-  function handlePolygonPointsDragMove(id: number) {
-    const pos = stage.findOne(`#dot-${id}`).position();
-    polygonPoints = polygonPoints.map((point) => {
-      if (point.id === id) {
-        return { ...point, x: pos.x, y: pos.y };
-      }
-      return point;
-    });
-  }
-
-  function handlePolygonPointsClick(i: number) {
-    if (i === 0) {
-      isCurrentPolygonClosed = true;
-    }
-  }
 </script>
 
 <div
@@ -1116,33 +1103,27 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
-          <Group config={{ id: "polygon", draggable: true }}>
-            <Line
-              config={{
-                points: flatPolygonPoints,
-                stroke: "red",
-                strokeWidth: 2,
-                closed: isCurrentPolygonClosed,
-                fill: "rgb(0,128,0,0.5)",
-              }}
+          <PolygonGroup
+            viewId={view.id}
+            selectedItemId={selectedItem.id}
+            {createNewShape}
+            {stage}
+            {images}
+            {polygonPoints}
+            bind:isCurrentPolygonClosed
+            canEdit
+          />
+          {#each manualMasks as manualMask}
+            <PolygonGroup
+              viewId={view.id}
+              selectedItemId={selectedItem.id}
+              {createNewShape}
+              {stage}
+              {images}
+              polygonPoints={manualMask}
+              isCurrentPolygonClosed
             />
-            {#each polygonPoints as point, i}
-              <Circle
-                on:click={() => handlePolygonPointsClick(i)}
-                on:dragmove={() => handlePolygonPointsDragMove(point.id)}
-                config={{
-                  x: point.x,
-                  y: point.y,
-                  radius: 5,
-                  fill: "blue",
-                  stroke: "black",
-                  strokeWidth: 1,
-                  id: `dot-${point.id}`,
-                  draggable: true,
-                }}
-              />
-            {/each}
-          </Group>
+          {/each}
         </Layer>
       {/if}
     {/each}
