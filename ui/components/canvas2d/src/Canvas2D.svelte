@@ -55,6 +55,7 @@
   let viewWithoutEmbeddings = "";
 
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
+  let timerId: number;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -720,7 +721,7 @@
     stage.container().style.cursor = "grab";
   }
 
-  async function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
+  function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
     stage.container().style.cursor = "grabbing";
 
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
@@ -738,7 +739,8 @@
     }
 
     // new currentAnn on new location
-    await updateCurrentMask(viewId);
+    clearTimeout(timerId); // reinit timer on each move move
+    timerId = setTimeout(() => updateCurrentMask(viewId), 50); // delay before predict to spare CPU
   }
 
   function highlightInputPoint(hl_point: Konva.Circle, viewId: string) {
