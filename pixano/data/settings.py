@@ -24,14 +24,12 @@ class Settings(BaseSettings):
     """Dataset library settings
 
     Attributes:
-        data_dir (Path | S3Path): Dataset library directory, or url to S3 path (eg. "s3://<bucket>[/<key>]")
-
-        If data_dir is a S3 url, the following environment variables can be provided
-            aws_endpoint (str, optional): S3 compatible storage url. Use AWS if not provided
-            aws_access_key_id (str, optional): access key
-            aws_secret_access_key (str, optional): secret key
-            aws_region (str, optional): region. Not always required for private S3 storages
-            local_model_dir (str, optional): Path to model (local) if not on S3 storage (in data_dir / models)
+        data_dir (Path | S3Path): Dataset library directory, or url to S3 path
+        aws_endpoint (str, optional): S3 compatible storage url. Used if data_dir is a S3 path. Use AWS if not provided
+        aws_access_key_id (str, optional): Access key. Used if data_dir is a S3 path
+        aws_secret_access_key (str, optional): Secret key. Used if data_dir is a S3 path
+        aws_region (str, optional): Region. Used if data_dir is a S3 path. Not always required for private S3 storages
+        local_model_dir (str, optional): Path to model (local). Required if data_dir is a S3 path
     """
 
     data_dir: Path | S3Path = Path.cwd() / "library"
