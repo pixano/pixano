@@ -148,15 +148,14 @@ class DatasetItem(BaseModel):
 
         # If object exists
         if existing_obj.num_rows > 0:
-            ds_table.update(f"id in ('{obj.id}')", pyarrow_obj)
+            ds_table.delete(f"id in ('{obj.id}')")
 
-        # If object does not exists
-        else:
-            table_obj = pa.Table.from_pylist(
-                [pyarrow_obj],
-                schema=ds_table.schema,
-            )
-            ds_table.add(table_obj)
+        # Add object
+        table_obj = pa.Table.from_pylist(
+            [pyarrow_obj],
+            schema=ds_table.schema,
+        )
+        ds_table.add(table_obj, mode="append")
 
         # Clear change history to prevent dataset from becoming too large
         ds_table.to_lance().cleanup_old_versions()

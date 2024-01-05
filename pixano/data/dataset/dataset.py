@@ -583,10 +583,18 @@ class Dataset(BaseModel):
                 .to_lance()
                 .scanner(filter=f"id in ('{item.id}')")
             )
-            pyarrow_item = scanner.to_table().to_pylist()[0]
-            # Update item
-            pyarrow_item["label"] = item.features["label"].value
-            ds_tables["main"]["db"].update(f"id in ('{item.id}')", pyarrow_item)
+            item_to_update = scanner.to_table().to_pylist()[0]
+            item_to_update["label"] = item.features["label"].value
+
+            # Delete old item
+            ds_tables["main"]["db"].delete(f"id in ('{item.id}')")
+
+            # Add updated item
+            table_item = pa.Table.from_pylist(
+                [item_to_update],
+                schema=ds_tables["main"]["db"].schema,
+            )
+            ds_tables["main"]["db"].add(table_item, mode="append")
 
             # Clear change history to prevent dataset from becoming too large
             ds_tables["main"]["db"].to_lance().cleanup_old_versions()
