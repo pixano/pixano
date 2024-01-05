@@ -9,7 +9,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write --ignore-unknown .",
     "format_check": "prettier --check --ignore-unknown .",
-    "lint": "tsc --noEmit && eslint ./src"
+    "lint": "tsc --noEmit && eslint ./src",
+    "prepare": "svelte-kit sync"
   },
   "dependencies": {
     "@pixano/canvas2d": "workspace:^0.3.0",
