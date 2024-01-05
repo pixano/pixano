@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import Button from "../button/button.svelte";
+  import { Button } from "../button";
   import * as Tooltip from "../tooltip";
   import { cn } from "../../../lib/utils/styleUtils";
 

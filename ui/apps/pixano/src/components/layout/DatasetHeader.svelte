@@ -70,8 +70,6 @@
   async function navigateTo(route: string) {
     await goto(route);
   }
-
-  $: console.log({ datasetName });
 </script>
 
 <header class="w-full fixed z-40">

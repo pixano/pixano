@@ -13,15 +13,13 @@
   export { className as class };
 </script>
 
-<div>
-  <ButtonPrimitive.Root
-    {builders}
-    class={cn(buttonVariants({ variant, size, className }))}
-    type="button"
-    {...$$restProps}
-    on:click
-    on:keydown
-  >
-    <slot />
-  </ButtonPrimitive.Root>
-</div>
+<ButtonPrimitive.Root
+  {builders}
+  class={cn(buttonVariants({ variant, size, className }))}
+  type="button"
+  {...$$restProps}
+  on:click
+  on:keydown
+>
+  <slot />
+</ButtonPrimitive.Root>
