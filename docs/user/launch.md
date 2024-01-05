@@ -19,6 +19,7 @@ You will then be provided with a URL to open in your browser to use the app.
 You can connect to a S3 compatible storage, by providing a S3 path instead of local path to your datasets
 
 The followings environ variables have to be set:
+
 - AWS_ENDPOINT : S3 Compatible Storage endpoint
 - AWS_ACCESS_KEY_ID : access key credentials
 - AWS_SECRET_ACCESS_KEY : secret access credentials
