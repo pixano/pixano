@@ -14,8 +14,8 @@
    * http://www.cecill.info
    */
   import { Eye, Trash2, Lock, Pencil, ChevronRight } from "lucide-svelte";
-  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import { cn } from "@pixano/core/src/lib/utils";
+
+  import { cn, IconButton } from "@pixano/core/src";
   import SubItem from "./ObjectTabLabelsSubItem.svelte";
 
   export let open: boolean = false;

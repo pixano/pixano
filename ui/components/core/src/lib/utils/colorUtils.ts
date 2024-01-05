@@ -13,7 +13,11 @@
  * http://www.cecill.info
  */
 
-// Exports
-export * as tools from "./tools";
+// Imports
+import { scaleOrdinal } from "d3";
+import { schemeSet3 } from "d3-scale-chromatic";
 
-export { default as Canvas2D } from "./Canvas2D.svelte";
+// Exports
+export function ordinalColorScale(range: Iterable<string>) {
+  return scaleOrdinal(schemeSet3).domain(range);
+}

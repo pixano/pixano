@@ -14,10 +14,7 @@
    * http://www.cecill.info
    */
 
-  import { Button } from "@pixano/core/src/lib/components/ui/button";
-  import { Input } from "@pixano/core/src/lib/components/ui/input";
-  import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
+  import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemFeature, ItemObject, Shape } from "@pixano/core";
 
   import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";

@@ -14,8 +14,8 @@
    * http://www.cecill.info
    */
   import { Eye, ChevronRight, PlusCircle } from "lucide-svelte";
-  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import { cn } from "@pixano/core/src/lib/utils";
+
+  import { cn, IconButton } from "@pixano/core/src";
   import ArrowSvg from "./ArrowSvg.svelte";
 
   export let open: boolean = false;

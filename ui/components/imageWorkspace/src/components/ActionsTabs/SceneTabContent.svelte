@@ -16,7 +16,7 @@
 
   import { Pencil } from "lucide-svelte";
 
-  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
+  import { IconButton } from "@pixano/core/src";
 
   import { canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import SceneFeatures from "../Features/FeatureInputs.svelte";

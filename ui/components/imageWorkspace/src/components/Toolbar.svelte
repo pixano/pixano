@@ -21,10 +21,9 @@
     PlusCircleIcon,
     MinusCircleIcon,
   } from "lucide-svelte";
-  import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
 
   import type { SelectionTool } from "@pixano/core";
-  import { cn } from "@pixano/core/src/lib/utils";
+  import { cn, IconButton } from "@pixano/core/src";
 
   import MagicIcon from "../assets/MagicIcon.svelte";
   import {
@@ -69,63 +68,60 @@
 
 <div class="h-full shadow-md bg-popover p-1">
   <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
-    <TooltipIconButton
+    <IconButton
       tooltipContent="Move your picture around"
       on:click={() => selectTool(panTool)}
       selected={selectedTool?.type === "PAN"}
     >
       <MousePointer />
-    </TooltipIconButton>
-    <TooltipIconButton
+    </IconButton>
+    <IconButton
       on:click={() => selectTool(rectangleTool)}
       selected={selectedTool?.type === "RECTANGLE" && !selectedTool.isSmart}
     >
       <Square />
-    </TooltipIconButton>
-    <TooltipIconButton
-      tooltipContent="Create a polygon"
-      selected={selectedTool?.type === "POLYGON"}
-    >
+    </IconButton>
+    <IconButton tooltipContent="Create a polygon" selected={selectedTool?.type === "POLYGON"}>
       <Share2 />
-    </TooltipIconButton>
-    <TooltipIconButton tooltipContent="TODO">
+    </IconButton>
+    <IconButton tooltipContent="TODO">
       <BrushIcon />
-    </TooltipIconButton>
+    </IconButton>
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {
       "bg-primary-light rounded-sm": showSmartTools,
     })}
   >
-    <TooltipIconButton tooltipContent="Smart tools" on:click={handleSmartToolClick}>
+    <IconButton tooltipContent="Smart tools" on:click={handleSmartToolClick}>
       <BrushIcon />
       <MagicIcon />
-    </TooltipIconButton>
+    </IconButton>
     {#if showSmartTools}
-      <TooltipIconButton
+      <IconButton
         tooltipContent={addSmartPointTool.name}
         on:click={() => selectTool(addSmartPointTool)}
         selected={selectedTool?.type === "POINT_SELECTION" && !!selectedTool.label}
       >
         <PlusCircleIcon />
         <MagicIcon />
-      </TooltipIconButton>
-      <TooltipIconButton
+      </IconButton>
+      <IconButton
         tooltipContent={removeSmartPointTool.name}
         on:click={() => selectTool(removeSmartPointTool)}
         selected={selectedTool?.type === "POINT_SELECTION" && !selectedTool.label}
       >
         <MinusCircleIcon />
         <MagicIcon />
-      </TooltipIconButton>
-      <TooltipIconButton
+      </IconButton>
+      <IconButton
         tooltipContent="Smart rectangle"
         on:click={() => selectTool(smartRectangleTool)}
         selected={selectedTool?.type === "RECTANGLE" && selectedTool.isSmart}
       >
         <Square />
         <MagicIcon />
-      </TooltipIconButton>
+      </IconButton>
     {/if}
   </div>
 </div>

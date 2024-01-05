@@ -14,8 +14,7 @@
    * http://www.cecill.info
    */
 
-  import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  import type { ItemObject } from "@pixano/core";
+  import { type ItemObject, Checkbox } from "@pixano/core/src";
 
   import { objectSetup } from "../../lib/settings/objectValidationSchemas";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";

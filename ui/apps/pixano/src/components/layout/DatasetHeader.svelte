@@ -21,9 +21,8 @@
   import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
-  import TooltipIconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import PrimaryButton from "@pixano/core/src/lib/components/molecules/PrimaryButton.svelte";
-  import type { DatasetInfo } from "@pixano/core/src";
+
+  import { IconButton, PrimaryButton, type DatasetInfo } from "@pixano/core/src";
 
   import { findSelectedItem } from "$lib/api/navigationApi";
   import { datasetsStore, isLoadingNewItemStore } from "$lib/stores/datasetStores";
@@ -71,6 +70,8 @@
   async function navigateTo(route: string) {
     await goto(route);
   }
+
+  $: console.log({ datasetName });
 </script>
 
 <header class="w-full fixed z-40">
@@ -83,9 +84,9 @@
         <button on:click={() => navigateTo("/")} class="h-10 w-10">
           <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
         </button>
-        <TooltipIconButton on:click={() => navigateTo("/")}>
+        <IconButton on:click={() => navigateTo("/")}>
           <ArrowLeftCircleIcon />
-        </TooltipIconButton>
+        </IconButton>
         <p>{datasetName}</p>
       </div>
     </div>
@@ -94,13 +95,13 @@
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <TooltipIconButton on:click={() => goToNeighborItem("previous")}>
+          <IconButton on:click={() => goToNeighborItem("previous")}>
             <ArrowLeft />
-          </TooltipIconButton>
+          </IconButton>
           {currentItemId}
-          <TooltipIconButton on:click={() => goToNeighborItem("next")}>
+          <IconButton on:click={() => goToNeighborItem("next")}>
             <ArrowRight />
-          </TooltipIconButton>
+          </IconButton>
         </div>
       {/if}
     {/if}

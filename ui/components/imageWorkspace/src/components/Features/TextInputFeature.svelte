@@ -16,7 +16,7 @@
 
   import { CheckCheckIcon } from "lucide-svelte";
 
-  import { Input } from "@pixano/core/src/lib/components/ui/input";
+  import { Input } from "@pixano/core/src";
 
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
 

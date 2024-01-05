@@ -22,7 +22,7 @@
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
   import { WarningModal, utils } from "@pixano/core";
-  import { cn } from "@pixano/core/src/lib/utils";
+  import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
     Mask,
@@ -53,7 +53,7 @@
     toggleBBoxIsLocked,
     mapMaskPointsToLineCoordinates,
   } from "./api/boundingBoxesApi";
-  import PolygonGroup from "./PolygonGroup.svelte";
+  import PolygonGroup from "./components/PolygonGroup.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;

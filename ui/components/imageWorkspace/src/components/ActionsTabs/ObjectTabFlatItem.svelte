@@ -14,9 +14,8 @@
    * http://www.cecill.info
    */
   import { Eye, EyeOff, Trash2, Lock, Pencil, ChevronRight } from "lucide-svelte";
-  import IconButton from "@pixano/core/src/lib/components/molecules/TooltipIconButton.svelte";
-  import { Checkbox } from "@pixano/core/src/lib/components/ui/checkbox";
-  import { cn } from "@pixano/core/src/lib/utils";
+
+  import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";

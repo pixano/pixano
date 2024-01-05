@@ -14,10 +14,8 @@
    * http://www.cecill.info
    */
 
-  import * as Tabs from "@pixano/core/src/lib/components/ui/tabs";
   import type { Shape } from "@pixano/core";
-  import { Skeleton } from "@pixano/core/src/lib/components/ui/skeleton";
-  import { cn } from "@pixano/core/src/lib/utils";
+  import { cn, Tabs, Skeleton } from "@pixano/core/src";
 
   import SceneTabContent from "./SceneTabContent.svelte";
   import ObjectTabContent from "./ObjectTabContent.svelte";

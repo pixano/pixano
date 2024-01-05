@@ -16,8 +16,7 @@
 
   // Imports
   import type { DatasetInfo } from "@pixano/core/src";
-  import { cn } from "@pixano/core/src/lib/utils";
-  import { Histogram } from "@pixano/core/src";
+  import { cn, Histogram } from "@pixano/core/src";
 
   import { dashboardTabs } from "../../lib/constants/dashboardsConstants";
 

@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import Combobox from "@pixano/core/src/lib/components/ui/combobox/combobox.svelte";
+  import { Combobox } from "@pixano/core/src";
 
   import type { ListFeature } from "../../lib/types/imageWorkspaceTypes";
   import { objectSetup } from "../../lib/settings/objectValidationSchemas";

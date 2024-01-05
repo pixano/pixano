@@ -17,8 +17,6 @@
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     await goto(`${dataset.name}/dataset`);
   };
-
-  $: console.log({ datasets });
 </script>
 
 <svelte:head>
