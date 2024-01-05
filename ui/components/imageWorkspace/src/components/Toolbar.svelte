@@ -31,7 +31,6 @@
     panTool,
     smartRectangleTool,
     rectangleTool,
-    polygoneTool,
     addSmartPointTool,
     removeSmartPointTool,
   } from "../lib/settings/selectionTools";
@@ -62,7 +61,7 @@
 
   $: {
     if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
-      newShape.set(null);
+      newShape.set({ status: "none" });
     }
     previousSelectedTool = selectedTool;
   }
@@ -85,7 +84,6 @@
     </TooltipIconButton>
     <TooltipIconButton
       tooltipContent="Create a polygon"
-      on:click={() => selectTool(polygoneTool)}
       selected={selectedTool?.type === "POLYGON"}
     >
       <Share2 />
