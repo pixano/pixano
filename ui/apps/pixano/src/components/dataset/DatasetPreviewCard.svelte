@@ -17,8 +17,8 @@
   // Imports
   import { createEventDispatcher } from "svelte";
 
-  import type { DatasetInfo } from "./lib/types/datasetTypes";
-  import { svg_right_arrow } from "./icons";
+  import type { DatasetInfo } from "@pixano/core/src";
+  import { svg_right_arrow } from "@pixano/core/src/icons";
 
   // Exports
   export let dataset: DatasetInfo;

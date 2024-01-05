@@ -15,7 +15,7 @@
     */
 
   // Imports
-  import { svg_loading } from "./icons";
+  import { svg_loading } from "../../icons";
 </script>
 
 <div class="fixed inset-0 z-50 overflow-y-auto">

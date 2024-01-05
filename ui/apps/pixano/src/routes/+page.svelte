@@ -2,8 +2,9 @@
   import { goto } from "$app/navigation";
 
   import type { DatasetInfo } from "@pixano/core/src";
-  import DatasetPreviewCard from "@pixano/core/src/DatasetPreviewCard.svelte";
+
   import { datasetsStore as datasetsStore } from "../lib/stores/datasetStores";
+  import DatasetPreviewCard from "../components/dataset/DatasetPreviewCard.svelte";
 
   let datasets: DatasetInfo[] = [];
 

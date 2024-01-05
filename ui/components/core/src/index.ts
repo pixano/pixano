@@ -18,17 +18,12 @@ export * from "./lib/types";
 export * as api from "./api";
 export * as icons from "./icons";
 export * as utils from "./utils";
-// Header
-export { default as Header } from "./Header.svelte";
-// Library
-export { default as DatasetPreviewCard } from "./DatasetPreviewCard.svelte";
-export { default as Library } from "./Library.svelte";
 
 // Modals
-export { default as ConfirmModal } from "./ConfirmModal.svelte";
-export { default as LoadingModal } from "./LoadingModal.svelte";
-export { default as PromptModal } from "./PromptModal.svelte";
-export { default as SelectModal } from "./SelectModal.svelte";
-export { default as WarningModal } from "./WarningModal.svelte";
-// Exploration
-export { default as Histogram } from "./Histogram.svelte";
+export { default as ConfirmModal } from "./components/modals/ConfirmModal.svelte";
+export { default as LoadingModal } from "./components/modals/LoadingModal.svelte";
+export { default as PromptModal } from "./components/modals/PromptModal.svelte";
+export { default as SelectModal } from "./components/modals/SelectModal.svelte";
+export { default as WarningModal } from "./components/modals/WarningModal.svelte";
+
+export { default as Histogram } from "./components/Histogram.svelte";
