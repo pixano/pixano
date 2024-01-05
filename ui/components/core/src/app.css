@@ -19,8 +19,8 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
 
-    --primary: 150 20% 20%; // #771E5F
-    --primary-foreground: 317.05 48.35% 35.69%; // #872f6e
+    --primary: 150 20% 20%; /* #771E5F */
+    --primary-foreground: 317.05 48.35% 35.69%; /* #872f6e */
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
