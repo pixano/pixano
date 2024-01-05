@@ -35,8 +35,6 @@
     "webpack": "^5.0.0"
   },
   "dependencies": {
-    "@pixano/annotator": "workspace:0.3.0",
-    "@pixano/explorer": "workspace:0.3.0",
     "@pixano/canvas2d": "workspace:0.3.0",
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/table": "workspace:^0.3.0",
