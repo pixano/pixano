@@ -26,7 +26,11 @@ from pixano.data import COCOImporter, DatasetInfo, DatasetItem, DatasetStat, Set
 
 
 class AppTestCase(unittest.TestCase):
+    """Pixano app test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         # Create temporary directory
         self.temp_dir = Path.cwd() / "library"
         self.temp_dir.mkdir(exist_ok=False)
@@ -80,9 +84,13 @@ class AppTestCase(unittest.TestCase):
         self.client = TestClient(create_app(Settings()))
 
     def tearDown(self):
+        """Tests teardown"""
+
         shutil.rmtree(self.temp_dir)
 
     def test_get_datasets(self):
+        """Test /datasets endpoint (GET)"""
+
         response = self.client.get("/datasets")
         output = response.json()
 
@@ -95,6 +103,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_info, DatasetInfo)
 
     def test_get_dataset(self):
+        """Test /datasets/{dataset_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset")
         output = response.json()
 
@@ -104,6 +114,8 @@ class AppTestCase(unittest.TestCase):
         self.assertIsInstance(ds_info, DatasetInfo)
 
     def test_get_dataset_items(self):
+        """Test /datasets/{dataset_id}/items endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items")
         output = response.json()
 
@@ -122,6 +134,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_item, DatasetItem)
 
     def test_search_dataset_items(self):
+        """Test /datasets/{dataset_id}/search endpoint (POST)"""
+
         # Without embeddings
         response = self.client.post(
             "/datasets/coco_dataset/search",
@@ -167,6 +181,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_item, DatasetItem)
 
     def test_get_dataset_item(self):
+        """Test /datasets/{dataset_id}/items/{item_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items/139")
         output = response.json()
 
@@ -176,6 +192,8 @@ class AppTestCase(unittest.TestCase):
         self.assertIsInstance(ds_item, DatasetItem)
 
     def test_post_dataset_item(self):
+        """Test /datasets/{dataset_id}/items/{item_id} endpoint (POST)"""
+
         response_1 = self.client.get("/datasets/coco_dataset/items/139")
         output = response_1.json()
 
@@ -193,12 +211,16 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response_2.status_code, 200)
 
     def test_get_dataset_item_embeddings(self):
+        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items/139/embeddings/SAM")
 
         # NOTE: Can't test embeddings without model weights
         self.assertEqual(response.status_code, 404)
 
     def test_get_models(self):
+        """Test /models endpoint (GET)"""
+
         with tempfile.NamedTemporaryFile(dir=self.temp_dir / "models", suffix=".onnx"):
             response = self.client.get("/models")
             output = response.json()

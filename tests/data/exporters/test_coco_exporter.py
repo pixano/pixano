@@ -20,7 +20,11 @@ from pixano.data import COCOExporter, COCOImporter
 
 
 class COCOExporterTestCase(unittest.TestCase):
+    """COCOExporter test case"""
+
     def test_export_dataset(self):
+        """Test COCOExporter export_dataset method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import and export directory
             import_dir = Path(temp_dir) / "coco"

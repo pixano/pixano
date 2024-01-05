@@ -19,7 +19,11 @@ from pixano.data import DatasetInfo, DatasetTable
 
 
 class DatasetInfoTestCase(unittest.TestCase):
+    """DatasetInfo test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         self.info = DatasetInfo(
             id="datasetid001",
             name="My dataset",
@@ -65,6 +69,8 @@ class DatasetInfoTestCase(unittest.TestCase):
         )
 
     def test_save(self):
+        """Test DatasetInfo save method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             self.info.save(Path(temp_dir))
             saved_info = DatasetInfo.from_json(Path(temp_dir) / "db.json")
@@ -73,6 +79,8 @@ class DatasetInfoTestCase(unittest.TestCase):
             self.assertEqual(self.info, saved_info)
 
     def test_dict(self):
+        """Test DatasetInfo export to dict and import from dict"""
+
         info_to_dict = self.info.model_dump()
 
         self.assertIsInstance(info_to_dict, dict)
@@ -83,6 +91,8 @@ class DatasetInfoTestCase(unittest.TestCase):
         self.assertEqual(self.info, info_from_dict)
 
     def test_load_directory(self):
+        """Test DatasetInfo load_directory method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             dir1 = Path(temp_dir) / "dir1"
             dir2 = Path(temp_dir) / "dir2"

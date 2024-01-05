@@ -13,7 +13,6 @@
 
 import tempfile
 import unittest
-from pathlib import Path
 
 import imageio
 import numpy as np
@@ -24,63 +23,90 @@ from pixano.core import DepthImage, DepthImageType
 
 
 class DepthImageTestCase(unittest.TestCase):
+    """DepthImage test case"""
+
     def setUp(self):
-        # Création d'une image de profondeur fictive
+        """Tests setup"""
+
         self.depth_map = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint16)
         self.shape = self.depth_map.shape
         self.bytes = self.depth_map.tobytes()
         self.depth_image = DepthImage(
-            depth_map=self.depth_map, shape=self.shape, bytes=self.bytes
+            depth_map=self.depth_map,
+            shape=self.shape,
+            bytes=self.bytes,
         )
 
-    def test_bytes_property(self):
+    def test_bytes(self):
+        """Test DepthImage bytes property"""
+
         depth_image_bytes = self.depth_image.bytes
+
         self.assertEqual(depth_image_bytes, self.bytes)
 
-    def test_depth_map_property(self):
+    def test_depth_map(self):
+        """Test DepthImage depth_map property"""
+
         depth_map = self.depth_image.depth_map
+
         self.assertIsInstance(depth_map, np.ndarray)
         self.assertEqual(depth_map.tolist(), self.depth_map.tolist())
 
     def test_load_npy(self):
+        """Test DepthImage load_npy method"""
+
         with tempfile.NamedTemporaryFile(suffix=".npy") as tmp_file:
             np.save(tmp_file.name, self.depth_map)
             depth_image = DepthImage.load_npy(tmp_file.name)
+
             self.assertIsInstance(depth_image, DepthImage)
             self.assertEqual(depth_image.depth_map.tolist(), self.depth_map.tolist())
 
     def test_load(self):
+        """Test DepthImage load method"""
+
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp_file:
             imageio.v3.imwrite(tmp_file.name, self.depth_map.astype(np.uint16))
             depth_image = DepthImage.load(tmp_file.name)
+
             self.assertIsInstance(depth_image, DepthImage)
             self.assertEqual(depth_image.depth_map.tolist(), self.depth_map.tolist())
 
     def test_save(self):
+        """Test DepthImage save method"""
+
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp_file:
             self.depth_image.save(tmp_file.name)
             loaded_image = imageio.v3.imread(tmp_file.name)
+
             self.assertIsInstance(loaded_image, np.ndarray)
             self.assertEqual(loaded_image.tolist(), self.depth_map.tolist())
 
     def test_open(self):
-        with tempfile.NamedTemporaryFile() as tmp_file:
-            tmp_path = Path(tmp_file.name)
-            io_obj = self.depth_image.open()
-            self.assertIsNotNone(io_obj)
-            # Vérification que les données ouvertes correspondent aux données initiales
-            loaded_bytes = io_obj.read()
-            self.assertEqual(loaded_bytes, self.bytes)
+        """Test DepthImage open method"""
+
+        io_obj = self.depth_image.open()
+        self.assertIsNotNone(io_obj)
+
+        loaded_bytes = io_obj.read()
+        self.assertEqual(loaded_bytes, self.bytes)
 
     def test_to_grayscale(self):
+        """Test DepthImage to_grayscale method"""
+
         gray_image = self.depth_image.to_grayscale()
+
         self.assertIsInstance(gray_image, DepthImage)
         self.assertEqual(gray_image.depth_map.dtype, np.uint8)
         self.assertEqual(gray_image.depth_map.tolist(), [[0, 51, 102], [153, 204, 255]])
 
 
 class TestParquetDepthImage(unittest.TestCase):
+    """DepthImage test case for Parquet storage"""
+
     def setUp(self) -> None:
+        """Tests setup"""
+
         uri1 = "tests/assets/depth_images/000067.png"
         uri2 = "tests/assets/depth_images/000934.png"
 
@@ -93,14 +119,13 @@ class TestParquetDepthImage(unittest.TestCase):
         ]
 
     def test_depth_image_table(self):
-        depth_image_array = DepthImageType.Array.from_pylist(self.depth_image_list)
+        """Test DepthImage Parquet storage"""
 
-        schema = pa.schema(
-            [
-                pa.field("DepthImage", DepthImageType),
-            ]
+        depth_image_arr = DepthImageType.Array.from_pylist(self.depth_image_list)
+        table = pa.Table.from_arrays(
+            [depth_image_arr],
+            schema=pa.schema([pa.field("DepthImage", DepthImageType)]),
         )
-        table = pa.Table.from_arrays([depth_image_array], schema=schema)
 
         with tempfile.NamedTemporaryFile(suffix=".parquet") as temp_file:
             temp_file_path = temp_file.name
@@ -108,5 +133,7 @@ class TestParquetDepthImage(unittest.TestCase):
             re_table = pq.read_table(temp_file_path)
 
         self.assertEqual(re_table.column_names, ["DepthImage"])
+
         depth_image0 = re_table.take([0])["DepthImage"][0].as_py()
+
         self.assertIsInstance(depth_image0, DepthImage)
