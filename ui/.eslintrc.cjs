@@ -24,6 +24,7 @@ module.exports = {
     "tailwind.config.cjs",
     "postcss.config.cjs",
     "vite.config.ts",
+    "**/.svelte-kit/**",
     "mask_utils.ts", // external code
   ],
   overrides: [
