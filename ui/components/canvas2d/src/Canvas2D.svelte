@@ -97,7 +97,7 @@
     }
     numberOfBBoxes = bboxes.length;
   }
-  let timerId: number;
+  let timerId: ReturnType<typeof setTimeout>;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -665,6 +665,7 @@
 
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     timerId = setTimeout(() => updateCurrentMask(viewId), 50); // delay before predict to spare CPU
   }
 
