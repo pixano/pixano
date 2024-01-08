@@ -26,8 +26,9 @@
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/models": "workspace:^0.3.0",
     "konva": "^8.4.2",
-    "svelte-konva": "^0.1.1",
     "nanoid": "^5.0.0",
+    "onnxruntime-web": "~1.16.0",
+    "svelte-konva": "^0.1.1",
     "vite-plugin-externals": "^0.6.2"
   }
 }

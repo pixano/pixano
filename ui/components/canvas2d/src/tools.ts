@@ -6,7 +6,7 @@
   This software is a collaborative computer program whose purpose is to
   generate and explore labeled data for computer vision applications.
   This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
+  abiding by the rules of distribution of free software. You can use,
   modify and/or redistribute the software under the terms of the CeCILL-C
   license as circulated by CEA, CNRS and INRIA at the following URL
 
@@ -32,6 +32,8 @@ interface Tool {
   type: ToolType;
   icon: string;
   cursor: string;
+  onSelect?: () => void;
+  isSmart?: boolean;
   modes?: Record<string, Tool>;
   postProcessor?: InteractiveImageSegmenter;
 }

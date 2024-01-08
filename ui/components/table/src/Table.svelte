@@ -51,7 +51,7 @@
   <table class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->
     <thead>
-      <tr class="sticky top-0 bg-slate-50 shadow-sm shadow-slate-300">
+      <tr class="sticky top-0 bg-slate-50 shadow-sm shadow-slate-300 border-b border-b-slate-400">
         {#each getColumnNames(items) as name}
           <th class="py-4 font-semibold">{name}</th>
         {/each}

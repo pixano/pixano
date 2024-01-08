@@ -18,44 +18,86 @@
   import * as ort from "onnxruntime-web";
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onMount } from "svelte";
+  import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
 
-  import { WarningModal } from "@pixano/core";
-
-  import { ToolType } from "./tools";
-
-  import type {
-    Tool,
-    PointSelectionModeTool,
-    RectangleTool,
-    DeleteTool,
-    PanTool,
-    ClassificationTool,
-  } from "./tools";
+  import { WarningModal, utils } from "@pixano/core";
+  import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { Mask, BBox, DatasetItem, ItemView } from "@pixano/core";
+  import type {
+    Mask,
+    BBox,
+    DatasetItem,
+    ItemView,
+    SelectionTool,
+    LabeledPointTool,
+    Shape,
+  } from "@pixano/core";
+
+  import {
+    BBOX_STROKEWIDTH,
+    INPUTPOINT_RADIUS,
+    INPUTPOINT_STROKEWIDTH,
+    INPUTRECT_STROKEWIDTH,
+    MASK_STROKEWIDTH,
+    POINT_SELECTION,
+  } from "./lib/constants";
+  import type { PolygonGroupDetails } from "./lib/types/canvas2dTypes";
+  import {
+    addBBox,
+    addMask,
+    destroyDeletedObjects,
+    findOrCreateCurrentMask,
+    clearCurrentAnn,
+    toggleIsEditingBBox,
+    toggleBBoxIsLocked,
+    mapMaskPointsToLineCoordinates,
+  } from "./api/boundingBoxesApi";
+  import PolygonGroup from "./components/PolygonGroup.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;
-  export let selectedTool: Tool | null;
-  export let colorScale: (id: string) => string;
-  export let masks: Array<Mask>;
-  export let bboxes: Array<BBox>;
+  export let colorRange: string[] = ["0", "10"];
+  export let masks: Mask[];
+  export let bboxes: BBox[];
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let selectedTool: SelectionTool;
+  export let newShape: Shape;
 
-  const INPUTPOINT_RADIUS: number = 6;
-  const INPUTPOINT_STROKEWIDTH: number = 3;
-  const INPUTRECT_STROKEWIDTH: number = 1.5;
-  const BBOX_STROKEWIDTH: number = 2.0;
-  const MASK_STROKEWIDTH: number = 2.0;
+  let isReady = false;
+
+  let colorScale: (id: string) => string;
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
-
+  let numberOfBBoxes: number;
+  let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-  let timerId: number;
+  let manualMasks: PolygonGroupDetails[];
+  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
+
+  $: {
+    if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
+      clearAnnotationAndInputs();
+    }
+    prevSelectedTool = selectedTool;
+  }
+
+  $: {
+    colorScale = utils.ordinalColorScale(colorRange);
+  }
+
+  $: {
+    if (stage && numberOfBBoxes !== bboxes?.length) {
+      const rect: Konva.Rect = stage?.findOne("#drag-rect");
+      if (rect) {
+        rect.destroy();
+      }
+    }
+    numberOfBBoxes = bboxes.length;
+  }
+  let timerId: ReturnType<typeof setTimeout>;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
@@ -65,12 +107,17 @@
   let stage: Konva.Stage;
   let toolsLayer: Konva.Layer;
   let highlighted_point: Konva.Circle = null;
+  let transformer = new Konva.Transformer({
+    id: "transformer",
+    rotateEnabled: false,
+  });
 
   // Main konva stage configuration
   let stageConfig: Konva.ContainerConfig = {
     width: 1024,
     height: 780,
     name: "konva",
+    id: "stage",
   };
 
   // Multiview image grid
@@ -109,14 +156,16 @@
   // ********** INIT ********** //
 
   onMount(() => {
-    console.log("Canvas2D.onMount");
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
   });
 
+  onDestroy(() => {
+    clearAnnotationAndInputs();
+  });
+
   afterUpdate(() => {
-    console.log("Canvas2D.afterUpdate");
     if (currentId !== selectedItem.id) loadItem();
 
     if (selectedTool) {
@@ -130,6 +179,8 @@
     }
 
     for (const viewId of Object.keys(selectedItem.views)) {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      if (viewLayer) viewLayer.add(transformer);
       if (masks) updateMasks(viewId);
       if (bboxes) updateBboxes(viewId);
     }
@@ -146,7 +197,7 @@
     for (const view of Object.values(selectedItem.views)) {
       zoomFactor[view.id] = 1;
       images[view.id] = new Image();
-      images[view.id].src = view.uri;
+      images[view.id].src = `/${view.uri}` || view.url;
       images[view.id].onload = () => {
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
@@ -156,7 +207,8 @@
         }
         scaleView(view);
         scaleElements(view);
-        //hack to refresh view (display masks/bboxes)
+        isReady = true;
+        // hack to refresh view (display masks/bboxes)
         masks = masks;
         bboxes = bboxes;
       };
@@ -219,6 +271,7 @@
 
     // Scale bboxes
     const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+    if (!bboxGroup) return;
     for (const bboxKonva of bboxGroup.children) {
       if (bboxKonva instanceof Konva.Group) {
         for (const bboxElement of bboxKonva.children) {
@@ -242,7 +295,7 @@
         maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
       }
     }
-    const currentMaskGroup = findOrCreateCurrentMask(view.id);
+    const currentMaskGroup = findOrCreateCurrentMask(view.id, stage);
     for (const maskKonva of currentMaskGroup.children) {
       if (maskKonva instanceof Konva.Shape) {
         maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
@@ -270,6 +323,8 @@
       const image: Konva.Image = viewLayer.findOne("#image");
       const bboxIds: Array<string> = [];
 
+      if (!bboxGroup) return;
+
       for (let i = 0; i < bboxes.length; ++i) {
         if (bboxes[i].viewId === viewId) {
           bboxIds.push(bboxes[i].id);
@@ -277,14 +332,20 @@
           //don't add a bbox that already exist
           const bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bboxKonva) {
-            addBBox(bboxes[i], colorScale(bboxes[i].catId.toString()), bboxGroup, image, viewId);
+            addBBox(bboxes[i], colorScale(bboxes[i].id), bboxGroup, image, viewId, zoomFactor);
           } else {
+            toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
+            toggleBBoxIsLocked(stage, bboxes[i]);
             //update visibility & opacity
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = colorScale(bboxes[i].catId.toString());
+            style.color = colorScale(bboxes[i].id);
+            const bboxText = bboxGroup.findOne(`#text${bboxes[i].id}`);
+            if (bboxText) {
+              bboxText.setAttr("text", bboxes[i].tooltip);
+            }
             for (const bboxElement of bboxKonva.children) {
               if (bboxElement instanceof Konva.Rect) {
                 bboxElement.stroke(style.color);
@@ -297,74 +358,8 @@
           }
         }
       }
-
       destroyDeletedObjects(bboxIds, bboxGroup);
     }
-  }
-
-  function addBBox(
-    bbox: BBox,
-    color: string,
-    bboxGroup: Konva.Group,
-    image: Konva.Image,
-    viewId: string,
-  ) {
-    const x = image.x() + bbox.bbox[0];
-    const y = image.y() + bbox.bbox[1];
-    const rect_width = bbox.bbox[2];
-    const rect_height = bbox.bbox[3];
-
-    const bboxKonva = new Konva.Group({
-      id: bbox.id,
-      visible: bbox.visible,
-      opacity: bbox.opacity,
-      listening: false,
-    });
-
-    const bboxRect = new Konva.Rect({
-      x: x,
-      y: y,
-      width: rect_width,
-      height: rect_height,
-      stroke: color,
-      strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
-    });
-    bboxKonva.add(bboxRect);
-
-    // Create a tooltip for bounding box category and confidence
-    const tooltip = new Konva.Label({
-      x: x,
-      y: y,
-      offsetY: 18,
-      scale: {
-        x: 1 / zoomFactor[viewId],
-        y: 1 / zoomFactor[viewId],
-      },
-    });
-
-    // Add a tag
-    tooltip.add(
-      new Konva.Tag({
-        fill: color,
-        stroke: color,
-      }),
-    );
-
-    // Add text
-    tooltip.add(
-      new Konva.Text({
-        x: x,
-        y: y,
-        text: bbox.tooltip,
-        fontSize: 18,
-        fontFamily: "DM Sans",
-        padding: 0,
-      }),
-    );
-
-    // Add to group
-    bboxKonva.add(tooltip);
-    bboxGroup.add(bboxKonva);
   }
 
   function updateMasks(viewId: string) {
@@ -382,14 +377,14 @@
           //don't add a mask that already exist
           const maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
           if (!maskKonva) {
-            addMask(masks[i], colorScale(masks[i].catId.toString()), maskGroup, image, viewId);
+            addMask(masks[i], colorScale(masks[i].id), maskGroup, image, viewId, stage, zoomFactor);
           } else {
             //update visibility & opacity
             maskKonva.visible(masks[i].visible);
             maskKonva.opacity(masks[i].opacity);
             //update color
             const style = new Option().style;
-            style.color = colorScale(masks[i].catId.toString());
+            style.color = colorScale(masks[i].id);
             maskKonva.stroke(style.color);
             maskKonva.fill(`rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`);
           }
@@ -399,82 +394,6 @@
       destroyDeletedObjects(maskIds, maskGroup);
     }
   }
-
-  function addMask(
-    mask: Mask,
-    color: string,
-    maskGroup: Konva.Group,
-    image: Konva.Image,
-    viewId: string,
-  ) {
-    const x = image.x();
-    const y = image.y();
-    const scale = image.scale();
-
-    const style = new Option().style;
-    style.color = color;
-
-    //utility functions to extract coords from SVG
-    //works only with SVG format "Mx0 y0 Lx1 y1 ... xn yn"
-    // --> format generated by convertSegmentsToSVG
-    function m_part(svg: string) {
-      const splits = svg.split(" ");
-      const x = splits[0].slice(1); //remove "M"
-      return { x: parseInt(x), y: parseInt(splits[1]) };
-    }
-    function l_part(svg: string) {
-      const splits = svg.split(" ");
-      const x0 = splits[2].slice(1); //remove "L"
-      const res = [{ x: parseInt(x0), y: parseInt(splits[3]) }];
-      for (let i = 4; i < splits.length; i += 2) {
-        res.push({
-          x: parseInt(splits[i]),
-          y: parseInt(splits[i + 1]),
-        });
-      }
-      return res;
-    }
-    const maskKonva = new Konva.Shape({
-      id: mask.id,
-      x: x,
-      y: y,
-      width: stage.width(),
-      height: stage.height(),
-      fill: `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`,
-      stroke: style.color,
-      strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
-      scale: scale,
-      visible: mask.visible,
-      opacity: mask.opacity,
-      listening: false,
-      sceneFunc: (ctx, shape) => {
-        ctx.beginPath();
-        for (let i = 0; i < mask.svg.length; ++i) {
-          const start = m_part(mask.svg[i]);
-          ctx.moveTo(start.x, start.y);
-          const l_pts = l_part(mask.svg[i]);
-          for (const pt of l_pts) {
-            ctx.lineTo(pt.x, pt.y);
-          }
-        }
-        ctx.fillStrokeShape(shape);
-      },
-    });
-    maskGroup.add(maskKonva);
-  }
-
-  function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: Konva.Group) {
-    // Check if Object ID still exist in list. If not, object is deleted and must be removed from group
-    const objectsToDestroy: Array<Konva.Group | Konva.Shape> = []; // need to build a list to not destroy while looping children
-    for (const obj of objectsGroup.children) {
-      if (!objectsIds.includes(obj.id())) {
-        objectsToDestroy.push(obj);
-      }
-    }
-    for (const obj of objectsToDestroy) obj.destroy();
-  }
-
-  // ********** CURRENT ANNOTATION ********** //
 
   async function updateCurrentMask(viewId: string) {
     const points = getInputPoints(viewId);
@@ -495,7 +414,18 @@
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
       if (results) {
-        const currentMaskGroup = findOrCreateCurrentMask(viewId);
+        newShape = {
+          masksImageSVG: results.masksImageSVG,
+          rle: results.rle,
+          type: "mask",
+          viewId,
+          itemId: selectedItem.id,
+          imageWidth: images[viewId].width,
+          imageHeight: images[viewId].height,
+          status: "inProgress",
+        };
+
+        const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const image: Konva.Image = viewLayer.findOne("#image");
 
@@ -521,39 +451,16 @@
           visible: true,
           opacity: 1.0,
         };
-        addMask(currentMask, "#008000", currentMaskGroup, image, viewId);
+        addMask(currentMask, "#008000", currentMaskGroup, image, viewId, stage, zoomFactor);
       }
     }
   }
 
-  function findOrCreateCurrentMask(viewId: string): Konva.Group {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-
-    const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
-
-    // Get and update the current annotation masks
-    let currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
-
-    if (!currentMaskGroup) {
-      currentMaskGroup = new Konva.Group({
-        id: "currentMask",
-      });
-      currentAnnGroup.add(currentMaskGroup);
-    }
-    return currentMaskGroup;
-  }
-
-  function clearCurrentAnn(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
-    const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
-    if (currentMaskGroup) currentMaskGroup.destroy();
-    if (selectedTool.postProcessor) selectedTool.postProcessor.reset();
-  }
+  // ********** CURRENT ANNOTATION ********** //
 
   function validateCurrentAnn() {
     if (currentAnn.validated) {
-      const currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewId);
+      const currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewId, stage);
       if (currentMaskGroup) currentMaskGroup.destroyChildren();
       if (highlighted_point) unhighlightInputPoint(highlighted_point);
       clearInputs(currentAnn.viewId);
@@ -570,23 +477,23 @@
     // Update the behavior of the canvas stage based on the selected tool
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
-      case ToolType.PointSelection:
-        displayInputPointTool(selectedTool as PointSelectionModeTool);
+      case "POINT_SELECTION":
+        displayInputPointTool(selectedTool);
         break;
-      case ToolType.Rectangle:
-        displayInputRectTool(selectedTool as RectangleTool);
+      case "RECTANGLE":
+        displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case ToolType.Delete:
+      case "DELETE":
         clearAnnotationAndInputs();
-        displayInputDeleteTool(selectedTool as DeleteTool);
+        displayInputDeleteTool(selectedTool);
         break;
-      case ToolType.Pan:
-        displayPanTool(selectedTool as PanTool);
+      case "PAN":
+        displayPanTool(selectedTool);
         // Enable box creation or change cursor style
         break;
-      case ToolType.Classification:
-        displayClassificationTool(selectedTool as ClassificationTool);
+      case "CLASSIFICATION":
+        displayClassificationTool(selectedTool);
         break;
 
       default:
@@ -596,18 +503,36 @@
   }
 
   function clearInputs(viewId: string) {
+    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+    if (viewLayer) {
+      const inputGroup: Konva.Group = viewLayer.findOne("#input");
+      inputGroup.destroyChildren();
+    }
+  }
+
+  // ********** POLYGON TOOL ********** //
+
+  function drawPolygonPoints(viewId: string) {
+    if (newShape?.status === "inProgress") return;
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    inputGroup.destroyChildren();
+    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
+    const x = Math.round(cursorPositionOnImage.x);
+    const y = Math.round(cursorPositionOnImage.y);
+
+    manualMasks = manualMasks.map((mask) =>
+      mask.status === "created"
+        ? mask
+        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }] },
+    );
   }
 
   // ********** PAN TOOL ********** //
 
-  function displayPanTool(tool: PanTool) {
+  function displayPanTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
+      const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -621,11 +546,11 @@
 
   // ********** CLASSIFICATION TOOL ********** //
 
-  function displayClassificationTool(tool: ClassificationTool) {
+  function displayClassificationTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Pan
-      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
+      const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -639,7 +564,7 @@
 
   // ********** INPUT POINTS TOOL ********** //
 
-  function displayInputPointTool(tool: PointSelectionModeTool) {
+  function displayInputPointTool(tool: LabeledPointTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Point
@@ -740,6 +665,7 @@
 
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     timerId = setTimeout(() => updateCurrentMask(viewId), 50); // delay before predict to spare CPU
   }
 
@@ -765,11 +691,11 @@
 
   // ********** INPUT RECTANGLE TOOL ********** //
 
-  function displayInputRectTool(tool: RectangleTool) {
+  function displayInputRectTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != Rectangle
-      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
+      const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
 
       if (!highlighted_point) {
@@ -851,7 +777,8 @@
   }
 
   function dragInputRectMove(viewId: string) {
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type === "RECTANGLE") {
+      newShape = { status: "none" };
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
@@ -867,7 +794,7 @@
   }
 
   async function dragInputRectEnd(viewId: string) {
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type == "RECTANGLE") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
@@ -877,8 +804,23 @@
           //rect with area = 0 -> delete it
           rect.destroy();
         } else {
-          //predict
-          await updateCurrentMask(viewId);
+          if (!selectedTool.isSmart) {
+            newShape = {
+              status: "inProgress",
+              attrs: {
+                x: rect.x(),
+                y: rect.y(),
+                width: rect.width(),
+                height: rect.height(),
+              },
+              type: "rectangle",
+              viewId,
+              itemId: selectedItem.id,
+              imageWidth: images[viewId].width,
+              imageHeight: images[viewId].height,
+            };
+          }
+          selectedTool.isSmart && (await updateCurrentMask(viewId));
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
@@ -888,11 +830,11 @@
 
   // ********** INPUT DELETE TOOL ********** //
 
-  function displayInputDeleteTool(tool: DeleteTool) {
+  function displayInputDeleteTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
       //TODO: etre générique sur l'ensemble des outils != DELETE
-      const pointer = stage.findOne(`#${ToolType.PointSelection}`);
+      const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
       const crossline = stage.findOne("#crossline");
       if (crossline) crossline.destroy();
@@ -906,11 +848,17 @@
   }
 
   function clearAnnotationAndInputs() {
+    if (!stage) return;
+    manualMasks = manualMasks.map((mask) =>
+      mask.status === "created" ? mask : { ...mask, points: [] },
+    );
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
-      clearCurrentAnn(viewId);
+      clearCurrentAnn(viewId, stage, selectedTool);
     }
-    stage.container().style.cursor = selectedTool.cursor;
+    if (selectedTool) {
+      stage.container().style.cursor = selectedTool.cursor;
+    }
     currentAnn = null;
   }
 
@@ -920,11 +868,11 @@
     const position = stage.getRelativePointerPosition();
 
     // Update tools states
-    if (selectedTool?.type == ToolType.PointSelection) {
+    if (selectedTool?.type === "POINT_SELECTION") {
       updateInputPointStage(position);
     }
 
-    if (selectedTool?.type == ToolType.Rectangle) {
+    if (selectedTool?.type === "RECTANGLE") {
       updateInputRectState(position);
     }
   }
@@ -951,6 +899,9 @@
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
+    if (selectedTool?.type === "POLYGON") {
+      drawPolygonPoints(viewId);
+    }
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -972,23 +923,23 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    // Perfome tool action if any active tool
+    // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
-    if (selectedTool?.type == ToolType.Pan || event.button == 1) {
+    if (selectedTool?.type == "PAN" || event.button == 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
       viewLayer.on("dragend", () => handleDragEndOnView(viewId));
-    } else if (selectedTool?.type == ToolType.PointSelection) {
+    } else if (selectedTool?.type == "POINT_SELECTION") {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
       //add Konva Point
       const input_point = new Konva.Circle({
-        name: `${(selectedTool as PointSelectionModeTool).label}`,
+        name: `${selectedTool.label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
         radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
         stroke: "white",
-        fill: (selectedTool as PointSelectionModeTool).label === 1 ? "green" : "red",
+        fill: selectedTool.label === 1 ? "green" : "red",
         strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
         visible: true,
         listening: true,
@@ -1011,10 +962,9 @@
       highlightInputPoint(input_point, viewId);
 
       await updateCurrentMask(viewId);
-    } else if (selectedTool?.type == ToolType.Rectangle) {
+    } else if (selectedTool?.type == "RECTANGLE") {
       const pos = viewLayer.getRelativePointerPosition();
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
-
       //add RECT
       let rect: Konva.Rect = inputGroup.findOne("#drag-rect");
       if (rect) {
@@ -1035,6 +985,7 @@
         });
         inputGroup.add(rect);
       }
+      // TODO100: where magic happens
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
     }
@@ -1108,7 +1059,7 @@
         //trigger a currentAnn with existing constructs
         await updateCurrentMask(viewId);
       } else {
-        clearCurrentAnn(viewId);
+        clearCurrentAnn(viewId, stage, selectedTool);
       }
     }
     if (event.key == "Escape") {
@@ -1133,7 +1084,12 @@
   }
 </script>
 
-<div class="flex h-full w-full bg-slate-100" bind:this={stageContainer}>
+<div
+  class={cn("flex h-full w-full bg-slate-100 transition-opacity duration-300 delay-100", {
+    "opacity-0": !isReady,
+  })}
+  bind:this={stageContainer}
+>
   <Stage
     bind:config={stageConfig}
     bind:handle={stage}
@@ -1157,6 +1113,19 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
+          {#each manualMasks as manualMask}
+            {#key manualMask.status}
+              <PolygonGroup
+                viewId={view.id}
+                selectedItemId={selectedItem.id}
+                bind:newShape
+                {stage}
+                {images}
+                polygonDetails={manualMask}
+                color={colorScale(manualMask.id)}
+              />
+            {/key}
+          {/each}
         </Layer>
       {/if}
     {/each}

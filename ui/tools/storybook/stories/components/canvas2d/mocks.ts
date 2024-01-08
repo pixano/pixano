@@ -17,19 +17,7 @@
 import { mask_utils } from "@pixano/models";
 
 import type { InteractiveImageSegmenter, InteractiveImageSegmenterInput } from "@pixano/models";
-import { SegmentationResult } from "@pixano/models/src/interfaces";
-
-function flattenArray(image: number[][]): number[] {
-  const flattenedArray: number[] = [];
-
-  for (let y = 0; y < image.length; y++) {
-    for (let x = 0; x < image[y].length; x++) {
-      flattenedArray.push(image[y][x]);
-    }
-  }
-
-  return flattenedArray;
-}
+import type { SegmentationResult } from "@pixano/models/src/interfaces";
 
 // Exports
 export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter {

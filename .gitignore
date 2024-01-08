@@ -23,6 +23,7 @@ site
 
 # Editor directories and files
 .vscode
+todo.*
 .vscode/*
 !.vscode/extensions.json
 .idea
