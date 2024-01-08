@@ -11,11 +11,11 @@
 #
 # http://www.cecill.info
 
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi_pagination.api import add_pagination
+from s3path import S3Path
 
 from pixano.apps.api import datasets, items, models
 from pixano.data import Settings
@@ -50,12 +50,20 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     model_dir = settings.data_dir / "models"
     model_dir.mkdir(exist_ok=True)
 
-    # Mount data directory (datasets + models)
-    app.mount(
-        "/data",
-        StaticFiles(directory=settings.data_dir),
-        name="data",
-    )
+    if not isinstance(settings.data_dir, S3Path):
+        # Mount data directory (datasets + models)
+        app.mount(
+            "/data",
+            StaticFiles(directory=settings.data_dir),
+            name="data",
+        )
+    else:
+        # don't need to mount dataset, but still need to mount model
+        app.mount(
+            "/data",
+            StaticFiles(directory=settings.local_model_dir),
+            name="data",
+        )
 
     app.include_router(datasets.router)
     app.include_router(items.router)

@@ -20,6 +20,7 @@ import lancedb
 import pyarrow as pa
 import pyarrow.dataset as pa_ds
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_info import DatasetInfo
@@ -123,7 +124,10 @@ class Dataset(BaseModel):
             lancedb.DBConnection: Dataset LanceDB connection
         """
 
-        return lancedb.connect(self.path)
+        if isinstance(self.path, S3Path):
+            return lancedb.connect(self.path.as_uri())
+        else:
+            return lancedb.connect(self.path)
 
     def open_tables(self) -> dict[str, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB
