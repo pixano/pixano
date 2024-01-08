@@ -22,6 +22,7 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import binary_to_url
@@ -175,7 +176,12 @@ class Image(PixanoType, BaseModel):
             IO: Opened image
         """
 
-        return urlopen(self.get_uri())
+        uri = self.get_uri()
+        if urlparse(uri).scheme == "s3":
+            presigned_url = S3Path.from_uri(uri).get_presigned_url()
+            return urlopen(presigned_url)
+        else:
+            return urlopen(uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow

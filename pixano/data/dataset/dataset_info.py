@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_category import DatasetCategory
@@ -73,8 +74,12 @@ class DatasetInfo(BaseModel):
             DatasetInfo: DatasetInfo
         """
 
-        with open(json_fp, encoding="utf-8") as json_file:
-            info_json = json.load(json_file)
+        if isinstance(json_fp, S3Path):
+            with json_fp.open(encoding="utf-8") as json_file:
+                info_json = json.load(json_file)
+        else:
+            with open(json_fp, encoding="utf-8") as json_file:
+                info_json = json.load(json_file)
 
         info = DatasetInfo.model_validate(info_json)
 
@@ -88,8 +93,11 @@ class DatasetInfo(BaseModel):
         if load_thumbnail:
             thumb_fp = json_fp.parent / "preview.png"
             if thumb_fp.is_file():
-                im = Image(uri=thumb_fp.absolute().as_uri())
-                info.preview = im.url
+                if isinstance(json_fp, S3Path):
+                    info.preview = thumb_fp.get_presigned_url()
+                else:
+                    im = Image(uri=thumb_fp.absolute().as_uri())
+                    info.preview = im.url
 
         return info
 

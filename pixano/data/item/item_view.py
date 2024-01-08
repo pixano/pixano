@@ -17,6 +17,7 @@ from urllib.parse import urlparse
 
 import pyarrow as pa
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image, is_image_type
 from pixano.data.item.item_feature import ItemFeature
@@ -76,12 +77,19 @@ class ItemView(BaseModel):
                     else Image.from_dict(item[field.name])
                 )
                 im.uri_prefix = media_dir.absolute().as_uri()
+                uri = (
+                    im.uri
+                    if urlparse(im.uri).scheme != ""
+                    else (
+                        (media_dir / im.uri).get_presigned_url()
+                        if isinstance(media_dir, S3Path)
+                        else f"data/{media_dir.parent.name}/media/{im.uri}"
+                    )
+                )
                 image_view = ItemView(
                     id=field.name,
                     type="image",
-                    uri=f"data/{media_dir.parent.name}/media/{im.uri}"
-                    if urlparse(im.uri).scheme == ""
-                    else im.uri,
+                    uri=uri,
                     thumbnail=im.preview_url,
                 )
                 image_view.features = {}

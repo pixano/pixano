@@ -6,6 +6,7 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
+- Add **S3** compatible storage access
 - Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
@@ -37,6 +38,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix pip commands in notebooks for Google Colab (pixano#11)
 - Fix broken link in CHANGELOG (pixano#4)
 - Fix documentation website API reference generation
+- Fix the COCO Importer to get the category name from the "categories" field as it does not always exist in the "annotations" field.
 
 ## [0.4.1] - 2023-11-13
 

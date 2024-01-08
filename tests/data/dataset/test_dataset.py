@@ -316,7 +316,7 @@ class DatasetTestCase(unittest.TestCase):
             id="added_object",
             item_id="632",
             view_id="image",
-            source_id="Pixano Annotator",
+            source_id="Ground Truth",
             bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
         )
         item_4.objects["added_object"] = added_object_3

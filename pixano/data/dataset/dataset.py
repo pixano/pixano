@@ -20,6 +20,7 @@ import lancedb
 import pyarrow as pa
 import pyarrow.dataset as pa_ds
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core import Image
 from pixano.data.dataset.dataset_info import DatasetInfo
@@ -150,7 +151,10 @@ class Dataset(BaseModel):
             lancedb.db.DBConnection: Dataset LanceDB connection
         """
 
-        return lancedb.connect(self.path)
+        if isinstance(self.path, S3Path):
+            return lancedb.connect(self.path.as_uri())
+        else:
+            return lancedb.connect(self.path)
 
     def open_tables(self) -> dict[str, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB
@@ -558,23 +562,55 @@ class Dataset(BaseModel):
         # Load dataset tables
         ds_tables = self.open_tables()
 
-        # Save item label if it exists
-        if "label" in item.features:
-            # If label not in main table, add label field
-            if "label" not in ds_tables["main"]["db"].schema.names:
+        # Save item features if exists
+        if len(item.features) > 0:
+            new_columns = [
+                feat
+                for feat in item.features
+                if feat not in ds_tables["main"]["db"].schema.names
+            ]
+            if len(new_columns) > 0:
                 main_table_ds = ds_tables["main"]["db"].to_lance()
-                # Create label table
-                label_table = main_table_ds.to_table(columns=["id"])
-                label_array = pa.array(
-                    [""] * len(ds_tables["main"]["db"]), type=pa.string()
-                )
-                label_table = label_table.append_column(
-                    pa.field("label", pa.string()), label_array
-                )
+                feat_table = main_table_ds.to_table(columns=["id"])
+
+                # Add new feats field in main table
+                for feat in new_columns:
+                    # detect data type
+                    if item.features[feat].dtype == "number":
+                        if isinstance(item.features[feat].value, int):
+                            feat_type = {
+                                "info": "int",
+                                "pa": pa.integer(),
+                                "empty_val": None,
+                            }
+                        elif isinstance(item.features[feat].value, float):
+                            feat_type = {
+                                "info": "float",
+                                "pa": pa.float32(),
+                                "empty_val": None,
+                            }
+                    elif item.features[feat].dtype == "boolean":
+                        feat_type = {
+                            "info": "bool",
+                            "pa": pa.bool_(),
+                            "empty_val": False,  # None is not supported for boolean yet by Lance, so we put False
+                        }
+                    else:
+                        feat_type = {"info": "str", "pa": pa.string(), "empty_val": ""}
+
+                    # Create empty feat column
+                    feat_array = pa.array(
+                        [feat_type["empty_val"]] * len(ds_tables["main"]["db"]),
+                        type=feat_type["pa"],
+                    )
+                    feat_table = feat_table.append_column(
+                        pa.field(feat, feat_type["pa"]), feat_array
+                    )
+                    # Update DatasetInfo
+                    self.info.tables["main"][0].fields[feat] = feat_type["info"]
+
                 # Merge with main table
-                main_table_ds.merge(label_table, "id")
-                # Update DatasetInfo
-                self.info.tables["main"][0].fields["label"] = "str"
+                main_table_ds.merge(feat_table, "id")
                 self.save_info()
 
             # Get item
@@ -584,7 +620,10 @@ class Dataset(BaseModel):
                 .scanner(filter=f"id in ('{item.id}')")
             )
             item_to_update = scanner.to_table().to_pylist()[0]
-            item_to_update["label"] = item.features["label"].value
+
+            # Update item
+            for feat in item.features:
+                item_to_update[feat] = item.features[feat].value
 
             # Delete old item
             ds_tables["main"]["db"].delete(f"id in ('{item.id}')")
@@ -607,18 +646,17 @@ class Dataset(BaseModel):
                     table_found = True
                     item.add_or_update_object(ds_tables["objects"][table.name], obj)
             # If first object from Annotator
-            if not table_found and obj.source_id == "Pixano Annotator":
+            if not table_found and obj.source_id == "Ground Truth":
                 # Create Annotator table
                 table = DatasetTable(
-                    name="obj_annotator",
-                    source="Pixano Annotator",
+                    name="objects",
+                    source="Ground Truth",
                     fields={
                         "id": "str",
                         "item_id": "str",
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_id": "int",
                         "category_name": "str",
                     },
                 )

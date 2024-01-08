@@ -13,7 +13,7 @@
  * http://www.cecill.info
  */
 
-import type { DatasetStat } from "./interfaces";
+import type { DatasetStat } from "./lib/types/datasetTypes";
 
 // Exports
 
