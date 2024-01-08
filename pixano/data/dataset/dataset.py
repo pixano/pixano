@@ -153,8 +153,7 @@ class Dataset(BaseModel):
 
         if isinstance(self.path, S3Path):
             return lancedb.connect(self.path.as_uri())
-        else:
-            return lancedb.connect(self.path)
+        return lancedb.connect(self.path)
 
     def open_tables(self) -> dict[str, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB

@@ -180,8 +180,7 @@ class Image(PixanoType, BaseModel):
         if urlparse(uri).scheme == "s3":
             presigned_url = S3Path.from_uri(uri).get_presigned_url()
             return urlopen(presigned_url)
-        else:
-            return urlopen(uri)
+        return urlopen(uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow
