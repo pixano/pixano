@@ -6,14 +6,14 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add **S3** compatible storage access
+- Add support for **datasets stored on Amazon S3 (AWS)** (pixano#21)
 - Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
 - Add option to load a list of category id and name pairs in Importers and to save it with Exporters (pixano#11)
 - Add new methods to PixanoTypes (from_rle() in BBox, file_name, width, and height in Image) (pixano#11)
-- Add GitHub actions to format, lint and test code (pixano#2, pixano#3, pixano#4)
-- Add new unit tests and refactor existing tests (pixano#11)
+- Add GitHub actions to format, lint and test code (pixano#2, pixano#3, pixano#4, pixano#26)
+- Add new unit tests and refactor existing tests (pixano#11, pixano#26)
 
 ### Changed
 
@@ -25,6 +25,7 @@ All notable changes to Pixano will be documented in this file.
   - Add new class related to Dataset (DatasetItem)
   - Add new classes related to DatasetItem (ItemEmbedding, ItemFeature, ItemObject, ItemView)
   - Refactor Exporters, Importers, and InferenceModels using updated API
+- Refactor Pixano Explorer and Annotator apps into a single Pixano app using the new ImageWorkspace (pixano#23)
 - Reformat Jupyter notebooks with black (pixano#2)
 - Reformat and refactor frontend code with Prettier and eslint (pixano#2, pixano#7, pixano#12)
 - Replace deprecated frontend package shortid by nanoid (pixano#12)
