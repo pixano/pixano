@@ -6,7 +6,7 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add support for **datasets stored on Amazon S3 (AWS)** (pixano#21)
+- Add support for **datasets stored on Amazon S3 cloud storage** (pixano#21)
 - Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
