@@ -22,7 +22,7 @@ All notable changes to Pixano will be documented in this file.
 - **Breaking:** Handle media files as **URI links instead of base 64 encodings** in Pixano API (pixano#8)
   - Drop support for datasets imported without copying media files, i.e. using the `portable=False` option
   - Remove the `portable=False` option, users can now choose to either **copy or move the media files** to the dataset directory when using an Importer
-- Refactor backend API with new endpoints, new methods, new data types, and more explicit error messages (pixano#11, pixano#12)
+- Refactor backend API with new endpoints, methods, data types, and more explicit error messages (pixano#11, pixano#12)
   - Update Dataset and DatasetInfo classes with new methods
   - Add new classes related to DatasetInfo (DatasetCategory, DatasetStat, DatasetTable)
   - Add new class related to Dataset (DatasetItem)
@@ -38,11 +38,11 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - Multiple visual fixes in frontend UI (pixano#12, pixano#15)
+- Fix retrieving category names with COCOImporter (pixano#13)
 - Fix type hints in backend code (pixano#11)
 - Fix pip commands in notebooks for Google Colab (pixano#11)
 - Fix broken link in CHANGELOG (pixano#4)
 - Fix documentation website API reference generation
-- Fix the COCO Importer to get the category name from the "categories" field as it does not always exist in the "annotations" field
 
 ## [0.4.1] - 2023-11-13
 
