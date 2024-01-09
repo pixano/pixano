@@ -8,7 +8,7 @@
 
 From the app home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
-For each dataset, you can see its name, the number of ite;s inside it, and a thumbnail composed from six sample ite;s.
+For each dataset, you can see its name, the number of items inside it, and a thumbnail composed from six sample items.
 
 You can hover over a dataset name to check the dataset description if it has one.
 
