@@ -65,32 +65,30 @@ class ImageTestCase(unittest.TestCase):
 
         self.assertEqual(self.image.preview_url, expected_url)
 
-    def test_image_uri_relative_with_prefix(self):
-        """Test Image get_uri method, with uri_prefix"""
+    def test_image_complete_uri(self):
+        """Test Image complete_uri property"""
 
-        uri_prefix = "http://example.com/images/"
-        image = Image("relative_path.png", uri_prefix=uri_prefix)
-        expected_uri = (
-            urlparse(uri_prefix)._replace(path="/images/relative_path.png").geturl()
+        # 1. Relative URI, with prefix
+        image_1 = Image("relative_path.png", uri_prefix="http://example.com/images/")
+        uri_1 = (
+            urlparse("http://example.com/images/")
+            ._replace(path="/images/relative_path.png")
+            .geturl()
         )
 
-        self.assertEqual(image.get_uri(), expected_uri)
+        self.assertEqual(image_1.complete_uri, uri_1)
 
-    def test_image_uri_relative_without_prefix(self):
-        """Test Image get_uri method, without uri_prefix"""
+        # 2. Relative URI, without prefix
+        image_2 = Image("relative_path.png")
 
-        image = Image("relative_path.png")
+        with self.assertRaises(ValueError):
+            print(image_2.complete_uri)
 
-        with self.assertRaises(Exception):
-            image.get_uri()
+        # 3. Absolute URI
+        image_3 = Image("http://example.com/image.png")
+        uri_3 = "http://example.com/image.png"
 
-    def test_image_uri_absolute(self):
-        """Test Image get_uri method, with absolute URI"""
-
-        image = Image("http://example.com/image.png")
-        expected_uri = "http://example.com/image.png"
-
-        self.assertEqual(image.get_uri(), expected_uri)
+        self.assertEqual(image_3.complete_uri, uri_3)
 
     def test_image_size(self):
         """Test Image size property"""
