@@ -72,6 +72,32 @@ class Image(PixanoType, BaseModel):
         )
 
     @property
+    def complete_uri(self) -> str:
+        """Return complete image URI using URI and URI prefix
+
+        Returns:
+            str: Image URI
+        """
+
+        # URI is incomplete
+        if urlparse(self.uri).scheme == "":
+            # URI prefix exists
+            if self.uri_prefix is not None:
+                parsed_uri = urlparse(self.uri_prefix)
+                # URI prefix is incomplete
+                if parsed_uri.scheme == "":
+                    raise ValueError(
+                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
+                    )
+                combined_path = Path(parsed_uri.path) / self.uri
+                parsed_uri = parsed_uri._replace(path=str(combined_path))
+                return parsed_uri.geturl()
+            # No URI prefix
+            raise ValueError("URI is incomplete, need URI prefix")
+        # URI is already complete
+        return self.uri
+
+    @property
     def url(self) -> str:
         """Return image base 64 URL
 
@@ -131,30 +157,6 @@ class Image(PixanoType, BaseModel):
 
         return self.as_pillow().height
 
-    def get_uri(self) -> str:
-        """Return complete image URI from URI and URI prefix
-
-        Returns:
-            str: Image URI
-        """
-
-        # Relative URI
-        if urlparse(self.uri).scheme == "":
-            # If URI prefix exists
-            if self.uri_prefix is not None:
-                parsed_uri = urlparse(self.uri_prefix)
-                if parsed_uri.scheme == "":
-                    raise ValueError(
-                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
-                    )
-                combined_path = Path(parsed_uri.path) / self.uri
-                parsed_uri = parsed_uri._replace(path=str(combined_path))
-                return parsed_uri.geturl()
-            # No URI prefix
-            raise AttributeError("Need URI prefix for relative URI")
-        # Complete URI
-        return self.uri
-
     def get_bytes(self) -> bytes:
         """Get image bytes from attribute or from reading file from URI
 
@@ -176,11 +178,11 @@ class Image(PixanoType, BaseModel):
             IO: Opened image
         """
 
-        uri = self.get_uri()
-        if urlparse(uri).scheme == "s3":
-            presigned_url = S3Path.from_uri(uri).get_presigned_url()
+        complete_uri = self.complete_uri
+        if urlparse(complete_uri).scheme == "s3":
+            presigned_url = S3Path.from_uri(complete_uri).get_presigned_url()
             return urlopen(presigned_url)
-        return urlopen(uri)
+        return urlopen(complete_uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow
