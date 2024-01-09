@@ -47,8 +47,7 @@ async def get_models() -> list[str]:
     # Return list of models
     if models:
         return models
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No models found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"No models found in {get_settings().data_dir.absolute()}",
+    )

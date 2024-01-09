@@ -27,6 +27,10 @@ from s3path import S3Path
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import binary_to_url
 
+# Disable warning for Image "bytes" attribute
+# NOTE: Rename attribute? Breaking change for Pixano datasets using Image
+# pylint: disable=redefined-builtin, used-before-assignment
+
 
 class Image(PixanoType, BaseModel):
     """Image type using URI or bytes
@@ -140,18 +144,16 @@ class Image(PixanoType, BaseModel):
             if self.uri_prefix is not None:
                 parsed_uri = urlparse(self.uri_prefix)
                 if parsed_uri.scheme == "":
-                    raise Exception(
+                    raise ValueError(
                         "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
                     )
                 combined_path = Path(parsed_uri.path) / self.uri
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
                 return parsed_uri.geturl()
             # No URI prefix
-            else:
-                raise Exception("Need URI prefix for relative URI")
+            raise AttributeError("Need URI prefix for relative URI")
         # Complete URI
-        else:
-            return self.uri
+        return self.uri
 
     def get_bytes(self) -> bytes:
         """Get image bytes from attribute or from reading file from URI
@@ -162,11 +164,10 @@ class Image(PixanoType, BaseModel):
 
         if self.bytes is not None:
             return self.bytes
-        elif self.uri is not None:
+        if self.uri is not None:
             with self.open() as f:
                 return f.read()
-        else:
-            return None
+        return None
 
     def open(self) -> IO:
         """Open image
@@ -179,8 +180,7 @@ class Image(PixanoType, BaseModel):
         if urlparse(uri).scheme == "s3":
             presigned_url = S3Path.from_uri(uri).get_presigned_url()
             return urlopen(presigned_url)
-        else:
-            return urlopen(uri)
+        return urlopen(uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow

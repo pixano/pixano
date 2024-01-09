@@ -20,8 +20,13 @@ from pixano.data import DatasetStat
 
 
 class DatasetStatTestCase(unittest.TestCase):
+    """DatasetStat test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         # Create temporary directory
+        # pylint: disable=consider-using-with
         self.temp_dir = tempfile.TemporaryDirectory()
         self.path = Path(self.temp_dir.name)
 
@@ -52,10 +57,14 @@ class DatasetStatTestCase(unittest.TestCase):
         with open(self.path / "stats.json", "w", encoding="utf-8") as f:
             json.dump([stat.model_dump() for stat in self.stats], f)
 
-    def tearDown(self) -> None:
+    def tearDown(self):
+        """Tests teardown"""
+
         self.temp_dir.cleanup()
 
     def test_from_json(self):
+        """Test DatasetStat from_json method"""
+
         loaded_stats = DatasetStat.from_json(Path(self.path) / "stats.json")
 
         self.assertIsInstance(loaded_stats, list)

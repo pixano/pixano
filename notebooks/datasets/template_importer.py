@@ -93,7 +93,13 @@ class TemplateImporter(Importer):
         categories = [DatasetCategory(id=i, name=f"Category {i}") for i in range(1, 40)]
 
         # Initialize Importer
-        super().__init__(name, description, splits, tables, categories)
+        super().__init__(
+            name=name,
+            description=description,
+            tables=tables,
+            splits=splits,
+            categories=categories,
+        )
 
     def import_rows(self) -> Iterator:
         """Process dataset rows for import

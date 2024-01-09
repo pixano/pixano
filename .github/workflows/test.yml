@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-name: Test code
+name: Test
 
 on:
   push:

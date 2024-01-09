@@ -22,7 +22,11 @@ from pixano.data import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
+    """ImageImporter test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         input_dirs = {"image": Path("tests/assets/coco_dataset/image")}
         self.importer = ImageImporter(
             name="COCO",
@@ -32,6 +36,8 @@ class ImageImporterTestCase(unittest.TestCase):
         )
 
     def test_import_dataset(self):
+        """Test ImageImporter import_dataset method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
             import_dir = Path(temp_dir) / "coco"

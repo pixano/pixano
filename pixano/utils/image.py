@@ -21,12 +21,12 @@ from PIL import Image
 from pycocotools import mask as mask_api
 
 
-def image_to_binary(image: Image.Image, format: str = "PNG") -> bytes:
+def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
     """Encode image from Pillow to binary
 
     Args:
         image (Image.Image): Image as Pillow
-        format (str, optional): Image file extension. Defaults to "PNG".
+        im_format (str, optional): Image file extension. Defaults to "PNG".
 
     Returns:
         bytes: Image as binary
@@ -36,7 +36,7 @@ def image_to_binary(image: Image.Image, format: str = "PNG") -> bytes:
         return None
 
     with BytesIO() as output_bytes:
-        image.save(output_bytes, format)
+        image.save(output_bytes, im_format)
         im_bytes = output_bytes.getvalue()
 
     return im_bytes
@@ -72,8 +72,7 @@ def binary_to_url(im_bytes: bytes) -> str:
     if im_bytes is not None:
         encoded = base64.b64encode(im_bytes).decode("utf-8")
         return f"data:image;base64,{encoded}"
-    else:
-        return ""
+    return ""
 
 
 def depth_file_to_binary(depth_path: str) -> bytes:
@@ -142,15 +141,12 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
     """
 
     if isinstance(mask, list):
-        rle = polygons_to_rle(mask, height, width)
-    elif isinstance(mask, dict):
+        return polygons_to_rle(mask, height, width)
+    if isinstance(mask, dict):
         if isinstance(mask["counts"], list):
-            rle = urle_to_rle(mask)
-        else:
-            rle = mask
-    else:
-        rle = None
-    return rle
+            return urle_to_rle(mask)
+        return mask
+    return None
 
 
 def mask_to_rle(mask: Image.Image) -> dict:
@@ -166,6 +162,7 @@ def mask_to_rle(mask: Image.Image) -> dict:
     if mask is not None:
         mask_array = np.asfortranarray(mask)
         return mask_api.encode(mask_array)
+    return None
 
 
 def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
@@ -180,6 +177,7 @@ def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
 
     if rle is not None:
         return mask_api.decode(rle)
+    return None
 
 
 def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
@@ -197,6 +195,7 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
     if polygons is not None:
         rles = mask_api.frPyObjects(polygons, height, width)
         return mask_api.merge(rles)
+    return None
 
 
 def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
@@ -222,6 +221,7 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
         polygons = [p.tolist() for p in polygons]
 
         return polygons
+    return None
 
 
 def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
@@ -264,6 +264,7 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
         res = [x + 0.5 for x in res if len(x) >= 6]
 
         return res, has_holes
+    return None
 
 
 def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
@@ -279,6 +280,7 @@ def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
     if urle is not None:
         height, width = urle["size"]
         return mask_api.frPyObjects(urle, height, width)
+    return None
 
 
 def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
@@ -302,3 +304,4 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
             counts.append(len(list(elements)))
 
         return urle
+    return None

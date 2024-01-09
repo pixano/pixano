@@ -85,13 +85,13 @@ def is_image_type(t: pa.DataType) -> bool:
 
 
 def pyarrow_array_from_list(
-    list_data: list, type: pa.ExtensionType | pa.DataType
+    list_data: list, pyarrow_type: pa.ExtensionType | pa.DataType
 ) -> pa.Array:
     """Convert data from Python list to PyArrow array
 
     Args:
         list_data (list): Data as Python list
-        type (pa.ExtensionType | pa.DataType): PyArrow base or custom extension type
+        pyarrow_type (pa.ExtensionType | pa.DataType): PyArrow base or custom extension type
 
     Raises:
         ValueError: Unknow type
@@ -100,12 +100,13 @@ def pyarrow_array_from_list(
         pa.Array: Data as PyArrow array
     """
 
-    if pa.types.is_list(type):
-        type = type.value_type
+    if pa.types.is_list(pyarrow_type):
+        pyarrow_type = pyarrow_type.value_type
 
-    if isinstance(type, pa.ExtensionType):
-        return type.Array.from_pylist(list_data)
-    elif isinstance(type, pa.DataType) and not isinstance(type, pa.ExtensionType):
+    if isinstance(pyarrow_type, pa.ExtensionType):
+        return pyarrow_type.Array.from_pylist(list_data)
+    if isinstance(pyarrow_type, pa.DataType) and not isinstance(
+        pyarrow_type, pa.ExtensionType
+    ):
         return pa.array(list_data)
-    else:
-        raise ValueError("Unknow type")
+    raise ValueError("Unknow type")

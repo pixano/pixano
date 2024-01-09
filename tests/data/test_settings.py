@@ -18,7 +18,11 @@ from pixano.data import Settings
 
 
 class SettingsTestCase(unittest.TestCase):
+    """Settings test case"""
+
     def test_init(self):
+        """Test Settings init method"""
+
         custom_path = Path("test")
 
         default_settings = Settings()

@@ -41,7 +41,7 @@ def estimate_size(folder_path: Path) -> str:
 
     # Estimate size
     total_size = 0
-    for dirpath, dirnames, filenames in os.walk(folder_path):
+    for dirpath, _, filenames in os.walk(folder_path):
         for f in filenames:
             fp = os.path.join(dirpath, f)
             # skip if it is symbolic link
@@ -54,7 +54,7 @@ def estimate_size(folder_path: Path) -> str:
     while total_size >= 1024 and i < len(suffixes) - 1:
         total_size /= 1024.0
         i += 1
-    f = ("%.2f" % total_size).rstrip("0").rstrip(".")
-    readable_size = "%s %s" % (f, suffixes[i])
+    f = (f"{total_size:.2f}").rstrip("0").rstrip(".")
+    readable_size = f"{f} {suffixes[i]}"
 
     return readable_size

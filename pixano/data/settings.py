@@ -56,17 +56,16 @@ class Settings(BaseSettings):
                 )
                 register_configuration_parameter(self.data_dir, resource=aws_ressource)
             except Exception as e:
-                raise Exception(
+                raise ValueError(
                     "ERROR Could not register S3 compatible storage.\n"
                     "You have to set the following environment variables:\n"
                     "- AWS_ENDPOINT : S3 Compatible Storage endpoint\n"
                     "- AWS_ACCESS_KEY_ID : access key credentials\n"
                     "- AWS_SECRET_ACCESS_KEY : secret access credentials\n"
-                    "- AWS_REGION (optionnal)",
-                    e,
-                )
+                    "- AWS_REGION (optionnal)"
+                ) from e
             # if S3, local_model_dir have to be set (maybe we could download it from S3 into a defined local dir?)
             if self.local_model_dir is None:
-                raise Exception(
+                raise AttributeError(
                     "Runtime model (.onnx) must be local, LOCAL_MODEL_DIR must be provided"
                 )

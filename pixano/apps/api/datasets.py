@@ -48,11 +48,10 @@ async def get_datasets() -> list[DatasetInfo]:
     # Return datasets
     if infos:
         return infos
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No datasets found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"No datasets found in {get_settings().data_dir.absolute()}",
+    )
 
 
 @router.get("/datasets/{ds_id}", response_model=DatasetInfo)
@@ -72,8 +71,7 @@ async def get_dataset(ds_id: str) -> DatasetInfo:
     # Return dataset info
     if dataset:
         return dataset.load_info(load_stats=True)
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
+    )

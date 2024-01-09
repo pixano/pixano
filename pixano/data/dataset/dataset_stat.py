@@ -46,10 +46,10 @@ class DatasetStat(BaseModel):
         """
 
         if isinstance(json_fp, S3Path):
-            with json_fp.open() as json_file:
+            with json_fp.open(encoding="utf-8") as json_file:
                 stats_json = json.load(json_file)
         else:
-            with open(json_fp) as json_file:
+            with open(json_fp, encoding="utf-8") as json_file:
                 stats_json = json.load(json_file)
 
         return [DatasetStat.model_validate(stat) for stat in stats_json]

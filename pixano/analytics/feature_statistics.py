@@ -123,8 +123,6 @@ def compute_stats(df: pd.DataFrame, split: str, feature: dict[str, Any]) -> list
     if feature["type"] == "categorical":
         return categorical_stats(df, split, feature["name"])
     # Numerical
-    elif feature["type"] == "numerical":
+    if feature["type"] == "numerical":
         return numerical_stats(df, split, feature["name"], feature.get("range", None))
-    # Else
-    else:
-        return []
+    return []

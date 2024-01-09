@@ -75,10 +75,10 @@ class DatasetInfo(BaseModel):
         """
 
         if isinstance(json_fp, S3Path):
-            with json_fp.open() as json_file:
+            with json_fp.open(encoding="utf-8") as json_file:
                 info_json = json.load(json_file)
         else:
-            with open(json_fp) as json_file:
+            with open(json_fp, encoding="utf-8") as json_file:
                 info_json = json.load(json_file)
 
         info = DatasetInfo.model_validate(info_json)
