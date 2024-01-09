@@ -11,23 +11,26 @@ All notable changes to Pixano will be documented in this file.
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
 - Add option to load a list of category id and name pairs in Importers and to save it with Exporters (pixano#11)
-- Add new methods to PixanoTypes (from_rle() in BBox, file_name, width, and height in Image) (pixano#11)
+- Add new from_rle method to BBox type (pixano#11)
+- Add new file_name, width, and height properties to Image type (pixano#11)
 - Add GitHub actions to format, lint and test code (pixano#2, pixano#3, pixano#4, pixano#26)
 - Add new unit tests and refactor existing tests (pixano#11, pixano#26)
 
 ### Changed
 
-- **Breaking:** Send **media files as URI** instead of base 64 encodings in Pixano API. Allows for better speed and flexibility for more complex datasets, but drops support for datasets imported without copying media files, i.e. using the `portable=False` option (pixano#8)
-  - Remove the `portable=False` option, users can now choose to either **copy or move the media files** to the dataset directory when using an Importer.
-- **Refactor API** with new endpoints, new methods, new data types, and more explicit error messages (pixano#11, pixano#12)
+- **Breaking:** Refactor Pixano Explorer and Annotator apps into a **single Pixano app** (pixano#23, pixano#27)
+- **Breaking:** Handle media files as **URI links instead of base 64 encodings** in Pixano API (pixano#8)
+  - Drop support for datasets imported without copying media files, i.e. using the `portable=False` option
+  - Remove the `portable=False` option, users can now choose to either **copy or move the media files** to the dataset directory when using an Importer
+- Refactor backend API with new endpoints, new methods, new data types, and more explicit error messages (pixano#11, pixano#12)
   - Update Dataset and DatasetInfo classes with new methods
   - Add new classes related to DatasetInfo (DatasetCategory, DatasetStat, DatasetTable)
   - Add new class related to Dataset (DatasetItem)
   - Add new classes related to DatasetItem (ItemEmbedding, ItemFeature, ItemObject, ItemView)
   - Refactor Exporters, Importers, and InferenceModels using updated API
-- Refactor Pixano Explorer and Annotator apps into a single Pixano app using the new ImageWorkspace (pixano#23)
-- Reformat Jupyter notebooks with black (pixano#2)
-- Reformat and refactor frontend code with Prettier and eslint (pixano#2, pixano#7, pixano#12)
+- Refactor frontend components into a single ImageWorkspace (pixano#23)
+- Format, lint, and refactor backend code and Jupyter notebooks with black and Pylint (pixano#2, pixano#26)
+- Format, lint, and refactor frontend code, Markdown and YAML files with Prettier and eslint (pixano#2, pixano#7, pixano#12)
 - Replace deprecated frontend package shortid by nanoid (pixano#12)
 - Update README with a header listing main features (pixano#2)
 - Update documentation website API accent color
@@ -39,7 +42,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix pip commands in notebooks for Google Colab (pixano#11)
 - Fix broken link in CHANGELOG (pixano#4)
 - Fix documentation website API reference generation
-- Fix the COCO Importer to get the category name from the "categories" field as it does not always exist in the "annotations" field.
+- Fix the COCO Importer to get the category name from the "categories" field as it does not always exist in the "annotations" field
 
 ## [0.4.1] - 2023-11-13
 
