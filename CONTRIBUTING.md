@@ -42,7 +42,7 @@ pnpm i
 First, you will need to launch the backend server using this command:
 
 ```bash
-DATA_DIR=your_datasets_directory/ uvicorn pixano.apps:create_app --factory --reload
+DATA_DIR=your_datasets_directory/ uvicorn pixano.app:create_app --factory --reload
 ```
 
 Then, in another terminal, you can launch the frontend apps using:
@@ -52,7 +52,7 @@ cd ui/
 pnpm --parallel run dev
 ```
 
-This command should provide you with two `http://localhost` links you can open in your browser to access both the Explorer and Annotator apps.
+This command should provide you with a `http://localhost` link you can open in your browser to access the Pixano app.
 
 Both the backend server and the frontend apps should refresh automatically when you make changes to the code.
 

@@ -91,9 +91,8 @@ nav:
       - "Installing Pixano": user/install.md
       - "Importing datasets": user/import.md
       - "Exporting datasets": user/export.md
-      - "Launching an app": user/launch.md
-      - "Using Pixano Explorer": user/explorer.md
-      - "Using Pixano Annotator": user/annotator.md
+      - "Launching the app": user/launch.md
+      - "Using the app": user/app.md
 
   - "API reference": code/
 

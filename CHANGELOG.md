@@ -105,7 +105,7 @@ All notable changes to Pixano will be documented in this file.
 ### Changed
 
 - Separate image tools and annotation tools in Pixano Annotator
-- Refactor Pixano Apps components
+- Refactor Pixano apps components
 - Add links to Pixano Inference documentation in Pixano documentation
 - Add link to dataset import notebook in Pixano apps
 
