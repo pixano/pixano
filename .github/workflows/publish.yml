@@ -56,9 +56,7 @@ jobs:
         run: |
           cd ui
           pnpm i
-          cd apps/explorer
-          pnpm build
-          cd ../annotator
+          cd apps/pixano
           pnpm build
           cd ../../..
 

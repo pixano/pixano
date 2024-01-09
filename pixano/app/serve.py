@@ -1,4 +1,3 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -14,15 +13,33 @@
 import asyncio
 from pathlib import Path
 
+import click
 import fastapi
+import pkg_resources
 import uvicorn
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from pixano.apps.display import display_cli, display_colab, display_ipython
-from pixano.apps.main import create_app
+from pixano.app.display import display_cli, display_colab, display_ipython
+from pixano.app.main import create_app
 from pixano.data import Settings
+
+LOGO = """
+                             ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
+                           ▒▓▒                                       ▓
+              █▓          ▓▓                                         ▓
+                        ▒▓▒   ▒▓▓▓▓▓ ▒▓   ▓▒▒▓▓▓▓▒     ▒▓▓▓▓▓▒       ▓
+▓▓ ▓▓▓▓▓▓▒    ▓▒  ▒▓   ▓▒   ▒▓      ▓██   ██     ▓▒  ▒█▓     ▒█▓     ▓
+███      ▓▓   █▒   ▓█      ▒█▒       ██   █▒     ▒█  ▓▒        █     ▓
+██        █▒  █▒    ▒█▓     █▒       ██   █▒     ▒█  ▓▓        █     ▓
+██        █▒  █▒    ▓█▓█     █▒     ▓██   █▒     ▒█   ██     ▓█▒     ▓
+██▓▒    ▒▓▒   █▒   ▓▒  ▒█▓    ▒▓▓▓▓▓ ▒▓   ▓      ▒▓    ▒▓▓▓▓▓▒       ▓
+██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
+██                         █▓                                        ▓
+"""
+ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/dist/assets")
+TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/dist")
 
 task_functions = {
     "colab": asyncio.get_event_loop().create_task,
@@ -37,20 +54,16 @@ display_functions = {
 
 
 class App:
-    """Base class for Annotator and Explorer apps
+    """Pixano app
 
     Attributes:
         settings (Settings): App settings
-        assets_path (str): Path to App assets directory
-        template_path (str): Path to App template directory
         app (fastapi.FastAPI): FastAPI App
         config (uvicorn.Config): App config
         server (uvicorn.Server): App server
     """
 
     settings: Settings
-    assets_path: str
-    template_path: str
     app: fastapi.FastAPI
     config: uvicorn.Config
     server: uvicorn.Server
@@ -70,15 +83,15 @@ class App:
         """
 
         # Create app
-        templates = Jinja2Templates(directory=self.template_path)
+        templates = Jinja2Templates(directory=TEMPLATE_PATH)
         settings = Settings(data_dir=Path(library_dir))
         app = create_app(settings)
 
         @app.get("/", response_class=HTMLResponse)
-        def main(request: fastapi.Request):
+        def app_main(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        app.mount("/assets", StaticFiles(directory=self.assets_path), name="assets")
+        app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
         self.config = uvicorn.Config(app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 
@@ -135,3 +148,30 @@ class App:
 
         # Else
         return "none"
+
+
+@click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
+@click.argument(
+    "library_dir",
+    type=str,
+)
+@click.option(
+    "--host",
+    type=str,
+    default="127.0.0.1",
+    help="Bind socket to this host.",
+    show_default=True,
+)
+@click.option(
+    "--port",
+    type=int,
+    default=0,
+    help="Bind socket to this port.",
+    show_default=True,
+)
+def main(library_dir: str, host: str, port: int):
+    """Launch Pixano App
+
+    LIBRARY_DIR: Dataset library directory
+    """
+    App(library_dir, host, port)

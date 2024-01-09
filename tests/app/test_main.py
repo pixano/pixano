@@ -21,7 +21,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 from pixano_inference import transformers
 
-from pixano.apps import create_app
+from pixano.app import create_app
 from pixano.data import COCOImporter, DatasetInfo, DatasetItem, DatasetStat, Settings
 
 

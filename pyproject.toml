@@ -65,16 +65,12 @@ Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 
 [project.scripts]
-pixano-annotator = "pixano.apps.annotator.serve:main"
-pixano-explorer = "pixano.apps.explorer.serve:main"
+pixano = "pixano.app.serve:main"
 
 [tool.hatch.build]
 include = ["/pixano"]
 exclude = ["__pycache__"]
-artifacts = [
-  "/pixano/apps/annotator/dist",
-  "/pixano/apps/explorer/dist"
-]
+artifacts = ["/pixano/app/dist"]
 
 [tool.hatch.version]
 path = "pixano/__version__.py"
