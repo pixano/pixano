@@ -1,5 +1,5 @@
 import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
-import { mask_utils } from "@pixano/models";
+import { mask_utils } from "@pixano/models/src";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
@@ -34,13 +34,19 @@ export const mapObjectToMasks = (obj: ItemObject) => {
   const size = obj.mask.size;
 
   const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+  const coordinates = mask_utils.generatePolygonCoordinates(rle, size[0]);
+  const lineCoordinates = mask_utils.generateLineCoordinates(rle, size[0]);
   const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+  console.log({ coordinates, lineCoordinates });
 
   return {
     id: obj.id,
     viewId: obj.view_id,
     svg: masksSVG,
     rle: obj.mask,
+    coordinates: coordinates,
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
@@ -119,11 +125,12 @@ export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
   old.map((object) => {
     if (newShape?.status !== "editingMask") return object;
     if (object.id === newShape.maskId && object.mask) {
+      console.log("updateManualMaskObject", newShape);
       return {
         ...object,
         mask: {
           ...object.mask,
-          counts: newShape.points,
+          // counts: newShape.points,
         },
       };
     }

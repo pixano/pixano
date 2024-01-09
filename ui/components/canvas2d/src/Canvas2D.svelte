@@ -181,7 +181,7 @@
     for (const viewId of Object.keys(selectedItem.views)) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
-      if (masks) updateMasks(viewId);
+      // if (masks) updateMasks(viewId);
       if (bboxes) updateBboxes(viewId);
     }
   });
@@ -362,38 +362,38 @@
     }
   }
 
-  function updateMasks(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  // function updateMasks(viewId: string) {
+  //   const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
-    if (viewLayer) {
-      const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-      const image: Konva.Image = viewLayer.findOne("#image");
-      const maskIds: Array<string> = [];
+  //   if (viewLayer) {
+  //     const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+  //     const image: Konva.Image = viewLayer.findOne("#image");
+  //     const maskIds: Array<string> = [];
 
-      for (let i = 0; i < masks.length; ++i) {
-        if (masks[i].viewId === viewId) {
-          maskIds.push(masks[i].id);
+  //     for (let i = 0; i < masks.length; ++i) {
+  //       if (masks[i].viewId === viewId) {
+  //         maskIds.push(masks[i].id);
 
-          //don't add a mask that already exist
-          const maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
-          if (!maskKonva) {
-            addMask(masks[i], colorScale(masks[i].id), maskGroup, image, viewId, stage, zoomFactor);
-          } else {
-            //update visibility & opacity
-            maskKonva.visible(masks[i].visible);
-            maskKonva.opacity(masks[i].opacity);
-            //update color
-            const style = new Option().style;
-            style.color = colorScale(masks[i].id);
-            maskKonva.stroke(style.color);
-            maskKonva.fill(`rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`);
-          }
-        }
-      }
+  //         //don't add a mask that already exist
+  //         const maskKonva: Konva.Shape = maskGroup.findOne(`#${masks[i].id}`);
+  //         if (!maskKonva) {
+  //           addMask(masks[i], colorScale(masks[i].id), maskGroup, image, viewId, stage, zoomFactor);
+  //         } else {
+  //           //update visibility & opacity
+  //           maskKonva.visible(masks[i].visible);
+  //           maskKonva.opacity(masks[i].opacity);
+  //           //update color
+  //           const style = new Option().style;
+  //           style.color = colorScale(masks[i].id);
+  //           maskKonva.stroke(style.color);
+  //           maskKonva.fill(`rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`);
+  //         }
+  //       }
+  //     }
 
-      destroyDeletedObjects(maskIds, maskGroup);
-    }
-  }
+  //     destroyDeletedObjects(maskIds, maskGroup);
+  //   }
+  // }
 
   async function updateCurrentMask(viewId: string) {
     const points = getInputPoints(viewId);
