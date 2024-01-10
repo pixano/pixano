@@ -640,10 +640,11 @@ class Dataset(BaseModel):
         # Add or update item objects
         for obj in item.objects.values():
             table_found = False
-            for table in self.info.tables["objects"]:
-                if table.source == obj.source_id:
-                    table_found = True
-                    item.add_or_update_object(ds_tables["objects"][table.name], obj)
+            if "objects" in self.info.tables:
+                for table in self.info.tables["objects"]:
+                    if table.source == obj.source_id:
+                        table_found = True
+                        item.add_or_update_object(ds_tables["objects"][table.name], obj)
             # If first Ground Truth object
             if not table_found and obj.source_id == "Ground Truth":
                 # Create Ground Truth table
