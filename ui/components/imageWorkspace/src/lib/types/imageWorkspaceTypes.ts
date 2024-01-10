@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as ort from "onnxruntime-web";
 
 import type { ItemObject } from "@pixano/core";
 
@@ -34,3 +35,5 @@ export type ListFeature = ListInput & {
 };
 
 export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
+
+export type Embeddings = Record<string, ort.Tensor>;

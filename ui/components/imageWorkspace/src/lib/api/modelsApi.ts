@@ -5,17 +5,13 @@ import { api } from "@pixano/core/src";
 import { npy } from "@pixano/models/src";
 
 export async function loadEmbeddings(
-  selectedItem: DatasetItem,
+  itemId: DatasetItem["id"],
   selectedModelName: string,
-  selectedDataset: DatasetInfo,
+  datasetId: DatasetInfo["id"],
 ): Promise<Record<string, ort.Tensor>> {
   const embeddings: Record<string, ort.Tensor> = {};
   if (selectedModelName) {
-    const item = await api.getItemEmbeddings(
-      selectedDataset.id,
-      selectedItem.id,
-      selectedModelName,
-    );
+    const item = await api.getItemEmbeddings(datasetId, itemId, selectedModelName);
     if (item) {
       for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
         try {

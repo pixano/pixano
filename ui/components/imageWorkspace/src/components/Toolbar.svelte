@@ -34,6 +34,7 @@
     removeSmartPointTool,
   } from "../lib/settings/selectionTools";
   import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
+  import { onMount } from "svelte";
 
   export let selectedTool: SelectionTool | null;
   let previousSelectedTool: SelectionTool | null = null;
@@ -58,6 +59,10 @@
     }
   });
 
+  onMount(() => {
+    selectTool(panTool);
+  });
+
   $: {
     if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
       newShape.set({ status: "none" });
@@ -69,7 +74,7 @@
 <div class="h-full shadow-md bg-popover p-1">
   <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
     <IconButton
-      tooltipContent="Move your picture around"
+      tooltipContent="Move image around"
       on:click={() => selectTool(panTool)}
       selected={selectedTool?.type === "PAN"}
     >
