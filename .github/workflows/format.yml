@@ -16,11 +16,11 @@ name: Format
 on:
   push:
     branches:
-      - "**"
+      - "develop"
+      - "main"
   pull_request:
     branches:
       - "develop"
-      - "main"
 
 permissions:
   contents: read
@@ -104,7 +104,14 @@ jobs:
           options: "--check --verbose --diff --color"
           src: "./pixano"
 
-      - name: Format notebooks with black
+      - name: Format backend tests with black
+        uses: psf/black@stable
+        with:
+          options: "--check --verbose --diff --color"
+          src: "./tests"
+          jupyter: true
+
+      - name: Format Jupyter notebooks with black
         uses: psf/black@stable
         with:
           options: "--check --verbose --diff --color"

@@ -182,21 +182,21 @@ class COCOExporter(Exporter):
         for view in item.views.values():
             if view.type == "image":
                 # Reformat URI for export
-                uri = (
+                export_uri = (
                     view.uri.replace(f"data/{self.dataset.path.name}/media/", "")
                     if urlparse(view.uri).scheme == ""
                     else view.uri
                 )
                 # Create image from URI
                 images[view.id] = Image(
-                    uri=uri,
+                    uri=export_uri,
                     uri_prefix=self.dataset.media_dir.absolute().as_uri(),
                 )
                 # Append image info
                 self.coco_json["images"].append(
                     {
                         "license": 1,
-                        "coco_url": images[view.id].uri,
+                        "coco_url": images[view.id].complete_uri,
                         "file_name": images[view.id].file_name,
                         "height": images[view.id].height,
                         "width": images[view.id].width,

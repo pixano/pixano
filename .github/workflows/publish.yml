@@ -52,13 +52,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install hatch
 
-      - name: Build apps
+      - name: Build app
         run: |
           cd ui
           pnpm i
-          cd apps/explorer
-          pnpm build
-          cd ../annotator
+          cd apps/pixano
           pnpm build
           cd ../../..
 

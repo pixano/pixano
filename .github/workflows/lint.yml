@@ -16,11 +16,11 @@ name: Lint
 on:
   push:
     branches:
-      - "**"
+      - "develop"
+      - "main"
   pull_request:
     branches:
       - "develop"
-      - "main"
 
 permissions:
   contents: read
@@ -80,5 +80,11 @@ jobs:
       - name: Lint backend code with Pylint
         run: |
           pylint pixano/ --rcfile .github/workflows/.pylintrc
-          pylint notebooks/ --rcfile .github/workflows/.pylintrc
+
+      - name: Lint backend tests with Pylint
+        run: |
           pylint tests/ --rcfile .github/workflows/.pylintrc --disable=R0801
+
+      - name: Lint Jupyter notebooks with Pylint
+        run: |
+          pylint notebooks/ --rcfile .github/workflows/.pylintrc

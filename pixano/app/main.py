@@ -1,4 +1,3 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -17,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi_pagination.api import add_pagination
 from s3path import S3Path
 
-from pixano.apps.api import datasets, items, models
+from pixano.app.api import datasets, items, models
 from pixano.data import Settings
 
 
@@ -28,7 +27,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         settings (Settings, optional): Settings containing dataset library path. Defaults to empty Settings().
 
     Returns:
-        FastAPI: Pixano App
+        FastAPI: Pixano app
     """
 
     app = FastAPI()

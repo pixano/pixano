@@ -644,9 +644,9 @@ class Dataset(BaseModel):
                 if table.source == obj.source_id:
                     table_found = True
                     item.add_or_update_object(ds_tables["objects"][table.name], obj)
-            # If first object from Annotator
+            # If first Ground Truth object
             if not table_found and obj.source_id == "Ground Truth":
-                # Create Annotator table
+                # Create Ground Truth table
                 table = DatasetTable(
                     name="objects",
                     source="Ground Truth",

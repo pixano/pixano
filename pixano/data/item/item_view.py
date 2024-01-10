@@ -13,7 +13,6 @@
 
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlparse
 
 import pyarrow as pa
 from pydantic import BaseModel
@@ -77,19 +76,15 @@ class ItemView(BaseModel):
                     else Image.from_dict(item[field.name])
                 )
                 im.uri_prefix = media_dir.absolute().as_uri()
-                uri = (
-                    im.uri
-                    if urlparse(im.uri).scheme != ""
-                    else (
-                        (media_dir / im.uri).get_presigned_url()
-                        if isinstance(media_dir, S3Path)
-                        else f"data/{media_dir.parent.name}/media/{im.uri}"
-                    )
+                api_uri = (
+                    (media_dir / im.uri).get_presigned_url()
+                    if isinstance(media_dir, S3Path)
+                    else f"data/{media_dir.parent.name}/media/{im.uri}"
                 )
                 image_view = ItemView(
                     id=field.name,
                     type="image",
-                    uri=uri,
+                    uri=api_uri,
                     thumbnail=im.preview_url,
                 )
                 image_view.features = {}
