@@ -38,8 +38,8 @@ LOGO = """
 ██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
 ██                         █▓                                        ▓
 """
-ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/dist/assets")
-TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/dist")
+ASSETS_PATH = pkg_resources.resource_filename("pixano", "app/dist/_app")
+TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "app/dist")
 
 task_functions = {
     "colab": asyncio.get_event_loop().create_task,
@@ -91,7 +91,7 @@ class App:
         def app_main(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
+        app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
         self.config = uvicorn.Config(app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 

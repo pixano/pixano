@@ -56,7 +56,7 @@ jobs:
         run: |
           cd ui
           pnpm i
-          cd apps/pixano
+          cd app/pixano
           pnpm build
           cd ../../..
 
