@@ -224,6 +224,8 @@ export function addMask(
       ctx.fillStrokeShape(shape);
     },
   });
+  console.log("TOTO", maskKonva);
+
   maskGroup.add(maskKonva);
 }
 
@@ -273,6 +275,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
         editing: mask.editing,
         id: mask.id,
         status: mask?.id ? "created" : "creating",
+        svg: mask?.svg,
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
             acc.push({
@@ -296,6 +299,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
     visible: true,
     status: "creating",
     points: [],
+    svg: [],
     editing: false,
     id: "creating",
   };

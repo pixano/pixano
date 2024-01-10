@@ -26,9 +26,10 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         // keep only first object
-        const firstObject = Object.values(item.objects || {})[0];
-        item.objects = { [firstObject.id]: firstObject };
+        //const firstObject = Object.values(item.objects || {})[0];
+        //item.objects = { [firstObject.id]: firstObject };
         selectedItem = item;
+        console.log("QRTY", selectedItem)
       })
       .then(() => isLoadingNewItemStore.set(false))
       .catch((err) => console.error(err));

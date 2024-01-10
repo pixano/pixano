@@ -37,9 +37,10 @@ export const mapObjectToMasks = (obj: ItemObject) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   const coordinates = mask_utils.generatePolygonCoordinates(rle, size[0]);
   const lineCoordinates = mask_utils.generateLineCoordinates(rle, size[0]);
+  
   const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
-  console.log({ coordinates, lineCoordinates });
+  console.log({ coordinates, lineCoordinates, maskPoly });
 
   return {
     id: obj.id,
