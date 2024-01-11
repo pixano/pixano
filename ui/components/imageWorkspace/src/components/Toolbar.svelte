@@ -33,7 +33,11 @@
     addSmartPointTool,
     removeSmartPointTool,
   } from "../lib/settings/selectionTools";
-  import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
+  import {
+    interactiveSegmenterModel,
+    newShape,
+    modelsStore,
+  } from "../lib/stores/imageWorkspaceStores";
   import { onMount } from "svelte";
 
   export let selectedTool: SelectionTool | null;
@@ -98,10 +102,15 @@
       "bg-primary-light rounded-sm": showSmartTools,
     })}
   >
-    <IconButton tooltipContent="Smart tools" on:click={handleSmartToolClick}>
+    <button
+      on:click={handleSmartToolClick}
+      on:dblclick={() =>
+        modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
+      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-gray-800"
+    >
       <BrushIcon />
       <MagicIcon />
-    </IconButton>
+    </button>
     {#if showSmartTools}
       <IconButton
         tooltipContent={addSmartPointTool.name}

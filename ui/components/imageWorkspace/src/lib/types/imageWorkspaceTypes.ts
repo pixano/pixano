@@ -37,3 +37,8 @@ export type ListFeature = ListInput & {
 export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
 
 export type Embeddings = Record<string, ort.Tensor>;
+
+export type ModelSelection = {
+  currentModalOpen: "selectModel" | "noModel" | "noEmbeddings" | "none";
+  selectedModelName: string;
+};

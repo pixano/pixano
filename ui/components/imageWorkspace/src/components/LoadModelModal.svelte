@@ -20,8 +20,8 @@
   import { SAM } from "@pixano/models";
   import type { DatasetInfo, DatasetItem, SelectionTool } from "@pixano/core";
   import { loadEmbeddings } from "../lib/api/modelsApi";
-  import { interactiveSegmenterModel } from "../lib/stores/imageWorkspaceStores";
-  import type { Embeddings } from "../lib/types/imageWorkspaceTypes";
+  import { interactiveSegmenterModel, modelsStore } from "../lib/stores/imageWorkspaceStores";
+  import type { Embeddings, ModelSelection } from "../lib/types/imageWorkspaceTypes";
 
   export let models: Array<string>;
   export let currentDatasetId: DatasetInfo["id"];
@@ -29,18 +29,21 @@
   export let embeddings: Embeddings;
   export let selectedTool: SelectionTool;
 
-  let currentModalOpen: "selectModel" | "noModel" | "noEmbeddings" | "none" = "none";
-  let selectedModelName: string;
+  let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
+  let selectedModelName: ModelSelection["selectedModelName"];
+
+  modelsStore.subscribe((store) => {
+    currentModalOpen = store.currentModalOpen;
+    selectedModelName = store.selectedModelName;
+  });
 
   const sam = new SAM();
 
   async function loadModel() {
-    currentModalOpen = "none";
+    modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
   }
-
-  $: console.log({ embeddings });
 
   $: {
     // load embeddings when selected item changes
@@ -50,6 +53,7 @@
           embeddings = results;
         })
         .catch((err) => {
+          modelsStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
           console.error("cannot load Embeddings", err);
         });
     }
@@ -59,7 +63,7 @@
     if (models.length > 0) {
       let samModels = models.filter((m) => m.includes("sam"));
       if (samModels.length == 1) {
-        selectedModelName = samModels[0];
+        modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
         await loadModel();
       }
     }
@@ -67,13 +71,20 @@
 
   $: {
     if (selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
-      currentModalOpen = "selectModel";
+      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     }
     if (selectedTool?.isSmart && models.length == 0) {
-      currentModalOpen = "noModel";
+      modelsStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
     }
-    if (selectedTool?.isSmart && !!Object.keys(embeddings).length) {
-      currentModalOpen = "noEmbeddings";
+  }
+
+  $: {
+    if (selectedModelName) {
+      modelsStore.update((store) => ({
+        ...store,
+        selectedModelName,
+        currentModalOpen: "selectModel",
+      }));
     }
   }
 </script>
@@ -98,6 +109,6 @@
   <WarningModal
     message="No embeddings found for model {selectedModelName}."
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
-    on:confirm={() => (currentModalOpen = "none")}
+    on:confirm={() => (currentModalOpen = "selectModel")}
   />
 {/if}
