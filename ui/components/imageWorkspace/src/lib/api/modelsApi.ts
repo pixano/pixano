@@ -12,7 +12,7 @@ export async function loadEmbeddings(
   const embeddings: Record<string, ort.Tensor> = {};
   if (selectedModelName) {
     const item = await api.getItemEmbeddings(datasetId, itemId, selectedModelName);
-    if (item) {
+    if (item.embeddings) {
       for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
         try {
           const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
