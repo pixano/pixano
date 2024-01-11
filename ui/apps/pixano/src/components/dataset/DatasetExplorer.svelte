@@ -16,6 +16,7 @@
 
   // Imports
   import { createEventDispatcher, onMount } from "svelte";
+  import { Loader2Icon } from "lucide-svelte";
 
   import { LoadingModal, WarningModal } from "@pixano/core/src";
   import { Table } from "@pixano/table";
@@ -41,10 +42,16 @@
 
   // Exports
   export let selectedDataset: DatasetInfo;
+  let isLoadingTableItems = false;
 
   // Page navigation
   let currentPage: number;
   let pageSize: number;
+  $: {
+    if (selectedDataset.page?.items) {
+      isLoadingTableItems = false;
+    }
+  }
 
   datasetTableStore.subscribe((value) => {
     currentPage = value?.currentPage || DEFAULT_DATASET_TABLE_PAGE;
@@ -58,7 +65,7 @@
   // Semantic search
   let search: string = "";
   let selectedSearchModel: string | undefined;
-  const searchModels: Array<string> = [];
+  const searchModels: string[] = [];
   if ("embeddings" in selectedDataset.tables) {
     for (const table of selectedDataset.tables.embeddings) {
       if (table.type == "search") {
@@ -77,86 +84,68 @@
     dispatch("selectItem", itemId);
   }
 
-  function loadPage() {
-    // let res: DatasetItems;
-    // let query: Record<string, string> = { model: selectedSearchModel as string, search: search };
-
-    // Load page
-    // const start = Date.now();
-    // if (search == "") {
-    //   // Standard page
-    //   res = await api.getDatasetItems(selectedDataset.id, currentPage, itemsPerPage);
-    //   console.log("DatasetExplorer.loadPage - api.getDatasetItems in", Date.now() - start, "ms");
-    // } else {
-    //   // Search page
-    //   loadingResultsModal = true;
-    //   res = await api.searchDatasetItems(selectedDataset.id, query, currentPage, itemsPerPage);
-    //   console.log("DatasetExplorer.loadPage - api.searchDatasetItems in", Date.now() - start, "ms");
-    // }
-
-    // Results
-    loadingResultsModal = false;
-    // if (res == null) {
-    //   datasetErrorModal = true;
-    // } else {
-    //   selectedDataset.page = res;
-    // }
-  }
-
   function handleClearSearch() {
     (document.getElementById("sem-search-input") as HTMLInputElement).value = "";
     handleSearch();
   }
 
   function handleGoToFirstPage() {
+    isLoadingTableItems = true;
     if (currentPage > 1) {
       datasetTableStore.update((value) => ({
+        ...value,
         pageSize: value?.pageSize || pageSize,
         currentPage: 1,
       }));
-      loadPage();
     }
   }
 
   function handleGoToPreviousPage() {
+    isLoadingTableItems = true;
     if (currentPage > 1) {
       datasetTableStore.update((value) => ({
+        ...value,
         pageSize: value?.pageSize || pageSize,
         currentPage: currentPage - 1,
       }));
-      loadPage();
     }
   }
 
   function handleGoToNextPage() {
+    isLoadingTableItems = true;
     if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
       datasetTableStore.update((value) => ({
+        ...value,
         pageSize: value?.pageSize || pageSize,
         currentPage: currentPage + 1,
       }));
-      loadPage();
     }
   }
 
   function handleGoToLastPage() {
+    isLoadingTableItems = true;
     if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
       datasetTableStore.update((value) => ({
+        ...value,
         pageSize: value?.pageSize || pageSize,
         currentPage: Math.ceil((selectedDataset.page?.total || 1) / pageSize),
       }));
-      loadPage();
     }
   }
 
   function handleSearch() {
     search = (document.getElementById("sem-search-input") as HTMLInputElement).value;
-    currentPage = 1;
-    loadPage();
+    let query = { model: selectedSearchModel as string, search };
+    isLoadingTableItems = true;
+    datasetTableStore.update((value) => ({
+      ...value,
+      currentPage: 1,
+      query,
+    }));
   }
 
   onMount(() => {
     search = "";
-    loadPage();
   });
 </script>
 
@@ -247,10 +236,16 @@
           {/if}
         </div>
       </div>
-      <Table
-        items={selectedDataset.page.items}
-        on:selectItem={(event) => handleSelectItem(event.detail)}
-      />
+      {#if isLoadingTableItems}
+        <div class="flex-grow flex justify-center items-center">
+          <Loader2Icon class="animate-spin" />
+        </div>
+      {:else}
+        <Table
+          items={selectedDataset.page.items}
+          on:selectItem={(event) => handleSelectItem(event.detail)}
+        />
+      {/if}
     </div>
 
     <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
