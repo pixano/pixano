@@ -451,7 +451,7 @@
           visible: true,
           opacity: 1.0,
         };
-        console.log("DDD", currentMask)
+
         addMask(currentMask, "#008000", currentMaskGroup, image, viewId, stage, zoomFactor);
       }
     }
@@ -1115,7 +1115,7 @@
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
           {#each manualMasks as manualMask}
-            {#key manualMask.status}
+            {#key manualMask.id}
               <PolygonGroup
                 viewId={view.id}
                 selectedItemId={selectedItem.id}

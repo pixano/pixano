@@ -34,20 +34,14 @@ export const mapObjectToMasks = (obj: ItemObject) => {
   const size = obj.mask.size;
 
   const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const coordinates = mask_utils.generatePolygonCoordinates(rle, size[0]);
-  const lineCoordinates = mask_utils.generateLineCoordinates(rle, size[0]);
-  
-  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
-  console.log({ coordinates, lineCoordinates, maskPoly });
+  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
   return {
     id: obj.id,
     viewId: obj.view_id,
     svg: masksSVG,
     rle: obj.mask,
-    coordinates: coordinates,
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,

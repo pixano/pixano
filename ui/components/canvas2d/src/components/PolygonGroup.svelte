@@ -17,11 +17,11 @@
   // Imports
 
   import Konva from "konva";
-  import { Group, Line, Circle, Shape as KonvaShape } from "svelte-konva";
+  import { Group, Circle, Shape as KonvaShape, Path } from "svelte-konva";
 
   import type { DatasetItem, Shape } from "@pixano/core";
-  import type { PolygonGroupDetails } from "../lib/types/canvas2dTypes";
-  import { split_css_unit } from "svelte/internal";
+  import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
+  import { sceneFunc, hexToRGBA, convertPointToSvg, parseSvgPath } from "../api/maskApi";
 
   // Exports
   export let viewId: string;
@@ -34,84 +34,67 @@
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
+  let polygonShape: {
+    simplifiedSvg: string[];
+    simplifiedPoints: PolygonGroupPoint[][];
+  } = {
+    simplifiedSvg: polygonDetails.svg,
+    simplifiedPoints: polygonDetails.svg.reduce(
+      (acc, val) => [...acc, parseSvgPath(val)],
+      [] as PolygonGroupPoint[][],
+    ),
+  };
 
   $: canEdit = polygonDetails.status === "creating" || polygonDetails.editing;
 
-  /*
-  $: flatPolygonPoints = polygonDetails.points.reduce(
-    (acc, val) => [...acc, val.x, val.y],
-    [] as number[],
+  $: {
+    if (polygonDetails.id !== "creating") {
+      polygonShape.simplifiedPoints = polygonDetails.svg.reduce(
+        (acc, val) => [...acc, parseSvgPath(val)],
+        [] as PolygonGroupPoint[][],
+      );
+    } else {
+      polygonShape.simplifiedPoints = [polygonDetails.points];
+    }
+  }
+
+  $: polygonShape.simplifiedSvg = polygonShape.simplifiedPoints.map((point) =>
+    convertPointToSvg(point),
   );
-  */
 
-  function parseSvgPath(svgPath) {
-    const regex = /([ML]?)\s*([\d.]+)\s+([\d.]+)/g;
-    let match;
-    const result = [];
-    while ((match = regex.exec(svgPath)) !== null) {
-      const [_, flag, x, y] = match;
-      result.push({ flag, point: { x: parseFloat(x), y: parseFloat(y) } });
-    }
-    return result;
-  }
-
-  let pointsFromSVG;
-  let flatPolygonPoints;
-  $: {
-    console.log("zeze", polygonDetails.svg)
-    pointsFromSVG = polygonDetails.svg.reduce(
-      (acc, val) => [
-        ...acc,
-        parseSvgPath(val).reduce((acc2, val2, idx) => {
-          //console.log("ddd", val2);
-          return [...acc2, { id: idx, x: val2.point.x, y: val2.point.y }];
-        }, []),
-      ],
-      [],
+  function handlePolygonPointsDragMove(id: number, i: number) {
+    const pos = stage.findOne(`#dot-${i}-${id}`).position();
+    const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
+      pi === i
+        ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
+        : points,
     );
-    console.log("ZAZA", pointsFromSVG);
-  }
-
-  $: {
-    flatPolygonPoints = pointsFromSVG.reduce((acc, val) => [...acc, val.reduce((acc2, val2) => [...acc2, val2.x, val2.y],[])], []);
-    console.log("Zooo", flatPolygonPoints);
-  }
-
-  $: {
-    if (polygonDetails.points.length === 0) {
-      isCurrentPolygonClosed = false;
-    }
-  }
-
-  function handlePolygonPointsDragMove(id: number) {
-    const pos = stage.findOne(`#dot-${id}`).position();
-    polygonDetails.points = polygonDetails.points.map((point) => {
-    //polygonDetails.points = pointsFromSVG.map((point) => {      
-      if (point.id === id) {
-        return { ...point, x: pos.x, y: pos.y };
-      }
-      return point;
-    });
+    polygonShape.simplifiedPoints = newSimplifiedPoints;
   }
 
   function handlePolygonPointsDragEnd() {
-    if (polygonDetails.editing) {
-      newShape = {
-        status: "editingMask",
-        maskId: polygonDetails.id,
-        points: flatPolygonPoints,
-      };
-    }
+    // TODO
+    // const counts = runLengthEncode(polygonDetails.svg[0]);
+    // console.log({ counts, polygonDetails });
+    // if (polygonDetails.editing) {
+    //   newShape = {
+    //     status: "editingMask",
+    //     maskId: polygonDetails.id,
+    //     points: flatPolygonPoints,
+    //   };
+    // }
   }
 
   function handlePolygonPointsClick(i: number, viewId: string) {
     if (i === 0) {
-      isCurrentPolygonClosed = true;
+      polygonShape.simplifiedPoints = [
+        [...polygonShape.simplifiedPoints[0], polygonShape.simplifiedPoints[0][0]],
+      ];
       newShape = {
         status: "inProgress",
         masksImageSVG: [],
         rle: {
-          counts: flatPolygonPoints,
+          counts: [],
           size: [images[viewId].width, images[viewId].height],
         },
         type: "mask",
@@ -124,88 +107,63 @@
     }
   }
 
-  const hexToRGBA = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  };
-
-  //utility functions to extract coords from SVG
-  //works only with SVG format "Mx0 y0 Lx1 y1 ... xn yn"
-  // --> format generated by convertSegmentsToSVG
-  function m_part(svg: string) {
-    const splits = svg.split(" ");
-    const x = splits[0].slice(1); //remove "M"
-    return { x: parseInt(x), y: parseInt(splits[1]) };
+  function updateCircleRadius(id: number, i: number, radius) {
+    const point: Konva.Circle = stage.findOne(`#dot-${i}-${id}`);
+    point.radius(radius);
   }
-  function l_part(svg: string) {
-    const splits = svg.split(" ");
-    const x0 = splits[2].slice(1); //remove "L"
-    const res = [{ x: parseInt(x0), y: parseInt(splits[3]) }];
-    for (let i = 4; i < splits.length; i += 2) {
-      res.push({
-        x: parseInt(splits[i]),
-        y: parseInt(splits[i + 1]),
-      });
-    }
-    return res;
-  }
-
-  const sceneFunc = (ctx, shape) => {
-    ctx.beginPath();
-    for (let i = 0; i < polygonDetails.svg.length; ++i) {
-      const start = m_part(polygonDetails.svg[i]);
-      ctx.moveTo(start.x, start.y);
-      const l_pts = l_part(polygonDetails.svg[i]);
-      for (const pt of l_pts) {
-        ctx.lineTo(pt.x, pt.y);
-      }
-    }
-    ctx.fillStrokeShape(shape);
-  };
 </script>
 
 <Group config={{ id: "polygon", draggable: canEdit, visible: polygonDetails.visible }}>
-  {#if !!polygonDetails.points.length}
-    <!--
-    <Line
-      config={{
-        points: flatPolygonPoints,
-        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
-        strokeWidth: polygonDetails.status === "created" ? 1 : 3,
-        closed: isCurrentPolygonClosed,
-        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
-      }}
-    />
-    -->
-    <KonvaShape
-      config={{
-        sceneFunc: sceneFunc,
-        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
-        strokeWidth: polygonDetails.status === "created" ? 1 : 3,
-        closed: isCurrentPolygonClosed,
-        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
-      }}
-    />
-  {/if}
   {#if canEdit}
-    {#each polygonDetails.points as point, i}
-      <Circle
-        on:click={() => handlePolygonPointsClick(i, viewId)}
-        on:dragmove={() => handlePolygonPointsDragMove(point.id)}
-        on:dragend={handlePolygonPointsDragEnd}
+    {#if polygonDetails.id === "creating"}
+      <Path
         config={{
-          x: point.x,
-          y: point.y,
-          radius: 5,
-          fill: "rgb(0,128,0)",
-          stroke: "white",
+          data: polygonShape.simplifiedSvg[0],
+          stroke: "hsl(316deg 60% 29.41%)",
           strokeWidth: 2,
-          id: `dot-${point.id}`,
-          draggable: true,
+          fill: "rgb(0,128,0,0.5)",
         }}
       />
+    {/if}
+    <KonvaShape
+      config={{
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
+        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
+        strokeWidth: 1,
+        closed: isCurrentPolygonClosed,
+        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
+      }}
+    />
+    {#each polygonShape.simplifiedPoints as shape, i}
+      {#each shape as point, pi}
+        <Circle
+          on:click={() => handlePolygonPointsClick(pi, viewId)}
+          on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
+          on:dragend={handlePolygonPointsDragEnd}
+          on:mouseover={() => point.id === 0 && updateCircleRadius(point.id, i, 4)}
+          on:mouseleave={() => updateCircleRadius(point.id, i, 2)}
+          config={{
+            x: point.x,
+            y: point.y,
+            radius: 2,
+            fill: "rgb(0,128,0)",
+            stroke: "white",
+            strokeWidth: 1,
+            id: `dot-${i}-${point.id}`,
+            draggable: true,
+          }}
+        />
+      {/each}
     {/each}
+  {:else}
+    <KonvaShape
+      config={{
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
+        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
+        strokeWidth: polygonDetails.status === "created" ? 1 : 3,
+        closed: isCurrentPolygonClosed,
+        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
+      }}
+    />
   {/if}
 </Group>

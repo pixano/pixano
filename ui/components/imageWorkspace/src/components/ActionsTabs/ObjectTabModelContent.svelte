@@ -36,8 +36,8 @@
         }
         return item.source_id === modelName;
       })
-      .every((item) => item.displayControl?.hidden);
-    hideAllObjects = allItemsOfCurrentModelAreHidden;
+      .find((item) => item.displayControl?.hidden);
+    hideAllObjects = !!allItemsOfCurrentModelAreHidden;
   });
 
   $: itemObjects.update((items) => {

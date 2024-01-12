@@ -224,7 +224,6 @@ export function addMask(
       ctx.fillStrokeShape(shape);
     },
   });
-  console.log("TOTO", maskKonva);
 
   maskGroup.add(maskKonva);
 }
