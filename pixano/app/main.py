@@ -31,7 +31,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     """
 
     # Create app
-    app = FastAPI(data_dir=settings.data_dir)
+    app = FastAPI()
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
