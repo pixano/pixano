@@ -10,6 +10,8 @@
 #
 # http://www.cecill.info
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,21 +19,21 @@ from fastapi_pagination.api import add_pagination
 from s3path import S3Path
 
 from pixano.app.api import datasets, items, models
-from pixano.data import Settings
+from pixano.data.settings import Settings
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
     """Run Pixano app
 
     Args:
-        settings (Settings, optional): Settings containing dataset library path. Defaults to empty Settings().
+        settings (Settings): App settings
 
     Returns:
         FastAPI: Pixano app
     """
 
-    app = FastAPI()
-
+    # Create app
+    app = FastAPI(data_dir=settings.data_dir)
     app.add_middleware(
         CORSMiddleware,
         allow_credentials=True,
@@ -39,28 +41,35 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Check if library exists
-    if not settings.data_dir.exists():
-        raise FileNotFoundError(
-            f"Dataset library '{settings.data_dir.absolute()}' not found"
-        )
-
-    # Create models directory
-    model_dir = settings.data_dir / "models"
-    model_dir.mkdir(exist_ok=True)
-
-    if not isinstance(settings.data_dir, S3Path):
-        # Mount data directory (datasets + models)
+    # Mount folders
+    if isinstance(settings.data_dir, S3Path):
+        # If S3, mount models parent folder
+        # Check if folder exists
+        model_dir = Path(settings.local_model_dir)
+        if not model_dir.exists():
+            raise FileNotFoundError(
+                f"Local model directory '{model_dir.absolute()}' not found"
+            )
+        # Mount
         app.mount(
             "/data",
-            StaticFiles(directory=settings.data_dir),
+            StaticFiles(directory=Path(settings.local_model_dir).parent),
             name="data",
         )
     else:
-        # don't need to mount dataset, but still need to mount model
+        # If local, mount datasets folder with models subfolder
+        # Check if folder exists
+        if not settings.data_dir.exists():
+            raise FileNotFoundError(
+                f"Dataset library '{settings.data_dir.absolute()}' not found"
+            )
+        # Create models subfolder in case it doesn't exist yet
+        model_dir = settings.data_dir / "models"
+        model_dir.mkdir(exist_ok=True)
+        # Mount
         app.mount(
             "/data",
-            StaticFiles(directory=settings.local_model_dir),
+            StaticFiles(directory=settings.data_dir),
             name="data",
         )
 

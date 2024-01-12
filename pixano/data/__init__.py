@@ -23,7 +23,7 @@ from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields
 from pixano.data.importers import COCOImporter, DOTAImporter, ImageImporter, Importer
 from pixano.data.item import ItemEmbedding, ItemFeature, ItemObject, ItemView
-from pixano.data.settings import Settings
+from pixano.data.settings import Settings, get_settings
 
 __all__ = [
     "Dataset",
@@ -38,6 +38,7 @@ __all__ = [
     "ItemView",
     "Fields",
     "Settings",
+    "get_settings",
     "Exporter",
     "COCOExporter",
     "Importer",

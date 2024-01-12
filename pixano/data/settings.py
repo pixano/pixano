@@ -11,6 +11,7 @@
 #
 # http://www.cecill.info
 
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
@@ -21,51 +22,75 @@ from s3path import S3Path, register_configuration_parameter
 
 
 class Settings(BaseSettings):
-    """Dataset library settings
+    """Pixano app settings
 
     Attributes:
-        data_dir (Path | S3Path): Dataset library directory, or url to S3 path
-        aws_endpoint (str, optional): S3 compatible storage url. Used if data_dir is a S3 path. Use AWS if not provided
-        aws_access_key_id (str, optional): Access key. Used if data_dir is a S3 path
-        aws_secret_access_key (str, optional): Secret key. Used if data_dir is a S3 path
-        aws_region (str, optional): Region. Used if data_dir is a S3 path. Not always required for private S3 storages
-        local_model_dir (str, optional): Path to model (local). Required if data_dir is a S3 path
+        library_dir (str): Local or S3 path to dataset library
+        endpoint_url (str): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path
+        region_name (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
+        aws_access_key (str): S3 AWS access key. Used if library_dir is an S3 path
+        aws_secret_key (str): S3 AWS secret key. Used if library_dir is an S3 path
+        local_model_dir (str): Local path to models. Used if library_dir is an S3 path
+        data_dir (Path | S3Path): Local or S3 dataset directory generated from attributes above
     """
 
-    data_dir: Path | S3Path = Path.cwd() / "library"
-
-    aws_access_key_id: Optional[str] = None
-    aws_secret_access_key: Optional[str] = None
-    aws_region: Optional[str] = None
-    aws_endpoint: Optional[str] = None
-    local_model_dir: Optional[Path] = None
+    library_dir: Optional[str] = (Path.cwd() / "library").as_posix()
+    endpoint_url: Optional[str] = None
+    region_name: Optional[str] = None
+    aws_access_key: Optional[str] = None
+    aws_secret_key: Optional[str] = None
+    local_model_dir: Optional[str] = None
+    data_dir: Optional[Path | S3Path] = None
 
     def __init__(self, *args, **kwargs):
+        """Initialize settings"""
+
         super().__init__(*args, **kwargs)
-        if urlparse(str(self.data_dir)).scheme == "s3":
+
+        # Setup data directory
+        if urlparse(self.library_dir).scheme == "s3":
+            # S3 library
             try:
-                aws_ressource = boto3.resource(
-                    "s3",
-                    region_name=self.aws_region,
-                    endpoint_url=self.aws_endpoint,
-                    aws_access_key_id=self.aws_access_key_id,
-                    aws_secret_access_key=self.aws_secret_access_key,
-                )
                 self.data_dir = S3Path.from_uri(
-                    str(self.data_dir).replace("s3:/", "s3://")
+                    self.library_dir.replace("s3:/", "s3://")
                 )
-                register_configuration_parameter(self.data_dir, resource=aws_ressource)
+                register_configuration_parameter(
+                    self.data_dir,
+                    resource=boto3.resource(
+                        "s3",
+                        endpoint_url=self.endpoint_url,
+                        region_name=self.region_name,
+                        aws_access_key_id=self.aws_access_key,
+                        aws_secret_access_key=self.aws_secret_key,
+                    ),
+                )
             except Exception as e:
                 raise ValueError(
-                    "ERROR Could not register S3 compatible storage.\n"
+                    "ERROR: Could not register S3 dataset library.\n"
                     "You have to set the following environment variables:\n"
-                    "- AWS_ENDPOINT : S3 Compatible Storage endpoint\n"
-                    "- AWS_ACCESS_KEY_ID : access key credentials\n"
-                    "- AWS_SECRET_ACCESS_KEY : secret access credentials\n"
-                    "- AWS_REGION (optionnal)"
+                    "- ENDPOINT_URL: S3 endpoint URL, use 'AWS' if not provided\n"
+                    "- AWS_REGION: S3 region name, not always required for private storages\n"
+                    "- AWS_ACCESS_KEY: S3 AWS access key\n"
+                    "- AWS_SECRET_KEY: S3 AWS secret key"
                 ) from e
-            # if S3, local_model_dir have to be set (maybe we could download it from S3 into a defined local dir?)
+
+            # Check if local model directory is provided
             if self.local_model_dir is None:
                 raise AttributeError(
-                    "Runtime model (.onnx) must be local, LOCAL_MODEL_DIR must be provided"
+                    "When using S3 storage, runtime models (.onnx files) must be stored locally and their directory must be provided with LOCAL_MODEL_DIR."
                 )
+
+        else:
+            # Local library
+            self.data_dir = Path(self.library_dir)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """Get app settings
+
+    Returns:
+        Settings: App settings
+    """
+
+    return Settings()

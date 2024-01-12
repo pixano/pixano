@@ -13,16 +13,23 @@
 # http://www.cecill.info
 
 import json
-import shutil
 import tempfile
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 from pixano_inference import transformers
 
 from pixano.app import create_app
-from pixano.data import COCOImporter, DatasetInfo, DatasetItem, DatasetStat, Settings
+from pixano.data import (
+    COCOImporter,
+    DatasetInfo,
+    DatasetItem,
+    DatasetStat,
+    Settings,
+    get_settings,
+)
 
 
 class AppTestCase(unittest.TestCase):
@@ -32,11 +39,13 @@ class AppTestCase(unittest.TestCase):
         """Tests setup"""
 
         # Create temporary directory
-        self.temp_dir = Path.cwd() / "library"
-        self.temp_dir.mkdir(exist_ok=False)
+        # pylint: disable=consider-using-with
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = Path(self.temp_dir.name)
+        (self.path / "models").mkdir()
 
         # Create a COCO dataset
-        import_dir = self.temp_dir / "coco"
+        import_dir = self.path / "coco"
         input_dirs = {
             "image": Path("tests/assets/coco_dataset/image"),
             "objects": Path("tests/assets/coco_dataset"),
@@ -80,13 +89,20 @@ class AppTestCase(unittest.TestCase):
         with open(import_dir / "stats.json", "w", encoding="utf-8") as f:
             json.dump([stat.model_dump() for stat in stats], f)
 
-        # Launch app
-        self.client = TestClient(create_app(Settings()))
+        # Override app settings
+        @lru_cache
+        def get_settings_override():
+            return Settings(library_dir=self.temp_dir.name)
+
+        # Create app
+        app = create_app(settings=get_settings_override())
+        app.dependency_overrides[get_settings] = get_settings_override
+        self.client = TestClient(app)
 
     def tearDown(self):
         """Tests teardown"""
 
-        shutil.rmtree(self.temp_dir)
+        self.temp_dir.cleanup()
 
     def test_get_datasets(self):
         """Test /datasets endpoint (GET)"""
@@ -151,7 +167,7 @@ class AppTestCase(unittest.TestCase):
         # With embeddings
         model = transformers.CLIP()
         model.process_dataset(
-            dataset_dir=self.temp_dir / "coco",
+            dataset_dir=self.path / "coco",
             process_type="search_emb",
             views=["image"],
         )
@@ -221,7 +237,7 @@ class AppTestCase(unittest.TestCase):
     def test_get_models(self):
         """Test /models endpoint (GET)"""
 
-        with tempfile.NamedTemporaryFile(dir=self.temp_dir / "models", suffix=".onnx"):
+        with tempfile.NamedTemporaryFile(dir=self.path / "models", suffix=".onnx"):
             response = self.client.get("/models")
             output = response.json()
 
