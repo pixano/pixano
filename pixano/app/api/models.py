@@ -32,7 +32,7 @@ async def get_models(
 
     # Load list of models
     models = []
-    for model_path in settings.data_dir.glob("models/*.onnx"):
+    for model_path in settings.model_dir.glob("*.onnx"):
         models.append(model_path.name)
 
     # Return list of models
@@ -40,5 +40,5 @@ async def get_models(
         return models
     raise HTTPException(
         status_code=404,
-        detail=f"No models found in {settings.data_dir.absolute()}",
+        detail=f"No models found in {settings.model_dir.absolute()}",
     )
