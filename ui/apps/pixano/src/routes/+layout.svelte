@@ -17,8 +17,6 @@
   let currentDatasetName: string;
 
   async function handleGetModels() {
-    console.log("App.handleGetModels");
-
     models = await api.getModels();
     modelsStore.set(models);
   }

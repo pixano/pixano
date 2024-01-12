@@ -25,6 +25,7 @@ import type {
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
+import type { ModelSelection } from "../types/imageWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
@@ -36,6 +37,10 @@ export const itemMetas = writable<{
   id: DatasetItem["id"];
 }>();
 export const canSave = writable<boolean>(false);
+export const modelsStore = writable<ModelSelection>({
+  currentModalOpen: "none",
+  selectedModelName: "",
+});
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {

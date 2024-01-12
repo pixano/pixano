@@ -58,7 +58,7 @@
 {#if selectedItem}
   <ImageWorkspace
     {selectedItem}
-    {selectedDataset}
+    currentDatasetId={selectedDataset.id}
     {models}
     {handleSaveItem}
     isLoading={isLoadingNewItem}

@@ -14,7 +14,6 @@
    * http://www.cecill.info
    */
 
-  import * as ort from "onnxruntime-web";
   import type {
     DatasetItem,
     BBox,
@@ -23,24 +22,23 @@
     DatasetInfo,
     ItemObject,
   } from "@pixano/core";
-  import { SAM } from "@pixano/models";
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
   import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
-  import { loadEmbeddings } from "./lib/api/modelsApi";
+  import LoadModelModal from "./components/LoadModelModal.svelte";
   import {
     itemObjects,
     itemBboxes,
     itemMasks,
-    interactiveSegmenterModel,
     itemMetas,
     newShape,
     canSave,
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
+  import type { Embeddings } from "./lib/types/imageWorkspaceTypes";
 
-  export let selectedDataset: DatasetInfo;
+  export let currentDatasetId: DatasetInfo["id"];
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => void;
@@ -49,10 +47,7 @@
   let selectedTool: SelectionTool;
   let allBBoxes: BBox[] = [];
   let allMasks: Mask[] = [];
-  let selectedModelName: string;
-  let embeddings: Record<string, ort.Tensor> = {};
-
-  let embeddingAreLoaded: boolean = false;
+  let embeddings: Embeddings = {};
 
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
@@ -66,25 +61,9 @@
 
   $: {
     if (selectedItem) {
-      embeddingAreLoaded = false;
       newShape.update((old) => ({ ...old, status: "none" }));
       canSave.set(false);
     }
-  }
-  $: {
-    if (!embeddingAreLoaded) {
-      loadEmbeddings(selectedItem, selectedModelName, selectedDataset)
-        .then((results) => (embeddings = results))
-        .then(() => (embeddingAreLoaded = true))
-        .catch((err) => console.error("cannot load Embeddings", err));
-    }
-  }
-
-  const sam = new SAM();
-
-  async function loadModel() {
-    await sam.init("/data/models/" + selectedModelName);
-    interactiveSegmenterModel.set(sam);
   }
 
   const onSave = () => {
@@ -105,16 +84,6 @@
     handleSaveItem(savedItem);
     canSave.set(false);
   };
-
-  $: {
-    if (models.length > 0) {
-      let samModels = models.filter((m) => m.includes("sam"));
-      if (samModels.length == 1) {
-        selectedModelName = samModels[0];
-        loadModel().catch((err) => console.error("cannot load model", err));
-      }
-    }
-  }
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
@@ -128,4 +97,11 @@
     {isLoading}
   />
   <ActionsTabs on:click={onSave} {isLoading} />
+  <LoadModelModal
+    {models}
+    {currentDatasetId}
+    selectedItemId={selectedItem.id}
+    bind:embeddings
+    {selectedTool}
+  />
 </div>
