@@ -19,7 +19,7 @@ import duckdb
 import lancedb
 import pyarrow as pa
 import pyarrow.dataset as pa_ds
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
 from pixano.core import Image
@@ -34,25 +34,27 @@ class Dataset(BaseModel):
     """Dataset
 
     Attributes:
-        path (Path): Dataset path
+        path (Path | S3Path): Dataset path
         info (DatasetInfo, optional): Dataset info
         stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
-    path: Path
+    path: Path | S3Path
     info: Optional[DatasetInfo] = None
     stats: Optional[list[DatasetStat]] = None
     thumbnail: Optional[str] = None
+    # Allow arbitrary types because of S3 Path
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __init__(
         self,
-        path: Path,
+        path: Path | S3Path,
     ):
         """Initialize dataset
 
         Args:
-            path (Path): Dataset path
+            path (Path | S3Path): Dataset path
         """
 
         info_file = path / "db.json"
@@ -70,11 +72,11 @@ class Dataset(BaseModel):
         )
 
     @property
-    def media_dir(self) -> Path:
+    def media_dir(self) -> Path | S3Path:
         """Return dataset media directory
 
         Returns:
-            Path: Dataset media directory
+            Path | S3Path: Dataset media directory
         """
 
         return self.path / "media"
@@ -119,11 +121,11 @@ class Dataset(BaseModel):
         self.info.save(self.path)
 
     @staticmethod
-    def create(path: Path, info: DatasetInfo) -> "Dataset":
+    def create(path: Path | S3Path, info: DatasetInfo) -> "Dataset":
         """Create dataset
 
         Args:
-            path (Path): Path to create dataset in
+            path (Path | S3Path): Path to create dataset in
             info (DatasetInfo): Dataset info
 
         Returns:
@@ -680,7 +682,7 @@ class Dataset(BaseModel):
     @staticmethod
     def find(
         dataset_id: str,
-        directory: Path,
+        directory: Path | S3Path,
     ) -> "Dataset":
         """Find Dataset in directory
 

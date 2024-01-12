@@ -35,11 +35,11 @@ class DatasetStat(BaseModel):
     range: Optional[list[int | float]] = None
 
     @staticmethod
-    def from_json(json_fp: Path) -> list["DatasetStat"]:
+    def from_json(json_fp: Path | S3Path) -> list["DatasetStat"]:
         """Read list of DatasetStats from JSON file
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp (Path | S3Path): JSON file path
 
         Returns:
             list[DatasetStats]: List of DatasetStat
