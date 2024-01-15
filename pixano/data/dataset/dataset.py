@@ -562,10 +562,9 @@ class Dataset(BaseModel):
         ds_tables = self.open_tables()
 
         # Force feature types
-        for feature in item.features:
-            type_dict = {"text": str, "number": float, "boolean": bool}
-            for feature in self.features.values():
-                item.features[feature.name] = type_dict[feature.dtype](feature.value)
+        type_dict = {"text": str, "number": float, "boolean": bool}
+        for feature in item.features.values():
+            item.features[feature.name] = type_dict[feature.dtype](feature.value)
 
         # Save item features if exists
         if len(item.features) > 0:
