@@ -4,9 +4,11 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0rc1] - 2024-01-15
+
 ### Added
 
-- Add support for **datasets stored on Amazon S3 cloud storage** (pixano#21)
+- Add support for **datasets stored on Amazon S3 cloud storage** (pixano#21, pixano#29)
 - Select **interactive segmentation models** with **dropdown menu** based on models found in directory (pixano#12)
 - Select **semantic search models** with **dropdown menu** based on embeddings found in dataset (pixano#12)
 - Add loading animation in frontend UI when loading or saving takes time (pixano#15)
@@ -18,7 +20,7 @@ All notable changes to Pixano will be documented in this file.
 
 ### Changed
 
-- **Breaking:** Refactor Pixano Explorer and Annotator apps into a **single Pixano app** (pixano#23, pixano#27)
+- **Breaking:** Refactor Pixano Explorer and Annotator apps into a **single Pixano app** (pixano#23, pixano#27, pixano#29)
 - **Breaking:** Handle media files as **URI links instead of base 64 encodings** in Pixano API (pixano#8)
   - Drop support for datasets imported without copying media files, i.e. using the `portable=False` option
   - Remove the `portable=False` option, users can now choose to either **copy or move the media files** to the dataset directory when using an Importer
@@ -200,6 +202,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.5.0rc1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0rc1
 [0.4.1]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2

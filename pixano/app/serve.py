@@ -11,7 +11,7 @@
 # http://www.cecill.info
 
 import asyncio
-from pathlib import Path
+from functools import lru_cache
 
 import click
 import fastapi
@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 
 from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
-from pixano.data import Settings
+from pixano.data.settings import Settings, get_settings
 
 LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
@@ -38,8 +38,8 @@ LOGO = """
 ██  ▒▓▓▒▒     ▒   ▒      ▒▓▒                                         ▓
 ██                         █▓                                        ▓
 """
-ASSETS_PATH = pkg_resources.resource_filename("pixano", "apps/dist/assets")
-TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "apps/dist")
+ASSETS_PATH = pkg_resources.resource_filename("pixano", "app/dist/_app")
+TEMPLATE_PATH = pkg_resources.resource_filename("pixano", "app/dist")
 
 task_functions = {
     "colab": asyncio.get_event_loop().create_task,
@@ -57,13 +57,11 @@ class App:
     """Pixano app
 
     Attributes:
-        settings (Settings): App settings
         app (fastapi.FastAPI): FastAPI App
         config (uvicorn.Config): App config
         server (uvicorn.Server): App server
     """
 
-    settings: Settings
     app: fastapi.FastAPI
     config: uvicorn.Config
     server: uvicorn.Server
@@ -71,28 +69,50 @@ class App:
     def __init__(
         self,
         library_dir: str,
+        endpoint_url: str = None,
+        region_name: str = None,
+        aws_access_key: str = None,
+        aws_secret_key: str = None,
+        local_model_dir: str = None,
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
         """Initialize and run Pixano app
 
         Args:
-            library_dir (str): Dataset library directory
+            library_dir (str): Local or S3 path to dataset library
+            endpoint_url (str, optional): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path. Defaults to None.
+            region_name (str, optional): S3 region name, not always required for private storages. Used if library_dir is an S3 path. Defaults to None.
+            aws_access_key (str, optional): S3 AWS access key. Used if library_dir is an S3 path. Defaults to None.
+            aws_secret_key (str, optional): S3 AWS secret key. Used if library_dir is an S3 path. Defaults to None.
+            local_model_dir (str, optional): Local path to models. Used if library_dir is an S3 path. Defaults to None.
             host (str, optional): App host. Defaults to "127.0.0.1".
             port (int, optional): App port. Defaults to 8000.
         """
 
+        # Override app settings
+        @lru_cache
+        def get_settings_override():
+            return Settings(
+                library_dir=library_dir,
+                endpoint_url=endpoint_url,
+                region_name=region_name,
+                aws_access_key=aws_access_key,
+                aws_secret_key=aws_secret_key,
+                local_model_dir=local_model_dir,
+            )
+
         # Create app
         templates = Jinja2Templates(directory=TEMPLATE_PATH)
-        settings = Settings(data_dir=Path(library_dir))
-        app = create_app(settings)
+        self.app = create_app(settings=get_settings_override())
+        self.app.dependency_overrides[get_settings] = get_settings_override
 
-        @app.get("/", response_class=HTMLResponse)
+        @self.app.get("/", response_class=HTMLResponse)
         def app_main(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        app.mount("/assets", StaticFiles(directory=ASSETS_PATH), name="assets")
-        self.config = uvicorn.Config(app, host=host, port=port)
+        self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        self.config = uvicorn.Config(self.app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 
         # Serve app
@@ -151,27 +171,68 @@ class App:
 
 
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
-@click.argument(
-    "library_dir",
+@click.argument("library_dir", type=str)
+@click.option(
+    "--endpoint_url",
     type=str,
+    help="S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path",
+)
+@click.option(
+    "--region_name",
+    type=str,
+    help="S3 region name, not always required for private storages. Used if library_dir is an S3 path",
+)
+@click.option(
+    "--aws_access_key",
+    type=str,
+    help="S3 AWS access key. Used if library_dir is an S3 path",
+)
+@click.option(
+    "--aws_secret_key",
+    type=str,
+    help="S3 AWS secret key. Used if library_dir is an S3 path",
+)
+@click.option(
+    "--local_model_dir",
+    type=str,
+    help="Local path to your models. Used if library_dir is an S3 path",
 )
 @click.option(
     "--host",
     type=str,
     default="127.0.0.1",
-    help="Bind socket to this host.",
+    help="Pixano app URL host",
     show_default=True,
 )
 @click.option(
     "--port",
     type=int,
     default=0,
-    help="Bind socket to this port.",
+    help="Pixano app URL port",
     show_default=True,
 )
-def main(library_dir: str, host: str, port: int):
-    """Launch Pixano App
+def main(
+    library_dir: str,
+    endpoint_url: str,
+    region_name: str,
+    aws_access_key: str,
+    aws_secret_key: str,
+    local_model_dir: str,
+    host: str,
+    port: int,
+):
+    """Launch Pixano App in LIBRARY_DIR
 
-    LIBRARY_DIR: Dataset library directory
+    LIBRARY_DIR is the local or S3 path to your dataset library
     """
-    App(library_dir, host, port)
+
+    App(
+        library_dir,
+        endpoint_url,
+        region_name,
+        aws_access_key,
+        aws_secret_key,
+        local_model_dir,
+        host,
+        port,
+    )

@@ -42,7 +42,7 @@ pnpm i
 First, you will need to launch the backend server using this command:
 
 ```bash
-DATA_DIR=your_datasets_directory/ uvicorn pixano.app:create_app --factory --reload
+LIBRARY_DIR=your_datasets_directory/ uvicorn pixano.app:create_app --factory --reload
 ```
 
 Then, in another terminal, you can launch the frontend apps using:

@@ -246,8 +246,6 @@ class Importer(ABC):
         # Load dataset tables
         ds_tables = dataset.open_tables()
 
-        print(ds_tables)
-
         # Initalize batches
         ds_batches: dict[str, dict[str, list]] = defaultdict(dict)
         for group_name, table_group in self.info.tables.items():

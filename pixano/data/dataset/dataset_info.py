@@ -51,22 +51,26 @@ class DatasetInfo(BaseModel):
     preview: Optional[str] = None
     stats: Optional[list[DatasetStat]] = None
 
-    def save(self, save_dir: Path):
-        """Save DatasetInfo to json file"""
+    def save(self, save_dir: Path | S3Path):
+        """Save DatasetInfo to json file
+
+        Args:
+            save_dir (Path | S3Path): Save directory
+        """
 
         with open(save_dir / "db.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
 
     @staticmethod
     def from_json(
-        json_fp: Path,
+        json_fp: Path | S3Path,
         load_stats: bool = False,
         load_thumbnail: bool = False,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp (Path | S3Path): JSON file path
             load_stats (bool, optional): Load dataset stats. Defaults to False.
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
 
@@ -103,14 +107,14 @@ class DatasetInfo(BaseModel):
 
     @staticmethod
     def load_directory(
-        directory: Path,
+        directory: Path | S3Path,
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetInfo"]:
         """Load list of DatasetInfo from directory
 
         Args:
-            directory (Path): Directory to load
+            directory (Path | S3Path): Directory to load
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
             load_stats (bool, optional): Load dataset stats. Defaults to False.
 
