@@ -1,7 +1,7 @@
 import type { ItemFeature } from "@pixano/core";
 import { z } from "zod";
+import type { CreateObjectSchemaDefinition } from "../types/imageWorkspaceTypes";
 
-// validate that inputs are in the correct format
 export const listInputSchema = z.object({
   name: z.string(),
   label: z.string(),
@@ -17,12 +17,10 @@ export const otherInputSchema = z.object({
   required: z.boolean().optional(),
 });
 
-export const objectInputSchema = z.array(z.union([listInputSchema, otherInputSchema]));
+export const createObjectInputsSchema = z.array(z.union([listInputSchema, otherInputSchema]));
 
-export type ObjectSetup = z.infer<typeof objectInputSchema>;
-
-export const reduceSetupArray = (setupArray: ItemFeature[]) =>
-  setupArray.reduce<Record<string, z.ZodTypeAny>>((acc, cur) => {
+export const mapInputsToValueType = (setupArray: ItemFeature[]) =>
+  setupArray.reduce<CreateObjectSchemaDefinition>((acc, cur) => {
     if (cur.dtype === "text" || cur.dtype === "list") {
       acc[cur.name] = z.string();
     } else if (cur.dtype === "number") {
@@ -35,3 +33,7 @@ export const reduceSetupArray = (setupArray: ItemFeature[]) =>
     }
     return acc;
   }, {});
+
+export const createSchemaFromFeatures = (setupArray: ItemFeature[]) => {
+  return z.object(mapInputsToValueType(setupArray));
+};

@@ -13,25 +13,25 @@
    *
    * http://www.cecill.info
    */
-  import { z } from "zod";
 
   import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
-  import type { FeatureValues, ItemFeature, ItemObject, Shape } from "@pixano/core";
+  import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
   import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import {
-    objectInputSchema,
-    reduceSetupArray,
-    type ObjectSetup,
+    createObjectInputsSchema,
+    createSchemaFromFeatures,
   } from "../../lib/settings/objectValidationSchemas";
   import { GROUND_TRUTH } from "../../lib/constants";
+  import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
+  import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
 
   let shape: Shape;
   let isFormValid: boolean = false;
 
   let objectProperties: { [key: string]: FeatureValues } = {};
-  let formInputs: ObjectSetup = [];
-  let objectValidationSchema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  let formInputs: CreateObjectInputs = [];
+  let objectValidationSchema: CreateObjectSchema;
 
   itemMetas.subscribe((metas) => {
     const itemFeaturesArray = Object.values(metas.itemFeatures || {}).map((feature) => ({
@@ -40,8 +40,8 @@
       required: true,
       type: feature.dtype,
     }));
-    objectValidationSchema = z.object(reduceSetupArray(itemFeaturesArray));
-    formInputs = objectInputSchema.parse(itemFeaturesArray);
+    objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
+    formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
   });
 
   newShape.subscribe((value) => {
@@ -49,17 +49,7 @@
   });
 
   const handleFormSubmit = () => {
-    const features = Object.entries(objectProperties).reduce(
-      (acc, [key, value]) => {
-        acc[key] = {
-          name: key,
-          dtype: formInputs.find((o) => o.name === key)?.type as ItemFeature["dtype"],
-          value,
-        };
-        return acc;
-      },
-      {} as Record<string, ItemFeature>,
-    );
+    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     itemObjects.update((oldObjects) => {
       if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;

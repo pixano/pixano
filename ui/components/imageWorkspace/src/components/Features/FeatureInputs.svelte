@@ -42,7 +42,7 @@
       <ListFeature
         handleInputChange={(value, name) => saveInputChange(value, name)}
         {isEditing}
-        listFeature={{ value: feature.value, name: feature.name }}
+        listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
       />
     {/if}
     {#if feature.type === "text" || feature.type === "number"}
