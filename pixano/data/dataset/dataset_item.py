@@ -134,8 +134,6 @@ class DatasetItem(BaseModel):
             obj (ItemObject): Object to add or update
         """
 
-        # Find source table
-
         # Remove keys not in schema
         pyarrow_obj = obj.to_pyarrow()
         for key in list(pyarrow_obj):
