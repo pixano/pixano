@@ -6,16 +6,16 @@ import type { ItemObject } from "@pixano/core";
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { listInputSchema, otherInputSchema } from "../settings/objectValidationSchemas";
 
-export type ListInput = z.infer<typeof listInputSchema>;
-
-export type OtherInput = z.infer<typeof otherInputSchema>;
-
 export type ObjectsSortedByModelType = {
   [GROUND_TRUTH]: ItemObject[];
   [MODEL_RUN]: { modelName: string; objects: ItemObject[] }[];
 };
 
-type CheckboxFeature = OtherInput & {
+export type ListInput = z.infer<typeof listInputSchema>;
+
+export type OtherInput = z.infer<typeof otherInputSchema>;
+
+export type CheckboxFeature = OtherInput & {
   type: "boolean";
   value: boolean;
 };

@@ -55,6 +55,7 @@
   $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
   $: itemMetas.set({
     features: selectedItem.features,
+    itemFeatures: Object.values(selectedItem.objects || {})[0]?.features,
     views: selectedItem.views,
     id: selectedItem.id,
   });
@@ -81,6 +82,7 @@
     itemMetas.subscribe((value) => {
       savedItem.features = value.features;
     });
+    console.log({ savedItem });
     handleSaveItem(savedItem);
     canSave.set(false);
   };

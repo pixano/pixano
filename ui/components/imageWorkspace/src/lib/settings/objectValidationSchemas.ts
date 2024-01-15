@@ -48,7 +48,7 @@ export const otherInputSchema = z.object({
   required: z.boolean().optional(),
 });
 
-const objectInputSchema = z.array(z.union([listInputSchema, otherInputSchema]));
+export const objectInputSchema = z.array(z.union([listInputSchema, otherInputSchema]));
 export const objectSetup = objectInputSchema.parse(userObjectSetup);
 
 export const schema = userObjectSetup.reduce<Record<string, z.ZodTypeAny>>((acc, cur) => {

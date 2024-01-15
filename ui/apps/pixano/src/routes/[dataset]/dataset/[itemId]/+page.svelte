@@ -53,9 +53,11 @@
     await api.postDatasetItem(selectedDataset.id, savedItem);
     handleSelectItem(selectedDataset, currentItemId);
   }
+
+  $: console.log({ selectedDataset, selectedItem });
 </script>
 
-{#if selectedItem}
+{#if selectedItem && selectedDataset}
   <ImageWorkspace
     {selectedItem}
     currentDatasetId={selectedDataset.id}
