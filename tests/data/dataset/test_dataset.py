@@ -333,7 +333,6 @@ class DatasetTestCase(unittest.TestCase):
     def test_find(self):
         """Test Dataset find method"""
 
-        print(self.dataset.info.id)
         found_dataset = Dataset.find("coco_dataset", self.library_dir)
 
         self.assertIsInstance(found_dataset, Dataset)
