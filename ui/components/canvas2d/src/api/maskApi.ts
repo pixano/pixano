@@ -1,6 +1,7 @@
 import Konva from "konva";
 import simplify from "simplify-js";
 
+import type { MaskSVG } from "@pixano/core";
 import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
 export const parseSvgPath = (svgPath: string): PolygonGroupPoint[] => {
@@ -66,3 +67,49 @@ export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[])
   }
   ctx.fillStrokeShape(shape);
 };
+
+// Function to parse SVG path (as provided in the previous response)
+function svgPathToBitmap(svgPath, width: number, height: number): number[] {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  // Draw the SVG path on the canvas
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "black";
+  context.fill(new Path2D(svgPath));
+
+  // Get the image data from the canvas
+  const imageData = context.getImageData(0, 0, width, height).data;
+  // Convert the image data to a binary bitmap
+  const bitmap: number[] = [];
+  for (let i = 0; i < imageData.length; i += 4) {
+    // Convert RGBA to binary (considering only the red(??? no, alpha it seems) channel)
+    //console.log("xx", imageData[i],imageData[i+1],imageData[i+2],imageData[i+3]) //test channel
+    //ok it's encoded in i+3 (alpha channel??)
+    bitmap.push(imageData[i + 3] === 0 ? 0 : 1);
+  }
+  return bitmap;
+}
+
+function rleEncode(bitmap): number[] {
+  const counts: number[] = [];
+  let count = 1;
+  for (let i = 1; i < bitmap.length; i++) {
+    if (bitmap[i] === bitmap[i - 1]) {
+      count++;
+    } else {
+      counts.push(count);
+      count = 1;
+    }
+  }
+  // Handle the last sequence
+  counts.push(count);
+  return counts;
+}
+
+export function runLengthEncode(svg: MaskSVG, imageWidth: number, imageHeight: number): number[] {
+  const bitmap = svgPathToBitmap(svg, imageWidth, imageHeight);
+  return rleEncode(bitmap);
+}
