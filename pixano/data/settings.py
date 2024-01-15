@@ -56,9 +56,7 @@ class Settings(BaseSettings):
         if urlparse(self.library_dir).scheme == "s3":
             # S3 library
             try:
-                self.data_dir = S3Path.from_uri(
-                    self.library_dir.replace("s3:/", "s3://")
-                )
+                self.data_dir = S3Path.from_uri(self.library_dir)
                 register_configuration_parameter(
                     self.data_dir,
                     resource=boto3.resource(
