@@ -49,7 +49,7 @@
     isEditing = !isEditing;
   };
 
-  const handleTextInputChange = (value: string | boolean, propertyName: string) => {
+  const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
       newMetas.features = {
