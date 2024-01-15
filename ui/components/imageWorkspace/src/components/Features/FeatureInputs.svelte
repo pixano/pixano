@@ -23,7 +23,7 @@
   export let features: Feature[];
 
   export let isEditing: boolean;
-  export let saveInputChange: (value: string | boolean, propertyName: string) => void;
+  export let saveInputChange: (value: string | boolean | number, propertyName: string) => void;
 </script>
 
 {#each features as feature}

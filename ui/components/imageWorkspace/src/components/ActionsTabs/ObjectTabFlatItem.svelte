@@ -67,7 +67,7 @@
   $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
-  const saveInputChange = (value: string | boolean, propertyName: string) => {
+  const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     itemObjects.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object.id === itemObject.id) {
