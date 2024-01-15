@@ -564,7 +564,7 @@ class Dataset(BaseModel):
         # Force feature types
         type_dict = {"text": str, "number": float, "boolean": bool}
         for feature in item.features.values():
-            item.features[feature.name] = type_dict[feature.dtype](feature.value)
+            item.features[feature.name].value = type_dict[feature.dtype](feature.value)
 
         # Save item features if exists
         if len(item.features) > 0:
