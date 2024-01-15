@@ -200,7 +200,8 @@ class ItemObject(BaseModel):
 
         # Features
         if self.features:
+            type_dict = {"text": str, "number": float, "boolean": bool}
             for feature in self.features.values():
-                pyarrow_object[feature.name] = feature.value
+                pyarrow_object[feature.name] = type_dict[feature.dtype](feature.value)
 
         return pyarrow_object
