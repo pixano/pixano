@@ -22,13 +22,14 @@
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
-  export let saveInputChange: (value: string, propertyName: string) => void;
+  export let saveInputChange: (value: string | number, propertyName: string) => void;
   export let inputType: "text" | "number" = "text";
 
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
-    saveInputChange(value, propertyName);
+    const formattedValue = inputType === "number" ? Number(value) : value;
+    saveInputChange(formattedValue, propertyName);
     isSaved = true;
   };
 </script>
