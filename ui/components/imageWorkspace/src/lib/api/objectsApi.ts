@@ -125,7 +125,7 @@ export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
         ...object,
         mask: {
           ...object.mask,
-          // counts: newShape.points,
+          counts: newShape.counts,
         },
       };
     }

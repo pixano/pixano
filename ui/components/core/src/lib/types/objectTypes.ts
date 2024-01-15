@@ -46,7 +46,7 @@ export type noShape = {
 export type editMaskShape = {
   status: "editingMask";
   maskId: string;
-  points: number[];
+  counts: number[];
 };
 
 export type Shape = inProgressShape | noShape | editMaskShape;

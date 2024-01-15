@@ -21,7 +21,13 @@
 
   import type { DatasetItem, Shape } from "@pixano/core";
   import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
-  import { sceneFunc, hexToRGBA, convertPointToSvg, parseSvgPath, runLengthEncode } from "../api/maskApi";
+  import {
+    sceneFunc,
+    hexToRGBA,
+    convertPointToSvg,
+    parseSvgPath,
+    runLengthEncode,
+  } from "../api/maskApi";
 
   // Exports
   export let viewId: string;
@@ -74,14 +80,17 @@
 
   function handlePolygonPointsDragEnd() {
     //const counts = runLengthEncode(polygonDetails.svg); //seul simplifiedSvg est "drag" (?) donc on utilise simplifiedSvg, pas svg
-    const counts = runLengthEncode(polygonShape.simplifiedSvg, images[viewId].width, images[viewId].height);
-    console.log({ counts, polygonDetails });
+    const counts = runLengthEncode(
+      polygonShape.simplifiedSvg,
+      images[viewId].width,
+      images[viewId].height,
+    );
+
     if (polygonDetails.editing) {
       newShape = {
         status: "editingMask",
         maskId: polygonDetails.id,
-        //points: flatPolygonPoints,  ??
-        points: counts, //???
+        counts,
       };
     }
   }
@@ -108,7 +117,7 @@
     }
   }
 
-  function updateCircleRadius(id: number, i: number, radius) {
+  function updateCircleRadius(id: number, i: number, radius: number) {
     const point: Konva.Circle = stage.findOne(`#dot-${i}-${id}`);
     point.radius(radius);
   }
