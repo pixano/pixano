@@ -664,7 +664,7 @@ class Dataset(BaseModel):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_name": "str",
+                        "category": "str",
                     },
                 )
                 self.create_table(
