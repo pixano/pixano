@@ -11,28 +11,19 @@
 #
 # http://www.cecill.info
 
-from functools import lru_cache
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from pixano.data import Settings
+from pixano.data import Settings, get_settings
 
 router = APIRouter(tags=["models"])
 
 
-@lru_cache
-def get_settings():
-    """Get app settings
-
-    Returns:
-        Settings: App settings
-    """
-
-    return Settings()
-
-
 @router.get("/models", response_model=list[str])
-async def get_models() -> list[str]:
+async def get_models(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[str]:
     """Load models
 
     Returns:
@@ -41,14 +32,13 @@ async def get_models() -> list[str]:
 
     # Load list of models
     models = []
-    for model_path in get_settings().data_dir.glob("models/*.onnx"):
+    for model_path in settings.model_dir.glob("*.onnx"):
         models.append(model_path.name)
 
     # Return list of models
     if models:
         return models
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No models found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"No models found in {settings.model_dir.absolute()}",
+    )

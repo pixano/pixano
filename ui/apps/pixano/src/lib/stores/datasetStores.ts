@@ -17,10 +17,23 @@
 import { writable } from "svelte/store";
 import type { DatasetInfo } from "@pixano/core/src";
 
+import {
+  DEFAULT_DATASET_TABLE_PAGE,
+  DEFAULT_DATASET_TABLE_SIZE,
+} from "$lib/constants/pixanoConstants";
 import type { DatasetTableStore } from "../types/pixanoTypes";
+
+const defaultDatasetTableValues: DatasetTableStore = {
+  currentPage: DEFAULT_DATASET_TABLE_PAGE,
+  pageSize: DEFAULT_DATASET_TABLE_SIZE,
+  query: {
+    model: "",
+    search: "",
+  },
+};
 
 // Exports
 export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(false);
-export const datasetTableStore = writable<DatasetTableStore>();
+export const datasetTableStore = writable<DatasetTableStore>(defaultDatasetTableValues);

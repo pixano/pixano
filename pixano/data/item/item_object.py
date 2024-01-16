@@ -158,7 +158,7 @@ class ItemObject(BaseModel):
         # Iterate on objects
         for index, item in enumerate(items):
             # Create object
-            object = ItemObject(
+            obj = ItemObject(
                 id=item["id"],
                 item_id=item["item_id"],
                 view_id=item["view_id"],
@@ -167,13 +167,13 @@ class ItemObject(BaseModel):
             # Add bbox and mask
             for field in schema:
                 if field.name == "bbox" and item["bbox"]:
-                    object.bbox = ItemBBox.from_pyarrow(item["bbox"])
+                    obj.bbox = ItemBBox.from_pyarrow(item["bbox"])
                 elif field.name == "mask" and item["mask"]:
-                    object.mask = ItemURLE.from_pyarrow(item["mask"])
+                    obj.mask = ItemURLE.from_pyarrow(item["mask"])
             # Add features
-            object.features = ItemFeature.from_pyarrow(table.take([index]), schema)
+            obj.features = ItemFeature.from_pyarrow(table.take([index]), schema)
             # Append object
-            objects[item["id"]] = object
+            objects[item["id"]] = obj
 
         return objects
 
@@ -200,7 +200,8 @@ class ItemObject(BaseModel):
 
         # Features
         if self.features:
+            type_dict = {"text": str, "number": float, "boolean": bool}
             for feature in self.features.values():
-                pyarrow_object[feature.name] = feature.value
+                pyarrow_object[feature.name] = type_dict[feature.dtype](feature.value)
 
         return pyarrow_object

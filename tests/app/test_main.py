@@ -13,26 +13,39 @@
 # http://www.cecill.info
 
 import json
-import shutil
 import tempfile
 import unittest
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 from pixano_inference import transformers
 
-from pixano.apps import create_app
-from pixano.data import COCOImporter, DatasetInfo, DatasetItem, DatasetStat, Settings
+from pixano.app import create_app
+from pixano.data import (
+    COCOImporter,
+    DatasetInfo,
+    DatasetItem,
+    DatasetStat,
+    Settings,
+    get_settings,
+)
 
 
 class AppTestCase(unittest.TestCase):
+    """Pixano app test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         # Create temporary directory
-        self.temp_dir = Path.cwd() / "library"
-        self.temp_dir.mkdir(exist_ok=False)
+        # pylint: disable=consider-using-with
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = Path(self.temp_dir.name)
+        (self.path / "models").mkdir()
 
         # Create a COCO dataset
-        import_dir = self.temp_dir / "coco"
+        import_dir = self.path / "coco"
         input_dirs = {
             "image": Path("tests/assets/coco_dataset/image"),
             "objects": Path("tests/assets/coco_dataset"),
@@ -76,13 +89,24 @@ class AppTestCase(unittest.TestCase):
         with open(import_dir / "stats.json", "w", encoding="utf-8") as f:
             json.dump([stat.model_dump() for stat in stats], f)
 
-        # Launch app
-        self.client = TestClient(create_app(Settings()))
+        # Override app settings
+        @lru_cache
+        def get_settings_override():
+            return Settings(library_dir=self.temp_dir.name)
+
+        # Create app
+        app = create_app(settings=get_settings_override())
+        app.dependency_overrides[get_settings] = get_settings_override
+        self.client = TestClient(app)
 
     def tearDown(self):
-        shutil.rmtree(self.temp_dir)
+        """Tests teardown"""
+
+        self.temp_dir.cleanup()
 
     def test_get_datasets(self):
+        """Test /datasets endpoint (GET)"""
+
         response = self.client.get("/datasets")
         output = response.json()
 
@@ -95,6 +119,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_info, DatasetInfo)
 
     def test_get_dataset(self):
+        """Test /datasets/{dataset_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset")
         output = response.json()
 
@@ -104,6 +130,8 @@ class AppTestCase(unittest.TestCase):
         self.assertIsInstance(ds_info, DatasetInfo)
 
     def test_get_dataset_items(self):
+        """Test /datasets/{dataset_id}/items endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items")
         output = response.json()
 
@@ -122,6 +150,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_item, DatasetItem)
 
     def test_search_dataset_items(self):
+        """Test /datasets/{dataset_id}/search endpoint (POST)"""
+
         # Without embeddings
         response = self.client.post(
             "/datasets/coco_dataset/search",
@@ -137,7 +167,7 @@ class AppTestCase(unittest.TestCase):
         # With embeddings
         model = transformers.CLIP()
         model.process_dataset(
-            dataset_dir=self.temp_dir / "coco",
+            dataset_dir=self.path / "coco",
             process_type="search_emb",
             views=["image"],
         )
@@ -167,6 +197,8 @@ class AppTestCase(unittest.TestCase):
             self.assertIsInstance(ds_item, DatasetItem)
 
     def test_get_dataset_item(self):
+        """Test /datasets/{dataset_id}/items/{item_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items/139")
         output = response.json()
 
@@ -176,6 +208,8 @@ class AppTestCase(unittest.TestCase):
         self.assertIsInstance(ds_item, DatasetItem)
 
     def test_post_dataset_item(self):
+        """Test /datasets/{dataset_id}/items/{item_id} endpoint (POST)"""
+
         response_1 = self.client.get("/datasets/coco_dataset/items/139")
         output = response_1.json()
 
@@ -193,13 +227,17 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response_2.status_code, 200)
 
     def test_get_dataset_item_embeddings(self):
+        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id} endpoint (GET)"""
+
         response = self.client.get("/datasets/coco_dataset/items/139/embeddings/SAM")
 
-        # TODO: Can't test embeddings without model weights
+        # NOTE: Can't test embeddings without model weights
         self.assertEqual(response.status_code, 404)
 
     def test_get_models(self):
-        with tempfile.NamedTemporaryFile(dir=self.temp_dir / "models", suffix=".onnx"):
+        """Test /models endpoint (GET)"""
+
+        with tempfile.NamedTemporaryFile(dir=self.path / "models", suffix=".onnx"):
             response = self.client.get("/models")
             output = response.json()
 

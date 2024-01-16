@@ -11,29 +11,23 @@
 #
 # http://www.cecill.info
 
-from functools import lru_cache
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from pixano.data import Dataset, DatasetInfo, Settings
+from pixano.data import Dataset, DatasetInfo, Settings, get_settings
 
 router = APIRouter(tags=["datasets"])
 
 
-@lru_cache
-def get_settings():
-    """Get app settings
-
-    Returns:
-        Settings: App settings
-    """
-
-    return Settings()
-
-
 @router.get("/datasets", response_model=list[DatasetInfo])
-async def get_datasets() -> list[DatasetInfo]:
+async def get_datasets(
+    settings: Annotated[Settings, Depends(get_settings)]
+) -> list[DatasetInfo]:
     """Load dataset list
+
+    Args:
+        settings (Settings): App settings
 
     Returns:
         list[DatasetInfo]: List of dataset infos
@@ -41,39 +35,41 @@ async def get_datasets() -> list[DatasetInfo]:
 
     # Load datasets
     infos = DatasetInfo.load_directory(
-        directory=get_settings().data_dir,
+        directory=settings.data_dir,
         load_thumbnail=True,
     )
 
     # Return datasets
     if infos:
         return infos
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No datasets found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"No datasets found in {settings.data_dir.absolute()}",
+    )
 
 
 @router.get("/datasets/{ds_id}", response_model=DatasetInfo)
-async def get_dataset(ds_id: str) -> DatasetInfo:
+async def get_dataset(
+    ds_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> DatasetInfo:
     """Load dataset
 
     Args:
         ds_id (str): Dataset ID
+        settings (Settings): App settings
 
     Returns:
         DatasetInfo: Dataset info
     """
 
     # Load dataset
-    dataset = Dataset.find(ds_id, get_settings().data_dir)
+    dataset = Dataset.find(ds_id, settings.data_dir)
 
     # Return dataset info
     if dataset:
         return dataset.load_info(load_stats=True)
-    else:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Dataset {ds_id} not found in {get_settings().data_dir.absolute()}",
-        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
+    )

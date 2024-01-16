@@ -34,7 +34,12 @@
     removeSmartPointTool,
     polygoneTool,
   } from "../lib/settings/selectionTools";
-  import { interactiveSegmenterModel, newShape } from "../lib/stores/imageWorkspaceStores";
+  import {
+    interactiveSegmenterModel,
+    newShape,
+    modelsStore,
+  } from "../lib/stores/imageWorkspaceStores";
+  import { onMount } from "svelte";
 
   export let selectedTool: SelectionTool | null;
   let previousSelectedTool: SelectionTool | null = null;
@@ -59,6 +64,10 @@
     }
   });
 
+  onMount(() => {
+    selectTool(panTool);
+  });
+
   $: {
     if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
       newShape.set({ status: "none" });
@@ -70,7 +79,7 @@
 <div class="h-full shadow-md bg-popover p-1">
   <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
     <IconButton
-      tooltipContent="Move your picture around"
+      tooltipContent="Move image around"
       on:click={() => selectTool(panTool)}
       selected={selectedTool?.type === "PAN"}
     >
@@ -98,10 +107,15 @@
       "bg-primary-light rounded-sm": showSmartTools,
     })}
   >
-    <IconButton tooltipContent="Smart tools" on:click={handleSmartToolClick}>
+    <button
+      on:click={handleSmartToolClick}
+      on:dblclick={() =>
+        modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
+      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-gray-800"
+    >
       <BrushIcon />
       <MagicIcon />
-    </IconButton>
+    </button>
     {#if showSmartTools}
       <IconButton
         tooltipContent={addSmartPointTool.name}

@@ -90,6 +90,7 @@ class Fields(BaseModel):
                     if size_str.isnumeric():
                         return pa.list_(pa.float32(), list_size=int(size_str))
                 return pa_type_mapping[input_type.lower()]
+            return None
 
         fields = []
         for field_name, field_type in self.field_dict.items():

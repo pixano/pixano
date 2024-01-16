@@ -1,22 +1,24 @@
-# Using Pixano Annotator
+[comment]: <> (TODO: Update screenshots and descriptions for new Pixano app)
+
+# Using the Pixano app
 
 ## Home page
 
-![Pixano Annotator Home Page](../assets/user/annotator_home.png)
+![Pixano App Home Page](../assets/user/app_home.png)
 
-From the Annotator home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
+From the app home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
-For each dataset, you can see its name, the number of elements inside it, and a thumbnail composed from six sample elements.
+For each dataset, you can see its name, the number of items inside it, and a thumbnail composed from six sample items.
 
 You can hover over a dataset name to check the dataset description if it has one.
 
-You can click on a dataset to open its annotation page on its first element.
+You can click on a dataset to open its annotation page on its first item.
 
-## Annotation page
+## Item page
 
-### Element view
+### Item view
 
-![Pixano Annotator Element View](../assets/user/annotator_elementview.png)
+![Pixano App Item View](../assets/user/app_elementview.png)
 
 The selected element (image or images for multi-view datasets) is displayed.
 
@@ -75,7 +77,7 @@ A _toolbar_ is available on the right side of the page with the following tabs:
 
 ### Annotating
 
-![Pixano Annotator Annotate](../assets/user/annotator_annotation.png)
+![Pixano App Annotation](../assets/user/app_annotation.png)
 
 You can currently annotate with the **_Points_** (**+** and **-**), and **_Rectangle_** tools available in the left toolbar as described above.
 
@@ -92,4 +94,4 @@ If you try to go back to the home page or change element with unsaved changes, y
 
 ### Going home
 
-To go back to the home page, click on "Pixano Annotator" in the top left-and corner or on the _Close_ icon in the top right-hand corner.
+To go back to the home page, click on the Pixano logo in the top left corner.

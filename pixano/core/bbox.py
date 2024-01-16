@@ -27,6 +27,10 @@ from pixano.utils import (
     xyxy_to_xywh,
 )
 
+# Disable warning for BBox "format" attribute
+# NOTE: Rename attribute? Breaking change for Pixano datasets using BBox
+# pylint: disable=redefined-builtin
+
 
 class BBox(PixanoType, BaseModel):
     """Bounding box type using coordinates in xyxy or xywh format

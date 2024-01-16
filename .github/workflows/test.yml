@@ -11,16 +11,16 @@
 #
 # http://www.cecill.info
 
-name: Test code
+name: Test
 
 on:
   push:
     branches:
-      - "**"
+      - "develop"
+      - "main"
   pull_request:
     branches:
       - "develop"
-      - "main"
 
 permissions:
   contents: read

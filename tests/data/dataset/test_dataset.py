@@ -32,8 +32,13 @@ from pixano.data import (
 
 
 class DatasetTestCase(unittest.TestCase):
+    """Dataset test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         # Create temporary directory
+        # pylint: disable=consider-using-with
         self.temp_dir = tempfile.TemporaryDirectory()
         self.library_dir = Path(self.temp_dir.name)
 
@@ -90,37 +95,52 @@ class DatasetTestCase(unittest.TestCase):
         # Load dataset
         self.dataset = Dataset(self.import_dir)
 
-    def tearDown(self) -> None:
+    def tearDown(self):
+        """Tests teardown"""
         self.temp_dir.cleanup()
 
-    def test_path_property(self):
+    def test_path(self):
+        """Test Dataset path property"""
+
         self.assertIsInstance(self.dataset.path, Path)
         self.assertEqual(self.dataset.path, self.import_dir)
 
-    def test_info_property(self):
+    def test_info(self):
+        """Test Dataset info property"""
+
         self.assertIsInstance(self.dataset.info, DatasetInfo)
         self.assertEqual(self.dataset.info.id, "coco_dataset")
 
-    def test_stats_property(self):
+    def test_stats(self):
+        """Test Dataset stats property"""
+
         self.assertTrue(isinstance(self.dataset.stats, list))
         self.assertEqual(self.dataset.stats, self.stats)
 
-    def test_thumbnail_property(self):
+    def test_thumbnail(self):
+        """Test Dataset thumbnail property"""
+
         self.assertIsInstance(self.dataset.thumbnail, str)
         self.assertEqual(
             self.dataset.thumbnail,
             self.thumbnail.url,
         )
 
-    def test_media_dir_property(self):
+    def test_media_dir(self):
+        """Test Dataset media_dir property"""
+
         self.assertIsInstance(self.dataset.media_dir, Path)
         self.assertEqual(self.dataset.media_dir, self.import_dir / "media")
 
-    def test_num_rows_property(self):
+    def test_num_rows(self):
+        """Test Dataset num_rows property"""
+
         self.assertIsInstance(self.dataset.num_rows, int)
         self.assertEqual(self.dataset.num_rows, 3)
 
     def test_load_info(self):
+        """Test Dataset load_info method"""
+
         loaded_info = self.dataset.load_info()
 
         self.assertIsInstance(loaded_info, DatasetInfo)
@@ -134,6 +154,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(full_loaded_info.preview, self.thumbnail.url)
 
     def test_save_info(self):
+        """Test Dataset save_info method"""
+
         # Edit DatasetInfo
         self.dataset.info.id = "coco_dataset_2"
         self.dataset.save_info()
@@ -149,13 +171,18 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(updated_info.id, "coco_dataset")
 
     def test_connect(self):
+        """Test Dataset connect method"""
+
         ds = self.dataset.connect()
 
         self.assertIsInstance(ds, lancedb.db.DBConnection)
+        # pylint: disable=no-value-for-parameter
         self.assertIn("db", ds.table_names())
         self.assertIn("image", ds.table_names())
 
     def test_open_tables(self):
+        """Test Dataset open_tables method"""
+
         ds_tables = self.dataset.open_tables()
 
         self.assertIsInstance(ds_tables, dict)
@@ -163,6 +190,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(ds_tables["media"]["image"], lancedb.db.LanceTable)
 
     def test_load_items(self):
+        """Test Dataset load_items method"""
+
         items = self.dataset.load_items(limit=2, offset=0)
 
         self.assertIsInstance(items, list)
@@ -189,8 +218,12 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(items[0].views["image"], ItemView)
 
     def test_search_items(self):
+        """Test Dataset search_items method"""
+
         # Without embeddings
-        items = self.dataset.search_items(limit=1, offset=0, query={"query": "bear"})
+        items = self.dataset.search_items(
+            limit=1, offset=0, query={"model": "CLIP", "query": "bear"}
+        )
 
         self.assertEqual(items, None)
 
@@ -209,6 +242,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(items[0].id, "285")
 
     def test_load_item(self):
+        """Test Dataset load_item method"""
+
         item = self.dataset.load_item("632", load_objects=True)
 
         self.assertIsInstance(item, DatasetItem)
@@ -224,6 +259,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(item, None)
 
     def test_save_item(self):
+        """Test Dataset save_item method"""
+
         # Original item has 18 objects
         item_1 = self.dataset.load_item("632", load_objects=True)
         self.assertEqual(len(item_1.objects), 18)
@@ -234,7 +271,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Ground Truth",
-            bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
+            bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
         )
         item_1.objects["added_object"] = added_object_1
         self.dataset.save_item(item_1)
@@ -253,7 +290,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Ground Truth",
-            bbox=dict(coords=[0.2, 0.2, 0.4, 0.4], format="xywh"),
+            bbox={"coords": [0.2, 0.2, 0.4, 0.4], "format": "xywh"},
         )
         item_2.objects["added_object"] = added_object_2
         self.dataset.save_item(item_2)
@@ -280,7 +317,7 @@ class DatasetTestCase(unittest.TestCase):
             item_id="632",
             view_id="image",
             source_id="Ground Truth",
-            bbox=dict(coords=[0.1, 0.1, 0.3, 0.3], format="xywh"),
+            bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
         )
         item_4.objects["added_object"] = added_object_3
         self.dataset.save_item(item_4)
@@ -294,7 +331,8 @@ class DatasetTestCase(unittest.TestCase):
         )
 
     def test_find(self):
-        print(self.dataset.info.id)
+        """Test Dataset find method"""
+
         found_dataset = Dataset.find("coco_dataset", self.library_dir)
 
         self.assertIsInstance(found_dataset, Dataset)

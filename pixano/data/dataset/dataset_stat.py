@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel
+from s3path import S3Path
 
 
 class DatasetStat(BaseModel):
@@ -34,17 +35,21 @@ class DatasetStat(BaseModel):
     range: Optional[list[int | float]] = None
 
     @staticmethod
-    def from_json(json_fp: Path) -> list["DatasetStat"]:
+    def from_json(json_fp: Path | S3Path) -> list["DatasetStat"]:
         """Read list of DatasetStats from JSON file
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp (Path | S3Path): JSON file path
 
         Returns:
             list[DatasetStats]: List of DatasetStat
         """
 
-        with open(json_fp) as json_file:
-            stats_json = json.load(json_file)
+        if isinstance(json_fp, S3Path):
+            with json_fp.open(encoding="utf-8") as json_file:
+                stats_json = json.load(json_file)
+        else:
+            with open(json_fp, encoding="utf-8") as json_file:
+                stats_json = json.load(json_file)
 
         return [DatasetStat.model_validate(stat) for stat in stats_json]

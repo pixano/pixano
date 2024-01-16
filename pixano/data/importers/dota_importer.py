@@ -19,7 +19,7 @@ import shortuuid
 from PIL import Image as PILImage
 
 from pixano.core import BBox, Image
-from pixano.data.dataset import DatasetCategory, DatasetTable
+from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
 from pixano.utils import dota_ids, image_to_thumbnail, natural_key
 
@@ -48,51 +48,17 @@ class DOTAImporter(Importer):
             splits (list[str]): Dataset splits
         """
 
-        tables: dict[str, list[DatasetTable]] = {
-            "main": [
-                DatasetTable(
-                    name="db",
-                    fields={
-                        "id": "str",
-                        "views": "[str]",
-                        "split": "str",
-                    },
-                )
-            ],
-            "media": [
-                DatasetTable(
-                    name="image",
-                    fields={
-                        "id": "str",
-                        "image": "image",
-                    },
-                )
-            ],
-            "objects": [
-                DatasetTable(
-                    name="objects",
-                    fields={
-                        "id": "str",
-                        "item_id": "str",
-                        "view_id": "str",
-                        "bbox": "bbox",
-                        "category_id": "int",
-                        "category_name": "str",
-                    },
-                    source="Ground Truth",
-                )
-            ],
-        }
+        # Create tables
+        tables = super().create_tables(
+            media_fields={"image": "image"},
+            object_fields={
+                "bbox": "bbox",
+                "category_id": "int",
+                "category_name": "str",
+            },
+        )
 
-        # Check input directories
-        self.input_dirs = input_dirs
-        for source_path in self.input_dirs.values():
-            if not source_path.exists():
-                raise FileNotFoundError(f"{source_path} does not exist.")
-            if not any(source_path.iterdir()):
-                raise FileNotFoundError(f"{source_path} is empty.")
-
-        # Get DOTA categories
+        # Create categories
         categories = [
             DatasetCategory(name="plane", id=1),
             DatasetCategory(name="ship", id=2),
@@ -115,6 +81,7 @@ class DOTAImporter(Importer):
         ]
 
         # Initialize Importer
+        self.input_dirs = input_dirs
         super().__init__(name, description, tables, splits, categories)
 
     def import_rows(self) -> Iterator:
@@ -137,7 +104,7 @@ class DOTAImporter(Importer):
                     / "hbb"
                     / im_path.name.replace("png", "txt")
                 )
-                with open(im_anns_file) as f:
+                with open(im_anns_file, encoding="utf-8") as f:
                     im_anns = [line.strip().split() for line in f]
 
                 # Allow DOTA largest images

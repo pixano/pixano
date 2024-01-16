@@ -14,32 +14,19 @@
    * http://www.cecill.info
    */
 
-  import { type ItemObject, Checkbox } from "@pixano/core/src";
-
-  import { objectSetup } from "../../lib/settings/objectValidationSchemas";
+  import { Checkbox } from "@pixano/core/src";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
 
   import FeatureTextInput from "./TextInputFeature.svelte";
   import ListFeature from "./ListInputFeature.svelte";
 
-  export let features: ItemObject["features"];
-  export let isEditing: boolean;
-  export let saveInputChange: (value: string | boolean, propertyName: string) => void;
+  export let features: Feature[];
 
-  $: featuresWithValue = objectSetup
-    .map((property) => {
-      const value = features[property.name]?.value;
-      return {
-        ...property,
-        label: property.label,
-        name: property.name,
-        value,
-      };
-    })
-    .filter(Boolean) as Feature[];
+  export let isEditing: boolean;
+  export let saveInputChange: (value: string | boolean | number, propertyName: string) => void;
 </script>
 
-{#each featuresWithValue as feature}
+{#each features as feature}
   <div class="mt-1">
     {#if isEditing || feature.value !== undefined}
       <p class="font-medium pb-1">{feature.label}</p>
@@ -55,7 +42,7 @@
       <ListFeature
         handleInputChange={(value, name) => saveInputChange(value, name)}
         {isEditing}
-        listFeature={{ value: feature.value, name: feature.name }}
+        listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
       />
     {/if}
     {#if feature.type === "text" || feature.type === "number"}

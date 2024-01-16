@@ -67,7 +67,7 @@ class ItemFeature(BaseModel):
                     features[field.name] = ItemFeature(
                         name=field.name,
                         dtype="text",
-                        value=item[field.name],
+                        value=str(item[field.name]),
                     )
 
                 # Boolean fields
@@ -75,7 +75,7 @@ class ItemFeature(BaseModel):
                     features[field.name] = ItemFeature(
                         name=field.name,
                         dtype="boolean",
-                        value=item[field.name],
+                        value=bool(item[field.name]),
                     )
 
         # Additional distance field in case of semantic search

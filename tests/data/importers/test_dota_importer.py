@@ -22,7 +22,11 @@ from pixano.data import DOTAImporter
 
 
 class DOTAImporterTestCase(unittest.TestCase):
+    """DOTAImporter test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         input_dirs = {
             "image": Path("tests/assets/coco_dataset/image"),
             "objects": Path("tests/assets/coco_dataset/objects"),
@@ -35,6 +39,8 @@ class DOTAImporterTestCase(unittest.TestCase):
         )
 
     def test_import_dataset(self):
+        """Test DOTAImporter import_dataset method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
             import_dir = Path(temp_dir) / "dota"

@@ -18,11 +18,19 @@ from pixano.data import Settings
 
 
 class SettingsTestCase(unittest.TestCase):
+    """Settings test case"""
+
     def test_init(self):
-        custom_path = Path("test")
+        """Test Settings init method"""
 
         default_settings = Settings()
-        custom_settings = Settings(data_dir=custom_path)
+        custom_settings = Settings(library_dir="my_custom_library")
 
-        self.assertEqual(default_settings.data_dir, Path.cwd() / "library")
-        self.assertEqual(custom_settings.data_dir, custom_path)
+        self.assertEqual(
+            default_settings.data_dir.absolute(),
+            (Path.cwd() / "library").absolute(),
+        )
+        self.assertEqual(
+            custom_settings.data_dir.absolute(),
+            (Path.cwd() / "my_custom_library").absolute(),
+        )

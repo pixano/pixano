@@ -134,6 +134,7 @@ export interface ItemFeature {
   name: string;
   dtype: string;
   value: number | string | boolean | DatasetStat;
+  required?: boolean;
 }
 
 // UI DATA

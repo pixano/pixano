@@ -22,9 +22,11 @@ import type {
   DatasetItem,
   Mask,
   BBox,
+  ItemFeature,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
+import type { ModelSelection } from "../types/imageWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
@@ -32,10 +34,15 @@ export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<{
   features: DatasetItem["features"];
+  itemFeatures: Record<string, ItemFeature>;
   views: DatasetItem["views"];
   id: DatasetItem["id"];
 }>();
 export const canSave = writable<boolean>(false);
+export const modelsStore = writable<ModelSelection>({
+  currentModalOpen: "none",
+  selectedModelName: "",
+});
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {

@@ -15,36 +15,44 @@
    */
 
   import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
-  import type { FeatureValues, ItemFeature, ItemObject, Shape } from "@pixano/core";
+  import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
+  import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import {
-    userObjectSetup as objectSetup,
-    objectValidationSchema,
+    createObjectInputsSchema,
+    createSchemaFromFeatures,
   } from "../../lib/settings/objectValidationSchemas";
   import { GROUND_TRUTH } from "../../lib/constants";
+  import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
+  import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
+  import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
 
   let shape: Shape;
   let isFormValid: boolean = false;
 
   let objectProperties: { [key: string]: FeatureValues } = {};
+  let formInputs: CreateObjectInputs = [];
+  let objectValidationSchema: CreateObjectSchema;
+
+  itemMetas.subscribe((metas) => {
+    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
+      (feature) => ({
+        ...feature,
+        label: feature.name,
+        required: true,
+        type: feature.dtype,
+      }),
+    );
+    objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
+    formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
+  });
 
   newShape.subscribe((value) => {
     if (value) shape = value;
   });
 
   const handleFormSubmit = () => {
-    const features = Object.entries(objectProperties).reduce(
-      (acc, [key, value]) => {
-        acc[key] = {
-          name: key,
-          dtype: objectSetup.find((o) => o.name === key)?.type as ItemFeature["dtype"],
-          value,
-        };
-        return acc;
-      },
-      {} as Record<string, ItemFeature>,
-    );
+    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     itemObjects.update((oldObjects) => {
       if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;
@@ -91,7 +99,6 @@
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
   };
-
   $: {
     const result = objectValidationSchema.safeParse(objectProperties);
     isFormValid = result.success;
@@ -101,7 +108,7 @@
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Sauvegarde {shape.type}</p>
-    {#each objectSetup as feature, i}
+    {#each formInputs as feature, i}
       {#if feature.type === "boolean"}
         <div class="flex gap-4 items-center">
           <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />

@@ -11,8 +11,10 @@
 #
 # http://www.cecill.info
 
-from pixano.apps.explorer.serve import Explorer
+from pixano.app.main import create_app
+from pixano.app.serve import App
 
 __all__ = [
-    "Explorer",
+    "App",
+    "create_app",
 ]

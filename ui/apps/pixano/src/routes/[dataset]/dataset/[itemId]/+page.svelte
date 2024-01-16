@@ -55,10 +55,10 @@
   }
 </script>
 
-{#if selectedItem}
+{#if selectedItem && selectedDataset}
   <ImageWorkspace
     {selectedItem}
-    {selectedDataset}
+    currentDatasetId={selectedDataset.id}
     {models}
     {handleSaveItem}
     isLoading={isLoadingNewItem}

@@ -22,7 +22,11 @@ from pixano.data import COCOImporter
 
 
 class COCOImporterTestCase(unittest.TestCase):
+    """COCOImporter test case"""
+
     def setUp(self):
+        """Tests setup"""
+
         input_dirs = {
             "image": Path("tests/assets/coco_dataset/image"),
             "objects": Path("tests/assets/coco_dataset"),
@@ -35,6 +39,8 @@ class COCOImporterTestCase(unittest.TestCase):
         )
 
     def test_import_dataset(self):
+        """Test COCOImporter import_dataset method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
             import_dir = Path(temp_dir) / "coco"
