@@ -100,12 +100,17 @@
       polygonShape.simplifiedPoints = [
         [...polygonShape.simplifiedPoints[0], polygonShape.simplifiedPoints[0][0]],
       ];
+      const counts = runLengthEncode(
+        polygonShape.simplifiedSvg,
+        images[viewId].width,
+        images[viewId].height,
+      );
       newShape = {
         status: "inProgress",
         masksImageSVG: [],
         rle: {
-          counts: [],
-          size: [images[viewId].width, images[viewId].height],
+          counts,
+          size: [images[viewId].height, images[viewId].width],
         },
         type: "mask",
         viewId: viewId,
