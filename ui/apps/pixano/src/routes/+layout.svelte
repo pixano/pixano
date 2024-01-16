@@ -12,7 +12,7 @@
   import "./styles.css";
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
 
-  let datasets: DatasetInfo[] = [];
+  let datasets: DatasetInfo[];
   let models: Array<string>;
   let pageId: string | null;
   let currentDatasetName: string;
@@ -23,13 +23,19 @@
   }
 
   async function handleGetDatasets() {
-    const loadedDatasets = await api.getDatasets();
-    datasets = loadedDatasets ? loadedDatasets : [];
-
-    if (loadedDatasets?.length > 0) {
+    try {
+      const loadedDatasets = await api.getDatasets();
       datasetsStore.set(loadedDatasets);
+    } catch (err) {
+      console.error(err);
     }
   }
+
+  datasetsStore.subscribe((value) => {
+    if (value) {
+      datasets = value;
+    }
+  });
 
   onMount(async () => {
     await handleGetDatasets();
