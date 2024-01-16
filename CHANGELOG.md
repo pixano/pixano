@@ -202,7 +202,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
-[0.5.0rc1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0rc1
+[0.5.0b1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0b1
 [0.4.1]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/pixano/pixano/compare/v0.3.1...v0.3.2
