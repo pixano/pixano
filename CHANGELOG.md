@@ -4,7 +4,7 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
-## [0.5.0rc1] - 2024-01-15
+## [0.5.0b1] - 2024-01-19
 
 ### Added
 
