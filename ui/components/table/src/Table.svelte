@@ -15,7 +15,7 @@
    */
 
   // Imports
-  import { createEventDispatcher } from "svelte/internal";
+  import { createEventDispatcher } from "svelte";
   import TableCell from "./TableCell.svelte";
   import { icons } from "@pixano/core";
 
