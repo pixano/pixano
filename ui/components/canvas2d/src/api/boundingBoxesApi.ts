@@ -1,4 +1,5 @@
 import Konva from "konva";
+import simplify from "simplify-js";
 import type { Mask, BBox, SelectionTool } from "@pixano/core";
 import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 
@@ -223,6 +224,7 @@ export function addMask(
       ctx.fillStrokeShape(shape);
     },
   });
+
   maskGroup.add(maskKonva);
 }
 
@@ -264,14 +266,15 @@ export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool
 
 export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetails[] {
   const mappedMasks: PolygonGroupDetails[] = masks
-    ?.filter((mask) => mask.isManual)
+    ?.filter((mask) => mask)
     .map((mask) => {
-      const points = mask.rle.counts;
+      const points = mask.coordinates || mask.rle.counts;
       return {
         visible: mask.visible,
         editing: mask.editing,
         id: mask.id,
         status: mask?.id ? "created" : "creating",
+        svg: mask?.svg,
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
             acc.push({
@@ -283,11 +286,19 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
           return acc;
         }, [] as PolygonGroupPoint[]),
       };
+    })
+    .map((mask) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+      const simplifiedPoints = simplify(mask.points, 4, false);
+      // console.log({ mask, simplifiedPoints });
+      mask.points = simplifiedPoints as PolygonGroupPoint[];
+      return mask as PolygonGroupDetails;
     });
   const emptyMask: PolygonGroupDetails = {
     visible: true,
     status: "creating",
     points: [],
+    svg: [],
     editing: false,
     id: "creating",
   };

@@ -146,7 +146,6 @@ export class SAM implements InteractiveImageSegmenter {
     this.previousMask = results.low_res_masks;
     const rleMask = maskDataToFortranArrayToRle(results.masks.data, imageHeight, imageWidth);
     const maskPolygons = generatePolygonSegments(rleMask, imageHeight);
-
     const masksSVG = convertSegmentsToSVG(maskPolygons);
     return {
       masksImageSVG: masksSVG,

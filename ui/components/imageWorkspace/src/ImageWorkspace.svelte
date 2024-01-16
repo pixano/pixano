@@ -82,7 +82,6 @@
     itemMetas.subscribe((value) => {
       savedItem.features = value.features;
     });
-    console.log({ savedItem });
     handleSaveItem(savedItem);
     canSave.set(false);
   };

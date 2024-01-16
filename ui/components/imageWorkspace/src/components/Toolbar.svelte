@@ -32,6 +32,7 @@
     rectangleTool,
     addSmartPointTool,
     removeSmartPointTool,
+    polygoneTool,
   } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -90,7 +91,11 @@
     >
       <Square />
     </IconButton>
-    <IconButton tooltipContent="Create a polygon" selected={selectedTool?.type === "POLYGON"}>
+    <IconButton
+      tooltipContent="Create a polygon"
+      on:click={() => selectTool(polygoneTool)}
+      selected={selectedTool?.type === "POLYGON"}
+    >
       <Share2 />
     </IconButton>
     <IconButton tooltipContent="TODO">

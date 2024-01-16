@@ -36,7 +36,10 @@
   $: {
     newShapeStore.set(newShape);
     if (newShape?.status === "editingMask") {
-      itemObjects.update((oldObjects) => updateManualMaskObject(oldObjects, newShape));
+      itemObjects.update((oldObjects) => {
+        const newMask = updateManualMaskObject(oldObjects, newShape);
+        return newMask;
+      });
     }
   }
 

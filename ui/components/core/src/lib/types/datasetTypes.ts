@@ -149,6 +149,7 @@ export interface Mask {
   editing: boolean;
   opacity: number;
   isManual?: boolean;
+  coordinates?: number[];
 }
 
 export type MaskSVG = string[];

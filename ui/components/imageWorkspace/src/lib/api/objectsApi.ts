@@ -1,5 +1,5 @@
 import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
-import { mask_utils } from "@pixano/models";
+import { mask_utils } from "@pixano/models/src";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
@@ -34,6 +34,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
   const size = obj.mask.size;
 
   const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+
   const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
   return {
@@ -123,7 +124,7 @@ export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
         ...object,
         mask: {
           ...object.mask,
-          counts: newShape.points,
+          counts: newShape.counts,
         },
       };
     }

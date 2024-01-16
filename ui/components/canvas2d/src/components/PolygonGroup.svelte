@@ -17,10 +17,17 @@
   // Imports
 
   import Konva from "konva";
-  import { Group, Line, Circle } from "svelte-konva";
+  import { Group, Circle, Shape as KonvaShape, Path } from "svelte-konva";
 
   import type { DatasetItem, Shape } from "@pixano/core";
-  import type { PolygonGroupDetails } from "../lib/types/canvas2dTypes";
+  import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
+  import {
+    sceneFunc,
+    hexToRGBA,
+    convertPointToSvg,
+    parseSvgPath,
+    runLengthEncode,
+  } from "../api/maskApi";
 
   // Exports
   export let viewId: string;
@@ -33,49 +40,77 @@
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
+  let polygonShape: {
+    simplifiedSvg: string[];
+    simplifiedPoints: PolygonGroupPoint[][];
+  } = {
+    simplifiedSvg: polygonDetails.svg,
+    simplifiedPoints: polygonDetails.svg.reduce(
+      (acc, val) => [...acc, parseSvgPath(val)],
+      [] as PolygonGroupPoint[][],
+    ),
+  };
 
   $: canEdit = polygonDetails.status === "creating" || polygonDetails.editing;
 
-  $: flatPolygonPoints = polygonDetails.points.reduce(
-    (acc, val) => [...acc, val.x, val.y],
-    [] as number[],
-  );
-
   $: {
-    if (polygonDetails.points.length === 0) {
-      isCurrentPolygonClosed = false;
+    if (polygonDetails.id !== "creating") {
+      polygonShape.simplifiedPoints = polygonDetails.svg.reduce(
+        (acc, val) => [...acc, parseSvgPath(val)],
+        [] as PolygonGroupPoint[][],
+      );
+    } else {
+      polygonShape.simplifiedPoints = [polygonDetails.points];
     }
   }
 
-  function handlePolygonPointsDragMove(id: number) {
-    const pos = stage.findOne(`#dot-${id}`).position();
-    polygonDetails.points = polygonDetails.points.map((point) => {
-      if (point.id === id) {
-        return { ...point, x: pos.x, y: pos.y };
-      }
-      return point;
-    });
+  $: polygonShape.simplifiedSvg = polygonShape.simplifiedPoints.map((point) =>
+    convertPointToSvg(point),
+  );
+
+  function handlePolygonPointsDragMove(id: number, i: number) {
+    const pos = stage.findOne(`#dot-${i}-${id}`).position();
+    const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
+      pi === i
+        ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
+        : points,
+    );
+    polygonShape.simplifiedPoints = newSimplifiedPoints;
   }
 
   function handlePolygonPointsDragEnd() {
+    //const counts = runLengthEncode(polygonDetails.svg); //seul simplifiedSvg est "drag" (?) donc on utilise simplifiedSvg, pas svg
+    const counts = runLengthEncode(
+      polygonShape.simplifiedSvg,
+      images[viewId].width,
+      images[viewId].height,
+    );
+
     if (polygonDetails.editing) {
       newShape = {
         status: "editingMask",
         maskId: polygonDetails.id,
-        points: flatPolygonPoints,
+        counts,
       };
     }
   }
 
   function handlePolygonPointsClick(i: number, viewId: string) {
     if (i === 0) {
-      isCurrentPolygonClosed = true;
+      polygonShape.simplifiedPoints = [
+        [...polygonShape.simplifiedPoints[0], polygonShape.simplifiedPoints[0][0]],
+      ];
+      const counts = runLengthEncode(
+        polygonShape.simplifiedSvg,
+        images[viewId].width,
+        images[viewId].height,
+      );
       newShape = {
         status: "inProgress",
         masksImageSVG: [],
         rle: {
-          counts: flatPolygonPoints,
-          size: [images[viewId].width, images[viewId].height],
+          counts,
+          size: [images[viewId].height, images[viewId].width],
         },
         type: "mask",
         viewId: viewId,
@@ -87,43 +122,63 @@
     }
   }
 
-  const hexToRGBA = (hex: string, alpha: number) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  };
+  function updateCircleRadius(id: number, i: number, radius: number) {
+    const point: Konva.Circle = stage.findOne(`#dot-${i}-${id}`);
+    point.radius(radius);
+  }
 </script>
 
 <Group config={{ id: "polygon", draggable: canEdit, visible: polygonDetails.visible }}>
-  {#if !!polygonDetails.points.length}
-    <Line
+  {#if canEdit}
+    {#if polygonDetails.id === "creating"}
+      <Path
+        config={{
+          data: polygonShape.simplifiedSvg[0],
+          stroke: "hsl(316deg 60% 29.41%)",
+          strokeWidth: 2,
+          fill: "rgb(0,128,0,0.5)",
+        }}
+      />
+    {/if}
+    <KonvaShape
       config={{
-        points: flatPolygonPoints,
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
+        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
+        strokeWidth: 1,
+        closed: isCurrentPolygonClosed,
+        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
+      }}
+    />
+    {#each polygonShape.simplifiedPoints as shape, i}
+      {#each shape as point, pi}
+        <Circle
+          on:click={() => handlePolygonPointsClick(pi, viewId)}
+          on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
+          on:dragend={handlePolygonPointsDragEnd}
+          on:mouseover={() => point.id === 0 && updateCircleRadius(point.id, i, 4)}
+          on:mouseleave={() => updateCircleRadius(point.id, i, 2)}
+          config={{
+            x: point.x,
+            y: point.y,
+            radius: 2,
+            fill: "rgb(0,128,0)",
+            stroke: "white",
+            strokeWidth: 1,
+            id: `dot-${i}-${point.id}`,
+            draggable: true,
+          }}
+        />
+      {/each}
+    {/each}
+  {:else}
+    <KonvaShape
+      config={{
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
         stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
         strokeWidth: polygonDetails.status === "created" ? 1 : 3,
         closed: isCurrentPolygonClosed,
         fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
       }}
     />
-  {/if}
-  {#if canEdit}
-    {#each polygonDetails.points as point, i}
-      <Circle
-        on:click={() => handlePolygonPointsClick(i, viewId)}
-        on:dragmove={() => handlePolygonPointsDragMove(point.id)}
-        on:dragend={handlePolygonPointsDragEnd}
-        config={{
-          x: point.x,
-          y: point.y,
-          radius: 5,
-          fill: "rgb(0,128,0)",
-          stroke: "white",
-          strokeWidth: 2,
-          id: `dot-${point.id}`,
-          draggable: true,
-        }}
-      />
-    {/each}
   {/if}
 </Group>
