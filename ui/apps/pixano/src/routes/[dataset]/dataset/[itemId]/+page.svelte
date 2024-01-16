@@ -55,7 +55,7 @@
   }
 </script>
 
-{#if selectedItem}
+{#if selectedItem && selectedDataset}
   <ImageWorkspace
     {selectedItem}
     currentDatasetId={selectedDataset.id}

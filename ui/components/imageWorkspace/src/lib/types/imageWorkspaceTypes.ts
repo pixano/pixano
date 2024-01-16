@@ -4,18 +4,27 @@ import * as ort from "onnxruntime-web";
 import type { ItemObject } from "@pixano/core";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
-import type { listInputSchema, otherInputSchema } from "../settings/objectValidationSchemas";
-
-export type ListInput = z.infer<typeof listInputSchema>;
-
-export type OtherInput = z.infer<typeof otherInputSchema>;
+import type {
+  createObjectInputsSchema,
+  listInputSchema,
+  otherInputSchema,
+} from "../settings/objectValidationSchemas";
 
 export type ObjectsSortedByModelType = {
   [GROUND_TRUTH]: ItemObject[];
   [MODEL_RUN]: { modelName: string; objects: ItemObject[] }[];
 };
 
-type CheckboxFeature = OtherInput & {
+export type ListInput = z.infer<typeof listInputSchema>;
+
+export type OtherInput = z.infer<typeof otherInputSchema>;
+
+export type CreateObjectInputs = z.infer<typeof createObjectInputsSchema>;
+
+export type CreateObjectSchemaDefinition = Record<string, z.ZodTypeAny>;
+export type CreateObjectSchema = z.ZodObject<CreateObjectSchemaDefinition>;
+
+export type CheckboxFeature = OtherInput & {
   type: "boolean";
   value: boolean;
 };

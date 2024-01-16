@@ -17,21 +17,17 @@
   import { Combobox } from "@pixano/core/src";
 
   import type { ListFeature } from "../../lib/types/imageWorkspaceTypes";
-  import { objectSetup } from "../../lib/settings/objectValidationSchemas";
-  import type { ListInput } from "../../lib/types/imageWorkspaceTypes";
 
-  export let listFeature: Pick<ListFeature, "name" | "value">;
+  export let listFeature: Pick<ListFeature, "name" | "value" | "options">;
   export let isEditing: boolean;
   export let handleInputChange: (value: string, propertyName: string) => void;
-
-  let currentObject = objectSetup.find((o) => o.name === listFeature.name) as ListInput;
 </script>
 
 {#if isEditing}
   <Combobox
-    placeholder={`Select a ${currentObject.name}`}
-    listItems={currentObject.options}
-    saveValue={(value) => handleInputChange(value, currentObject.name)}
+    placeholder={`Select a ${listFeature.name}`}
+    listItems={listFeature.options}
+    saveValue={(value) => handleInputChange(value, listFeature.name)}
     value={listFeature.value}
   />
 {:else if listFeature.value}

@@ -20,11 +20,14 @@
 
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import { createFeature } from "../../lib/api/featuresApi";
 
   import ItemFeatures from "../Features/FeatureInputs.svelte";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
+
+  $: features = createFeature(itemObject.features);
 
   let color: string;
   $: {
@@ -64,7 +67,7 @@
   $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
-  const saveInputChange = (value: string | boolean, propertyName: string) => {
+  const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     itemObjects.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object.id === itemObject.id) {
@@ -141,7 +144,7 @@
         </div>
       </div>
       <div>
-        <ItemFeatures features={itemObject.features} {isEditing} {saveInputChange} />
+        <ItemFeatures {features} {isEditing} {saveInputChange} />
       </div>
     </div>
   </div>

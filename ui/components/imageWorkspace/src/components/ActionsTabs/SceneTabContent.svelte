@@ -19,8 +19,11 @@
   import { IconButton } from "@pixano/core/src";
 
   import { canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import SceneFeatures from "../Features/FeatureInputs.svelte";
-  import type { DatasetItem } from "@pixano/core";
+  import FeatureInputs from "../Features/FeatureInputs.svelte";
+
+  import { createFeature } from "../../lib/api/featuresApi";
+  import type { Feature } from "../../lib/types/imageWorkspaceTypes";
+  import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ImageMeta = {
     width: number;
@@ -29,25 +32,28 @@
     id: string;
   };
 
-  let features: DatasetItem["features"];
+  let features: Feature[];
   let imageMeta: ImageMeta[] = [];
   let isEditing: boolean = false;
 
   itemMetas.subscribe((metas) => {
-    imageMeta = Object.values(metas.views).map((view) => ({
+    imageMeta = Object.values(metas.views || {}).map((view) => ({
       width: view.features.width.value as number,
       height: view.features.height.value as number,
       format: view.uri.split(".").at(-1) as string,
       id: view.id,
     }));
-    features = metas.features;
+    const sceneFeatures = Object.values(metas.features).length
+      ? metas.features
+      : defaultSceneFeatures;
+    features = createFeature(sceneFeatures);
   });
 
   const handleEditIconClick = () => {
     isEditing = !isEditing;
   };
 
-  const handleTextInputChange = (value: string | boolean, propertyName: string) => {
+  const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
       newMetas.features = {
@@ -55,8 +61,6 @@
         [propertyName]: {
           ...newMetas.features[propertyName],
           value,
-          dtype: typeof value,
-          name: propertyName,
         },
       };
       return newMetas;
@@ -72,7 +76,7 @@
       ><Pencil class="h-4" /></IconButton
     >
   </h3>
-  <SceneFeatures {features} {isEditing} saveInputChange={handleTextInputChange} />
+  <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
 </div>
 {#each imageMeta as meta}
   <div class="p-4">

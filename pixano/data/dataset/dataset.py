@@ -563,52 +563,59 @@ class Dataset(BaseModel):
         # Load dataset tables
         ds_tables = self.open_tables()
 
+        # Force feature types
+        type_dict = {"text": str, "number": float, "boolean": bool}
+        for feature in item.features.values():
+            item.features[feature.name].value = type_dict[feature.dtype](feature.value)
+
         # Save item features if exists
         if len(item.features) > 0:
-            new_columns = [
+            # Add new features to table
+            new_features = [
                 feat
-                for feat in item.features
-                if feat not in ds_tables["main"]["db"].schema.names
+                for feat in item.features.values()
+                if feat.name not in ds_tables["main"]["db"].schema.names
             ]
-            if len(new_columns) > 0:
+            if len(new_features) > 0:
                 main_table_ds = ds_tables["main"]["db"].to_lance()
                 feat_table = main_table_ds.to_table(columns=["id"])
-
-                # Add new feats field in main table
-                for feat in new_columns:
-                    # detect data type
-                    if item.features[feat].dtype == "number":
+                for feat in new_features:
+                    # Convert feature type
+                    if feat.dtype == "number":
                         if isinstance(item.features[feat].value, int):
                             feat_type = {
-                                "info": "int",
-                                "pa": pa.integer(),
+                                "python": "int",
+                                "pyarrow": pa.integer(),
                                 "empty_val": None,
                             }
                         elif isinstance(item.features[feat].value, float):
                             feat_type = {
-                                "info": "float",
-                                "pa": pa.float32(),
+                                "python": "float",
+                                "pyarrow": pa.float32(),
                                 "empty_val": None,
                             }
-                    elif item.features[feat].dtype == "boolean":
+                    elif feat.dtype == "boolean":
                         feat_type = {
-                            "info": "bool",
-                            "pa": pa.bool_(),
-                            "empty_val": False,  # None is not supported for boolean yet by Lance, so we put False
+                            "python": "bool",
+                            "pyarrow": pa.bool_(),
+                            "empty_val": False,  # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
                         }
-                    else:
-                        feat_type = {"info": "str", "pa": pa.string(), "empty_val": ""}
-
-                    # Create empty feat column
+                    elif feat.dtype == "text":
+                        feat_type = {
+                            "python": "str",
+                            "pyarrow": pa.string(),
+                            "empty_val": "",
+                        }
+                    # Create feature column
                     feat_array = pa.array(
                         [feat_type["empty_val"]] * len(ds_tables["main"]["db"]),
-                        type=feat_type["pa"],
+                        type=feat_type["pyarrow"],
                     )
                     feat_table = feat_table.append_column(
-                        pa.field(feat, feat_type["pa"]), feat_array
+                        pa.field(feat, feat_type["pyarrow"]), feat_array
                     )
                     # Update DatasetInfo
-                    self.info.tables["main"][0].fields[feat] = feat_type["info"]
+                    self.info.tables["main"][0].fields[feat] = feat_type["python"]
 
                 # Merge with main table
                 main_table_ds.merge(feat_table, "id")
@@ -659,7 +666,7 @@ class Dataset(BaseModel):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_name": "str",
+                        "category": "str",
                     },
                 )
                 self.create_table(
