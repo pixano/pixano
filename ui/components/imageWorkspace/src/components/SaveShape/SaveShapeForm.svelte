@@ -25,6 +25,7 @@
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
+  import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
 
   let shape: Shape;
   let isFormValid: boolean = false;
@@ -34,12 +35,14 @@
   let objectValidationSchema: CreateObjectSchema;
 
   itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.itemFeatures || {}).map((feature) => ({
-      ...feature,
-      label: feature.name,
-      required: true,
-      type: feature.dtype,
-    }));
+    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
+      (feature) => ({
+        ...feature,
+        label: feature.name,
+        required: true,
+        type: feature.dtype,
+      }),
+    );
     objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
     formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
   });

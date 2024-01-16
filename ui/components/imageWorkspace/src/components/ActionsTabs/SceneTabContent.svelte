@@ -23,6 +23,7 @@
 
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
+  import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ImageMeta = {
     width: number;
@@ -42,7 +43,10 @@
       format: view.uri.split(".").at(-1) as string,
       id: view.id,
     }));
-    features = createFeature(metas.features);
+    const sceneFeatures = Object.values(metas.features).length
+      ? metas.features
+      : defaultSceneFeatures;
+    features = createFeature(sceneFeatures);
   });
 
   const handleEditIconClick = () => {
