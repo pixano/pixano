@@ -8,6 +8,7 @@
   import MainHeader from "../components/layout/MainHeader.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
   import { datasetsStore, modelsStore, datasetTableStore } from "../lib/stores/datasetStores";
+  import pixanoFavicon from "../assets/favicon.ico";
 
   import "./styles.css";
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
@@ -74,6 +75,10 @@
       );
   });
 </script>
+
+<svelte:head>
+  <link rel="icon" type="image/svg" href={pixanoFavicon} />
+</svelte:head>
 
 <div class="app">
   {#if pageId === "/"}
