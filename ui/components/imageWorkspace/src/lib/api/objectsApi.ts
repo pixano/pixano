@@ -120,7 +120,6 @@ export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
   old.map((object) => {
     if (newShape?.status !== "editingMask") return object;
     if (object.id === newShape.maskId && object.mask) {
-      console.log("updateManualMaskObject", newShape);
       return {
         ...object,
         mask: {
