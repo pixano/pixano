@@ -25,17 +25,12 @@
   async function handleGetDatasets() {
     try {
       const loadedDatasets = await api.getDatasets();
+      datasets = loadedDatasets;
       datasetsStore.set(loadedDatasets);
     } catch (err) {
       console.error(err);
     }
   }
-
-  datasetsStore.subscribe((value) => {
-    if (value) {
-      datasets = value;
-    }
-  });
 
   onMount(async () => {
     await handleGetDatasets();
