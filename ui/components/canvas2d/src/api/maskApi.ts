@@ -85,9 +85,7 @@ function svgPathToBitmap(svgPath, width: number, height: number): number[] {
   // Convert the image data to a binary bitmap
   const bitmap: number[] = [];
   for (let i = 0; i < imageData.length; i += 4) {
-    // Convert RGBA to binary (considering only the red(??? no, alpha it seems) channel)
-    //console.log("xx", imageData[i],imageData[i+1],imageData[i+2],imageData[i+3]) //test channel
-    //ok it's encoded in i+3 (alpha channel??)
+    // Convert RGBA to binary (considering only the alpha channel)
     bitmap.push(imageData[i + 3] === 0 ? 0 : 1);
   }
   return bitmap;
@@ -109,7 +107,21 @@ function rleEncode(bitmap): number[] {
   return counts;
 }
 
+function reshapeArray(array: number[], rows: number, cols: number): number[] {
+  if (array.length !== rows * cols) {
+    throw new Error("Can't reshape with length != cols*rows");
+  }
+  const reshapedArray: number[] = [];
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < rows; row++) {
+      reshapedArray.push(array[row * cols + col]);
+    }
+  }
+  return reshapedArray;
+}
+
 export function runLengthEncode(svg: MaskSVG, imageWidth: number, imageHeight: number): number[] {
-  const bitmap = svgPathToBitmap(svg, imageWidth, imageHeight);
+  let bitmap = svgPathToBitmap(svg, imageWidth, imageHeight);
+  bitmap = reshapeArray(bitmap, imageHeight, imageWidth);
   return rleEncode(bitmap);
 }
