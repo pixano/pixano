@@ -20,7 +20,7 @@ from pixano.data.dataset import (
     DatasetTable,
 )
 from pixano.data.exporters import COCOExporter, Exporter
-from pixano.data.fields import Fields
+from pixano.data.fields import Fields, field_to_pyarrow, field_to_python
 from pixano.data.importers import COCOImporter, DOTAImporter, ImageImporter, Importer
 from pixano.data.item import ItemEmbedding, ItemFeature, ItemObject, ItemView
 from pixano.data.settings import Settings, get_settings
@@ -37,6 +37,8 @@ __all__ = [
     "ItemObject",
     "ItemView",
     "Fields",
+    "field_to_pyarrow",
+    "field_to_python",
     "Settings",
     "get_settings",
     "Exporter",

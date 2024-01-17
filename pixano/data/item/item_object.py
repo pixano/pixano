@@ -13,10 +13,12 @@
 
 from typing import Any, Optional
 
+import lancedb
 import pyarrow as pa
 from pydantic import BaseModel
 
 from pixano.core import BBox, CompressedRLE
+from pixano.data.fields import field_to_python
 from pixano.data.item.item_feature import ItemFeature
 
 
@@ -200,8 +202,49 @@ class ItemObject(BaseModel):
 
         # Features
         if self.features:
-            type_dict = {"str": str, "int": int, "float": float, "bool": bool}
-            for feature in self.features.values():
-                pyarrow_object[feature.name] = type_dict[feature.dtype](feature.value)
+            for feat in self.features.values():
+                pyarrow_object[feat.name] = (
+                    field_to_python(feat.dtype)(feat.value)
+                    if feat.value is not None
+                    else None
+                )
+
+        # Check feature types
+        for feat in self.features.values():
+            if pyarrow_object[feat.name] is not None and not isinstance(
+                pyarrow_object[feat.name], field_to_python(feat.dtype)
+            ):
+                raise ValueError(
+                    f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
+                )
 
         return pyarrow_object
+
+    def add_or_update(
+        self,
+        ds_table: lancedb.db.LanceTable,
+    ):
+        """Add or update item object
+
+        Args:
+            ds_table (lancedb.db.LanceTable): Object table
+        """
+
+        # Convert object to PyArrow
+        pyarrow_obj = self.to_pyarrow()
+        table_obj = pa.Table.from_pylist(
+            [pyarrow_obj],
+            schema=ds_table.schema,
+        )
+
+        # Delete object (if it exists)
+        scanner = ds_table.to_lance().scanner(filter=f"id in ('{self.id}')")
+        existing_obj = scanner.to_table()
+        if existing_obj.num_rows > 0:
+            ds_table.delete(f"id in ('{self.id}')")
+
+        # Add object
+        ds_table.add(table_obj, mode="append")
+
+        # Clear change history to prevent dataset from becoming too large
+        ds_table.to_lance().cleanup_old_versions()

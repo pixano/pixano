@@ -121,14 +121,16 @@ def convert_field(
 
 
 def create_pyarrow_type(
-    struct_type: pa.StructType, name: str, python_type: Type
+    struct_type: pa.StructType,
+    name: str,
+    python_type: type,
 ) -> pa.ExtensionType:
     """Create PyArrow ExtensionType for Pixano custom type
 
     Args:
         struct_type (pa.StructType): Pixano custom type as PyArrow Struct
         name (str): Pixano custom type name
-        python_type (Type): Pixano custom type Python type
+        python_type (type): Pixano custom type Python type
 
     Returns:
         pa.ExtensionType: PyArrow ExtensionType

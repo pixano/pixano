@@ -12,14 +12,14 @@
 # http://www.cecill.info
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import lancedb
 import pyarrow as pa
 from pydantic import BaseModel
 
 from pixano.data.dataset.dataset_info import DatasetInfo
-from pixano.data.fields import Fields
+from pixano.data.fields import Fields, field_to_python
 from pixano.data.item import ItemEmbedding, ItemFeature, ItemObject, ItemView
 
 
@@ -122,38 +122,59 @@ class DatasetItem(BaseModel):
 
         return item
 
-    def add_or_update_object(
-        self,
-        ds_table: lancedb.db.LanceTable,
-        obj: ItemObject,
-    ):
-        """Add or update object in dataset item
+    def to_pyarrow(self) -> dict[str, Any]:
+        """Return DatasetItem in PyArrow format
 
-        Args:
-            ds_table (lancedb.db.LanceTable): Object table
-            obj (ItemObject): Object to add or update
+        Returns:
+            dict[str, Any]: Item in PyArrow format
         """
 
-        # Remove keys not in schema
-        pyarrow_obj = obj.to_pyarrow()
-        for key in list(pyarrow_obj):
-            if key not in ds_table.schema.names:
-                pyarrow_obj.pop(key)
+        pyarrow_item = {}
 
-        # Look for existing object
-        scanner = ds_table.to_lance().scanner(filter=f"id in ('{obj.id}')")
-        existing_obj = scanner.to_table()
+        # ID
+        pyarrow_item["id"] = self.id
+        pyarrow_item["split"] = self.split
 
-        # If object exists
-        if existing_obj.num_rows > 0:
-            ds_table.delete(f"id in ('{obj.id}')")
+        # Features
+        if self.features:
+            for feat in self.features.values():
+                pyarrow_item[feat.name] = (
+                    field_to_python(feat.dtype)(feat.value)
+                    if feat.value is not None
+                    else None
+                )
 
-        # Add object
-        table_obj = pa.Table.from_pylist(
-            [pyarrow_obj],
+        # Check feature types
+        for feat in self.features.values():
+            if pyarrow_item[feat.name] is not None and not isinstance(
+                pyarrow_item[feat.name], field_to_python(feat.dtype)
+            ):
+                raise ValueError(
+                    f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
+                )
+
+        return pyarrow_item
+
+    def update(
+        self,
+        ds_table: lancedb.db.LanceTable,
+    ):
+        """Update dataset item
+
+        Args:
+            ds_table (lancedb.db.LanceTable): Item table
+        """
+
+        # Convert item to PyArrow
+        pyarrow_item = self.to_pyarrow()
+        table_item = pa.Table.from_pylist(
+            [pyarrow_item],
             schema=ds_table.schema,
         )
-        ds_table.add(table_obj, mode="append")
+
+        # Update item
+        ds_table.delete(f"id in ('{self.id}')")
+        ds_table.add(table_item, mode="append")
 
         # Clear change history to prevent dataset from becoming too large
         ds_table.to_lance().cleanup_old_versions()
@@ -161,15 +182,20 @@ class DatasetItem(BaseModel):
     def delete_objects(
         self,
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
-        current_obj_tables: dict[str, list],
     ):
         """Delete remove objects from dataset item
 
         Args:
             ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
-            current_obj_tables (dict[str, list]): Current item objects tables
         """
 
+        # Get current item objects
+        current_obj_tables = {}
+        for table_name, table in ds_tables["objects"].items():
+            media_scanner = table.to_lance().scanner(filter=f"item_id in ('{self.id}')")
+            current_obj_tables[table_name] = media_scanner.to_table().to_pylist()
+
+        # Check if objects have been deleted
         for table_name, current_obj_table in current_obj_tables.items():
             for current_obj in current_obj_table:
                 # If object has been deleted
