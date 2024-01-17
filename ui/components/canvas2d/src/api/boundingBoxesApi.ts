@@ -113,7 +113,7 @@ export function addBBox(
   tooltip.add(
     new Konva.Tag({
       fill: color,
-      stroke: color,
+      stroke: bbox.tooltip ? color : "transparent",
     }),
   );
 
@@ -122,7 +122,7 @@ export function addBBox(
     new Konva.Text({
       id: `text${bbox.id}`,
       x: 24,
-      y: 50,
+      y: 0,
       text: bbox.tooltip,
       fontSize: 12,
       fontStyle: "100",

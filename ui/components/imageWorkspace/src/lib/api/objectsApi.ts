@@ -12,7 +12,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
-  const tooltip = obj.features.category ? obj.features.category.value : obj.id;
+  const tooltip = obj.features.category?.value;
   return {
     id: obj.id,
     viewId: obj.view_id,
