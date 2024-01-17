@@ -102,7 +102,7 @@ export function addBBox(
     y,
     width: 500,
     height: 50,
-    offsetY: 18,
+    offsetY: 12,
     scale: {
       x: 1 / zoomFactor[viewId],
       y: 1 / zoomFactor[viewId],
