@@ -1109,6 +1109,7 @@
                 {images}
                 polygonDetails={manualMask}
                 color={colorScale(manualMask.id)}
+                {zoomFactor}
               />
             {/key}
           {/each}

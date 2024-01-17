@@ -37,6 +37,7 @@
   export let images: Record<string, HTMLImageElement> = {};
   export let polygonDetails: PolygonGroupDetails;
   export let color: string;
+  export let zoomFactor: Record<string, number>;
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
@@ -69,7 +70,7 @@
   );
 
   function handlePolygonPointsDragMove(id: number, i: number) {
-    const pos = stage.findOne(`#dot-${i}-${id}`).position();
+    const pos = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`).position();
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
       pi === i
         ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
@@ -79,7 +80,6 @@
   }
 
   function handlePolygonPointsDragEnd() {
-    //const counts = runLengthEncode(polygonDetails.svg); //seul simplifiedSvg est "drag" (?) donc on utilise simplifiedSvg, pas svg
     const counts = runLengthEncode(
       polygonShape.simplifiedSvg,
       images[viewId].width,
@@ -124,7 +124,7 @@
   }
 
   function updateCircleRadius(id: number, i: number, radius: number) {
-    const point: Konva.Circle = stage.findOne(`#dot-${i}-${id}`);
+    const point: Konva.Circle = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`);
     point.radius(radius);
   }
 </script>
@@ -156,16 +156,20 @@
           on:click={() => handlePolygonPointsClick(pi, viewId)}
           on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
           on:dragend={handlePolygonPointsDragEnd}
-          on:mouseover={() => point.id === 0 && updateCircleRadius(point.id, i, 4)}
-          on:mouseleave={() => updateCircleRadius(point.id, i, 2)}
+          on:mouseover={(e) => {
+            console.log({ e });
+            e.detail.target?.attrs?.id === `dot-${polygonDetails.id}-${i}-${point.id}` &&
+              updateCircleRadius(point.id, i, 8 / zoomFactor[viewId]);
+          }}
+          on:mouseleave={() => updateCircleRadius(point.id, i, 4 / zoomFactor[viewId])}
           config={{
             x: point.x,
             y: point.y,
-            radius: 2,
+            radius: 4 / zoomFactor[viewId],
             fill: "rgb(0,128,0)",
             stroke: "white",
             strokeWidth: 1,
-            id: `dot-${i}-${point.id}`,
+            id: `dot-${polygonDetails.id}-${i}-${point.id}`,
             draggable: true,
           }}
         />
