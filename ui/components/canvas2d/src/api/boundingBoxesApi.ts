@@ -124,8 +124,8 @@ export function addBBox(
       x: 24,
       y: 50,
       text: bbox.tooltip,
-      fontSize: 18,
-      fontFamily: "DM Sans",
+      fontSize: 12,
+      fontStyle: "100",
     }),
   );
 

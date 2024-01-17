@@ -12,15 +12,13 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
-  const catName =
-    "category_name" in obj.features ? (obj.features.category_name.value as string) : null;
-  const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
+  const tooltip = obj.features.category ? obj.features.category.value : obj.id;
   return {
     id: obj.id,
     viewId: obj.view_id,
     catId: (obj.features.category_id?.value || 1) as number,
     bbox: [x, y, w, h],
-    tooltip: catName + confidence,
+    tooltip,
     opacity: 1.0,
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
