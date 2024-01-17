@@ -99,6 +99,7 @@
       <Share2 />
     </IconButton>
     <!-- <IconButton tooltipContent="TODO">
+      uncomment when ready
       <BrushIcon />
     </IconButton> -->
   </div>

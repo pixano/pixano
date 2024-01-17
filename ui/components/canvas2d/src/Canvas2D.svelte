@@ -845,8 +845,8 @@
       stage.container().style.cursor = selectedTool.cursor;
     }
     const pointer: Konva.Circle = stage.findOne(`#${POINT_SELECTION}`);
-    const crossline = toolsLayer.findOne("#crossline");
     if (pointer) pointer.destroy();
+    const crossline = toolsLayer?.findOne("#crossline");
     if (crossline) crossline.destroy();
     currentAnn = null;
   }
@@ -966,9 +966,8 @@
           y: pos.y + 1,
           width: 0,
           height: 0,
-          stroke: "white",
-          dash: [10, 5],
-          fill: "rgba(255, 255, 255, 0.15)",
+          stroke: "hsl(316deg 60% 29.41%)",
+          fill: "#f9f4f773",
           strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
           listening: false,
         });
