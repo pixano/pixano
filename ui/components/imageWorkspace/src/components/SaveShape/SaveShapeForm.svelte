@@ -155,6 +155,7 @@
           </span>
           <Input
             type="number"
+            step="1"
             on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
           />
         </div>
