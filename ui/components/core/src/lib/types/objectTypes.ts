@@ -4,13 +4,13 @@ import type { BBox, Mask } from "./datasetTypes";
 export type ObjectParameters = {
   label: string;
   multiple: boolean;
-  type: "text" | "number" | "checkbox";
+  type: "str" | "int" | "float" | "checkbox";
   mandatory: boolean;
 };
 
 // OBJECTS FEATURES
 export type TextFeature = {
-  type: "text";
+  type: "str";
   multiple: boolean;
   value: string;
 };

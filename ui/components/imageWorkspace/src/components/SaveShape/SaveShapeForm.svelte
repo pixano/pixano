@@ -109,7 +109,7 @@
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Sauvegarde {shape.type}</p>
     {#each formInputs as feature, i}
-      {#if feature.type === "boolean"}
+      {#if feature.type === "bool"}
         <div class="flex gap-4 items-center">
           <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
           <span
@@ -127,7 +127,7 @@
           saveValue={(value) => handleInputChange(value, feature.name)}
         />
       {/if}
-      {#if feature.type === "text"}
+      {#if feature.type === "str"}
         <div>
           <span
             >{feature.label}
@@ -145,7 +145,7 @@
           {/if}
         </div>
       {/if}
-      {#if feature.type === "number"}
+      {#if feature.type === "int"}
         <div>
           <span
             >{feature.label}
@@ -155,6 +155,21 @@
           </span>
           <Input
             type="number"
+            on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+          />
+        </div>
+      {/if}
+      {#if feature.type === "float"}
+        <div>
+          <span
+            >{feature.label}
+            {#if feature.required}
+              <span>*</span>
+            {/if}
+          </span>
+          <Input
+            type="number"
+            step="any"
             on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
           />
         </div>

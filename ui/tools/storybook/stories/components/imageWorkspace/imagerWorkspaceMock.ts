@@ -13,17 +13,17 @@ export const mockImage: ItemData = {
   features: [
     {
       name: "id",
-      dtype: "text",
+      dtype: "str",
       value: "fleurs.jpg",
     },
     {
       name: "split",
-      dtype: "text",
+      dtype: "str",
       value: "demo",
     },
     {
       name: "label",
-      dtype: "text",
+      dtype: "str",
       value: "roses",
     },
     {

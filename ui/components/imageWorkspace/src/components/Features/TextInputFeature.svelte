@@ -18,17 +18,17 @@
 
   import { Input } from "@pixano/core/src";
 
-  import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
+  import type { TextFeature, IntFeature, FloatFeature } from "../../lib/types/imageWorkspaceTypes";
 
-  export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
+  export let textFeature: Pick<IntFeature | FloatFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
   export let saveInputChange: (value: string | number, propertyName: string) => void;
-  export let inputType: "text" | "number" = "text";
+  export let inputType: "str" | "int" | "float" = "str";
 
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
-    const formattedValue = inputType === "number" ? Number(value) : value;
+    const formattedValue = inputType === "str" ? value : Number(value);
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
   };

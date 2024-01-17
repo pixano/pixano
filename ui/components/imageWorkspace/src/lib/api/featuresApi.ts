@@ -5,7 +5,8 @@ import type {
   CreateObjectInputs,
   Feature,
   ListFeature,
-  NumberFeature,
+  IntFeature,
+  FloatFeature,
   TextFeature,
 } from "../../lib/types/imageWorkspaceTypes";
 
@@ -22,7 +23,7 @@ export const createFeature = (features: DatasetItem["features"]): Feature[] => {
     const value = features[feature.name]?.value;
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
-    return { ...feature, value } as NumberFeature | TextFeature | CheckboxFeature;
+    return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
   });
 };
 

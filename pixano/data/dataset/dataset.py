@@ -564,7 +564,7 @@ class Dataset(BaseModel):
         ds_tables = self.open_tables()
 
         # Force feature types
-        type_dict = {"text": str, "number": float, "boolean": bool}
+        type_dict = {"str": str, "int": int, "float": float, "bool": bool}
         for feature in item.features.values():
             item.features[feature.name].value = type_dict[feature.dtype](feature.value)
 
@@ -581,26 +581,25 @@ class Dataset(BaseModel):
                 feat_table = main_table_ds.to_table(columns=["id"])
                 for feat in new_features:
                     # Convert feature type
-                    if feat.dtype == "number":
-                        if isinstance(item.features[feat].value, int):
-                            feat_type = {
-                                "python": "int",
-                                "pyarrow": pa.integer(),
-                                "empty_val": None,
-                            }
-                        elif isinstance(item.features[feat].value, float):
-                            feat_type = {
-                                "python": "float",
-                                "pyarrow": pa.float32(),
-                                "empty_val": None,
-                            }
-                    elif feat.dtype == "boolean":
+                    if feat.dtype == "int":
+                        feat_type = {
+                            "python": "int",
+                            "pyarrow": pa.integer(),
+                            "empty_val": None,
+                        }
+                    elif feat.dtype == "float":
+                        feat_type = {
+                            "python": "float",
+                            "pyarrow": pa.float32(),
+                            "empty_val": None,
+                        }
+                    elif feat.dtype == "bool":
                         feat_type = {
                             "python": "bool",
                             "pyarrow": pa.bool_(),
                             "empty_val": False,  # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
                         }
-                    elif feat.dtype == "text":
+                    elif feat.dtype == "str":
                         feat_type = {
                             "python": "str",
                             "pyarrow": pa.string(),

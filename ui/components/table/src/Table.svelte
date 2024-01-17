@@ -68,10 +68,10 @@
           }}
         >
           <td class="py-1 border-b border-slate-300">
-            <TableCell itemFeature={{ name: "id", dtype: "text", value: item.id }} />
+            <TableCell itemFeature={{ name: "id", dtype: "str", value: item.id }} />
           </td>
           <td class="py-1 border-b border-slate-300">
-            <TableCell itemFeature={{ name: "split", dtype: "text", value: item.split }} />
+            <TableCell itemFeature={{ name: "split", dtype: "str", value: item.split }} />
           </td>
 
           {#if item.views}

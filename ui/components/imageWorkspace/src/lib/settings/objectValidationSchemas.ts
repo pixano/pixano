@@ -13,7 +13,7 @@ export const listInputSchema = z.object({
 export const otherInputSchema = z.object({
   name: z.string(),
   label: z.string(),
-  type: z.enum(["number", "boolean", "text"]),
+  type: z.enum(["int", "float", "bool", "str"]),
   required: z.boolean().optional(),
 });
 
@@ -21,9 +21,9 @@ export const createObjectInputsSchema = z.array(z.union([listInputSchema, otherI
 
 export const mapInputsToValueType = (setupArray: ItemFeature[]) =>
   setupArray.reduce<CreateObjectSchemaDefinition>((acc, cur) => {
-    if (cur.dtype === "text" || cur.dtype === "list") {
+    if (cur.dtype === "str" || cur.dtype === "list") {
       acc[cur.name] = z.string();
-    } else if (cur.dtype === "number") {
+    } else if (cur.dtype === "int" || cur.dtype === "float") {
       acc[cur.name] = z.number();
     } else {
       acc[cur.name] = z.boolean();

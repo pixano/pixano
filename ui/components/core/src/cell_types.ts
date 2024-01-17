@@ -20,7 +20,8 @@ import type { DatasetStat } from "./lib/types/datasetTypes";
 export type CellData =
   | TextCellData
   | ImageCellData
-  | NumberCellData
+  | IntCellData
+  | FloatCellData
   | BooleanCellData
   | HistogramCellData;
 
@@ -29,15 +30,20 @@ interface ImageCellData {
   value: string;
 }
 interface TextCellData {
-  dtype: "text";
+  dtype: "str";
   value: string;
 }
-interface NumberCellData {
-  dtype: "number";
+interface IntCellData {
+  dtype: "int";
   value: number;
 }
+interface FloatCellData {
+  dtype: "float";
+  value: number;
+}
+
 interface BooleanCellData {
-  dtype: "boolean";
+  dtype: "bool";
   value: boolean;
 }
 interface HistogramCellData {
