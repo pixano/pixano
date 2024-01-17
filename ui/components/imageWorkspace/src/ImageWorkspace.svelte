@@ -37,12 +37,14 @@
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/imageWorkspaceTypes";
+  import { Loader2Icon } from "lucide-svelte";
 
   export let currentDatasetId: DatasetInfo["id"];
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
-  export let handleSaveItem: (item: DatasetItem) => void;
+  export let handleSaveItem: (item: DatasetItem) => Promise<void>;
   export let isLoading: boolean;
+  let isSaving: boolean = false;
 
   let selectedTool: SelectionTool;
   let allBBoxes: BBox[] = [];
@@ -67,7 +69,8 @@
     }
   }
 
-  const onSave = () => {
+  const onSave = async () => {
+    isSaving = true;
     let savedItem = { ...selectedItem };
 
     itemObjects.subscribe((value) => {
@@ -82,12 +85,20 @@
     itemMetas.subscribe((value) => {
       savedItem.features = value.features;
     });
-    handleSaveItem(savedItem);
+    await handleSaveItem(savedItem);
     canSave.set(false);
+    isSaving = false;
   };
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
+  {#if isSaving}
+    <div
+      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-gray-300 z-50 opacity-30"
+    >
+      <Loader2Icon class="animate-spin" />
+    </div>
+  {/if}
   <Toolbar bind:selectedTool />
   <ImageCanvas
     {selectedTool}

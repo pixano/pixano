@@ -25,7 +25,9 @@
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
-        selectedItem = item;
+        if (selectedItem?.id !== item.id) {
+          selectedItem = item;
+        }
       })
       .then(() => isLoadingNewItemStore.set(false))
       .catch((err) => console.error(err));
