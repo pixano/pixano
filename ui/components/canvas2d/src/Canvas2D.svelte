@@ -680,10 +680,9 @@
   function displayInputRectTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != Rectangle
+      // TODO: être générique sur l'ensemble des outils != Rectangle
       const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
-
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
@@ -846,7 +845,9 @@
       stage.container().style.cursor = selectedTool.cursor;
     }
     const pointer: Konva.Circle = stage.findOne(`#${POINT_SELECTION}`);
+    const crossline = toolsLayer.findOne("#crossline");
     if (pointer) pointer.destroy();
+    if (crossline) crossline.destroy();
     currentAnn = null;
   }
 
