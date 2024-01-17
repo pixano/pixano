@@ -29,9 +29,10 @@
 
   // Map types to cell components
   const componentsMap = {
-    number: NumberCell,
-    boolean: BooleanCell,
-    text: TextCell,
+    int: NumberCell,
+    float: NumberCell,
+    bool: BooleanCell,
+    str: TextCell,
     image: ImageCell,
     video: VideoCell,
     histogram: HistogramCell,
