@@ -36,12 +36,30 @@
 
 <div class="flex justify-start items-center gap-4">
   {#if isEditing}
-    <Input
-      value={textFeature.value}
-      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
-      on:input={() => (isSaved = false)}
-      type={inputType}
-    />
+    {#if inputType === "str"}
+      <Input
+        value={textFeature.value}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
+        on:input={() => (isSaved = false)}
+        type="text"
+      />
+    {:else if inputType === "int"}
+      <Input
+        value={textFeature.value}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
+        on:input={() => (isSaved = false)}
+        type="number"
+        step="1"
+      />
+    {:else if inputType === "float"}
+      <Input
+        value={textFeature.value}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
+        on:input={() => (isSaved = false)}
+        type="number"
+        step="any"
+      />
+    {/if}
     {#if isSaved}
       <span class="text-green-700">
         <CheckCheckIcon />
