@@ -73,8 +73,7 @@ class TemplateImporter(Importer):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_id": "int",
-                        "category_name": "str",
+                        "category": "str",
                     },
                     "source": "Ground Truth",
                 }
@@ -159,8 +158,7 @@ class TemplateImporter(Importer):
                                 "mask": CompressedRLE.encode(
                                     ann["segmentation"], h, w
                                 ).to_dict(),
-                                "category_id": int(ann["category_id"]),
-                                "category_name": coco_names_91(ann["category_id"]),
+                                "category": coco_names_91(ann["category_id"]),
                             }
                             for ann in im_anns
                         ]

@@ -53,8 +53,7 @@ class DOTAImporter(Importer):
             media_fields={"image": "image"},
             object_fields={
                 "bbox": "bbox",
-                "category_id": "int",
-                "category_name": "str",
+                "category": "str",
             },
         )
 
@@ -153,8 +152,7 @@ class DOTAImporter(Importer):
                                 )
                                 .normalize(im_h, im_w)
                                 .to_dict(),
-                                "category_id": dota_ids(str(ann[8])),
-                                "category_name": str(ann[8]).replace("-", " "),
+                                "category": str(ann[8]).replace("-", " "),
                             }
                             for ann in im_anns
                         ]
