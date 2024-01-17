@@ -55,8 +55,7 @@ class COCOImporter(Importer):
             object_fields={
                 "bbox": "bbox",
                 "mask": "compressedrle",
-                "category_id": "int",
-                "category_name": "str",
+                "category": "str",
             },
         )
 
@@ -96,10 +95,10 @@ class COCOImporter(Importer):
             for ann in coco_instances["annotations"]:
                 annotations[ann["image_id"]].append(ann)
 
-            # Create a COCO category id to COCO category dictionary
+            # Create a COCO category id to COCO category name dictionary
             categories = {}
             for cat in coco_instances["categories"]:
-                categories[cat["id"]] = cat
+                categories[cat["id"]] = cat["name"]
 
             # Process rows
             for im in sorted(
@@ -155,10 +154,7 @@ class COCOImporter(Importer):
                                 ).to_dict()
                                 if ann["segmentation"]
                                 else None,
-                                "category_id": int(ann["category_id"]),
-                                "category_name": str(
-                                    categories[ann["category_id"]]["name"]
-                                ),
+                                "category": str(categories[ann["category_id"]]),
                             }
                             for ann in im_anns
                         ]

@@ -59,8 +59,7 @@ class DatasetInfoTestCase(unittest.TestCase):
                             "item_id": "str",
                             "view_id": "str",
                             "bbox": "bbox",
-                            "category_id": "int",
-                            "category_name": "str",
+                            "category": "str",
                         },
                         source="Ground Truth",
                     )

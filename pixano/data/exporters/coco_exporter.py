@@ -34,12 +34,10 @@ class COCOExporter(Exporter):
     Attributes:
         dataset (Dataset): Dataset to export
         coco_json (dict[str, Any]): Dataset split in COCO format
-        category_ids (list[int]): Seen category IDs
     """
 
     dataset: Dataset
     coco_json: dict[str, Any]
-    category_ids: list[int]
 
     def export_dataset(
         self,
@@ -99,11 +97,12 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": [
-                        cat.model_dump() for cat in self.dataset.info.categories
-                    ],
+                    "categories": sorted(
+                        [cat.model_dump() for cat in self.dataset.info.categories],
+                        key=lambda c: c["id"],
+                    ),
                 }
-                self.category_ids = [cat.id for cat in self.dataset.info.categories]
+
                 batch_size = 1024
 
                 for batch_index in range(ceil(self.dataset.num_rows / batch_size)):
@@ -125,10 +124,6 @@ class COCOExporter(Exporter):
                             # Update progress bar
                             progress.update(1)
 
-                # Sort categories
-                self.coco_json["categories"] = sorted(
-                    self.coco_json["categories"], key=lambda c: c["id"]
-                )
                 # Save COCO format .json file
                 with open(
                     ann_dir / f"instances_{split}.json", "w", encoding="utf-8"
@@ -237,13 +232,15 @@ class COCOExporter(Exporter):
 
         # Category
         category = {
-            "id": obj.features["category_id"].value
-            if "category_id" in obj.features
-            else None,
-            "name": obj.features["category_name"].value
-            if "category_name" in obj.features
+            "id": None,
+            "name": obj.features["category"].value
+            if "category" in obj.features
             else None,
         }
+        if category["name"] is not None:
+            for cat in self.dataset.info.categories:
+                if cat.name == category["name"]:
+                    category["id"] = cat.id
 
         # Add object
         self.coco_json["annotations"].append(
@@ -258,14 +255,3 @@ class COCOExporter(Exporter):
                 "category_name": category["name"],
             }
         )
-
-        # Add category if not seen yet
-        if category["id"] not in self.category_ids and category["name"] is not None:
-            self.category_ids.append(category["id"])
-            self.coco_json["categories"].append(
-                {
-                    "supercategory": "N/A",
-                    "id": category["id"],
-                    "name": category["name"],
-                },
-            )
