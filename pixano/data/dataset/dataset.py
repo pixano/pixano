@@ -230,31 +230,34 @@ class Dataset(BaseModel):
             table_name (str): Table name
         """
 
-        new_feats = [
-            feat for feat in features.values() if feat.name not in table.schema.names
-        ]
-        if len(new_feats) > 0:
-            new_feats_table = table.to_lance().to_table(columns=["id"])
-            # Create new feature columns
-            for feat in new_feats:
-                # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
-                feat_array = pa.array(
-                    [False] * len(table)
-                    if feat.dtype == "bool"
-                    else [None] * len(table),
-                    type=field_to_pyarrow(feat.dtype),
-                )
-                new_feats_table = new_feats_table.append_column(
-                    pa.field(feat.name, field_to_pyarrow(feat.dtype)), feat_array
-                )
-                # Update DatasetInfo
-                for info_table in self.info.tables[table_group]:
-                    if info_table.name == table_name:
-                        info_table.fields[feat.name] = feat.dtype
+        if features is not None:
+            new_feats = [
+                feat
+                for feat in features.values()
+                if feat.name not in table.schema.names
+            ]
+            if len(new_feats) > 0:
+                new_feats_table = table.to_lance().to_table(columns=["id"])
+                # Create new feature columns
+                for feat in new_feats:
+                    # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
+                    feat_array = pa.array(
+                        [False] * len(table)
+                        if feat.dtype == "bool"
+                        else [None] * len(table),
+                        type=field_to_pyarrow(feat.dtype),
+                    )
+                    new_feats_table = new_feats_table.append_column(
+                        pa.field(feat.name, field_to_pyarrow(feat.dtype)), feat_array
+                    )
+                    # Update DatasetInfo
+                    for info_table in self.info.tables[table_group]:
+                        if info_table.name == table_name:
+                            info_table.fields[feat.name] = feat.dtype
 
-            # Merge with main table
-            table.to_lance().merge(new_feats_table, "id")
-            self.save_info()
+                # Merge with main table
+                table.to_lance().merge(new_feats_table, "id")
+                self.save_info()
 
     def load_items(
         self,

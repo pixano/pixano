@@ -136,7 +136,8 @@ class DatasetItem(BaseModel):
         pyarrow_item["split"] = self.split
 
         # Features
-        if self.features:
+        if self.features is not None:
+            # Add features
             for feat in self.features.values():
                 pyarrow_item[feat.name] = (
                     field_to_python(feat.dtype)(feat.value)
@@ -144,14 +145,14 @@ class DatasetItem(BaseModel):
                     else None
                 )
 
-        # Check feature types
-        for feat in self.features.values():
-            if pyarrow_item[feat.name] is not None and not isinstance(
-                pyarrow_item[feat.name], field_to_python(feat.dtype)
-            ):
-                raise ValueError(
-                    f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
-                )
+            # Check feature types
+            for feat in self.features.values():
+                if pyarrow_item[feat.name] is not None and not isinstance(
+                    pyarrow_item[feat.name], field_to_python(feat.dtype)
+                ):
+                    raise ValueError(
+                        f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
+                    )
 
         return pyarrow_item
 

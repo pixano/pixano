@@ -201,7 +201,8 @@ class ItemObject(BaseModel):
         pyarrow_object["bbox"] = pyarrow_bbox.to_dict() if pyarrow_bbox else None
 
         # Features
-        if self.features:
+        if self.features is not None:
+            # Add features
             for feat in self.features.values():
                 pyarrow_object[feat.name] = (
                     field_to_python(feat.dtype)(feat.value)
@@ -209,14 +210,14 @@ class ItemObject(BaseModel):
                     else None
                 )
 
-        # Check feature types
-        for feat in self.features.values():
-            if pyarrow_object[feat.name] is not None and not isinstance(
-                pyarrow_object[feat.name], field_to_python(feat.dtype)
-            ):
-                raise ValueError(
-                    f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
-                )
+            # Check feature types
+            for feat in self.features.values():
+                if pyarrow_object[feat.name] is not None and not isinstance(
+                    pyarrow_object[feat.name], field_to_python(feat.dtype)
+                ):
+                    raise ValueError(
+                        f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
+                    )
 
         return pyarrow_object
 
