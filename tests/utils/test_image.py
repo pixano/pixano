@@ -41,24 +41,21 @@ class ImageUtilsTestCase(unittest.TestCase):
     def test_image_to_binary(self):
         """Test image_to_binary function"""
 
-        im_bytes = image_to_binary(self.im)
-
-        self.assertIsInstance(im_bytes, bytes)
+        self.assertIsInstance(image_to_binary(self.im), bytes)
+        self.assertIsNone(image_to_binary(None))
 
     def test_image_to_thumbnail(self):
         """Test image_to_thumbnail function"""
 
-        im_thumbnail = image_to_thumbnail(self.im)
-
-        self.assertIsInstance(im_thumbnail, bytes)
+        self.assertIsInstance(image_to_thumbnail(self.im), bytes)
 
     def test_binary_to_url(self):
         """Test binary_to_url function"""
 
         im_bytes = image_to_binary(self.im)
-        im_url = binary_to_url(im_bytes)
 
-        self.assertIsInstance(im_url, str)
+        self.assertIsInstance(binary_to_url(im_bytes), str)
+        self.assertEqual(binary_to_url(None), "")
 
     def test_depth_file_to_binary(self):
         """Test depth_file_to_binary function"""
@@ -100,6 +97,7 @@ class ImageUtilsTestCase(unittest.TestCase):
         self.assertEqual(encode_rle(rle, height=10, width=10), rle)
         self.assertEqual(encode_rle(urle, height=10, width=10), rle)
         self.assertEqual(encode_rle(polygons, height=10, width=10), rle)
+        self.assertEqual(encode_rle(None, height=10, width=10), None)
 
     def test_mask_to_polygons(self):
         """Test mask_to_polygons function"""
@@ -119,10 +117,13 @@ class ImageUtilsTestCase(unittest.TestCase):
             ],
             dtype="uint8",
         )
+        empty_mask = np.zeros((10, 10), dtype="uint8")
         polygons = [[4.5, 5.5, 4.5, 6.5, 5.5, 7.5, 6.5, 7.5, 6.5, 6.5, 5.5, 5.5]]
         has_holes = False
 
         self.assertEqual(mask_to_polygons(mask), (polygons, has_holes))
+        self.assertEqual(mask_to_polygons(empty_mask), ([], False))
+        self.assertEqual(mask_to_polygons(None), ([], False))
 
     def test_mask_to_rle(self):
         """Test mask_to_rle function"""
@@ -145,6 +146,7 @@ class ImageUtilsTestCase(unittest.TestCase):
         rle = {"size": [10, 10], "counts": b"]12810Oh0"}
 
         self.assertEqual(mask_to_rle(mask), rle)
+        self.assertEqual(mask_to_rle(None), None)
 
     def test_polygons_to_rle(self):
         """Test polygons_to_rle function"""
@@ -181,10 +183,10 @@ class ImageUtilsTestCase(unittest.TestCase):
             dtype="uint8",
         )
         polygons = mask_to_polygons(polygon_mask)[0]
-        print(polygons)
         rle_from_polygons = polygons_to_rle(polygons, height=10, width=10)
 
         np.testing.assert_array_equal(rle_to_mask(rle_from_polygons), actual_mask)
+        self.assertEqual(polygons_to_rle(None, height=10, width=10), None)
 
     def test_rle_to_mask(self):
         """Test rle_to_mask function"""
@@ -207,6 +209,7 @@ class ImageUtilsTestCase(unittest.TestCase):
         )
 
         np.testing.assert_array_equal(rle_to_mask(rle), mask)
+        self.assertEqual(rle_to_mask(None), None)
 
     def test_rle_to_polygons(self):
         """Test rle_to_polygons function"""
@@ -230,6 +233,7 @@ class ImageUtilsTestCase(unittest.TestCase):
         ]
 
         self.assertEqual(rle_to_polygons(rle), normalized_polygons)
+        self.assertEqual(rle_to_polygons(None), None)
 
     def test_rle_to_urle(self):
         """Test rle_to_urle function"""
@@ -238,6 +242,7 @@ class ImageUtilsTestCase(unittest.TestCase):
         urle = {"counts": [45, 2, 8, 3, 8, 2, 32], "size": [10, 10]}
 
         self.assertEqual(rle_to_urle(rle), urle)
+        self.assertEqual(rle_to_urle(None), None)
 
     def test_urle_to_rle(self):
         """Test urle_to_rle function"""
@@ -246,3 +251,4 @@ class ImageUtilsTestCase(unittest.TestCase):
         urle = {"counts": [45, 2, 8, 3, 8, 2, 32], "size": [10, 10]}
 
         self.assertEqual(urle_to_rle(urle), rle)
+        self.assertEqual(urle_to_rle(None), None)
