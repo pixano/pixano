@@ -21,7 +21,7 @@ from PIL import Image as PILImage
 from pixano.core import BBox, Image
 from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
-from pixano.utils import dota_ids, image_to_thumbnail, natural_key
+from pixano.utils import image_to_thumbnail, natural_key
 
 
 class DOTAImporter(Importer):
