@@ -65,6 +65,7 @@ def field_to_python(field: str) -> type:
         if field.startswith("vector(") and field.endswith(")"):
             return np.ndarray
         return python_dict[field.lower()]
+    return None
 
 
 def field_to_pyarrow(field: str) -> pa.DataType:
@@ -103,6 +104,7 @@ def field_to_pyarrow(field: str) -> pa.DataType:
             if size_str.isnumeric():
                 return pa.list_(pa.float32(), list_size=int(size_str))
         return pyarrow_dict[field.lower()]
+    return None
 
 
 class Fields(BaseModel):
