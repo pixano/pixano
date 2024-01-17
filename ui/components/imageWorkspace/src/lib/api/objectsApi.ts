@@ -116,15 +116,24 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [MODEL_RUN]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
+export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
   old.map((object) => {
-    if (newShape?.status !== "editingMask") return object;
-    if (object.id === newShape.maskId && object.mask) {
+    if (newShape?.status !== "editing") return object;
+    if (newShape.type === "mask" && object.id === newShape.maskId && object.mask) {
       return {
         ...object,
         mask: {
           ...object.mask,
           counts: newShape.counts,
+        },
+      };
+    }
+    if (newShape.type === "rectangle" && object.id === newShape.rectangleId && object.bbox) {
+      return {
+        ...object,
+        bbox: {
+          ...object.bbox,
+          coords: newShape.coords,
         },
       };
     }

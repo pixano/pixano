@@ -19,8 +19,12 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { BBox, DatasetItem, Mask, SelectionTool, Shape } from "@pixano/core";
 
-  import { newShape as newShapeStore, itemObjects } from "../lib/stores/imageWorkspaceStores";
-  import { updateManualMaskObject } from "../lib/api/objectsApi";
+  import {
+    newShape as newShapeStore,
+    itemObjects,
+    canSave,
+  } from "../lib/stores/imageWorkspaceStores";
+  import { updateExistingObject } from "../lib/api/objectsApi";
 
   export let selectedItem: DatasetItem;
   export let masks: Mask[] = [];
@@ -35,11 +39,9 @@
 
   $: {
     newShapeStore.set(newShape);
-    if (newShape?.status === "editingMask") {
-      itemObjects.update((oldObjects) => {
-        const newMask = updateManualMaskObject(oldObjects, newShape);
-        return newMask;
-      });
+    if (newShape?.status === "editing") {
+      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, newShape));
+      canSave.set(true);
     }
   }
 
