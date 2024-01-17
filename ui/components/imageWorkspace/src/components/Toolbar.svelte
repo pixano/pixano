@@ -98,9 +98,9 @@
     >
       <Share2 />
     </IconButton>
-    <IconButton tooltipContent="TODO">
+    <!-- <IconButton tooltipContent="TODO">
       <BrushIcon />
-    </IconButton>
+    </IconButton> -->
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

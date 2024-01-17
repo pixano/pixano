@@ -581,10 +581,10 @@
   function findOrCreateInputPointPointer(id: string, viewId: string = null): Konva.Circle {
     let pointer: Konva.Circle = stage.findOne(`#${id}`);
     if (!pointer) {
-      let zoomF = 1.0; //in some cases we aren't in a view, so we use default scaling
+      let zoomF = 1.0; // in some cases we aren't in a view, so we use default scaling
       if (viewId) zoomF = zoomFactor[viewId];
       pointer = new Konva.Circle({
-        id: id,
+        id,
         x: 0,
         y: 0,
         radius: INPUTPOINT_RADIUS / zoomF,
@@ -845,6 +845,8 @@
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
     }
+    const pointer: Konva.Circle = stage.findOne(`#${POINT_SELECTION}`);
+    if (pointer) pointer.destroy();
     currentAnn = null;
   }
 
