@@ -202,7 +202,7 @@
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
           const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
-          const konvaImg: Konva.Image = viewLayer.findOne("#image");
+          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${view.id}`);
           konvaImg.image(images[view.id]);
         }
         scaleView(view);
@@ -330,7 +330,7 @@
 
     if (viewLayer) {
       const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-      const image: Konva.Image = viewLayer.findOne("#image");
+      const image: Konva.Image = viewLayer.findOne(`#image-${selectedItem.views[viewId].id}`);
       const bboxIds: Array<string> = [];
 
       if (!bboxGroup) return;
@@ -412,7 +412,7 @@
 
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-        const image: Konva.Image = viewLayer.findOne("#image");
+        const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
 
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
@@ -636,7 +636,7 @@
     stage.container().style.cursor = "grabbing";
 
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const image: Konva.Image = viewLayer.findOne("#image");
+    const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
     const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
@@ -1090,7 +1090,7 @@
           on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
         >
           <KonvaImage
-            config={{ image: images[view.id], id: "image" }}
+            config={{ image: images[view.id], id: `image-${view.id}` }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
             on:pointerup={() => handlePointerUpOnImage(view.id)}
             on:dblclick={() => handleDoubleClickOnImage(view.id)}

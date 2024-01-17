@@ -157,7 +157,6 @@
           on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
           on:dragend={handlePolygonPointsDragEnd}
           on:mouseover={(e) => {
-            console.log({ e });
             e.detail.target?.attrs?.id === `dot-${polygonDetails.id}-${i}-${point.id}` &&
               updateCircleRadius(point.id, i, 8 / zoomFactor[viewId]);
           }}
