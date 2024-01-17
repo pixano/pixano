@@ -88,7 +88,7 @@ class TemplateImporter(Importer):
             if not any(source_path.iterdir()):
                 raise FileNotFoundError(f"{source_path} is empty.")
 
-        ##### Retrieve your annotations (or define them manually) #####
+        ##### Retrieve your categories (or define them manually) #####
         categories = [DatasetCategory(id=i, name=f"Category {i}") for i in range(1, 40)]
 
         # Initialize Importer
