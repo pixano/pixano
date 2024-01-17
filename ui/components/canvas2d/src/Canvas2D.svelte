@@ -508,7 +508,7 @@
     manualMasks = manualMasks.map((mask) =>
       mask.status === "created"
         ? mask
-        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }] },
+        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }], viewId },
     );
   }
 
@@ -1101,16 +1101,18 @@
           <Group config={{ id: "input" }} />
           {#each manualMasks as manualMask}
             {#key manualMask.id}
-              <PolygonGroup
-                viewId={view.id}
-                selectedItemId={selectedItem.id}
-                bind:newShape
-                {stage}
-                {images}
-                polygonDetails={manualMask}
-                color={colorScale(manualMask.id)}
-                {zoomFactor}
-              />
+              {#if manualMask.viewId === view.id}
+                <PolygonGroup
+                  viewId={view.id}
+                  selectedItemId={selectedItem.id}
+                  bind:newShape
+                  {stage}
+                  {images}
+                  polygonDetails={manualMask}
+                  color={colorScale(manualMask.id)}
+                  {zoomFactor}
+                />
+              {/if}
             {/key}
           {/each}
         </Layer>

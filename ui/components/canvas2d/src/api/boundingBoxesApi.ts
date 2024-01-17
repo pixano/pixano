@@ -296,6 +296,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
         id: mask.id,
         status: mask?.id ? "created" : "creating",
         svg: mask?.svg,
+        viewId: mask.viewId,
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
             acc.push({
@@ -311,7 +312,6 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
     .map((mask) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const simplifiedPoints = simplify(mask.points, 4, false);
-      // console.log({ mask, simplifiedPoints });
       mask.points = simplifiedPoints as PolygonGroupPoint[];
       return mask as PolygonGroupDetails;
     });
@@ -322,6 +322,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
     svg: [],
     editing: false,
     id: "creating",
+    viewId: undefined,
   };
   mappedMasks.push(emptyMask);
   return mappedMasks;
