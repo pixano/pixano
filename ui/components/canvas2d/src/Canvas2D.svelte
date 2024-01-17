@@ -52,6 +52,7 @@
     toggleIsEditingBBox,
     toggleBBoxIsLocked,
     mapMaskPointsToLineCoordinates,
+    getNewRectangleDimensions,
   } from "./api/boundingBoxesApi";
   import PolygonGroup from "./components/PolygonGroup.svelte";
 
@@ -314,6 +315,16 @@
 
   // ********** BOUNDING BOXES AND MASKS ********** //
 
+  function updateBoxDimensions(rect: Konva.Rect, i: number, viewId: string) {
+    const coords = getNewRectangleDimensions(rect, images[viewId]);
+    newShape = {
+      status: "editing",
+      type: "rectangle",
+      rectangleId: bboxes[i].id,
+      coords,
+    };
+  }
+
   function updateBboxes(viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
@@ -331,7 +342,15 @@
           //don't add a bbox that already exist
           const bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
           if (!bboxKonva) {
-            addBBox(bboxes[i], colorScale(bboxes[i].id), bboxGroup, image, viewId, zoomFactor);
+            addBBox(
+              bboxes[i],
+              colorScale(bboxes[i].id),
+              bboxGroup,
+              image,
+              viewId,
+              zoomFactor,
+              (rect: Konva.Rect) => updateBoxDimensions(rect, i, viewId),
+            );
           } else {
             toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
             toggleBBoxIsLocked(stage, bboxes[i]);

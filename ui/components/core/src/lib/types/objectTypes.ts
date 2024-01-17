@@ -44,12 +44,20 @@ export type noShape = {
 };
 
 export type editMaskShape = {
-  status: "editingMask";
+  status: "editing";
+  type: "mask";
   maskId: string;
   counts: number[];
 };
 
-export type Shape = inProgressShape | noShape | editMaskShape;
+export type editRectangleShape = {
+  status: "editing";
+  type: "rectangle";
+  rectangleId: string;
+  coords: number[];
+};
+
+export type Shape = inProgressShape | noShape | editMaskShape | editRectangleShape;
 
 export type FeatureValues = string | number | boolean;
 

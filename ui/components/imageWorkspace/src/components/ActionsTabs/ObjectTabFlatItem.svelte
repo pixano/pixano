@@ -59,6 +59,7 @@
 
   const deleteObject = () => {
     itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
+    canSave.set(true);
   };
 
   $: isLocked = itemObject.displayControl?.locked || false;

@@ -88,7 +88,8 @@
 
     if (polygonDetails.editing) {
       newShape = {
-        status: "editingMask",
+        status: "editing",
+        type: "mask",
         maskId: polygonDetails.id,
         counts,
       };

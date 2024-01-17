@@ -32,6 +32,20 @@ export const toggleIsEditingBBox = (
   });
 };
 
+export const getNewRectangleDimensions = (rect: Konva.Rect, image: HTMLImageElement) => {
+  const width = rect?.width();
+  const height = rect?.height();
+  const scaleX = rect?.scaleX();
+  const scaleY = rect?.scaleY();
+  const imageWidth = image.width;
+  const imageHeight = image.height;
+  const newX = (rect?.x() + (width * scaleX - width) / 2) / imageWidth;
+  const newY = (rect?.y() + (height * scaleY - height) / 2) / imageHeight;
+  const newWidth = (width * scaleX) / imageWidth;
+  const newHeight = (height * scaleY) / imageHeight;
+  return [newX, newY, newWidth, newHeight];
+};
+
 export const toggleBBoxIsLocked = (stage: Konva.Stage, currentBox: BBox) => {
   const rect: Konva.Rect = stage.findOne(`#rect${currentBox.id}`);
   const lockIcon = stage.findOne(`#lockTooltip${currentBox.id}`);
@@ -49,6 +63,7 @@ export function addBBox(
   image: Konva.Image,
   viewId: string,
   zoomFactor: Record<string, number>,
+  updateDimensions: (bbox: Konva.Rect) => void,
 ) {
   const x = image.x() + bbox.bbox[0];
   const y = image.y() + bbox.bbox[1];
@@ -64,14 +79,20 @@ export function addBBox(
 
   const bboxRect = new Konva.Rect({
     id: `rect${bbox.id}`,
-    x: x,
-    y: y,
+    x,
+    y,
     width: rect_width,
     height: rect_height,
     stroke: color,
     draggable: false,
     strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
   });
+
+  bboxRect.on("transformend", () => {
+    const box: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
+    updateDimensions(box);
+  });
+
   bboxKonva.add(bboxRect);
 
   // Create a tooltip for bounding box category and confidence
@@ -81,7 +102,7 @@ export function addBBox(
     y,
     width: 500,
     height: 50,
-    offsetY: 18,
+    offsetY: 12,
     scale: {
       x: 1 / zoomFactor[viewId],
       y: 1 / zoomFactor[viewId],
@@ -92,7 +113,7 @@ export function addBBox(
   tooltip.add(
     new Konva.Tag({
       fill: color,
-      stroke: color,
+      stroke: bbox.tooltip ? color : "transparent",
     }),
   );
 
@@ -101,10 +122,10 @@ export function addBBox(
     new Konva.Text({
       id: `text${bbox.id}`,
       x: 24,
-      y: 50,
+      y: 0,
       text: bbox.tooltip,
-      fontSize: 18,
-      fontFamily: "DM Sans",
+      fontSize: 12,
+      fontStyle: "100",
     }),
   );
 
@@ -207,7 +228,7 @@ export function addMask(
     fill: `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`,
     stroke: style.color,
     strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
-    scale: scale,
+    scale,
     visible: mask.visible,
     opacity: mask.opacity,
     listening: false,

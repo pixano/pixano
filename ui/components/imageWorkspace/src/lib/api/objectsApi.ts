@@ -12,15 +12,13 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
-  const catName =
-    "category_name" in obj.features ? (obj.features.category_name.value as string) : null;
-  const confidence = obj.bbox.confidence != 0.0 ? " " + obj.bbox.confidence.toFixed(2) : "";
+  const tooltip = obj.features.category?.value;
   return {
     id: obj.id,
     viewId: obj.view_id,
     catId: (obj.features.category_id?.value || 1) as number,
     bbox: [x, y, w, h],
-    tooltip: catName + confidence,
+    tooltip,
     opacity: 1.0,
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
@@ -116,15 +114,24 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [MODEL_RUN]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateManualMaskObject = (old: ItemObject[], newShape: Shape) =>
+export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
   old.map((object) => {
-    if (newShape?.status !== "editingMask") return object;
-    if (object.id === newShape.maskId && object.mask) {
+    if (newShape?.status !== "editing") return object;
+    if (newShape.type === "mask" && object.id === newShape.maskId && object.mask) {
       return {
         ...object,
         mask: {
           ...object.mask,
           counts: newShape.counts,
+        },
+      };
+    }
+    if (newShape.type === "rectangle" && object.id === newShape.rectangleId && object.bbox) {
+      return {
+        ...object,
+        bbox: {
+          ...object.bbox,
+          coords: newShape.coords,
         },
       };
     }
