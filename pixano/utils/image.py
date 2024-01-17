@@ -214,11 +214,8 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
 
         # Normalize point coordinates
         for p in polygons:
-            p[::2] /= w
-            p[1::2] /= h
-
-        # Cast to python list
-        polygons = [p.tolist() for p in polygons]
+            p[::2] = [x / w for x in p[::2]]
+            p[1::2] = [y / h for y in p[1::2]]
 
         return polygons
     return None
