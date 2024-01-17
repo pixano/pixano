@@ -212,9 +212,24 @@ class ImageUtilsTestCase(unittest.TestCase):
         """Test rle_to_polygons function"""
 
         rle = {"size": [10, 10], "counts": b"]12810Oh0"}
-        polygons = [[4.5, 5.5, 4.5, 6.5, 5.5, 7.5, 6.5, 7.5, 6.5, 6.5, 5.5, 5.5]]
+        normalized_polygons = [
+            [
+                0.45,
+                0.55,
+                0.45,
+                0.65,
+                0.55,
+                0.75,
+                0.65,
+                0.75,
+                0.65,
+                0.65,
+                0.55,
+                0.55,
+            ]
+        ]
 
-        print(rle_to_polygons(rle), polygons)
+        self.assertEqual(rle_to_polygons(rle), normalized_polygons)
 
     def test_rle_to_urle(self):
         """Test rle_to_urle function"""
