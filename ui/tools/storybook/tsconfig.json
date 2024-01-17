@@ -14,7 +14,7 @@
     "allowJs": true,
     "checkJs": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
   },
   "include": [
     "src/**/*.d.ts",
@@ -22,7 +22,7 @@
     "src/**/*.js",
     "src/**/*.svelte",
     "stories/**/*.ts",
-    "stories/**/*.stories.ts"
+    "stories/**/*.stories.ts",
   ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "references": [{ "path": "./tsconfig.node.json" }],
 }
