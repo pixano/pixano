@@ -224,15 +224,15 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
     return None
 
 
-def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
+def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
     """Encode mask from NumPy array to polygons
 
     Args:
         mask (np.ndarray): Mask as NumPy array
 
     Returns:
-        list: Mask as polygons
-        bool: Mask has holes
+        list[list]: Mask as polygons
+        bool: True if mask has holes
     """
 
     if mask is not None:
@@ -263,7 +263,11 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
         # would be to first +0.5 and then dilate the returned polygon by 0.5.
         res = [x + 0.5 for x in res if len(x) >= 6]
 
+        # Convert np.array to lists
+        res = [x.tolist() for x in res]
+
         return res, has_holes
+
     return None
 
 
