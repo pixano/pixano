@@ -63,44 +63,47 @@ class ItemView(BaseModel):
         """
 
         # NOTE: Potential change to flattened view fields with one row per view
-        item = table.to_pylist()[0]
+        item = table.to_pylist()[0] if len(table.to_pylist()) > 0 else None
         views = {}
 
         # Iterate on fields
         for field in schema:
             # Image
             if is_image_type(field.type):
-                im = (
-                    item[field.name]
-                    if isinstance(item[field.name], Image)
-                    else Image.from_dict(item[field.name])
-                )
-                im.uri_prefix = media_dir.absolute().as_uri()
-                api_uri = (
-                    (media_dir / im.uri).get_presigned_url()
-                    if isinstance(media_dir, S3Path)
-                    else f"data/{media_dir.parent.name}/media/{im.uri}"
-                )
-                image_view = ItemView(
-                    id=field.name,
-                    type="image",
-                    uri=api_uri,
-                    thumbnail=im.preview_url,
-                )
-                image_view.features = {}
-                if media_features:
-                    image_view.features["width"] = ItemFeature(
-                        name="width",
-                        dtype="int",
-                        value=im.width,
+                if item is not None:
+                    im = (
+                        item[field.name]
+                        if isinstance(item[field.name], Image)
+                        else Image.from_dict(item[field.name])
                     )
+                    im.uri_prefix = media_dir.absolute().as_uri()
+                    api_uri = (
+                        (media_dir / im.uri).get_presigned_url()
+                        if isinstance(media_dir, S3Path)
+                        else f"data/{media_dir.parent.name}/media/{im.uri}"
+                    )
+                    image_view = ItemView(
+                        id=field.name,
+                        type="image",
+                        uri=api_uri,
+                        thumbnail=im.preview_url,
+                    )
+                    image_view.features = {}
+                    if media_features:
+                        image_view.features["width"] = ItemFeature(
+                            name="width",
+                            dtype="int",
+                            value=im.width,
+                        )
 
-                    image_view.features["height"] = ItemFeature(
-                        name="height",
-                        dtype="int",
-                        value=im.height,
-                    )
-                views[field.name] = image_view
+                        image_view.features["height"] = ItemFeature(
+                            name="height",
+                            dtype="int",
+                            value=im.height,
+                        )
+                    views[field.name] = image_view
+                else:
+                    views[field.name] = ItemView(id=field.name, type="image", uri="")
 
             # NOTE: Future support for videos and 3D point clouds
 
