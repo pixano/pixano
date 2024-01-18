@@ -17,7 +17,7 @@
   import { utils } from "@pixano/core";
 
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
-  import ActionsTabsSearchInput from "./ObjectTabModelContent.svelte";
+  import ObjectTabModelContent from "./ObjectTabModelContent.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
@@ -39,19 +39,19 @@
 
 <div class="p-2">
   <div>
-    <ActionsTabsSearchInput sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
+    <ObjectTabModelContent sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
         <ObjectTabFlatItem bind:itemObject {colorScale} />
       {/each}
-    </ActionsTabsSearchInput>
+    </ObjectTabModelContent>
   </div>
-  <ActionsTabsSearchInput sectionTitle={"Model run"} modelName={MODEL_RUN}>
+  <ObjectTabModelContent sectionTitle={"Model run"} modelName={MODEL_RUN}>
     {#each allItemsSortedByModel[MODEL_RUN] as model}
-      <ActionsTabsSearchInput sectionTitle={model.modelName} modelName={model.modelName}>
+      <ObjectTabModelContent sectionTitle={model.modelName} modelName={model.modelName}>
         {#each model.objects as itemObject}
           <ObjectTabFlatItem bind:itemObject {colorScale} />
         {/each}
-      </ActionsTabsSearchInput>
+      </ObjectTabModelContent>
     {/each}
-  </ActionsTabsSearchInput>
+  </ObjectTabModelContent>
 </div>
