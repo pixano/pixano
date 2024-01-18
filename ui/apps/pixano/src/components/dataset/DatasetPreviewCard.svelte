@@ -39,7 +39,7 @@
   <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
     <div>
       <h3
-        class="text-lg font-semibold font-Montserrat truncate text-main"
+        class="text-lg font-semibold truncate text-main"
         title="{dataset.name}&#10;&#13;{dataset.description}"
       >
         {dataset.name}

@@ -29,7 +29,7 @@
 {#each features as feature}
   <div class="mt-1">
     {#if isEditing || feature.value !== undefined}
-      <p class="font-medium pb-1">{feature.label}</p>
+      <p class="font-bold first-letter:uppercase pb-1">{feature.label.replace("_", " ")}</p>
     {/if}
     {#if feature.type === "boolean" && (feature.value !== undefined || isEditing)}
       <Checkbox
