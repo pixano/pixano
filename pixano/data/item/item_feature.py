@@ -64,11 +64,24 @@ class ItemFeature(BaseModel):
 
                 # Float fields
                 if is_float(field.type):
-                    features[field.name] = ItemFeature(
-                        name=field.name,
-                        dtype="float",
-                        value=item[field.name],
+                    # Parse float value from string
+                    # (Float conversions from PyArrow to Python can currently add a lot of random decimal places)
+                    value_as_string: str = table[field.name].to_string()
+                    value_as_string = (
+                        value_as_string.replace("[", "").replace("]", "").strip()
                     )
+                    try:
+                        features[field.name] = ItemFeature(
+                            name=field.name,
+                            dtype="float",
+                            value=float(value_as_string),
+                        )
+                    except ValueError:
+                        features[field.name] = ItemFeature(
+                            name=field.name,
+                            dtype="float",
+                            value=float(item[field.name]),
+                        )
 
                 # String fields
                 elif is_string(field.type):
