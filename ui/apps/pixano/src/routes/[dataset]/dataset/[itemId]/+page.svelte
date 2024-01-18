@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import type { DatasetItem, DatasetInfo } from "@pixano/core/src";
+  import { type DatasetItem, type DatasetInfo, PrimaryButton } from "@pixano/core/src";
   import ImageWorkspace from "@pixano/imageworkspace/src/ImageWorkspace.svelte";
   import { api } from "@pixano/core/src";
 
@@ -10,6 +10,7 @@
     modelsStore,
     saveCurrentItemStore,
   } from "../../../../lib/stores/datasetStores";
+  import { goto } from "$app/navigation";
 
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
@@ -25,7 +26,6 @@
   });
 
   saveCurrentItemStore.subscribe((value) => {
-    console.log({ value });
     canSaveCurrentItem = value.canSave;
     shouldSaveCurrentItem = value.shouldSave;
   });
@@ -79,4 +79,12 @@
     bind:canSaveCurrentItem
     {shouldSaveCurrentItem}
   />
+{/if}
+{#if !selectedItem && !isLoadingNewItem}
+  <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
+    <p>Current item could not be loaded</p>
+    <PrimaryButton on:click={() => goto(`/${currentDatasetName}/dataset`)}
+      >Back to dataset</PrimaryButton
+    >
+  </div>
 {/if}
