@@ -28,7 +28,12 @@
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
-    const formattedValue = inputType === "str" ? value : Number(value);
+    let formattedValue: string | number = value;
+    if (inputType === "int") {
+      formattedValue = Math.round(Number(value));
+    } else if (inputType === "float") {
+      formattedValue = Number(value);
+    }
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
   };
