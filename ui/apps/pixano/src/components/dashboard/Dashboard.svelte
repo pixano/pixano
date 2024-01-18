@@ -27,7 +27,7 @@
 </script>
 
 {#if selectedDataset.page}
-  <div class="h-full flex flex-row bg-slate-50 p-8 gap-4">
+  <div class="h-full flex flex-row bg-slate-50 p-20 gap-4">
     <div class="bg-white min-h-[70%] shadow-md flex flex-col w-[30%]">
       {#each dashboardTabs as tab}
         <button
@@ -43,18 +43,18 @@
         <!-- Overview -->
         <div class="w-full flex flex-row justify-between">
           <div>
-            <span class="text-5xl font-bold font-Montserrat">
+            <span class="text-5xl font-bold">
               {selectedDataset.name}
             </span>
-            <span class="text-xl text-slate-500 font-Montserrat">
+            <span class="text-xl text-slate-500">
               #{selectedDataset.id}
             </span>
           </div>
           <div>
-            <span class="text-5xl font-bold font-Montserrat">
+            <span class="text-5xl font-bold">
               {selectedDataset.num_elements}
             </span>
-            <span class="ml-2 text-xl font-Montserrat"> items </span>
+            <span class="ml-2 text-xl"> items </span>
           </div>
         </div>
         <!-- Description -->
@@ -65,7 +65,7 @@
         </div>
       {:else if selectedTab === "derived source feature"}
         <!-- Stats -->
-        <span class="text-5xl font-bold font-Montserrat"> Statistics </span>
+        <span class="text-5xl font-bold"> Statistics </span>
 
         {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
           <div class="mt-8 flex flex-wrap justify-center gap-6 mx-8">

@@ -76,8 +76,8 @@
   }
 </script>
 
-<div class="h-full shadow-md bg-popover p-1">
-  <div class="border-b border-gray-400 pb-4 flex items-center flex-col gap-4 bg-popover">
+<div class="h-full shadow-md bg-popover py-4 px-2 w-16 border-l border-slate-200 z-10">
+  <div class="flex items-center flex-col gap-4">
     <IconButton
       tooltipContent="Move image around"
       on:click={() => selectTool(panTool)}
@@ -105,7 +105,7 @@
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {
-      "bg-primary-light rounded-sm": showSmartTools,
+      "bg-slate-100 rounded-sm": showSmartTools,
     })}
   >
     <button

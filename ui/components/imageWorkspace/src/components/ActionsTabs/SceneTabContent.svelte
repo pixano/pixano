@@ -69,8 +69,8 @@
   };
 </script>
 
-<div class="border-b-2 border-b-gray-500 p-4 mb-4">
-  <h3 class="uppercase font-extralight">
+<div class="border-b-2 border-b-gray-500 p-4 mb-4 text-slate-800">
+  <h3 class="uppercase font-light">
     <span class="mr-4">Features</span>
     <IconButton selected={isEditing} on:click={handleEditIconClick}
       ><Pencil class="h-4" /></IconButton
@@ -79,19 +79,19 @@
   <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
 </div>
 {#each imageMeta as meta}
-  <div class="p-4">
-    <h3 class="uppercase font-extralight">File {meta.id}</h3>
-    <div class="font-extralight mt-4 pb-4">
+  <div class="p-4 text-slate-800">
+    <h3 class="uppercase font-light">File {meta.id}</h3>
+    <div class="mt-4 pb-4">
       <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-light first-letter:uppercase">Width</p>
+        <p class="font-bold first-letter:uppercase">Width</p>
         <p>{meta.width}</p>
       </div>
       <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-light first-letter:uppercase">Height</p>
+        <p class="font-bold first-letter:uppercase">Height</p>
         <p>{meta.height}</p>
       </div>
       <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-light first-letter:uppercase">Format</p>
+        <p class="font-bold first-letter:uppercase">Format</p>
         <p>{meta.format}</p>
       </div>
     </div>

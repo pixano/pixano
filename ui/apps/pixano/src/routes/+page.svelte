@@ -25,7 +25,7 @@
   <meta name="description" content="Pixano app" />
 </svelte:head>
 
-<section class="p-8">
+<section class="p-8 bg-slate-50">
   <div class="flex flex-wrap justify-center gap-6 mx-20">
     {#if datasets}
       {#each datasets as dataset}

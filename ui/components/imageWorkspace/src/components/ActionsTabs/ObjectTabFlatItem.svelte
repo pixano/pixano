@@ -88,7 +88,7 @@
 </script>
 
 <div
-  class={cn("flex items-center mt-2 hover:bg-gray-100 rounded justify-between", {
+  class={cn("flex items-center mt-2 hover:bg-gray-100 rounded justify-between text-slate-800", {
     "bg-gray-100": open,
   })}
 >
@@ -117,7 +117,7 @@
   </div>
 </div>
 {#if open}
-  <div class="pl-5 border-b border-b-gray-600">
+  <div class="pl-5 border-b border-b-gray-600 text-slate-800">
     <div
       class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
       style="border-color:{color}"
@@ -131,7 +131,7 @@
                 handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
                 bind:checked={boxIsVisible}
               />
-              <span class="font-medium">Box</span>
+              <span class="font-medium">Bounding box</span>
             </div>
           {/if}
           {#if itemObject.mask}

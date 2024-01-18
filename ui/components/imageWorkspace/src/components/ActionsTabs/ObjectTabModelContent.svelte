@@ -57,7 +57,7 @@
   };
 </script>
 
-<div class="flex items-center gap-3 justify-between">
+<div class="flex items-center gap-3 justify-between text-slate-800">
   <div class="flex items-center gap-3">
     <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
       {#if hideAllObjects}
@@ -66,7 +66,7 @@
         <Eye class="h-4" />
       {/if}
     </IconButton>
-    <h3 class="uppercase font-extralight">{sectionTitle}</h3>
+    <h3 class="uppercase font-light">{sectionTitle}</h3>
   </div>
   <IconButton on:click={() => (open = !open)}
     ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton

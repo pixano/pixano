@@ -27,5 +27,7 @@
 </script>
 
 {#if selectedDataset?.page}
-  <DatasetExplorer {selectedDataset} on:selectItem={(event) => handleSelectItem(event)} />
+  <div class="pt-20 h-1 min-h-screen">
+    <DatasetExplorer {selectedDataset} on:selectItem={(event) => handleSelectItem(event)} />
+  </div>
 {/if}

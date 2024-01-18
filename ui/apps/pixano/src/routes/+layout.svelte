@@ -86,7 +86,7 @@
   {:else}
     <DatasetHeader datasetName={currentDatasetName} {pageId} {currentDatasetName} />
   {/if}
-  <main class="pt-20 h-1 min-h-screen">
+  <main class="h-1 min-h-screen">
     <slot />
   </main>
 </div>

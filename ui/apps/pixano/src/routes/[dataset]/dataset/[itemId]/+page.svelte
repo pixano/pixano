@@ -70,15 +70,17 @@
 </script>
 
 {#if selectedItem && selectedDataset}
-  <ImageWorkspace
-    {selectedItem}
-    {models}
-    currentDatasetId={selectedDataset.id}
-    {handleSaveItem}
-    isLoading={isLoadingNewItem}
-    bind:canSaveCurrentItem
-    {shouldSaveCurrentItem}
-  />
+  <div class="pt-20 h-1 min-h-screen">
+    <ImageWorkspace
+      {selectedItem}
+      {models}
+      currentDatasetId={selectedDataset.id}
+      {handleSaveItem}
+      isLoading={isLoadingNewItem}
+      bind:canSaveCurrentItem
+      {shouldSaveCurrentItem}
+    />
+  </div>
 {/if}
 {#if !selectedItem && !isLoadingNewItem}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
