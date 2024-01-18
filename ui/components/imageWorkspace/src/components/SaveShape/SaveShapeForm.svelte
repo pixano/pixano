@@ -141,7 +141,10 @@
               autofocus
             />
           {:else}
-            <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
+            <Input
+              on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
+              on:keyup={(e) => e.stopPropagation()}
+            />
           {/if}
         </div>
       {/if}

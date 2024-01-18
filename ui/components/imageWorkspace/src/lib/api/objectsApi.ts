@@ -3,6 +3,20 @@ import { mask_utils } from "@pixano/models/src";
 
 import { GROUND_TRUTH, MODEL_RUN } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
+import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
+
+const defineTooltip = (object: ItemObject) => {
+  if (!object.bbox) return null;
+  const confidence =
+    object.bbox.confidence != 0.0 && object.source_id !== GROUND_TRUTH
+      ? " " + object.bbox.confidence.toFixed(2)
+      : "";
+  const tooltip =
+    typeof object.features[DEFAULT_FEATURE]?.value == "string"
+      ? object.features[DEFAULT_FEATURE]?.value + confidence
+      : null;
+  return tooltip;
+};
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   if (!obj.bbox) return;
@@ -12,7 +26,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
-  const tooltip = obj.features.category?.value;
+  const tooltip = defineTooltip(obj);
   return {
     id: obj.id,
     viewId: obj.view_id,
