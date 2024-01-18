@@ -127,25 +127,7 @@
           saveValue={(value) => handleInputChange(value, feature.name)}
         />
       {/if}
-      {#if feature.type === "str"}
-        <div>
-          <span
-            >{feature.label}
-            {#if feature.required}
-              <span>*</span>
-            {/if}
-          </span>
-          {#if i === 0}
-            <Input
-              on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
-              autofocus
-            />
-          {:else}
-            <Input on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)} />
-          {/if}
-        </div>
-      {/if}
-      {#if feature.type === "int"}
+      {#if ["int", "float", "str"].includes(feature.type)}
         <div>
           <span
             >{feature.label}
@@ -154,24 +136,14 @@
             {/if}
           </span>
           <Input
-            type="number"
-            step="1"
-            on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
-          />
-        </div>
-      {/if}
-      {#if feature.type === "float"}
-        <div>
-          <span
-            >{feature.label}
-            {#if feature.required}
-              <span>*</span>
-            {/if}
-          </span>
-          <Input
-            type="number"
-            step="any"
-            on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+            type={feature.type === "str" ? "text" : "number"}
+            step={feature.type === "int" ? "1" : "any"}
+            autofocus={i === 0 ? true : false}
+            on:change={(e) =>
+              handleInputChange(
+                feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
+                feature.name,
+              )}
           />
         </div>
       {/if}
