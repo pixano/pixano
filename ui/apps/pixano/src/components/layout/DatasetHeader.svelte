@@ -108,7 +108,7 @@
         <IconButton on:click={() => navigateTo("/")}>
           <ArrowLeftCircleIcon />
         </IconButton>
-        <p>{datasetName}</p>
+        <button on:click={() => navigateTo(`/${datasetName}/dataset`)}> {datasetName} </button>
       </div>
     </div>
     {#if currentItemId}
