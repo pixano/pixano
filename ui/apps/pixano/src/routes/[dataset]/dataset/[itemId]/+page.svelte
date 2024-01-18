@@ -8,6 +8,7 @@
     datasetsStore,
     isLoadingNewItemStore,
     modelsStore,
+    saveCurrentItemStore,
   } from "../../../../lib/stores/datasetStores";
 
   let selectedItem: DatasetItem;
@@ -16,10 +17,20 @@
   let currentDatasetName: string;
   let currentItemId: string;
   let isLoadingNewItem: boolean = false;
+  let canSaveCurrentItem: boolean = false;
+  let shouldSaveCurrentItem: boolean = false;
 
   modelsStore.subscribe((value) => {
     models = value;
   });
+
+  saveCurrentItemStore.subscribe((value) => {
+    console.log({ value });
+    canSaveCurrentItem = value.canSave;
+    shouldSaveCurrentItem = value.shouldSave;
+  });
+
+  $: saveCurrentItemStore.update((old) => ({ ...old, canSave: canSaveCurrentItem }));
 
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     api
@@ -54,15 +65,18 @@
   async function handleSaveItem(savedItem: DatasetItem) {
     await api.postDatasetItem(selectedDataset.id, savedItem);
     handleSelectItem(selectedDataset, currentItemId);
+    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>
 
 {#if selectedItem && selectedDataset}
   <ImageWorkspace
     {selectedItem}
-    currentDatasetId={selectedDataset.id}
     {models}
+    currentDatasetId={selectedDataset.id}
     {handleSaveItem}
     isLoading={isLoadingNewItem}
+    bind:canSaveCurrentItem
+    {shouldSaveCurrentItem}
   />
 {/if}

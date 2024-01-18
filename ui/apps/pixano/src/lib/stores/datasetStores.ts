@@ -37,3 +37,8 @@ export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(false);
 export const datasetTableStore = writable<DatasetTableStore>(defaultDatasetTableValues);
+export const canSaveCurrentItemStore = writable<boolean>();
+export const saveCurrentItemStore = writable<{ shouldSave: boolean; canSave: boolean }>({
+  shouldSave: false,
+  canSave: false,
+});
