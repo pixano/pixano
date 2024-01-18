@@ -1,13 +1,6 @@
 import type { SegmentationResult } from ".";
 import type { BBox, Mask } from "./datasetTypes";
 
-export type ObjectParameters = {
-  label: string;
-  multiple: boolean;
-  type: "str" | "int" | "float" | "checkbox";
-  mandatory: boolean;
-};
-
 // OBJECTS FEATURES
 export type TextFeature = {
   type: "str";
