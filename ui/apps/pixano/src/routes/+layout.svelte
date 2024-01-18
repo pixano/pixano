@@ -12,6 +12,10 @@
 
   import "./styles.css";
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
+  import {
+    DEFAULT_DATASET_TABLE_PAGE,
+    DEFAULT_DATASET_TABLE_SIZE,
+  } from "$lib/constants/pixanoConstants";
 
   let datasets: DatasetInfo[];
   let models: Array<string>;
@@ -64,7 +68,12 @@
 
   $: {
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId) getDatasetItems(currentDatasetId).catch((err) => console.error(err));
+    if (currentDatasetId)
+      getDatasetItems(
+        currentDatasetId,
+        DEFAULT_DATASET_TABLE_PAGE,
+        DEFAULT_DATASET_TABLE_SIZE,
+      ).catch((err) => console.error(err));
   }
 
   datasetTableStore.subscribe((value) => {
