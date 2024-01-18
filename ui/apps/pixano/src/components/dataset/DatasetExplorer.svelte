@@ -90,8 +90,8 @@
   }
 
   function handleGoToFirstPage() {
-    isLoadingTableItems = true;
     if (currentPage > 1) {
+      isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
@@ -101,8 +101,8 @@
   }
 
   function handleGoToPreviousPage() {
-    isLoadingTableItems = true;
     if (currentPage > 1) {
+      isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
@@ -112,8 +112,8 @@
   }
 
   function handleGoToNextPage() {
-    isLoadingTableItems = true;
     if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+      isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
@@ -123,8 +123,8 @@
   }
 
   function handleGoToLastPage() {
-    isLoadingTableItems = true;
     if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+      isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
@@ -146,6 +146,11 @@
 
   onMount(() => {
     search = "";
+    datasetTableStore.update((value) => ({
+      ...value,
+      pageSize: DEFAULT_DATASET_TABLE_SIZE,
+      currentPage: DEFAULT_DATASET_TABLE_PAGE,
+    }));
   });
 </script>
 
