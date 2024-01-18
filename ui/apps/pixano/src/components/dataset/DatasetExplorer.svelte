@@ -146,6 +146,11 @@
 
   onMount(() => {
     search = "";
+    datasetTableStore.update((value) => ({
+      ...value,
+      pageSize: DEFAULT_DATASET_TABLE_SIZE,
+      currentPage: DEFAULT_DATASET_TABLE_PAGE,
+    }));
   });
 </script>
 
