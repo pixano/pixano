@@ -44,6 +44,9 @@
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
   export let isLoading: boolean;
+  export let canSaveCurrentItem: boolean;
+  export let shouldSaveCurrentItem: boolean;
+
   let isSaving: boolean = false;
 
   let selectedTool: SelectionTool;
@@ -61,6 +64,8 @@
     views: selectedItem.views,
     id: selectedItem.id,
   });
+
+  canSave.subscribe((value) => (canSaveCurrentItem = value));
 
   $: {
     if (selectedItem) {
@@ -89,6 +94,12 @@
     canSave.set(false);
     isSaving = false;
   };
+
+  $: {
+    if (shouldSaveCurrentItem) {
+      onSave().catch((err) => console.error(err));
+    }
+  }
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">

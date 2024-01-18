@@ -73,8 +73,7 @@ class TemplateImporter(Importer):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_id": "int",
-                        "category_name": "str",
+                        "category": "str",
                     },
                     "source": "Ground Truth",
                 }
@@ -89,7 +88,7 @@ class TemplateImporter(Importer):
             if not any(source_path.iterdir()):
                 raise FileNotFoundError(f"{source_path} is empty.")
 
-        ##### Retrieve your annotations (or define them manually) #####
+        ##### Retrieve your categories (or define them manually) #####
         categories = [DatasetCategory(id=i, name=f"Category {i}") for i in range(1, 40)]
 
         # Initialize Importer
@@ -159,8 +158,7 @@ class TemplateImporter(Importer):
                                 "mask": CompressedRLE.encode(
                                     ann["segmentation"], h, w
                                 ).to_dict(),
-                                "category_id": int(ann["category_id"]),
-                                "category_name": coco_names_91(ann["category_id"]),
+                                "category": coco_names_91(ann["category_id"]),
                             }
                             for ann in im_anns
                         ]

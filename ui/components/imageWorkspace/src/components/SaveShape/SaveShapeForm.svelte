@@ -139,6 +139,7 @@
             type={feature.type === "str" ? "text" : "number"}
             step={feature.type === "int" ? "1" : "any"}
             autofocus={i === 0 ? true : false}
+            on:keyup={(e) => e.stopPropagation()}
             on:change={(e) =>
               handleInputChange(
                 feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),

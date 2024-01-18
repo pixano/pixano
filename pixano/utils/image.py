@@ -214,25 +214,22 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
 
         # Normalize point coordinates
         for p in polygons:
-            p[::2] /= w
-            p[1::2] /= h
-
-        # Cast to python list
-        polygons = [p.tolist() for p in polygons]
+            p[::2] = [x / w for x in p[::2]]
+            p[1::2] = [y / h for y in p[1::2]]
 
         return polygons
     return None
 
 
-def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
+def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
     """Encode mask from NumPy array to polygons
 
     Args:
         mask (np.ndarray): Mask as NumPy array
 
     Returns:
-        list: Mask as polygons
-        bool: Mask has holes
+        list[list]: Mask as polygons
+        bool: True if mask has holes
     """
 
     if mask is not None:
@@ -263,8 +260,12 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list, bool]:
         # would be to first +0.5 and then dilate the returned polygon by 0.5.
         res = [x + 0.5 for x in res if len(x) >= 6]
 
+        # Convert np.array to lists
+        res = [x.tolist() for x in res]
+
         return res, has_holes
-    return None
+
+    return [], False
 
 
 def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
@@ -296,12 +297,9 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     if rle is not None and rle["counts"] is not None:
         mask = rle_to_mask(rle)
         urle = {"counts": [], "size": list(mask.shape)}
-        counts = urle.get("counts")
 
         for i, (value, elements) in enumerate(groupby(mask.ravel(order="F"))):
-            if i == 0 and value == 1:
-                counts.append(0)
-            counts.append(len(list(elements)))
+            urle["counts"].append(0 if i == 0 and value == 1 else len(list(elements)))
 
         return urle
     return None

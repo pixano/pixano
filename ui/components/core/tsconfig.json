@@ -14,14 +14,14 @@
      */
     "allowJs": true,
     "checkJs": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
   },
   "include": [
     "src/**/*.d.ts",
     "src/**/*.ts",
     "src/**/*.js",
     "src/**/*.svelte",
-    "theme/tailwindTheme.ts"
+    "theme/tailwindTheme.ts",
   ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "references": [{ "path": "./tsconfig.node.json" }],
 }

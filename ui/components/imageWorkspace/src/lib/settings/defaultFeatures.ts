@@ -1,7 +1,9 @@
 import type { ItemFeature } from "@pixano/core";
 
+export const DEFAULT_FEATURE = "category";
+
 export const defaultObjectFeatures = {
-  category: {
+  [DEFAULT_FEATURE]: {
     name: "category",
     dtype: "str",
     label: "category",

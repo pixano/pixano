@@ -47,6 +47,7 @@
       on:input={() => (isSaved = false)}
       type={inputType === "str" ? "text" : "number"}
       step={inputType === "int" ? "1" : "any"}
+      on:keyup={(e) => e.stopPropagation()}
     />
     {#if isSaved}
       <span class="text-green-700">
