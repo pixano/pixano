@@ -22,5 +22,7 @@
 </script>
 
 {#if selectedDataset?.page}
-  <Dashboard {selectedDataset} />
+  <div class="pt-20 h-1 min-h-screen">
+    <Dashboard {selectedDataset} />
+  </div>
 {/if}

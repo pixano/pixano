@@ -36,7 +36,7 @@
   };
 </script>
 
-<header class="p-4 w-full h-fit px-20 xl:px-60 flex flex-col justify-evenly bg-primary z-10">
+<header class="p-4 w-full h-fit pt-10 px-20 xl:px-60 flex flex-col justify-evenly bg-primary z-10">
   <div class="flex gap-2">
     <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10 h-10" />
     <span class="text-3xl font-bold text-slate-50 uppercase font-Montserrat"> Pixano </span>

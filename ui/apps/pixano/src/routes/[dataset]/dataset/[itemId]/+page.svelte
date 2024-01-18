@@ -58,11 +58,13 @@
 </script>
 
 {#if selectedItem && selectedDataset}
-  <ImageWorkspace
-    {selectedItem}
-    currentDatasetId={selectedDataset.id}
-    {models}
-    {handleSaveItem}
-    isLoading={isLoadingNewItem}
-  />
+  <div class="pt-20 h-1 min-h-screen">
+    <ImageWorkspace
+      {selectedItem}
+      currentDatasetId={selectedDataset.id}
+      {models}
+      {handleSaveItem}
+      isLoading={isLoadingNewItem}
+    />
+  </div>
 {/if}
