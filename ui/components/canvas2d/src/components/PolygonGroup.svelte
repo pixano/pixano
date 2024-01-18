@@ -168,7 +168,7 @@
             radius: 4 / zoomFactor[viewId],
             fill: "rgb(0,128,0)",
             stroke: "white",
-            strokeWidth: 1,
+            strokeWidth: 1 / zoomFactor[viewId],
             id: `dot-${polygonDetails.id}-${i}-${point.id}`,
             draggable: true,
           }}
