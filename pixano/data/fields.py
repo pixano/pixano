@@ -11,25 +11,108 @@
 #
 # http://www.cecill.info
 
+import numpy as np
 import pyarrow as pa
 from pydantic import BaseModel
 
 from pixano.core import (
+    BBox,
     BBoxType,
+    Camera,
     CameraType,
+    CompressedRLE,
     CompressedRLEType,
+    DepthImage,
     DepthImageType,
+    GtInfo,
     GtInfoType,
+    Image,
     ImageType,
+    Pose,
     PoseType,
 )
+
+
+def field_to_python(field: str) -> type:
+    """Return Python type from string field
+
+    Args:
+        field (str): String field
+
+    Returns:
+        type: Python type
+    """
+
+    python_dict = {
+        "int": int,
+        "float": float,
+        "bool": bool,
+        "str": str,
+        "bytes": bytes,
+        "np.ndarray": np.ndarray,
+        "image": Image,
+        "depthimage": DepthImage,
+        "camera": Camera,
+        "compressedrle": CompressedRLE,
+        "pose": Pose,
+        "bbox": BBox,
+        "gtinfo": GtInfo,
+    }
+
+    if isinstance(field, str):
+        if field.startswith("[") and field.endswith("]"):
+            return list
+        if field.startswith("vector(") and field.endswith(")"):
+            return np.ndarray
+        return python_dict[field.lower()]
+    return None
+
+
+def field_to_pyarrow(field: str) -> pa.DataType:
+    """Return PyArrpw type from string field
+
+    Args:
+        field (str): String field
+
+    Returns:
+        pa.DataType: PyArrow type
+    """
+
+    pyarrow_dict = {
+        "int": pa.int64(),
+        "float": pa.float32(),
+        "bool": pa.bool_(),
+        "str": pa.string(),
+        "bytes": pa.binary(),
+        "np.ndarray": pa.list_(pa.float32()),
+        "image": ImageType,
+        "depthimage": DepthImageType,
+        "camera": CameraType,
+        "compressedrle": CompressedRLEType,
+        "pose": PoseType,
+        "bbox": BBoxType,
+        "gtinfo": GtInfoType,
+    }
+
+    if isinstance(field, str):
+        if field.startswith("[") and field.endswith("]"):
+            return pa.list_(
+                pyarrow_dict[field.removeprefix("[").removesuffix("]").lower()]
+            )
+        if field.startswith("vector(") and field.endswith(")"):
+            size_str = field.removeprefix("vector(").removesuffix(")")
+            if size_str.isnumeric():
+                return pa.list_(pa.float32(), list_size=int(size_str))
+        return pyarrow_dict[field.lower()]
+    return None
 
 
 class Fields(BaseModel):
     """Dataset PyArrow fields as string dictionary
 
     Attributes:
-        field_dict: PyArrow fields as string dictionary
+        field_dict (dict[str, str]): PyArrow fields as string dictionary
+
     """
 
     field_dict: dict[str, str]
@@ -50,51 +133,9 @@ class Fields(BaseModel):
         Returns:
             pa.schema: Fields as PyArrow schema
         """
-
-        def _pyarrow_mapping(input_type: str) -> pa.DataType:
-            """Convert string types to PyArrow type
-
-            Args:
-                input_type (str): String type. Can be written as list form: [myType]
-
-            Returns:
-                pa.DataType: PyArrow DataType or PyArrow list of DataType
-            """
-
-            pa_type_mapping = {
-                "int": pa.int64(),
-                "float": pa.float32(),
-                "bool": pa.bool_(),
-                "str": pa.string(),
-                "bytes": pa.binary(),
-                "np.ndarray": pa.list_(pa.float32()),
-                "image": ImageType,
-                "depthimage": DepthImageType,
-                "camera": CameraType,
-                "compressedrle": CompressedRLEType,
-                "pose": PoseType,
-                "bbox": BBoxType,
-                "gtinfo": GtInfoType,
-            }
-
-            # str
-            if isinstance(input_type, str):
-                if input_type.startswith("[") and input_type.endswith("]"):
-                    return pa.list_(
-                        pa_type_mapping[
-                            input_type.removeprefix("[").removesuffix("]").lower()
-                        ]
-                    )
-                if input_type.startswith("vector(") and input_type.endswith(")"):
-                    size_str = input_type.removeprefix("vector(").removesuffix(")")
-                    if size_str.isnumeric():
-                        return pa.list_(pa.float32(), list_size=int(size_str))
-                return pa_type_mapping[input_type.lower()]
-            return None
-
         fields = []
         for field_name, field_type in self.field_dict.items():
             # Convert the field type to PyArrow type
-            field = pa.field(field_name, _pyarrow_mapping(field_type), nullable=True)
+            field = pa.field(field_name, field_to_pyarrow(field_type), nullable=True)
             fields.append(field)
         return pa.schema(fields)

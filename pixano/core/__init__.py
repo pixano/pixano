@@ -22,8 +22,9 @@ from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
     is_binary,
     is_boolean,
+    is_float,
     is_image_type,
-    is_number,
+    is_integer,
     is_string,
     pyarrow_array_from_list,
 )
@@ -48,8 +49,9 @@ __all__ = [
     "PoseType",
     "is_binary",
     "is_boolean",
+    "is_float",
     "is_image_type",
-    "is_number",
+    "is_integer",
     "is_string",
     "pyarrow_array_from_list",
 ]

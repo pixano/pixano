@@ -19,7 +19,7 @@
 </script>
 
 {#if value}
-  <input type="checkbox" class="pointer-events: none;" checked />
+  <input type="checkbox" disabled={true} class="pointer-events: none;" checked />
 {:else}
-  <input type="checkbox" class="pointer-events: none;" />
+  <input type="checkbox" disabled={true} class="pointer-events: none;" />
 {/if}

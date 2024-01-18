@@ -16,7 +16,7 @@ from typing import Optional
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core import is_boolean, is_number, is_string
+from pixano.core import is_boolean, is_float, is_integer, is_string
 
 
 class ItemFeature(BaseModel):
@@ -54,19 +54,40 @@ class ItemFeature(BaseModel):
         # Iterate on fields
         for field in schema:
             if field.name not in ignored_fields:
-                # Number fields
-                if is_number(field.type):
+                # Integer fields
+                if is_integer(field.type):
                     features[field.name] = ItemFeature(
                         name=field.name,
-                        dtype="number",
+                        dtype="int",
                         value=item[field.name],
                     )
+
+                # Float fields
+                if is_float(field.type):
+                    # Parse float value from string
+                    # (Float conversions from PyArrow to Python can currently add a lot of random decimal places)
+                    value_as_string: str = table[field.name].to_string()
+                    value_as_string = (
+                        value_as_string.replace("[", "").replace("]", "").strip()
+                    )
+                    try:
+                        features[field.name] = ItemFeature(
+                            name=field.name,
+                            dtype="float",
+                            value=float(value_as_string),
+                        )
+                    except ValueError:
+                        features[field.name] = ItemFeature(
+                            name=field.name,
+                            dtype="float",
+                            value=float(item[field.name]),
+                        )
 
                 # String fields
                 elif is_string(field.type):
                     features[field.name] = ItemFeature(
                         name=field.name,
-                        dtype="text",
+                        dtype="str",
                         value=str(item[field.name]),
                     )
 
@@ -74,7 +95,7 @@ class ItemFeature(BaseModel):
                 elif is_boolean(field.type):
                     features[field.name] = ItemFeature(
                         name=field.name,
-                        dtype="boolean",
+                        dtype="bool",
                         value=bool(item[field.name]),
                     )
 
@@ -83,7 +104,7 @@ class ItemFeature(BaseModel):
             if field_name == "distance":
                 features["search distance"] = ItemFeature(
                     name="search distance",
-                    dtype="number",
+                    dtype="float",
                     value=round(item[field_name], 2),
                 )
 

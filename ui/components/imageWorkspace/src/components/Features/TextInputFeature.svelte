@@ -23,12 +23,17 @@
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
   export let saveInputChange: (value: string | number, propertyName: string) => void;
-  export let inputType: "text" | "number" = "text";
+  export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
 
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
-    const formattedValue = inputType === "number" ? Number(value) : value;
+    let formattedValue: string | number = value;
+    if (inputType === "int") {
+      formattedValue = Math.round(Number(value));
+    } else if (inputType === "float") {
+      formattedValue = Number(value);
+    }
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
   };
@@ -40,8 +45,9 @@
       value={textFeature.value}
       on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
       on:input={() => (isSaved = false)}
+      type={inputType === "str" ? "text" : "number"}
+      step={inputType === "int" ? "1" : "any"}
       on:keyup={(e) => e.stopPropagation()}
-      type={inputType}
     />
     {#if isSaved}
       <span class="text-green-700">

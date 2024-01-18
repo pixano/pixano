@@ -27,7 +27,8 @@ from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
-from pixano.data.fields import Fields
+from pixano.data.fields import Fields, field_to_pyarrow
+from pixano.data.item.item_feature import ItemFeature
 
 
 class Dataset(BaseModel):
@@ -212,6 +213,51 @@ class Dataset(BaseModel):
             else:
                 self.info.tables[table_group] = [table]
             self.save_info()
+
+    def update_table(
+        self,
+        features: dict[str, ItemFeature],
+        table: lancedb.db.LanceTable,
+        table_group: str,
+        table_name: str,
+    ):
+        """Update a table with new features
+
+        Args:
+            table (lancedb.db.LanceTable): Table to update
+            features (dict[str, ItemFeature]): Features
+            table_group (str): Table group
+            table_name (str): Table name
+        """
+
+        if features is not None:
+            new_feats = [
+                feat
+                for feat in features.values()
+                if feat.name not in table.schema.names
+            ]
+            if len(new_feats) > 0:
+                new_feats_table = table.to_lance().to_table(columns=["id"])
+                # Create new feature columns
+                for feat in new_feats:
+                    # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
+                    feat_array = pa.array(
+                        [False] * len(table)
+                        if feat.dtype == "bool"
+                        else [None] * len(table),
+                        type=field_to_pyarrow(feat.dtype),
+                    )
+                    new_feats_table = new_feats_table.append_column(
+                        pa.field(feat.name, field_to_pyarrow(feat.dtype)), feat_array
+                    )
+                    # Update DatasetInfo
+                    for info_table in self.info.tables[table_group]:
+                        if info_table.name == table_name:
+                            info_table.fields[feat.name] = feat.dtype
+
+                # Merge with main table
+                table.to_lance().merge(new_feats_table, "id")
+                self.save_info()
 
     def load_items(
         self,
@@ -562,89 +608,17 @@ class Dataset(BaseModel):
 
         # Load dataset tables
         ds_tables = self.open_tables()
+        main_table = ds_tables["main"]["db"]
 
-        # Force feature types
-        type_dict = {"text": str, "number": float, "boolean": bool}
-        for feature in item.features.values():
-            item.features[feature.name].value = type_dict[feature.dtype](feature.value)
+        # Add new item features
+        self.update_table(item.features, main_table, "main", "db")
 
-        # Save item features if exists
-        if len(item.features) > 0:
-            # Add new features to table
-            new_features = [
-                feat
-                for feat in item.features.values()
-                if feat.name not in ds_tables["main"]["db"].schema.names
-            ]
-            if len(new_features) > 0:
-                main_table_ds = ds_tables["main"]["db"].to_lance()
-                feat_table = main_table_ds.to_table(columns=["id"])
-                for feat in new_features:
-                    # Convert feature type
-                    if feat.dtype == "number":
-                        if isinstance(item.features[feat].value, int):
-                            feat_type = {
-                                "python": "int",
-                                "pyarrow": pa.integer(),
-                                "empty_val": None,
-                            }
-                        elif isinstance(item.features[feat].value, float):
-                            feat_type = {
-                                "python": "float",
-                                "pyarrow": pa.float32(),
-                                "empty_val": None,
-                            }
-                    elif feat.dtype == "boolean":
-                        feat_type = {
-                            "python": "bool",
-                            "pyarrow": pa.bool_(),
-                            "empty_val": False,  # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
-                        }
-                    elif feat.dtype == "text":
-                        feat_type = {
-                            "python": "str",
-                            "pyarrow": pa.string(),
-                            "empty_val": "",
-                        }
-                    # Create feature column
-                    feat_array = pa.array(
-                        [feat_type["empty_val"]] * len(ds_tables["main"]["db"]),
-                        type=feat_type["pyarrow"],
-                    )
-                    feat_table = feat_table.append_column(
-                        pa.field(feat, feat_type["pyarrow"]), feat_array
-                    )
-                    # Update DatasetInfo
-                    self.info.tables["main"][0].fields[feat] = feat_type["python"]
+        # Reload dataset tables
+        ds_tables = self.open_tables()
+        main_table = ds_tables["main"]["db"]
 
-                # Merge with main table
-                main_table_ds.merge(feat_table, "id")
-                self.save_info()
-
-            # Get item
-            scanner = (
-                ds_tables["main"]["db"]
-                .to_lance()
-                .scanner(filter=f"id in ('{item.id}')")
-            )
-            item_to_update = scanner.to_table().to_pylist()[0]
-
-            # Update item
-            for feat in item.features:
-                item_to_update[feat] = item.features[feat].value
-
-            # Delete old item
-            ds_tables["main"]["db"].delete(f"id in ('{item.id}')")
-
-            # Add updated item
-            table_item = pa.Table.from_pylist(
-                [item_to_update],
-                schema=ds_tables["main"]["db"].schema,
-            )
-            ds_tables["main"]["db"].add(table_item, mode="append")
-
-            # Clear change history to prevent dataset from becoming too large
-            ds_tables["main"]["db"].to_lance().cleanup_old_versions()
+        # Update item
+        item.update(main_table)
 
         # Add or update item objects
         for obj in item.objects.values():
@@ -652,11 +626,24 @@ class Dataset(BaseModel):
             if "objects" in self.info.tables:
                 for table in self.info.tables["objects"]:
                     if table.source == obj.source_id:
+                        # Load object table
                         table_found = True
-                        item.add_or_update_object(ds_tables["objects"][table.name], obj)
-            # If first Ground Truth object
+                        obj_table = ds_tables["objects"][table.name]
+
+                        # Add new object features
+                        self.update_table(
+                            obj.features, obj_table, "objects", table.name
+                        )
+
+                        # Reload dataset tables
+                        ds_tables = self.open_tables()
+                        main_table = ds_tables["objects"][table.name]
+
+                        # Add or update object
+                        obj.add_or_update(obj_table)
+            # If first object
             if not table_found and obj.source_id == "Ground Truth":
-                # Create Ground Truth table
+                # Create table
                 table = DatasetTable(
                     name="objects",
                     source="Ground Truth",
@@ -666,26 +653,21 @@ class Dataset(BaseModel):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category": "str",
                     },
                 )
-                self.create_table(
-                    table,
-                    "objects",
-                )
+                for feat in obj.features.values():
+                    table.fields[feat.name] = feat.dtype
+                self.create_table(table, "objects")
+
                 # Reload dataset tables
                 ds_tables = self.open_tables()
-                # Add object
-                item.add_or_update_object(ds_tables["objects"][table.name], obj)
+                obj_table = ds_tables["objects"][table.name]
 
-        # Get current item objects
-        current_obj_tables = {}
-        for table_name, table in ds_tables["objects"].items():
-            media_scanner = table.to_lance().scanner(filter=f"item_id in ('{item.id}')")
-            current_obj_tables[table_name] = media_scanner.to_table().to_pylist()
+                # Add object
+                obj.add_or_update(obj_table)
 
         # Delete removed item objects
-        item.delete_objects(ds_tables, current_obj_tables)
+        item.delete_objects(ds_tables)
 
     @staticmethod
     def find(

@@ -91,13 +91,13 @@ class ItemView(BaseModel):
                 if media_features:
                     image_view.features["width"] = ItemFeature(
                         name="width",
-                        dtype="number",
+                        dtype="int",
                         value=im.width,
                     )
 
                     image_view.features["height"] = ItemFeature(
                         name="height",
-                        dtype="number",
+                        dtype="int",
                         value=im.height,
                     )
                 views[field.name] = image_view

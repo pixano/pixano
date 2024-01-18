@@ -25,17 +25,24 @@ export type CreateObjectSchemaDefinition = Record<string, z.ZodTypeAny>;
 export type CreateObjectSchema = z.ZodObject<CreateObjectSchemaDefinition>;
 
 export type CheckboxFeature = OtherInput & {
-  type: "boolean";
+  type: "bool";
   value: boolean;
 };
 
 export type TextFeature = OtherInput & {
-  type: "text";
+  type: "str";
   value: string;
 };
 
-export type NumberFeature = OtherInput & {
-  type: "number";
+export type NumberFeature = IntFeature | FloatFeature;
+
+export type IntFeature = OtherInput & {
+  type: "int";
+  value: number;
+};
+
+export type FloatFeature = OtherInput & {
+  type: "float";
   value: number;
 };
 

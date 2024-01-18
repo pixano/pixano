@@ -18,8 +18,9 @@ import pyarrow as pa
 from pixano.core import (
     Image,
     ImageType,
+    is_float,
     is_image_type,
-    is_number,
+    is_integer,
     pyarrow_array_from_list,
 )
 
@@ -27,14 +28,23 @@ from pixano.core import (
 class UtilsTestCase(unittest.TestCase):
     """Core utils functions test case"""
 
-    def test_is_number(self):
-        """Test is_number function"""
+    def test_is_integer(self):
+        """Test is_integer function"""
 
         pa_int_field = pa.field("some integers", pa.int64())
         pa_float_field = pa.field("some floats", pa.float64())
 
-        self.assertTrue(is_number(pa_int_field.type))
-        self.assertTrue(is_number(pa_float_field.type))
+        self.assertTrue(is_integer(pa_int_field.type))
+        self.assertFalse(is_integer(pa_float_field.type))
+
+    def test_is_float(self):
+        """Test is_float function"""
+
+        pa_int_field = pa.field("some integers", pa.int64())
+        pa_float_field = pa.field("some floats", pa.float64())
+
+        self.assertTrue(is_float(pa_float_field.type))
+        self.assertFalse(is_float(pa_int_field.type))
 
     def test_is_image_type(self):
         """Test is_image_type function"""

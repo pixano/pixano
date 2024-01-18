@@ -16,17 +16,30 @@ import pyarrow as pa
 from pixano.core.image import ImageType
 
 
-def is_number(t: pa.DataType) -> bool:
-    """Check if DataType is a number (integer or float)
+def is_integer(t: pa.DataType) -> bool:
+    """Check if DataType is an integer
 
     Args:
         t (pa.DataType): DataType to check
 
     Returns:
-        bool: True if DataType is an integer or a float
+        bool: True if DataType is an integer
     """
 
-    return pa.types.is_integer(t) or pa.types.is_floating(t)
+    return pa.types.is_integer(t)
+
+
+def is_float(t: pa.DataType) -> bool:
+    """Check if DataType is a float
+
+    Args:
+        t (pa.DataType): DataType to check
+
+    Returns:
+        bool: True if DataType is a float
+    """
+
+    return pa.types.is_floating(t)
 
 
 def is_string(t: pa.DataType) -> bool:

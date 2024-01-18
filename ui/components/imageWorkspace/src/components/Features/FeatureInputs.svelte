@@ -31,7 +31,7 @@
     {#if isEditing || feature.value !== undefined}
       <p class="font-medium pb-1">{feature.label}</p>
     {/if}
-    {#if feature.type === "boolean" && (feature.value !== undefined || isEditing)}
+    {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
       <Checkbox
         checked={!!feature.value}
         disabled={!isEditing}
@@ -45,7 +45,7 @@
         listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
       />
     {/if}
-    {#if feature.type === "text" || feature.type === "number"}
+    {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
       <FeatureTextInput
         saveInputChange={(value, name) => saveInputChange(value, name)}
         textFeature={{ value: feature.value, name: feature.name }}

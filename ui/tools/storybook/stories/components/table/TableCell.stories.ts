@@ -31,17 +31,27 @@ export const Text: Story = {
   args: {
     itemFeature: {
       name: "text cell",
-      dtype: "text",
+      dtype: "str",
       value: "This is a text cell.",
     },
   },
 };
 
-export const Number: Story = {
+export const Int: Story = {
   args: {
     itemFeature: {
-      name: "number cell",
-      dtype: "number",
+      name: "int cell",
+      dtype: "float",
+      value: 54,
+    },
+  },
+};
+
+export const Float: Story = {
+  args: {
+    itemFeature: {
+      name: "float cell",
+      dtype: "float",
       value: 5.4,
     },
   },

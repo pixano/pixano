@@ -109,7 +109,7 @@
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Sauvegarde {shape.type}</p>
     {#each formInputs as feature, i}
-      {#if feature.type === "boolean"}
+      {#if feature.type === "bool"}
         <div class="flex gap-4 items-center">
           <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
           <span
@@ -127,28 +127,7 @@
           saveValue={(value) => handleInputChange(value, feature.name)}
         />
       {/if}
-      {#if feature.type === "text"}
-        <div>
-          <span
-            >{feature.label}
-            {#if feature.required}
-              <span>*</span>
-            {/if}
-          </span>
-          {#if i === 0}
-            <Input
-              on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
-              autofocus
-            />
-          {:else}
-            <Input
-              on:input={(e) => handleInputChange(e.currentTarget.value, feature.name)}
-              on:keyup={(e) => e.stopPropagation()}
-            />
-          {/if}
-        </div>
-      {/if}
-      {#if feature.type === "number"}
+      {#if ["int", "float", "str"].includes(feature.type)}
         <div>
           <span
             >{feature.label}
@@ -157,8 +136,15 @@
             {/if}
           </span>
           <Input
-            type="number"
-            on:change={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
+            type={feature.type === "str" ? "text" : "number"}
+            step={feature.type === "int" ? "1" : "any"}
+            autofocus={i === 0 ? true : false}
+            on:keyup={(e) => e.stopPropagation()}
+            on:change={(e) =>
+              handleInputChange(
+                feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
+                feature.name,
+              )}
           />
         </div>
       {/if}
