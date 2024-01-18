@@ -32,7 +32,7 @@
 
 <button
   class="w-96 h-72 flex flex-col text-left
-  bg-slate-50 border rounded-sm border-slate-300 shadow shadow-slate-300 transition-shadow hover:shadow-xl"
+  bg-white border rounded-sm border-slate-300 shadow shadow-slate-300 transition-shadow hover:shadow-xl"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
@@ -56,14 +56,14 @@
       height="48"
       viewBox="0 -960 960 960"
       width="48"
-      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 transition-colors hover:bg-slate-300"
+      class="absolute right-5 h-8 w-8 mx-auto p-1 border text-slate-500 rounded-full border-slate-300 transition-colors hover:bg-slate-200"
     >
       <path d={svg_right_arrow} fill="currentcolor" />
     </svg>
   </div>
 
   <!-- Dataset Thumbnail -->
-  <div class="m-4 bg-slate-100">
+  <div class="m-4 bg-slate-50">
     {#if dataset.preview}
       <img
         src={dataset.preview}

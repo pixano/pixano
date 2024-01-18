@@ -75,7 +75,7 @@
 <header class="w-full fixed z-40">
   <div
     class="h-20 p-5 flex justify-between items-center shrink-0
-      bg-slate-50 border-b border-slate-300 text-slate-800"
+      bg-white border-b border-slate-200 shadow-sm text-slate-800"
   >
     <div class="h-10 flex items-center font-semibold text-2xl">
       <div class="flex gap-4 items-center font-light">

@@ -49,8 +49,8 @@
       {/if}
       <button
         type="button"
-        class="rounded border border-transparent text-slate-900 mt-3 mx-1 py-1 px-3
-        bg-main transition-colors hover:bg-secondary"
+        class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3
+        bg-primary transition-colors hover:bg-primary-foreground"
         on:click={handleConfirm}
       >
         Ok

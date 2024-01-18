@@ -46,12 +46,12 @@
 
 <div
   class="h-full w-full overflow-y-auto overflow-x-auto
-  rounded-sm bg-slate-50 border border-slate-300 shadow-sm shadow-slate-300"
+  rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300"
 >
   <table class="table-auto z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->
     <thead>
-      <tr class="sticky top-0 bg-slate-50 shadow-sm shadow-slate-300 border-b border-b-slate-400">
+      <tr class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400">
         {#each getColumnNames(items) as name}
           <th class="py-4 font-semibold">{name}</th>
         {/each}
@@ -97,7 +97,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 transition-colors hover:bg-slate-300"
+              class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 transition-colors hover:bg-slate-200"
             >
               <title>Open</title>
               <path d={icons.svg_right_arrow} fill="currentcolor" />

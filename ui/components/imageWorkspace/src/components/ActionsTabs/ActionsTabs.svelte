@@ -36,14 +36,14 @@
   });
 </script>
 
-<div class="h-full max-h-screen shadow-md bg-popover">
+<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-popover">
   {#if shape?.status === "inProgress"}
     <SaveShapeForm />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">
       <Tabs.List class="h-[48px]">
         <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
-        <Tabs.Trigger value="objects">Objets</Tabs.Trigger>
+        <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
       </Tabs.List>
       <div class="h-[calc(100%-48px)] flex flex-col justify-between">
         <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto">

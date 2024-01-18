@@ -149,7 +149,7 @@
   });
 </script>
 
-<div class="w-full px-20 flex flex-col bg-slate-100 text-slate-800 min-h-[calc(100vh-80px)]">
+<div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
   {#if selectedDataset.page}
     <!-- Items list -->
     <div class="w-full h-full flex flex-col">
