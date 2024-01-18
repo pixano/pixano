@@ -20,6 +20,7 @@
   let isLoadingNewItem: boolean = false;
   let canSaveCurrentItem: boolean = false;
   let shouldSaveCurrentItem: boolean = false;
+  let noItemFound: boolean = false;
 
   modelsStore.subscribe((value) => {
     models = value;
@@ -38,6 +39,11 @@
       .then((item) => {
         if (selectedItem?.id !== item.id) {
           selectedItem = item;
+        }
+        if (Object.keys(item).length === 0) {
+          noItemFound = true;
+        } else {
+          noItemFound = false;
         }
       })
       .then(() => isLoadingNewItemStore.set(false))
@@ -82,7 +88,7 @@
     />
   </div>
 {/if}
-{#if !selectedItem && !isLoadingNewItem}
+{#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
     <PrimaryButton on:click={() => goto(`/${currentDatasetName}/dataset`)}
