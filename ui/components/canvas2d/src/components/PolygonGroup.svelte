@@ -28,6 +28,7 @@
     parseSvgPath,
     runLengthEncode,
   } from "../api/maskApi";
+  import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
 
   // Exports
   export let viewId: string;
@@ -37,6 +38,7 @@
   export let images: Record<string, HTMLImageElement> = {};
   export let polygonDetails: PolygonGroupDetails;
   export let color: string;
+  export let zoomFactor: Record<string, number>;
 
   let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
@@ -69,7 +71,7 @@
   );
 
   function handlePolygonPointsDragMove(id: number, i: number) {
-    const pos = stage.findOne(`#dot-${i}-${id}`).position();
+    const pos = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`).position();
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
       pi === i
         ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
@@ -79,7 +81,6 @@
   }
 
   function handlePolygonPointsDragEnd() {
-    //const counts = runLengthEncode(polygonDetails.svg); //seul simplifiedSvg est "drag" (?) donc on utilise simplifiedSvg, pas svg
     const counts = runLengthEncode(
       polygonShape.simplifiedSvg,
       images[viewId].width,
@@ -124,7 +125,7 @@
   }
 
   function updateCircleRadius(id: number, i: number, radius: number) {
-    const point: Konva.Circle = stage.findOne(`#dot-${i}-${id}`);
+    const point: Konva.Circle = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`);
     point.radius(radius);
   }
 </script>
@@ -136,8 +137,8 @@
         config={{
           data: polygonShape.simplifiedSvg[0],
           stroke: "hsl(316deg 60% 29.41%)",
-          strokeWidth: 2,
-          fill: "rgb(0,128,0,0.5)",
+          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
+          fill: "#f9f4f773",
         }}
       />
     {/if}
@@ -145,9 +146,9 @@
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
         stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
-        strokeWidth: 1,
+        strokeWidth: 2 / zoomFactor[viewId],
         closed: isCurrentPolygonClosed,
-        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
+        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "#f9f4f773",
       }}
     />
     {#each polygonShape.simplifiedPoints as shape, i}
@@ -156,16 +157,19 @@
           on:click={() => handlePolygonPointsClick(pi, viewId)}
           on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
           on:dragend={handlePolygonPointsDragEnd}
-          on:mouseover={() => point.id === 0 && updateCircleRadius(point.id, i, 4)}
-          on:mouseleave={() => updateCircleRadius(point.id, i, 2)}
+          on:mouseover={(e) => {
+            e.detail.target?.attrs?.id === `dot-${polygonDetails.id}-${i}-${point.id}` &&
+              updateCircleRadius(point.id, i, 8 / zoomFactor[viewId]);
+          }}
+          on:mouseleave={() => updateCircleRadius(point.id, i, 4 / zoomFactor[viewId])}
           config={{
             x: point.x,
             y: point.y,
-            radius: 2,
+            radius: 4 / zoomFactor[viewId],
             fill: "rgb(0,128,0)",
             stroke: "white",
-            strokeWidth: 1,
-            id: `dot-${i}-${point.id}`,
+            strokeWidth: 1 / zoomFactor[viewId],
+            id: `dot-${polygonDetails.id}-${i}-${point.id}`,
             draggable: true,
           }}
         />

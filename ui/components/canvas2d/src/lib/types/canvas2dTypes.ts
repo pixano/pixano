@@ -15,4 +15,5 @@ export type PolygonGroupDetails = {
   editing: boolean;
   status: PolygonGroupStatus;
   id: string;
+  viewId: string | undefined;
 };

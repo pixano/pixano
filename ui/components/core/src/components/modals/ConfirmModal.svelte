@@ -21,6 +21,7 @@
   export let message: string;
   export let details: string = "";
   export let confirm: string = "Ok";
+  export let alternativeAction: string = "";
 
   const dispatch = createEventDispatcher();
 
@@ -29,6 +30,9 @@
   }
   function handleConfirm() {
     dispatch("confirm");
+  }
+  function handleAlternativeChoice() {
+    dispatch("alternative");
   }
 
   function handleKeyDown(event: KeyboardEvent) {
@@ -56,6 +60,16 @@
       >
         Cancel
       </button>
+      {#if alternativeAction}
+        <button
+          type="button"
+          class="rounded border mt-3 mx-1 py-1 px-3
+        bg-slate-50 transition-colors hover:bg-slate-100 border-slate-300"
+          on:click={handleAlternativeChoice}
+        >
+          {alternativeAction}
+        </button>
+      {/if}
       <button
         type="button"
         class="rounded border border-transparent text-slate-50 mt-3 mx-1 py-1 px-3

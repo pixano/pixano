@@ -202,7 +202,7 @@
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
           const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
-          const konvaImg: Konva.Image = viewLayer.findOne("#image");
+          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${view.id}`);
           konvaImg.image(images[view.id]);
         }
         scaleView(view);
@@ -330,7 +330,7 @@
 
     if (viewLayer) {
       const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-      const image: Konva.Image = viewLayer.findOne("#image");
+      const image: Konva.Image = viewLayer.findOne(`#image-${selectedItem.views[viewId].id}`);
       const bboxIds: Array<string> = [];
 
       if (!bboxGroup) return;
@@ -412,7 +412,7 @@
 
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-        const image: Konva.Image = viewLayer.findOne("#image");
+        const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
 
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
@@ -508,7 +508,7 @@
     manualMasks = manualMasks.map((mask) =>
       mask.status === "created"
         ? mask
-        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }] },
+        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }], viewId },
     );
   }
 
@@ -581,10 +581,10 @@
   function findOrCreateInputPointPointer(id: string, viewId: string = null): Konva.Circle {
     let pointer: Konva.Circle = stage.findOne(`#${id}`);
     if (!pointer) {
-      let zoomF = 1.0; //in some cases we aren't in a view, so we use default scaling
+      let zoomF = 1.0; // in some cases we aren't in a view, so we use default scaling
       if (viewId) zoomF = zoomFactor[viewId];
       pointer = new Konva.Circle({
-        id: id,
+        id,
         x: 0,
         y: 0,
         radius: INPUTPOINT_RADIUS / zoomF,
@@ -636,7 +636,7 @@
     stage.container().style.cursor = "grabbing";
 
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const image: Konva.Image = viewLayer.findOne("#image");
+    const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
     const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
@@ -680,10 +680,9 @@
   function displayInputRectTool(tool: SelectionTool) {
     if (toolsLayer) {
       //clean other tools
-      //TODO: etre générique sur l'ensemble des outils != Rectangle
+      // TODO: être générique sur l'ensemble des outils != Rectangle
       const pointer = stage.findOne(`#${POINT_SELECTION}`);
       if (pointer) pointer.destroy();
-
       if (!highlighted_point) {
         stage.container().style.cursor = tool.cursor;
       }
@@ -845,6 +844,10 @@
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
     }
+    const pointer: Konva.Circle = stage.findOne(`#${POINT_SELECTION}`);
+    if (pointer) pointer.destroy();
+    const crossline = toolsLayer?.findOne("#crossline");
+    if (crossline) crossline.destroy();
     currentAnn = null;
   }
 
@@ -963,9 +966,8 @@
           y: pos.y + 1,
           width: 0,
           height: 0,
-          stroke: "white",
-          dash: [10, 5],
-          fill: "rgba(255, 255, 255, 0.15)",
+          stroke: "hsl(316deg 60% 29.41%)",
+          fill: "#f9f4f773",
           strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
           listening: false,
         });
@@ -1090,7 +1092,7 @@
           on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
         >
           <KonvaImage
-            config={{ image: images[view.id], id: "image" }}
+            config={{ image: images[view.id], id: `image-${view.id}` }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
             on:pointerup={() => handlePointerUpOnImage(view.id)}
             on:dblclick={() => handleDoubleClickOnImage(view.id)}
@@ -1101,15 +1103,18 @@
           <Group config={{ id: "input" }} />
           {#each manualMasks as manualMask}
             {#key manualMask.id}
-              <PolygonGroup
-                viewId={view.id}
-                selectedItemId={selectedItem.id}
-                bind:newShape
-                {stage}
-                {images}
-                polygonDetails={manualMask}
-                color={colorScale(manualMask.id)}
-              />
+              {#if manualMask.viewId === view.id}
+                <PolygonGroup
+                  viewId={view.id}
+                  selectedItemId={selectedItem.id}
+                  bind:newShape
+                  {stage}
+                  {images}
+                  polygonDetails={manualMask}
+                  color={colorScale(manualMask.id)}
+                  {zoomFactor}
+                />
+              {/if}
             {/key}
           {/each}
         </Layer>

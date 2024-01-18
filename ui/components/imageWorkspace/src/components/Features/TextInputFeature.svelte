@@ -40,6 +40,7 @@
       value={textFeature.value}
       on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
       on:input={() => (isSaved = false)}
+      on:keyup={(e) => e.stopPropagation()}
       type={inputType}
     />
     {#if isSaved}

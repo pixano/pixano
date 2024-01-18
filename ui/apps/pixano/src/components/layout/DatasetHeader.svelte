@@ -22,10 +22,14 @@
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { IconButton, PrimaryButton, type DatasetInfo } from "@pixano/core/src";
+  import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
 
   import { findSelectedItem } from "$lib/api/navigationApi";
-  import { datasetsStore, isLoadingNewItemStore } from "$lib/stores/datasetStores";
+  import {
+    datasetsStore,
+    isLoadingNewItemStore,
+    saveCurrentItemStore,
+  } from "$lib/stores/datasetStores";
   import { navItems } from "$lib/constants/headerConstants";
 
   export let datasetName: string;
@@ -35,6 +39,11 @@
   let datasets: DatasetInfo[];
   let currentItemId: string;
   let isLoading: boolean;
+  let canSaveCurrentItem: boolean;
+  type Direction = "previous" | "next" | "none";
+  let showConfirmModal: Direction = "none";
+
+  saveCurrentItemStore.subscribe((value) => (canSaveCurrentItem = value.canSave));
 
   isLoadingNewItemStore.subscribe((value) => {
     isLoading = value;
@@ -48,14 +57,23 @@
     currentItemId = value.params.itemId;
   });
 
-  const goToNeighborItem = async (direction: "previous" | "next") => {
+  const findAndNavigateToNeighbor = async (direction: Direction) => {
+    if (direction === "none") return;
     const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
     const datasetItems = Object.values(currentDataset?.page?.items || {});
     const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
     if (selectedId) {
       currentItemId = selectedId;
       await goto(`/${currentDatasetName}/dataset/${selectedId}`);
+      showConfirmModal = "none";
     }
+  };
+
+  const goToNeighborItem = async (direction: "previous" | "next") => {
+    if (canSaveCurrentItem) {
+      return (showConfirmModal = direction);
+    }
+    await findAndNavigateToNeighbor(direction);
   };
 
   const onKeyDown = async (event: KeyboardEvent) => {
@@ -65,6 +83,11 @@
       await goToNeighborItem("next");
     }
     return event.key;
+  };
+
+  const handleConfirmClick = async () => {
+    saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
+    await findAndNavigateToNeighbor(showConfirmModal);
   };
 
   async function navigateTo(route: string) {
@@ -116,4 +139,14 @@
     </div>
   </div>
 </header>
+{#if showConfirmModal !== "none"}
+  <ConfirmModal
+    message="You have unsaved changes"
+    confirm="Save and continue"
+    alternativeAction="Continue without saving"
+    on:confirm={handleConfirmClick}
+    on:alternative={() => findAndNavigateToNeighbor(showConfirmModal)}
+    on:cancel={() => (showConfirmModal = "none")}
+  />
+{/if}
 <svelte:window on:keyup={onKeyDown} />
