@@ -35,9 +35,7 @@ async def get_datasets(
 
     # Load datasets
     infos = DatasetInfo.load_directory(
-        directory=settings.data_dir,
-        load_thumbnail=True,
-        load_stats=True
+        directory=settings.data_dir, load_thumbnail=True, load_stats=True
     )
 
     # Return datasets
