@@ -53,3 +53,32 @@ class DatasetStat(BaseModel):
                 stats_json = json.load(json_file)
 
         return [DatasetStat.model_validate(stat) for stat in stats_json]
+
+    def to_json(self, json_fp: Path | S3Path):
+        """Write DatasetStat to json_fp
+           replace existing histogram with same name in json_fp
+
+        Args:
+            json_fp (Path | S3Path): Path to "stats.json" file
+        """
+        try:
+            if isinstance(json_fp, S3Path):
+                with json_fp.open(encoding="utf-8") as json_file:
+                    json_stats = json.load(json_file)
+            else:
+                with open(json_fp, "r", encoding="utf-8") as json_file:
+                    json_stats = json.load(json_file)
+        except FileNotFoundError:
+            json_stats = []
+        # keep all stats except the one with same name, we replace it if exist
+        json_stats = [stat for stat in json_stats if stat["name"] != self.name]
+        json_stats.append(
+            {"name": self.name, "type": self.type, "histogram": self.histogram}
+        )
+
+        if isinstance(json_fp, S3Path):
+            with json_fp.open("w", encoding="utf-8") as f:
+                json.dump(json_stats, f, indent="\t")
+        else:
+            with open(json_fp, "w", encoding="utf-8") as f:
+                json.dump(json_stats, f, indent="\t")
