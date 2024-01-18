@@ -34,6 +34,8 @@ export type TextFeature = OtherInput & {
   value: string;
 };
 
+export type NumberFeature = IntFeature | FloatFeature;
+
 export type IntFeature = OtherInput & {
   type: "int";
   value: number;
@@ -48,7 +50,7 @@ export type ListFeature = ListInput & {
   value: string;
 };
 
-export type Feature = CheckboxFeature | TextFeature | IntFeature | FloatFeature | ListFeature;
+export type Feature = CheckboxFeature | TextFeature | NumberFeature | ListFeature;
 
 export type Embeddings = Record<string, ort.Tensor>;
 
