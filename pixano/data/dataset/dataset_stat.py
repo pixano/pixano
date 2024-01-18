@@ -54,19 +54,20 @@ class DatasetStat(BaseModel):
 
         return [DatasetStat.model_validate(stat) for stat in stats_json]
 
-    def to_json(self, json_fp: Path | S3Path):
-        """Write DatasetStat to json_fp
+    def save(self, save_dir: Path | S3Path):
+        """Save DatasetInfo to json file
            replace existing histogram with same name in json_fp
 
         Args:
-            json_fp (Path | S3Path): Path to "stats.json" file
+            save_dir (Path | S3Path): Save directory
         """
+
         try:
-            if isinstance(json_fp, S3Path):
-                with json_fp.open(encoding="utf-8") as json_file:
+            if isinstance(save_dir, S3Path):
+                with (save_dir / "stats.json").open(encoding="utf-8") as json_file:
                     json_stats = json.load(json_file)
             else:
-                with open(json_fp, "r", encoding="utf-8") as json_file:
+                with open(save_dir / "stats.json", "r", encoding="utf-8") as json_file:
                     json_stats = json.load(json_file)
         except FileNotFoundError:
             json_stats = []
@@ -76,9 +77,9 @@ class DatasetStat(BaseModel):
             {"name": self.name, "type": self.type, "histogram": self.histogram}
         )
 
-        if isinstance(json_fp, S3Path):
-            with json_fp.open("w", encoding="utf-8") as f:
+        if isinstance(save_dir, S3Path):
+            with (save_dir / "stats.json").open("w", encoding="utf-8") as f:
                 json.dump(json_stats, f, indent="\t")
         else:
-            with open(json_fp, "w", encoding="utf-8") as f:
+            with open(save_dir / "stats.json", "w", encoding="utf-8") as f:
                 json.dump(json_stats, f, indent="\t")
