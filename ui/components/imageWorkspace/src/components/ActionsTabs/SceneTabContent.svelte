@@ -59,7 +59,7 @@
       newMetas.features = {
         ...newMetas.features,
         [propertyName]: {
-          ...newMetas.features[propertyName],
+          ...(newMetas.features?.[propertyName] || defaultSceneFeatures[propertyName]),
           value,
         },
       };
