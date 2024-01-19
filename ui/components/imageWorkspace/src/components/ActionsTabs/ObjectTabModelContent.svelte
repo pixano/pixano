@@ -23,44 +23,71 @@
 
   export let sectionTitle: string;
   export let modelName: string;
-  let hideAllObjects: boolean | undefined;
 
-  let tooltipContent: string = hideAllObjects ? "show all" : "hide all";
+  let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
+  $: tooltipContent = visibilityStatus === "hidden" ? "show all" : "hide all";
   let open: boolean = true;
 
   itemObjects.subscribe((items) => {
-    const allItemsOfCurrentModelAreHidden = items
-      .filter((item) => {
-        if (modelName === MODEL_RUN) {
-          return item.source_id !== GROUND_TRUTH;
-        }
-        return item.source_id === modelName;
-      })
-      .find((item) => item.displayControl?.hidden);
-    hideAllObjects = !!allItemsOfCurrentModelAreHidden;
+    const allObjectsOfCurrentModel = items.filter((item) => {
+      if (modelName === MODEL_RUN) {
+        return item.source_id !== GROUND_TRUTH;
+      }
+      return item.source_id === modelName;
+    });
+    const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
+      (item) => item.displayControl?.hidden,
+    );
+    if (allObjectsOfCurrentModelAreHidden) {
+      visibilityStatus = "hidden";
+    }
+    const allObjectsOfCurrentModelAreShown = allObjectsOfCurrentModel.every(
+      (item) => !item.displayControl?.hidden,
+    );
+    if (allObjectsOfCurrentModelAreShown) {
+      visibilityStatus = "shown";
+    }
   });
 
   $: itemObjects.update((items) => {
     return items.map((item) => {
       if (item.source_id === modelName) {
-        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], !!hideAllObjects);
+        if (visibilityStatus === "mixed") return item;
+        return toggleObjectDisplayControl(
+          item,
+          "hidden",
+          ["bbox", "mask"],
+          visibilityStatus === "hidden",
+        );
       }
       if (modelName === MODEL_RUN && item.source_id !== GROUND_TRUTH) {
-        return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], !!hideAllObjects);
+        if (visibilityStatus === "mixed") return item;
+        return toggleObjectDisplayControl(
+          item,
+          "hidden",
+          ["bbox", "mask"],
+          visibilityStatus === "hidden",
+        );
       }
       return item;
     });
   });
 
   const handleVisibilityIconClick = () => {
-    hideAllObjects = !hideAllObjects;
+    if (visibilityStatus === "hidden") {
+      visibilityStatus = "shown";
+    } else if (visibilityStatus === "shown") {
+      visibilityStatus = "hidden";
+    } else {
+      visibilityStatus = "hidden";
+    }
   };
 </script>
 
 <div class="flex items-center gap-3 justify-between text-slate-800">
   <div class="flex items-center gap-3">
     <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
-      {#if hideAllObjects}
+      {#if visibilityStatus === "hidden"}
         <EyeOff class="h-4" />
       {:else}
         <Eye class="h-4" />

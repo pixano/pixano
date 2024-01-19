@@ -57,7 +57,11 @@
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
 
-  $: itemObjects.set(Object.values(selectedItem.objects || {}).flat());
+  $: itemObjects.set(
+    Object.values(selectedItem.objects || {})
+      .flat()
+      .map((obj) => ({ ...obj, displayControl: { hidden: false } })),
+  );
   $: itemMetas.set({
     features: selectedItem.features,
     itemFeatures: Object.values(selectedItem.objects || {})[0]?.features,
