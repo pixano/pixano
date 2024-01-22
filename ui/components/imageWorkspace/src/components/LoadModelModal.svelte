@@ -19,7 +19,7 @@
   import { SelectModal, WarningModal } from "@pixano/core";
   import { SAM } from "@pixano/models";
   import type { DatasetInfo, DatasetItem, SelectionTool } from "@pixano/core";
-  import { loadEmbeddings } from "../lib/api/modelsApi";
+  import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
   import { interactiveSegmenterModel, modelsStore } from "../lib/stores/imageWorkspaceStores";
   import type { Embeddings, ModelSelection } from "../lib/types/imageWorkspaceTypes";
 
@@ -37,25 +37,32 @@
     selectedModelName = store.selectedModelName;
   });
 
+  const loadEmbeddings = () => {
+    if (!selectedItemId || !selectedModelName || !currentDatasetId) {
+      return;
+    }
+    loadEmbeddingsApi(selectedItemId, selectedModelName, currentDatasetId)
+      .then((results) => {
+        embeddings = results;
+      })
+      .catch((err) => {
+        modelsStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
+        console.error("cannot load Embeddings", err);
+      });
+  };
+
   const sam = new SAM();
 
   async function loadModel() {
     modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
+    loadEmbeddings();
   }
 
   $: {
-    // load embeddings when selected item changes
-    if (selectedItemId && selectedModelName) {
-      loadEmbeddings(selectedItemId, selectedModelName, currentDatasetId)
-        .then((results) => {
-          embeddings = results;
-        })
-        .catch((err) => {
-          modelsStore.update((store) => ({ ...store, currentModalOpen: "noEmbeddings" }));
-          console.error("cannot load Embeddings", err);
-        });
+    if (selectedItemId) {
+      loadEmbeddings();
     }
   }
 
