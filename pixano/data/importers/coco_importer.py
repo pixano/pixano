@@ -17,6 +17,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
+import shortuuid
+
 from pixano.core import BBox, CompressedRLE, Image
 from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
@@ -90,6 +92,10 @@ class COCOImporter(Importer):
             ) as f:
                 coco_instances = json.load(f)
 
+            # ensure uniqueness by using shortid
+            for im in coco_instances["images"]:
+                im["uuid"] = shortuuid.uuid()
+
             # Group annotations by image ID
             annotations = defaultdict(list)
             for ann in coco_instances["annotations"]:
@@ -124,7 +130,7 @@ class COCOImporter(Importer):
                     "main": {
                         "db": [
                             {
-                                "id": str(im["id"]),
+                                "id": str(im["uuid"]),
                                 "views": ["image"],
                                 "split": split,
                             }
@@ -133,7 +139,7 @@ class COCOImporter(Importer):
                     "media": {
                         "image": [
                             {
-                                "id": str(im["id"]),
+                                "id": str(im["uuid"]),
                                 "image": Image(im_uri, None, im_thumb).to_dict(),
                             }
                         ]
@@ -142,7 +148,7 @@ class COCOImporter(Importer):
                         "objects": [
                             {
                                 "id": str(ann["id"]),
-                                "item_id": str(im["id"]),
+                                "item_id": str(im["uuid"]),
                                 "view_id": "image",
                                 "bbox": BBox.from_xywh(ann["bbox"])
                                 .normalize(im["height"], im["width"])
