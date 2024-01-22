@@ -1,7 +1,7 @@
+import type { BBox, Mask, SelectionTool } from "@pixano/core";
+import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 import Konva from "konva";
 import simplify from "simplify-js";
-import type { Mask, BBox, SelectionTool } from "@pixano/core";
-import LockIcon from "@pixano/core/src/assets/icons/lockIcon.svg";
 
 import { BBOX_STROKEWIDTH, MASK_STROKEWIDTH } from "../lib/constants";
 import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
@@ -174,6 +174,13 @@ export function addBBox(
   bboxGroup.add(bboxKonva);
 
   bboxRect.on("transform", function () {
+    const rect: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
+    rect.setAttrs({
+      width: rect.width() * rect.scaleX(),
+      height: rect.height() * rect.scaleY(),
+      scaleX: 1,
+      scaleY: 1,
+    });
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
   });
 
