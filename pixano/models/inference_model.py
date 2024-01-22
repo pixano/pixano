@@ -24,17 +24,13 @@ from tqdm.auto import tqdm
 
 from pixano.data import Dataset, DatasetTable, Fields
 
-# Disable warning for InferenceModel "id" attribute
-# NOTE: Rename attribute? Will need to update Pixano Inference
-# pylint: disable=redefined-builtin
-
 
 class InferenceModel(ABC):
     """Abstract parent class for OfflineModel and OnlineModel
 
     Attributes:
         name (str): Model name
-        id (str): Model ID
+        model_id (str): Model ID
         device (str): Model GPU or CPU device
         description (str): Model description
     """
@@ -42,7 +38,7 @@ class InferenceModel(ABC):
     def __init__(
         self,
         name: str,
-        id: str = "",
+        model_id: str = "",
         device: str = "",
         description: str = "",
     ) -> None:
@@ -50,16 +46,16 @@ class InferenceModel(ABC):
 
         Args:
             name (str): Model name
-            id (str, optional): Model ID. Defaults to "".
+            model_id (str, optional): Model ID. Defaults to "".
             device (str, optional): Model GPU or CPU device. Defaults to "".
             description (str, optional): Model description. Defaults to "".
         """
 
         self.name = name
-        if id == "":
-            self.id = f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{name}"
+        if model_id == "":
+            self.model_id = f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{name}"
         else:
-            self.id = id
+            self.model_id = model_id
         self.device = device
         self.description = description
 
@@ -84,7 +80,9 @@ class InferenceModel(ABC):
         """
 
         # Inference table filename
-        table_filename = f"emb_{self.id}" if "emb" in process_type else f"obj_{self.id}"
+        table_filename = (
+            f"emb_{self.model_id}" if "emb" in process_type else f"obj_{self.model_id}"
+        )
 
         # Objects preannotation schema
         if process_type == "obj":
