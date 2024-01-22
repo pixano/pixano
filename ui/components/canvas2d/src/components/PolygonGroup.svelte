@@ -124,9 +124,11 @@
     }
   }
 
-  function updateCircleRadius(id: number, i: number, radius: number) {
+  function scaleCircleRadius(id: number, i: number, scale: number) {
     const point: Konva.Circle = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`);
-    point.radius(radius);
+
+    point.scaleX(scale);
+    point.scaleY(scale);
   }
 </script>
 
@@ -159,14 +161,14 @@
           on:dragend={handlePolygonPointsDragEnd}
           on:mouseover={(e) => {
             e.detail.target?.attrs?.id === `dot-${polygonDetails.id}-${i}-${point.id}` &&
-              updateCircleRadius(point.id, i, 8 / zoomFactor[viewId]);
+              scaleCircleRadius(point.id, i, 2);
           }}
-          on:mouseleave={() => updateCircleRadius(point.id, i, 4 / zoomFactor[viewId])}
+          on:mouseleave={() => scaleCircleRadius(point.id, i, 1)}
           config={{
             x: point.x,
             y: point.y,
-            radius: 4 / zoomFactor[viewId],
-            fill: "rgb(0,128,0)",
+            radius: (pi === 0 ? 6 : 4) / zoomFactor[viewId],
+            fill: pi === 0 ? "#781e60" : "rgb(0,128,0)",
             stroke: "white",
             strokeWidth: 1 / zoomFactor[viewId],
             id: `dot-${polygonDetails.id}-${i}-${point.id}`,
