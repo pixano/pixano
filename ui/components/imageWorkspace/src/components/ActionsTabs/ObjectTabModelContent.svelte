@@ -13,13 +13,13 @@
    *
    * http://www.cecill.info
    */
-  import { Eye, EyeOff, ChevronRight } from "lucide-svelte";
+  import { ChevronRight, Eye, EyeOff } from "lucide-svelte";
 
   import { cn, IconButton } from "@pixano/core/src";
 
-  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let sectionTitle: string;
   export let modelName: string;
@@ -29,6 +29,7 @@
   let open: boolean = true;
 
   itemObjects.subscribe((items) => {
+    if (!items.length) return;
     const allObjectsOfCurrentModel = items.filter((item) => {
       if (modelName === MODEL_RUN) {
         return item.source_id !== GROUND_TRUTH;

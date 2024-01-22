@@ -105,7 +105,7 @@
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {
-      "bg-slate-100 rounded-sm": showSmartTools,
+      "bg-slate-200 rounded-sm": showSmartTools,
     })}
   >
     <button
