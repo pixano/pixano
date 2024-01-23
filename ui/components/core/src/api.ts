@@ -13,186 +13,198 @@
  * http://www.cecill.info
  */
 
-// Exports
+// Imports
+import type { DatasetInfo, DatasetItems, DatasetItem } from "./lib/types/datasetTypes";
 
-export async function getDatasetList() {
-  let datasets = null;
+// Exports
+export async function getDatasets(): Promise<Array<DatasetInfo>> {
+  let datasets: Array<DatasetInfo>;
 
   try {
     const response = await fetch("/datasets");
     if (response.ok) {
-      datasets = await response.json();
+      datasets = (await response.json()) as Array<DatasetInfo>;
     } else {
-      console.log(
-        "api.getDatasetList -",
-        response.status,
-        response.statusText,
-        await response.text()
-      );
+      datasets = [];
+      console.log("api.getDatasets -", response.status, response.statusText, await response.text());
     }
   } catch (e) {
-    console.log("api.getDatasetList -", e);
+    datasets = [];
+    console.log("api.getDatasets -", e);
   }
 
   return datasets;
 }
 
-export async function getDatasetItems(
-  datasetId: String,
-  page: number = 1,
-  size: number = 100
-) {
-  let datasetItems = null;
+export async function getDataset(datasetId: string): Promise<DatasetInfo> {
+  let dataset: DatasetInfo;
 
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items?page=${page}&size=${size}`
-    );
+    const response = await fetch(`/datasets/${datasetId}`);
     if (response.ok) {
-      datasetItems = await response.json();
+      dataset = (await response.json()) as DatasetInfo;
     } else {
+      dataset = {} as DatasetInfo;
+      console.log("api.getDataset -", response.status, response.statusText, await response.text());
+    }
+  } catch (e) {
+    dataset = {} as DatasetInfo;
+    console.log("api.getDataset -", e);
+  }
+
+  return dataset;
+}
+
+export async function getDatasetItems(
+  datasetId: string,
+  page: number = 1,
+  size: number = 100,
+): Promise<DatasetItems> {
+  let datasetItems: DatasetItems;
+
+  try {
+    const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
+    if (response.ok) {
+      datasetItems = (await response.json()) as DatasetItems;
+    } else {
+      datasetItems = {} as DatasetItems;
       console.log(
         "api.getDatasetItems -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
+    datasetItems = {} as DatasetItems;
     console.log("api.getDatasetItems -", e);
   }
 
   return datasetItems;
 }
 
-export async function getDatasetStats(datasetId: String) {
-  let datasetStats = null;
-
+export async function searchDatasetItems(
+  datasetId: string,
+  query: Record<string, string>,
+  page: number = 1,
+  size: number = 100,
+): Promise<DatasetItems> {
+  let datasetItems: DatasetItems | undefined;
   try {
-    const response = await fetch(`/datasets/${datasetId}/stats`);
+    const response = await fetch(`/datasets/${datasetId}/search?page=${page}&size=${size}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(query),
+      method: "POST",
+    });
     if (response.ok) {
-      datasetStats = await response.json();
+      datasetItems = (await response.json()) as DatasetItems;
     } else {
+      datasetItems = {} as DatasetItems;
       console.log(
-        "api.getDatasetStats -",
+        "api.searchDatasetItems -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
-    console.log("api.getDatasetStats -", e);
+    datasetItems = {} as DatasetItems;
+    console.log("api.searchDatasetItems -", e);
   }
-
-  return datasetStats;
+  return datasetItems;
 }
 
-export async function getItemDetails(datasetId: String, itemId: string) {
-  let itemDetails = null;
+export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
+  let item: DatasetItem | undefined;
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
-      itemDetails = await response.json();
+      item = (await response.json()) as DatasetItem;
     } else {
+      item = {} as DatasetItem;
       console.log(
-        "api.getItemDetails -",
+        "api.getDatasetItem -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
-    console.log("api.getItemDetails -", e);
+    item = {} as DatasetItem;
+    console.log("api.getDatasetItem -", e);
   }
 
-  return itemDetails;
+  return item;
 }
 
-export async function getItemEmbeddings(datasetId: String, itemId: string) {
-  let embeddings = null;
+export async function getItemEmbeddings(
+  datasetId: string,
+  itemId: string,
+  modelId: string,
+): Promise<DatasetItem> {
+  let item: DatasetItem | undefined;
 
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/embeddings`
-    );
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}/embeddings/${modelId}`);
     if (response.ok) {
-      embeddings = await response.json();
+      item = (await response.json()) as DatasetItem;
     } else {
+      item = {} as DatasetItem;
       console.log(
         "api.getItemEmbeddings -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
+    item = {} as DatasetItem;
     console.log("api.getItemEmbeddings -", e);
   }
-  return embeddings;
+  return item;
 }
 
-export async function postItemDetails(
-  itemDetails: Object,
-  datasetId: String,
-  itemId: string
-) {
+export async function postDatasetItem(datasetId: string, item: DatasetItem) {
   try {
-    const response = await fetch(
-      `/datasets/${datasetId}/items/${itemId}/details`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(itemDetails),
-        method: "POST",
-      }
-    );
-    if (!response.ok) {
-      console.log(
-        "api.postItemDetails -",
-        response.status,
-        response.statusText,
-        await response.text()
-      );
-    }
-  } catch (e) {
-    console.log("api.postItemDetails -", e);
-  }
-}
-
-export async function getSearchResult(
-  datasetId: String,
-  query: string,
-  page: number = 1,
-  size: number = 100
-) {
-  let datasetItems = null;
-  try {
-    const response = await fetch(
-      `/datasets/${datasetId}/search?page=${page}&size=${size}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({"query": query}),
-        method: "POST",
-      }
-    );
+    const response = await fetch(`/datasets/${datasetId}/items/${item.id}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(item),
+      method: "POST",
+    });
     if (response.ok) {
-      datasetItems = await response.json();
-    }
-    else {
       console.log(
-        "api.getSearchResult -",
+        "api.postDatasetItem -",
         response.status,
         response.statusText,
-        await response.text()
+        await response.text(),
       );
     }
   } catch (e) {
-    console.log("api.getSearchResult -", e);
+    console.log("api.postDatasetItem -", e);
   }
-  return datasetItems
+}
+
+export async function getModels(): Promise<Array<string>> {
+  let models: Array<string> | undefined;
+
+  try {
+    const response = await fetch("/models");
+    if (response.ok) {
+      models = (await response.json()) as Array<string>;
+    } else {
+      models = [];
+      console.log("api.getModels -", response.status, response.statusText, await response.text());
+    }
+  } catch (e) {
+    models = [];
+    console.log("api.getModels -", e);
+  }
+
+  return models;
 }

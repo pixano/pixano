@@ -20,8 +20,11 @@ from pixano.core.image import Image, ImageType
 from pixano.core.pixano_type import PixanoType, convert_field, create_pyarrow_type
 from pixano.core.pose import Pose, PoseType
 from pixano.core.utils import (
+    is_binary,
+    is_boolean,
+    is_float,
     is_image_type,
-    is_number,
+    is_integer,
     is_string,
     pyarrow_array_from_list,
 )
@@ -44,8 +47,11 @@ __all__ = [
     "create_pyarrow_type",
     "Pose",
     "PoseType",
+    "is_binary",
+    "is_boolean",
+    "is_float",
     "is_image_type",
-    "is_number",
+    "is_integer",
     "is_string",
     "pyarrow_array_from_list",
 ]

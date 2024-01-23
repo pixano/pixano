@@ -33,12 +33,11 @@ class PixanoType(ABC, BaseModel):
 
             if isinstance(value, PixanoType):
                 return value.to_dict()
-            elif isinstance(value, dict):
+            if isinstance(value, dict):
                 return {k: _convert_value_as_dict(v) for k, v in value.items()}
-            elif isinstance(value, (list, tuple)):
+            if isinstance(value, (list, tuple)):
                 return [_convert_value_as_dict(item) for item in value]
-            else:
-                return value
+            return value
 
         struct_fields = self.to_struct()
         return {
@@ -60,15 +59,14 @@ class PixanoType(ABC, BaseModel):
 
         return cls(**data)
 
+    @staticmethod
     @abstractmethod
-    def to_struct(cls) -> pa.StructType:
+    def to_struct() -> pa.StructType:
         """Return custom type as PyArrow Struct
 
         Returns:
             pa.StructType: Custom type corresponding PyArrow Struct
         """
-
-        pass
 
 
 def convert_field(
@@ -91,7 +89,7 @@ def convert_field(
         return pa.ExtensionArray.from_storage(field_type, storage)
 
     # If target format is an extension of ListType
-    elif pa.types.is_list(field_type):
+    if pa.types.is_list(field_type):
         native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
             return pa.nulls(len(native_arr), field_type)
@@ -103,7 +101,7 @@ def convert_field(
         )
 
     # If target format is an extension of StructType
-    elif pa.types.is_struct(field_type):
+    if pa.types.is_struct(field_type):
         native_arr = pa.array(field_data)
         if isinstance(native_arr, pa.NullArray):
             return pa.nulls(len(native_arr), field_type)
@@ -119,28 +117,29 @@ def convert_field(
         return pa.StructArray.from_arrays(arrays, fields=field_type)
 
     # For other target formats
-    else:
-        return pa.array(field_data, type=field_type)
+    return pa.array(field_data, type=field_type)
 
 
 def create_pyarrow_type(
-    struct_type: pa.StructType, name: str, pyType: Type
+    struct_type: pa.StructType,
+    name: str,
+    python_type: type,
 ) -> pa.ExtensionType:
     """Create PyArrow ExtensionType for Pixano custom type
 
     Args:
         struct_type (pa.StructType): Pixano custom type as PyArrow Struct
         name (str): Pixano custom type name
-        pyType (Type): Pixano custom type Python type
+        python_type (type): Pixano custom type Python type
 
     Returns:
         pa.ExtensionType: PyArrow ExtensionType
     """
 
     class CustomExtensionType(pa.ExtensionType):
-        def __init__(self, struct_type: pa.StructType, name: str):
-            super().__init__(struct_type, name)
+        """PyArrow CustomExtensionType"""
 
+        # pylint: disable=unused-argument
         @classmethod
         def __arrow_ext_deserialize__(cls, storage_type, serialized):
             return cls(struct_type, name)
@@ -158,7 +157,11 @@ def create_pyarrow_type(
             return f"ExtensionType<{name}Type>"
 
         class Scalar(pa.ExtensionScalar):
+            """PyArrow ExtensionScalar"""
+
             def as_py(self):
+                """Create Python PixanoType from ExtensionScalar dictionary of PyArrow objects"""
+
                 def as_py_dict(pa_dict: dict[str, Any]) -> dict[str, Any]:
                     """Recusively convert dictionary of PyArrow objects to dictionary of Python objects
 
@@ -179,15 +182,36 @@ def create_pyarrow_type(
                             py_dict[key] = as_py_dict(value)
                     return py_dict
 
-                return pyType.from_dict(as_py_dict(self.value))
+                return python_type.from_dict(as_py_dict(self.value))
 
         class Array(pa.ExtensionArray):
+            """PyArrow ExtensionArray"""
+
             def __repr__(self):
                 return f"<{name}Array object at {hex(id(self))}>\n{self}"
 
             @staticmethod
-            def from_pylist(lst: list | list[list]):
-                def from_list(lst: list):
+            def from_pylist(lst: list) -> pa.ExtensionArray | pa.ListArray:
+                """Create PyArrow list of objects from Python list
+
+
+                Args:
+                    lst (list): Python list
+
+                Returns:
+                    pa.ExtensionArray | pa.ListArray: PyArrow list
+                """
+
+                def from_list(lst: list) -> pa.ExtensionArray:
+                    """Return ExtensionArray from Python list
+
+                    Args:
+                        lst (list): Python list
+
+                    Returns:
+                        pa.ExtensionArray: ExtensionArray
+                    """
+
                     fields = struct_type
                     arrays = []
 
@@ -216,21 +240,21 @@ def create_pyarrow_type(
                     sto = pa.StructArray.from_arrays(arrays, fields=fields)
                     return pa.ExtensionArray.from_storage(pyarrow_type, sto)
 
-                def from_lists(list: list[list[Type]]) -> pa.ListArray:
-                    """Return paListArray corresponding to list of list of type
+                def from_lists(lsts: list[list]) -> pa.ListArray:
+                    """Return ListArray from Python list of lists
 
                     Args:
-                        list (list[list[Type]]): list of list of type
+                        lsts (list[list]): Python list of lists
 
                     Returns:
-                        pa.ListArray: List array with offset corresponding to list
+                        pa.ListArray: ListArray
                     """
 
                     offset = [0]
-                    for sub_list in list:
+                    for sub_list in lsts:
                         offset.append(len(sub_list) + offset[-1])
 
-                    flat_list = [item for sublist in list for item in sublist]
+                    flat_list = [item for sublist in lsts for item in sublist]
                     flat_array = from_list(flat_list)
 
                     return pa.ListArray.from_arrays(
@@ -238,21 +262,36 @@ def create_pyarrow_type(
                     )
 
                 def is_nested(lst: list) -> bool:
-                    """Check if list contains only sublists"""
+                    """Check if list contains only sublists
+
+                    Args:
+                        lst (list): List to check
+
+                    Returns:
+                        bool: True if list contains only sublists
+                    """
+
                     return all(isinstance(item, list) for item in lst)
 
                 def is_flat(lst: list) -> bool:
-                    """Check if list does not contain sublists"""
+                    """Check if list does not contain sublists
+
+                    Args:
+                        lst (list): List to check
+
+                    Returns:
+                        bool: True if list does not contains sublists
+                    """
+
                     return all(not isinstance(item, list) for item in lst)
 
                 if is_nested(lst):
                     return from_lists(lst)
-                elif is_flat(lst):
+                if is_flat(lst):
                     return from_list(lst)
-                else:
-                    raise ValueError(
-                        "Input list must be either a nested list or a flat list"
-                    )
+                raise ValueError(
+                    "Input list must be either a nested list or a flat list"
+                )
 
     # Create ExtensionType
     pyarrow_type = CustomExtensionType(struct_type, name)

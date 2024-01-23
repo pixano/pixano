@@ -21,18 +21,18 @@ class Pose(PixanoType, BaseModel):
     """Pose type using orientation and translation matrices
 
     Attributes:
-        _cam_R_m2c (list[float]): 3*3 orientation matrix
+        _cam_r_w2c (list[float]): 3*3 orientation matrix
         _cam_t_m2c (list[float]): 3*1 translation matrix
     """
 
-    _cam_R_m2c: list[float] = PrivateAttr()
+    _cam_r_m2c: list[float] = PrivateAttr()
     _cam_t_m2c: list[float] = PrivateAttr()
 
-    def __init__(self, cam_R_m2c: list[float], cam_t_m2c: list[float]):
+    def __init__(self, cam_r_m2c: list[float], cam_t_m2c: list[float]):
         """Initialize pose from orientation and translation matrices
 
         Args:
-            cam_R_m2c (list[float]): 3*3 orientation matrix
+            cam_r_w2c (list[float]): 3*3 orientation matrix
             cam_t_m2c (list[float]): 3*1 translation matrix
         """
 
@@ -40,18 +40,18 @@ class Pose(PixanoType, BaseModel):
         super().__init__()
 
         # Define private attributes manually
-        self._cam_R_m2c = cam_R_m2c
+        self._cam_r_m2c = cam_r_m2c
         self._cam_t_m2c = cam_t_m2c
 
     @property
-    def cam_R_m2c(self) -> list[float]:
+    def cam_r_m2c(self) -> list[float]:
         """Return Pose orientation matrix
 
         Returns:
             list[float]: 3*3 orientation matrix
         """
 
-        return self._cam_R_m2c
+        return self._cam_r_m2c
 
     @property
     def cam_t_m2c(self) -> list[float]:
@@ -73,7 +73,7 @@ class Pose(PixanoType, BaseModel):
 
         return pa.struct(
             [
-                pa.field("cam_R_m2c", pa.list_(pa.float64(), list_size=9)),
+                pa.field("cam_r_m2c", pa.list_(pa.float64(), list_size=9)),
                 pa.field("cam_t_m2c", pa.list_(pa.float64(), list_size=3)),
             ]
         )

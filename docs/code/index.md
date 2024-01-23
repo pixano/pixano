@@ -6,10 +6,9 @@ title: Pixano API reference
 
 Here you will find the documentation for all of our Python API.
 
-- The ***analytics*** module contains useful functions for computing statistics on a dataset.
-- The ***api*** module contains the API functions to send relevant data to the User Interface.
-- The ***apps*** module contains the Pixano Explorer and Annotator *Apps*.
-- The ***core*** module contains the Pixano custom data types and their corresponding PyArrow types.
-- The ***data*** module contains the Pixano *Datasets*, as well as the *Importers* and *Exporters* for importing and exporting datasets.
-- The ***models*** module contains the Pixano *InferenceModel* for inference generation and embedding precomputing.
-- The ***utils*** module contains many useful functions to work with images, bounding boxes, and labels.
+- The **_analytics_** module contains useful functions for computing statistics on a dataset.
+- The **_apps_** module contains the Pixano app and its API.
+- The **_core_** module contains the Pixano custom data types for storing data in the PyArrow tabular format.
+- The **_data_** module contains classes like for interfacing data with the API, as well as the classes for importing and exporting datasets.
+- The **_models_** module contains the base class for inference generation and embedding precomputing models.
+- The **_utils_** module contains useful functions to work with images, bounding boxes, labels, and more.

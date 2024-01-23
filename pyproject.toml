@@ -32,10 +32,10 @@ dependencies = [
   "importlib-resources ~= 5.12.0",
   "ipywidgets ~= 8.0.0",
   "jinja2 ~= 3.1.2",
-  "lancedb ~= 0.3.3",
+  "lancedb == 0.3.4",
   "numpy >= 1.23.0",
   "onnx ~= 1.13.0",
-  "onnxruntime ~= 1.16.0",
+  "onnxruntime ~= 1.15.0",
   "opencv-python ~= 4.7.0",
   "pandas ~= 1.5.0",
   "Pillow ~= 9.4.0",
@@ -43,7 +43,8 @@ dependencies = [
   "pycocotools ~= 2.0.0",
   "pydantic ~= 2.4.0",
   "pydantic-settings ~= 2.0.0",
-  "pylance ~= 0.8.10",
+  "pylance == 0.8.17",
+  "s3path ~= 0.5.0",
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
   "tqdm ~= 4.64.0",
@@ -64,16 +65,12 @@ Issues = "https://github.com/pixano/pixano/issues"
 Source = "https://github.com/pixano/pixano"
 
 [project.scripts]
-pixano-annotator = "pixano.apps.annotator.serve:main"
-pixano-explorer = "pixano.apps.explorer.serve:main"
+pixano = "pixano.app.serve:main"
 
 [tool.hatch.build]
 include = ["/pixano"]
 exclude = ["__pycache__"]
-artifacts = [
-  "/pixano/apps/annotator/dist",
-  "/pixano/apps/explorer/dist"
-]
+artifacts = ["/pixano/app/dist"]
 
 [tool.hatch.version]
 path = "pixano/__version__.py"

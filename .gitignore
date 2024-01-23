@@ -23,6 +23,7 @@ site
 
 # Editor directories and files
 .vscode
+todo.*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -33,6 +34,7 @@ site
 *.sln
 *.sw?
 *lock.yaml
+*.code-workspace
 makefile
 
 # Environment
@@ -46,3 +48,7 @@ __pycache__
 *.pth
 *.onnx
 *.wasm
+
+# Dataset files
+*.lance
+

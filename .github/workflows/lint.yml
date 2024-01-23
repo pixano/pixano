@@ -1,0 +1,90 @@
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
+# @License: CECILL-C
+#
+# This software is a collaborative computer program whose purpose is to
+# generate and explore labeled data for computer vision applications.
+# This software is governed by the CeCILL-C license under French law and
+# abiding by the rules of distribution of free software. You can use,
+# modify and/ or redistribute the software under the terms of the CeCILL-C
+# license as circulated by CEA, CNRS and INRIA at the following URL
+#
+# http://www.cecill.info
+
+name: Lint
+
+on:
+  push:
+    branches:
+      - "develop"
+      - "main"
+  pull_request:
+    branches:
+      - "develop"
+
+permissions:
+  contents: read
+
+jobs:
+  # This workflow will lint frontend code (Svelte, Typescript) with eslint
+  lint_front:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i
+
+      - name: Lint frontend code with eslint
+        run: |
+          cd ui
+          pnpm lint
+
+  # This job will lint backend code (Python) with Pylint
+  # Disable R0801 (duplicate-code) for backend tests as we reuse some code like sample statistics and importers basic tests
+  lint_back:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pylint
+          python -m pip install pixano-inference@git+https://github.com/pixano/pixano-inference
+          python -m pip install .
+
+      - name: Lint backend code with Pylint
+        run: |
+          pylint pixano/ --rcfile .github/workflows/.pylintrc
+
+      - name: Lint backend tests with Pylint
+        run: |
+          pylint tests/ --rcfile .github/workflows/.pylintrc --disable=R0801
+
+      - name: Lint Jupyter notebooks with Pylint
+        run: |
+          pylint notebooks/ --rcfile .github/workflows/.pylintrc

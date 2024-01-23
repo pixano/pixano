@@ -18,8 +18,9 @@ import fs from "fs";
 import { readFile } from "fs/promises";
 import * as ort from "onnxruntime-node";
 import { describe, expect, test } from "vitest";
+import { Tensor } from "onnxruntime-web";
 
-import { LabeledClick } from "../src/interfaces";
+import type { LabeledClick, Box } from "../src/interfaces";
 import * as npyjs from "../src/npy";
 import { SAM } from "../src/Sam";
 
@@ -29,11 +30,8 @@ const H: number = 576;
 
 describe("SAM", () => {
   test("Init model", async () => {
-    const modelWeights = await readFile(
-      `${__dirname}/sam_onnx_quantized_vit_h.onnx`
-    );
     const sam = new SAM();
-    await sam.init(modelWeights);
+    await sam.init(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
 
     const expectedInputs = [
       "image_embeddings",
@@ -56,9 +54,7 @@ describe("SAM", () => {
   });
 
   test("Preprocess clicks", () => {
-    const expectedPointsCoords = [
-      388, 133.33333, 653.3333, 222.66667, 836, 238.66667, 0, 0,
-    ];
+    const expectedPointsCoords = [388, 133.33333, 653.3333, 222.66667, 836, 238.66667, 0, 0];
 
     const expectedLabels = [1, 1, 0, -1];
 
@@ -78,27 +74,20 @@ describe("SAM", () => {
   });
 
   test("segmentImage from clicks", async () => {
-    const modelWeights = await readFile(
-      `${__dirname}/sam_onnx_quantized_vit_h.onnx`
-    );
     const sam = new SAM();
-    await sam.init(modelWeights);
+    await sam.init(`${__dirname}/sam_onnx_quantized_vit_h.onnx`);
 
     Object.defineProperty(Image.prototype, "naturalHeight", { get: () => H });
     Object.defineProperty(Image.prototype, "naturalWidth", { get: () => W });
 
     // load embedding
-    const rawData = fs.readFileSync(`${__dirname}/image-0001.npy`);
+    const rawData = fs.readFileSync(`${__dirname}/image-0001.npy`).toJSON().data;
     const embeddingArr = npyjs.parse(rawData);
-    const embedding = new ort.Tensor(
-      "float32",
-      embeddingArr.data,
-      embeddingArr.shape
-    );
+    const embedding = new ort.Tensor("float32", embeddingArr.data, embeddingArr.shape);
 
     const expectedEmbedding = [
-      -0.18764384, -0.2177867, -0.19377214, -0.19490339, -0.2003522,
-      -0.16835165, -0.15158224, -0.1445655, -0.08978239, -0.1408087,
+      -0.18764384, -0.2177867, -0.19377214, -0.19490339, -0.2003522, -0.16835165, -0.15158224,
+      -0.1445655, -0.08978239, -0.1408087,
     ];
 
     for (let i = 0; i < 10; ++i) {
@@ -118,6 +107,8 @@ describe("SAM", () => {
       image: new Image(),
       embedding: embedding,
       points: inputClicks,
+      box: null as unknown as Box, // TODO : fix this type
+      mask: null as unknown as Tensor, // TODO : fix this type
     };
 
     const result = await sam.segmentImage(samInput);

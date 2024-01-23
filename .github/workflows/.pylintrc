@@ -1,0 +1,18 @@
+[MASTER]
+disable=
+    C0114, # missing-module-docstring
+    C0301, # line-too-long (already set by black formatter)
+    R0903, # too-few-public-methods (PixanoType CustomExtensionType and Scalar, Exporter)
+generated-members=
+    cv2.*, # members not found
+    duckdb.*, # members not found
+
+[MAIN]
+max-branches=20
+
+[DESIGN]
+max-args = 10
+max-locals = 20
+
+[SIMILARITIES]
+min-similarity-lines=10

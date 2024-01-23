@@ -22,25 +22,28 @@ from pixano.data import ImageImporter
 
 
 class ImageImporterTestCase(unittest.TestCase):
+    """ImageImporter test case"""
+
     def setUp(self):
-        self.input_dirs = {"image": Path("tests/assets/coco_dataset/image")}
+        """Tests setup"""
+
+        input_dirs = {"image": Path("tests/assets/coco_dataset/image")}
         self.importer = ImageImporter(
             name="COCO",
             description="Image dataset using COCO",
+            input_dirs=input_dirs,
             splits=["val"],
         )
 
     def test_import_dataset(self):
+        """Test ImageImporter import_dataset method"""
+
         with tempfile.TemporaryDirectory() as temp_dir:
             # Set import directory
             import_dir = Path(temp_dir) / "coco"
 
             # Import dataset
-            dataset = self.importer.import_dataset(
-                self.input_dirs,
-                import_dir,
-                portable=False,
-            )
+            dataset = self.importer.import_dataset(import_dir, copy=True)
 
             # Check that db.json exists
             spec_json_path = import_dir / "db.json"

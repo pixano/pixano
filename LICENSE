@@ -1,6 +1,5 @@
 CeCILL-C FREE SOFTWARE LICENSE AGREEMENT
 
-
     Notice
 
 This Agreement is a Free Software license agreement that is the result
@@ -31,7 +30,6 @@ INRIA, a public scientific and technological establishment, having its
 principal place of business at Domaine de Voluceau, Rocquencourt, BP
 105, 78153 Le Chesnay cedex, France.
 
-
     Preamble
 
 The purpose of this Free Software license agreement is to grant users
@@ -61,7 +59,6 @@ removed herefrom.
 
 This Agreement may apply to any or all software for which the holder of
 the economic rights decides to submit the use thereof to its provisions.
-
 
     Article 1 - DEFINITIONS
 
@@ -115,14 +112,12 @@ Parties: mean both the Licensee and the Licensor.
 
 These expressions may be used both in singular and plural form.
 
-
     Article 2 - PURPOSE
 
 The purpose of the Agreement is the grant by the Licensor to the
 Licensee of a non-exclusive, transferable and worldwide license for the
 Software as set forth in Article 5 hereinafter for the whole term of the
-protection granted by the rights over said Software. 
-
+protection granted by the rights over said Software.
 
     Article 3 - ACCEPTANCE
 
@@ -143,7 +138,6 @@ to the Licensee prior to its acceptance as set forth in Article 3.1
 hereinabove, and the Licensee hereby acknowledges that it has read and
 understood it.
 
-
     Article 4 - EFFECTIVE DATE AND TERM
 
 
@@ -152,12 +146,10 @@ understood it.
 The Agreement shall become effective on the date when it is accepted by
 the Licensee as set forth in Article 3.1.
 
-
       4.2 TERM
 
 The Agreement shall remain in force for the entire legal term of
 protection of the economic rights over the Software.
-
 
     Article 5 - SCOPE OF RIGHTS GRANTED
 
@@ -173,28 +165,26 @@ modifying the Software. If these patents are transferred, the Licensor
 undertakes to have the transferees subscribe to the obligations set
 forth in this paragraph.
 
-
       5.1 RIGHT OF USE
 
 The Licensee is authorized to use the Software, without any limitation
 as to its fields of application, with it being hereinafter specified
 that this comprises:
 
-   1. permanent or temporary reproduction of all or part of the Software
-      by any or all means and in any or all form.
+1.  permanent or temporary reproduction of all or part of the Software
+    by any or all means and in any or all form.
 
-   2. loading, displaying, running, or storing the Software on any or
-      all medium.
+2.  loading, displaying, running, or storing the Software on any or
+    all medium.
 
-   3. entitlement to observe, study or test its operation so as to
-      determine the ideas and principles behind any or all constituent
-      elements of said Software. This shall apply when the Licensee
-      carries out any or all loading, displaying, running, transmission
-      or storage operation as regards the Software, that it is entitled
-      to carry out hereunder.
+3.  entitlement to observe, study or test its operation so as to
+    determine the ideas and principles behind any or all constituent
+    elements of said Software. This shall apply when the Licensee
+    carries out any or all loading, displaying, running, transmission
+    or storage operation as regards the Software, that it is entitled
+    to carry out hereunder.
 
-
-      5.2 RIGHT OF MODIFICATION
+    5.2 RIGHT OF MODIFICATION
 
 The right of modification includes the right to translate, adapt,
 arrange, or make any or all modifications to the Software, and the right
@@ -204,7 +194,6 @@ right to create a Derivative Software.
 The Licensee is authorized to make any or all modification to the
 Software provided that it includes an explicit notice that it is the
 author of said modification and indicates the date of the creation thereof.
-
 
       5.3 RIGHT OF DISTRIBUTION
 
@@ -218,17 +207,16 @@ The Licensee is further authorized to distribute copies of the modified
 or unmodified Software to third parties according to the terms and
 conditions set forth hereinafter.
 
-
         5.3.1 DISTRIBUTION OF SOFTWARE WITHOUT MODIFICATION
 
 The Licensee is authorized to distribute true copies of the Software in
 Source Code or Object Code form, provided that said distribution
 complies with all the provisions of the Agreement and is accompanied by:
 
-   1. a copy of the Agreement,
+1.  a copy of the Agreement,
 
-   2. a notice relating to the limitation of both the Licensor's
-      warranty and liability as set forth in Articles 8 and 9,
+2.  a notice relating to the limitation of both the Licensor's
+    warranty and liability as set forth in Articles 8 and 9,
 
 and that, in the event that only the Object Code of the Software is
 redistributed, the Licensee allows effective access to the full Source
@@ -236,7 +224,6 @@ Code of the Software at a minimum during the entire period of its
 distribution of the Software, it being understood that the additional
 cost of acquiring the Source Code shall not exceed the cost of
 transferring the data.
-
 
         5.3.2 DISTRIBUTION OF MODIFIED SOFTWARE
 
@@ -248,10 +235,10 @@ The Licensee is authorized to distribute the Modified Software, in
 source code or object code form, provided that said distribution
 complies with all the provisions of the Agreement and is accompanied by:
 
-   1. a copy of the Agreement,
+1.  a copy of the Agreement,
 
-   2. a notice relating to the limitation of both the Licensor's
-      warranty and liability as set forth in Articles 8 and 9,
+2.  a notice relating to the limitation of both the Licensor's
+    warranty and liability as set forth in Articles 8 and 9,
 
 and that, in the event that only the object code of the Modified
 Software is redistributed, the Licensee allows effective access to the
@@ -260,35 +247,32 @@ period of its distribution of the Modified Software, it being understood
 that the additional cost of acquiring the source code shall not exceed
 the cost of transferring the data.
 
-
         5.3.3 DISTRIBUTION OF DERIVATIVE SOFTWARE
 
 When the Licensee creates Derivative Software, this Derivative Software
 may be distributed under a license agreement other than this Agreement,
 subject to compliance with the requirement to include a notice
 concerning the rights over the Software as defined in Article 6.4.
-In the event the creation of the Derivative Software required modification 
+In the event the creation of the Derivative Software required modification
 of the Source Code, the Licensee undertakes that:
 
-   1. the resulting Modified Software will be governed by this Agreement,
-   2. the Integrated Contributions in the resulting Modified Software
-      will be clearly identified and documented,
-   3. the Licensee will allow effective access to the source code of the
-      Modified Software, at a minimum during the entire period of
-      distribution of the Derivative Software, such that such
-      modifications may be carried over in a subsequent version of the
-      Software; it being understood that the additional cost of
-      purchasing the source code of the Modified Software shall not
-      exceed the cost of transferring the data.
+1.  the resulting Modified Software will be governed by this Agreement,
+2.  the Integrated Contributions in the resulting Modified Software
+    will be clearly identified and documented,
+3.  the Licensee will allow effective access to the source code of the
+    Modified Software, at a minimum during the entire period of
+    distribution of the Derivative Software, such that such
+    modifications may be carried over in a subsequent version of the
+    Software; it being understood that the additional cost of
+    purchasing the source code of the Modified Software shall not
+    exceed the cost of transferring the data.
 
-
-        5.3.4 COMPATIBILITY WITH THE CeCILL LICENSE
+    5.3.4 COMPATIBILITY WITH THE CeCILL LICENSE
 
 When a Modified Software contains an Integrated Contribution subject to
 the CeCILL license agreement, or when a Derivative Software contains a
 Related Module subject to the CeCILL license agreement, the provisions
 set forth in the third item of Article 6.4 are optional.
-
 
     Article 6 - INTELLECTUAL PROPERTY
 
@@ -304,13 +288,11 @@ distribution of said Initial Software.
 The Holder undertakes that the Initial Software will remain ruled at
 least by this Agreement, for the duration set forth in Article 4.2.
 
-
       6.2 OVER THE INTEGRATED CONTRIBUTIONS
 
 The Licensee who develops an Integrated Contribution is the owner of the
 intellectual property rights over this Contribution as defined by
 applicable law.
-
 
       6.3 OVER THE RELATED MODULES
 
@@ -319,28 +301,26 @@ intellectual property rights over this Related Module as defined by
 applicable law and is free to choose the type of agreement that shall
 govern its distribution under the conditions defined in Article 5.3.3.
 
-
       6.4 NOTICE OF RIGHTS
 
 The Licensee expressly undertakes:
 
-   1. not to remove, or modify, in any manner, the intellectual property
-      notices attached to the Software;
+1.  not to remove, or modify, in any manner, the intellectual property
+    notices attached to the Software;
 
-   2. to reproduce said notices, in an identical manner, in the copies
-      of the Software modified or not;
+2.  to reproduce said notices, in an identical manner, in the copies
+    of the Software modified or not;
 
-   3. to ensure that use of the Software, its intellectual property
-      notices and the fact that it is governed by the Agreement is
-      indicated in a text that is easily accessible, specifically from
-      the interface of any Derivative Software.
+3.  to ensure that use of the Software, its intellectual property
+    notices and the fact that it is governed by the Agreement is
+    indicated in a text that is easily accessible, specifically from
+    the interface of any Derivative Software.
 
 The Licensee undertakes not to directly or indirectly infringe the
 intellectual property rights of the Holder and/or Contributors on the
 Software and to take, where applicable, vis-à-vis its staff, any and all
 measures required to ensure respect of said intellectual property rights
 of the Holder and/or Contributors.
-
 
     Article 7 - RELATED SERVICES
 
@@ -361,7 +341,6 @@ warranty, and the financial terms and conditions of its application,
 shall be subject of a separate instrument executed between the Licensor
 and the Licensee.
 
-
     Article 8 - LIABILITY
 
 8.1 Subject to the provisions of Article 8.2, the Licensee shall be
@@ -381,7 +360,6 @@ opportunity cost, any disturbance to business activities) or any or all
 legal proceedings instituted against the Licensee by a third party,
 shall constitute consequential loss and shall not provide entitlement to
 any or all compensation from the Licensor.
-
 
     Article 9 - WARRANTY
 
@@ -429,7 +407,6 @@ name of the Software. No warranty is given as regards the existence of
 prior rights over the name of the Software or as regards the existence
 of a trademark.
 
-
     Article 10 - TERMINATION
 
 10.1 In the event of a breach by the Licensee of its obligations
@@ -442,7 +419,6 @@ authorized to use, modify or distribute the Software. However, any
 licenses that it may have granted prior to termination of the Agreement
 shall remain valid subject to their having been granted in compliance
 with the terms and conditions hereof.
-
 
     Article 11 - MISCELLANEOUS
 
@@ -478,12 +454,10 @@ text. All other provisions shall remain effective. Similarly, invalidity
 of a provision of the Agreement, for any reason whatsoever, shall not
 cause the Agreement as a whole to be invalid.
 
-
       11.5 LANGUAGE
 
 The Agreement is drafted in both French and English and both versions
 are deemed authentic.
-
 
     Article 12 - NEW VERSIONS OF THE AGREEMENT
 
@@ -500,7 +474,6 @@ address new issues encountered by Free Software.
 only be subsequently distributed under the same version of the Agreement
 or a subsequent version.
 
-
     Article 13 - GOVERNING LAW AND JURISDICTION
 
 13.1 The Agreement is governed by French law. The Parties agree to
@@ -511,6 +484,5 @@ that may arise during the performance of the Agreement.
 occurrence, and unless emergency proceedings are necessary, the
 disagreements or disputes shall be referred to the Paris Courts having
 jurisdiction, by the more diligent Party.
-
 
 Version 1.0 dated 2006-09-05.

@@ -2,7 +2,6 @@
 
 Thank you for your interest in Pixano! Here you will find information on running Pixano locally and guidelines on how to publish your contributions.
 
-
 ## Getting started
 
 ### Issue and suggestions
@@ -14,7 +13,6 @@ If you find a bug or you think of some missing features that could be useful whi
 To contribute more actively to the project, you are welcome to develop the fix or the feature you have in mind, and [create a pull request](https://github.com/pixano/pixano/pulls)!
 
 And if you want to change the application to your liking, feel free to [fork this repository](https://github.com/pixano/pixano/fork)!
-
 
 ## Running Pixano locally
 
@@ -32,51 +30,94 @@ pip install .
 
 #### Frontend
 
-You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, inside the `pixano/ui/` directory, run this command to install all the pnpm dependencies:
+You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, you will need to run this to install all the pnpm dependencies:
 
 ```bash
+cd ui/
 pnpm i
 ```
 
 ### Running the server and apps
 
-First, launch the backend server using this command:
+First, you will need to launch the backend server using this command:
 
 ```bash
-DATA_DIR=your_datasets_directory/ uvicorn pixano.apps:create_app --factory --reload
+LIBRARY_DIR=your_datasets_directory/ uvicorn pixano.app:create_app --factory --reload
 ```
 
-Then, in another terminal, launch the frontend apps using:
+Then, in another terminal, you can launch the frontend apps using:
 
 ```bash
+cd ui/
 pnpm --parallel run dev
 ```
 
-This command should provide you with `http://localhost` links you can open in your browser to access the Explorer and Annotator apps.
+This command should provide you with a `http://localhost` link you can open in your browser to access the Pixano app.
 
-Both the uvicorn server and the pnpm apps will refresh automatically when you make changes to the code.
-
+Both the backend server and the frontend apps should refresh automatically when you make changes to the code.
 
 ## Testing the code
 
-We test our backend code with Python's built-in `unittest` framework. All our unit testing files are in the `tests/` folder, with a `test_` prefix, so your settings file in VS Code should look like this:
+### Backend
 
-```json
-  "python.testing.unittestArgs": ["-v", "-s", "./tests", "-p", "test_*.py"],
-  "python.testing.pytestEnabled": false,
-  "python.testing.unittestEnabled": true
-```
+We test our backend code with Python's built-in `unittest` framework.
+
+All our unit testing files are in the `tests/` folder, with a `test_` prefix.
+
+### Frontend
 
 Our frontend code is tested using Storybook, which you can launch with the following command:
 
 ```bash
+cd ui/
 pnpm -r run storybook
 ```
 
+## Formatting and linting the code
 
-## Formatting the code
+### Backend
 
-We use these extensions for formatting the Pixano source code:
-- Python: Black
-- Typescript: Prettier
-- Svelte: Svelte for VS Code
+We format Python files and Jupyter notebooks with the **Black formatter**.
+
+You can install the <a href="https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter" target="_blank">Visual Studio Extension</a> and set it to format files automatically on save.
+
+Or you can use the Python package:
+
+```bash
+pip install black
+black pixano/
+black notebooks/
+```
+
+### Frontend
+
+We format frontend files (Typescript, Javascript, Svelte, HTML, CSS, JSON, YAML, Markdown) with the **Prettier formatter**.
+
+You can install the <a href="https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode" target="_blank">Visual Studio Extension</a> (and <a href="https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode
+" target="_blank">this Extension</a> for Svelte) and set them to format files automatically on save.
+
+Or you can use the command line we have set up:
+
+```bash
+cd ui/
+pnpm format
+```
+
+We also lint frontend files with **eslint**.
+
+You can use the command line we have set up:
+
+```bash
+cd ui/
+pnpm lint
+```
+
+## Formatting your commits
+
+We format our commit messages with **the <a href="https://www.conventionalcommits.org/en/v1.0.0/#summary" target="_blank">Conventional Commits</a> guidelines.**
+
+## Updating the changelog
+
+When you want to create a pull request with the changes you have made, please update the CHANGELOG.md accordingly.
+
+We format our changelog with **the <a href="https://keepachangelog.com/en/1.1.0/#how" target="_blank">Keep a Changelog</a> guidelines.**

@@ -13,9 +13,40 @@
  * http://www.cecill.info
  */
 
+import type { DatasetStat } from "./lib/types/datasetTypes";
+
 // Exports
-type DType = "image" | "text" | "number" | "histogram" | "hidden";
-export interface CellData {
-  dtype: DType;
-  value: any;
+
+export type CellData =
+  | TextCellData
+  | ImageCellData
+  | IntCellData
+  | FloatCellData
+  | BooleanCellData
+  | HistogramCellData;
+
+interface ImageCellData {
+  dtype: "image";
+  value: string;
+}
+interface TextCellData {
+  dtype: "str";
+  value: string;
+}
+interface IntCellData {
+  dtype: "int";
+  value: number;
+}
+interface FloatCellData {
+  dtype: "float";
+  value: number;
+}
+
+interface BooleanCellData {
+  dtype: "bool";
+  value: boolean;
+}
+interface HistogramCellData {
+  dtype: "histogram";
+  value: DatasetStat;
 }

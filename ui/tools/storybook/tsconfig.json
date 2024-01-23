@@ -13,10 +13,16 @@
      */
     "allowJs": true,
     "checkJs": true,
-    "isolatedModules": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
   },
-  "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": [
+    "src/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "stories/**/*.ts",
+    "stories/**/*.stories.ts",
+  ],
+  "references": [{ "path": "./tsconfig.node.json" }],
 }

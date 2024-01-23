@@ -15,11 +15,8 @@ import glob
 from collections.abc import Iterator
 from pathlib import Path
 
-import pyarrow as pa
-import shortuuid
-
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data import Fields, Importer
+from pixano.data import DatasetCategory, Importer
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 
@@ -28,14 +25,14 @@ class TemplateImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
-        schema (pa.schema): Dataset schema
-        splits (list[str]): Dataset splits
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str],
     ):
         """Initialize Template Importer
@@ -43,6 +40,7 @@ class TemplateImporter(Importer):
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
         """
 
@@ -75,27 +73,35 @@ class TemplateImporter(Importer):
                         "view_id": "str",
                         "bbox": "bbox",
                         "mask": "compressedrle",
-                        "category_id": "int",
-                        "category_name": "str",
+                        "category": "str",
                     },
                     "source": "Ground Truth",
                 }
             ],
         }
 
+        # Check input directories
+        self.input_dirs = input_dirs
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
+        ##### Retrieve your categories (or define them manually) #####
+        categories = [DatasetCategory(id=i, name=f"Category {i}") for i in range(1, 40)]
+
         # Initialize Importer
-        super().__init__(name, description, splits, tables)
+        super().__init__(
+            name=name,
+            description=description,
+            tables=tables,
+            splits=splits,
+            categories=categories,
+        )
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-        portable: bool = False,
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
@@ -103,21 +109,17 @@ class TemplateImporter(Importer):
 
         for split in self.info.splits:
             ##### Retrieve your annotations #####
-            annotations = input_dirs["objects"] / "......"
+            annotations = self.input_dirs["objects"] / "......"
 
             ##### Retrieve your images #####
-            image_paths = glob.glob(str(input_dirs["image"] / split / "......"))
+            image_paths = glob.glob(str(self.input_dirs["image"] / split / "......"))
 
             # Process rows
             for im_path in image_paths:
                 # Create image thumbnail
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
                 # Set image URI
-                im_uri = (
-                    f"image/{split}/{im_path.name}"
-                    if portable
-                    else im_path.absolute().as_uri()
-                )
+                im_uri = f"image/{split}/{im_path.name}"
                 # Load image
                 image = Image(im_uri, None, im_thumb)
                 w, h = image.size
@@ -156,8 +158,7 @@ class TemplateImporter(Importer):
                                 "mask": CompressedRLE.encode(
                                     ann["segmentation"], h, w
                                 ).to_dict(),
-                                "category_id": int(ann["category_id"]),
-                                "category_name": coco_names_91(ann["category_id"]),
+                                "category": coco_names_91(ann["category_id"]),
                             }
                             for ann in im_anns
                         ]

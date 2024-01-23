@@ -14,15 +14,35 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+from pixano.data.dataset import Dataset
+
 
 class Exporter(ABC):
-    """Abstract Data Exmporter class"""
+    """Abstract Data Exporter class
+
+    Attributes:
+        dataset (Dataset): Dataset to export
+    """
+
+    dataset: Dataset
+
+    def __init__(
+        self,
+        input_dir: Path,
+    ):
+        """Initialize Exporter
+
+        Args:
+            input_dir (Path): Input dataset directory
+        """
+
+        # Dataset to export
+        self.dataset = Dataset(input_dir)
 
     @abstractmethod
-    def export_dataset(self, input_dir: Path, export_dir: Path):
+    def export_dataset(self, export_dir: Path):
         """Export dataset back to original format
 
         Args:
-            input_dir (Path): Input directory
             export_dir (Path): Export directory
         """

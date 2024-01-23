@@ -17,9 +17,10 @@
   // Imports
   import { Histogram } from "@pixano/core";
 
+  import type { DatasetStat } from "@pixano/core";
+
   // Exports
-  // Represents an histogram (name, type, values)
-  export let value: any;
+  export let value: DatasetStat;
 </script>
 
 <div class="w-full flex flex-row items-center overflow-y-scroll">

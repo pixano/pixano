@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-import json
 import random
 import shutil
 from abc import ABC, abstractmethod
@@ -28,7 +27,8 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetInfo, Fields
+from pixano.data.dataset import Dataset, DatasetCategory, DatasetInfo, DatasetTable
+from pixano.data.fields import Fields
 from pixano.utils import estimate_size
 
 
@@ -37,56 +37,111 @@ class Importer(ABC):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
+
+    info: DatasetInfo
+    input_dirs: dict[str, Path]
 
     def __init__(
         self,
         name: str,
         description: str,
-        tables: dict[str, list],
+        tables: dict[str, list[DatasetTable]],
         splits: list[str],
+        categories: list[DatasetCategory] = None,
     ):
         """Initialize Importer
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
-            tables (dict[str, list]): Dataset fields
+            tables (dict[str, list[DatasetTable]]): Dataset tables
             splits (list[str]): Dataset splits
+            categories (list[DatasetCategory], optional): Dataset categories
         """
 
-        # Dataset info
+        # Check input directories
+        for source_path in self.input_dirs.values():
+            if not source_path.exists():
+                raise FileNotFoundError(f"{source_path} does not exist.")
+            if not any(source_path.iterdir()):
+                raise FileNotFoundError(f"{source_path} is empty.")
+
+        # Create DatasetInfo
         self.info = DatasetInfo(
             id=shortuuid.uuid(),
             name=name,
             description=description,
             estimated_size="N/A",
             num_elements=0,
-            preview=None,
             splits=splits,
             tables=tables,
-            categories=[],
+            categories=categories,
         )
 
-    def create_json(
-        self,
-        import_dir: Path,
-        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
+    def create_tables(
+        self, media_fields: dict[str, str] = None, object_fields: dict[str, str] = None
     ):
-        """Create dataset spec.json
+        """Create dataset tables
 
         Args:
-            import_dir (Path): Import directory
-            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
+            media_fields (dict[str, str], optional): Media fields. Defaults to None.
+            object_fields (dict[str, str], optional): Object fields. Defaults to None.
+
+        Returns:
+            dict[str, list[DatasetTable]]: Tables
         """
 
-        self.info.num_elements = len(ds_tables["main"]["db"])
-        self.info.estimated_size = estimate_size(import_dir)
+        if media_fields is None:
+            media_fields = {"image": "image"}
 
-        # Save DatasetInfo
-        with tqdm(desc="Creating dataset info file", total=1) as progress:
-            self.info.save(import_dir)
-            progress.update(1)
+        tables: dict[str, list[DatasetTable]] = {
+            "main": [
+                DatasetTable(
+                    name="db",
+                    fields={
+                        "id": "str",
+                        "views": "[str]",
+                        "split": "str",
+                    },
+                )
+            ],
+            "media": [],
+        }
+
+        # Add media fields
+        for field_name, field_type in media_fields.items():
+            table_exists = False
+            # If table for given field type exists
+            for media_table in tables["media"]:
+                if field_type == media_table.name and not table_exists:
+                    media_table.fields[field_name] = field_type
+                    table_exists = True
+            # Else, create that table
+            if not table_exists:
+                tables["media"].append(
+                    DatasetTable(
+                        name=field_type,
+                        fields={
+                            "id": "str",
+                            field_name: field_type,
+                        },
+                    )
+                )
+
+        # Add object fields
+        if object_fields is not None:
+            tables["objects"] = [
+                DatasetTable(
+                    name="objects",
+                    fields={"id": "str", "item_id": "str", "view_id": "str"}
+                    | object_fields,
+                    source="Ground Truth",
+                )
+            ]
+
+        return tables
 
     def create_preview(
         self,
@@ -124,16 +179,47 @@ class Importer(ABC):
                         preview.save(import_dir / "preview.png")
                         progress.update(1)
 
-    @abstractmethod
-    def import_rows(
+    def copy_or_move_files(
         self,
-        input_dirs: dict[str, Path],
-        portable: bool = False,
-    ) -> Iterator:
-        """Process dataset rows for import
+        import_dir: Path,
+        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
+        copy: bool,
+    ):
+        """Copy or move dataset files
 
         Args:
-            input_dirs (dict[str, Path]): Input directories
+            import_dir (Path): Import directory
+            ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
+            copy (bool): True to copy files, False to move them
+        """
+
+        if copy:
+            for table in tqdm(
+                ds_tables["media"].values(), desc="Copying media directories"
+            ):
+                for field in table.schema:
+                    if field.name in self.input_dirs:
+                        field_dir = import_dir / "media" / field.name
+                        field_dir.mkdir(parents=True, exist_ok=True)
+                        if self.input_dirs[field.name] != field_dir:
+                            shutil.copytree(
+                                self.input_dirs[field.name],
+                                field_dir,
+                                dirs_exist_ok=True,
+                            )
+        else:
+            for table in tqdm(
+                ds_tables["media"].values(), desc="Moving media directories"
+            ):
+                for field in table.schema:
+                    if field.name in self.input_dirs:
+                        field_dir = import_dir / "media" / field.name
+                        if self.input_dirs[field.name] != field_dir:
+                            self.input_dirs[field.name].rename(field_dir)
+
+    @abstractmethod
+    def import_rows(self) -> Iterator:
+        """Process dataset rows for import
 
         Yields:
             Iterator: Processed rows
@@ -141,85 +227,67 @@ class Importer(ABC):
 
     def import_dataset(
         self,
-        input_dirs: dict[str, Path],
         import_dir: Path,
-        portable: bool = False,
+        copy: bool = True,
     ) -> Dataset:
         """Import dataset to Pixano format
 
         Args:
-            input_dirs (dict[str, Path]): Input directories
             import_dir (Path): Import directory
-            portable (bool, optional): True to copy or download files to import directory and use relative paths. Defaults to False.
+            copy (bool, optional): True to copy files to the import directory, False to move them. Defaults to True.
 
         Returns:
             Dataset: Imported dataset
         """
 
-        # Check input directories
-        for source_path in input_dirs.values():
-            if not source_path.exists():
-                raise FileNotFoundError(f"{source_path} does not exist.")
-            if not any(source_path.iterdir()):
-                raise FileNotFoundError(f"{source_path} is empty.")
+        # Create dataset
+        dataset = Dataset.create(import_dir, self.info)
 
-        # Connect to dataset
-        import_dir.mkdir(parents=True, exist_ok=True)
-        ds = lancedb.connect(import_dir)
+        # Load dataset tables
+        ds_tables = dataset.open_tables()
 
-        # Initialize dataset tables
-        ds_tables: dict[str, dict[str, lancedb.db.LanceTable]] = defaultdict(dict)
+        # Initalize batches
         ds_batches: dict[str, dict[str, list]] = defaultdict(dict)
-
-        # Create tables
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                ds_tables[table_group][table["name"]] = ds.create_table(
-                    table["name"],
-                    schema=Fields(table["fields"]).to_schema(),
-                    mode="overwrite",
-                )
-                ds_batches[table_group][table["name"]] = []
-        save_batch_size = 1024
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
+                ds_batches[group_name][table.name] = []
 
         # Add rows to tables
-        for rows in tqdm(
-            self.import_rows(input_dirs, portable),
-            desc="Importing dataset",
-        ):
-            for table_group, tables in self.info.tables.items():
-                for table in tables:
+        save_batch_size = 1024
+        for rows in tqdm(self.import_rows(), desc="Importing dataset"):
+            for group_name, table_group in self.info.tables.items():
+                for table in table_group:
                     # Store rows in a batch
-                    ds_batches[table_group][table["name"]].extend(
-                        rows[table_group][table["name"]]
+                    ds_batches[group_name][table.name].extend(
+                        rows[group_name][table.name]
                     )
                     # If batch reaches 1024 rows, store in table
-                    if len(ds_batches[table_group][table["name"]]) >= save_batch_size:
+                    if len(ds_batches[group_name][table.name]) >= save_batch_size:
                         pa_batch = pa.Table.from_pylist(
-                            ds_batches[table_group][table["name"]],
-                            schema=Fields(table["fields"]).to_schema(),
+                            ds_batches[group_name][table.name],
+                            schema=Fields(table.fields).to_schema(),
                         )
                         lance.write_dataset(
                             pa_batch,
-                            uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                            uri=ds_tables[group_name][table.name].to_lance().uri,
                             mode="append",
                         )
-                        ds_batches[table_group][table["name"]] = []
+                        ds_batches[group_name][table.name] = []
 
         # Store final batches
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                if len(ds_batches[table_group][table["name"]]) > 0:
+        for group_name, table_group in self.info.tables.items():
+            for table in table_group:
+                if len(ds_batches[group_name][table.name]) > 0:
                     pa_batch = pa.Table.from_pylist(
-                        ds_batches[table_group][table["name"]],
-                        schema=Fields(table["fields"]).to_schema(),
+                        ds_batches[group_name][table.name],
+                        schema=Fields(table.fields).to_schema(),
                     )
                     lance.write_dataset(
                         pa_batch,
-                        uri=ds_tables[table_group][table["name"]].to_lance().uri,
+                        uri=ds_tables[group_name][table.name].to_lance().uri,
                         mode="append",
                     )
-                    ds_batches[table_group][table["name"]] = []
+                    ds_batches[group_name][table.name] = []
 
         # Optimize and clear creation history
         for tables in ds_tables.values():
@@ -228,9 +296,7 @@ class Importer(ABC):
                 table.to_lance().cleanup_old_versions(older_than=timedelta(0))
 
         # Refresh tables
-        for table_group, tables in self.info.tables.items():
-            for table in tables:
-                ds_tables[table_group][table["name"]] = ds.open_table(table["name"])
+        ds_tables = dataset.open_tables()
 
         # Raise error if generated dataset is empty
         if len(ds_tables["main"]["db"]) == 0:
@@ -238,24 +304,15 @@ class Importer(ABC):
                 "Generated dataset is empty. Please make sure that the paths to your media files are correct, and that they each contain subfolders for your splits."
             )
 
-        # Copy media directories if portable
-        if portable and "media" in ds_tables:
-            for table in tqdm(
-                ds_tables["media"].values(), desc="Copying media directories"
-            ):
-                for field in table.schema:
-                    if field.name in input_dirs:
-                        field_dir = import_dir / "media" / field.name
-                        field_dir.mkdir(parents=True, exist_ok=True)
-                        if input_dirs[field.name] != field_dir:
-                            shutil.copytree(
-                                input_dirs[field.name], field_dir, dirs_exist_ok=True
-                            )
+        # Create DatasetInfo
+        dataset.info.num_elements = len(ds_tables["main"]["db"])
+        dataset.info.estimated_size = estimate_size(import_dir)
+        dataset.save_info()
 
-        # Create spec.json
-        self.create_json(import_dir, ds_tables)
-
-        # Create preview.png
+        # Create thumbnail
         self.create_preview(import_dir, ds_tables)
+
+        # Copy or move media directories
+        self.copy_or_move_files(import_dir, ds_tables, copy)
 
         return Dataset(import_dir)

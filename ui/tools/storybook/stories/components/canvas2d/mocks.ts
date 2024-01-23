@@ -16,27 +16,11 @@
 // Imports
 import { mask_utils } from "@pixano/models";
 
-import type {
-  InteractiveImageSegmenter,
-  InteractiveImageSegmenterInput,
-} from "@pixano/models";
-
-function flattenArray(image: number[][]): number[] {
-  const flattenedArray: number[] = [];
-
-  for (let y = 0; y < image.length; y++) {
-    for (let x = 0; x < image[y].length; x++) {
-      flattenedArray.push(image[y][x]);
-    }
-  }
-
-  return flattenedArray;
-}
+import type { InteractiveImageSegmenter, InteractiveImageSegmenterInput } from "@pixano/models";
+import type { SegmentationResult } from "@pixano/models/src/interfaces";
 
 // Exports
-export class MockInteractiveImageSegmenter
-  implements InteractiveImageSegmenter
-{
+export class MockInteractiveImageSegmenter implements InteractiveImageSegmenter {
   currentMask: Array<number> | null = null;
 
   segmentImage(input: InteractiveImageSegmenterInput) {
@@ -67,13 +51,9 @@ export class MockInteractiveImageSegmenter
 
     if (input.box) {
       if (this.currentMask) {
-        const xstart = Math.round(
-          Math.min(input.box.x, input.box.x + input.box.width)
-        );
+        const xstart = Math.round(Math.min(input.box.x, input.box.x + input.box.width));
         const width = Math.round(Math.abs(input.box.width));
-        const ystart = Math.round(
-          Math.min(input.box.y, input.box.y + input.box.height)
-        );
+        const ystart = Math.round(Math.min(input.box.y, input.box.y + input.box.height));
         const height = Math.round(Math.abs(input.box.height));
         for (let i = xstart; i < xstart + width; i++) {
           for (let j = ystart; j < ystart + height; j++) {
@@ -83,18 +63,17 @@ export class MockInteractiveImageSegmenter
       }
     }
 
-    const maskRLE = mask_utils.maskDataToFortranArrayToRle(
-      this.currentMask,
-      h,
-      w
-    );
+    const maskRLE = mask_utils.maskDataToFortranArrayToRle(this.currentMask, h, w);
     //console.log(maskRLE)
     const maskPolygons = mask_utils.generatePolygonSegments(maskRLE, h);
     //console.log(maskPolygons);
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPolygons);
     //console.log(masksSVG);
     //console.log(masksSVG.length);
-    return Promise.resolve({ masksImageSVG: masksSVG, rle:null });
+    return Promise.resolve({
+      masksImageSVG: masksSVG,
+      rle: { counts: [], size: [] },
+    } as SegmentationResult);
   }
 
   reset() {

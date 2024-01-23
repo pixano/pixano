@@ -14,6 +14,7 @@
  */
 
 // Exports
+
 const dtypes = {
   "<u1": {
     name: "uint8",
@@ -71,33 +72,34 @@ const dtypes = {
     arrayConstructor: Float64Array,
   },
 };
-export function parse(buffer) {
+
+export function parse(buffer: ArrayBufferLike | Array<number>) {
   const buf = new Uint8Array(buffer);
   if (buf[6] != 1) throw "Only npy version 1 is supported";
 
   const headerLength = buf[8] + buf[9] * 256;
   const offsetBytes = 10 + headerLength;
 
-  const header = JSON.parse(
+  const header: unknown = JSON.parse(
     new TextDecoder("utf-8")
       .decode(buf.slice(10, 10 + headerLength))
       .replace(/'/g, '"')
       .replace("False", "false")
       .replace("(", "[")
-      .replace(/,*\),*/g, "]")
+      .replace(/,*\),*/g, "]"),
   );
 
-  if (header.fortan_order)
-    throw "Fortran-contiguous array data are not supported";
-  const dtype = dtypes[header.descr];
+  if (header["fortan_order"]) throw "Fortran-contiguous array data are not supported";
+  const dtype = dtypes[header["descr"] as keyof typeof dtypes];
 
   return {
     data: new dtype["arrayConstructor"](buf.slice(offsetBytes).buffer),
-    shape: header.shape,
+    shape: header["shape"] as Array<number>,
     dtype: dtype.name,
   };
 }
-export function b64ToBuffer(b64) {
+
+export function b64ToBuffer(b64: string) {
   const binaryString = atob(b64);
   const bytes = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {

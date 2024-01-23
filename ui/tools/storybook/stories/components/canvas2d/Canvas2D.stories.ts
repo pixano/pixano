@@ -34,25 +34,33 @@ type Story = StoryObj<typeof meta>;
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 
-let catCol = utils.colorLabel([1, 2]);
+let catCol = utils.ordinalColorScale(["1", "2"]);
 
 export const CanvasWithoutSelectedTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
-          url: "img-02.jpg",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
+          uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
     selectedTool: null,
-    labelColors: catCol,
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: {},
@@ -61,26 +69,34 @@ export const CanvasWithoutSelectedTool: Story = {
 };
 
 const segmenter = new mocks.MockInteractiveImageSegmenter();
-let labeledPointCreator = tools.createLabeledPointTool(1);
+let labeledPointCreator = tools.createPointSelectionTool();
 labeledPointCreator.postProcessor = segmenter;
 
 export const CanvasWithLabeledPointTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
-          url: "img-02.jpg",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
+          uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
-    selectedTool: labeledPointCreator,
-    labelColors: catCol,
+    selectedTool: labeledPointCreator.modes[0],
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },
@@ -95,19 +111,27 @@ export const CanvasWithRectangleTool: Story = {
   args: {
     selectedItem: {
       id: "1",
+      split: "val",
       views: {
-        view: {
-          id: "view",
-          url: "img-02.jpg",
+        view1: {
+          id: "view1",
+          uri: "img-01.jpg",
+          type: "image",
+          features: {},
+        },
+        view2: {
+          id: "view2",
+          uri: "img-02.jpg",
+          type: "image",
+          features: {},
         },
       },
-      features: [
-        { name: "id", dtype: "text", value: "1" },
-        { name: "view", dtype: "image", value: "img-02.jpg" },
-      ],
+      features: {},
+      objects: {},
+      embeddings: {},
     },
     selectedTool: rectangleCreator,
-    labelColors: catCol,
+    colorScale: catCol,
     masks: [],
     bboxes: [],
     embeddings: { view: [] },

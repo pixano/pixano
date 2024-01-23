@@ -16,7 +16,9 @@ import numpy as np
 from pixano.utils.image import rle_to_mask, urle_to_rle
 
 
-def denormalize_coords(coord: list[float], height: int, width: int, rounded_int=True) -> list[float]:
+def denormalize_coords(
+    coord: list[float], height: int, width: int, rounded_int=True
+) -> list[float]:
     """Denormalize coordinates
 
     Args:
@@ -102,28 +104,6 @@ def urle_to_bbox(urle: dict) -> list[float]:
     """
 
     return mask_to_bbox(rle_to_mask(urle_to_rle(urle)))
-
-
-def format_bbox(bbox: list[float], confidence: float = 0.0) -> dict:
-    """Convert bounding box to frontend format
-
-    Args:
-        bbox (list[float]): Bounding box
-        confidence (float, optional): Bounding box confidence. Defaults to None.
-
-    Returns:
-        dict: Bounding box in frontend format
-    """
-
-    if bbox != [0.0, 0.0, 0.0, 0.0]:
-        return {
-            "x": float(bbox[0]),
-            "y": float(bbox[1]),
-            "width": float(bbox[2]),
-            "height": float(bbox[3]),
-            "predicted": confidence != 0.0,
-            "confidence": confidence,
-        }
 
 
 def xywh_to_xyxy(xywh: list[float]) -> list[float]:

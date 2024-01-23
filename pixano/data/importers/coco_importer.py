@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from pixano.core import BBox, CompressedRLE, Image
+from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -27,101 +28,77 @@ class COCOImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str],
-        media_fields: dict[str, str] = {"image": "image"},
+        media_fields: dict[str, str] = None,
     ):
         """Initialize COCO Importer
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
-            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
+            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to None.
         """
 
-        tables = {
-            "main": [
-                {
-                    "name": "db",
-                    "fields": {
-                        "id": "str",
-                        "views": "[str]",
-                        "split": "str",
-                    },
-                }
-            ],
-            "media": [],
-            "objects": [
-                {
-                    "name": "objects",
-                    "fields": {
-                        "id": "str",
-                        "item_id": "str",
-                        "view_id": "str",
-                        "bbox": "bbox",
-                        "mask": "compressedrle",
-                        "category_id": "int",
-                        "category_name": "str",
-                    },
-                    "source": "Ground Truth",
-                }
-            ],
-        }
+        # Create tables
+        tables = super().create_tables(
+            media_fields,
+            object_fields={
+                "bbox": "bbox",
+                "mask": "compressedrle",
+                "category": "str",
+            },
+        )
 
-        # Add media fields to tables
-        for field_name, field_type in media_fields.items():
-            table_exists = False
-            # If table for given field type exists
-            for media_table in tables["media"]:
-                if field_type == media_table["name"] and not table_exists:
-                    media_table["fields"][field_name] = field_type
-                    table_exists = True
-            # Else, create that table
-            if not table_exists:
-                tables["media"].append(
-                    {
-                        "name": field_type,
-                        "fields": {
-                            "id": "str",
-                            field_name: field_type,
-                        },
-                    }
-                )
+        # Create categories
+        categories = []
+        for split in splits:
+            with open(
+                input_dirs["objects"] / f"instances_{split}.json", "r", encoding="utf-8"
+            ) as f:
+                coco_instances = json.load(f)
+                for category in coco_instances["categories"]:
+                    categories.append(DatasetCategory.model_validate(category))
 
         # Initialize Importer
-        super().__init__(name, description, tables, splits)
+        self.input_dirs = input_dirs
+        super().__init__(name, description, tables, splits, categories)
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-        portable: bool = False,
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
         """
 
-        # iterate on splits
+        # Iterate on splits
         for split in self.info.splits:
             # Open annotation files
-            with open(input_dirs["objects"] / f"instances_{split}.json", "r") as f:
+            with open(
+                self.input_dirs["objects"] / f"instances_{split}.json",
+                "r",
+                encoding="utf-8",
+            ) as f:
                 coco_instances = json.load(f)
 
             # Group annotations by image ID
             annotations = defaultdict(list)
             for ann in coco_instances["annotations"]:
                 annotations[ann["image_id"]].append(ann)
+
+            # Create a COCO category id to COCO category name dictionary
+            categories = {}
+            for cat in coco_instances["categories"]:
+                categories[cat["id"]] = cat["name"]
 
             # Process rows
             for im in sorted(
@@ -132,7 +109,7 @@ class COCOImporter(Importer):
                 # Load image
                 file_name_uri = urlparse(im["file_name"])
                 if file_name_uri.scheme == "":
-                    im_path = input_dirs["image"] / split / im["file_name"]
+                    im_path = self.input_dirs["image"] / split / im["file_name"]
                 else:
                     im_path = Path(file_name_uri.path)
 
@@ -140,11 +117,7 @@ class COCOImporter(Importer):
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
 
                 # Set image URI
-                im_uri = (
-                    f"image/{split}/{im_path.name}"
-                    if portable
-                    else im_path.absolute().as_uri()
-                )
+                im_uri = f"image/{split}/{im_path.name}"
 
                 # Return rows
                 rows = {
@@ -181,8 +154,7 @@ class COCOImporter(Importer):
                                 ).to_dict()
                                 if ann["segmentation"]
                                 else None,
-                                "category_id": int(ann["category_id"]),
-                                "category_name": str(ann["category_name"]),
+                                "category": str(categories[ann["category_id"]]),
                             }
                             for ann in im_anns
                         ]

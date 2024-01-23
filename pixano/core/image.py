@@ -22,9 +22,14 @@ import pyarrow as pa
 from IPython.core.display import Image as IPyImage
 from PIL import Image as PILImage
 from pydantic import BaseModel
+from s3path import S3Path
 
 from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 from pixano.utils import binary_to_url
+
+# Disable warning for Image "bytes" attribute
+# NOTE: Rename attribute? Breaking change for Pixano datasets using Image
+# pylint: disable=redefined-builtin, used-before-assignment
 
 
 class Image(PixanoType, BaseModel):
@@ -67,24 +72,60 @@ class Image(PixanoType, BaseModel):
         )
 
     @property
-    def url(self) -> str:
-        """Return image URL
+    def complete_uri(self) -> str:
+        """Return complete image URI using URI and URI prefix
 
         Returns:
-            str: Image URL
+            str: Image URI
+        """
+
+        # URI is incomplete
+        if urlparse(self.uri).scheme == "":
+            # URI prefix exists
+            if self.uri_prefix is not None:
+                parsed_uri = urlparse(self.uri_prefix)
+                # URI prefix is incomplete
+                if parsed_uri.scheme == "":
+                    raise ValueError(
+                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
+                    )
+                combined_path = Path(parsed_uri.path) / self.uri
+                parsed_uri = parsed_uri._replace(path=str(combined_path))
+                return parsed_uri.geturl()
+            # No URI prefix
+            raise ValueError("URI is incomplete, need URI prefix")
+        # URI is already complete
+        return self.uri
+
+    @property
+    def url(self) -> str:
+        """Return image base 64 URL
+
+        Returns:
+            str: Image base 64 URL
         """
 
         return binary_to_url(self.get_bytes())
 
     @property
     def preview_url(self) -> str:
-        """Return image preview URL
+        """Return image preview base 64 URL
 
         Returns:
-            str: Image preview URL
+            str: Image preview base 64 URL
         """
 
         return binary_to_url(self.preview_bytes)
+
+    @property
+    def file_name(self) -> str:
+        """Return image file name from URI
+
+        Returns:
+            str: Image file name
+        """
+
+        return Path(urlparse(self.uri).path).name
 
     @property
     def size(self) -> list[int]:
@@ -96,31 +137,25 @@ class Image(PixanoType, BaseModel):
 
         return self.as_pillow().size
 
-    def get_uri(self) -> str:
-        """Return complete image URI from URI and URI prefix
+    @property
+    def width(self) -> int:
+        """Return image width
 
         Returns:
-            str: Image URI
+            int: Image width
         """
 
-        # Relative URI
-        if urlparse(self.uri).scheme == "":
-            # If URI prefix exists
-            if self.uri_prefix is not None:
-                parsed_uri = urlparse(self.uri_prefix)
-                if parsed_uri.scheme == "":
-                    raise Exception(
-                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
-                    )
-                combined_path = Path(parsed_uri.path) / self.uri
-                parsed_uri = parsed_uri._replace(path=str(combined_path))
-                return parsed_uri.geturl()
-            # No URI prefix
-            else:
-                raise Exception("Need Uri prefix for relative uri")
-        # Complete URI
-        else:
-            return self.uri
+        return self.as_pillow().width
+
+    @property
+    def height(self) -> int:
+        """Return image height
+
+        Returns:
+            int: Image height
+        """
+
+        return self.as_pillow().height
 
     def get_bytes(self) -> bytes:
         """Get image bytes from attribute or from reading file from URI
@@ -131,11 +166,10 @@ class Image(PixanoType, BaseModel):
 
         if self.bytes is not None:
             return self.bytes
-        elif self.uri is not None:
+        if self.uri is not None:
             with self.open() as f:
                 return f.read()
-        else:
-            return None
+        return None
 
     def open(self) -> IO:
         """Open image
@@ -144,7 +178,11 @@ class Image(PixanoType, BaseModel):
             IO: Opened image
         """
 
-        return urlopen(self.get_uri())
+        complete_uri = self.complete_uri
+        if urlparse(complete_uri).scheme == "s3":
+            presigned_url = S3Path.from_uri(complete_uri).get_presigned_url()
+            return urlopen(presigned_url)
+        return urlopen(complete_uri)
 
     def as_pillow(self) -> PILImage.Image:
         """Open image as Pillow

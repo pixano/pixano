@@ -25,75 +25,40 @@ class ImageImporter(Importer):
 
     Attributes:
         info (DatasetInfo): Dataset information
+        input_dirs (dict[str, Path]): Dataset input directories
     """
 
     def __init__(
         self,
         name: str,
         description: str,
+        input_dirs: dict[str, Path],
         splits: list[str] = None,
-        media_fields: dict[str, str] = {"image": "image"},
+        media_fields: dict[str, str] = None,
     ):
         """Initialize Image Importer
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
+            input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str], optional): Dataset splits. Defaults to None for datasets with no subfolders for splits.
-            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to {"image": "image"}.
+            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to None.
         """
 
-        tables = {
-            "main": [
-                {
-                    "name": "db",
-                    "fields": {
-                        "id": "str",
-                        "views": "[str]",
-                        "split": "str",
-                    },
-                }
-            ],
-            "media": [],
-        }
+        # Create dataset tables
+        tables = super().create_tables(media_fields)
 
-        # Add media fields to tables
-        for field_name, field_type in media_fields.items():
-            table_exists = False
-            # If table for given field type exists
-            for media_table in tables["media"]:
-                if field_type == media_table["name"] and not table_exists:
-                    media_table["fields"][field_name] = field_type
-                    table_exists = True
-            # Else, create that table
-            if not table_exists:
-                tables["media"].append(
-                    {
-                        "name": field_type,
-                        "fields": {
-                            "id": "str",
-                            field_name: field_type,
-                        },
-                    }
-                )
-
-        # If no splits given, define a default single dataset split
-        if not splits:
+        # Create splits
+        if splits is None:
             splits = ["dataset"]
 
         # Initialize Importer
+        self.input_dirs = input_dirs
         super().__init__(name, description, tables, splits)
 
-    def import_rows(
-        self,
-        input_dirs: dict[str, Path],
-        portable: bool = False,
-    ) -> Iterator:
+    def import_rows(self) -> Iterator:
         """Process dataset rows for import
-
-        Args:
-            input_dirs (dict[str, Path]): Input directories
-            portable (bool, optional): True to move or download media files inside dataset. Defaults to False.
 
         Yields:
             Iterator: Processed rows
@@ -104,10 +69,10 @@ class ImageImporter(Importer):
             image_paths = []
             for ftype in ["*.png", "*.jpg", "*.jpeg"]:
                 if split == "dataset":
-                    image_paths.extend(glob.glob(str(input_dirs["image"] / ftype)))
+                    image_paths.extend(glob.glob(str(self.input_dirs["image"] / ftype)))
                 else:
                     image_paths.extend(
-                        glob.glob(str(input_dirs["image"] / split / ftype))
+                        glob.glob(str(self.input_dirs["image"] / split / ftype))
                     )
             image_paths = [Path(p) for p in sorted(image_paths, key=natural_key)]
 
@@ -117,14 +82,11 @@ class ImageImporter(Importer):
                 im_thumb = image_to_thumbnail(im_path.read_bytes())
 
                 # Set image URI
-                if portable:
-                    im_uri = (
-                        f"image/{im_path.name}"
-                        if split == "dataset"
-                        else f"image/{split}/{im_path.name}"
-                    )
-                else:
-                    im_uri = im_path.absolute().as_uri()
+                im_uri = (
+                    f"image/{im_path.name}"
+                    if split == "dataset"
+                    else f"image/{split}/{im_path.name}"
+                )
 
                 # Return rows
                 rows = {

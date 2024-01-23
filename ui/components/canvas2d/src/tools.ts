@@ -6,7 +6,7 @@
   This software is a collaborative computer program whose purpose is to
   generate and explore labeled data for computer vision applications.
   This software is governed by the CeCILL-C license under French law and
-  abiding by the rules of distribution of free software. You can use, 
+  abiding by the rules of distribution of free software. You can use,
   modify and/or redistribute the software under the terms of the CeCILL-C
   license as circulated by CEA, CNRS and INRIA at the following URL
 
@@ -16,9 +16,11 @@
 // Imports
 import { icons } from "@pixano/core";
 
+import type { InteractiveImageSegmenter } from "@pixano/models";
+
 // Exports
 export enum ToolType {
-  LabeledPoint = "LABELED_POINT",
+  PointSelection = "POINT_SELECTION",
   Rectangle = "RECTANGLE",
   Delete = "DELETE",
   Pan = "PAN",
@@ -30,16 +32,20 @@ interface Tool {
   type: ToolType;
   icon: string;
   cursor: string;
-  onSelect: () => void;
-  postProcessor: any;
+  onSelect?: () => void;
+  isSmart?: boolean;
+  modes?: Record<string, Tool>;
+  postProcessor?: InteractiveImageSegmenter;
 }
 
-interface MultiModalTool extends Tool {
-  modes: Array<Tool>;
+interface PointSelectionTool extends Tool {
+  modes: Record<string, Tool>;
+  type: ToolType.PointSelection;
 }
-interface LabeledPointTool extends Tool {
-  type: ToolType.LabeledPoint;
+
+interface PointSelectionModeTool extends Tool {
   label: number;
+  type: ToolType.PointSelection;
 }
 
 interface RectangleTool extends Tool {
@@ -58,56 +64,41 @@ interface ClassificationTool extends Tool {
   type: ToolType.Classification;
 }
 
-function getIcon(type: ToolType, label?: number): string {
-  switch (type) {
-    case ToolType.LabeledPoint:
-      switch (label) {
-        case 0:
-          return icons.svg_point_minus;
-        case 1:
-          return icons.svg_point_plus;
-        default:
-          return icons.svg_point;
-      }
-    case ToolType.Rectangle:
-      return icons.svg_rectangle;
-    case ToolType.Delete:
-      return icons.svg_delete;
-    case ToolType.Pan:
-      return icons.svg_pan;
-    case ToolType.Classification:
-      return icons.svg_classify;
-  }
-}
-
-export function createMultiModalTool(
-  name: string,
-  type: ToolType,
-  tools: Array<Tool>
-): MultiModalTool {
+export function createPointSelectionTool(): PointSelectionTool {
   return {
-    name: name,
-    type: type,
-    icon: getIcon(type),
-    modes: tools,
-  } as MultiModalTool;
-}
-
-export function createLabeledPointTool(label: number): LabeledPointTool {
-  return {
-    name: (label ? "Positive" : "Negative") + " point selection",
-    type: ToolType.LabeledPoint,
-    label: label,
-    icon: getIcon(ToolType.LabeledPoint, label),
+    name: "Point selection",
+    type: ToolType.PointSelection,
+    icon: icons.svg_point,
     cursor: "crosshair",
-  } as LabeledPointTool;
+    modes: { plus: createPointPlusTool(), minus: createPointMinusTool() },
+  } as PointSelectionTool;
+}
+
+export function createPointPlusTool(): PointSelectionModeTool {
+  return {
+    name: "Positive point selection",
+    label: 1,
+    type: ToolType.PointSelection,
+    icon: icons.svg_point_plus,
+    cursor: "crosshair",
+  } as PointSelectionModeTool;
+}
+
+export function createPointMinusTool(): PointSelectionModeTool {
+  return {
+    name: "Negative point selection",
+    label: 0,
+    type: ToolType.PointSelection,
+    icon: icons.svg_point_minus,
+    cursor: "crosshair",
+  } as PointSelectionModeTool;
 }
 
 export function createRectangleTool(): RectangleTool {
   return {
     name: "Rectangle selection",
     type: ToolType.Rectangle,
-    icon: getIcon(ToolType.Rectangle),
+    icon: icons.svg_rectangle,
     cursor: "crosshair",
   } as RectangleTool;
 }
@@ -116,7 +107,7 @@ export function createDeleteTool(): DeleteTool {
   return {
     name: "Delete selection",
     type: ToolType.Delete,
-    icon: getIcon(ToolType.Delete),
+    icon: icons.svg_delete,
     cursor: "auto",
   } as DeleteTool;
 }
@@ -125,7 +116,7 @@ export function createPanTool(): PanTool {
   return {
     name: "Move image",
     type: ToolType.Pan,
-    icon: getIcon(ToolType.Pan),
+    icon: icons.svg_pan,
     cursor: "move",
   } as PanTool;
 }
@@ -134,14 +125,15 @@ export function createClassifTool(): ClassificationTool {
   return {
     name: "Classification",
     type: ToolType.Classification,
-    icon: getIcon(ToolType.Classification),
+    icon: icons.svg_classify,
     cursor: "default",
   } as ClassificationTool;
 }
 
 export type {
   Tool,
-  LabeledPointTool,
+  PointSelectionTool,
+  PointSelectionModeTool,
   RectangleTool,
   DeleteTool,
   PanTool,
