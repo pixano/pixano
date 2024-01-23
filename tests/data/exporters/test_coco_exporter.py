@@ -41,7 +41,7 @@ class COCOExporterTestCase(unittest.TestCase):
                 input_dirs=input_dirs,
                 splits=["val"],
             )
-            importer.import_dataset(import_dir)
+            imported_dataset = importer.import_dataset(import_dir)
 
             # Export dataset
             exporter = COCOExporter(input_dir=import_dir)
@@ -78,7 +78,7 @@ class COCOExporterTestCase(unittest.TestCase):
                     )
                     for i in range(len(imported_ann["images"])):
                         self.assertEqual(
-                            imported_ann["images"][i]["id"],
+                            imported_dataset.get_item_uuid(imported_ann["images"][i]["id"]),
                             exported_ann["images"][i]["id"],
                         )
                         self.assertEqual(
@@ -101,11 +101,11 @@ class COCOExporterTestCase(unittest.TestCase):
                     )
                     for i in range(len(imported_ann["annotations"])):
                         self.assertEqual(
-                            imported_ann["annotations"][i]["id"],
+                            imported_dataset.get_object_uuid(imported_ann["annotations"][i]["id"]),
                             exported_ann["annotations"][i]["id"],
                         )
                         self.assertEqual(
-                            imported_ann["annotations"][i]["image_id"],
+                            imported_dataset.get_item_uuid(imported_ann["annotations"][i]["image_id"]),
                             exported_ann["annotations"][i]["image_id"],
                         )
 
