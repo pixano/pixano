@@ -34,6 +34,7 @@
   $: saveCurrentItemStore.update((old) => ({ ...old, canSave: canSaveCurrentItem }));
 
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
+    if (!dataset || id === selectedItem?.id) return;
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
@@ -55,14 +56,19 @@
     currentItemId = value.params.itemId;
   });
 
-  $: datasetsStore.subscribe((value) => {
+  datasetsStore.subscribe((value) => {
     const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
-    if (foundDataset && currentItemId) {
+    if (foundDataset) {
       selectedDataset = foundDataset;
+    }
+  });
+
+  $: {
+    if (currentItemId !== selectedItem?.id) {
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
-  });
+  }
 
   $: isLoadingNewItemStore.subscribe((value) => {
     isLoadingNewItem = value;
