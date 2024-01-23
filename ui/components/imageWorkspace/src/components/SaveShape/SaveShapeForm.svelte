@@ -14,38 +14,42 @@
    * http://www.cecill.info
    */
 
-  import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
+  import { Button } from "@pixano/core/src";
+  // import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import {
-    createObjectInputsSchema,
-    createSchemaFromFeatures,
-  } from "../../lib/settings/objectValidationSchemas";
+  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
+  // import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
+  // import {
+  //   createObjectInputsSchema,
+  //   createSchemaFromFeatures,
+  // } from "../../lib/settings/objectValidationSchemas";
   import { GROUND_TRUTH } from "../../lib/constants";
-  import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
+  import type { CreateObjectInputs } from "../../lib/types/imageWorkspaceTypes";
+  // import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
-  import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  // import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
   let shape: Shape;
   let isFormValid: boolean = false;
+  let formInputs: CreateObjectInputs = [];
 
   let objectProperties: { [key: string]: FeatureValues } = {};
-  let formInputs: CreateObjectInputs = [];
-  let objectValidationSchema: CreateObjectSchema;
+  // let objectValidationSchema: CreateObjectSchema;
 
-  itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
-      (feature) => ({
-        ...feature,
-        label: feature.name,
-        required: true,
-        type: feature.dtype,
-      }),
-    );
-    objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
-    formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
-  });
+  // itemMetas.subscribe((metas) => {
+  //   const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
+  //     (feature) => ({
+  //       ...feature,
+  //       label: feature.name,
+  //       required: true,
+  //       type: feature.dtype,
+  //     }),
+  //   );
+  //   objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
+  //   formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
+  // });
 
   newShape.subscribe((value) => {
     if (value) shape = value;
@@ -96,19 +100,20 @@
     canSave.set(true);
   };
 
-  const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
-    objectProperties[propertyLabel] = value;
-  };
-  $: {
-    const result = objectValidationSchema.safeParse(objectProperties);
-    isFormValid = result.success;
-  }
+  // const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
+  //   objectProperties[propertyLabel] = value;
+  // };
+  // $: {
+  //   const result = objectValidationSchema.safeParse(objectProperties);
+  //   isFormValid = result.success;
+  // }
 </script>
 
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Sauvegarde {shape.type}</p>
-    {#each formInputs as feature, i}
+    <FeatureFormInputs bind:isFormValid bind:formInputs />
+    <!-- {#each formInputs as feature, i}
       {#if feature.type === "bool"}
         <div class="flex gap-4 items-center">
           <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
@@ -148,7 +153,7 @@
           />
         </div>
       {/if}
-    {/each}
+    {/each} -->
     <div class="flex gap-4">
       <Button
         class="text-white"
