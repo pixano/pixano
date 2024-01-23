@@ -55,11 +55,15 @@ class COCOImporter(Importer):
         tables = super().create_tables(
             media_fields,
             object_fields={
+                "original_id": "str",
                 "bbox": "bbox",
                 "mask": "compressedrle",
                 "category": "str",
             },
         )
+
+        # Add original id in main table
+        tables["main"][0].fields["original_id"] = "str"
 
         # Create categories
         categories = []
@@ -92,10 +96,6 @@ class COCOImporter(Importer):
             ) as f:
                 coco_instances = json.load(f)
 
-            # ensure uniqueness by using shortid
-            for im in coco_instances["images"]:
-                im["uuid"] = shortuuid.uuid()
-
             # Group annotations by image ID
             annotations = defaultdict(list)
             for ann in coco_instances["annotations"]:
@@ -125,12 +125,16 @@ class COCOImporter(Importer):
                 # Set image URI
                 im_uri = f"image/{split}/{im_path.name}"
 
+                # Set unique id
+                item_id = shortuuid.uuid()
+
                 # Return rows
                 rows = {
                     "main": {
                         "db": [
                             {
-                                "id": str(im["uuid"]),
+                                "id": item_id,
+                                "original_id": str(im["id"]),
                                 "views": ["image"],
                                 "split": split,
                             }
@@ -139,7 +143,7 @@ class COCOImporter(Importer):
                     "media": {
                         "image": [
                             {
-                                "id": str(im["uuid"]),
+                                "id": item_id,
                                 "image": Image(im_uri, None, im_thumb).to_dict(),
                             }
                         ]
@@ -147,8 +151,9 @@ class COCOImporter(Importer):
                     "objects": {
                         "objects": [
                             {
-                                "id": str(ann["id"]),
-                                "item_id": str(im["uuid"]),
+                                "id": shortuuid.uuid(),
+                                "original_id": str(ann["id"]),
+                                "item_id": item_id,
                                 "view_id": "image",
                                 "bbox": BBox.from_xywh(ann["bbox"])
                                 .normalize(im["height"], im["width"])
