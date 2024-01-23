@@ -16,6 +16,9 @@
 
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
   import { PrimaryButton, Slider, IconButton } from "@pixano/core";
+  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+
+  let isFormValid: boolean = false;
 </script>
 
 <div class="my-4">
@@ -36,9 +39,11 @@
       <BoxSelectIcon color="#133AFC" />
       <span>obj535253453</span>
     </p>
-    <div>infos diverses</div>
+    <div class="flex flex-col gap-4 py-4">
+      <FeatureFormInputs bind:isFormValid />
+    </div>
     <div class="flex gap-4 mt-4 w-full justify-center">
-      <PrimaryButton isSelected><Check />Accept</PrimaryButton>
+      <PrimaryButton isSelected disabled={!isFormValid}><Check />Accept</PrimaryButton>
       <PrimaryButton>Ignore</PrimaryButton>
     </div>
   </div>
