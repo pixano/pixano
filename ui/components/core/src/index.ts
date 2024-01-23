@@ -36,6 +36,7 @@ export { Skeleton } from "./components/ui/skeleton";
 export { Checkbox } from "./components/ui/checkbox";
 export { default as Combobox } from "./components/ui/combobox/combobox.svelte";
 export { Input } from "./components/ui/input";
+export { Slider } from "./components/ui/slider";
 
 // lib
 // utils

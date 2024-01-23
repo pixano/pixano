@@ -21,6 +21,7 @@
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
+  import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
 
   let allItemsSortedByModel: ObjectsSortedByModelType = {
@@ -38,6 +39,7 @@
 </script>
 
 <div class="p-2">
+  <PreAnnotation />
   <div>
     <ObjectTabModelContent sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
