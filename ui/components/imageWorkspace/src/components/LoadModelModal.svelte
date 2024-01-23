@@ -90,7 +90,6 @@
       modelsStore.update((store) => ({
         ...store,
         selectedModelName,
-        currentModalOpen: store.selectedModelName ? "none" : "selectModel",
       }));
     }
   }
