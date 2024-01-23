@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import duckdb
 import lancedb
 from pixano_inference import transformers
 
@@ -241,10 +242,26 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0].id, "285")
 
+    def get_uuid(self, original_id: str) -> str:
+        ds_tables = self.dataset.open_tables()
+        # pylint: disable=unused-variable
+        lance_table = ds_tables["main"]["db"].to_lance()
+        result = (
+            duckdb.query(
+                f"SELECT id FROM lance_table WHERE original_id = '{original_id}'"
+            )
+            .to_arrow_table()
+            .to_pylist()
+        )
+        if result and len(result) == 1:
+            return result[0]["id"]
+        else:
+            return original_id
+
     def test_load_item(self):
         """Test Dataset load_item method"""
 
-        item = self.dataset.load_item("632", load_objects=True)
+        item = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "632")
@@ -253,7 +270,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(len(item.objects.values()), 18)
 
         item = self.dataset.load_item(
-            "632", load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
+            self.get_uuid("632"), load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
         )
 
         self.assertEqual(item, None)
@@ -262,7 +279,7 @@ class DatasetTestCase(unittest.TestCase):
         """Test Dataset save_item method"""
 
         # Original item has 18 objects
-        item_1 = self.dataset.load_item("632", load_objects=True)
+        item_1 = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
         self.assertEqual(len(item_1.objects), 18)
 
         # 1. Add object to existing table
@@ -277,7 +294,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_1)
 
         # Item should now have 19 objects
-        item_2 = self.dataset.load_item("632", load_objects=True)
+        item_2 = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
         self.assertEqual(len(item_2.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_2.objects["added_object"].bbox.coords],
@@ -296,7 +313,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_2)
 
         # Item should still have 19 objects
-        item_3 = self.dataset.load_item("632", load_objects=True)
+        item_3 = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
         self.assertEqual(len(item_3.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_3.objects["added_object"].bbox.coords],
@@ -308,7 +325,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_3)
 
         # Item should now have 18 objects again
-        item_4 = self.dataset.load_item("632", load_objects=True)
+        item_4 = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
         self.assertEqual(len(item_4.objects), 18)
 
         # 4. Add object to new table
@@ -323,7 +340,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_4)
 
         # Item should now have 19 objects
-        item_5 = self.dataset.load_item("632", load_objects=True)
+        item_5 = self.dataset.load_item(self.get_uuid("632"), load_objects=True)
         self.assertEqual(len(item_5.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_5.objects["added_object"].bbox.coords],
