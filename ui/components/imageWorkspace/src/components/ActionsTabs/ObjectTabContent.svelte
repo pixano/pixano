@@ -40,7 +40,7 @@
 </script>
 
 <div class="p-2">
-  <PreAnnotation objectsToAnnotate={allItemsSortedByModel[PRE_ANNOTATION]} />
+  <PreAnnotation objectsToAnnotate={allItemsSortedByModel[PRE_ANNOTATION]} {colorScale} />
   <div>
     <ObjectTabModelContent sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}

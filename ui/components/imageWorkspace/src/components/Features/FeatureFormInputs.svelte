@@ -15,7 +15,7 @@
    */
 
   import { Input, Checkbox, Combobox } from "@pixano/core/src";
-  import type { FeatureValues } from "@pixano/core";
+  import type { FeatureValues, ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import {
@@ -29,6 +29,7 @@
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
   export let objectProperties: { [key: string]: FeatureValues } = {};
+  export let initialValues: Record<string, ItemFeature> = {};
 
   let objectValidationSchema: CreateObjectSchema;
 
@@ -50,6 +51,14 @@
   };
 
   $: {
+    Object.values(initialValues).forEach((feature) => {
+      if (typeof feature.value !== "object") {
+        objectProperties[feature.name] = feature.value;
+      }
+    });
+  }
+
+  $: {
     const result = objectValidationSchema.safeParse(objectProperties);
     isFormValid = result.success;
   }
@@ -58,7 +67,10 @@
 {#each formInputs as feature, i}
   {#if feature.type === "bool"}
     <div class="flex gap-4 items-center">
-      <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
+      <Checkbox
+        handleClick={(checked) => handleInputChange(checked, feature.name)}
+        checked={initialValues[feature.name]?.value === 1}
+      />
       <span
         >{feature.label}
         {#if feature.required}
@@ -86,6 +98,7 @@
         type={feature.type === "str" ? "text" : "number"}
         step={feature.type === "int" ? "1" : "any"}
         autofocus={i === 0 ? true : false}
+        value={initialValues[feature.name]?.value || ""}
         on:keyup={(e) => e.stopPropagation()}
         on:input={(e) =>
           handleInputChange(

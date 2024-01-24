@@ -21,11 +21,17 @@
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let objectsToAnnotate: ItemObject[] = [];
+  export let colorScale: (id: string) => string;
 
   let isFormValid: boolean = false;
   let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
   let objectToAnnotate: ItemObject = objectsToAnnotate[0];
+  let color: string;
+
+  $: {
+    color = colorScale(objectToAnnotate?.id);
+  }
 
   $: sortedObjects = objectsToAnnotate.sort((a, b) => {
     const confidenceA = a.bbox?.confidence || 0;
@@ -38,13 +44,13 @@
     return confidence >= confidenceFilterValue[0];
   });
 
-  $: console.log({ objectsToAnnotate, filteredObjects, sortedObjects });
+  $: currentObjectIndex = sortedObjects.findIndex((object) => object.id === objectToAnnotate.id);
 
   $: {
     itemObjects.update((objects) =>
       objects.map((object) => {
         object.highlighted = preAnnotationIsActive ? "none" : "all";
-        if (object.id === objectToAnnotate.id && preAnnotationIsActive) {
+        if (object.id === objectToAnnotate?.id && preAnnotationIsActive) {
           object.highlighted = "self";
         }
         return object;
@@ -52,12 +58,21 @@
     );
   }
 
-  const annotateNext = () => {
-    const currentIndex = filteredObjects.findIndex((object) => object.id === objectToAnnotate.id);
-    const nextObject = filteredObjects[currentIndex + 1];
+  const highlightNextItem = () => {
+    const nextObject = filteredObjects[currentObjectIndex + 1];
     if (nextObject) {
       objectToAnnotate = nextObject;
+    } else {
+      objectToAnnotate = filteredObjects[0];
     }
+  };
+
+  const handleAcceptItem = () => {
+    highlightNextItem();
+  };
+
+  const handleRejectItem = () => {
+    highlightNextItem();
   };
 </script>
 
@@ -68,7 +83,7 @@
       <h3>PRE ANNOTATION</h3>
     </div>
     {#if preAnnotationIsActive}
-      <span>1 / {filteredObjects.length}</span>
+      <span>{currentObjectIndex + 1} / {filteredObjects.length}</span>
     {/if}
   </div>
   {#if preAnnotationIsActive && objectToAnnotate}
@@ -82,17 +97,17 @@
     </div>
     <div class="bg-white rounded-sm p-4 mt-4">
       <p class="flex gap-2">
-        <BoxSelectIcon color="#133AFC" />
+        <BoxSelectIcon {color} />
         <span>{objectToAnnotate.id}</span>
       </p>
       <div class="flex flex-col gap-4 py-4">
-        <FeatureFormInputs bind:isFormValid />
+        <FeatureFormInputs bind:isFormValid initialValues={objectToAnnotate.features} />
       </div>
       <div class="flex gap-4 mt-4 w-full justify-center">
-        <PrimaryButton on:click={annotateNext} isSelected disabled={!isFormValid}
+        <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
           ><Check />Accept</PrimaryButton
         >
-        <PrimaryButton>Ignore</PrimaryButton>
+        <PrimaryButton on:click={handleRejectItem}>Ignore</PrimaryButton>
       </div>
     </div>
   {/if}

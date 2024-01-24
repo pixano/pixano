@@ -358,8 +358,7 @@
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);
             const rect: Konva.Rect = bboxKonva.findOne(`#rect${bboxes[i].id}`);
-            const currentStrokeWidth = rect.strokeWidth();
-            rect.strokeWidth(bboxes[i].strokeFactor * currentStrokeWidth);
+            rect.strokeWidth(bboxes[i].strokeFactor * (BBOX_STROKEWIDTH / zoomFactor[viewId]));
             //update color
             const style = new Option().style;
             style.color = colorScale(bboxes[i].id);
