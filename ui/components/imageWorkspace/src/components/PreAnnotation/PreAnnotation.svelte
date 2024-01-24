@@ -16,10 +16,15 @@
 
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
   import { PrimaryButton, Slider, IconButton, Switch } from "@pixano/core";
+  import type { ItemObject } from "@pixano/core";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+
+  export let objectsToAnnotate: ItemObject[] = [];
 
   let isFormValid: boolean = false;
   let isActive: boolean = false;
+
+  $: console.log({ objectsToAnnotate });
 </script>
 
 <div class="my-4">
@@ -29,7 +34,7 @@
       <h3>PRE ANNOTATION</h3>
     </div>
     {#if isActive}
-      <span>1 / 5</span>
+      <span>1 / {objectsToAnnotate.length}</span>
     {/if}
   </div>
   {#if isActive}

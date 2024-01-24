@@ -1,7 +1,7 @@
 import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
-import { GROUND_TRUTH, MODEL_RUN } from "../constants";
+import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 
@@ -123,9 +123,10 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
           });
         }
       }
+      acc[PRE_ANNOTATION] = acc[MODEL_RUN][0]?.objects || [];
       return acc;
     },
-    { [GROUND_TRUTH]: [], [MODEL_RUN]: [] } as ObjectsSortedByModelType,
+    { [GROUND_TRUTH]: [], [MODEL_RUN]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
 export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
