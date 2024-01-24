@@ -19,6 +19,7 @@
   import type { ItemObject } from "@pixano/core";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
+  import { GROUND_TRUTH } from "../../lib/constants";
 
   export let objectsToAnnotate: ItemObject[] = [];
   export let colorScale: (id: string) => string;
@@ -68,10 +69,19 @@
   };
 
   const handleAcceptItem = () => {
+    itemObjects.update((objects) =>
+      objects.map((object) => {
+        if (object.id === objectToAnnotate.id) {
+          object.source_id = GROUND_TRUTH;
+        }
+        return object;
+      }),
+    );
     highlightNextItem();
   };
 
   const handleRejectItem = () => {
+    itemObjects.update((objects) => objects.filter((object) => object.id !== objectToAnnotate.id));
     highlightNextItem();
   };
 </script>
