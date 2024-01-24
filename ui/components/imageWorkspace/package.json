@@ -27,6 +27,7 @@
     "@pixano/models": "workspace:^0.3.0",
     "clsx": "^2.0.0",
     "lucide-svelte": "^0.292.0",
+    "nanoid": "^5.0.0",
     "onnxruntime-web": "~1.16.0",
     "tailwind-merge": "^2.0.0",
     "tailwind-variants": "^0.1.18",

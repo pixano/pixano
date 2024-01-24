@@ -4,7 +4,20 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
-## [0.5.0b1] - 2024-01-19
+## [0.5.0b2] - 2024-01-23
+
+### Changed
+
+- Update InferenceModel and uses of pixano-inference (pixano#51)
+
+### Fixed
+
+- Fix scaling of bounding box edges when resizing with editing tool (pixano#52)
+- Fix issue where app would hang indefinitely when loading item with no features (pixano#52)
+- Fix loading embeddings only once a model is selected (pixano#53)
+- Fix visibility of the first point of a polygon (pixano#54)
+
+## [0.5.0b1] - 2024-01-22
 
 ### Added
 
@@ -202,6 +215,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.5.0b2]: https://github.com/pixano/pixano/compare/v0.5.0b1...v0.5.0b2
 [0.5.0b1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0b1
 [0.4.1]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pixano/pixano/compare/v0.3.2...v0.4.0

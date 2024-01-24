@@ -102,6 +102,7 @@ class Importer(ABC):
                     name="db",
                     fields={
                         "id": "str",
+                        "original_id": "str",
                         "views": "[str]",
                         "split": "str",
                     },

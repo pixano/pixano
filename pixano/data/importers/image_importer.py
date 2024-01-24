@@ -15,6 +15,8 @@ import glob
 from collections.abc import Iterator
 from pathlib import Path
 
+import shortuuid
+
 from pixano.core import Image
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
@@ -88,12 +90,16 @@ class ImageImporter(Importer):
                     else f"image/{split}/{im_path.name}"
                 )
 
+                # Set unique item id
+                item_id = shortuuid.uuid()
+
                 # Return rows
                 rows = {
                     "main": {
                         "db": [
                             {
-                                "id": im_path.name,
+                                "id": item_id,
+                                "original_id": im_path.name,
                                 "views": ["image"],
                                 "split": split,
                                 "label": "",
@@ -103,7 +109,7 @@ class ImageImporter(Importer):
                     "media": {
                         "image": [
                             {
-                                "id": im_path.name,
+                                "id": item_id,
                                 "image": Image(im_uri, None, im_thumb).to_dict(),
                             }
                         ]

@@ -198,12 +198,12 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(len(items), 2)
 
         self.assertIsInstance(items[0], DatasetItem)
-        self.assertEqual(items[0].id, "139")
+        self.assertEqual(items[0].id, self.dataset.get_item_uuid("139"))
         self.assertEqual(items[0].split, "val")
         self.assertIsInstance(items[0].views["image"], ItemView)
 
         self.assertIsInstance(items[1], DatasetItem)
-        self.assertEqual(items[1].id, "285")
+        self.assertEqual(items[1].id, self.dataset.get_item_uuid("285"))
         self.assertEqual(items[1].split, "val")
         self.assertIsInstance(items[1].views["image"], ItemView)
 
@@ -213,7 +213,7 @@ class DatasetTestCase(unittest.TestCase):
         self.assertEqual(len(items), 1)
 
         self.assertIsInstance(items[0], DatasetItem)
-        self.assertEqual(items[0].id, "632")
+        self.assertEqual(items[0].id, self.dataset.get_item_uuid("632"))
         self.assertEqual(items[0].split, "val")
         self.assertIsInstance(items[0].views["image"], ItemView)
 
@@ -239,21 +239,24 @@ class DatasetTestCase(unittest.TestCase):
         )
         self.assertIsInstance(items, list)
         self.assertEqual(len(items), 1)
-        self.assertEqual(items[0].id, "285")
+        self.assertEqual(items[0].id, self.dataset.get_item_uuid("285"))
 
     def test_load_item(self):
         """Test Dataset load_item method"""
 
-        item = self.dataset.load_item("632", load_objects=True)
+        # get item uuid from original id
+        item_uuid = self.dataset.get_item_uuid("632")
+
+        item = self.dataset.load_item(item_uuid, load_objects=True)
 
         self.assertIsInstance(item, DatasetItem)
-        self.assertEqual(item.id, "632")
+        self.assertEqual(item.id, item_uuid)
         self.assertEqual(item.split, "val")
         self.assertIsInstance(item.views["image"], ItemView)
         self.assertEqual(len(item.objects.values()), 18)
 
         item = self.dataset.load_item(
-            "632", load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
+            item_uuid, load_embeddings=True, model_id="sam_vit_h_4b8939.onnx"
         )
 
         self.assertEqual(item, None)
@@ -261,14 +264,17 @@ class DatasetTestCase(unittest.TestCase):
     def test_save_item(self):
         """Test Dataset save_item method"""
 
+        # get item uuid from original id
+        item_uuid = self.dataset.get_item_uuid("632")
+
         # Original item has 18 objects
-        item_1 = self.dataset.load_item("632", load_objects=True)
+        item_1 = self.dataset.load_item(item_uuid, load_objects=True)
         self.assertEqual(len(item_1.objects), 18)
 
         # 1. Add object to existing table
         added_object_1 = ItemObject(
             id="added_object",
-            item_id="632",
+            item_id=item_uuid,
             view_id="image",
             source_id="Ground Truth",
             bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
@@ -277,7 +283,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_1)
 
         # Item should now have 19 objects
-        item_2 = self.dataset.load_item("632", load_objects=True)
+        item_2 = self.dataset.load_item(item_uuid, load_objects=True)
         self.assertEqual(len(item_2.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_2.objects["added_object"].bbox.coords],
@@ -287,7 +293,7 @@ class DatasetTestCase(unittest.TestCase):
         # 2. Edit existing object
         added_object_2 = ItemObject(
             id="added_object",
-            item_id="632",
+            item_id=item_uuid,
             view_id="image",
             source_id="Ground Truth",
             bbox={"coords": [0.2, 0.2, 0.4, 0.4], "format": "xywh"},
@@ -296,7 +302,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_2)
 
         # Item should still have 19 objects
-        item_3 = self.dataset.load_item("632", load_objects=True)
+        item_3 = self.dataset.load_item(item_uuid, load_objects=True)
         self.assertEqual(len(item_3.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_3.objects["added_object"].bbox.coords],
@@ -308,13 +314,13 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_3)
 
         # Item should now have 18 objects again
-        item_4 = self.dataset.load_item("632", load_objects=True)
+        item_4 = self.dataset.load_item(item_uuid, load_objects=True)
         self.assertEqual(len(item_4.objects), 18)
 
         # 4. Add object to new table
         added_object_3 = ItemObject(
             id="added_object",
-            item_id="632",
+            item_id=item_uuid,
             view_id="image",
             source_id="Ground Truth",
             bbox={"coords": [0.1, 0.1, 0.3, 0.3], "format": "xywh"},
@@ -323,7 +329,7 @@ class DatasetTestCase(unittest.TestCase):
         self.dataset.save_item(item_4)
 
         # Item should now have 19 objects
-        item_5 = self.dataset.load_item("632", load_objects=True)
+        item_5 = self.dataset.load_item(item_uuid, load_objects=True)
         self.assertEqual(len(item_5.objects), 19)
         self.assertEqual(
             [round(coord) for coord in item_5.objects["added_object"].bbox.coords],

@@ -15,20 +15,14 @@
    */
 
   import { Button } from "@pixano/core/src";
-  // import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
+  import { nanoid } from "nanoid";
+
   import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
   import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
-  // import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  // import {
-  //   createObjectInputsSchema,
-  //   createSchemaFromFeatures,
-  // } from "../../lib/settings/objectValidationSchemas";
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs } from "../../lib/types/imageWorkspaceTypes";
-  // import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
-  // import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
   let shape: Shape;
@@ -46,8 +40,11 @@
     itemObjects.update((oldObjects) => {
       if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;
+      const id = nanoid(10);
+      const id2 = nanoid(10);
+      console.log({ id, id2 });
       const baseObject = {
-        id: `object${oldObjects.length + 1}`,
+        id: nanoid(10),
         item_id: shape.itemId,
         source_id: GROUND_TRUTH,
         view_id: shape.viewId,
@@ -91,7 +88,6 @@
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Sauvegarde {shape.type}</p>
     <FeatureFormInputs bind:isFormValid bind:formInputs bind:objectProperties />
-
     <div class="flex gap-4">
       <Button
         class="text-white"

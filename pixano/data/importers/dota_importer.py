@@ -52,6 +52,7 @@ class DOTAImporter(Importer):
         tables = super().create_tables(
             media_fields={"image": "image"},
             object_fields={
+                "original_id": "str",
                 "bbox": "bbox",
                 "category": "str",
             },
@@ -117,12 +118,16 @@ class DOTAImporter(Importer):
                 # Set image URI
                 im_uri = f"image/{split}/{im_path.name}"
 
+                # Set unique item id
+                item_id = shortuuid.uuid()
+
                 # Return rows
                 rows = {
                     "main": {
                         "db": [
                             {
-                                "id": im_path.stem,
+                                "id": item_id,
+                                "original_id": im_path.stem,
                                 "views": ["image"],
                                 "split": split,
                             }
@@ -131,7 +136,7 @@ class DOTAImporter(Importer):
                     "media": {
                         "image": [
                             {
-                                "id": im_path.stem,
+                                "id": item_id,
                                 "image": Image(im_uri, None, im_thumb).to_dict(),
                             }
                         ]
@@ -140,7 +145,7 @@ class DOTAImporter(Importer):
                         "objects": [
                             {
                                 "id": shortuuid.uuid(),
-                                "item_id": im_path.stem,
+                                "item_id": item_id,
                                 "view_id": "image",
                                 "bbox": BBox.from_xyxy(
                                     [
