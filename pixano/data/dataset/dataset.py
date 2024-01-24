@@ -95,6 +95,52 @@ class Dataset(BaseModel):
         # Return number of rows of main table
         return len(ds.open_table("db"))
 
+    def get_item_uuid(self, original_id: str) -> str:
+        """Get id (uuid) from original data item id, if exist
+
+        Args:
+            original_id (str): original data item id
+
+        Returns:
+            str: unique item id, or original_id if not found
+        """
+        ds_tables = self.open_tables()
+        # pylint: disable=unused-variable
+        lance_table = ds_tables["main"]["db"].to_lance()
+        result = (
+            duckdb.query(
+                f"SELECT id FROM lance_table WHERE original_id = '{original_id}'"
+            )
+            .to_arrow_table()
+            .to_pylist()
+        )
+        if result and len(result) == 1:
+            return result[0]["id"]
+        return original_id
+
+    def get_object_uuid(self, original_id: str) -> str:
+        """Get id (uuid) from original data object id, if exist
+
+        Args:
+            original_id (str): original data object id
+
+        Returns:
+            str: unique item id, or original_id if not found
+        """
+        ds_tables = self.open_tables()
+        # pylint: disable=unused-variable
+        lance_table = ds_tables["objects"]["objects"].to_lance()
+        result = (
+            duckdb.query(
+                f"SELECT id FROM lance_table WHERE original_id = '{original_id}'"
+            )
+            .to_arrow_table()
+            .to_pylist()
+        )
+        if result and len(result) == 1:
+            return result[0]["id"]
+        return original_id
+
     def load_info(
         self,
         load_stats: bool = False,
@@ -287,15 +333,17 @@ class Dataset(BaseModel):
         # Load PyArrow items from main table
         # pylint: disable=unused-variable
         lance_table = ds_tables["main"]["db"].to_lance()
+        id_field = "original_id" if "original_id" in lance_table.schema.names else "id"
         pyarrow_items["main"]["db"] = duckdb.query(
-            f"SELECT * FROM lance_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            f"SELECT * FROM lance_table ORDER BY len({id_field}), {id_field} LIMIT {limit} OFFSET {offset}"
         ).to_arrow_table()
+        id_list = tuple(pyarrow_items["main"]["db"].to_pydict()["id"])
 
         # Media tables
         for media_source, media_table in ds_tables["media"].items():
             lance_table = media_table.to_lance()
             pyarrow_items["media"][media_source] = duckdb.query(
-                f"SELECT * FROM lance_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                f"SELECT * FROM lance_table WHERE id IN {id_list}"
             ).to_arrow_table()
 
         # Active Learning tables
@@ -303,7 +351,7 @@ class Dataset(BaseModel):
             for al_source, al_table in ds_tables["active_learning"].items():
                 lance_table = al_table.to_lance()
                 pyarrow_items["active_learning"][al_source] = duckdb.query(
-                    f"SELECT * FROM lance_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                    f"SELECT * FROM lance_table  WHERE id IN {id_list}"
                 ).to_arrow_table()
 
         if pyarrow_items["main"]["db"].num_rows > 0:

@@ -195,7 +195,7 @@ class COCOExporter(Exporter):
                         "file_name": images[view.id].file_name,
                         "height": images[view.id].height,
                         "width": images[view.id].width,
-                        "id": item.id,
+                        "id": item.original_id if item.original_id else item.id,
                     }
                 )
 
@@ -245,8 +245,8 @@ class COCOExporter(Exporter):
         # Add object
         self.coco_json["annotations"].append(
             {
-                "id": obj.id,
-                "image_id": item.id,
+                "id": obj.original_id if obj.original_id else obj.id,
+                "image_id": item.original_id if item.original_id else item.id,
                 "segmentation": mask,
                 "bbox": bbox,
                 "area": 0,

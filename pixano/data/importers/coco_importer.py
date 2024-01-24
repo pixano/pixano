@@ -17,6 +17,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlparse
 
+import shortuuid
+
 from pixano.core import BBox, CompressedRLE, Image
 from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
@@ -53,6 +55,7 @@ class COCOImporter(Importer):
         tables = super().create_tables(
             media_fields,
             object_fields={
+                "original_id": "str",
                 "bbox": "bbox",
                 "mask": "compressedrle",
                 "category": "str",
@@ -119,12 +122,16 @@ class COCOImporter(Importer):
                 # Set image URI
                 im_uri = f"image/{split}/{im_path.name}"
 
+                # Set unique id
+                item_id = shortuuid.uuid()
+
                 # Return rows
                 rows = {
                     "main": {
                         "db": [
                             {
-                                "id": str(im["id"]),
+                                "id": item_id,
+                                "original_id": str(im["id"]),
                                 "views": ["image"],
                                 "split": split,
                             }
@@ -133,7 +140,7 @@ class COCOImporter(Importer):
                     "media": {
                         "image": [
                             {
-                                "id": str(im["id"]),
+                                "id": item_id,
                                 "image": Image(im_uri, None, im_thumb).to_dict(),
                             }
                         ]
@@ -141,8 +148,9 @@ class COCOImporter(Importer):
                     "objects": {
                         "objects": [
                             {
-                                "id": str(ann["id"]),
-                                "item_id": str(im["id"]),
+                                "id": shortuuid.uuid(),
+                                "original_id": str(ann["id"]),
+                                "item_id": item_id,
                                 "view_id": "image",
                                 "bbox": BBox.from_xywh(ann["bbox"])
                                 .normalize(im["height"], im["width"])
