@@ -51,9 +51,6 @@ class ImageImporter(Importer):
         # Create dataset tables
         tables = super().create_tables(media_fields)
 
-        # Add original id in main table
-        tables["main"][0].fields["original_id"] = "str"
-
         # Create splits
         if splits is None:
             splits = ["dataset"]

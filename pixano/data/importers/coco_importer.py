@@ -62,9 +62,6 @@ class COCOImporter(Importer):
             },
         )
 
-        # Add original id in main table
-        tables["main"][0].fields["original_id"] = "str"
-
         # Create categories
         categories = []
         for split in splits:
