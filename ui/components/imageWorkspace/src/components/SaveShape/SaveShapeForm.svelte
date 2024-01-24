@@ -14,6 +14,7 @@
    * http://www.cecill.info
    */
 
+  import short from "short-uuid";
   import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
@@ -57,7 +58,7 @@
       if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;
       const baseObject = {
-        id: `object${oldObjects.length + 1}`,
+        id: short.generate(),
         item_id: shape.itemId,
         source_id: GROUND_TRUTH,
         view_id: shape.viewId,
