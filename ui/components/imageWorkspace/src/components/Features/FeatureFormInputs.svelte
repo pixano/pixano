@@ -28,8 +28,8 @@
 
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
+  export let objectProperties: { [key: string]: FeatureValues } = {};
 
-  let objectProperties: { [key: string]: FeatureValues } = {};
   let objectValidationSchema: CreateObjectSchema;
 
   itemMetas.subscribe((metas) => {
