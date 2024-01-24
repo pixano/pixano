@@ -121,6 +121,7 @@ class ItemObject(BaseModel):
 
     Attributes:
         id (str): Object ID
+        original_id (str, optional): Object original ID
         item_id (str): Object item ID
         view_id (str): Object view ID
         source_id (str): Object source ID
@@ -130,6 +131,7 @@ class ItemObject(BaseModel):
     """
 
     id: str
+    original_id: Optional[str] = None
     item_id: str
     view_id: str
     source_id: str

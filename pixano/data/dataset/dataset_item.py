@@ -28,6 +28,7 @@ class DatasetItem(BaseModel):
 
     Attributes:
         id (str): Item ID
+        original_id (str, optional): Item original ID
         split (str): Item split
         features (dict[str, ItemFeature], optional): Item features
         views (dict[str, ItemView], optional): Item views
@@ -36,6 +37,7 @@ class DatasetItem(BaseModel):
     """
 
     id: str
+    original_id: Optional[str] = None
     split: str
     features: Optional[dict[str, ItemFeature]] = None
     views: Optional[dict[str, ItemView]] = None

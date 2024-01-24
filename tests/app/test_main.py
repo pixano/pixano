@@ -56,11 +56,11 @@ class AppTestCase(unittest.TestCase):
             input_dirs=input_dirs,
             splits=["val"],
         )
-        dataset = importer.import_dataset(import_dir, copy=True)
+        self.dataset = importer.import_dataset(import_dir, copy=True)
 
         # Set dataset ID
-        dataset.info.id = "coco_dataset"
-        dataset.save_info()
+        self.dataset.info.id = "coco_dataset"
+        self.dataset.save_info()
 
         # Create dataset stats
         stats = [
@@ -199,7 +199,9 @@ class AppTestCase(unittest.TestCase):
     def test_get_dataset_item(self):
         """Test /datasets/{dataset_id}/items/{item_id} endpoint (GET)"""
 
-        response = self.client.get("/datasets/coco_dataset/items/139")
+        # get item uuid from original id
+        item_uuid = self.dataset.get_item_uuid("139")
+        response = self.client.get(f"/datasets/coco_dataset/items/{item_uuid}")
         output = response.json()
 
         self.assertEqual(response.status_code, 200)
@@ -210,7 +212,9 @@ class AppTestCase(unittest.TestCase):
     def test_post_dataset_item(self):
         """Test /datasets/{dataset_id}/items/{item_id} endpoint (POST)"""
 
-        response_1 = self.client.get("/datasets/coco_dataset/items/139")
+        # get item uuid from original id
+        item_uuid = self.dataset.get_item_uuid("139")
+        response_1 = self.client.get(f"/datasets/coco_dataset/items/{item_uuid}")
         output = response_1.json()
 
         ds_item = DatasetItem.model_validate(output)
