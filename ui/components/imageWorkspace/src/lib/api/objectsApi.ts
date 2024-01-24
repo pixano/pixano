@@ -1,7 +1,13 @@
 import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
-import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../constants";
+import {
+  ANNOTATION_ITEM_STROKE_FACTOR,
+  GROUND_TRUTH,
+  MODEL_RUN,
+  NOT_ANNOTATION_ITEM_OPACITY,
+  PRE_ANNOTATION,
+} from "../constants";
 import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 
@@ -33,10 +39,11 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     catId: (obj.features.category_id?.value || 1) as number,
     bbox: [x, y, w, h],
     tooltip,
-    opacity: 1.0,
+    opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     locked: obj.displayControl?.locked,
+    strokeFactor: obj.highlighted === "self" ? ANNOTATION_ITEM_STROKE_FACTOR : 1,
   } as BBox;
 };
 

@@ -11,6 +11,7 @@
   let isMouseOverThumb: boolean = false;
 
   $: pourcentage = Math.round(((value?.[0] || 0) / $$restProps.max) * 100);
+  $: displayedValue = `${pourcentage / 100}`;
 </script>
 
 <div class="flex gap-4">
@@ -35,11 +36,11 @@
       data-melt-slider-thumb=""
       class={cn(
         "block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        { "h-8 w-8": isMouseOverThumb },
+        { "h-10 w-10": isMouseOverThumb },
       )}
       data-bits-slider-thumb=""
       style={`position: absolute; left: ${pourcentage}%; translate: -50%;`}
-      >{#if isMouseOverThumb && pourcentage > 0 && pourcentage < $$restProps.max}{pourcentage}
+      >{#if isMouseOverThumb && pourcentage > 0 && pourcentage < $$restProps.max * 100}{displayedValue}
       {/if}</button
     >
   </SliderPrimitive.Root>

@@ -18,44 +18,80 @@
   import { PrimaryButton, Slider, IconButton, Switch } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let objectsToAnnotate: ItemObject[] = [];
 
   let isFormValid: boolean = false;
-  let isActive: boolean = false;
+  let preAnnotationIsActive: boolean = false;
+  let confidenceFilterValue = [0];
+  let objectToAnnotate: ItemObject = objectsToAnnotate[0];
 
-  $: console.log({ objectsToAnnotate });
+  $: sortedObjects = objectsToAnnotate.sort((a, b) => {
+    const confidenceA = a.bbox?.confidence || 0;
+    const confidenceB = b.bbox?.confidence || 0;
+    return confidenceB - confidenceA;
+  });
+
+  $: filteredObjects = sortedObjects.filter((object) => {
+    const confidence = object.bbox?.confidence || 0;
+    return confidence >= confidenceFilterValue[0];
+  });
+
+  $: console.log({ objectsToAnnotate, filteredObjects, sortedObjects });
+
+  $: {
+    itemObjects.update((objects) =>
+      objects.map((object) => {
+        object.highlighted = preAnnotationIsActive ? "none" : "all";
+        if (object.id === objectToAnnotate.id && preAnnotationIsActive) {
+          object.highlighted = "self";
+        }
+        return object;
+      }),
+    );
+  }
+
+  const annotateNext = () => {
+    const currentIndex = filteredObjects.findIndex((object) => object.id === objectToAnnotate.id);
+    const nextObject = filteredObjects[currentIndex + 1];
+    if (nextObject) {
+      objectToAnnotate = nextObject;
+    }
+  };
 </script>
 
 <div class="my-4">
   <div class="flex justify-between my-4">
     <div class="flex gap-4">
-      <Switch bind:checked={isActive} />
+      <Switch bind:checked={preAnnotationIsActive} />
       <h3>PRE ANNOTATION</h3>
     </div>
-    {#if isActive}
-      <span>1 / {objectsToAnnotate.length}</span>
+    {#if preAnnotationIsActive}
+      <span>1 / {filteredObjects.length}</span>
     {/if}
   </div>
-  {#if isActive}
+  {#if preAnnotationIsActive && objectToAnnotate}
     <div class="my-2 flex items-center">
       <IconButton tooltipContent="confidence slider">
         <Filter />
       </IconButton>
       <div class="px-8 w-full">
-        <Slider value={[0]} max={100} step={1} />
+        <Slider bind:value={confidenceFilterValue} max={1} step={0.01} />
       </div>
     </div>
     <div class="bg-white rounded-sm p-4 mt-4">
       <p class="flex gap-2">
         <BoxSelectIcon color="#133AFC" />
-        <span>obj535253453</span>
+        <span>{objectToAnnotate.id}</span>
       </p>
       <div class="flex flex-col gap-4 py-4">
         <FeatureFormInputs bind:isFormValid />
       </div>
       <div class="flex gap-4 mt-4 w-full justify-center">
-        <PrimaryButton isSelected disabled={!isFormValid}><Check />Accept</PrimaryButton>
+        <PrimaryButton on:click={annotateNext} isSelected disabled={!isFormValid}
+          ><Check />Accept</PrimaryButton
+        >
         <PrimaryButton>Ignore</PrimaryButton>
       </div>
     </div>
