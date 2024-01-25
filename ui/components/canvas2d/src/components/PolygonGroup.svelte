@@ -62,8 +62,13 @@
         [] as PolygonGroupPoint[][],
       );
     } else {
-      const lastPoint = polygonDetails.points.at(-1);
-      polygonShape.simplifiedPoints = [[...(polygonShape.simplifiedPoints?.[0] || []), lastPoint]];
+      const lastPolygonDetailsPoint = polygonDetails.points.at(-1);
+      const lastSimplifiedPoint = polygonShape.simplifiedPoints?.[0]?.at(-1);
+      if (lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
+        polygonShape.simplifiedPoints = [
+          [...(polygonShape.simplifiedPoints?.[0] || []), lastPolygonDetailsPoint],
+        ];
+      }
     }
   }
 
