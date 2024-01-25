@@ -34,6 +34,7 @@ export type inProgressShape = (RectangleShape | MaskShape) & {
 
 export type noShape = {
   status: "none";
+  shouldReset?: boolean;
 };
 
 export type editMaskShape = {
