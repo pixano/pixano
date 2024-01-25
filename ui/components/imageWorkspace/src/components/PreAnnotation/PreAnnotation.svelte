@@ -28,6 +28,7 @@
   let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
   let objectToAnnotate: ItemObject = objectsToAnnotate[0];
+  let filteredObjects: ItemObject[] = [];
   let color: string;
 
   $: {
@@ -40,12 +41,23 @@
     return confidenceB - confidenceA;
   });
 
-  $: filteredObjects = sortedObjects.filter((object) => {
-    const confidence = object.bbox?.confidence || 0;
-    return confidence >= confidenceFilterValue[0];
-  });
+  $: {
+    filteredObjects = sortedObjects.filter((object) => {
+      const confidence = object.bbox?.confidence || 0;
+      return confidence >= confidenceFilterValue[0];
+    });
+  }
 
-  $: currentObjectIndex = sortedObjects.findIndex((object) => object.id === objectToAnnotate.id);
+  $: {
+    const noObjectToAnnotate = filteredObjects.every(
+      (object) => object.id !== objectToAnnotate?.id,
+    );
+    if (noObjectToAnnotate) {
+      objectToAnnotate = filteredObjects[0];
+    }
+  }
+
+  $: currentObjectIndex = filteredObjects.findIndex((object) => object.id === objectToAnnotate.id);
 
   $: {
     itemObjects.update((objects) =>
@@ -90,13 +102,13 @@
   <div class="flex justify-between my-4">
     <div class="flex gap-4">
       <Switch bind:checked={preAnnotationIsActive} />
-      <h3>PRE ANNOTATION</h3>
+      <h3 class="uppercase font-light">PRE ANNOTATION</h3>
     </div>
     {#if preAnnotationIsActive}
       <span>{currentObjectIndex + 1} / {filteredObjects.length}</span>
     {/if}
   </div>
-  {#if preAnnotationIsActive && objectToAnnotate}
+  {#if preAnnotationIsActive}
     <div class="my-2 flex items-center">
       <IconButton tooltipContent="confidence slider">
         <Filter />
@@ -105,20 +117,22 @@
         <Slider bind:value={confidenceFilterValue} max={1} step={0.01} />
       </div>
     </div>
-    <div class="bg-white rounded-sm p-4 mt-4">
-      <p class="flex gap-2">
-        <BoxSelectIcon {color} />
-        <span>{objectToAnnotate.id}</span>
-      </p>
-      <div class="flex flex-col gap-4 py-4">
-        <FeatureFormInputs bind:isFormValid initialValues={objectToAnnotate.features} />
+    {#if objectToAnnotate}
+      <div class="bg-white rounded-sm p-4 mt-4">
+        <p class="flex gap-2">
+          <BoxSelectIcon {color} />
+          <span>{objectToAnnotate.id}</span>
+        </p>
+        <div class="flex flex-col gap-4 py-4">
+          <FeatureFormInputs bind:isFormValid initialValues={objectToAnnotate.features} />
+        </div>
+        <div class="flex gap-4 mt-4 w-full justify-center">
+          <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
+            ><Check />Accept</PrimaryButton
+          >
+          <PrimaryButton on:click={handleRejectItem}>Ignore</PrimaryButton>
+        </div>
       </div>
-      <div class="flex gap-4 mt-4 w-full justify-center">
-        <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
-          ><Check />Accept</PrimaryButton
-        >
-        <PrimaryButton on:click={handleRejectItem}>Ignore</PrimaryButton>
-      </div>
-    </div>
+    {/if}
   {/if}
 </div>
