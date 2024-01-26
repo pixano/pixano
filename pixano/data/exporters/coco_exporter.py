@@ -233,9 +233,9 @@ class COCOExporter(Exporter):
         # Category
         category = {
             "id": None,
-            "name": obj.features["category"].value
-            if "category" in obj.features
-            else None,
+            "name": (
+                obj.features["category"].value if "category" in obj.features else None
+            ),
         }
         if category["name"] is not None:
             for cat in self.dataset.info.categories:
