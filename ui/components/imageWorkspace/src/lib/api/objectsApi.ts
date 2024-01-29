@@ -103,8 +103,9 @@ export const toggleObjectDisplayControl = (
 export const sortObjectsByModel = (objects: ItemObject[]) =>
   objects.reduce(
     (acc, object) => {
-      if (object.source_id === PRE_ANNOTATION && !object.preAnnotation) {
-        acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
+      if (object.source_id === PRE_ANNOTATION) {
+        if (!object.preAnnotation) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
+        return acc;
       }
       if (object.source_id === GROUND_TRUTH) {
         acc[object.source_id] = [object, ...acc[GROUND_TRUTH]];
@@ -167,12 +168,32 @@ export const sortAndFilterObjectsToAnnotate = (
   confidenceFilterValue: number[],
 ) =>
   objects
-    // .sort((a, b) => {
-    //   const confidenceA = a.bbox?.confidence || 0;
-    //   const confidenceB = b.bbox?.confidence || 0;
-    //   return confidenceB - confidenceA;
-    // })
+    .filter((object) => object.source_id === PRE_ANNOTATION && !object.preAnnotation)
     .filter((object) => {
       const confidence = object.bbox?.confidence || 0;
       return confidence >= confidenceFilterValue[0];
+    })
+    .sort((a, b) => {
+      const confidenceA = a.bbox?.confidence || 0;
+      const confidenceB = b.bbox?.confidence || 0;
+      return confidenceB - confidenceA;
     });
+
+export const mapObjectWithNewStatus = (
+  allObjects: ItemObject[],
+  objectsToAnnotate: ItemObject[],
+  status: "accepted" | "rejected",
+) => {
+  const nextObjectId = objectsToAnnotate[1]?.id;
+  return allObjects.map((object) => {
+    if (object.id === nextObjectId) {
+      object.highlighted = "self";
+    } else {
+      object.highlighted = "none";
+    }
+    if (object.id === objectsToAnnotate[0]?.id) {
+      object.preAnnotation = status;
+    }
+    return object;
+  });
+};

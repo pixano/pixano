@@ -15,11 +15,13 @@
    */
 
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
-  import { PrimaryButton, Slider, IconButton, Switch } from "@pixano/core";
+  import { PrimaryButton, Slider, IconButton, Switch, cn } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
+  import { mapObjectWithNewStatus, sortAndFilterObjectsToAnnotate } from "../../lib/api/objectsApi";
+  import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
 
   export let objectsToAnnotate: ItemObject[] = [];
   export let colorScale: (id: string) => string;
@@ -27,94 +29,61 @@
   let isFormValid: boolean = false;
   let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
-  let objectToAnnotate: ItemObject = objectsToAnnotate[0];
-  let filteredObjects: ItemObject[] = [];
+  $: objectToAnnotate = objectsToAnnotate[0];
   let color: string;
 
-  $: {
-    color = colorScale(objectToAnnotate?.id);
-  }
+  $: color = colorScale(objectToAnnotate?.id || "");
 
-  $: sortedObjects = objectsToAnnotate.sort((a, b) => {
-    const confidenceA = a.bbox?.confidence || 0;
-    const confidenceB = b.bbox?.confidence || 0;
-    return confidenceB - confidenceA;
+  itemObjects.subscribe((objects) => {
+    objectsToAnnotate = sortAndFilterObjectsToAnnotate(objects, confidenceFilterValue);
+    if (objectsToAnnotate.length === 0) {
+      preAnnotationIsActive = false;
+    }
   });
 
-  $: {
-    filteredObjects = sortedObjects.filter((object) => {
-      const confidence = object.bbox?.confidence || 0;
-      return confidence >= confidenceFilterValue[0];
+  $: itemObjects.update((objects) => {
+    const tempObjects = sortAndFilterObjectsToAnnotate(objects, confidenceFilterValue);
+    return objects.map((object) => {
+      object.highlighted = preAnnotationIsActive ? "none" : "all";
+      if (object.id === tempObjects[0]?.id && preAnnotationIsActive) {
+        object.highlighted = "self";
+      }
+      return object;
     });
-  }
-
-  $: {
-    const noObjectToAnnotate = filteredObjects.every(
-      (object) => object.id !== objectToAnnotate?.id,
-    );
-    if (noObjectToAnnotate) {
-      objectToAnnotate = filteredObjects[0];
-    }
-  }
-
-  $: currentObjectIndex = filteredObjects.findIndex((object) => object.id === objectToAnnotate.id);
-
-  $: {
-    itemObjects.update((objects) =>
-      objects.map((object) => {
-        object.highlighted = preAnnotationIsActive ? "none" : "all";
-        if (object.id === objectToAnnotate?.id && preAnnotationIsActive) {
-          object.highlighted = "self";
-        }
-        return object;
-      }),
-    );
-  }
-
-  const highlightNextItem = () => {
-    const nextObject = filteredObjects[currentObjectIndex + 1];
-    if (nextObject) {
-      objectToAnnotate = nextObject;
-    } else {
-      objectToAnnotate = filteredObjects[0];
-    }
-  };
+  });
 
   const handleAcceptItem = () => {
     itemObjects.update((objects) => [
-      ...objects.map((object) => {
-        if (object.id === objectToAnnotate.id) {
-          object.preAnnotation = "accepted";
-        }
-        return object;
-      }),
       { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH },
+      ...mapObjectWithNewStatus(objects, objectsToAnnotate, "accepted"),
     ]);
-    highlightNextItem();
   };
 
   const handleRejectItem = () => {
-    itemObjects.update((objects) => objects.filter((object) => object.id !== objectToAnnotate.id));
-    itemObjects.update((objects) =>
-      objects.map((object) => {
-        if (object.id === objectToAnnotate.id) {
-          object.preAnnotation = "rejected";
-        }
-        return object;
-      }),
-    );
-    highlightNextItem();
+    itemObjects.update((objects) => mapObjectWithNewStatus(objects, objectsToAnnotate, "rejected"));
   };
 </script>
 
 <div class="my-4">
   <div class="flex justify-between my-4">
     <div class="flex gap-4">
-      <Switch bind:checked={preAnnotationIsActive} />
+      <Tooltip.Root>
+        <Tooltip.Trigger>
+          <Switch
+            bind:checked={preAnnotationIsActive}
+            class={cn({ "pointer-events-none": !objectsToAnnotate.length })}
+          />
+        </Tooltip.Trigger>
+        {#if objectsToAnnotate.length === 0}
+          <Tooltip.Content>
+            <p>No objects to annotate</p>
+          </Tooltip.Content>
+        {/if}
+      </Tooltip.Root>
       <h3 class="uppercase font-light">PRE ANNOTATION</h3>
     </div>
     {#if preAnnotationIsActive}
-      <span>{currentObjectIndex + 1} / {filteredObjects.length}</span>
+      <span>1 / {objectsToAnnotate.length}</span>
     {/if}
   </div>
   {#if preAnnotationIsActive}
