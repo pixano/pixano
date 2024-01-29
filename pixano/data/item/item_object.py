@@ -110,9 +110,7 @@ class ItemBBox(BaseModel):
         return (
             BBox.from_dict(self.model_dump())
             if self.coords != [0.0, 0.0, 0.0, 0.0]
-            else BBox.from_rle(mask.to_pyarrow())
-            if mask
-            else None
+            else BBox.from_rle(mask.to_pyarrow()) if mask else None
         )
 
 

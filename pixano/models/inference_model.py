@@ -243,11 +243,11 @@ class InferenceModel(ABC):
                     save_batch.extend(
                         self.preannotate(process_batch, views, uri_prefix, threshold)
                         if process_type == "obj"
-                        else self.precompute_embeddings(
-                            process_batch, views, uri_prefix
+                        else (
+                            self.precompute_embeddings(process_batch, views, uri_prefix)
+                            if process_type in ["segment_emb", "search_emb"]
+                            else []
                         )
-                        if process_type in ["segment_emb", "search_emb"]
-                        else []
                     )
                     progress.update(batch_size)
 

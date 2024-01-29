@@ -103,6 +103,7 @@ jobs:
         with:
           options: "--check --verbose --diff --color"
           src: "./pixano"
+          version: "~= 24.0"
 
       - name: Format backend tests with black
         uses: psf/black@stable
@@ -110,6 +111,7 @@ jobs:
           options: "--check --verbose --diff --color"
           src: "./tests"
           jupyter: true
+          version: "~= 24.0"
 
       - name: Format Jupyter notebooks with black
         uses: psf/black@stable
@@ -117,3 +119,4 @@ jobs:
           options: "--check --verbose --diff --color"
           src: "./notebooks"
           jupyter: true
+          version: "~= 24.0"

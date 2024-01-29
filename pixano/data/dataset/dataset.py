@@ -67,9 +67,11 @@ class Dataset(BaseModel):
             path=path,
             info=DatasetInfo.from_json(info_file),
             stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
-            thumbnail=Image(uri=thumb_file.absolute().as_uri()).url
-            if thumb_file.is_file()
-            else None,
+            thumbnail=(
+                Image(uri=thumb_file.absolute().as_uri()).url
+                if thumb_file.is_file()
+                else None
+            ),
         )
 
     @property
@@ -288,9 +290,11 @@ class Dataset(BaseModel):
                 for feat in new_feats:
                     # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
                     feat_array = pa.array(
-                        [False] * len(table)
-                        if feat.dtype == "bool"
-                        else [None] * len(table),
+                        (
+                            [False] * len(table)
+                            if feat.dtype == "bool"
+                            else [None] * len(table)
+                        ),
                         type=field_to_pyarrow(feat.dtype),
                     )
                     new_feats_table = new_feats_table.append_column(
