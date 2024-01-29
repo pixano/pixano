@@ -103,7 +103,7 @@ export const toggleObjectDisplayControl = (
 export const sortObjectsByModel = (objects: ItemObject[]) =>
   objects.reduce(
     (acc, object) => {
-      if (object.source_id === PRE_ANNOTATION) {
+      if (object.source_id === PRE_ANNOTATION && !object.preAnnotation) {
         acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
       }
       if (object.source_id === GROUND_TRUTH) {
@@ -133,7 +133,6 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
           });
         }
       }
-      acc[PRE_ANNOTATION] = acc[MODEL_RUN][0]?.objects || [];
       return acc;
     },
     { [GROUND_TRUTH]: [], [MODEL_RUN]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
@@ -162,3 +161,18 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
     }
     return object;
   });
+
+export const sortAndFilterObjectsToAnnotate = (
+  objects: ItemObject[],
+  confidenceFilterValue: number[],
+) =>
+  objects
+    // .sort((a, b) => {
+    //   const confidenceA = a.bbox?.confidence || 0;
+    //   const confidenceB = b.bbox?.confidence || 0;
+    //   return confidenceB - confidenceA;
+    // })
+    .filter((object) => {
+      const confidence = object.bbox?.confidence || 0;
+      return confidence >= confidenceFilterValue[0];
+    });
