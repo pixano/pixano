@@ -95,6 +95,14 @@
 
   const handleRejectItem = () => {
     itemObjects.update((objects) => objects.filter((object) => object.id !== objectToAnnotate.id));
+    itemObjects.update((objects) =>
+      objects.map((object) => {
+        if (object.id === objectToAnnotate.id) {
+          object.preAnnotation = "rejected";
+        }
+        return object;
+      }),
+    );
     highlightNextItem();
   };
 </script>
