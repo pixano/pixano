@@ -173,12 +173,14 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
     return object;
   });
 
+export const getObjectsToPreAnnotate = (objects: ItemObject[]) =>
+  objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.preAnnotation);
+
 export const sortAndFilterObjectsToAnnotate = (
   objects: ItemObject[],
   confidenceFilterValue: number[],
 ) =>
   objects
-    .filter((object) => object.source_id === PRE_ANNOTATION && !object.preAnnotation)
     .filter((object) => {
       const confidence = object.bbox?.confidence || 0;
       return confidence >= confidenceFilterValue[0];

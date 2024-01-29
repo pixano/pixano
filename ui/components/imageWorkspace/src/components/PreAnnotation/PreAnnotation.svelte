@@ -22,31 +22,41 @@
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
-  import { mapObjectWithNewStatus, sortAndFilterObjectsToAnnotate } from "../../lib/api/objectsApi";
+  import {
+    getObjectsToPreAnnotate,
+    mapObjectWithNewStatus,
+    sortAndFilterObjectsToAnnotate,
+  } from "../../lib/api/objectsApi";
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
   import type { ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
 
-  export let objectsToAnnotate: ItemObject[] = [];
   export let colorScale: (id: string) => string;
 
+  let objectsToAnnotate: ItemObject[] = [];
+  let filteredObjectsToAnnotate: ItemObject[] = [];
   let isFormValid: boolean = false;
   let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
-  $: objectToAnnotate = objectsToAnnotate[0];
+  $: objectToAnnotate = filteredObjectsToAnnotate[0];
   let color: string;
   let objectProperties: ObjectProperties = {};
 
   $: color = colorScale(objectToAnnotate?.id || "");
 
   itemObjects.subscribe((objects) => {
-    objectsToAnnotate = sortAndFilterObjectsToAnnotate(objects, confidenceFilterValue);
+    objectsToAnnotate = getObjectsToPreAnnotate(objects);
+    filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
+      objectsToAnnotate,
+      confidenceFilterValue,
+    );
     if (objectsToAnnotate.length === 0) {
       preAnnotationIsActive = false;
     }
   });
 
   $: itemObjects.update((objects) => {
-    const tempObjects = sortAndFilterObjectsToAnnotate(objects, confidenceFilterValue);
+    const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
+    const tempObjects = sortAndFilterObjectsToAnnotate(objectsToPreAnnotate, confidenceFilterValue);
     return objects.map((object) => {
       object.highlighted = preAnnotationIsActive ? "none" : "all";
       if (object.id === tempObjects[0]?.id && preAnnotationIsActive) {
@@ -88,8 +98,11 @@
       </Tooltip.Root>
       <h3 class="uppercase font-light">PRE ANNOTATION</h3>
     </div>
-    {#if preAnnotationIsActive}
-      <span>1 / {objectsToAnnotate.length}</span>
+    {#if preAnnotationIsActive && filteredObjectsToAnnotate.length > 0}
+      <span>1 / {filteredObjectsToAnnotate.length}</span>
+    {/if}
+    {#if preAnnotationIsActive && filteredObjectsToAnnotate.length === 0}
+      <span>0</span>
     {/if}
   </div>
   {#if preAnnotationIsActive}
