@@ -81,14 +81,15 @@
   };
 
   const handleAcceptItem = () => {
-    itemObjects.update((objects) =>
-      objects.map((object) => {
+    itemObjects.update((objects) => [
+      ...objects.map((object) => {
         if (object.id === objectToAnnotate.id) {
-          object.source_id = GROUND_TRUTH;
+          object.preAnnotation = "accepted";
         }
         return object;
       }),
-    );
+      { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH },
+    ]);
     highlightNextItem();
   };
 
