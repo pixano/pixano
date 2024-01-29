@@ -25,7 +25,12 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  if (!obj.bbox) return;
+  if (
+    !obj.bbox ||
+    obj.preAnnotation === "rejected" ||
+    (obj.source_id === PRE_ANNOTATION && obj.preAnnotation === "accepted")
+  )
+    return;
   const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
   const imageWidth = (views?.[obj.view_id]?.features.width.value as number) || 1;
   const x = obj.bbox.coords[0] * imageWidth;
@@ -48,7 +53,12 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
 };
 
 export const mapObjectToMasks = (obj: ItemObject) => {
-  if (!obj.mask) return;
+  if (
+    !obj.mask ||
+    obj.preAnnotation ||
+    (obj.source_id === PRE_ANNOTATION && obj.preAnnotation === "accepted")
+  )
+    return;
   const rle = obj.mask.counts;
   const size = obj.mask.size;
 
