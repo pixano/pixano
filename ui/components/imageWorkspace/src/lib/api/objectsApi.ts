@@ -8,7 +8,7 @@ import {
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
 } from "../constants";
-import type { ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
+import type { ObjectProperties, ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 
 const defineTooltip = (object: ItemObject) => {
@@ -183,6 +183,7 @@ export const mapObjectWithNewStatus = (
   allObjects: ItemObject[],
   objectsToAnnotate: ItemObject[],
   status: "accepted" | "rejected",
+  features: ObjectProperties = {},
 ) => {
   const nextObjectId = objectsToAnnotate[1]?.id;
   return allObjects.map((object) => {
@@ -193,6 +194,11 @@ export const mapObjectWithNewStatus = (
     }
     if (object.id === objectsToAnnotate[0]?.id) {
       object.preAnnotation = status;
+      Object.keys(features || {}).forEach((key) => {
+        if (object.features[key]) {
+          object.features[key].value = features[key];
+        }
+      });
     }
     return object;
   });

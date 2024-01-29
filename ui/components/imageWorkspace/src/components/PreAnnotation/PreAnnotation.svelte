@@ -22,6 +22,7 @@
   import { GROUND_TRUTH } from "../../lib/constants";
   import { mapObjectWithNewStatus, sortAndFilterObjectsToAnnotate } from "../../lib/api/objectsApi";
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
+  import type { ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
 
   export let objectsToAnnotate: ItemObject[] = [];
   export let colorScale: (id: string) => string;
@@ -31,6 +32,7 @@
   let confidenceFilterValue = [0];
   $: objectToAnnotate = objectsToAnnotate[0];
   let color: string;
+  let objectProperties: ObjectProperties = {};
 
   $: color = colorScale(objectToAnnotate?.id || "");
 
@@ -55,7 +57,7 @@
   const handleAcceptItem = () => {
     itemObjects.update((objects) => [
       { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH },
-      ...mapObjectWithNewStatus(objects, objectsToAnnotate, "accepted"),
+      ...mapObjectWithNewStatus(objects, objectsToAnnotate, "accepted", objectProperties),
     ]);
   };
 
@@ -102,7 +104,11 @@
           <span>{objectToAnnotate.id}</span>
         </p>
         <div class="flex flex-col gap-4 py-4">
-          <FeatureFormInputs bind:isFormValid initialValues={objectToAnnotate.features} />
+          <FeatureFormInputs
+            bind:isFormValid
+            initialValues={objectToAnnotate.features}
+            bind:objectProperties
+          />
         </div>
         <div class="flex gap-4 mt-4 w-full justify-center">
           <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}

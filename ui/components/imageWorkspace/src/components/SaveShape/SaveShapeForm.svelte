@@ -17,11 +17,11 @@
   import { Button } from "@pixano/core/src";
   import { nanoid } from "nanoid";
 
-  import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
+  import type { ItemObject, Shape } from "@pixano/core";
 
   import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
-  import type { CreateObjectInputs } from "../../lib/types/imageWorkspaceTypes";
+  import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
@@ -29,7 +29,7 @@
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
 
-  let objectProperties: { [key: string]: FeatureValues } = {};
+  let objectProperties: ObjectProperties = {};
 
   newShape.subscribe((value) => {
     if (value) shape = value;
