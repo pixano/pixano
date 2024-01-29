@@ -62,12 +62,21 @@
         [] as PolygonGroupPoint[][],
       );
     } else {
-      polygonShape.simplifiedPoints = [polygonDetails.points];
+      const lastPolygonDetailsPoint = polygonDetails.points.at(-1);
+      const lastSimplifiedPoint = polygonShape.simplifiedPoints?.[0]?.at(-1);
+      if (lastPolygonDetailsPoint && lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
+        polygonShape.simplifiedPoints = [
+          [...(polygonShape.simplifiedPoints?.[0] || []), lastPolygonDetailsPoint],
+        ];
+      }
+      if (polygonDetails.points.length === 0) {
+        polygonShape.simplifiedPoints = [];
+      }
     }
   }
 
   $: polygonShape.simplifiedSvg = polygonShape.simplifiedPoints.map((point) =>
-    convertPointToSvg(point),
+    convertPointToSvg(point.filter(Boolean)),
   );
 
   function handlePolygonPointsDragMove(id: number, i: number) {
