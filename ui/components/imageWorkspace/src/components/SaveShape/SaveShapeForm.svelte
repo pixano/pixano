@@ -57,9 +57,6 @@
     itemObjects.update((oldObjects) => {
       if (shape.status !== "inProgress") return oldObjects;
       let newObject: ItemObject | null = null;
-      const id = nanoid(10);
-      const id2 = nanoid(10);
-      console.log({ id, id2 });
       const baseObject = {
         id: nanoid(10),
         item_id: shape.itemId,
@@ -156,7 +153,7 @@
     <div class="flex gap-4">
       <Button
         class="text-white"
-        on:click={() => newShape.update((old) => ({ ...old, status: "none" }))}>cancel</Button
+        on:click={() => newShape.set({ status: "none", shouldReset: true })}>cancel</Button
       >
       <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
     </div>

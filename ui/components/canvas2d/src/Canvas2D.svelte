@@ -86,6 +86,12 @@
   }
 
   $: {
+    if (newShape.status === "none" && newShape.shouldReset) {
+      clearAnnotationAndInputs();
+    }
+  }
+
+  $: {
     colorScale = utils.ordinalColorScale(colorRange);
   }
 
