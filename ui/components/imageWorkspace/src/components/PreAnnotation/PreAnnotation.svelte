@@ -15,10 +15,12 @@
    */
 
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
+  import { nanoid } from "nanoid";
+
   import { PrimaryButton, Slider, IconButton, Switch, cn } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
-  import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
+  import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import { mapObjectWithNewStatus, sortAndFilterObjectsToAnnotate } from "../../lib/api/objectsApi";
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
@@ -56,13 +58,15 @@
 
   const handleAcceptItem = () => {
     itemObjects.update((objects) => [
-      { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH },
+      { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH, id: nanoid(10) },
       ...mapObjectWithNewStatus(objects, objectsToAnnotate, "accepted", objectProperties),
     ]);
+    canSave.set(true);
   };
 
   const handleRejectItem = () => {
     itemObjects.update((objects) => mapObjectWithNewStatus(objects, objectsToAnnotate, "rejected"));
+    canSave.set(true);
   };
 </script>
 
