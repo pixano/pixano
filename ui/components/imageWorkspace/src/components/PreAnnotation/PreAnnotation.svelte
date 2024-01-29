@@ -37,10 +37,10 @@
   let isFormValid: boolean = false;
   let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
-  $: objectToAnnotate = filteredObjectsToAnnotate[0];
   let color: string;
   let objectProperties: ObjectProperties = {};
 
+  $: objectToAnnotate = filteredObjectsToAnnotate[0];
   $: color = colorScale(objectToAnnotate?.id || "");
 
   itemObjects.subscribe((objects) => {
@@ -69,13 +69,15 @@
   const handleAcceptItem = () => {
     itemObjects.update((objects) => [
       { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH, id: nanoid(10) },
-      ...mapObjectWithNewStatus(objects, objectsToAnnotate, "accepted", objectProperties),
+      ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
     ]);
     canSave.set(true);
   };
 
   const handleRejectItem = () => {
-    itemObjects.update((objects) => mapObjectWithNewStatus(objects, objectsToAnnotate, "rejected"));
+    itemObjects.update((objects) =>
+      mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "rejected"),
+    );
     canSave.set(true);
   };
 </script>
