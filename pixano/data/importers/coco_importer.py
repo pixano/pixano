@@ -152,16 +152,20 @@ class COCOImporter(Importer):
                                 "original_id": str(ann["id"]),
                                 "item_id": item_id,
                                 "view_id": "image",
-                                "bbox": BBox.from_xywh(ann["bbox"])
-                                .normalize(im["height"], im["width"])
-                                .to_dict()
-                                if ann["bbox"]
-                                else None,
-                                "mask": CompressedRLE.encode(
-                                    ann["segmentation"], im["height"], im["width"]
-                                ).to_dict()
-                                if ann["segmentation"]
-                                else None,
+                                "bbox": (
+                                    BBox.from_xywh(ann["bbox"])
+                                    .normalize(im["height"], im["width"])
+                                    .to_dict()
+                                    if ann["bbox"]
+                                    else None
+                                ),
+                                "mask": (
+                                    CompressedRLE.encode(
+                                        ann["segmentation"], im["height"], im["width"]
+                                    ).to_dict()
+                                    if ann["segmentation"]
+                                    else None
+                                ),
                                 "category": str(categories[ann["category_id"]]),
                             }
                             for ann in im_anns
