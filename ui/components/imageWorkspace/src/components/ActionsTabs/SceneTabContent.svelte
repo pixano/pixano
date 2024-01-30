@@ -69,7 +69,7 @@
   };
 </script>
 
-<div class="border-b-2 border-b-gray-500 p-4 mb-4 text-slate-800">
+<div class="border-b-2 border-b-slate-500 p-4 mb-4 text-slate-800">
   <h3 class="uppercase font-light">
     <span class="mr-4">Features</span>
     <IconButton selected={isEditing} on:click={handleEditIconClick}

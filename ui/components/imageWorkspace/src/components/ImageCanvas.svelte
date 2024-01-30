@@ -56,7 +56,7 @@
   });
 </script>
 
-<div class="max-w-[100%] bg-gray-900">
+<div class="max-w-[100%] bg-slate-800">
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
