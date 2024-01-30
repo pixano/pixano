@@ -27,8 +27,8 @@ const defineTooltip = (object: ItemObject) => {
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   if (
     !obj.bbox ||
-    obj.preAnnotation === "rejected" ||
-    (obj.source_id === PRE_ANNOTATION && obj.preAnnotation === "accepted")
+    obj.review_state === "rejected" ||
+    (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   )
     return;
   const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
@@ -55,8 +55,8 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
 export const mapObjectToMasks = (obj: ItemObject) => {
   if (
     !obj.mask ||
-    obj.preAnnotation ||
-    (obj.source_id === PRE_ANNOTATION && obj.preAnnotation === "accepted")
+    obj.review_state ||
+    (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   )
     return;
   const rle = obj.mask.counts;
@@ -114,7 +114,7 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
   objects.reduce(
     (acc, object) => {
       if (object.source_id === PRE_ANNOTATION) {
-        if (!object.preAnnotation) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
+        if (!object.review_state) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
         return acc;
       }
       if (object.source_id === GROUND_TRUTH) {
@@ -174,7 +174,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
   });
 
 export const getObjectsToPreAnnotate = (objects: ItemObject[]) =>
-  objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.preAnnotation);
+  objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.review_state);
 
 export const sortAndFilterObjectsToAnnotate = (
   objects: ItemObject[],
@@ -205,7 +205,7 @@ export const mapObjectWithNewStatus = (
       object.highlighted = "none";
     }
     if (object.id === objectsToAnnotate[0]?.id) {
-      object.preAnnotation = status;
+      object.review_state = status;
       Object.keys(features || {}).forEach((key) => {
         if (object.features[key]) {
           object.features[key].value = features[key];

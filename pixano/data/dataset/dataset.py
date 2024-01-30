@@ -29,6 +29,7 @@ from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.fields import Fields, field_to_pyarrow
 from pixano.data.item.item_feature import ItemFeature
+from pixano.data.item.item_object import ItemObject
 
 
 class Dataset(BaseModel):
@@ -264,52 +265,66 @@ class Dataset(BaseModel):
 
     def update_table(
         self,
-        features: dict[str, ItemFeature],
+        element: DatasetItem | ItemObject,
         table: lancedb.db.LanceTable,
         table_group: str,
         table_name: str,
     ):
-        """Update a table with new features
+        """Update a table with new features or base fields
 
         Args:
+            element (DatasetItem | ItemObject): Table element (item or object)
             table (lancedb.db.LanceTable): Table to update
-            features (dict[str, ItemFeature]): Features
             table_group (str): Table group
             table_name (str): Table name
         """
 
-        if features is not None:
-            new_feats = [
-                feat
-                for feat in features.values()
-                if feat.name not in table.schema.names
-            ]
-            if len(new_feats) > 0:
-                new_feats_table = table.to_lance().to_table(columns=["id"])
-                # Create new feature columns
-                for feat in new_feats:
-                    # None should be suported for booleans with pylance 0.9.1
-                    # None is not supported for integers and floats yet
-                    none_value = (
-                        False
-                        if feat.dtype == "bool"
-                        else 0 if feat.dtype in ("int", "float") else None
-                    )
-                    feat_array = pa.array(
-                        [none_value] * len(table),
-                        type=field_to_pyarrow(feat.dtype),
-                    )
-                    new_feats_table = new_feats_table.append_column(
-                        pa.field(feat.name, field_to_pyarrow(feat.dtype)), feat_array
-                    )
-                    # Update DatasetInfo
-                    for info_table in self.info.tables[table_group]:
-                        if info_table.name == table_name:
-                            info_table.fields[feat.name] = feat.dtype
+        new_columns: list[ItemFeature] = []
 
-                # Merge with main table
-                table.to_lance().merge(new_feats_table, "id")
-                self.save_info()
+        # Check for new base fields
+        base_fields = {"review_state": "str", "bbox": "bbox", "mask": "compressedrle"}
+        new_columns.extend(
+            [
+                ItemFeature(name=field_name, dtype=field_type, value=None)
+                for field_name, field_type in base_fields.items()
+                if hasattr(element, field_name) and field_name not in table.schema.names
+            ]
+        )
+        # Check for new features
+        if element.features is not None:
+            new_columns.extend(
+                [
+                    feat
+                    for feat in element.features.values()
+                    if feat.name not in table.schema.names
+                ]
+            )
+        # Add new columns
+        if len(new_columns) > 0:
+            new_columns_table = table.to_lance().to_table(columns=["id"])
+            for col in new_columns:
+                # None should be suported for booleans with pylance 0.9.1
+                # None is not supported for integers and floats yet
+                none_value = (
+                    False
+                    if col.dtype == "bool"
+                    else 0 if col.dtype in ("int", "float") else None
+                )
+                col_array = pa.array(
+                    [none_value] * len(table),
+                    type=field_to_pyarrow(col.dtype),
+                )
+                new_columns_table = new_columns_table.append_column(
+                    pa.field(col.name, field_to_pyarrow(col.dtype)), col_array
+                )
+                # Update DatasetInfo
+                for info_table in self.info.tables[table_group]:
+                    if info_table.name == table_name:
+                        info_table.fields[col.name] = col.dtype
+
+            # Merge with main table
+            table.to_lance().merge(new_columns_table, "id")
+            self.save_info()
 
     def load_items(
         self,
@@ -664,8 +679,8 @@ class Dataset(BaseModel):
         ds_tables = self.open_tables()
         main_table = ds_tables["main"]["db"]
 
-        # Add new item features
-        self.update_table(item.features, main_table, "main", "db")
+        # Add new item columns
+        self.update_table(item, main_table, "main", "db")
 
         # Reload dataset tables
         ds_tables = self.open_tables()
@@ -684,10 +699,8 @@ class Dataset(BaseModel):
                         table_found = True
                         obj_table = ds_tables["objects"][table.name]
 
-                        # Add new object features
-                        self.update_table(
-                            obj.features, obj_table, "objects", table.name
-                        )
+                        # Add new object columns
+                        self.update_table(obj, obj_table, "objects", table.name)
 
                         # Reload dataset tables
                         ds_tables = self.open_tables()

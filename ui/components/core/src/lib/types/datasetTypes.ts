@@ -106,7 +106,7 @@ export type ItemObject = (BBoxObject | MaskObject) & {
   displayControl?: DisplayControl;
   isManual?: boolean;
   highlighted?: "none" | "self" | "all";
-  preAnnotation?: "accepted" | "rejected";
+  review_state?: "accepted" | "rejected";
 };
 
 export interface ItemRLE {

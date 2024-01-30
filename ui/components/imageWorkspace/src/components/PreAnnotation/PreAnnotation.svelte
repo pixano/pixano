@@ -68,7 +68,7 @@
 
   const handleAcceptItem = () => {
     itemObjects.update((objects) => [
-      { ...objectToAnnotate, preAnnotation: "accepted", source_id: GROUND_TRUTH, id: nanoid(10) },
+      { ...objectToAnnotate, review_state: "accepted", source_id: GROUND_TRUTH, id: nanoid(10) },
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
     ]);
     canSave.set(true);
