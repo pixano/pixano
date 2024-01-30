@@ -83,14 +83,14 @@
 
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-    <p>Sauvegarde {shape.type}</p>
+    <p>Save {shape.type}</p>
     <FeatureFormInputs bind:isFormValid bind:formInputs bind:objectProperties />
     <div class="flex gap-4">
       <Button
         class="text-white"
-        on:click={() => newShape.set({ status: "none", shouldReset: true })}>cancel</Button
+        on:click={() => newShape.set({ status: "none", shouldReset: true })}>Cancel</Button
       >
-      <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
+      <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>
 {/if}
