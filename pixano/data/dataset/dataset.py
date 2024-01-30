@@ -288,13 +288,17 @@ class Dataset(BaseModel):
                 new_feats_table = table.to_lance().to_table(columns=["id"])
                 # Create new feature columns
                 for feat in new_feats:
-                    # None is not supported for booleans yet (should be fixed in pylance 0.9.1)
+                    # None should be suported for booleans with pylance 0.9.1
+                    # None is not supported for integers and floats yet
+                    none_value = (
+                        False
+                        if feat.dtype == "bool"
+                        else 0
+                        if feat.dtype in ("int", "float")
+                        else None
+                    )
                     feat_array = pa.array(
-                        (
-                            [False] * len(table)
-                            if feat.dtype == "bool"
-                            else [None] * len(table)
-                        ),
+                        [none_value] * len(table),
                         type=field_to_pyarrow(feat.dtype),
                     )
                     new_feats_table = new_feats_table.append_column(
