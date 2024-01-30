@@ -37,6 +37,18 @@ export type noShape = {
   shouldReset?: boolean;
 };
 
+export type PolygonGroupPoint = {
+  x: number;
+  y: number;
+  id: number;
+};
+
+export type CreateMaskShape = {
+  status: "creating";
+  type: "mask";
+  points: PolygonGroupPoint[];
+};
+
 export type editMaskShape = {
   status: "editing";
   type: "mask";
@@ -51,7 +63,12 @@ export type editRectangleShape = {
   coords: number[];
 };
 
-export type Shape = inProgressShape | noShape | editMaskShape | editRectangleShape;
+export type Shape =
+  | inProgressShape
+  | noShape
+  | editMaskShape
+  | editRectangleShape
+  | CreateMaskShape;
 
 export type FeatureValues = string | number | boolean;
 
