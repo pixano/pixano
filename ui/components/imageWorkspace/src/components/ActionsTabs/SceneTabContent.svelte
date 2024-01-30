@@ -26,6 +26,7 @@
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ImageMeta = {
+    fileName: string;
     width: number;
     height: number;
     format: string;
@@ -38,9 +39,10 @@
 
   itemMetas.subscribe((metas) => {
     imageMeta = Object.values(metas.views || {}).map((view) => ({
+      fileName: view.uri.split("/").at(-1) as string,
       width: view.features.width.value as number,
       height: view.features.height.value as number,
-      format: view.uri.split(".").at(-1) as string,
+      format: view.uri.split(".").at(-1)?.toUpperCase() as string,
       id: view.id,
     }));
     const sceneFeatures = Object.values(metas.features).length
@@ -69,31 +71,37 @@
   };
 </script>
 
-<div class="border-b-2 border-b-slate-500 p-4 mb-4 text-slate-800">
-  <h3 class="uppercase font-light">
-    <span class="mr-4">Features</span>
+<div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
+  <h3 class="uppercase font-light h-10">
+    <span>Features</span>
     <IconButton selected={isEditing} on:click={handleEditIconClick}
-      ><Pencil class="h-4" /></IconButton
-    >
+      ><Pencil class="h-4" />
+    </IconButton>
   </h3>
-  <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
+  <div class="mx-4">
+    <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
+  </div>
 </div>
-{#each imageMeta as meta}
-  <div class="p-4 text-slate-800">
-    <h3 class="uppercase font-light">File {meta.id}</h3>
-    <div class="mt-4 pb-4">
-      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-bold first-letter:uppercase">Width</p>
+<div class="p-4 text-slate-800">
+  {#each imageMeta as meta}
+    <h3 class="uppercase font-light h-10 flex items-center">{meta.id}</h3>
+    <div class="mx-4 mb-4">
+      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+        <p class="font-medium first-letter:uppercase">File name</p>
+        <p class="truncate" title={meta.fileName}>{meta.fileName}</p>
+      </div>
+      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+        <p class="font-medium first-letter:uppercase">Width</p>
         <p>{meta.width}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-bold first-letter:uppercase">Height</p>
+      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+        <p class="font-medium first-letter:uppercase">Height</p>
         <p>{meta.height}</p>
       </div>
-      <div class="grid gap-4 grid-cols-[100px_auto] mt-2">
-        <p class="font-bold first-letter:uppercase">Format</p>
+      <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+        <p class="font-medium first-letter:uppercase">Format</p>
         <p>{meta.format}</p>
       </div>
     </div>
-  </div>
-{/each}
+  {/each}
+</div>
