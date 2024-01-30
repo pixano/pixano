@@ -293,9 +293,7 @@ class Dataset(BaseModel):
                     none_value = (
                         False
                         if feat.dtype == "bool"
-                        else 0
-                        if feat.dtype in ("int", "float")
-                        else None
+                        else 0 if feat.dtype in ("int", "float") else None
                     )
                     feat_array = pa.array(
                         [none_value] * len(table),
