@@ -1117,13 +1117,11 @@
             selectedItemId={selectedItem.id}
             bind:newShape
           />
-
           {#each manualMasks as manualMask}
             {#key manualMask.id}
               {#if manualMask.viewId === view.id}
                 <PolygonGroup
                   viewId={view.id}
-                  selectedItemId={selectedItem.id}
                   bind:newShape
                   {stage}
                   {images}
