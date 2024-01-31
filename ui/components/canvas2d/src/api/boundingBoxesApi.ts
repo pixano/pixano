@@ -19,8 +19,9 @@ export const toggleIsEditingBBox = (
   currentBox: BBox,
   bboxes: BBox[],
 ) => {
-  const rect = stage.findOne(`#rect${currentBox.id}`);
-  rect.draggable(value === "on");
+  const rectGroup = stage.findOne(`#${currentBox.id}`);
+  const rect: Konva.Rect = stage.findOne(`#rect${currentBox.id}`);
+  rectGroup.listening(value === "on");
   const transformer: Konva.Transformer = stage.findOne("#transformer");
   const nodes = transformer.nodes();
   transformer.nodes(value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())]);
@@ -84,13 +85,8 @@ export function addBBox(
     width: rect_width,
     height: rect_height,
     stroke: color,
-    draggable: false,
+    draggable: true,
     strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
-  });
-
-  bboxRect.on("transformend", () => {
-    const box: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
-    updateDimensions(box);
   });
 
   bboxKonva.add(bboxRect);
@@ -186,6 +182,11 @@ export function addBBox(
 
   bboxRect.on("dragmove", function () {
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
+  });
+
+  bboxRect.on("transformend dragend", () => {
+    const box: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
+    updateDimensions(box);
   });
 }
 
