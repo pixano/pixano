@@ -23,8 +23,8 @@
 </script>
 
 <div
-  class={cn("flex items-center mt-2 hover:bg-gray-100 rounded justify-between", {
-    "hover:bg-gray-100": open,
+  class={cn("flex items-center mt-2 hover:bg-slate-100 rounded justify-between", {
+    "hover:bg-slate-100": open,
   })}
 >
   <div class="flex items-center">

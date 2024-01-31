@@ -87,11 +87,7 @@
   };
 </script>
 
-<div
-  class={cn("flex items-center mt-2 hover:bg-gray-100 rounded justify-between text-slate-800", {
-    "bg-gray-100": open,
-  })}
->
+<div class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white")}>
   <div class="flex items-center flex-auto max-w-[50%]">
     <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
       {#if isVisible}
@@ -117,34 +113,32 @@
   </div>
 </div>
 {#if open}
-  <div class="pl-5 border-b border-b-gray-600 text-slate-800">
+  <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
     <div
       class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
       style="border-color:{color}"
     >
-      <div>
-        <p class="font-medium pb-1">Display</p>
-        <div class="flex flex-col gap-2">
-          {#if itemObject.bbox}
-            <div>
-              <Checkbox
-                handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-                bind:checked={boxIsVisible}
-              />
-              <span class="font-medium">Bounding box</span>
-            </div>
-          {/if}
-          {#if itemObject.mask}
-            <div>
-              <Checkbox
-                bind:checked={maskIsVisible}
-                handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-              /> <span class="font-medium">Mask</span>
-            </div>
-          {/if}
-        </div>
-      </div>
-      <div>
+      <div class="flex flex-col gap-2">
+        {#if itemObject.bbox}
+          <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+            <p class="font-medium first-letter:uppercase">Bounding box</p>
+            <Checkbox
+              handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+              bind:checked={boxIsVisible}
+              class="mx-1"
+            />
+          </div>
+        {/if}
+        {#if itemObject.mask}
+          <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+            <p class="font-medium first-letter:uppercase">Mask</p>
+            <Checkbox
+              handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+              bind:checked={maskIsVisible}
+              class="mx-1"
+            />
+          </div>
+        {/if}
         <ItemFeatures {features} {isEditing} {saveInputChange} />
       </div>
     </div>

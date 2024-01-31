@@ -27,7 +27,7 @@
 </script>
 
 {#if selectedDataset.page}
-  <div class="h-full flex flex-row bg-slate-50 p-20 gap-4">
+  <div class="h-full flex flex-row bg-slate-50 p-20 gap-4 text-slate-800">
     <div class="bg-white min-h-[70%] shadow-md flex flex-col w-[30%]">
       {#each dashboardTabs as tab}
         <button

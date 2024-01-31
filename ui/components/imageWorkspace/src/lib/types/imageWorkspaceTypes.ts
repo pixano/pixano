@@ -1,9 +1,9 @@
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type { ItemObject } from "@pixano/core";
+import type { FeatureValues, ItemObject } from "@pixano/core";
 
-import { GROUND_TRUTH, MODEL_RUN } from "../constants";
+import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../constants";
 import type {
   createObjectInputsSchema,
   listInputSchema,
@@ -12,6 +12,7 @@ import type {
 
 export type ObjectsSortedByModelType = {
   [GROUND_TRUTH]: ItemObject[];
+  [PRE_ANNOTATION]: ItemObject[];
   [MODEL_RUN]: { modelName: string; objects: ItemObject[] }[];
 };
 
@@ -20,6 +21,8 @@ export type ListInput = z.infer<typeof listInputSchema>;
 export type OtherInput = z.infer<typeof otherInputSchema>;
 
 export type CreateObjectInputs = z.infer<typeof createObjectInputsSchema>;
+
+export type ObjectProperties = { [key: string]: FeatureValues };
 
 export type CreateObjectSchemaDefinition = Record<string, z.ZodTypeAny>;
 export type CreateObjectSchema = z.ZodObject<CreateObjectSchemaDefinition>;

@@ -109,7 +109,7 @@
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
   {#if isSaving}
     <div
-      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-gray-300 z-50 opacity-30"
+      class="h-full w-full flex justify-center items-center absolute top-0 left-0 bg-slate-300 z-50 opacity-30"
     >
       <Loader2Icon class="animate-spin" />
     </div>

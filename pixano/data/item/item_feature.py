@@ -49,7 +49,14 @@ class ItemFeature(BaseModel):
 
         item = table.to_pylist()[0]
         features = {}
-        ignored_fields = ["id", "item_id", "view_id", "source_id", "split"]
+        ignored_fields = [
+            "id",
+            "item_id",
+            "view_id",
+            "source_id",
+            "split",
+            "review_state",
+        ]
 
         # Iterate on fields
         for field in schema:

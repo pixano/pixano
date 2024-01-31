@@ -112,7 +112,7 @@
       on:click={handleSmartToolClick}
       on:dblclick={() =>
         modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
-      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-gray-800"
+      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-slate-800"
     >
       <BrushIcon />
       <MagicIcon />
