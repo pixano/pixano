@@ -18,7 +18,7 @@
   import { cn, IconButton } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { EXISTING_SOURCE_IDS, GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let sectionTitle: string;
@@ -61,7 +61,7 @@
           visibilityStatus === "hidden",
         );
       }
-      if (modelName === MODEL_RUN && item.source_id !== GROUND_TRUTH) {
+      if (modelName === MODEL_RUN && !EXISTING_SOURCE_IDS.includes(item.source_id)) {
         if (visibilityStatus === "mixed") return item;
         return toggleObjectDisplayControl(
           item,

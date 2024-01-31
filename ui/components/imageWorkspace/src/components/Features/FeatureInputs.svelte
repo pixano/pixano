@@ -27,10 +27,11 @@
 </script>
 
 {#each features as feature}
-  <div class="mt-1">
+  <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
     {#if isEditing || feature.value !== undefined}
-      <p class="font-bold first-letter:uppercase pb-1">{feature.label.replace("_", " ")}</p>
+      <p class="font-medium first-letter:uppercase">{feature.label.replace("_", " ")}</p>
     {/if}
+
     {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}
       <Checkbox
         checked={!!feature.value}

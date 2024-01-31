@@ -68,7 +68,7 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="absolute left-3 h-5 w-5 pointer-events-none text-slate-500"
+              class="absolute left-3 h-5 w-5 pointer-events-none text-slate-800"
             >
               <path d={svg_search} fill="currentcolor" />
             </svg>

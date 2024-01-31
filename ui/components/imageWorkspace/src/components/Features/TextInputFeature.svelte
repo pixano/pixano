@@ -55,9 +55,7 @@
       </span>
     {/if}
   {:else if textFeature.value || textFeature.value === 0}
-    <p
-      class="font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3"
-    >
+    <p class="first-letter:uppercase">
       {textFeature.value}
     </p>
   {/if}

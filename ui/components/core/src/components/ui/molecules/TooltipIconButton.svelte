@@ -26,7 +26,7 @@
   <Tooltip.Trigger tabindex={-1}>
     <Button
       size="icon"
-      class={cn("bg-transparent text-gray-800 hover:bg-primary-light relative", {
+      class={cn("bg-transparent text-slate-800 hover:bg-primary-light relative", {
         "bg-primary text-white": selected,
       })}
       on:click

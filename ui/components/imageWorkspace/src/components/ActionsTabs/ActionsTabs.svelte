@@ -36,14 +36,14 @@
   });
 </script>
 
-<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-popover">
+<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100">
   {#if shape?.status === "inProgress"}
     <SaveShapeForm />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">
       <Tabs.List class="h-[48px]">
-        <Tabs.Trigger value="scene">Scene</Tabs.Trigger>
-        <Tabs.Trigger value="objects">Objects</Tabs.Trigger>
+        <Tabs.Trigger value="scene" class="w-1/2">Scene</Tabs.Trigger>
+        <Tabs.Trigger value="objects" class="w-1/2">Objects</Tabs.Trigger>
       </Tabs.List>
       <div class="h-[calc(100%-48px)] flex flex-col justify-between">
         <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -57,7 +57,7 @@
             <SceneTabContent />
           {/if}
         </Tabs.Content>
-        <Tabs.Content value="objects" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto">
+        <Tabs.Content value="objects" class="max-h-[calc(100vh-200px)] overflow-y-auto">
           {#if isLoading}
             <div class="p-4 flex flex-col gap-4">
               <Skeleton class="h-8 w-full" />

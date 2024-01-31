@@ -303,6 +303,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
         id: mask.id,
         status: mask?.id ? "created" : "creating",
         svg: mask?.svg,
+        opacity: mask.opacity || 1,
         viewId: mask.viewId,
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {

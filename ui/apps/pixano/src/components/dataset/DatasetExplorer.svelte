@@ -217,7 +217,7 @@
                 height="48"
                 viewBox="0 -960 960 960"
                 width="48"
-                class="absolute left-2 h-5 w-5 text-slate-500 pointer-events-none"
+                class="absolute left-2 h-5 w-5 text-slate-800 pointer-events-none"
               >
                 <path d={svg_search} fill="currentcolor" />
               </svg>
@@ -231,7 +231,7 @@
                     height="48"
                     viewBox="0 -960 960 960"
                     width="48"
-                    class="h-5 w-5 text-slate-500"
+                    class="h-5 w-5 text-slate-800"
                   >
                     <path d={svg_clear} fill="currentcolor" />
                   </svg>

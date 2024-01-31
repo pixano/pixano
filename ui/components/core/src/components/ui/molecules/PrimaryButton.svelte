@@ -20,9 +20,11 @@
   import Button from "../button/button.svelte";
 
   export let isSelected: boolean = false;
+  export let disabled: boolean = false;
 </script>
 
 <Button
+  {disabled}
   class={cn("font-medium h-10 px-6 border rounded-full transition-colors flex gap-2 ", {
     "bg-primary hover:bg-primary-foreground border-primary hover:border-primary-foreground text-slate-50":
       isSelected,

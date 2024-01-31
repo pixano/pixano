@@ -364,6 +364,8 @@
             //update visibility & opacity
             bboxKonva.visible(bboxes[i].visible);
             bboxKonva.opacity(bboxes[i].opacity);
+            const rect: Konva.Rect = bboxKonva.findOne(`#rect${bboxes[i].id}`);
+            rect.strokeWidth(bboxes[i].strokeFactor * (BBOX_STROKEWIDTH / zoomFactor[viewId]));
             //update color
             const style = new Option().style;
             style.color = colorScale(bboxes[i].id);
@@ -1081,7 +1083,7 @@
 </script>
 
 <div
-  class={cn("flex h-full w-full bg-slate-100 transition-opacity duration-300 delay-100", {
+  class={cn("flex h-full w-full bg-slate-800 transition-opacity duration-300 delay-100", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
