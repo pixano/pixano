@@ -15,6 +15,7 @@ import io
 from typing import IO, Optional
 
 import imageio
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow as pa
@@ -158,13 +159,20 @@ class DepthImage(PixanoType, BaseModel):
         return DepthImage(depth_map=depth_n.astype(np.uint8), shape=depth.shape)
 
     def display(self):
-        """Display Depth image with matplotlib"""
+        """Display Depth image with matplotlib
 
-        plt.imshow(self.depth_map.astype(np.int8), cmap="gray", vmin=0, vmax=255)
-        plt.axis("off")
-        if self._shape is not None:
-            plt.figure(figsize=self._shape)
+        Returns:
+            plt.Figure: Plotted image
+        """
+
+        fig, ax = plt.subplots(figsize=self._shape)
+        ax.imshow(self.depth_map.astype(np.int8), cmap="gray", vmin=0, vmax=255)
+        ax.axis("off")
+
+        plt.ion()
         plt.show()
+
+        return fig
 
     @staticmethod
     def to_struct() -> pa.StructType:
