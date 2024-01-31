@@ -15,7 +15,7 @@ import unittest
 
 import pyarrow as pa
 
-from pixano.core import ImageType, is_float, is_image_type, is_integer
+from pixano.core import ImageType, is_binary, is_float, is_image_type, is_integer
 
 
 class UtilsTestCase(unittest.TestCase):
@@ -38,6 +38,15 @@ class UtilsTestCase(unittest.TestCase):
 
         self.assertTrue(is_float(pa_float_field.type))
         self.assertFalse(is_float(pa_int_field.type))
+
+    def test_is_binary(self):
+        """Test is_binary function"""
+
+        pa_binary_field = pa.field("some binaries", pa.binary())
+        pa_string_field = pa.field("some string", pa.string())
+
+        self.assertTrue(is_binary(pa_binary_field.type))
+        self.assertFalse(is_binary(pa_string_field.type))
 
     def test_is_image_type(self):
         """Test is_image_type function"""
