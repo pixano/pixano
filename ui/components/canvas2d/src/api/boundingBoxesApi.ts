@@ -183,7 +183,20 @@ export function addBBox(
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
   });
 
-  bboxRect.on("dragmove", function () {
+  bboxRect.on("dragmove", function (e) {
+    const imageSize = image.getSize();
+    if (e.target.x() < 0) {
+      bboxRect.x(0);
+    }
+    if (e.target.x() > imageSize.width - bboxRect.width()) {
+      bboxRect.x(imageSize.width - bboxRect.width());
+    }
+    if (e.target.y() < 0) {
+      bboxRect.y(0);
+    }
+    if (e.target.y() > imageSize.height - bboxRect.height()) {
+      bboxRect.y(imageSize.height - bboxRect.height());
+    }
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
   });
 
