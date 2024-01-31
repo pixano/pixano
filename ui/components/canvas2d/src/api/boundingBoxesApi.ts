@@ -323,16 +323,6 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
       mask.points = simplifiedPoints as PolygonGroupPoint[];
       return mask as PolygonGroupDetails;
     });
-  const emptyMask: PolygonGroupDetails = {
-    visible: true,
-    status: "creating",
-    points: [],
-    svg: [],
-    editing: false,
-    id: "creating",
-    viewId: undefined,
-    opacity: 1,
-  };
-  mappedMasks.push(emptyMask);
+
   return mappedMasks;
 }

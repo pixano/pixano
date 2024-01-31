@@ -55,6 +55,7 @@
     getNewRectangleDimensions,
   } from "./api/boundingBoxesApi";
   import PolygonGroup from "./components/PolygonGroup.svelte";
+  import CreatePolygon from "./components/CreatePolygon.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -513,11 +514,12 @@
     const x = Math.round(cursorPositionOnImage.x);
     const y = Math.round(cursorPositionOnImage.y);
 
-    manualMasks = manualMasks.map((mask) =>
-      mask.status === "created"
-        ? mask
-        : { ...mask, points: [...mask.points, { x, y, id: mask.points.length }], viewId },
-    );
+    const oldPoints = newShape.status === "creating" ? newShape.points : [];
+    newShape = {
+      status: "creating",
+      type: "mask",
+      points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+    };
   }
 
   // ********** PAN TOOL ********** //
@@ -1109,18 +1111,25 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
+          <CreatePolygon
+            viewId={view.id}
+            {stage}
+            {images}
+            {zoomFactor}
+            selectedItemId={selectedItem.id}
+            bind:newShape
+          />
           {#each manualMasks as manualMask}
             {#key manualMask.id}
               {#if manualMask.viewId === view.id}
                 <PolygonGroup
                   viewId={view.id}
-                  selectedItemId={selectedItem.id}
                   bind:newShape
                   {stage}
                   {images}
+                  {zoomFactor}
                   polygonDetails={manualMask}
                   color={colorScale(manualMask.id)}
-                  {zoomFactor}
                 />
               {/if}
             {/key}

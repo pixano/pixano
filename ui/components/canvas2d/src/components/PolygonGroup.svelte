@@ -17,9 +17,9 @@
   // Imports
 
   import Konva from "konva";
-  import { Group, Circle, Shape as KonvaShape, Path } from "svelte-konva";
+  import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { DatasetItem, Shape } from "@pixano/core";
+  import type { Shape } from "@pixano/core";
   import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
@@ -28,11 +28,10 @@
     parseSvgPath,
     runLengthEncode,
   } from "../api/maskApi";
-  import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
+  import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
   export let viewId: string;
-  export let selectedItemId: DatasetItem["id"];
   export let newShape: Shape;
   export let stage: Konva.Stage;
   export let images: Record<string, HTMLImageElement> = {};
@@ -53,30 +52,17 @@
     ),
   };
 
-  $: canEdit = polygonDetails.status === "creating" || polygonDetails.editing;
+  $: canEdit = polygonDetails.editing;
 
   $: {
-    if (polygonDetails.id !== "creating") {
-      polygonShape.simplifiedPoints = polygonDetails.svg.reduce(
-        (acc, val) => [...acc, parseSvgPath(val)],
-        [] as PolygonGroupPoint[][],
-      );
-    } else {
-      const lastPolygonDetailsPoint = polygonDetails.points.at(-1);
-      const lastSimplifiedPoint = polygonShape.simplifiedPoints?.[0]?.at(-1);
-      if (lastPolygonDetailsPoint && lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
-        polygonShape.simplifiedPoints = [
-          [...(polygonShape.simplifiedPoints?.[0] || []), lastPolygonDetailsPoint],
-        ];
-      }
-      if (polygonDetails.points.length === 0) {
-        polygonShape.simplifiedPoints = [];
-      }
-    }
+    polygonShape.simplifiedPoints = polygonDetails.svg.reduce(
+      (acc, val) => [...acc, parseSvgPath(val)],
+      [] as PolygonGroupPoint[][],
+    );
   }
 
   $: polygonShape.simplifiedSvg = polygonShape.simplifiedPoints.map((point) =>
-    convertPointToSvg(point.filter(Boolean)),
+    convertPointToSvg(point),
   );
 
   function handlePolygonPointsDragMove(id: number, i: number) {
@@ -105,40 +91,6 @@
       };
     }
   }
-
-  function handlePolygonPointsClick(i: number, viewId: string) {
-    if (i === 0) {
-      polygonShape.simplifiedPoints = [
-        [...polygonShape.simplifiedPoints[0], polygonShape.simplifiedPoints[0][0]],
-      ];
-      const counts = runLengthEncode(
-        polygonShape.simplifiedSvg,
-        images[viewId].width,
-        images[viewId].height,
-      );
-      newShape = {
-        status: "inProgress",
-        masksImageSVG: [],
-        rle: {
-          counts,
-          size: [images[viewId].height, images[viewId].width],
-        },
-        type: "mask",
-        viewId: viewId,
-        itemId: selectedItemId,
-        imageWidth: images[viewId].width,
-        imageHeight: images[viewId].height,
-        isManual: true,
-      };
-    }
-  }
-
-  function scaleCircleRadius(id: number, i: number, scale: number) {
-    const point: Konva.Circle = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`);
-
-    point.scaleX(scale);
-    point.scaleY(scale);
-  }
 </script>
 
 <Group
@@ -150,16 +102,6 @@
   }}
 >
   {#if canEdit}
-    {#if polygonDetails.id === "creating"}
-      <Path
-        config={{
-          data: polygonShape.simplifiedSvg[0],
-          stroke: "hsl(316deg 60% 29.41%)",
-          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
-          fill: "#f9f4f773",
-        }}
-      />
-    {/if}
     <KonvaShape
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
@@ -169,30 +111,16 @@
         fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "#f9f4f773",
       }}
     />
-    {#each polygonShape.simplifiedPoints as shape, i}
-      {#each shape as point, pi}
-        <Circle
-          on:click={() => handlePolygonPointsClick(pi, viewId)}
-          on:dragmove={() => handlePolygonPointsDragMove(point.id, i)}
-          on:dragend={handlePolygonPointsDragEnd}
-          on:mouseover={(e) => {
-            e.detail.target?.attrs?.id === `dot-${polygonDetails.id}-${i}-${point.id}` &&
-              scaleCircleRadius(point.id, i, 2);
-          }}
-          on:mouseleave={() => scaleCircleRadius(point.id, i, 1)}
-          config={{
-            x: point.x,
-            y: point.y,
-            radius: (pi === 0 ? 6 : 4) / zoomFactor[viewId],
-            fill: pi === 0 ? "#781e60" : "rgb(0,128,0)",
-            stroke: "white",
-            strokeWidth: 1 / zoomFactor[viewId],
-            id: `dot-${polygonDetails.id}-${i}-${point.id}`,
-            draggable: true,
-          }}
-        />
-      {/each}
-    {/each}
+    <PolygonPoints
+      {viewId}
+      {stage}
+      {zoomFactor}
+      polygonId={polygonDetails.id}
+      points={polygonShape.simplifiedPoints}
+      handlePolygonPointsClick={null}
+      {handlePolygonPointsDragMove}
+      {handlePolygonPointsDragEnd}
+    />
   {:else}
     <KonvaShape
       config={{
