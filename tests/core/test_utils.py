@@ -15,14 +15,7 @@ import unittest
 
 import pyarrow as pa
 
-from pixano.core import (
-    Image,
-    ImageType,
-    is_float,
-    is_image_type,
-    is_integer,
-    pyarrow_array_from_list,
-)
+from pixano.core import ImageType, is_float, is_image_type, is_integer
 
 
 class UtilsTestCase(unittest.TestCase):
@@ -52,29 +45,3 @@ class UtilsTestCase(unittest.TestCase):
         pa_im_field = pa.field("some images", ImageType)
 
         self.assertTrue(is_image_type(pa_im_field.type))
-
-    def test_extension_type_conversion(self):
-        """Test pyarrow_array_from_list function, with simple list of images"""
-
-        data = [Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]
-        result_array = pyarrow_array_from_list(data, ImageType)
-
-        self.assertIsInstance(result_array, pa.Array)
-
-    def test_list_extension_type_conversion(self):
-        """Test pyarrow_array_from_list function, with nested list of images"""
-
-        data = [[Image(uri="1", bytes=b""), Image(uri="2", bytes=b"")]]
-        result_array = pyarrow_array_from_list(data, ImageType)
-
-        self.assertIsInstance(result_array, pa.Array)
-        self.assertIsInstance(result_array.to_pylist()[0][0], Image)
-
-    def test_data_type_conversion(self):
-        """Test pyarrow_array_from_list function, with simple list of numbers"""
-
-        data_type = pa.int32()
-        data = [1, 2, 3]
-        result_array = pyarrow_array_from_list(data, data_type)
-
-        self.assertIsInstance(result_array, pa.Array)
