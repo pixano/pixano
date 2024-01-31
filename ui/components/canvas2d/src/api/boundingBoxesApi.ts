@@ -19,18 +19,22 @@ export const toggleIsEditingBBox = (
   currentBox: BBox,
   bboxes: BBox[],
 ) => {
-  const rectGroup = stage.findOne(`#${currentBox.id}`);
-  const rect: Konva.Rect = stage.findOne(`#rect${currentBox.id}`);
-  rectGroup.listening(value === "on");
-  const transformer: Konva.Transformer = stage.findOne("#transformer");
-  const nodes = transformer.nodes();
-  transformer.nodes(value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())]);
-  return bboxes.map((bbox) => {
-    if (bbox.id === currentBox.id) {
-      bbox.editing = value === "on";
-    }
-    return bbox;
-  });
+  const rectGroup: Konva.Group = stage.findOne(`#${currentBox.id}`);
+  const rect: Konva.Rect = rectGroup.findOne(`#rect${currentBox.id}`);
+  if (rect) {
+    rectGroup.listening(value === "on");
+    const transformer: Konva.Transformer = stage.findOne("#transformer");
+    const nodes = transformer.nodes();
+    transformer.nodes(
+      value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())],
+    );
+    return bboxes.map((bbox) => {
+      if (bbox.id === currentBox.id) {
+        bbox.editing = value === "on";
+      }
+      return bbox;
+    });
+  }
 };
 
 export const getNewRectangleDimensions = (rect: Konva.Rect, image: HTMLImageElement) => {
@@ -52,7 +56,6 @@ export const toggleBBoxIsLocked = (stage: Konva.Stage, currentBox: BBox) => {
   const lockIcon = stage.findOne(`#lockTooltip${currentBox.id}`);
   lockIcon.opacity(currentBox.locked ? 1 : 0);
   const isLocked = currentBox.locked;
-  // rect.draggable(!isLocked); // TODO100
   rect.listening(!isLocked);
   return currentBox;
 };
