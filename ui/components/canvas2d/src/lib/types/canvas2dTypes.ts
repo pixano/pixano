@@ -16,4 +16,5 @@ export type PolygonGroupDetails = {
   status: PolygonGroupStatus;
   id: string;
   viewId: string | undefined;
+  opacity: number;
 };

@@ -19,13 +19,15 @@
   import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
   import ObjectTabModelContent from "./ObjectTabModelContent.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
-  import { GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
+  import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
 
   let allItemsSortedByModel: ObjectsSortedByModelType = {
     [GROUND_TRUTH]: [],
     [MODEL_RUN]: [],
+    [PRE_ANNOTATION]: [],
   };
   let allIds: string[] = [];
 
@@ -38,6 +40,7 @@
 </script>
 
 <div class="p-2">
+  <PreAnnotation {colorScale} />
   <div>
     <ObjectTabModelContent sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}

@@ -141,7 +141,14 @@
   }
 </script>
 
-<Group config={{ id: "polygon", draggable: canEdit, visible: polygonDetails.visible }}>
+<Group
+  config={{
+    id: "polygon",
+    draggable: canEdit,
+    visible: polygonDetails.visible,
+    opacity: polygonDetails.opacity,
+  }}
+>
   {#if canEdit}
     {#if polygonDetails.id === "creating"}
       <Path

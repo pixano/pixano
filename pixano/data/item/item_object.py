@@ -123,6 +123,7 @@ class ItemObject(BaseModel):
         item_id (str): Object item ID
         view_id (str): Object view ID
         source_id (str): Object source ID
+        review_state (str, optional): Object review state ("accepted", "rejected", None)
         bbox (ItemBBox, optional): Object bounding box
         mask (ItemURLE, optional): Object mask
         features (dict[str, ItemFeature], optional): Object features
@@ -133,6 +134,7 @@ class ItemObject(BaseModel):
     item_id: str
     view_id: str
     source_id: str
+    review_state: Optional[str] = None
     bbox: Optional[ItemBBox] = None
     mask: Optional[ItemURLE] = None
     features: Optional[dict[str, ItemFeature]] = None
@@ -166,8 +168,11 @@ class ItemObject(BaseModel):
                 view_id=item["view_id"],
                 source_id=source_id,
             )
-            # Add bbox and mask
+
+            # Add other base fields (review state, bbox, mask)
             for field in schema:
+                if field.name == "review_state" and item["review_state"]:
+                    obj.review_state = item["review_state"]
                 if field.name == "bbox" and item["bbox"]:
                     obj.bbox = ItemBBox.from_pyarrow(item["bbox"])
                 elif field.name == "mask" and item["mask"]:
@@ -188,12 +193,14 @@ class ItemObject(BaseModel):
 
         pyarrow_object = {}
 
-        # ID
+        # IDs
         pyarrow_object["id"] = self.id
         pyarrow_object["item_id"] = self.item_id
         pyarrow_object["view_id"] = self.view_id
 
-        # BBox and Mask
+        # Base fields (review state, bbox, mask)
+        pyarrow_object["review_state"] = self.review_state
+
         pyarrow_mask = self.mask.to_pyarrow() if self.mask else None
         pyarrow_bbox = self.bbox.to_pyarrow(self.mask) if self.bbox else None
 

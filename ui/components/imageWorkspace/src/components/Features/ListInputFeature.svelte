@@ -31,9 +31,7 @@
     value={listFeature.value}
   />
 {:else if listFeature.value}
-  <p
-    class="font-light rounded-xl bg-primary-light first-letter:uppercase flex justify-center items-center h-6 py-1 px-3 w-min"
-  >
+  <p class="first-letter:uppercase">
     {listFeature.value}
   </p>
 {/if}

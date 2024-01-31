@@ -105,6 +105,8 @@ export type ItemObject = (BBoxObject | MaskObject) & {
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   isManual?: boolean;
+  highlighted?: "none" | "self" | "all";
+  review_state?: "accepted" | "rejected";
 };
 
 export interface ItemRLE {
@@ -164,6 +166,7 @@ export interface BBox {
   opacity: number;
   editing?: boolean;
   locked?: boolean;
+  strokeFactor?: number;
 }
 
 // LABELS DATA

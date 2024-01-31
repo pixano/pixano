@@ -14,39 +14,22 @@
    * http://www.cecill.info
    */
 
+  import { Button } from "@pixano/core/src";
   import { nanoid } from "nanoid";
-  import { Button, Input, Checkbox, Combobox } from "@pixano/core/src";
-  import type { FeatureValues, ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import {
-    createObjectInputsSchema,
-    createSchemaFromFeatures,
-  } from "../../lib/settings/objectValidationSchemas";
+  import type { ItemObject, Shape } from "@pixano/core";
+
+  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
-  import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
+  import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
-  import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
   let shape: Shape;
   let isFormValid: boolean = false;
-
-  let objectProperties: { [key: string]: FeatureValues } = {};
   let formInputs: CreateObjectInputs = [];
-  let objectValidationSchema: CreateObjectSchema;
 
-  itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
-      (feature) => ({
-        ...feature,
-        label: feature.name,
-        required: true,
-        type: feature.dtype,
-      }),
-    );
-    objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
-    formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
-  });
+  let objectProperties: ObjectProperties = {};
 
   newShape.subscribe((value) => {
     if (value) shape = value;
@@ -96,66 +79,18 @@
     newShape.set({ status: "none" });
     canSave.set(true);
   };
-
-  const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
-    objectProperties[propertyLabel] = value;
-  };
-  $: {
-    const result = objectValidationSchema.safeParse(objectProperties);
-    isFormValid = result.success;
-  }
 </script>
 
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
-    <p>Sauvegarde {shape.type}</p>
-    {#each formInputs as feature, i}
-      {#if feature.type === "bool"}
-        <div class="flex gap-4 items-center">
-          <Checkbox handleClick={(checked) => handleInputChange(checked, feature.name)} />
-          <span
-            >{feature.label}
-            {#if feature.required}
-              <span>*</span>
-            {/if}
-          </span>
-        </div>
-      {/if}
-      {#if feature.type === "list"}
-        <Combobox
-          placeholder={`Select a ${feature.label}`}
-          listItems={feature.options}
-          saveValue={(value) => handleInputChange(value, feature.name)}
-        />
-      {/if}
-      {#if ["int", "float", "str"].includes(feature.type)}
-        <div>
-          <span
-            >{feature.label}
-            {#if feature.required}
-              <span>*</span>
-            {/if}
-          </span>
-          <Input
-            type={feature.type === "str" ? "text" : "number"}
-            step={feature.type === "int" ? "1" : "any"}
-            autofocus={i === 0 ? true : false}
-            on:keyup={(e) => e.stopPropagation()}
-            on:change={(e) =>
-              handleInputChange(
-                feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
-                feature.name,
-              )}
-          />
-        </div>
-      {/if}
-    {/each}
+    <p>Save {shape.type}</p>
+    <FeatureFormInputs bind:isFormValid bind:formInputs bind:objectProperties />
     <div class="flex gap-4">
       <Button
         class="text-white"
-        on:click={() => newShape.set({ status: "none", shouldReset: true })}>cancel</Button
+        on:click={() => newShape.set({ status: "none", shouldReset: true })}>Cancel</Button
       >
-      <Button class="text-white" type="submit" disabled={!isFormValid}>confirm</Button>
+      <Button class="text-white" type="submit" disabled={!isFormValid}>Confirm</Button>
     </div>
   </form>
 {/if}
