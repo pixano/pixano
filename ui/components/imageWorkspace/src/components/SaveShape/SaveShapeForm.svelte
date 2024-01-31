@@ -66,7 +66,6 @@
       if (shape.type === "mask") {
         newObject = {
           ...baseObject,
-          isManual: !!shape.isManual,
           mask: {
             counts: shape.rle.counts,
             size: shape.rle.size,
