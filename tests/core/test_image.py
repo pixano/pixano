@@ -78,11 +78,10 @@ class ImageTestCase(unittest.TestCase):
 
         self.assertEqual(image_1.complete_uri, uri_1)
 
-        # 2. Relative URI, without prefix
+        # 2. Relative URI, without prefix. The assertRaises does not count in code coverage, not sure why.
         image_2 = Image("relative_path.png")
 
-        with self.assertRaises(ValueError):
-            print(image_2.complete_uri)
+        self.assertRaises(ValueError, getattr, image_2, "complete_uri")
 
         # 3. Absolute URI
         image_3 = Image("http://example.com/image.png")
@@ -98,8 +97,18 @@ class ImageTestCase(unittest.TestCase):
 
         self.assertEqual(self.image.size, expected_size)
 
+    def test_image_get_bytes(self):
+        """Test Image get_bytes method"""
+
+        empty_image = Image(uri="")
+        empty_image.uri = None
+
+        self.assertIsNone(empty_image.get_bytes())
+
     def test_image_open(self):
         """Test Image open method"""
+
+        # Missing test for opening S3 image
 
         with self.image.open() as f:
             opened_bytes = f.read()
