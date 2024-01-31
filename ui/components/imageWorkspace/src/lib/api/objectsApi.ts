@@ -61,9 +61,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     return;
   const rle = obj.mask.counts;
   const size = obj.mask.size;
-
   const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-
   const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
   return {
@@ -74,7 +72,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
-    opacity: 1.0,
+    opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     isManual: !!obj.isManual,
   } as Mask;
 };
