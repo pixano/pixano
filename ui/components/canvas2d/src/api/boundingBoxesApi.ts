@@ -19,17 +19,22 @@ export const toggleIsEditingBBox = (
   currentBox: BBox,
   bboxes: BBox[],
 ) => {
-  const rect = stage.findOne(`#rect${currentBox.id}`);
-  rect.draggable(value === "on");
-  const transformer: Konva.Transformer = stage.findOne("#transformer");
-  const nodes = transformer.nodes();
-  transformer.nodes(value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())]);
-  return bboxes.map((bbox) => {
-    if (bbox.id === currentBox.id) {
-      bbox.editing = value === "on";
-    }
-    return bbox;
-  });
+  const rectGroup: Konva.Group = stage.findOne(`#${currentBox.id}`);
+  const rect: Konva.Rect = rectGroup.findOne(`#rect${currentBox.id}`);
+  if (rect) {
+    rectGroup.listening(value === "on");
+    const transformer: Konva.Transformer = stage.findOne("#transformer");
+    const nodes = transformer.nodes();
+    transformer.nodes(
+      value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())],
+    );
+    return bboxes.map((bbox) => {
+      if (bbox.id === currentBox.id) {
+        bbox.editing = value === "on";
+      }
+      return bbox;
+    });
+  }
 };
 
 export const getNewRectangleDimensions = (rect: Konva.Rect, image: HTMLImageElement) => {
@@ -51,7 +56,6 @@ export const toggleBBoxIsLocked = (stage: Konva.Stage, currentBox: BBox) => {
   const lockIcon = stage.findOne(`#lockTooltip${currentBox.id}`);
   lockIcon.opacity(currentBox.locked ? 1 : 0);
   const isLocked = currentBox.locked;
-  // rect.draggable(!isLocked); // TODO100
   rect.listening(!isLocked);
   return currentBox;
 };
@@ -84,13 +88,8 @@ export function addBBox(
     width: rect_width,
     height: rect_height,
     stroke: color,
-    draggable: false,
+    draggable: true,
     strokeWidth: BBOX_STROKEWIDTH / zoomFactor[viewId],
-  });
-
-  bboxRect.on("transformend", () => {
-    const box: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
-    updateDimensions(box);
   });
 
   bboxKonva.add(bboxRect);
@@ -184,8 +183,26 @@ export function addBBox(
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
   });
 
-  bboxRect.on("dragmove", function () {
+  bboxRect.on("dragmove", function (e) {
+    const imageSize = image.getSize();
+    if (e.target.x() < 0) {
+      bboxRect.x(0);
+    }
+    if (e.target.x() > imageSize.width - bboxRect.width()) {
+      bboxRect.x(imageSize.width - bboxRect.width());
+    }
+    if (e.target.y() < 0) {
+      bboxRect.y(0);
+    }
+    if (e.target.y() > imageSize.height - bboxRect.height()) {
+      bboxRect.y(imageSize.height - bboxRect.height());
+    }
     stickLabelsToRectangle(tooltip, lockTooltip, bboxRect);
+  });
+
+  bboxRect.on("transformend dragend", () => {
+    const box: Konva.Rect = bboxKonva.findOne(`#rect${bbox.id}`);
+    updateDimensions(box);
   });
 }
 
