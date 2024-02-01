@@ -30,6 +30,7 @@ export interface DatasetInfo {
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
+  isErrored?: boolean;
 }
 
 export interface DatasetTable {

@@ -21,6 +21,7 @@
   let models: Array<string>;
   let pageId: string | null;
   let currentDatasetName: string;
+  let fetchError: string;
 
   async function handleGetModels() {
     models = await api.getModels();
@@ -48,15 +49,24 @@
     size?: number,
     query?: DatasetTableStore["query"],
   ) => {
-    let datasetItems: DatasetItems;
+    let datasetItems: DatasetItems = { items: [], total: 0 };
+    let isErrored = false;
     if (query?.search) {
-      datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
+      try {
+        datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
+      } catch (err) {
+        isErrored = true;
+      }
     } else {
-      datasetItems = await api.getDatasetItems(datasetId, page, size);
+      try {
+        datasetItems = await api.getDatasetItems(datasetId, page, size);
+      } catch (err) {
+        isErrored = true;
+      }
     }
     datasetsStore.update((value = []) =>
       value.map((dataset) =>
-        dataset.id === datasetId ? { ...dataset, page: datasetItems } : dataset,
+        dataset.id === datasetId ? { ...dataset, page: datasetItems, isErrored } : dataset,
       ),
     );
   };
@@ -83,6 +93,8 @@
         (err) => console.error(err),
       );
   });
+
+  $: console.log({ fetchError });
 </script>
 
 <svelte:head>
