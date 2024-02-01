@@ -28,7 +28,7 @@ class DepthImageTestCase(unittest.TestCase):
     def setUp(self):
         """Tests setup"""
 
-        self.depth_map = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.uint16)
+        self.depth_map = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float32)
         self.shape = self.depth_map.shape
         self.bytes = self.depth_map.tobytes()
         self.depth_image = DepthImage(
@@ -47,10 +47,13 @@ class DepthImageTestCase(unittest.TestCase):
     def test_depth_map(self):
         """Test DepthImage depth_map property"""
 
-        depth_map = self.depth_image.depth_map
+        image_without_depth_map = DepthImage(shape=self.shape, bytes=self.bytes)
+        depth_map_from_bytes = image_without_depth_map.depth_map
 
-        self.assertIsInstance(depth_map, np.ndarray)
-        self.assertEqual(depth_map.tolist(), self.depth_map.tolist())
+        self.assertIsInstance(self.depth_image.depth_map, np.ndarray)
+        self.assertIsInstance(depth_map_from_bytes, np.ndarray)
+        self.assertEqual(self.depth_image.depth_map.tolist(), self.depth_map.tolist())
+        self.assertEqual(depth_map_from_bytes.tolist(), self.depth_map.tolist())
 
     def test_load_npy(self):
         """Test DepthImage load_npy method"""
@@ -90,6 +93,11 @@ class DepthImageTestCase(unittest.TestCase):
 
         loaded_bytes = io_obj.read()
         self.assertEqual(loaded_bytes, self.bytes)
+
+    def test_display(self):
+        """Test DepthImage display method"""
+
+        self.depth_image.display()
 
     def test_to_grayscale(self):
         """Test DepthImage to_grayscale method"""

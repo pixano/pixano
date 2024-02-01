@@ -26,7 +26,6 @@ from pixano.core.utils import (
     is_image_type,
     is_integer,
     is_string,
-    pyarrow_array_from_list,
 )
 
 __all__ = [
@@ -53,5 +52,4 @@ __all__ = [
     "is_image_type",
     "is_integer",
     "is_string",
-    "pyarrow_array_from_list",
 ]
