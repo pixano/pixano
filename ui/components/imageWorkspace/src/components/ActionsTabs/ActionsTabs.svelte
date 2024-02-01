@@ -38,7 +38,7 @@
 
 <div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100">
   {#if shape?.status === "inProgress"}
-    <SaveShapeForm />
+    <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">
       <Tabs.List class="h-[48px]">
