@@ -19,6 +19,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from pixano.core import BBox, BBoxType
+from pixano.core.compressed_rle import CompressedRLE
 
 
 class BBoxTestCase(unittest.TestCase):
@@ -100,6 +101,51 @@ class BBoxTestCase(unittest.TestCase):
         denormalized_bbox = normalized_bbox.denormalize(self.height, self.width)
 
         self.assertTrue(np.allclose(denormalized_bbox.xyxy_coords, self.coords["xyxy"]))
+
+    def test_from_mask(self):
+        """Test BBox from_mask method"""
+
+        mask = np.array(
+            [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+            dtype="uint8",
+        )
+        coords = [0.4, 0.5, 0.1, 0.1]
+
+        self.assertEqual(BBox.from_mask(mask).coords, coords)
+
+    def test_from_rle(self):
+        """Test BBox from_rle method"""
+
+        mask = np.array(
+            [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ],
+            dtype="uint8",
+        )
+        rle = CompressedRLE.from_mask(mask)
+        coords = [0.4, 0.5, 0.1, 0.1]
+
+        self.assertEqual(BBox.from_rle(rle).coords, coords)
 
 
 class TestParquetBBox(unittest.TestCase):

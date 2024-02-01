@@ -25,6 +25,7 @@
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
+  export let currentTab: "scene" | "objects";
   let shape: Shape;
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
@@ -66,6 +67,12 @@
       if (shape.type === "mask") {
         newObject = {
           ...baseObject,
+          bbox: {
+            coords: [0, 0, 0, 0],
+            format: "xywh",
+            is_normalized: true,
+            confidence: 1,
+          },
           mask: {
             counts: shape.rle.counts,
             size: shape.rle.size,
@@ -77,6 +84,7 @@
     });
     newShape.set({ status: "none" });
     canSave.set(true);
+    currentTab = "objects";
   };
 </script>
 

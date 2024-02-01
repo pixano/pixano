@@ -519,6 +519,7 @@
       status: "creating",
       type: "mask",
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+      viewId,
     };
   }
 
@@ -819,6 +820,9 @@
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
+      }
+      if (selectedTool.isSmart) {
+        rect.destroy();
       }
     }
   }

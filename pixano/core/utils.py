@@ -95,31 +95,3 @@ def is_image_type(t: pa.DataType) -> bool:
         ImageType.equals(t)
         or str(t) == "struct<uri: string, bytes: binary, preview_bytes: binary>"
     )
-
-
-def pyarrow_array_from_list(
-    list_data: list, pyarrow_type: pa.ExtensionType | pa.DataType
-) -> pa.Array:
-    """Convert data from Python list to PyArrow array
-
-    Args:
-        list_data (list): Data as Python list
-        pyarrow_type (pa.ExtensionType | pa.DataType): PyArrow base or custom extension type
-
-    Raises:
-        ValueError: Unknow type
-
-    Returns:
-        pa.Array: Data as PyArrow array
-    """
-
-    if pa.types.is_list(pyarrow_type):
-        pyarrow_type = pyarrow_type.value_type
-
-    if isinstance(pyarrow_type, pa.ExtensionType):
-        return pyarrow_type.Array.from_pylist(list_data)
-    if isinstance(pyarrow_type, pa.DataType) and not isinstance(
-        pyarrow_type, pa.ExtensionType
-    ):
-        return pa.array(list_data)
-    raise ValueError("Unknow type")
