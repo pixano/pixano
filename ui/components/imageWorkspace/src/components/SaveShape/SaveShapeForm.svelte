@@ -67,6 +67,12 @@
         newObject = {
           ...baseObject,
           isManual: !!shape.isManual,
+          bbox: {
+            coords: [0, 0, 0, 0],
+            format: "xywh",
+            is_normalized: true,
+            confidence: 1,
+          },
           mask: {
             counts: shape.rle.counts,
             size: shape.rle.size,
