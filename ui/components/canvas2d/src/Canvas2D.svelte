@@ -821,6 +821,9 @@
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
       }
+      if (selectedTool.isSmart) {
+        rect.destroy();
+      }
     }
   }
 
