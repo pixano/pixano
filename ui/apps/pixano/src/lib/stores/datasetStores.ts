@@ -26,10 +26,6 @@ import type { DatasetTableStore } from "../types/pixanoTypes";
 export const defaultDatasetTableValues: DatasetTableStore = {
   currentPage: DEFAULT_DATASET_TABLE_PAGE,
   pageSize: DEFAULT_DATASET_TABLE_SIZE,
-  query: {
-    model: "",
-    search: "",
-  },
 };
 
 // Exports

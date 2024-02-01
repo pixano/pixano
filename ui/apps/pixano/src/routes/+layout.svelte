@@ -7,15 +7,16 @@
 
   import MainHeader from "../components/layout/MainHeader.svelte";
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
-  import { datasetsStore, modelsStore, datasetTableStore } from "../lib/stores/datasetStores";
+  import {
+    datasetsStore,
+    modelsStore,
+    datasetTableStore,
+    defaultDatasetTableValues,
+  } from "../lib/stores/datasetStores";
   import pixanoFavicon from "../assets/favicon.ico";
 
   import "./styles.css";
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
-  import {
-    DEFAULT_DATASET_TABLE_PAGE,
-    DEFAULT_DATASET_TABLE_SIZE,
-  } from "$lib/constants/pixanoConstants";
 
   let datasets: DatasetInfo[];
   let models: Array<string>;
@@ -77,20 +78,18 @@
 
   $: {
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId)
-      getDatasetItems(
-        currentDatasetId,
-        DEFAULT_DATASET_TABLE_PAGE,
-        DEFAULT_DATASET_TABLE_SIZE,
-      ).catch((err) => console.error(err));
+    if (currentDatasetId) {
+      datasetTableStore.set(defaultDatasetTableValues);
+    }
   }
 
   datasetTableStore.subscribe((value) => {
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId && value)
+    if (currentDatasetId && value) {
       getDatasetItems(currentDatasetId, value.currentPage, value.pageSize, value.query).catch(
         (err) => console.error(err),
       );
+    }
   });
 </script>
 

@@ -15,7 +15,7 @@
    */
 
   // Imports
-  import { createEventDispatcher, onDestroy, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
 
   import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
@@ -31,7 +31,7 @@
     svg_search,
   } from "@pixano/core/src/icons";
 
-  import { datasetTableStore, defaultDatasetTableValues } from "../../lib/stores/datasetStores";
+  import { datasetTableStore } from "../../lib/stores/datasetStores";
   import {
     DEFAULT_DATASET_TABLE_PAGE,
     DEFAULT_DATASET_TABLE_SIZE,
@@ -140,19 +140,6 @@
       query,
     }));
   }
-
-  onMount(() => {
-    searchInput = "";
-    datasetTableStore.update((value) => ({
-      ...value,
-      pageSize: DEFAULT_DATASET_TABLE_SIZE,
-      currentPage: DEFAULT_DATASET_TABLE_PAGE,
-    }));
-  });
-
-  onDestroy(() => {
-    datasetTableStore.set(defaultDatasetTableValues);
-  });
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
