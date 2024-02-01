@@ -214,67 +214,69 @@
       {/if}
     </div>
 
-    <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
-      {#if selectedDataset.page.total > pageSize}
-        <button on:click={handleGoToFirstPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_first_page} fill="currentcolor" />
-          </svg>
-        </button>
+    {#if !selectedDataset.isErrored}
+      <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
+        {#if selectedDataset.page.total > pageSize}
+          <button on:click={handleGoToFirstPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_first_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToPreviousPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_prev_page} fill="currentcolor" />
-          </svg>
-        </button>
-      {/if}
+          <button on:click={handleGoToPreviousPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_prev_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
 
-      <span class="mx-4">
-        {1 + pageSize * (currentPage - 1)} - {Math.min(
-          pageSize * currentPage,
-          selectedDataset.page.total,
-        )} of
-        {selectedDataset.page.total}
-      </span>
+        <span class="mx-4">
+          {1 + pageSize * (currentPage - 1)} - {Math.min(
+            pageSize * currentPage,
+            selectedDataset.page.total,
+          )} of
+          {selectedDataset.page.total}
+        </span>
 
-      {#if selectedDataset.page.total > pageSize}
-        <button on:click={handleGoToNextPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_next_page} fill="currentcolor" />
-          </svg>
-        </button>
+        {#if selectedDataset.page.total > pageSize}
+          <button on:click={handleGoToNextPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_next_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToLastPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_last_page} fill="currentcolor" />
-          </svg>
-        </button>
-      {/if}
-    </div>
+          <button on:click={handleGoToLastPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_last_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
   {/if}
   {#if datasetErrorModal}
     <WarningModal
