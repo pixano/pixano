@@ -89,24 +89,26 @@
   $: flatPoints = polygonPoints[0]?.reduce((acc, val) => [...acc, val.x, val.y], [] as number[]);
 </script>
 
-<Group config={{ id: "polygon", draggable: true }}>
-  <Line
-    config={{
-      points: flatPoints,
-      stroke: "hsl(316deg 60% 29.41%)",
-      strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
-      fill: "#f9f4f773",
-      closed: isClosed,
-    }}
-  />
-  <PolygonPoints
-    {viewId}
-    {stage}
-    {zoomFactor}
-    polygonId={POLYGON_ID}
-    points={polygonPoints}
-    {handlePolygonPointsClick}
-    {handlePolygonPointsDragMove}
-    handlePolygonPointsDragEnd={null}
-  />
-</Group>
+{#if "viewId" in newShape && newShape.viewId === viewId}
+  <Group config={{ id: "polygon", draggable: true }}>
+    <Line
+      config={{
+        points: flatPoints,
+        stroke: "hsl(316deg 60% 29.41%)",
+        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
+        fill: "#f9f4f773",
+        closed: isClosed,
+      }}
+    />
+    <PolygonPoints
+      {viewId}
+      {stage}
+      {zoomFactor}
+      polygonId={POLYGON_ID}
+      points={polygonPoints}
+      {handlePolygonPointsClick}
+      {handlePolygonPointsDragMove}
+      handlePolygonPointsDragEnd={null}
+    />
+  </Group>
+{/if}

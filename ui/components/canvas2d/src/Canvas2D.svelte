@@ -519,6 +519,7 @@
       status: "creating",
       type: "mask",
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+      viewId,
     };
   }
 

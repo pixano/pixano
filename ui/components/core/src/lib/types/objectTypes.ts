@@ -47,6 +47,7 @@ export type CreateMaskShape = {
   status: "creating";
   type: "mask";
   points: PolygonGroupPoint[];
+  viewId: string;
 };
 
 export type editMaskShape = {
