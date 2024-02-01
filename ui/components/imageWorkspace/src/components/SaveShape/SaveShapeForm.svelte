@@ -25,6 +25,7 @@
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
+  export let currentTab: "scene" | "objects";
   let shape: Shape;
   let isFormValid: boolean = false;
   let formInputs: CreateObjectInputs = [];
@@ -84,6 +85,7 @@
     });
     newShape.set({ status: "none" });
     canSave.set(true);
+    currentTab = "objects";
   };
 </script>
 
