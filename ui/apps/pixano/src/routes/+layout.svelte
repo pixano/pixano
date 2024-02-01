@@ -21,7 +21,6 @@
   let models: Array<string>;
   let pageId: string | null;
   let currentDatasetName: string;
-  let fetchError: string;
 
   async function handleGetModels() {
     models = await api.getModels();
@@ -93,8 +92,6 @@
         (err) => console.error(err),
       );
   });
-
-  $: console.log({ fetchError });
 </script>
 
 <svelte:head>
