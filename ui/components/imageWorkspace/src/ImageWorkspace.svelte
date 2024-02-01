@@ -25,7 +25,7 @@
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
-  import ActionsTabs from "./components/ActionsTabs/ActionsTabs.svelte";
+  import ActionsTabs from "./components/ImageInspector/ImageInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
   import {
     itemObjects,

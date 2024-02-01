@@ -16,8 +16,8 @@
 
   import { utils } from "@pixano/core";
 
-  import ObjectTabFlatItem from "./ObjectTabFlatItem.svelte";
-  import ObjectTabModelContent from "./ObjectTabModelContent.svelte";
+  import ObjectItem from "./ObjectItem.svelte";
+  import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
@@ -42,19 +42,19 @@
 <div class="p-2">
   <PreAnnotation {colorScale} />
   <div>
-    <ObjectTabModelContent sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
+    <ObjectsModelSection sectionTitle={"Ground truth"} modelName={GROUND_TRUTH}>
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-        <ObjectTabFlatItem bind:itemObject {colorScale} />
+        <ObjectItem bind:itemObject {colorScale} />
       {/each}
-    </ObjectTabModelContent>
+    </ObjectsModelSection>
   </div>
-  <ObjectTabModelContent sectionTitle={"Model run"} modelName={MODEL_RUN}>
+  <ObjectsModelSection sectionTitle={"Model run"} modelName={MODEL_RUN}>
     {#each allItemsSortedByModel[MODEL_RUN] as model}
-      <ObjectTabModelContent sectionTitle={model.modelName} modelName={model.modelName}>
+      <ObjectsModelSection sectionTitle={model.modelName} modelName={model.modelName}>
         {#each model.objects as itemObject}
-          <ObjectTabFlatItem bind:itemObject {colorScale} />
+          <ObjectItem bind:itemObject {colorScale} />
         {/each}
-      </ObjectTabModelContent>
+      </ObjectsModelSection>
     {/each}
-  </ObjectTabModelContent>
+  </ObjectsModelSection>
 </div>

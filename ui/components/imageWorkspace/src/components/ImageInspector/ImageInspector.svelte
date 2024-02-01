@@ -17,8 +17,8 @@
   import type { Shape } from "@pixano/core";
   import { cn, Tabs, Skeleton } from "@pixano/core/src";
 
-  import SceneTabContent from "./SceneTabContent.svelte";
-  import ObjectTabContent from "./ObjectTabContent.svelte";
+  import SceneInspector from "./SceneInspector.svelte";
+  import ObjectsInspector from "./ObjectsInspector.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { canSave, newShape } from "../../lib/stores/imageWorkspaceStores";
 
@@ -54,7 +54,7 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <SceneTabContent />
+            <SceneInspector />
           {/if}
         </Tabs.Content>
         <Tabs.Content value="objects" class="max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -65,7 +65,7 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <ObjectTabContent />
+            <ObjectsInspector />
           {/if}
         </Tabs.Content>
         <button
