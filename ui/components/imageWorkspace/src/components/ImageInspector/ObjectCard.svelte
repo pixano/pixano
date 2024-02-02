@@ -27,14 +27,15 @@
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
 
+  let color: string;
+  let open: boolean = false;
+  let showIcons: boolean = false;
+
   $: features = createFeature(itemObject.features);
 
-  let color: string;
   $: {
     color = colorScale(itemObject.id);
   }
-
-  let open: boolean = false;
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
@@ -87,66 +88,73 @@
   };
 </script>
 
-<div class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white")}>
-  <div class="flex items-center flex-auto max-w-[50%]">
-    <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
-      {#if isVisible}
-        <Eye class="h-4" />
-      {:else}
-        <EyeOff class="h-4" />
+<article on:mouseenter={() => (showIcons = true)} on:mouseleave={() => (showIcons = open)}>
+  <div class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white")}>
+    <div class="flex items-center flex-auto max-w-[50%]">
+      <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
+        {#if isVisible}
+          <Eye class="h-4" />
+        {:else}
+          <EyeOff class="h-4" />
+        {/if}
+      </IconButton>
+      <div class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]" style="background:{color}" />
+      <span class="truncate w-max flex-auto">{itemObject.id}</span>
+    </div>
+    <div class="flex items-center">
+      {#if showIcons}
+        <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
+          ><Pencil class="h-4" /></IconButton
+        >
+        <IconButton selected={isLocked} on:click={() => handleIconClick("locked", !isLocked)}
+          ><Lock class="h-4" /></IconButton
+        >
+        <IconButton on:click={deleteObject}><Trash2 class="h-4" /></IconButton>
       {/if}
-    </IconButton>
-    <div class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]" style="background:{color}" />
-    <span class="truncate w-max flex-auto">{itemObject.id}</span>
-  </div>
-  <div class="flex items-center">
-    <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
-      ><Pencil class="h-4" /></IconButton
-    >
-    <IconButton selected={isLocked} on:click={() => handleIconClick("locked", !isLocked)}
-      ><Lock class="h-4" /></IconButton
-    >
-    <IconButton on:click={deleteObject}><Trash2 class="h-4" /></IconButton>
-    <IconButton on:click={() => (open = !open)}
-      ><ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} /></IconButton
-    >
-  </div>
-</div>
-{#if open}
-  <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
-    <div
-      class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
-      style="border-color:{color}"
-    >
-      <div class="flex flex-col gap-2">
-        <div>
-          <p class="font-medium first-letter:uppercase">display</p>
-          <div class="flex gap-4">
-            {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
-              <div class="flex gap-2 mt-2 items-center">
-                <p class="font-light first-letter:uppercase">Box</p>
-                <Checkbox
-                  handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-                  bind:checked={boxIsVisible}
-                  class="mx-1"
-                />
-              </div>
-            {/if}
-            {#if itemObject.mask}
-              <div class="flex gap-2 mt-2 items-center">
-                <p class="font-light first-letter:uppercase">Mask</p>
-                <Checkbox
-                  handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-                  bind:checked={maskIsVisible}
-                  class="mx-1"
-                />
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <ItemFeatures {features} {isEditing} {saveInputChange} />
-      </div>
+      <IconButton on:click={() => (open = !open)}
+        ><ChevronRight
+          class={cn("transition", { "rotate-90": open })}
+          strokeWidth={1}
+        /></IconButton
+      >
     </div>
   </div>
-{/if}
+  {#if open}
+    <div class="pl-5 border-b border-b-slate-600 text-slate-800 bg-white">
+      <div
+        class="border-l-4 border-dashed border-red-400 pl-4 pb-4 pt-4 flex flex-col gap-4"
+        style="border-color:{color}"
+      >
+        <div class="flex flex-col gap-2">
+          <div>
+            <p class="font-medium first-letter:uppercase">display</p>
+            <div class="flex gap-4">
+              {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
+                <div class="flex gap-2 mt-2 items-center">
+                  <p class="font-light first-letter:uppercase">Box</p>
+                  <Checkbox
+                    handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                    bind:checked={boxIsVisible}
+                    class="mx-1"
+                  />
+                </div>
+              {/if}
+              {#if itemObject.mask}
+                <div class="flex gap-2 mt-2 items-center">
+                  <p class="font-light first-letter:uppercase">Mask</p>
+                  <Checkbox
+                    handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                    bind:checked={maskIsVisible}
+                    class="mx-1"
+                  />
+                </div>
+              {/if}
+            </div>
+          </div>
+
+          <ItemFeatures {features} {isEditing} {saveInputChange} />
+        </div>
+      </div>
+    </div>
+  {/if}
+</article>
