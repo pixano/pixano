@@ -4,6 +4,31 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0b3] - 2024-02-02
+
+### Added
+
+- Add pre-annotation feature (pixano#58)
+- Allow creating concave polygons (pixano#65)
+- Allow dragging rectangle when edit mode is on (pixano#68)
+
+### Changed
+
+- Use UUIDs for imported item and objects to prevent ID conflicts (pixano#55)
+  - Imported IDs are kept as `original_id` for reference
+- Use UUIDs for created objects in Pixano app to prevent ID conflicts (pixano#57)
+- Improve pixano.core unit tests (pixano#67)
+
+### Fixed
+
+- Fix removing created shapes when canceling an annotation (pixano#61)
+- Fix keeping modified points when creating a polygon (pixano#63)
+- Fix displaying drawn polygon only on matching image in multi-view (pixano#74)
+- Fix creating bounding box when saving mask or polygon (pixano#77)
+- Fix deleting rectangle selection once smart mask is created (pixano#78)
+- Fix switching to objects tab when a shape is created (pixano#79)
+- Fix formatting for new stable version of black (pixano#64)
+
 ## [0.5.0b2] - 2024-01-23
 
 ### Changed
@@ -215,6 +240,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.5.0b3]: https://github.com/pixano/pixano/compare/v0.5.0b2...v0.5.0b3
 [0.5.0b2]: https://github.com/pixano/pixano/compare/v0.5.0b1...v0.5.0b2
 [0.5.0b1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0b1
 [0.4.1]: https://github.com/pixano/pixano/compare/v0.4.0...v0.4.1
