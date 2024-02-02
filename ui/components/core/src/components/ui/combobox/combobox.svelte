@@ -12,6 +12,7 @@
   let open = false;
   export let value: string = "";
   export let saveValue: (value: string) => void = () => {};
+  export let width: string = "w-[200px]";
 
   $: selectedValue = listItems.find((f) => f.value === value)?.label ?? placeholder;
 
@@ -40,13 +41,13 @@
       variant="outline"
       role="combobox"
       aria-expanded={open}
-      class="w-[200px] justify-between"
+      class={cn("justify-between", width)}
     >
       {selectedValue}
       <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
     </Button>
   </Popover.Trigger>
-  <Popover.Content class="w-[200px] p-0">
+  <Popover.Content class={cn("p-0", width)}>
     <Command.Root>
       <Command.Group>
         {#each listItems as listItem}

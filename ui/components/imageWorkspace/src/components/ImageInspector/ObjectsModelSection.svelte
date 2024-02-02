@@ -13,9 +13,9 @@
    *
    * http://www.cecill.info
    */
-  import { ChevronRight, Eye, EyeOff } from "lucide-svelte";
+  import { Eye, EyeOff } from "lucide-svelte";
 
-  import { cn, IconButton } from "@pixano/core/src";
+  import { IconButton } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { EXISTING_SOURCE_IDS, GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
@@ -26,7 +26,6 @@
 
   let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
   $: tooltipContent = visibilityStatus === "hidden" ? "show all" : "hide all";
-  let open: boolean = true;
 
   itemObjects.subscribe((items) => {
     if (!items.length) return;
@@ -85,22 +84,21 @@
   };
 </script>
 
-<div class="flex items-center gap-3 justify-between text-slate-800">
-  <div class="flex items-center gap-3">
-    <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
-      {#if visibilityStatus === "hidden"}
-        <EyeOff class="h-4" />
-      {:else}
-        <Eye class="h-4" />
-      {/if}
-    </IconButton>
-    <h3 class="uppercase font-light">{sectionTitle}</h3>
+<section>
+  <div class="flex items-center gap-3 justify-between text-slate-800">
+    <div class="flex items-center gap-3 w-full">
+      <h3 class="uppercase font-medium pl-2 grow">{sectionTitle}</h3>
+      <slot name="modelSelection" />
+      <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
+        {#if visibilityStatus === "hidden"}
+          <EyeOff class="h-4" />
+        {:else}
+          <Eye class="h-4" />
+        {/if}
+      </IconButton>
+    </div>
   </div>
-  <IconButton on:click={() => (open = !open)}
-    ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton
-  >
-</div>
-
-<div class={cn("p-2", { hidden: !open })}>
-  <slot />
-</div>
+  <div class="p-2 pt-0 max-h-[300px] overflow-y-auto">
+    <slot />
+  </div>
+</section>

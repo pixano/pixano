@@ -34,7 +34,7 @@
     color = colorScale(itemObject.id);
   }
 
-  let open: boolean = true;
+  let open: boolean = false;
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
