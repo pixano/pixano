@@ -119,26 +119,32 @@
       style="border-color:{color}"
     >
       <div class="flex flex-col gap-2">
-        {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
-          <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-            <p class="font-medium first-letter:uppercase">Bounding box</p>
-            <Checkbox
-              handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-              bind:checked={boxIsVisible}
-              class="mx-1"
-            />
+        <div>
+          <p class="font-medium first-letter:uppercase">display</p>
+          <div class="flex gap-4">
+            {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
+              <div class="flex gap-2 mt-2 items-center">
+                <p class="font-light first-letter:uppercase">Box</p>
+                <Checkbox
+                  handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                  bind:checked={boxIsVisible}
+                  class="mx-1"
+                />
+              </div>
+            {/if}
+            {#if itemObject.mask}
+              <div class="flex gap-2 mt-2 items-center">
+                <p class="font-light first-letter:uppercase">Mask</p>
+                <Checkbox
+                  handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                  bind:checked={maskIsVisible}
+                  class="mx-1"
+                />
+              </div>
+            {/if}
           </div>
-        {/if}
-        {#if itemObject.mask}
-          <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
-            <p class="font-medium first-letter:uppercase">Mask</p>
-            <Checkbox
-              handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-              bind:checked={maskIsVisible}
-              class="mx-1"
-            />
-          </div>
-        {/if}
+        </div>
+
         <ItemFeatures {features} {isEditing} {saveInputChange} />
       </div>
     </div>
