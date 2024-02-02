@@ -102,17 +102,10 @@ export async function searchDatasetItems(
     if (response.ok) {
       datasetItems = (await response.json()) as DatasetItems;
     } else {
-      datasetItems = {} as DatasetItems;
-      console.log(
-        "api.searchDatasetItems -",
-        response.status,
-        response.statusText,
-        await response.text(),
-      );
+      throw new Error("api.searchDatasetItems");
     }
   } catch (e) {
-    datasetItems = {} as DatasetItems;
-    console.log("api.searchDatasetItems -", e);
+    throw new Error("api.searchDatasetItems");
   }
   return datasetItems;
 }

@@ -15,20 +15,17 @@
    */
 
   // Imports
-  import { createEventDispatcher, onMount } from "svelte";
+  import { createEventDispatcher } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
 
-  import { LoadingModal, WarningModal } from "@pixano/core/src";
+  import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
   import { Table } from "@pixano/table";
   import type { DatasetInfo } from "@pixano/core/src";
 
   import {
     svg_clear,
-    svg_filter,
     svg_first_page,
-    svg_grid,
     svg_last_page,
-    svg_list,
     svg_next_page,
     svg_prev_page,
     svg_search,
@@ -63,7 +60,7 @@
   let datasetErrorModal = false;
 
   // Semantic search
-  let search: string = "";
+  let searchInput: string = "";
   let selectedSearchModel: string | undefined;
   const searchModels: string[] = [];
   if ("embeddings" in selectedDataset.tables) {
@@ -134,8 +131,8 @@
   }
 
   function handleSearch() {
-    search = (document.getElementById("sem-search-input") as HTMLInputElement).value;
-    let query = { model: selectedSearchModel as string, search };
+    searchInput = (document.getElementById("sem-search-input") as HTMLInputElement).value;
+    let query = { model: selectedSearchModel as string, search: searchInput };
     isLoadingTableItems = true;
     datasetTableStore.update((value) => ({
       ...value,
@@ -143,15 +140,6 @@
       query,
     }));
   }
-
-  onMount(() => {
-    search = "";
-    datasetTableStore.update((value) => ({
-      ...value,
-      pageSize: DEFAULT_DATASET_TABLE_SIZE,
-      currentPage: DEFAULT_DATASET_TABLE_PAGE,
-    }));
-  });
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
@@ -159,39 +147,6 @@
     <!-- Items list -->
     <div class="w-full h-full flex flex-col">
       <div class="py-5 h-20 flex space-x-2 items-center">
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_list} fill="currentcolor" />
-          </svg>
-        </button>
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_grid} fill="currentcolor" />
-          </svg>
-        </button>
-        <button>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_filter} fill="currentcolor" />
-          </svg>
-        </button>
         <div class="flex-grow" />
         <div class="relative flex items-center">
           {#if searchModels.length > 0}
@@ -202,12 +157,11 @@
                 </option>
               {/each}
             </select>
-
             <div class="relative flex items-center">
               <input
                 id="sem-search-input"
                 type="text"
-                value={search}
+                value={searchInput}
                 placeholder="Semantic search using {selectedSearchModel}"
                 class="h-10 pl-10 pr-4 rounded-full border text-slate-800 placeholder-slate-500 bg-slate-50 border-slate-300 shadow-slate-300 accent-main"
                 on:change={handleSearch}
@@ -221,7 +175,7 @@
               >
                 <path d={svg_search} fill="currentcolor" />
               </svg>
-              {#if search !== ""}
+              {#if searchInput !== ""}
                 <button
                   class="absolute right-2 p-1 rounded-full transition-colors hover:bg-slate-300"
                   on:click={handleClearSearch}
@@ -245,75 +199,84 @@
         <div class="flex-grow flex justify-center items-center">
           <Loader2Icon class="animate-spin" />
         </div>
-      {:else}
+      {:else if !selectedDataset.isErrored}
         <Table
           items={selectedDataset.page.items}
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
+      {:else}
+        <div
+          class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
+        >
+          <p>Error: dataset items could not be loaded</p>
+          <PrimaryButton on:click={handleClearSearch}>Try again</PrimaryButton>
+        </div>
       {/if}
     </div>
 
-    <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
-      {#if selectedDataset.page.total > pageSize}
-        <button on:click={handleGoToFirstPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_first_page} fill="currentcolor" />
-          </svg>
-        </button>
+    {#if !selectedDataset.isErrored}
+      <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
+        {#if selectedDataset.page.total > pageSize}
+          <button on:click={handleGoToFirstPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_first_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToPreviousPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_prev_page} fill="currentcolor" />
-          </svg>
-        </button>
-      {/if}
+          <button on:click={handleGoToPreviousPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_prev_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
 
-      <span class="mx-4">
-        {1 + pageSize * (currentPage - 1)} - {Math.min(
-          pageSize * currentPage,
-          selectedDataset.page.total,
-        )} of
-        {selectedDataset.page.total}
-      </span>
+        <span class="mx-4">
+          {1 + pageSize * (currentPage - 1)} - {Math.min(
+            pageSize * currentPage,
+            selectedDataset.page.total,
+          )} of
+          {selectedDataset.page.total}
+        </span>
 
-      {#if selectedDataset.page.total > pageSize}
-        <button on:click={handleGoToNextPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_next_page} fill="currentcolor" />
-          </svg>
-        </button>
+        {#if selectedDataset.page.total > pageSize}
+          <button on:click={handleGoToNextPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_next_page} fill="currentcolor" />
+            </svg>
+          </button>
 
-        <button on:click={handleGoToLastPage}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            height="48"
-            viewBox="0 -960 960 960"
-            width="48"
-            class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
-          >
-            <path d={svg_last_page} fill="currentcolor" />
-          </svg>
-        </button>
-      {/if}
-    </div>
+          <button on:click={handleGoToLastPage}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="48"
+              viewBox="0 -960 960 960"
+              width="48"
+              class="h-8 w-8 p-1 rounded-full transition-colors hover:bg-slate-300"
+            >
+              <path d={svg_last_page} fill="currentcolor" />
+            </svg>
+          </button>
+        {/if}
+      </div>
+    {/if}
   {/if}
   {#if datasetErrorModal}
     <WarningModal

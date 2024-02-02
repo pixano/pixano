@@ -27,7 +27,7 @@
       const completedDatasetwithStats = await api.getDataset(selectedDataset.id);
       if (
         completedDatasetwithStats.stats !== undefined &&
-        completedDatasetwithStats.stats.length > 0
+        completedDatasetwithStats.stats?.length > 0
       ) {
         selectedDataset.stats = completedDatasetwithStats.stats;
       }

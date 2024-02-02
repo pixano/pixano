@@ -23,13 +23,9 @@ import {
 } from "$lib/constants/pixanoConstants";
 import type { DatasetTableStore } from "../types/pixanoTypes";
 
-const defaultDatasetTableValues: DatasetTableStore = {
+export const defaultDatasetTableValues: DatasetTableStore = {
   currentPage: DEFAULT_DATASET_TABLE_PAGE,
   pageSize: DEFAULT_DATASET_TABLE_SIZE,
-  query: {
-    model: "",
-    search: "",
-  },
 };
 
 // Exports

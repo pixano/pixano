@@ -30,6 +30,7 @@ export interface DatasetInfo {
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
+  isErrored?: boolean;
 }
 
 export interface DatasetTable {
@@ -104,7 +105,6 @@ export type ItemObject = (BBoxObject | MaskObject) & {
   view_id: string;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
-  isManual?: boolean;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
 };
@@ -150,7 +150,6 @@ export interface Mask {
   visible: boolean;
   editing: boolean;
   opacity: number;
-  isManual?: boolean;
   coordinates?: number[];
 }
 

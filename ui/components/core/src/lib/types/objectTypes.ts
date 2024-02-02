@@ -21,7 +21,6 @@ type RectangleShape = {
 
 type MaskShape = SegmentationResult & {
   type: "mask";
-  isManual?: boolean;
 };
 
 export type inProgressShape = (RectangleShape | MaskShape) & {
