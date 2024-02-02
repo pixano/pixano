@@ -98,7 +98,7 @@
           </Tooltip.Content>
         {/if}
       </Tooltip.Root>
-      <h3 class="uppercase font-light">PRE ANNOTATION</h3>
+      <h3 class="uppercase font-medium">PRE ANNOTATION</h3>
     </div>
     {#if preAnnotationIsActive}
       <span>{filteredObjectsToAnnotate.length}</span>

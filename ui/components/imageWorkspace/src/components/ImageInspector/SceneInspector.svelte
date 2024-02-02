@@ -72,7 +72,7 @@
 </script>
 
 <div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
-  <h3 class="uppercase font-light h-10">
+  <h3 class="uppercase font-medium h-10">
     <span>Features</span>
     <IconButton selected={isEditing} on:click={handleEditIconClick}
       ><Pencil class="h-4" />
@@ -84,7 +84,7 @@
 </div>
 <div class="p-4 text-slate-800">
   {#each imageMeta as meta}
-    <h3 class="uppercase font-light h-10 flex items-center">{meta.id}</h3>
+    <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
     <div class="mx-4 mb-4">
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
         <p class="font-medium first-letter:uppercase">File name</p>
