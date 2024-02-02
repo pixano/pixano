@@ -108,7 +108,7 @@
     >
     <IconButton on:click={deleteObject}><Trash2 class="h-4" /></IconButton>
     <IconButton on:click={() => (open = !open)}
-      ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton
+      ><ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} /></IconButton
     >
   </div>
 </div>
