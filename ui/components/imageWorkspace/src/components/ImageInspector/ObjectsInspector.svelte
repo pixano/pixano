@@ -16,7 +16,7 @@
 
   import { utils, Combobox } from "@pixano/core";
 
-  import ObjectItem from "./ObjectItem.svelte";
+  import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../../lib/constants";
@@ -53,7 +53,7 @@
       numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
     >
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-        <ObjectItem bind:itemObject {colorScale} />
+        <ObjectCard bind:itemObject {colorScale} />
       {/each}
     </ObjectsModelSection>
     {#if selectedModel}
@@ -72,7 +72,7 @@
           }))}
         />
         {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-          <ObjectItem bind:itemObject {colorScale} />
+          <ObjectCard bind:itemObject {colorScale} />
         {/each}
       </ObjectsModelSection>
     {/if}
