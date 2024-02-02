@@ -67,7 +67,6 @@
       if (shape.type === "mask") {
         newObject = {
           ...baseObject,
-          isManual: !!shape.isManual,
           bbox: {
             coords: [0, 0, 0, 0],
             format: "xywh",

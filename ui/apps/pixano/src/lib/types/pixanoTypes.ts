@@ -1,7 +1,7 @@
 export type DatasetTableStore = {
   currentPage: number;
   pageSize: number;
-  query: {
+  query?: {
     model: string;
     search: string;
   };

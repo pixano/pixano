@@ -70,7 +70,6 @@
         itemId: selectedItemId,
         imageWidth: images[viewId].width,
         imageHeight: images[viewId].height,
-        isManual: true,
       };
       isClosed = true;
     }
