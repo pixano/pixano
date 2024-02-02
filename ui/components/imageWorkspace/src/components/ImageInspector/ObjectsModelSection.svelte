@@ -23,6 +23,7 @@
 
   export let sectionTitle: string;
   export let modelName: string;
+  export let numberOfItem: number;
 
   let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
   $: tooltipContent = visibilityStatus === "hidden" ? "show all" : "hide all";
@@ -87,8 +88,6 @@
 <section>
   <div class="flex items-center gap-3 justify-between text-slate-800">
     <div class="flex items-center gap-3 w-full">
-      <h3 class="uppercase font-medium pl-2 grow">{sectionTitle}</h3>
-      <slot name="modelSelection" />
       <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
         {#if visibilityStatus === "hidden"}
           <EyeOff class="h-4" />
@@ -96,6 +95,9 @@
           <Eye class="h-4" />
         {/if}
       </IconButton>
+      <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
+      <slot name="modelSelection" />
+      <p>{numberOfItem}</p>
     </div>
   </div>
   <div class="p-2 pt-0 max-h-[300px] overflow-y-auto">

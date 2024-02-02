@@ -47,13 +47,21 @@
 <div class="p-2 flex flex-col h-full">
   <PreAnnotation {colorScale} />
   <div class="gap-4 grow grid grid-cols-1 grid-rows-2">
-    <ObjectsModelSection sectionTitle="Ground truth" modelName={GROUND_TRUTH}>
+    <ObjectsModelSection
+      sectionTitle="Ground truth"
+      modelName={GROUND_TRUTH}
+      numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
+    >
       {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
         <ObjectItem bind:itemObject {colorScale} />
       {/each}
     </ObjectsModelSection>
     {#if selectedModel}
-      <ObjectsModelSection sectionTitle="Model run" modelName={MODEL_RUN}>
+      <ObjectsModelSection
+        sectionTitle="Model run"
+        modelName={MODEL_RUN}
+        numberOfItem={allItemsSortedByModel[selectedModel].length}
+      >
         <Combobox
           slot="modelSelection"
           bind:value={selectedModel}
