@@ -39,10 +39,9 @@
   let allModels = Object.keys(allItemsSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   );
-  let selectedModel: string =
-    Object.keys(allItemsSortedByModel).filter(
-      (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-    )[0] || "";
+  let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
+    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
+  )[0];
 </script>
 
 <div class="p-2 flex flex-col h-full">
@@ -53,19 +52,21 @@
         <ObjectItem bind:itemObject {colorScale} />
       {/each}
     </ObjectsModelSection>
-    <ObjectsModelSection sectionTitle="Model run" modelName={MODEL_RUN}>
-      <Combobox
-        slot="modelSelection"
-        bind:value={selectedModel}
-        width="w-[180px]"
-        listItems={allModels.map((model) => ({
-          value: model,
-          label: model,
-        }))}
-      />
-      {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-        <ObjectItem bind:itemObject {colorScale} />
-      {/each}
-    </ObjectsModelSection>
+    {#if selectedModel}
+      <ObjectsModelSection sectionTitle="Model run" modelName={MODEL_RUN}>
+        <Combobox
+          slot="modelSelection"
+          bind:value={selectedModel}
+          width="w-[180px]"
+          listItems={allModels.map((model) => ({
+            value: model,
+            label: model,
+          }))}
+        />
+        {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
+          <ObjectItem bind:itemObject {colorScale} />
+        {/each}
+      </ObjectsModelSection>
+    {/if}
   </div>
 </div>
