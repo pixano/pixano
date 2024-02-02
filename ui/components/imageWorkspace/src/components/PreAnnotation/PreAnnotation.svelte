@@ -31,11 +31,11 @@
   import type { ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
 
   export let colorScale: (id: string) => string;
+  export let preAnnotationIsActive: boolean = false;
 
   let objectsToAnnotate: ItemObject[] = [];
   let filteredObjectsToAnnotate: ItemObject[] = [];
   let isFormValid: boolean = false;
-  let preAnnotationIsActive: boolean = false;
   let confidenceFilterValue = [0];
   let color: string;
   let objectProperties: ObjectProperties = {};
@@ -114,7 +114,7 @@
       </div>
     </div>
     {#if objectToAnnotate}
-      <div class="bg-white rounded-sm p-4 mt-4">
+      <div class="bg-white rounded-sm p-4 pb-0 mt-4 relative max-h-[60vh] overflow-y-auto">
         <p class="flex gap-2">
           <BoxSelectIcon {color} />
           <span>{objectToAnnotate.id}</span>
@@ -126,7 +126,7 @@
             bind:objectProperties
           />
         </div>
-        <div class="flex gap-4 mt-4 w-full justify-center">
+        <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
           <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
             ><Check />Accept</PrimaryButton
           >

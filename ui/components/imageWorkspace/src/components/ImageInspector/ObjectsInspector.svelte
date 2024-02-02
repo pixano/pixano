@@ -29,6 +29,7 @@
     [PRE_ANNOTATION]: [],
   };
   let allIds: string[] = [];
+  let preAnnotationIsActive: boolean = false;
 
   itemObjects.subscribe((value) => {
     allIds = value.map((item) => item.id);
@@ -36,45 +37,49 @@
   });
 
   let colorScale = utils.ordinalColorScale(allIds);
+
   let allModels = Object.keys(allItemsSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   );
+
   let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   )[0];
 </script>
 
 <div class="p-2 flex flex-col h-full">
-  <PreAnnotation {colorScale} />
-  <div class="gap-4 grow grid grid-cols-1 grid-rows-2">
-    <ObjectsModelSection
-      sectionTitle="Ground truth"
-      modelName={GROUND_TRUTH}
-      numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
-    >
-      {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-        <ObjectCard bind:itemObject {colorScale} />
-      {/each}
-    </ObjectsModelSection>
-    {#if selectedModel}
+  <PreAnnotation {colorScale} bind:preAnnotationIsActive />
+  {#if !preAnnotationIsActive}
+    <div class="gap-4 grow grid grid-cols-1 grid-rows-2">
       <ObjectsModelSection
-        sectionTitle="Model run"
-        modelName={MODEL_RUN}
-        numberOfItem={allItemsSortedByModel[selectedModel].length}
+        sectionTitle="Ground truth"
+        modelName={GROUND_TRUTH}
+        numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
       >
-        <Combobox
-          slot="modelSelection"
-          bind:value={selectedModel}
-          width="w-[180px]"
-          listItems={allModels.map((model) => ({
-            value: model,
-            label: model,
-          }))}
-        />
-        {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
+        {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
           <ObjectCard bind:itemObject {colorScale} />
         {/each}
       </ObjectsModelSection>
-    {/if}
-  </div>
+      {#if selectedModel}
+        <ObjectsModelSection
+          sectionTitle="Model run"
+          modelName={MODEL_RUN}
+          numberOfItem={allItemsSortedByModel[selectedModel].length}
+        >
+          <Combobox
+            slot="modelSelection"
+            bind:value={selectedModel}
+            width="w-[180px]"
+            listItems={allModels.map((model) => ({
+              value: model,
+              label: model,
+            }))}
+          />
+          {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
+            <ObjectCard bind:itemObject {colorScale} />
+          {/each}
+        </ObjectsModelSection>
+      {/if}
+    </div>
+  {/if}
 </div>
