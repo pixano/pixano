@@ -42,7 +42,11 @@ class ItemEmbedding(BaseModel):
             dict[str, ItemEmbedding]: Dictionary of ItemEmbedding
         """
 
-        item = table.to_pylist()[0]
+        list_item = table.to_pylist()
+        if len(list_item == 0):
+            return {}
+        else:
+            item = list_item[0]
         embeddings = {}
 
         # Iterate on fields
