@@ -47,10 +47,10 @@
   )[0];
 </script>
 
-<div class="p-2 flex flex-col h-full">
+<div class="p-2 flex flex-col h-[calc(100vh-200px)]">
   <PreAnnotation {colorScale} bind:preAnnotationIsActive />
   {#if !preAnnotationIsActive}
-    <div class="gap-4 grow grid grid-cols-1 grid-rows-2">
+    <div class="gap-4 grow grid grid-cols-1 grid-rows-2 h-full">
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}

@@ -85,8 +85,8 @@
   };
 </script>
 
-<section>
-  <div class="flex items-center gap-3 justify-between text-slate-800">
+<section class="h-full overflow-hidden pb-10">
+  <div class="flex items-center justify-between text-slate-800">
     <div class="flex items-center gap-3 w-full">
       <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
         {#if visibilityStatus === "hidden"}
@@ -100,7 +100,7 @@
       <p>{numberOfItem}</p>
     </div>
   </div>
-  <div class="p-2 pt-0 max-h-[300px] overflow-y-auto">
+  <div class="p-2 pt-0 max-h-full overflow-y-auto">
     <slot />
   </div>
 </section>
