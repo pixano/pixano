@@ -18,7 +18,7 @@
   import { IconButton } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { EXISTING_SOURCE_IDS, GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { EXISTING_SOURCE_IDS, GROUND_TRUTH } from "../../lib/constants";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let sectionTitle: string;
@@ -30,12 +30,7 @@
 
   itemObjects.subscribe((items) => {
     if (!items.length) return;
-    const allObjectsOfCurrentModel = items.filter((item) => {
-      if (modelName === MODEL_RUN) {
-        return item.source_id !== GROUND_TRUTH;
-      }
-      return item.source_id === modelName;
-    });
+    const allObjectsOfCurrentModel = items.filter((item) => item.source_id === modelName);
     const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
       (item) => item.displayControl?.hidden,
     );
@@ -51,24 +46,23 @@
   });
 
   $: itemObjects.update((items) => {
+    console.log({ items, modelName, visibilityStatus });
     return items.map((item) => {
-      if (item.source_id === modelName) {
-        if (visibilityStatus === "mixed") return item;
-        return toggleObjectDisplayControl(
-          item,
-          "hidden",
-          ["bbox", "mask"],
-          visibilityStatus === "hidden",
-        );
+      const isHidden = visibilityStatus === "hidden";
+      if (modelName === GROUND_TRUTH) {
+        if (item.source_id === modelName) {
+          console.log("model name is GROUND_TRUTH", { sourceId: item.source_id });
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+        } else {
+          return item;
+        }
       }
-      if (modelName === MODEL_RUN && !EXISTING_SOURCE_IDS.includes(item.source_id)) {
-        if (visibilityStatus === "mixed") return item;
-        return toggleObjectDisplayControl(
-          item,
-          "hidden",
-          ["bbox", "mask"],
-          visibilityStatus === "hidden",
-        );
+      if (!EXISTING_SOURCE_IDS.includes(item.source_id)) {
+        if (item.source_id === modelName) {
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+        } else {
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], true);
+        }
       }
       return item;
     });

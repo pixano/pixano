@@ -19,7 +19,7 @@
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
-  import { GROUND_TRUTH, MODEL_RUN, PRE_ANNOTATION } from "../../lib/constants";
+  import { GROUND_TRUTH, PRE_ANNOTATION } from "../../lib/constants";
   import { sortObjectsByModel } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
@@ -63,13 +63,13 @@
       {#if selectedModel}
         <ObjectsModelSection
           sectionTitle="Model run"
-          modelName={MODEL_RUN}
+          modelName={selectedModel}
           numberOfItem={allItemsSortedByModel[selectedModel].length}
         >
           <Combobox
             slot="modelSelection"
             bind:value={selectedModel}
-            width="w-[180px]"
+            width="w-[150px]"
             listItems={allModels.map((model) => ({
               value: model,
               label: model,
