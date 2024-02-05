@@ -43,7 +43,7 @@ class ItemEmbedding(BaseModel):
         """
 
         list_item = table.to_pylist()
-        if len(list_item == 0):
+        if len(list_item) == 0:
             return {}
         else:
             item = list_item[0]
