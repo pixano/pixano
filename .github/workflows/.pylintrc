@@ -12,7 +12,7 @@ max-branches=20
 
 [DESIGN]
 max-args = 10
-max-locals = 25
+max-locals = 20
 
 [SIMILARITIES]
 min-similarity-lines=10
