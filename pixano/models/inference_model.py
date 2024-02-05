@@ -62,7 +62,6 @@ class InferenceModel(ABC):
     def create_table(
         self,
         process_type: str,
-        ann_type: str,
         views: list[str],
         dataset: Dataset,
     ) -> DatasetTable:
@@ -70,12 +69,10 @@ class InferenceModel(ABC):
 
         Args:
             process_type (str): Process type
-                                - 'ann' for annotations
+                                - 'pre_ann' for pre-annotations to accept or reject as Ground Truth
+                                - 'model_run' for annotations to compare to Ground Truth
                                 - 'segment_emb' for segmentation embeddings
                                 - 'search_emb' for semantic search embeddings
-            ann_type (str): Annotation type
-                                - 'Pre-annotation' for pre-annotations to accept or reject as Ground Truth
-                                - 'Model run' for annotations to compare to Ground Truth
             views (list[str]): Dataset views
             dataset (Dataset): Dataset
 
@@ -89,7 +86,7 @@ class InferenceModel(ABC):
         )
 
         # Annotations schema
-        if process_type == "ann":
+        if process_type in ["pre_ann", "model_run"]:
             table_group = "objects"
             # Create table
             table = DatasetTable(
@@ -102,7 +99,7 @@ class InferenceModel(ABC):
                     "mask": "compressedrle",
                     "category": "str",
                 },
-                source=self.name if ann_type == "Model run" else "Pre-annotation",
+                source=self.name if process_type == "model_run" else "Pre-annotation",
                 type=None,
             )
         # Segmentation embeddings schema
@@ -181,7 +178,6 @@ class InferenceModel(ABC):
         dataset_dir: Path,
         views: list[str],
         process_type: str,
-        ann_type: str = None,
         splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
@@ -192,12 +188,10 @@ class InferenceModel(ABC):
             dataset_dir (Path): Dataset directory
             views (list[str]): Dataset views
             process_type (str): Process type
-                                - 'ann' for annotations
+                                - 'pre_ann' for pre-annotations to accept or reject as Ground Truth
+                                - 'model_run' for annotations to compare to Ground Truth
                                 - 'segment_emb' for segmentation embeddings
                                 - 'search_emb' for semantic search embeddings
-            ann_type (str): Annotation type
-                                - 'Pre-annotation' for pre-annotations to accept or reject as Ground Truth
-                                - 'Model run' for annotations to compare to Ground Truth
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per process batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
@@ -206,18 +200,16 @@ class InferenceModel(ABC):
             Dataset: Dataset
         """
 
-        if process_type not in ["ann", "segment_emb", "search_emb"]:
+        if process_type not in [
+            "pre_ann",
+            "model_run",
+            "segment_emb",
+            "search_emb",
+        ]:
             raise ValueError(
                 "Please choose a valid process type"
-                "('ann' for annotations,"
+                "('pre_ann' or 'model_run' for for annotations,"
                 "'segment_emb' or 'search_emb' for segmentation or semantic search embeddings)"
-            )
-
-        if process_type == "ann" and ann_type not in ["Pre-annotation", "Model run"]:
-            raise ValueError(
-                "Please choose a valid annotation type"
-                "('Pre-annotation' for pre-annotations to accept or reject as Ground Truth,"
-                "'Model run' for annotations to compare to Ground Truth)"
             )
 
         if not views:
@@ -227,13 +219,13 @@ class InferenceModel(ABC):
         dataset = Dataset(dataset_dir)
 
         # Create inference table
-        table = self.create_table(process_type, ann_type, views, dataset)
+        table = self.create_table(process_type, views, dataset)
 
         # Load dataset tables
         ds_tables = dataset.open_tables()
 
         # Load inference table
-        table_group = "objects" if process_type == "ann" else "embeddings"
+        table_group = "embeddings" if "emb" in process_type else "objects"
         table_lance = ds_tables[table_group][table.name].to_lance()
 
         # Create URI prefix
@@ -257,12 +249,10 @@ class InferenceModel(ABC):
                 save_batch = []
                 for process_batch in process_batches:
                     save_batch.extend(
-                        self.preannotate(process_batch, views, uri_prefix, threshold)
-                        if process_type == "ann"
-                        else (
-                            self.precompute_embeddings(process_batch, views, uri_prefix)
-                            if process_type in ["segment_emb", "search_emb"]
-                            else []
+                        self.precompute_embeddings(process_batch, views, uri_prefix)
+                        if "emb" in process_type
+                        else self.preannotate(
+                            process_batch, views, uri_prefix, threshold
                         )
                     )
                     progress.update(batch_size)
