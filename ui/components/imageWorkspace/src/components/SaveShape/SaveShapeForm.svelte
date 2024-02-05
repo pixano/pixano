@@ -82,10 +82,17 @@
 
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
-    newShape.set({ status: "none" });
+    newShape.set({ status: "none", shouldReset: true });
     canSave.set(true);
     currentTab = "objects";
   };
+
+  async function handleKeyDown(event: KeyboardEvent) {
+    if (event.key == "Escape") {
+      newShape.set({ status: "none", shouldReset: true });
+    }
+  }
+
 </script>
 
 {#if shape.status === "inProgress"}
@@ -101,3 +108,4 @@
     </div>
   </form>
 {/if}
+<svelte:window on:keydown={handleKeyDown} />
