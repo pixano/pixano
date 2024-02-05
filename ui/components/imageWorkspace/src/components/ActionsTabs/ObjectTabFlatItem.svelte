@@ -119,7 +119,7 @@
       style="border-color:{color}"
     >
       <div class="flex flex-col gap-2">
-        {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
+        {#if itemObject.bbox}
           <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
             <p class="font-medium first-letter:uppercase">Bounding box</p>
             <Checkbox
