@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     Attributes:
         library_dir (str): Local or S3 path to dataset library
         aws_endpoint (str): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path
-        aws_default_region (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
+        aws_region (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
         aws_access_key (str): S3 AWS access key. Used if library_dir is an S3 path
         aws_secret_key (str): S3 AWS secret key. Used if library_dir is an S3 path
         local_model_dir (str): Local path to models. Used if library_dir is an S3 path
