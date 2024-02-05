@@ -21,3 +21,11 @@ import { schemeSet3 } from "d3-scale-chromatic";
 export function ordinalColorScale(range: Iterable<string>) {
   return scaleOrdinal(schemeSet3).domain(range);
 }
+
+export function isValidURL(urlString: string) {
+  try {
+    return Boolean(new URL(urlString));
+  } catch (e) {
+    return false;
+  }
+}

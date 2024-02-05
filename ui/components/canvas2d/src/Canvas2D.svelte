@@ -204,7 +204,11 @@
     for (const view of Object.values(selectedItem.views)) {
       zoomFactor[view.id] = 1;
       images[view.id] = new Image();
-      images[view.id].src = `/${view.uri}` || view.url;
+      if (utils.isValidURL(view.uri)) {
+        images[view.id].src = `${view.uri}` || view.url;
+      } else {
+        images[view.id].src = `/${view.uri}` || view.url;
+      }
       images[view.id].onload = () => {
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
