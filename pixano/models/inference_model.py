@@ -179,9 +179,9 @@ class InferenceModel(ABC):
     def process_dataset(
         self,
         dataset_dir: Path,
-        process_type: str,
-        ann_type: str,
         views: list[str],
+        process_type: str,
+        ann_type: str = None,
         splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
@@ -190,6 +190,7 @@ class InferenceModel(ABC):
 
         Args:
             dataset_dir (Path): Dataset directory
+            views (list[str]): Dataset views
             process_type (str): Process type
                                 - 'ann' for annotations
                                 - 'segment_emb' for segmentation embeddings
@@ -197,7 +198,6 @@ class InferenceModel(ABC):
             ann_type (str): Annotation type
                                 - 'Pre-annotation' for pre-annotations to accept or reject as Ground Truth
                                 - 'Model run' for annotations to compare to Ground Truth
-            views (list[str]): Dataset views
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per process batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
@@ -213,14 +213,12 @@ class InferenceModel(ABC):
                 "'segment_emb' or 'search_emb' for segmentation or semantic search embeddings)"
             )
 
-        if ann_type not in ["Pre-annotation", "Model run"]:
-            if process_type == "ann":
-                raise ValueError(
-                    "Please choose a valid annotation type"
-                    "('Pre-annotation' for pre-annotations to accept or reject as Ground Truth,"
-                    "'Model run' for annotations to compare to Ground Truth)"
-                )
-            ann_type = None
+        if process_type == "ann" and ann_type not in ["Pre-annotation", "Model run"]:
+            raise ValueError(
+                "Please choose a valid annotation type"
+                "('Pre-annotation' for pre-annotations to accept or reject as Ground Truth,"
+                "'Model run' for annotations to compare to Ground Truth)"
+            )
 
         if not views:
             raise ValueError("Please select which views you want to process on.")
