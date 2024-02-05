@@ -45,8 +45,7 @@ class ItemEmbedding(BaseModel):
         list_item = table.to_pylist()
         if len(list_item) == 0:
             return {}
-        else:
-            item = list_item[0]
+        item = list_item[0]
         embeddings = {}
 
         # Iterate on fields
