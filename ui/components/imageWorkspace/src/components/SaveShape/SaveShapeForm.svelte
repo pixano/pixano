@@ -92,7 +92,6 @@
       newShape.set({ status: "none", shouldReset: true });
     }
   }
-
 </script>
 
 {#if shape.status === "inProgress"}
