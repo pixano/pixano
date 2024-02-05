@@ -72,7 +72,6 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    isManual: !!obj.isManual,
   } as Mask;
 };
 

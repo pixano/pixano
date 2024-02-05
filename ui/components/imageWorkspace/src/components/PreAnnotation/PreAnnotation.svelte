@@ -130,7 +130,7 @@
           <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
             ><Check />Accept</PrimaryButton
           >
-          <PrimaryButton on:click={handleRejectItem}>Ignore</PrimaryButton>
+          <PrimaryButton on:click={handleRejectItem}>Reject</PrimaryButton>
         </div>
       </div>
     {/if}

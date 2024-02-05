@@ -27,10 +27,10 @@
   // Calculate row headers
   function getColumnNames(items: Array<DatasetItem>): Array<string> {
     const columnNames = ["id", "split"];
-    if (items[0].views) {
+    if (items[0]?.views) {
       columnNames.push.apply(columnNames, Object.keys(items[0].views));
     }
-    if (items[0].features) {
+    if (items[0]?.features) {
       columnNames.push.apply(columnNames, Object.keys(items[0].features));
     }
     return columnNames;

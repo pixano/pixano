@@ -215,7 +215,6 @@ export function addMask(
   stage: Konva.Stage,
   zoomFactor: Record<string, number>,
 ) {
-  if (mask.isManual) return;
   const x = image.x();
   const y = image.y();
   const scale = image.scale();
