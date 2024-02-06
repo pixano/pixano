@@ -83,7 +83,6 @@
   };
 
   const onClick = (target: Konva.Group) => {
-    console.log("from rect click", target);
     const id = target.id();
     if (id !== bbox.id) {
       newShape = {
