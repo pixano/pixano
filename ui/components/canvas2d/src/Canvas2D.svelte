@@ -1045,14 +1045,16 @@
           <Group config={{ id: "input" }} />
           {#each bboxes as bbox}
             {#if bbox.viewId === view.id}
-              <Rectangle
-                {bbox}
-                {colorScale}
-                zoomFactor={zoomFactor[view.id]}
-                {stage}
-                viewId={view.id}
-                bind:newShape
-              />
+              {#key bbox.id}
+                <Rectangle
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view.id]}
+                  {stage}
+                  viewId={view.id}
+                  bind:newShape
+                />
+              {/key}
             {/if}
           {/each}
           <CreatePolygon

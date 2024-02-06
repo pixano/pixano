@@ -15,7 +15,6 @@
    */
 
   // Imports
-
   import Konva from "konva";
   import { Rect, Label, Tag, Text, Group } from "svelte-konva";
   import type { BBox, Shape } from "@pixano/core";
