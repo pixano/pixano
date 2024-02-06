@@ -46,12 +46,10 @@
   });
 
   $: itemObjects.update((items) => {
-    console.log({ items, modelName, visibilityStatus });
     return items.map((item) => {
       const isHidden = visibilityStatus === "hidden";
       if (modelName === GROUND_TRUTH) {
         if (item.source_id === modelName) {
-          console.log("model name is GROUND_TRUTH", { sourceId: item.source_id });
           return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
         } else {
           return item;
