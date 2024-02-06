@@ -38,7 +38,7 @@
     if (!highlightedObject) return;
     const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
 

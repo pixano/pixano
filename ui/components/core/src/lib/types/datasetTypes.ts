@@ -152,6 +152,7 @@ export interface Mask {
   opacity: number;
   coordinates?: number[];
   strokeFactor?: number;
+  highlighted?: "none" | "self" | "all";
 }
 
 export type MaskSVG = string[];
@@ -167,6 +168,7 @@ export interface BBox {
   editing?: boolean;
   locked?: boolean;
   strokeFactor?: number;
+  highlighted?: "none" | "self" | "all";
 }
 
 // LABELS DATA

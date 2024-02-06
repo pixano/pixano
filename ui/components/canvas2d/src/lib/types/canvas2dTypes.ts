@@ -18,4 +18,5 @@ export type PolygonGroupDetails = {
   viewId: string | undefined;
   opacity: number;
   strokeFactor: number;
+  highlighted?: "none" | "self" | "all";
 };

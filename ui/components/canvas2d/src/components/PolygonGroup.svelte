@@ -101,9 +101,8 @@
     };
   };
 
-  const onClick = (target: Konva.Shape) => {
-    const id = target.id();
-    if (id !== polygonDetails.id) {
+  const onClick = () => {
+    if (polygonDetails.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: polygonDetails.id,
@@ -145,7 +144,7 @@
   {:else}
     <KonvaShape
       on:dblclick={onDoubleClick}
-      on:click={(e) => onClick(e.detail.target)}
+      on:click={onClick}
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
         stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",

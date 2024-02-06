@@ -45,6 +45,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     editing: obj.displayControl?.editing,
     locked: obj.displayControl?.locked,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+    highlighted: obj.highlighted,
   } as BBox;
 };
 
@@ -70,6 +71,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+    highlighted: obj.highlighted,
   } as Mask;
 };
 

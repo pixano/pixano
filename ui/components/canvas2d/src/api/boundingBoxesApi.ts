@@ -122,6 +122,7 @@ export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetai
         opacity: mask.opacity || 1,
         viewId: mask.viewId,
         strokeFactor: mask.strokeFactor || 1,
+        highlighted: mask.highlighted,
         points: points.reduce((acc, val, i) => {
           if (i % 2 === 0) {
             acc.push({

@@ -854,8 +854,7 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (newShape.status === "none") {
-      console.log("salut");
+    if (newShape.status === "none" || (newShape.status == "editing" && newShape.type == "none")) {
       newShape = {
         status: "editing",
         type: "none",
