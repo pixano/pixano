@@ -4,7 +4,6 @@ import { mask_utils } from "@pixano/models/src";
 import {
   ANNOTATION_ITEM_STROKE_FACTOR,
   GROUND_TRUTH,
-  MODEL_RUN,
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
 } from "../constants";
@@ -114,36 +113,10 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
         if (!object.review_state) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
         return acc;
       }
-      if (object.source_id === GROUND_TRUTH) {
-        acc[object.source_id] = [object, ...acc[GROUND_TRUTH]];
-      } else {
-        const modelAlreadyExists = acc[MODEL_RUN].some(
-          (model) => model.modelName === object.source_id,
-        );
-        if (!modelAlreadyExists) {
-          acc[MODEL_RUN] = [
-            ...acc[MODEL_RUN],
-            {
-              modelName: object.source_id,
-              objects: [object],
-            },
-          ];
-        }
-        if (modelAlreadyExists) {
-          acc[MODEL_RUN] = acc[MODEL_RUN].map((model) => {
-            if (model.modelName === object.source_id) {
-              return {
-                ...model,
-                objects: [...model.objects, object],
-              };
-            }
-            return model;
-          });
-        }
-      }
+      acc[object.source_id] = [object, ...(acc[object.source_id] || [])];
       return acc;
     },
-    { [GROUND_TRUTH]: [], [MODEL_RUN]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
+    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
 export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>

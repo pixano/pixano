@@ -13,29 +13,24 @@
    *
    * http://www.cecill.info
    */
-  import { ChevronRight, Eye, EyeOff } from "lucide-svelte";
+  import { Eye, EyeOff } from "lucide-svelte";
 
-  import { cn, IconButton } from "@pixano/core/src";
+  import { IconButton } from "@pixano/core/src";
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
-  import { EXISTING_SOURCE_IDS, GROUND_TRUTH, MODEL_RUN } from "../../lib/constants";
+  import { EXISTING_SOURCE_IDS, GROUND_TRUTH } from "../../lib/constants";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
 
   export let sectionTitle: string;
   export let modelName: string;
+  export let numberOfItem: number;
 
   let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
   $: tooltipContent = visibilityStatus === "hidden" ? "show all" : "hide all";
-  let open: boolean = true;
 
   itemObjects.subscribe((items) => {
     if (!items.length) return;
-    const allObjectsOfCurrentModel = items.filter((item) => {
-      if (modelName === MODEL_RUN) {
-        return item.source_id !== GROUND_TRUTH;
-      }
-      return item.source_id === modelName;
-    });
+    const allObjectsOfCurrentModel = items.filter((item) => item.source_id === modelName);
     const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
       (item) => item.displayControl?.hidden,
     );
@@ -52,23 +47,20 @@
 
   $: itemObjects.update((items) => {
     return items.map((item) => {
-      if (item.source_id === modelName) {
-        if (visibilityStatus === "mixed") return item;
-        return toggleObjectDisplayControl(
-          item,
-          "hidden",
-          ["bbox", "mask"],
-          visibilityStatus === "hidden",
-        );
+      const isHidden = visibilityStatus === "hidden";
+      if (modelName === GROUND_TRUTH) {
+        if (item.source_id === modelName) {
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+        } else {
+          return item;
+        }
       }
-      if (modelName === MODEL_RUN && !EXISTING_SOURCE_IDS.includes(item.source_id)) {
-        if (visibilityStatus === "mixed") return item;
-        return toggleObjectDisplayControl(
-          item,
-          "hidden",
-          ["bbox", "mask"],
-          visibilityStatus === "hidden",
-        );
+      if (!EXISTING_SOURCE_IDS.includes(item.source_id)) {
+        if (item.source_id === modelName) {
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+        } else {
+          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], true);
+        }
       }
       return item;
     });
@@ -85,22 +77,22 @@
   };
 </script>
 
-<div class="flex items-center gap-3 justify-between text-slate-800">
-  <div class="flex items-center gap-3">
-    <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
-      {#if visibilityStatus === "hidden"}
-        <EyeOff class="h-4" />
-      {:else}
-        <Eye class="h-4" />
-      {/if}
-    </IconButton>
-    <h3 class="uppercase font-light">{sectionTitle}</h3>
+<section class="h-full overflow-hidden pb-10">
+  <div class="flex items-center justify-between text-slate-800">
+    <div class="flex items-center gap-3 w-full">
+      <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
+        {#if visibilityStatus === "hidden"}
+          <EyeOff class="h-4" />
+        {:else}
+          <Eye class="h-4" />
+        {/if}
+      </IconButton>
+      <h3 class="uppercase font-medium grow">{sectionTitle}</h3>
+      <slot name="modelSelection" />
+      <p>{numberOfItem}</p>
+    </div>
   </div>
-  <IconButton on:click={() => (open = !open)}
-    ><ChevronRight class={cn("transition", { "rotate-90": open })} /></IconButton
-  >
-</div>
-
-<div class={cn("p-2", { hidden: !open })}>
-  <slot />
-</div>
+  <div class="p-2 pt-0 max-h-full overflow-y-auto">
+    <slot />
+  </div>
+</section>
