@@ -102,7 +102,7 @@
       <span class="truncate w-max flex-auto">{itemObject.id}</span>
     </div>
     <div class="flex items-center">
-      {#if showIcons}
+      {#if showIcons || isEditing || isLocked}
         <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
           ><Pencil class="h-4" /></IconButton
         >
@@ -151,7 +151,6 @@
               {/if}
             </div>
           </div>
-
           <ItemFeatures {features} {isEditing} {saveInputChange} />
         </div>
       </div>
