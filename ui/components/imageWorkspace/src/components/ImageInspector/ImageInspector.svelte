@@ -17,8 +17,8 @@
   import type { Shape } from "@pixano/core";
   import { cn, Tabs, Skeleton } from "@pixano/core/src";
 
-  import SceneTabContent from "./SceneTabContent.svelte";
-  import ObjectTabContent from "./ObjectTabContent.svelte";
+  import SceneInspector from "./SceneInspector.svelte";
+  import ObjectsInspector from "./ObjectsInspector.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { canSave, newShape } from "../../lib/stores/imageWorkspaceStores";
 
@@ -46,7 +46,7 @@
         <Tabs.Trigger value="objects" class="w-1/2">Objects</Tabs.Trigger>
       </Tabs.List>
       <div class="h-[calc(100%-48px)] flex flex-col justify-between">
-        <Tabs.Content value="scene" class="bg-red max-h-[calc(100vh-200px)] overflow-y-auto">
+        <Tabs.Content value="scene" class="max-h-[calc(100vh-200px)] overflow-y-auto">
           {#if isLoading}
             <div class="p-4 flex flex-col gap-4">
               <Skeleton class="h-8 w-full" />
@@ -54,10 +54,10 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <SceneTabContent />
+            <SceneInspector />
           {/if}
         </Tabs.Content>
-        <Tabs.Content value="objects" class="max-h-[calc(100vh-200px)] overflow-y-auto">
+        <Tabs.Content value="objects" class="h-full">
           {#if isLoading}
             <div class="p-4 flex flex-col gap-4">
               <Skeleton class="h-8 w-full" />
@@ -65,7 +65,7 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <ObjectTabContent />
+            <ObjectsInspector />
           {/if}
         </Tabs.Content>
         <button
