@@ -854,6 +854,15 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    if (newShape.status === "none") {
+      console.log("salut");
+      newShape = {
+        status: "editing",
+        type: "none",
+        shapeId: null,
+        highlighted: "all",
+      };
+    }
     // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
     if (selectedTool?.type == "PAN" || event.button == 1) {

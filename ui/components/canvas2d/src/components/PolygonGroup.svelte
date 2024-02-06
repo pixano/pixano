@@ -96,9 +96,21 @@
     newShape = {
       status: "editing",
       shapeId: polygonDetails.id,
-      isHighlighted: true,
+      highlighted: "self",
       type: "none",
     };
+  };
+
+  const onClick = (target: Konva.Shape) => {
+    const id = target.id();
+    if (id !== polygonDetails.id) {
+      newShape = {
+        status: "editing",
+        shapeId: polygonDetails.id,
+        highlighted: "all",
+        type: "none",
+      };
+    }
   };
 </script>
 
@@ -133,12 +145,14 @@
   {:else}
     <KonvaShape
       on:dblclick={onDoubleClick}
+      on:click={(e) => onClick(e.detail.target)}
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
         stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
         strokeWidth: polygonDetails.strokeFactor * (polygonDetails.status === "created" ? 1 : 3),
         closed: isCurrentPolygonClosed,
         fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
+        id: polygonDetails.id,
       }}
     />
   {/if}

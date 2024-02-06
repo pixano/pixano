@@ -62,7 +62,7 @@ export type EditRectangleShape = {
 export type EditShape = {
   status: "editing";
   shapeId: string;
-  isHighlighted?: boolean;
+  highlighted?: "all" | "self" | "none";
 } & (EditRectangleShape | EditMaskShape | { type: "none" });
 
 export type Shape = inProgressShape | noShape | EditShape | CreateMaskShape;

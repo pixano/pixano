@@ -77,13 +77,26 @@
     newShape = {
       status: "editing",
       shapeId: bbox.id,
-      isHighlighted: true,
+      highlighted: "self",
       type: "none",
     };
   };
+
+  const onClick = (target: Konva.Group) => {
+    console.log("from rect click", target);
+    const id = target.id();
+    if (id !== bbox.id) {
+      newShape = {
+        status: "editing",
+        shapeId: bbox.id,
+        highlighted: "all",
+        type: "none",
+      };
+    }
+  };
 </script>
 
-<Group on:dblclick={onDoubleClick}>
+<Group on:dblclick={onDoubleClick} on:click={(e) => onClick(e.detail.target)}>
   <Rect
     config={{
       id: `rect${bbox.id}`,

@@ -86,6 +86,22 @@
     );
     canSave.set(true);
   };
+
+  const onColoredDotClick = () => {
+    const isObjectHighlighted = itemObject.highlighted === "self";
+    itemObjects.update((oldObjects) =>
+      oldObjects.map((object) => {
+        if (isObjectHighlighted) {
+          object.highlighted = "all";
+        } else if (object.id === itemObject.id) {
+          object.highlighted = "self";
+        } else {
+          object.highlighted = "none";
+        }
+        return object;
+      }),
+    );
+  };
 </script>
 
 <article
@@ -105,7 +121,11 @@
           <EyeOff class="h-4" />
         {/if}
       </IconButton>
-      <div class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]" style="background:{color}" />
+      <button
+        class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
+        style="background:{color}"
+        on:click={onColoredDotClick}
+      />
       <span class="truncate w-max flex-auto">{itemObject.id}</span>
     </div>
     <div class="flex items-center">

@@ -116,14 +116,15 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
-  old.map((object) => {
+export const updateExistingObject = (old: ItemObject[], newShape: Shape) => {
+  return old.map((object) => {
     if (newShape?.status !== "editing") return object;
-    if (newShape.shapeId !== object.id) {
+    if (newShape.highlighted === "all") {
       object.highlighted = "all";
-      return object;
     }
-    if (newShape.isHighlighted) object.highlighted = "self";
+    if (newShape.highlighted === "self") {
+      object.highlighted = newShape.shapeId === object.id ? "self" : "none";
+    }
     if (newShape.type === "mask" && object.mask) {
       return {
         ...object,
@@ -144,6 +145,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
     }
     return object;
   });
+};
 
 export const getObjectsToPreAnnotate = (objects: ItemObject[]) =>
   objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.review_state);
