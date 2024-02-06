@@ -51,7 +51,10 @@
           };
         }
         if (object.id === itemObject.id) {
-          return toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+          object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+        }
+        if (value && itemObject.highlighted === "self") {
+          object.highlighted = "all";
         }
         return object;
       }),
