@@ -2,10 +2,11 @@ import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from 
 import { mask_utils } from "@pixano/models/src";
 
 import {
-  ANNOTATION_ITEM_STROKE_FACTOR,
+  HIGHLIGHTED_BOX_STROKE_FACTOR,
   GROUND_TRUTH,
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
+  HIGHLIGHTED_MASK_STROKE_FACTOR,
 } from "../constants";
 import type { ObjectProperties, ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
@@ -43,7 +44,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     locked: obj.displayControl?.locked,
-    strokeFactor: obj.highlighted === "self" ? ANNOTATION_ITEM_STROKE_FACTOR : 1,
+    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
   } as BBox;
 };
 
@@ -68,7 +69,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    strokeFactor: obj.highlighted === "self" ? ANNOTATION_ITEM_STROKE_FACTOR : 1,
+    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
   } as Mask;
 };
 
