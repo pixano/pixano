@@ -68,6 +68,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+    strokeFactor: obj.highlighted === "self" ? ANNOTATION_ITEM_STROKE_FACTOR : 1,
   } as Mask;
 };
 
@@ -118,7 +119,12 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
 export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
   old.map((object) => {
     if (newShape?.status !== "editing") return object;
-    if (newShape.type === "mask" && object.id === newShape.maskId && object.mask) {
+    if (newShape.shapeId !== object.id) {
+      object.highlighted = "all";
+      return object;
+    }
+    if (newShape.isHighlighted) object.highlighted = "self";
+    if (newShape.type === "mask" && object.mask) {
       return {
         ...object,
         mask: {
@@ -127,7 +133,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
         },
       };
     }
-    if (newShape.type === "rectangle" && object.id === newShape.rectangleId && object.bbox) {
+    if (newShape.type === "rectangle" && object.bbox) {
       return {
         ...object,
         bbox: {
@@ -181,3 +187,5 @@ export const mapObjectWithNewStatus = (
     return object;
   });
 };
+
+export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;

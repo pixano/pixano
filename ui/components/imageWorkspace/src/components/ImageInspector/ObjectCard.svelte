@@ -19,7 +19,7 @@
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
-  import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import ItemFeatures from "../Features/FeatureInputs.svelte";
@@ -88,8 +88,15 @@
   };
 </script>
 
-<article on:mouseenter={() => (showIcons = true)} on:mouseleave={() => (showIcons = open)}>
-  <div class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white")}>
+<article
+  on:mouseenter={() => (showIcons = true)}
+  on:mouseleave={() => (showIcons = open)}
+  id={createObjectCardId(itemObject)}
+>
+  <div
+    class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
+    style="border-color:{itemObject.highlighted === 'self' ? color : 'transparent'}"
+  >
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
         {#if isVisible}

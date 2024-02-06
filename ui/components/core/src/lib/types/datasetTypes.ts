@@ -151,6 +151,7 @@ export interface Mask {
   editing: boolean;
   opacity: number;
   coordinates?: number[];
+  strokeFactor?: number;
 }
 
 export type MaskSVG = string[];

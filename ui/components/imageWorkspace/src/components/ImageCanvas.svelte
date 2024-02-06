@@ -52,6 +52,7 @@
   let allIds: string[] = [];
 
   itemObjects.subscribe((value) => {
+    console.log({ objects: value });
     allIds = value.map((item) => item.id);
   });
 </script>

@@ -17,4 +17,5 @@ export type PolygonGroupDetails = {
   id: string;
   viewId: string | undefined;
   opacity: number;
+  strokeFactor: number;
 };

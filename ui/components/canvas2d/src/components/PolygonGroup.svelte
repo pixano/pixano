@@ -86,11 +86,20 @@
       newShape = {
         status: "editing",
         type: "mask",
-        maskId: polygonDetails.id,
+        shapeId: polygonDetails.id,
         counts,
       };
     }
   }
+
+  const onDoubleClick = () => {
+    newShape = {
+      status: "editing",
+      shapeId: polygonDetails.id,
+      isHighlighted: true,
+      type: "none",
+    };
+  };
 </script>
 
 <Group
@@ -123,10 +132,11 @@
     />
   {:else}
     <KonvaShape
+      on:dblclick={onDoubleClick}
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
         stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
-        strokeWidth: polygonDetails.status === "created" ? 1 : 3,
+        strokeWidth: polygonDetails.strokeFactor * (polygonDetails.status === "created" ? 1 : 3),
         closed: isCurrentPolygonClosed,
         fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
       }}

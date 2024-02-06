@@ -45,7 +45,7 @@
     newShape = {
       status: "editing",
       type: "rectangle",
-      rectangleId: bbox.id,
+      shapeId: bbox.id,
       coords,
     };
   }
@@ -72,9 +72,18 @@
       });
     }
   }
+
+  const onDoubleClick = () => {
+    newShape = {
+      status: "editing",
+      shapeId: bbox.id,
+      isHighlighted: true,
+      type: "none",
+    };
+  };
 </script>
 
-<Group>
+<Group on:dblclick={onDoubleClick}>
   <Rect
     config={{
       id: `rect${bbox.id}`,
@@ -102,6 +111,7 @@
         x: 1 / zoomFactor,
         y: 1 / zoomFactor,
       },
+      opacity: bbox.opacity,
     }}
   >
     <Tag
