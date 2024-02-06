@@ -129,7 +129,7 @@
           <div>
             <p class="font-medium first-letter:uppercase">display</p>
             <div class="flex gap-4">
-              {#if itemObject.bbox && !itemObject.bbox.coords.every((coord) => coord === 0)}
+              {#if itemObject.bbox}
                 <div class="flex gap-2 mt-2 items-center">
                   <p class="font-light first-letter:uppercase">Box</p>
                   <Checkbox

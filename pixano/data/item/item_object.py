@@ -96,12 +96,8 @@ class ItemBBox(BaseModel):
             else None
         )
 
-    def to_pyarrow(self, mask: ItemURLE = None) -> BBox:
+    def to_pyarrow(self) -> BBox:
         """Return ItemBbox as BBox
-
-        Args:
-            mask (ItemURLE, optional): Mask to create BBox from in ItemBBox is empty. Defaults to None.
-
 
         Returns:
             BBox: Bounding box
@@ -110,7 +106,7 @@ class ItemBBox(BaseModel):
         return (
             BBox.from_dict(self.model_dump())
             if self.coords != [0.0, 0.0, 0.0, 0.0]
-            else BBox.from_rle(mask.to_pyarrow()) if mask else None
+            else None
         )
 
 
@@ -202,7 +198,11 @@ class ItemObject(BaseModel):
         pyarrow_object["review_state"] = self.review_state
 
         pyarrow_mask = self.mask.to_pyarrow() if self.mask else None
-        pyarrow_bbox = self.bbox.to_pyarrow(self.mask) if self.bbox else None
+        pyarrow_bbox = (
+            self.bbox.to_pyarrow()
+            if self.bbox
+            else BBox.from_rle(pyarrow_mask) if pyarrow_mask else None
+        )
 
         pyarrow_object["mask"] = pyarrow_mask.to_dict() if pyarrow_mask else None
         pyarrow_object["bbox"] = pyarrow_bbox.to_dict() if pyarrow_bbox else None
