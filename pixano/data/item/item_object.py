@@ -195,7 +195,8 @@ class ItemObject(BaseModel):
         pyarrow_object["view_id"] = self.view_id
 
         # Base fields (review state, bbox, mask)
-        pyarrow_object["review_state"] = self.review_state
+        if self.review_state is not None:
+            pyarrow_object["review_state"] = self.review_state
 
         pyarrow_mask = self.mask.to_pyarrow() if self.mask else None
         pyarrow_bbox = (
