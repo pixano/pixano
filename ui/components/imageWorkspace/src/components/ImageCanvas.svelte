@@ -41,7 +41,7 @@
     newShapeStore.set(newShape);
     if (newShape?.status === "editing") {
       itemObjects.update((oldObjects) => updateExistingObject(oldObjects, newShape));
-      canSave.set(true);
+      canSave.set(newShape.type !== "none");
     }
   }
 
