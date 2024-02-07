@@ -14,13 +14,13 @@
    * http://www.cecill.info
    */
 
-  import { utils, Combobox } from "@pixano/core";
+  import { utils, Combobox, cn } from "@pixano/core";
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import { itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH, PRE_ANNOTATION } from "../../lib/constants";
-  import { sortObjectsByModel } from "../../lib/api/objectsApi";
+  import { createObjectCardId, sortObjectsByModel } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/imageWorkspaceTypes";
 
@@ -34,6 +34,12 @@
   itemObjects.subscribe((value) => {
     allIds = value.map((item) => item.id);
     allItemsSortedByModel = sortObjectsByModel(value);
+    const highlightedObject = value.find((item) => item.highlighted === "self");
+    if (!highlightedObject) return;
+    const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
 
   let colorScale = utils.ordinalColorScale(allIds);
@@ -50,7 +56,11 @@
 <div class="p-2 flex flex-col h-[calc(100vh-200px)]">
   <PreAnnotation {colorScale} bind:preAnnotationIsActive />
   {#if !preAnnotationIsActive}
-    <div class="gap-4 grow grid grid-cols-1 grid-rows-2 h-full">
+    <div
+      class={cn("gap-4 grow grid grid-cols-1 grid-rows-2 h-full", {
+        block: !selectedModel,
+      })}
+    >
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}

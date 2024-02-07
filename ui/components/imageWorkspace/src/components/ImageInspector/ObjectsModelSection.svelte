@@ -77,7 +77,7 @@
   };
 </script>
 
-<section class="h-full overflow-hidden pb-10">
+<section class="h-full pb-10">
   <div class="flex items-center justify-between text-slate-800">
     <div class="flex items-center gap-3 w-full">
       <IconButton {tooltipContent} on:click={handleVisibilityIconClick}>
