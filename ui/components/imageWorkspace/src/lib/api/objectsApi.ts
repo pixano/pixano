@@ -43,7 +43,6 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
-    locked: obj.displayControl?.locked,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     highlighted: obj.highlighted,
   } as BBox;
