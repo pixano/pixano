@@ -19,8 +19,8 @@
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Shape } from "@pixano/core";
-  import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
+  import type { Mask, Shape } from "@pixano/core";
+  import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
     hexToRGBA,
@@ -35,27 +35,23 @@
   export let newShape: Shape;
   export let stage: Konva.Stage;
   export let images: Record<string, HTMLImageElement> = {};
-  export let polygonDetails: PolygonGroupDetails;
+  export let mask: Mask;
   export let color: string;
   export let zoomFactor: Record<string, number>;
 
-  let isCurrentPolygonClosed = polygonDetails.status === "created";
   let canEdit = false;
-  let polygonShape: {
-    simplifiedSvg: string[];
-    simplifiedPoints: PolygonGroupPoint[][];
-  } = {
-    simplifiedSvg: polygonDetails.svg,
-    simplifiedPoints: polygonDetails.svg.reduce(
+  let polygonShape: PolygonShape = {
+    simplifiedSvg: mask.svg,
+    simplifiedPoints: mask.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     ),
   };
 
-  $: canEdit = polygonDetails.editing;
+  $: canEdit = mask.editing;
 
   $: {
-    polygonShape.simplifiedPoints = polygonDetails.svg.reduce(
+    polygonShape.simplifiedPoints = mask.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     );
@@ -66,7 +62,7 @@
   );
 
   function handlePolygonPointsDragMove(id: number, i: number) {
-    const pos = stage.findOne(`#dot-${polygonDetails.id}-${i}-${id}`).position();
+    const pos = stage.findOne(`#dot-${mask.id}-${i}-${id}`).position();
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
       pi === i
         ? points.map((point) => (point.id === id ? { ...point, x: pos.x, y: pos.y } : point))
@@ -81,12 +77,13 @@
       images[viewId].width,
       images[viewId].height,
     );
+    console.log("end");
 
-    if (polygonDetails.editing) {
+    if (mask.editing) {
       newShape = {
         status: "editing",
         type: "mask",
-        shapeId: polygonDetails.id,
+        shapeId: mask.id,
         counts,
       };
     }
@@ -95,17 +92,17 @@
   const onDoubleClick = () => {
     newShape = {
       status: "editing",
-      shapeId: polygonDetails.id,
+      shapeId: mask.id,
       highlighted: "self",
       type: "none",
     };
   };
 
   const onClick = () => {
-    if (polygonDetails.highlighted !== "self") {
+    if (mask.highlighted !== "self") {
       newShape = {
         status: "editing",
-        shapeId: polygonDetails.id,
+        shapeId: mask.id,
         highlighted: "all",
         type: "none",
       };
@@ -114,28 +111,29 @@
 </script>
 
 <Group
+  on:dragend={handlePolygonPointsDragEnd}
   config={{
     id: "polygon",
     draggable: canEdit,
-    visible: polygonDetails.visible,
-    opacity: polygonDetails.opacity,
+    visible: mask.visible,
+    opacity: mask.opacity,
   }}
 >
   {#if canEdit}
     <KonvaShape
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
-        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
+        stroke: color,
         strokeWidth: 2 / zoomFactor[viewId],
-        closed: isCurrentPolygonClosed,
-        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "#f9f4f773",
+        closed: true,
+        fill: hexToRGBA(color, 0.5),
       }}
     />
     <PolygonPoints
       {viewId}
       {stage}
       {zoomFactor}
-      polygonId={polygonDetails.id}
+      polygonId={mask.id}
       points={polygonShape.simplifiedPoints}
       handlePolygonPointsClick={null}
       {handlePolygonPointsDragMove}
@@ -146,12 +144,12 @@
       on:dblclick={onDoubleClick}
       on:click={onClick}
       config={{
-        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonDetails.svg),
-        stroke: polygonDetails.status === "created" ? color : "hsl(316deg 60% 29.41%)",
-        strokeWidth: polygonDetails.strokeFactor * (polygonDetails.status === "created" ? 1 : 3),
-        closed: isCurrentPolygonClosed,
-        fill: polygonDetails.status === "created" ? hexToRGBA(color, 0.5) : "rgb(0,128,0,0.5)",
-        id: polygonDetails.id,
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.svg),
+        stroke: color,
+        strokeWidth: mask.strokeFactor,
+        closed: true,
+        fill: hexToRGBA(color, 0.5),
+        id: mask.id,
       }}
     />
   {/if}

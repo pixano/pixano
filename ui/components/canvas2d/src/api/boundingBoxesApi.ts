@@ -1,10 +1,8 @@
 import type { Mask, SelectionTool } from "@pixano/core";
 
 import Konva from "konva";
-import simplify from "simplify-js";
 
 import { MASK_STROKEWIDTH } from "../lib/constants";
-import type { PolygonGroupDetails, PolygonGroupPoint } from "../lib/types/canvas2dTypes";
 
 export function addMask(
   mask: Mask,
@@ -106,41 +104,4 @@ export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool
     if (currentMaskGroup) currentMaskGroup.destroy();
     if (selectedTool?.postProcessor) selectedTool.postProcessor.reset();
   }
-}
-
-export function mapMaskPointsToLineCoordinates(masks: Mask[]): PolygonGroupDetails[] {
-  const mappedMasks: PolygonGroupDetails[] = masks
-    ?.filter((mask) => mask)
-    .map((mask) => {
-      const points = mask.coordinates || mask.rle.counts;
-      return {
-        visible: mask.visible,
-        editing: mask.editing,
-        id: mask.id,
-        status: mask?.id ? "created" : "creating",
-        svg: mask?.svg,
-        opacity: mask.opacity || 1,
-        viewId: mask.viewId,
-        strokeFactor: mask.strokeFactor || 1,
-        highlighted: mask.highlighted,
-        points: points.reduce((acc, val, i) => {
-          if (i % 2 === 0) {
-            acc.push({
-              x: val,
-              y: points[i + 1],
-              id: i / 2,
-            });
-          }
-          return acc;
-        }, [] as PolygonGroupPoint[]),
-      };
-    })
-    .map((mask) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-      const simplifiedPoints = simplify(mask.points, 4, false);
-      mask.points = simplifiedPoints as PolygonGroupPoint[];
-      return mask as PolygonGroupDetails;
-    });
-
-  return mappedMasks;
 }

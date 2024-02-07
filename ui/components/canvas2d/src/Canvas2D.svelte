@@ -42,13 +42,7 @@
     MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
-  import type { PolygonGroupDetails } from "./lib/types/canvas2dTypes";
-  import {
-    addMask,
-    findOrCreateCurrentMask,
-    clearCurrentAnn,
-    mapMaskPointsToLineCoordinates,
-  } from "./api/boundingBoxesApi";
+  import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
   import PolygonGroup from "./components/PolygonGroup.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
@@ -72,8 +66,6 @@
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-  let manualMasks: PolygonGroupDetails[];
-  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
 
   $: {
     if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
@@ -776,9 +768,6 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    manualMasks = manualMasks.map((mask) =>
-      mask.status === "created" ? mask : { ...mask, points: [] },
-    );
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
@@ -1073,17 +1062,17 @@
             selectedItemId={selectedItem.id}
             bind:newShape
           />
-          {#each manualMasks as manualMask}
-            {#key manualMask.id}
-              {#if manualMask.viewId === view.id}
+          {#each masks as mask}
+            {#key mask.id}
+              {#if mask.viewId === view.id}
                 <PolygonGroup
                   viewId={view.id}
                   bind:newShape
                   {stage}
                   {images}
                   {zoomFactor}
-                  polygonDetails={manualMask}
-                  color={colorScale(manualMask.id)}
+                  {mask}
+                  color={colorScale(mask.id)}
                 />
               {/if}
             {/key}
