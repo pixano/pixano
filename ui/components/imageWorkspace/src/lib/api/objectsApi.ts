@@ -156,9 +156,9 @@ export const sortAndFilterObjectsToAnnotate = (
       return confidence >= confidenceFilterValue[0];
     })
     .sort((a, b) => {
-      const confidenceA = a.bbox?.confidence || 0;
-      const confidenceB = b.bbox?.confidence || 0;
-      return confidenceB - confidenceA;
+      const confidenceA = a.bbox?.coords[0] || 0;
+      const confidenceB = b.bbox?.coords[0] || 0;
+      return confidenceA - confidenceB;
     });
 
 export const mapObjectWithNewStatus = (
