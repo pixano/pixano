@@ -2,11 +2,18 @@
   import { Switch as SwitchPrimitive } from "bits-ui";
   import { cn } from "../../../lib/utils/styleUtils";
 
-  type $$Props = SwitchPrimitive.Props;
+  type $$Props = SwitchPrimitive.Props & {
+    onChange: (checked: boolean | undefined) => void | null;
+  };
 
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = undefined;
   export { className as class };
+  export let onChange: (checked: boolean | undefined) => void;
+
+  $: {
+    onChange(checked);
+  }
 </script>
 
 <SwitchPrimitive.Root

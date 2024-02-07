@@ -2,7 +2,9 @@
   import { Slider as SliderPrimitive } from "bits-ui";
   import { cn } from "../../../lib/utils/styleUtils";
 
-  type $$Props = SliderPrimitive.Props;
+  type $$Props = SliderPrimitive.Props & {
+    onChange: (value: number[] | undefined) => void | null;
+  };
 
   let className: $$Props["class"] = undefined;
   export let value: $$Props["value"] = [0];
@@ -12,6 +14,12 @@
 
   $: pourcentage = Math.round(((value?.[0] || 0) / $$restProps.max) * 100);
   $: displayedValue = `${pourcentage / 100}`;
+
+  export let onChange: (value: number[] | undefined) => void;
+
+  $: {
+    onChange(value);
+  }
 </script>
 
 <div class="flex gap-4">

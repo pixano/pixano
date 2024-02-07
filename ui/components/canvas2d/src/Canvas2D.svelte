@@ -42,20 +42,10 @@
     MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
-  import type { PolygonGroupDetails } from "./lib/types/canvas2dTypes";
-  import {
-    addBBox,
-    addMask,
-    destroyDeletedObjects,
-    findOrCreateCurrentMask,
-    clearCurrentAnn,
-    toggleIsEditingBBox,
-    toggleBBoxIsLocked,
-    mapMaskPointsToLineCoordinates,
-    getNewRectangleDimensions,
-  } from "./api/boundingBoxesApi";
+  import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
   import PolygonGroup from "./components/PolygonGroup.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
+  import Rectangle from "./components/Rectangle.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -76,8 +66,6 @@
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
-  let manualMasks: PolygonGroupDetails[];
-  $: manualMasks = mapMaskPointsToLineCoordinates(masks);
 
   $: {
     if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
@@ -189,7 +177,6 @@
     for (const viewId of Object.keys(selectedItem.views)) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
-      if (bboxes) updateBboxes(viewId);
     }
   });
 
@@ -325,73 +312,6 @@
   }
 
   // ********** BOUNDING BOXES AND MASKS ********** //
-
-  function updateBoxDimensions(rect: Konva.Rect, i: number, viewId: string) {
-    const coords = getNewRectangleDimensions(rect, images[viewId]);
-    newShape = {
-      status: "editing",
-      type: "rectangle",
-      rectangleId: bboxes[i].id,
-      coords,
-    };
-  }
-
-  function updateBboxes(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-
-    if (viewLayer) {
-      const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-      const image: Konva.Image = viewLayer.findOne(`#image-${selectedItem.views[viewId].id}`);
-      const bboxIds: Array<string> = [];
-
-      if (!bboxGroup) return;
-
-      for (let i = 0; i < bboxes.length; ++i) {
-        if (bboxes[i].viewId === viewId) {
-          bboxIds.push(bboxes[i].id);
-
-          //don't add a bbox that already exist
-          const bboxKonva: Konva.Group = bboxGroup.findOne(`#${bboxes[i].id}`);
-          if (!bboxKonva) {
-            addBBox(
-              bboxes[i],
-              colorScale(bboxes[i].id),
-              bboxGroup,
-              image,
-              viewId,
-              zoomFactor,
-              (rect: Konva.Rect) => updateBoxDimensions(rect, i, viewId),
-            );
-          } else {
-            toggleIsEditingBBox(bboxes[i].editing ? "on" : "off", stage, bboxes[i], bboxes);
-            toggleBBoxIsLocked(stage, bboxes[i]);
-            //update visibility & opacity
-            bboxKonva.visible(bboxes[i].visible);
-            bboxKonva.opacity(bboxes[i].opacity);
-            const rect: Konva.Rect = bboxKonva.findOne(`#rect${bboxes[i].id}`);
-            rect.strokeWidth(bboxes[i].strokeFactor * (BBOX_STROKEWIDTH / zoomFactor[viewId]));
-            //update color
-            const style = new Option().style;
-            style.color = colorScale(bboxes[i].id);
-            const bboxText = bboxGroup.findOne(`#text${bboxes[i].id}`);
-            if (bboxText) {
-              bboxText.setAttr("text", bboxes[i].tooltip);
-            }
-            for (const bboxElement of bboxKonva.children) {
-              if (bboxElement instanceof Konva.Rect) {
-                bboxElement.stroke(style.color);
-              }
-              if (bboxElement instanceof Konva.Label) {
-                bboxElement.getTag().fill(style.color);
-                bboxElement.getTag().stroke();
-              }
-            }
-          }
-        }
-      }
-      destroyDeletedObjects(bboxIds, bboxGroup);
-    }
-  }
 
   async function updateCurrentMask(viewId: string) {
     const points = getInputPoints(viewId);
@@ -852,9 +772,6 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    manualMasks = manualMasks.map((mask) =>
-      mask.status === "created" ? mask : { ...mask, points: [] },
-    );
     for (const viewId of Object.keys(selectedItem.views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
@@ -930,6 +847,14 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    if (newShape.status === "none" || (newShape.status == "editing" && newShape.type == "none")) {
+      newShape = {
+        status: "editing",
+        type: "none",
+        shapeId: null,
+        highlighted: "all",
+      };
+    }
     // Perform tool action if any active tool
     // For convenience: bypass tool on mouse middle-button click
     if (selectedTool?.type == "PAN" || event.button == 1) {
@@ -1116,6 +1041,20 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
+          {#each bboxes as bbox}
+            {#if bbox.viewId === view.id}
+              {#key bbox.id}
+                <Rectangle
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view.id]}
+                  {stage}
+                  viewId={view.id}
+                  bind:newShape
+                />
+              {/key}
+            {/if}
+          {/each}
           <CreatePolygon
             viewId={view.id}
             {stage}
@@ -1124,17 +1063,17 @@
             selectedItemId={selectedItem.id}
             bind:newShape
           />
-          {#each manualMasks as manualMask}
-            {#key manualMask.id}
-              {#if manualMask.viewId === view.id}
+          {#each masks as mask}
+            {#key mask.id}
+              {#if mask.viewId === view.id}
                 <PolygonGroup
                   viewId={view.id}
                   bind:newShape
                   {stage}
                   {images}
                   {zoomFactor}
-                  polygonDetails={manualMask}
-                  color={colorScale(manualMask.id)}
+                  {mask}
+                  color={colorScale(mask.id)}
                 />
               {/if}
             {/key}

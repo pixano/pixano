@@ -19,7 +19,7 @@
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
-  import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import ItemFeatures from "../Features/FeatureInputs.svelte";
@@ -51,7 +51,10 @@
           };
         }
         if (object.id === itemObject.id) {
-          return toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+          object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+        }
+        if (value && itemObject.highlighted === "self") {
+          object.highlighted = "all";
         }
         return object;
       }),
@@ -86,10 +89,33 @@
     );
     canSave.set(true);
   };
+
+  const onColoredDotClick = () => {
+    const isObjectHighlighted = itemObject.highlighted === "self";
+    itemObjects.update((oldObjects) =>
+      oldObjects.map((object) => {
+        if (isObjectHighlighted) {
+          object.highlighted = "all";
+        } else if (object.id === itemObject.id) {
+          object.highlighted = "self";
+        } else {
+          object.highlighted = "none";
+        }
+        return object;
+      }),
+    );
+  };
 </script>
 
-<article on:mouseenter={() => (showIcons = true)} on:mouseleave={() => (showIcons = open)}>
-  <div class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white")}>
+<article
+  on:mouseenter={() => (showIcons = true)}
+  on:mouseleave={() => (showIcons = open)}
+  id={createObjectCardId(itemObject)}
+>
+  <div
+    class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
+    style="border-color:{itemObject.highlighted === 'self' ? color : 'transparent'}"
+  >
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
         {#if isVisible}
@@ -98,11 +124,15 @@
           <EyeOff class="h-4" />
         {/if}
       </IconButton>
-      <div class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]" style="background:{color}" />
+      <button
+        class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
+        style="background:{color}"
+        on:click={onColoredDotClick}
+      />
       <span class="truncate w-max flex-auto">{itemObject.id}</span>
     </div>
     <div class="flex items-center">
-      {#if showIcons}
+      {#if showIcons || isEditing || isLocked}
         <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
           ><Pencil class="h-4" /></IconButton
         >
@@ -151,7 +181,6 @@
               {/if}
             </div>
           </div>
-
           <ItemFeatures {features} {isEditing} {saveInputChange} />
         </div>
       </div>

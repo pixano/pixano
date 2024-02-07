@@ -54,31 +54,54 @@
     }
   });
 
-  $: itemObjects.update((objects) => {
-    const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
-    const tempObjects = sortAndFilterObjectsToAnnotate(objectsToPreAnnotate, confidenceFilterValue);
-    return objects.map((object) => {
-      object.highlighted = preAnnotationIsActive ? "none" : "all";
-      if (object.id === tempObjects[0]?.id && preAnnotationIsActive) {
-        object.highlighted = "self";
-      }
-      return object;
-    });
-  });
-
-  const handleAcceptItem = () => {
+  const onAcceptItem = () => {
     itemObjects.update((objects) => [
-      { ...objectToAnnotate, review_state: "accepted", source_id: GROUND_TRUTH, id: nanoid(10) },
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
+      {
+        ...objectToAnnotate,
+        review_state: "accepted",
+        source_id: GROUND_TRUTH,
+        id: nanoid(10),
+        highlighted: "none",
+      },
     ]);
     canSave.set(true);
   };
 
-  const handleRejectItem = () => {
+  const onRejectItem = () => {
     itemObjects.update((objects) =>
       mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "rejected"),
     );
     canSave.set(true);
+  };
+
+  const onSwitchChange = (checked: boolean | undefined) => {
+    preAnnotationIsActive = checked || false;
+    itemObjects.update((objects) => {
+      const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
+      const tempObjects = sortAndFilterObjectsToAnnotate(
+        objectsToPreAnnotate,
+        confidenceFilterValue,
+      );
+      return objects.map((object) => {
+        object.highlighted = preAnnotationIsActive ? "none" : "all";
+        if (object.id === tempObjects[0]?.id && preAnnotationIsActive) {
+          object.highlighted = "self";
+        }
+        return object;
+      });
+    });
+  };
+
+  const onSliderChange = (value: number[] | undefined) => {
+    confidenceFilterValue = value || [0];
+    filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
+      objectsToAnnotate,
+      confidenceFilterValue,
+    );
+    if (objectsToAnnotate.length === 0) {
+      preAnnotationIsActive = false;
+    }
   };
 </script>
 
@@ -88,8 +111,8 @@
       <Tooltip.Root>
         <Tooltip.Trigger>
           <Switch
-            bind:checked={preAnnotationIsActive}
             class={cn({ "pointer-events-none": !objectsToAnnotate.length })}
+            onChange={onSwitchChange}
           />
         </Tooltip.Trigger>
         {#if objectsToAnnotate.length === 0}
@@ -110,7 +133,7 @@
         <Filter />
       </IconButton>
       <div class="px-8 w-full">
-        <Slider bind:value={confidenceFilterValue} max={1} step={0.01} />
+        <Slider onChange={onSliderChange} max={1} step={0.01} />
       </div>
     </div>
     {#if objectToAnnotate}
@@ -127,10 +150,10 @@
           />
         </div>
         <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
-          <PrimaryButton on:click={handleAcceptItem} isSelected disabled={!isFormValid}
+          <PrimaryButton on:click={onAcceptItem} isSelected disabled={!isFormValid}
             ><Check />Accept</PrimaryButton
           >
-          <PrimaryButton on:click={handleRejectItem}>Reject</PrimaryButton>
+          <PrimaryButton on:click={onRejectItem}>Reject</PrimaryButton>
         </div>
       </div>
     {/if}

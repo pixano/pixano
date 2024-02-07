@@ -2,10 +2,11 @@ import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from 
 import { mask_utils } from "@pixano/models/src";
 
 import {
-  ANNOTATION_ITEM_STROKE_FACTOR,
+  HIGHLIGHTED_BOX_STROKE_FACTOR,
   GROUND_TRUTH,
   NOT_ANNOTATION_ITEM_OPACITY,
   PRE_ANNOTATION,
+  HIGHLIGHTED_MASK_STROKE_FACTOR,
 } from "../constants";
 import type { ObjectProperties, ObjectsSortedByModelType } from "../types/imageWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
@@ -24,12 +25,8 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  if (
-    !obj.bbox ||
-    obj.review_state === "rejected" ||
-    (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
-  )
-    return;
+  if (!obj.bbox) return;
+  if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
   const imageWidth = (views?.[obj.view_id]?.features.width.value as number) || 1;
   const x = obj.bbox.coords[0] * imageWidth;
@@ -47,7 +44,8 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     visible: !obj.bbox.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     locked: obj.displayControl?.locked,
-    strokeFactor: obj.highlighted === "self" ? ANNOTATION_ITEM_STROKE_FACTOR : 1,
+    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+    highlighted: obj.highlighted,
   } as BBox;
 };
 
@@ -72,6 +70,8 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     visible: !obj.mask.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+    highlighted: obj.highlighted,
   } as Mask;
 };
 
@@ -119,10 +119,16 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
-  old.map((object) => {
+export const updateExistingObject = (old: ItemObject[], newShape: Shape) => {
+  return old.map((object) => {
     if (newShape?.status !== "editing") return object;
-    if (newShape.type === "mask" && object.id === newShape.maskId && object.mask) {
+    if (newShape.highlighted === "all") {
+      object.highlighted = "all";
+    }
+    if (newShape.highlighted === "self") {
+      object.highlighted = newShape.shapeId === object.id ? "self" : "none";
+    }
+    if (newShape.type === "mask" && object.mask) {
       return {
         ...object,
         mask: {
@@ -131,7 +137,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
         },
       };
     }
-    if (newShape.type === "rectangle" && object.id === newShape.rectangleId && object.bbox) {
+    if (newShape.type === "rectangle" && object.bbox) {
       return {
         ...object,
         bbox: {
@@ -142,6 +148,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) =>
     }
     return object;
   });
+};
 
 export const getObjectsToPreAnnotate = (objects: ItemObject[]) =>
   objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.review_state);
@@ -185,3 +192,5 @@ export const mapObjectWithNewStatus = (
     return object;
   });
 };
+
+export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;

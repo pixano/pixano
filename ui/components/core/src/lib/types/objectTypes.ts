@@ -49,26 +49,23 @@ export type CreateMaskShape = {
   viewId: string;
 };
 
-export type editMaskShape = {
-  status: "editing";
+export type EditMaskShape = {
   type: "mask";
-  maskId: string;
   counts: number[];
 };
 
-export type editRectangleShape = {
-  status: "editing";
+export type EditRectangleShape = {
   type: "rectangle";
-  rectangleId: string;
   coords: number[];
 };
 
-export type Shape =
-  | inProgressShape
-  | noShape
-  | editMaskShape
-  | editRectangleShape
-  | CreateMaskShape;
+export type EditShape = {
+  status: "editing";
+  shapeId: string;
+  highlighted?: "all" | "self" | "none";
+} & (EditRectangleShape | EditMaskShape | { type: "none" });
+
+export type Shape = inProgressShape | noShape | EditShape | CreateMaskShape;
 
 export type FeatureValues = string | number | boolean;
 

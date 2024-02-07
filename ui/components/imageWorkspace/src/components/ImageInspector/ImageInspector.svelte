@@ -71,7 +71,7 @@
         <button
           disabled={!isButtonEnabled}
           class={cn(
-            "h-[48px] w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer",
+            "h-[48px] w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer bg-slate-50 z-50",
             {
               "bg-slate-100 hover:bg-slate-100 pointer-events-none cursor-not-allowed text-slate-500":
                 !isButtonEnabled,
