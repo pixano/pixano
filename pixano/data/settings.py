@@ -27,8 +27,8 @@ class Settings(BaseSettings):
 
     Attributes:
         library_dir (str): Local or S3 path to dataset library
-        endpoint_url (str): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path
-        region_name (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
+        aws_endpoint (str): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path
+        aws_region (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
         aws_access_key (str): S3 AWS access key. Used if library_dir is an S3 path
         aws_secret_key (str): S3 AWS secret key. Used if library_dir is an S3 path
         local_model_dir (str): Local path to models. Used if library_dir is an S3 path
@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     """
 
     library_dir: Optional[str] = (Path.cwd() / "library").as_posix()
-    endpoint_url: Optional[str] = None
-    region_name: Optional[str] = None
+    aws_endpoint: Optional[str] = None
+    aws_region: Optional[str] = None
     aws_access_key: Optional[str] = None
     aws_secret_key: Optional[str] = None
     local_model_dir: Optional[str] = None
@@ -61,8 +61,8 @@ class Settings(BaseSettings):
                     self.data_dir,
                     resource=boto3.resource(
                         "s3",
-                        endpoint_url=self.endpoint_url,
-                        region_name=self.region_name,
+                        endpoint_url=self.aws_endpoint,
+                        region_name=self.aws_region,
                         aws_access_key_id=self.aws_access_key,
                         aws_secret_access_key=self.aws_secret_key,
                     ),
@@ -71,7 +71,7 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "ERROR: Could not register S3 dataset library.\n"
                     "You have to set the following environment variables:\n"
-                    "- ENDPOINT_URL: S3 endpoint URL, use 'AWS' if not provided\n"
+                    "- AWS_ENDPOINT: S3 endpoint URL, use 'AWS' if not provided\n"
                     "- AWS_REGION: S3 region name, not always required for private storages\n"
                     "- AWS_ACCESS_KEY: S3 AWS access key\n"
                     "- AWS_SECRET_KEY: S3 AWS secret key"
