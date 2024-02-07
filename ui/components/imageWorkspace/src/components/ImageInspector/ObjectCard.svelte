@@ -13,7 +13,7 @@
    *
    * http://www.cecill.info
    */
-  import { Eye, EyeOff, Trash2, Lock, Pencil, ChevronRight } from "lucide-svelte";
+  import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import type { DisplayControl, ItemObject } from "@pixano/core";
@@ -63,7 +63,6 @@
     canSave.set(true);
   };
 
-  $: isLocked = itemObject.displayControl?.locked || false;
   $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
   $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
@@ -103,13 +102,14 @@
     </div>
     <div class="flex items-center">
       {#if showIcons}
-        <IconButton selected={isEditing} on:click={() => handleIconClick("editing", !isEditing)}
-          ><Pencil class="h-4" /></IconButton
+        <IconButton
+          selected={isEditing}
+          tooltipContent="edit object"
+          on:click={() => handleIconClick("editing", !isEditing)}><Pencil class="h-4" /></IconButton
         >
-        <IconButton selected={isLocked} on:click={() => handleIconClick("locked", !isLocked)}
-          ><Lock class="h-4" /></IconButton
+        <IconButton tooltipContent="delete object" on:click={deleteObject}
+          ><Trash2 class="h-4" /></IconButton
         >
-        <IconButton on:click={deleteObject}><Trash2 class="h-4" /></IconButton>
       {/if}
       <IconButton on:click={() => (open = !open)}
         ><ChevronRight
