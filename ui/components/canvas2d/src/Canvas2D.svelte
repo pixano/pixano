@@ -989,9 +989,6 @@
         clearCurrentAnn(viewId, stage, selectedTool);
       }
     }
-    if (event.key == "Escape") {
-      clearAnnotationAndInputs();
-    }
     if (event.key == "i") {
       console.log("Canvas2D - Infos");
       console.log("masks", masks);
