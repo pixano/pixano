@@ -61,7 +61,7 @@
     convertPointToSvg(point),
   );
 
-  function handlePolygonPointsDragMove(id: number, i: number) {
+  const handlePolygonPointsDragMove = (id: number, i: number) => {
     const pos = stage.findOne(`#dot-${mask.id}-${i}-${id}`).position();
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
       pi === i
@@ -69,15 +69,14 @@
         : points,
     );
     polygonShape.simplifiedPoints = newSimplifiedPoints;
-  }
+  };
 
-  function handlePolygonPointsDragEnd() {
+  const handlePolygonPointsDragEnd = (svg?: string[]) => {
     const counts = runLengthEncode(
-      polygonShape.simplifiedSvg,
+      svg || polygonShape.simplifiedSvg,
       images[viewId].width,
       images[viewId].height,
     );
-    console.log("end");
 
     if (mask.editing) {
       newShape = {
@@ -87,7 +86,22 @@
         counts,
       };
     }
-  }
+  };
+
+  const handlePolygonDragMove = (e: MouseEvent, target: Konva.Group) => {
+    if (target.id() !== `polygon-${mask.id}`) return;
+    const moveX = target.x();
+    const moveY = target.y();
+    console.log({ moveX, moveY, e, target });
+    const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points) =>
+      points.map((point) => ({ ...point, x: point.x + moveX, y: point.y + moveY })),
+    );
+    const currentPolygon = stage.findOne(`#polygon-${mask.id}`);
+    currentPolygon.position({ x: 0, y: 0 });
+    polygonShape.simplifiedPoints = newSimplifiedPoints;
+    const svg = polygonShape.simplifiedPoints.map((point) => convertPointToSvg(point));
+    handlePolygonPointsDragEnd(svg);
+  };
 
   const onDoubleClick = () => {
     newShape = {
@@ -111,9 +125,9 @@
 </script>
 
 <Group
-  on:dragend={handlePolygonPointsDragEnd}
+  on:dragend={(e) => handlePolygonDragMove(e.detail.evt, e.detail.target)}
   config={{
-    id: "polygon",
+    id: `polygon-${mask.id}`,
     draggable: canEdit,
     visible: mask.visible,
     opacity: mask.opacity,
