@@ -74,7 +74,7 @@
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allItemsSortedByModel[selectedModel].length}
+          numberOfItem={allItemsSortedByModel[selectedModel]?.length || 0}
         >
           <Combobox
             slot="modelSelection"
