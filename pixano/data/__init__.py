@@ -18,6 +18,7 @@ from pixano.data.dataset import (
     DatasetItem,
     DatasetStat,
     DatasetTable,
+    DatasetAvailableFeatureValues,
 )
 from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields, field_to_pyarrow, field_to_python
@@ -32,6 +33,7 @@ __all__ = [
     "DatasetItem",
     "DatasetStat",
     "DatasetTable",
+    "DatasetAvailableFeatureValues",
     "ItemEmbedding",
     "ItemFeature",
     "ItemObject",

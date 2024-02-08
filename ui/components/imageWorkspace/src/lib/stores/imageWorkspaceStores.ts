@@ -23,6 +23,7 @@ import type {
   Mask,
   BBox,
   ItemFeature,
+  FeaturesAvailableValues,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
@@ -38,6 +39,7 @@ export const itemMetas = writable<{
   views: DatasetItem["views"];
   id: DatasetItem["id"];
 }>();
+export const itemFeaturesAvailableValues = writable<FeaturesAvailableValues>();
 export const canSave = writable<boolean>(false);
 export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",

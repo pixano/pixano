@@ -17,6 +17,7 @@ from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
+from pixano.data.dataset.dataset_availablefeaturesvalues import DatasetAvailableFeatureValues
 
 __all__ = [
     "Dataset",
@@ -25,4 +26,5 @@ __all__ = [
     "DatasetItem",
     "DatasetStat",
     "DatasetTable",
+    "DatasetAvailableFeatureValues",
 ]

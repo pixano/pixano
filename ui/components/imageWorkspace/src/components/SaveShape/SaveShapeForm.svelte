@@ -19,7 +19,12 @@
 
   import type { ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
+  import {
+    newShape,
+    itemObjects,
+    itemFeaturesAvailableValues,
+    canSave,
+  } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
@@ -76,6 +81,14 @@
 
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
+
+    // add new inputs to lists of available values
+    for (let feat of $itemFeaturesAvailableValues["objects"]) {
+      if (typeof objectProperties[feat.name] === "string") {
+        feat.values.push(objectProperties[feat.name] as string);
+      }
+    }
+
     newShape.set({ status: "none", shouldReset: true });
     canSave.set(true);
     currentTab = "objects";

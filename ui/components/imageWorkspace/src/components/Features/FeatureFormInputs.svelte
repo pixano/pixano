@@ -15,9 +15,9 @@
    */
 
   import { Input, Checkbox, Combobox } from "@pixano/core/src";
-  import type { FeatureValues, ItemFeature } from "@pixano/core";
+  import type { FeatureValues, ItemFeature, FeaturesAvailableValues, TabFeatureAvailableValues } from "@pixano/core";
 
-  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
+  import { itemMetas, itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
   import {
     createObjectInputsSchema,
     createSchemaFromFeatures,
@@ -32,6 +32,8 @@
   export let initialValues: Record<string, ItemFeature> = {};
 
   let objectValidationSchema: CreateObjectSchema;
+  let availableValues: TabFeatureAvailableValues = {};
+  //let availableValues: Record<string, Array<string>> = {};
 
   itemMetas.subscribe((metas) => {
     const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
@@ -44,6 +46,18 @@
     );
     objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
     formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
+  });
+
+  itemFeaturesAvailableValues.subscribe((ifav) => {
+    console.log("zaza", ifav, ifav["objects"], typeof(ifav["objects"]) )
+    //PB HERE (ts2349, mais ca fonctionne ...)
+    availableValues = (ifav as FeaturesAvailableValues)["objects"].reduce(
+      (acc, feat) => {
+        acc[feat.name] = feat.values;
+        return acc;
+      },
+      {} as TabFeatureAvailableValues
+    );
   });
 
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
@@ -99,6 +113,7 @@
         step={feature.type === "int" ? "1" : "any"}
         autofocus={i === 0 ? true : false}
         value={initialValues[feature.name]?.value || ""}
+        list="availableValues_{feature.name}"
         on:keyup={(e) => e.stopPropagation()}
         on:input={(e) =>
           handleInputChange(
@@ -106,6 +121,11 @@
             feature.name,
           )}
       />
+      <datalist id="availableValues_{feature.name}">
+        {#each availableValues[feature.name].sort() as proposedValue}
+          <option value={proposedValue} />
+        {/each}
+      </datalist>
     </div>
   {/if}
 {/each}

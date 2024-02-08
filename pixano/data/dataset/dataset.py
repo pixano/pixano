@@ -23,6 +23,9 @@ from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
 from pixano.core import Image
+from pixano.data.dataset.dataset_availablefeaturesvalues import (
+    DatasetAvailableFeatureValues,
+)
 from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
@@ -148,22 +151,32 @@ class Dataset(BaseModel):
         self,
         load_stats: bool = False,
         load_thumbnail: bool = False,
+        load_available_values: bool = False,
     ) -> DatasetInfo:
         """Return dataset info with thumbnail and stats inside
 
         Args:
             load_stats (bool, optional): Load dataset stats. Defaults to False.
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+            load_available_values (bool, optional): Load available values. Defaults to False.
 
         Returns:
             DatasetInfo: Dataset info
         """
 
-        return DatasetInfo.from_json(
+        info = DatasetInfo.from_json(
             self.path / "db.json",
             load_stats=load_stats,
             load_thumbnail=load_thumbnail,
         )
+        # TMP
+        # right now we get available values directly from tables.
+        # Later we could build them at import and write it in db.json, in order to read it directly from file
+        # and avoid some table access
+        if load_available_values:
+            info.available_feat_values = self.get_available_features_values()
+
+        return info
 
     def save_info(self):
         """Save updated dataset info"""
@@ -735,6 +748,76 @@ class Dataset(BaseModel):
 
         # Delete removed item objects
         item.delete_objects(ds_tables)
+
+    def get_available_features_values(
+        self,
+    ) -> dict[str, list[DatasetAvailableFeatureValues]]:
+        """get distinct existing values for each scene and object string features
+
+        Returns:
+            dict[str, dict[str, list[str]]]: dict ("scene", "objects") of existing values
+                                             for each scene and object string feature
+        """
+
+        # Load tables
+        ds_tables = self.open_tables()
+
+        avail_values = {"scene": defaultdict(set), "objects": defaultdict(set)}
+        # get features distinct values from objects tables
+        for table_name, obj_table in ds_tables["objects"].items():
+            table_arrow = obj_table.to_arrow()
+            feats = [
+                f
+                for f in table_arrow.column_names
+                if f not in ["id", "item_id", "view_id", "bbox", "mask", "review_state"]
+            ]
+            for feat in feats:
+                v = (
+                    duckdb.sql(f"select DISTINCT {feat} from table_arrow")
+                    .to_arrow_table()
+                    .to_pydict()
+                )
+                if v[feat] is not None and v[feat] != [None]:
+                    avail_values["objects"][feat].update(
+                        [
+                            val
+                            for val in v[feat]
+                            if val is not None and isinstance(val, str)
+                        ]
+                    )
+
+        # get features distinct values from main table
+        for table_name, scene_table in ds_tables["main"].items():
+            table_arrow = scene_table.to_arrow()
+            feats = [
+                f
+                for f in table_arrow.column_names
+                if f not in ["id", "split", "views", "original_id"]
+            ]
+            for feat in feats:
+                v = (
+                    duckdb.sql(f"select DISTINCT {feat} from table_arrow")
+                    .to_arrow_table()
+                    .to_pydict()
+                )
+                if v[feat] is not None and v[feat] != [None]:
+                    avail_values["scene"][feat].update(
+                        [
+                            val
+                            for val in v[feat]
+                            if val is not None and isinstance(val, str)
+                        ]
+                    )
+        # convert dict[str, defaultdict(set)] to dict[str, list[DatasetAvailableFeatureValues]]
+        result = {}
+        for table in avail_values:
+            result[table] = [
+                DatasetAvailableFeatureValues(
+                    name=feat, values=avail_values[table][feat]
+                )
+                for feat in avail_values[table]
+            ]
+        return result
 
     @staticmethod
     def find(

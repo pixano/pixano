@@ -21,6 +21,7 @@
     SelectionTool,
     DatasetInfo,
     ItemObject,
+    FeaturesAvailableValues,
   } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
@@ -32,16 +33,20 @@
     itemBboxes,
     itemMasks,
     itemMetas,
+    itemFeaturesAvailableValues,
     newShape,
     canSave,
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/imageWorkspaceTypes";
   import { Loader2Icon } from "lucide-svelte";
+  import { onMount } from "svelte";
+  import { api } from "@pixano/core/src";
 
   export let currentDatasetId: DatasetInfo["id"];
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
+  export let featuresAvailableValues: FeaturesAvailableValues = {};
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
@@ -68,6 +73,7 @@
     views: selectedItem.views,
     id: selectedItem.id,
   });
+  $: itemFeaturesAvailableValues.set(featuresAvailableValues);
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
 
@@ -104,6 +110,14 @@
       onSave().catch((err) => console.error(err));
     }
   }
+
+  onMount(async () => {
+    //TMP: should be removed when available value written in db.json, so present in DatasetInfo[] from getDatasets (S)
+    // but right now, we compute available feats only in getDataset (no S) route, used only for stats, and here
+    // later, we should export featuresAvailableValues directly from DatasetInfo["available_feat_values"]
+    const completedDatasetwithFeats = await api.getDataset(currentDatasetId);
+    featuresAvailableValues = completedDatasetwithFeats.available_feat_values || {};
+  });
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">
