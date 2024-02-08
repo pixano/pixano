@@ -32,7 +32,7 @@
     rectangleTool,
     addSmartPointTool,
     removeSmartPointTool,
-    polygoneTool,
+    polygonTool,
   } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -52,6 +52,7 @@
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
+      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     } else selectTool(null);
     showSmartTools = !showSmartTools;
   };
@@ -79,21 +80,22 @@
 <div class="h-full shadow-md bg-popover py-4 px-2 w-16 border-l border-slate-200 z-10">
   <div class="flex items-center flex-col gap-4">
     <IconButton
-      tooltipContent="Move image around"
+      tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
       selected={selectedTool?.type === "PAN"}
     >
       <MousePointer />
     </IconButton>
     <IconButton
+      tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
       selected={selectedTool?.type === "RECTANGLE" && !selectedTool.isSmart}
     >
       <Square />
     </IconButton>
     <IconButton
-      tooltipContent="Create a polygon"
-      on:click={() => selectTool(polygoneTool)}
+      tooltipContent={polygonTool.name}
+      on:click={() => selectTool(polygonTool)}
       selected={selectedTool?.type === "POLYGON"}
     >
       <Share2 />
@@ -108,15 +110,10 @@
       "bg-slate-200 rounded-sm": showSmartTools,
     })}
   >
-    <button
-      on:click={handleSmartToolClick}
-      on:dblclick={() =>
-        modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
-      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-slate-800"
-    >
+    <IconButton tooltipContent="Use a smart segmentation model" on:click={handleSmartToolClick}>
       <BrushIcon />
       <MagicIcon />
-    </button>
+    </IconButton>
     {#if showSmartTools}
       <IconButton
         tooltipContent={addSmartPointTool.name}
@@ -135,7 +132,7 @@
         <MagicIcon />
       </IconButton>
       <IconButton
-        tooltipContent="Smart rectangle"
+        tooltipContent={smartRectangleTool.name}
         on:click={() => selectTool(smartRectangleTool)}
         selected={selectedTool?.type === "RECTANGLE" && selectedTool.isSmart}
       >
