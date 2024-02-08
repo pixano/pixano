@@ -138,7 +138,9 @@
         <IconButton
           tooltipContent="Edit object"
           selected={isEditing}
-          on:click={() => handleIconClick("editing", !isEditing)}><Pencil class="h-4" /></IconButton
+          on:click={() => {
+            handleIconClick("editing", !isEditing), (open = true);
+          }}><Pencil class="h-4" /></IconButton
         >
         <IconButton tooltipContent="Delete object" on:click={deleteObject}
           ><Trash2 class="h-4" /></IconButton
