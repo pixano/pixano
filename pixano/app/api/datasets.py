@@ -70,34 +70,3 @@ async def get_dataset(
         status_code=404,
         detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
     )
-
-
-"""
-@router.get(
-    "/datasets/{ds_id}/features", response_model=dict[str, DatasetAvailableFeatureValues]
-)
-async def get_dataset_available_features_values(
-    ds_id: str,
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> dict[str, DatasetAvailableFeatureValues]:
-    ""Load dataset
-
-    Args:
-        ds_id (str): Dataset ID
-        settings (Settings): App settings
-
-    Returns:
-        DatasetInfo: Dataset info
-    ""
-
-    # Load dataset
-    dataset = Dataset.find(ds_id, settings.data_dir)
-
-    # Return dataset info
-    if dataset:
-        return dataset.get_available_features_values()
-    raise HTTPException(
-        status_code=404,
-        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
-    )
-"""

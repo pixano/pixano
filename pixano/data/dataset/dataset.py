@@ -764,7 +764,7 @@ class Dataset(BaseModel):
 
         avail_values = {"scene": defaultdict(set), "objects": defaultdict(set)}
         # get features distinct values from objects tables
-        for table_name, obj_table in ds_tables["objects"].items():
+        for obj_table in ds_tables["objects"].values():
             table_arrow = obj_table.to_arrow()
             feats = [
                 f
@@ -787,7 +787,7 @@ class Dataset(BaseModel):
                     )
 
         # get features distinct values from main table
-        for table_name, scene_table in ds_tables["main"].items():
+        for scene_table in ds_tables["main"].values():
             table_arrow = scene_table.to_arrow()
             feats = [
                 f
@@ -810,12 +810,10 @@ class Dataset(BaseModel):
                     )
         # convert dict[str, defaultdict(set)] to dict[str, list[DatasetAvailableFeatureValues]]
         result = {}
-        for table in avail_values:
+        for table, table_values in avail_values.items():
             result[table] = [
-                DatasetAvailableFeatureValues(
-                    name=feat, values=avail_values[table][feat]
-                )
-                for feat in avail_values[table]
+                DatasetAvailableFeatureValues(name=feat, values=feat_values)
+                for feat, feat_values in table_values.items()
             ]
         return result
 
