@@ -92,7 +92,6 @@
     if (target.id() !== `polygon-${mask.id}`) return;
     const moveX = target.x();
     const moveY = target.y();
-    console.log({ moveX, moveY, e, target });
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points) =>
       points.map((point) => ({ ...point, x: point.x + moveX, y: point.y + moveY })),
     );
