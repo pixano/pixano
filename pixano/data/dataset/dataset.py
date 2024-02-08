@@ -755,7 +755,7 @@ class Dataset(BaseModel):
         """get distinct existing values for each scene and object string features
 
         Returns:
-            dict[str, dict[str, list[str]]]: dict ("scene", "objects") of existing values
+            dict[str, list[DatasetAvailableFeatureValues]]: dict ("scene", "objects") of existing values
                                              for each scene and object string feature
         """
 
