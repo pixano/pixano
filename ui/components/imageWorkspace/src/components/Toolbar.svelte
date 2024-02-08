@@ -43,14 +43,10 @@
 
   export let selectedTool: SelectionTool | null;
   let previousSelectedTool: SelectionTool | null = null;
-  let smartTools = [addSmartPointTool, removeSmartPointTool, smartRectangleTool];
   let showSmartTools: boolean = false;
 
   const selectTool = (tool: SelectionTool | null) => {
     if (tool !== selectedTool) selectedTool = tool;
-    if (tool && !smartTools.includes(tool) && showSmartTools) {
-      showSmartTools = !showSmartTools;
-    }
   };
 
   const handleSmartToolClick = () => {
