@@ -116,11 +116,11 @@
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <IconButton on:click={() => goToNeighborItem("previous")}>
+          <IconButton on:click={() => goToNeighborItem("previous")} tooltipContent="Previous item">
             <ArrowLeft />
           </IconButton>
           {currentItemId}
-          <IconButton on:click={() => goToNeighborItem("next")}>
+          <IconButton on:click={() => goToNeighborItem("next")} tooltipContent="Next item">
             <ArrowRight />
           </IconButton>
         </div>
