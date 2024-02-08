@@ -116,7 +116,10 @@
     style="border-color:{itemObject.highlighted === 'self' ? color : 'transparent'}"
   >
     <div class="flex items-center flex-auto max-w-[50%]">
-      <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
+      <IconButton
+        on:click={() => handleIconClick("hidden", isVisible)}
+        tooltipContent={isVisible ? "Hide" : "Show"}
+      >
         {#if isVisible}
           <Eye class="h-4" />
         {:else}
