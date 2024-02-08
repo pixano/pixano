@@ -19,7 +19,7 @@
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, Shape } from "@pixano/core";
+  import type { Mask, SelectionTool, Shape } from "@pixano/core";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
@@ -38,6 +38,7 @@
   export let mask: Mask;
   export let color: string;
   export let zoomFactor: Record<string, number>;
+  export let selectedTool: SelectionTool;
 
   let canEdit = false;
   let polygonShape: PolygonShape = {
@@ -130,6 +131,7 @@
     draggable: canEdit,
     visible: mask.visible,
     opacity: mask.opacity,
+    listening: selectedTool.type === "PAN",
   }}
 >
   {#if canEdit}
