@@ -43,15 +43,20 @@
 
   export let selectedTool: SelectionTool | null;
   let previousSelectedTool: SelectionTool | null = null;
+  let smartTools = [addSmartPointTool, removeSmartPointTool, smartRectangleTool];
   let showSmartTools: boolean = false;
 
   const selectTool = (tool: SelectionTool | null) => {
     if (tool !== selectedTool) selectedTool = tool;
+    if (tool && !smartTools.includes(tool) && showSmartTools) {
+      showSmartTools = !showSmartTools;
+    }
   };
 
   const handleSmartToolClick = () => {
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
+      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     } else selectTool(null);
     showSmartTools = !showSmartTools;
   };
@@ -109,15 +114,10 @@
       "bg-slate-200 rounded-sm": showSmartTools,
     })}
   >
-    <button
-      on:click={handleSmartToolClick}
-      on:dblclick={() =>
-        modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
-      class="relative hover:bg-primary-light inline-flex items-center justify-center rounded-md text-sm font-medium whitespace-nowrap ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-10 w-10 bg-transparent text-slate-800"
-    >
+    <IconButton tooltipContent="Use a smart segmentation model" on:click={handleSmartToolClick}>
       <BrushIcon />
       <MagicIcon />
-    </button>
+    </IconButton>
     {#if showSmartTools}
       <IconButton
         tooltipContent={addSmartPointTool.name}
