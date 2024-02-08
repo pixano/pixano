@@ -170,6 +170,7 @@
                   <Checkbox
                     handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
                     bind:checked={boxIsVisible}
+                    title={boxIsVisible ? "Hide" : "Show"}
                     class="mx-1"
                   />
                 </div>
@@ -180,6 +181,7 @@
                   <Checkbox
                     handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
                     bind:checked={maskIsVisible}
+                    title={maskIsVisible ? "Hide" : "Show"}
                     class="mx-1"
                   />
                 </div>
