@@ -129,6 +129,7 @@
       <button
         class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
         style="background:{color}"
+        title="Highlight object"
         on:click={onColoredDotClick}
       />
       <span class="truncate w-max flex-auto">{itemObject.id}</span>
