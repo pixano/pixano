@@ -146,12 +146,12 @@
           ><Trash2 class="h-4" /></IconButton
         >
       {/if}
-      <IconButton on:click={() => (open = !open)}
-        ><ChevronRight
-          class={cn("transition", { "rotate-90": open })}
-          strokeWidth={1}
-        /></IconButton
+      <IconButton
+        on:click={() => (open = !open)}
+        tooltipContent={open ? "Hide features" : "Show features"}
       >
+        <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
+      </IconButton>
     </div>
   </div>
   {#if open}
