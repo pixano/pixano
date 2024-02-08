@@ -83,7 +83,7 @@
 
   const handleSaveandContinue = async () => {
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
-    handleContinue();
+    await handleContinue();
   };
 
   const handleContinue = async () => {
