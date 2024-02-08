@@ -99,7 +99,7 @@
         step={feature.type === "int" ? "1" : "any"}
         autofocus={i === 0 ? true : false}
         value={initialValues[feature.name]?.value || ""}
-        list="availableValues_{feature.name}"
+        list="obj_availableValues_{feature.name}"
         on:keyup={(e) => e.stopPropagation()}
         on:input={(e) =>
           handleInputChange(
@@ -107,7 +107,7 @@
             feature.name,
           )}
       />
-      <datalist id="availableValues_{feature.name}">
+      <datalist id="obj_availableValues_{feature.name}">
         {#if "objects" in $itemFeaturesAvailableValues && feature.name in $itemFeaturesAvailableValues.objects}
           {#each $itemFeaturesAvailableValues.objects[feature.name].sort() as proposedValue}
             <option value={proposedValue} />

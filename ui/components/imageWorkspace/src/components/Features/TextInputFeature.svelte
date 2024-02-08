@@ -57,12 +57,12 @@
       value={textFeature.value}
       type={inputType === "str" ? "text" : "number"}
       step={inputType === "int" ? "1" : "any"}
-      list="availableValues_{textFeature.name}"
+      list="scene_availableValues_{textFeature.name}"
       on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
       on:input={() => (isSaved = false)}
       on:keyup={(e) => e.stopPropagation()}
     />
-    <datalist id="availableValues_{textFeature.name}">
+    <datalist id="scene_availableValues_{textFeature.name}">
       {#if "scene" in $itemFeaturesAvailableValues && textFeature.name in $itemFeaturesAvailableValues.scene}
         {#each $itemFeaturesAvailableValues.scene[textFeature.name].sort() as proposedValue}
           <option value={proposedValue} />

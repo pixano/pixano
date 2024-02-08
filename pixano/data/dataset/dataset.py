@@ -756,7 +756,7 @@ class Dataset(BaseModel):
 
         Returns:
             dict[str, list[DatasetAvailableFeatureValues]]: dict ("scene", "objects") of existing values
-                                             for each scene and object string feature
+                                                            for each scene and object string feature
         """
 
         # Load tables
