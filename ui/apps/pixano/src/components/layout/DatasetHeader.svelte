@@ -105,10 +105,13 @@
         <button on:click={() => navigateTo("/")} class="h-10 w-10">
           <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
         </button>
-        <IconButton on:click={() => navigateTo("/")}>
+        <IconButton
+          on:click={() => navigateTo(currentItemId ? `/${datasetName}/dataset` : "/")}
+          tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
+        >
           <ArrowLeftCircleIcon />
         </IconButton>
-        <button on:click={() => navigateTo(`/${datasetName}/dataset`)}> {datasetName} </button>
+        {datasetName}
       </div>
     </div>
     {#if currentItemId}
@@ -116,11 +119,11 @@
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <IconButton on:click={() => goToNeighborItem("previous")}>
+          <IconButton on:click={() => goToNeighborItem("previous")} tooltipContent="Previous item">
             <ArrowLeft />
           </IconButton>
           {currentItemId}
-          <IconButton on:click={() => goToNeighborItem("next")}>
+          <IconButton on:click={() => goToNeighborItem("next")} tooltipContent="Next item">
             <ArrowRight />
           </IconButton>
         </div>
