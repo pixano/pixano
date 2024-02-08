@@ -99,6 +99,7 @@
           type={feature.type === "str" ? "text" : "number"}
           step={feature.type === "int" ? "1" : "any"}
           value={initialValues[feature.name]?.value || ""}
+          autofocus
           on:keyup={(e) => e.stopPropagation()}
           on:input={(e) =>
             handleInputChange(
