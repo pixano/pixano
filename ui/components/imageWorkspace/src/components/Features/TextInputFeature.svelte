@@ -34,6 +34,18 @@
     } else if (inputType === "float") {
       formattedValue = Number(value);
     }
+
+    // add new inputs to lists of available values
+    if ("scene" in $itemFeaturesAvailableValues) {
+      if (typeof formattedValue === "string") {
+        if (!$itemFeaturesAvailableValues.scene[propertyName]) {
+          $itemFeaturesAvailableValues.scene[propertyName] = [formattedValue];
+        } else if (!$itemFeaturesAvailableValues.scene[propertyName].includes(formattedValue)) {
+          $itemFeaturesAvailableValues.scene[propertyName].push(formattedValue);
+        }
+      }
+    }
+
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
   };

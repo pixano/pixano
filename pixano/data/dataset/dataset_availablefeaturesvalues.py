@@ -21,5 +21,6 @@ class DatasetAvailableFeatureValues(BaseModel):
         name (str): feature name
         values (list[str]): available values
     """
+
     name: str
     values: list[str]

@@ -83,12 +83,15 @@
     });
 
     // add new inputs to lists of available values
-    for (let feat in objectProperties) {
-      if (typeof objectProperties[feat] === "string") {
-        if(feat in $itemFeaturesAvailableValues["objects"]) {
-          $itemFeaturesAvailableValues["objects"][feat].push(objectProperties[feat] as string);
-        } else {
-          $itemFeaturesAvailableValues["objects"][feat] = [objectProperties[feat] as string]
+    if ("objects" in $itemFeaturesAvailableValues) {
+      for (let feat in objectProperties) {
+        if (typeof objectProperties[feat] === "string") {
+          const new_val = objectProperties[feat] as string;
+          if (!$itemFeaturesAvailableValues.objects[feat]) {
+            $itemFeaturesAvailableValues.objects[feat] = [new_val];
+          } else if (!$itemFeaturesAvailableValues.objects[feat].includes(new_val)) {
+            $itemFeaturesAvailableValues.objects[feat].push(new_val);
+          }
         }
       }
     }
