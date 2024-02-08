@@ -21,6 +21,7 @@
     SelectionTool,
     DatasetInfo,
     ItemObject,
+    InputFeaturesAvailableValues,
     FeaturesAvailableValues,
   } from "@pixano/core";
 
@@ -46,7 +47,6 @@
   export let currentDatasetId: DatasetInfo["id"];
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
-  export let featuresAvailableValues: FeaturesAvailableValues = {};
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
@@ -73,7 +73,6 @@
     views: selectedItem.views,
     id: selectedItem.id,
   });
-  $: itemFeaturesAvailableValues.set(featuresAvailableValues);
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
 
@@ -111,12 +110,25 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
     //TMP: should be removed when available value written in db.json, so present in DatasetInfo[] from getDatasets (S)
     // but right now, we compute available feats only in getDataset (no S) route, used only for stats, and here
     // later, we should export featuresAvailableValues directly from DatasetInfo["available_feat_values"]
-    const completedDatasetwithFeats = await api.getDataset(currentDatasetId);
-    featuresAvailableValues = completedDatasetwithFeats.available_feat_values || {};
+    api
+      .getDataset(currentDatasetId)
+      .then((datasetWithFeats) => {
+        const inputFeaturesAvailableValues: InputFeaturesAvailableValues = datasetWithFeats.available_feat_values || {};
+        let outputFeaturesAvailableValues: FeaturesAvailableValues = {}
+        //convert from InputFeaturesAvailableValues to FeaturesAvailableValues
+        for(let table in inputFeaturesAvailableValues) {
+          outputFeaturesAvailableValues[table] = {}
+          for(let feat of inputFeaturesAvailableValues[table]) {
+            outputFeaturesAvailableValues[table][feat.name] = feat.values;
+          }
+        }
+        itemFeaturesAvailableValues.set(outputFeaturesAvailableValues);
+      })
+      .catch((err) => console.log(err));
   });
 </script>
 

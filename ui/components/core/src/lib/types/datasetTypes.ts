@@ -27,7 +27,7 @@ export interface DatasetInfo {
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
-  available_feat_values?: FeaturesAvailableValues;
+  available_feat_values?: InputFeaturesAvailableValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
@@ -140,11 +140,17 @@ export interface ItemFeature {
   required?: boolean;
 }
 
-export interface TabFeatureAvailableValues {
-  [key: string]: Array<string>
-}
 export interface FeaturesAvailableValues {
-  [key: string]: TabFeatureAvailableValues
+  [key: string]: {
+    [innerKey: string]: Array<string>;
+  };
+}
+
+export interface InputFeaturesAvailableValues {
+  [key: string]: Array<{
+    name: string;
+    values: Array<string>;
+  }>;
 }
 
 // UI DATA

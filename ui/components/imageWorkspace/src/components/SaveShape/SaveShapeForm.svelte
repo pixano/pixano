@@ -83,9 +83,9 @@
     });
 
     // add new inputs to lists of available values
-    for (let feat of $itemFeaturesAvailableValues["objects"]) {
-      if (typeof objectProperties[feat.name] === "string") {
-        feat.values.push(objectProperties[feat.name] as string);
+    for (let feat in $itemFeaturesAvailableValues["objects"]) {
+      if (typeof objectProperties[feat] === "string") {
+        $itemFeaturesAvailableValues["objects"][feat].push(objectProperties[feat] as string);
       }
     }
 
