@@ -32,7 +32,7 @@
     rectangleTool,
     addSmartPointTool,
     removeSmartPointTool,
-    polygoneTool,
+    polygonTool,
   } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -79,21 +79,22 @@
 <div class="h-full shadow-md bg-popover py-4 px-2 w-16 border-l border-slate-200 z-10">
   <div class="flex items-center flex-col gap-4">
     <IconButton
-      tooltipContent="Move image around"
+      tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
       selected={selectedTool?.type === "PAN"}
     >
       <MousePointer />
     </IconButton>
     <IconButton
+      tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
       selected={selectedTool?.type === "RECTANGLE" && !selectedTool.isSmart}
     >
       <Square />
     </IconButton>
     <IconButton
-      tooltipContent="Create a polygon"
-      on:click={() => selectTool(polygoneTool)}
+      tooltipContent={polygonTool.name}
+      on:click={() => selectTool(polygonTool)}
       selected={selectedTool?.type === "POLYGON"}
     >
       <Share2 />
@@ -135,7 +136,7 @@
         <MagicIcon />
       </IconButton>
       <IconButton
-        tooltipContent="Smart rectangle"
+        tooltipContent={smartRectangleTool.name}
         on:click={() => selectTool(smartRectangleTool)}
         selected={selectedTool?.type === "RECTANGLE" && selectedTool.isSmart}
       >

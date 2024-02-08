@@ -6,16 +6,16 @@ export const panTool: SelectionTool = {
   cursor: "move",
 };
 
-export const smartRectangleTool: SelectionTool = {
-  name: "Smart rectangle selection",
+export const rectangleTool: SelectionTool = {
+  name: "Create a bounding box",
   type: "RECTANGLE",
   cursor: "crosshair",
-  isSmart: true,
+  isSmart: false,
 };
 
-export const rectangleTool: SelectionTool = {
-  name: "Rectangle selection",
-  type: "RECTANGLE",
+export const polygonTool: SelectionTool = {
+  name: "Create a polygon",
+  type: "POLYGON",
   cursor: "crosshair",
   isSmart: false,
 };
@@ -36,9 +36,9 @@ export const addSmartPointTool: SelectionTool = {
   isSmart: true,
 };
 
-export const polygoneTool: SelectionTool = {
-  name: "Polygone selection",
-  type: "POLYGON",
+export const smartRectangleTool: SelectionTool = {
+  name: "Rectangle selection",
+  type: "RECTANGLE",
   cursor: "crosshair",
-  isSmart: false,
+  isSmart: true,
 };
