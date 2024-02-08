@@ -88,7 +88,7 @@
     }
   };
 
-  const handlePolygonDragMove = (e: MouseEvent, target: Konva.Group) => {
+  const handlePolygonDragEnd = (target: Konva.Group) => {
     if (target.id() !== `polygon-${mask.id}`) return;
     const moveX = target.x();
     const moveY = target.y();
@@ -124,7 +124,7 @@
 </script>
 
 <Group
-  on:dragend={(e) => handlePolygonDragMove(e.detail.evt, e.detail.target)}
+  on:dragend={(e) => handlePolygonDragEnd(e.detail.target)}
   config={{
     id: `polygon-${mask.id}`,
     draggable: canEdit,
