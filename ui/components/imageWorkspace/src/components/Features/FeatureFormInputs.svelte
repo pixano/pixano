@@ -32,8 +32,6 @@
   export let initialValues: Record<string, ItemFeature> = {};
 
   let objectValidationSchema: CreateObjectSchema;
-  let availableValues: TabFeatureAvailableValues = {};
-  //let availableValues: Record<string, Array<string>> = {};
 
   itemMetas.subscribe((metas) => {
     const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
@@ -110,9 +108,11 @@
           )}
       />
       <datalist id="availableValues_{feature.name}">
-        {#each $itemFeaturesAvailableValues["objects"][feature.name].sort() as proposedValue}
-          <option value={proposedValue} />
-        {/each}
+        {#if "objects" in $itemFeaturesAvailableValues && feature.name in $itemFeaturesAvailableValues.objects}
+          {#each $itemFeaturesAvailableValues.objects[feature.name].sort() as proposedValue}
+            <option value={proposedValue} />
+          {/each}
+        {/if}
       </datalist>
     </div>
   {/if}

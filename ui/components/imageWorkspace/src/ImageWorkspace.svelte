@@ -117,13 +117,16 @@
     api
       .getDataset(currentDatasetId)
       .then((datasetWithFeats) => {
-        const inputFeaturesAvailableValues: InputFeaturesAvailableValues = datasetWithFeats.available_feat_values || {};
-        let outputFeaturesAvailableValues: FeaturesAvailableValues = {}
+        const inputFeaturesAvailableValues: InputFeaturesAvailableValues =
+          datasetWithFeats.available_feat_values || {};
+        let outputFeaturesAvailableValues: FeaturesAvailableValues = {};
         //convert from InputFeaturesAvailableValues to FeaturesAvailableValues
-        for(let table in inputFeaturesAvailableValues) {
-          outputFeaturesAvailableValues[table] = {}
-          for(let feat of inputFeaturesAvailableValues[table]) {
-            outputFeaturesAvailableValues[table][feat.name] = feat.values;
+        for (let table in inputFeaturesAvailableValues) {
+          outputFeaturesAvailableValues[table] = {};
+          for (let feat of inputFeaturesAvailableValues[table]) {
+            if (feat.values.length) {
+              outputFeaturesAvailableValues[table][feat.name] = feat.values;
+            }
           }
         }
         itemFeaturesAvailableValues.set(outputFeaturesAvailableValues);

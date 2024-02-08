@@ -17,8 +17,8 @@
   import { CheckCheckIcon } from "lucide-svelte";
 
   import { Input } from "@pixano/core/src";
-
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
+  import { itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
@@ -43,12 +43,21 @@
   {#if isEditing}
     <Input
       value={textFeature.value}
-      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
-      on:input={() => (isSaved = false)}
       type={inputType === "str" ? "text" : "number"}
       step={inputType === "int" ? "1" : "any"}
+      list="availableValues_{textFeature.name}"
+      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
+      on:input={() => (isSaved = false)}
       on:keyup={(e) => e.stopPropagation()}
     />
+    <datalist id="availableValues_{textFeature.name}">
+      {#if "scene" in $itemFeaturesAvailableValues && textFeature.name in $itemFeaturesAvailableValues.scene}
+        {#each $itemFeaturesAvailableValues.scene[textFeature.name].sort() as proposedValue}
+          <option value={proposedValue} />
+        {/each}
+      {/if}
+    </datalist>
+
     {#if isSaved}
       <span class="text-green-700">
         <CheckCheckIcon />
