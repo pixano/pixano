@@ -40,8 +40,8 @@
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
-  type Direction = "previous" | "next" | "none";
-  let showConfirmModal: Direction = "none";
+  let showConfirmModal: string = "none";
+  let newItemId: string = "none";
 
   saveCurrentItemStore.subscribe((value) => (canSaveCurrentItem = value.canSave));
 
@@ -57,23 +57,19 @@
     currentItemId = value.params.itemId;
   });
 
-  const findAndNavigateToNeighbor = async (direction: Direction) => {
-    if (direction === "none") return;
+  const goToNeighborItem = async (direction: "previous" | "next") => {
     const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
     const datasetItems = Object.values(currentDataset?.page?.items || {});
     const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
     if (selectedId) {
+      const route = `/${currentDatasetName}/dataset/${selectedId}`;
+      if (canSaveCurrentItem) {
+        newItemId = selectedId;
+        return (showConfirmModal = route);
+      }
       currentItemId = selectedId;
-      await goto(`/${currentDatasetName}/dataset/${selectedId}`);
-      showConfirmModal = "none";
+      await goto(route);
     }
-  };
-
-  const goToNeighborItem = async (direction: "previous" | "next") => {
-    if (canSaveCurrentItem) {
-      return (showConfirmModal = direction);
-    }
-    await findAndNavigateToNeighbor(direction);
   };
 
   const onKeyDown = async (event: KeyboardEvent) => {
@@ -85,12 +81,24 @@
     return event.key;
   };
 
-  const handleConfirmClick = async () => {
+  const handleSaveandContinue = async () => {
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
-    await findAndNavigateToNeighbor(showConfirmModal);
+    handleContinue();
+  };
+
+  const handleContinue = async () => {
+    if (newItemId !== "none") {
+      currentItemId = newItemId;
+      newItemId = "none";
+    }
+    await goto(showConfirmModal);
+    showConfirmModal = "none";
   };
 
   async function navigateTo(route: string) {
+    if (canSaveCurrentItem) {
+      return (showConfirmModal = route);
+    }
     await goto(route);
   }
 </script>
@@ -147,8 +155,8 @@
     message="You have unsaved changes"
     confirm="Save and continue"
     alternativeAction="Continue without saving"
-    on:confirm={handleConfirmClick}
-    on:alternative={() => findAndNavigateToNeighbor(showConfirmModal)}
+    on:confirm={handleSaveandContinue}
+    on:alternative={handleContinue}
     on:cancel={() => (showConfirmModal = "none")}
   />
 {/if}
