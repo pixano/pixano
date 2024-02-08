@@ -116,7 +116,10 @@
     style="border-color:{itemObject.highlighted === 'self' ? color : 'transparent'}"
   >
     <div class="flex items-center flex-auto max-w-[50%]">
-      <IconButton on:click={() => handleIconClick("hidden", isVisible)}>
+      <IconButton
+        on:click={() => handleIconClick("hidden", isVisible)}
+        tooltipContent={isVisible ? "Hide object" : "Show object"}
+      >
         {#if isVisible}
           <Eye class="h-4" />
         {:else}
@@ -126,6 +129,7 @@
       <button
         class="rounded-full border w-3 h-3 mr-2 flex-[0_0_0.75rem]"
         style="background:{color}"
+        title="Highlight object"
         on:click={onColoredDotClick}
       />
       <span class="truncate w-max flex-auto">{itemObject.id}</span>
@@ -133,20 +137,22 @@
     <div class="flex items-center">
       {#if showIcons || isEditing}
         <IconButton
-          tooltipContent="edit object"
+          tooltipContent="Edit object"
           selected={isEditing}
-          on:click={() => handleIconClick("editing", !isEditing)}><Pencil class="h-4" /></IconButton
+          on:click={() => {
+            handleIconClick("editing", !isEditing), (open = true);
+          }}><Pencil class="h-4" /></IconButton
         >
-        <IconButton tooltipContent="delete object" on:click={deleteObject}
+        <IconButton tooltipContent="Delete object" on:click={deleteObject}
           ><Trash2 class="h-4" /></IconButton
         >
       {/if}
-      <IconButton on:click={() => (open = !open)}
-        ><ChevronRight
-          class={cn("transition", { "rotate-90": open })}
-          strokeWidth={1}
-        /></IconButton
+      <IconButton
+        on:click={() => (open = !open)}
+        tooltipContent={open ? "Hide features" : "Show features"}
       >
+        <ChevronRight class={cn("transition", { "rotate-90": open })} strokeWidth={1} />
+      </IconButton>
     </div>
   </div>
   {#if open}
@@ -165,6 +171,7 @@
                   <Checkbox
                     handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
                     bind:checked={boxIsVisible}
+                    title={boxIsVisible ? "Hide" : "Show"}
                     class="mx-1"
                   />
                 </div>
@@ -175,6 +182,7 @@
                   <Checkbox
                     handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
                     bind:checked={maskIsVisible}
+                    title={maskIsVisible ? "Hide" : "Show"}
                     class="mx-1"
                   />
                 </div>
