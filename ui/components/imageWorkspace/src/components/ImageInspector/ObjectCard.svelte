@@ -133,11 +133,11 @@
     <div class="flex items-center">
       {#if showIcons || isEditing}
         <IconButton
-          tooltipContent="edit object"
+          tooltipContent="Edit object"
           selected={isEditing}
           on:click={() => handleIconClick("editing", !isEditing)}><Pencil class="h-4" /></IconButton
         >
-        <IconButton tooltipContent="delete object" on:click={deleteObject}
+        <IconButton tooltipContent="Delete object" on:click={deleteObject}
           ><Trash2 class="h-4" /></IconButton
         >
       {/if}

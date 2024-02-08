@@ -26,7 +26,7 @@
   export let numberOfItem: number;
 
   let visibilityStatus: "hidden" | "shown" | "mixed" = "shown";
-  $: tooltipContent = visibilityStatus === "hidden" ? "show all" : "hide all";
+  $: tooltipContent = visibilityStatus === "hidden" ? "Show all" : "Hide all";
 
   itemObjects.subscribe((items) => {
     if (!items.length) return;
