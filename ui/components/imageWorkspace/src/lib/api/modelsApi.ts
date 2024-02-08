@@ -27,5 +27,8 @@ export async function loadEmbeddings(
       }
     }
   }
+  if (Object.keys(embeddings).length === 0) {
+    throw new Error("No embeddings found");
+  }
   return embeddings;
 }
