@@ -74,8 +74,12 @@
 <div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
   <h3 class="uppercase font-medium h-10">
     <span>Features</span>
-    <IconButton selected={isEditing} on:click={handleEditIconClick}
-      ><Pencil class="h-4" />
+    <IconButton
+      selected={isEditing}
+      on:click={handleEditIconClick}
+      tooltipContent="Edit scene features"
+    >
+      <Pencil class="h-4" />
     </IconButton>
   </h3>
   <div class="mx-4">
