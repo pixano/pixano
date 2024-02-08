@@ -118,7 +118,7 @@
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton
         on:click={() => handleIconClick("hidden", isVisible)}
-        tooltipContent={isVisible ? "Hide" : "Show"}
+        tooltipContent={isVisible ? "Hide object" : "Show object"}
       >
         {#if isVisible}
           <Eye class="h-4" />
