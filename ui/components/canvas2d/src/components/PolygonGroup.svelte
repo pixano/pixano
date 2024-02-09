@@ -19,7 +19,7 @@
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, Shape } from "@pixano/core";
+  import type { Mask, SelectionTool, Shape } from "@pixano/core";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
@@ -38,6 +38,7 @@
   export let mask: Mask;
   export let color: string;
   export let zoomFactor: Record<string, number>;
+  export let selectedTool: SelectionTool;
 
   let canEdit = false;
   let polygonShape: PolygonShape = {
@@ -61,7 +62,7 @@
     convertPointToSvg(point),
   );
 
-  function handlePolygonPointsDragMove(id: number, i: number) {
+  const handlePolygonPointsDragMove = (id: number, i: number) => {
     const pos = stage.findOne(`#dot-${mask.id}-${i}-${id}`).position();
     const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points, pi) =>
       pi === i
@@ -69,15 +70,14 @@
         : points,
     );
     polygonShape.simplifiedPoints = newSimplifiedPoints;
-  }
+  };
 
-  function handlePolygonPointsDragEnd() {
+  const handlePolygonPointsDragEnd = (svg?: string[]) => {
     const counts = runLengthEncode(
-      polygonShape.simplifiedSvg,
+      svg || polygonShape.simplifiedSvg,
       images[viewId].width,
       images[viewId].height,
     );
-    console.log("end");
 
     if (mask.editing) {
       newShape = {
@@ -87,7 +87,21 @@
         counts,
       };
     }
-  }
+  };
+
+  const handlePolygonDragEnd = (target: Konva.Group) => {
+    if (target.id() !== `polygon-${mask.id}`) return;
+    const moveX = target.x();
+    const moveY = target.y();
+    const newSimplifiedPoints = polygonShape.simplifiedPoints.map((points) =>
+      points.map((point) => ({ ...point, x: point.x + moveX, y: point.y + moveY })),
+    );
+    const currentPolygon = stage.findOne(`#polygon-${mask.id}`);
+    currentPolygon.position({ x: 0, y: 0 });
+    polygonShape.simplifiedPoints = newSimplifiedPoints;
+    const svg = polygonShape.simplifiedPoints.map((point) => convertPointToSvg(point));
+    handlePolygonPointsDragEnd(svg);
+  };
 
   const onDoubleClick = () => {
     newShape = {
@@ -111,12 +125,13 @@
 </script>
 
 <Group
-  on:dragend={handlePolygonPointsDragEnd}
+  on:dragend={(e) => handlePolygonDragEnd(e.detail.target)}
   config={{
-    id: "polygon",
+    id: `polygon-${mask.id}`,
     draggable: canEdit,
     visible: mask.visible,
     opacity: mask.opacity,
+    listening: selectedTool.type === "PAN",
   }}
 >
   {#if canEdit}

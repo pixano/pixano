@@ -86,7 +86,6 @@ export interface ItemView {
 export interface DisplayControl {
   hidden?: boolean;
   editing?: boolean;
-  locked?: boolean;
 }
 
 export interface BBoxObject {
@@ -172,7 +171,6 @@ export interface BBox {
   visible: boolean;
   opacity: number;
   editing?: boolean;
-  locked?: boolean;
   strokeFactor?: number;
   highlighted?: "none" | "self" | "all";
 }

@@ -1051,6 +1051,7 @@
                   {stage}
                   viewId={view.id}
                   bind:newShape
+                  {selectedTool}
                 />
               {/key}
             {/if}
@@ -1074,6 +1075,7 @@
                   {zoomFactor}
                   {mask}
                   color={colorScale(mask.id)}
+                  {selectedTool}
                 />
               {/if}
             {/key}
@@ -1087,6 +1089,7 @@
 {#if viewEmbeddingModal}
   <WarningModal
     message="No embeddings found for view '{viewWithoutEmbeddings}'."
+    details="The embeddings may not have finished loading yet. Please try again."
     on:confirm={() => (viewEmbeddingModal = false)}
   />
 {/if}

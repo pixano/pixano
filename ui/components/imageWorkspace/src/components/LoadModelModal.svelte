@@ -108,13 +108,14 @@
   <WarningModal
     message="It looks like there is no model for interactive segmentation in your dataset library."
     details="Please refer to our interactive annotation notebook for information on how to export your model to ONNX."
-    on:confirm={() => (currentModalOpen = "none")}
+    on:confirm={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
   />
 {/if}
 {#if currentModalOpen === "noEmbeddings"}
   <WarningModal
     message="No embeddings found for model {selectedModelName}."
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
-    on:confirm={() => (currentModalOpen = "selectModel")}
+    on:confirm={() =>
+      modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
   />
 {/if}

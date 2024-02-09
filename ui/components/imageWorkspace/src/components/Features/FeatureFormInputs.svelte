@@ -95,19 +95,34 @@
           <span>*</span>
         {/if}
       </span>
-      <Input
-        type={feature.type === "str" ? "text" : "number"}
-        step={feature.type === "int" ? "1" : "any"}
-        autofocus={i === 0 ? true : false}
-        value={initialValues[feature.name]?.value || ""}
-        list="objAvailableValues_{feature.name}"
-        on:keyup={(e) => e.stopPropagation()}
-        on:input={(e) =>
-          handleInputChange(
-            feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
-            feature.name,
-          )}
-      />
+      {#if i === 0}
+        <Input
+          type={feature.type === "str" ? "text" : "number"}
+          step={feature.type === "int" ? "1" : "any"}
+          value={initialValues[feature.name]?.value || ""}
+          list="objAvailableValues_{feature.name}"
+          autofocus
+          on:keyup={(e) => e.stopPropagation()}
+          on:input={(e) =>
+            handleInputChange(
+              feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
+              feature.name,
+            )}
+        />
+      {:else}
+        <Input
+          type={feature.type === "str" ? "text" : "number"}
+          step={feature.type === "int" ? "1" : "any"}
+          value={initialValues[feature.name]?.value || ""}
+          list="objAvailableValues_{feature.name}"
+          on:keyup={(e) => e.stopPropagation()}
+          on:input={(e) =>
+            handleInputChange(
+              feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
+              feature.name,
+            )}
+        />
+      {/if}
       <datalist id="objAvailableValues_{feature.name}">
         {#if $itemFeaturesAvailableValues.objects && feature.name in $itemFeaturesAvailableValues.objects}
           {#each $itemFeaturesAvailableValues.objects[feature.name].sort() as proposedValue}

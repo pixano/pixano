@@ -40,8 +40,8 @@
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
-  type Direction = "previous" | "next" | "none";
-  let showConfirmModal: Direction = "none";
+  let showConfirmModal: string = "none";
+  let newItemId: string = "none";
 
   saveCurrentItemStore.subscribe((value) => (canSaveCurrentItem = value.canSave));
 
@@ -57,23 +57,19 @@
     currentItemId = value.params.itemId;
   });
 
-  const findAndNavigateToNeighbor = async (direction: Direction) => {
-    if (direction === "none") return;
+  const goToNeighborItem = async (direction: "previous" | "next") => {
     const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
     const datasetItems = Object.values(currentDataset?.page?.items || {});
     const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
     if (selectedId) {
+      const route = `/${currentDatasetName}/dataset/${selectedId}`;
+      if (canSaveCurrentItem) {
+        newItemId = selectedId;
+        return (showConfirmModal = route);
+      }
       currentItemId = selectedId;
-      await goto(`/${currentDatasetName}/dataset/${selectedId}`);
-      showConfirmModal = "none";
+      await goto(route);
     }
-  };
-
-  const goToNeighborItem = async (direction: "previous" | "next") => {
-    if (canSaveCurrentItem) {
-      return (showConfirmModal = direction);
-    }
-    await findAndNavigateToNeighbor(direction);
   };
 
   const onKeyDown = async (event: KeyboardEvent) => {
@@ -85,12 +81,24 @@
     return event.key;
   };
 
-  const handleConfirmClick = async () => {
+  const handleSaveAndContinue = async () => {
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
-    await findAndNavigateToNeighbor(showConfirmModal);
+    await handleContinue();
+  };
+
+  const handleContinue = async () => {
+    if (newItemId !== "none") {
+      currentItemId = newItemId;
+      newItemId = "none";
+    }
+    await goto(showConfirmModal);
+    showConfirmModal = "none";
   };
 
   async function navigateTo(route: string) {
+    if (canSaveCurrentItem) {
+      return (showConfirmModal = route);
+    }
     await goto(route);
   }
 </script>
@@ -105,10 +113,13 @@
         <button on:click={() => navigateTo("/")} class="h-10 w-10">
           <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
         </button>
-        <IconButton on:click={() => navigateTo("/")}>
+        <IconButton
+          on:click={() => navigateTo(currentItemId ? `/${datasetName}/dataset` : "/")}
+          tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
+        >
           <ArrowLeftCircleIcon />
         </IconButton>
-        <button on:click={() => navigateTo(`/${datasetName}/dataset`)}> {datasetName} </button>
+        {datasetName}
       </div>
     </div>
     {#if currentItemId}
@@ -116,11 +127,11 @@
         <Loader2Icon class="animate-spin" />
       {:else}
         <div class="flex items-center gap-4">
-          <IconButton on:click={() => goToNeighborItem("previous")}>
+          <IconButton on:click={() => goToNeighborItem("previous")} tooltipContent="Previous item">
             <ArrowLeft />
           </IconButton>
           {currentItemId}
-          <IconButton on:click={() => goToNeighborItem("next")}>
+          <IconButton on:click={() => goToNeighborItem("next")} tooltipContent="Next item">
             <ArrowRight />
           </IconButton>
         </div>
@@ -144,8 +155,8 @@
     message="You have unsaved changes"
     confirm="Save and continue"
     alternativeAction="Continue without saving"
-    on:confirm={handleConfirmClick}
-    on:alternative={() => findAndNavigateToNeighbor(showConfirmModal)}
+    on:confirm={handleSaveAndContinue}
+    on:alternative={handleContinue}
     on:cancel={() => (showConfirmModal = "none")}
   />
 {/if}
