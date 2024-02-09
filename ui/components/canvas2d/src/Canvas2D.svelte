@@ -1087,6 +1087,7 @@
 {#if viewEmbeddingModal}
   <WarningModal
     message="No embeddings found for view '{viewWithoutEmbeddings}'."
+    details="The embeddings may not have finished loading yet. Please try again."
     on:confirm={() => (viewEmbeddingModal = false)}
   />
 {/if}
