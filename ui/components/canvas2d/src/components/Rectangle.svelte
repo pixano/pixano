@@ -17,7 +17,7 @@
   // Imports
   import Konva from "konva";
   import { Rect, Label, Tag, Text, Group } from "svelte-konva";
-  import type { BBox, Shape } from "@pixano/core";
+  import type { BBox, SelectionTool, Shape } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
@@ -33,6 +33,7 @@
   export let zoomFactor: number;
   export let viewId: string;
   export let newShape: Shape;
+  export let selectedTool: SelectionTool;
 
   let currentRect: Konva.Rect = stage.findOne(`#rect${bbox.id}`);
 
@@ -94,7 +95,11 @@
   };
 </script>
 
-<Group on:dblclick={onDoubleClick} on:click={onClick}>
+<Group
+  on:dblclick={onDoubleClick}
+  on:click={onClick}
+  config={{ listening: selectedTool.type === "PAN" }}
+>
   <Rect
     config={{
       id: `rect${bbox.id}`,
