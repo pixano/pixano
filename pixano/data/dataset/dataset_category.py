@@ -11,18 +11,21 @@
 #
 # http://www.cecill.info
 
-from pixano.data.dataset.dataset import Dataset
-from pixano.data.dataset.dataset_category import DatasetCategory
-from pixano.data.dataset.dataset_info import DatasetInfo
-from pixano.data.dataset.dataset_item import DatasetItem
-from pixano.data.dataset.dataset_stat import DatasetStat
-from pixano.data.dataset.dataset_table import DatasetTable
 
-__all__ = [
-    "Dataset",
-    "DatasetCategory",
-    "DatasetInfo",
-    "DatasetItem",
-    "DatasetStat",
-    "DatasetTable",
-]
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class DatasetCategory(BaseModel):
+    """DatasetTable
+
+    Attributes:
+        id (int): Category ID
+        name (str): Category name
+        supercategory (str, optional): Supercategory name
+    """
+
+    id: int
+    name: str
+    supercategory: Optional[str] = None
