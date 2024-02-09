@@ -49,7 +49,7 @@ class Importer(ABC):
         description: str,
         tables: dict[str, list[DatasetTable]],
         splits: list[str],
-        categories: list[DatasetCategory] = None,        
+        categories: list[DatasetCategory] = None,
     ):
         """Initialize Importer
 
