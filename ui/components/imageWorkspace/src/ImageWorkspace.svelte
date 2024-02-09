@@ -115,7 +115,6 @@
         itemFeaturesAvailableValues.set(
           datasetWithFeats.available_feat_values || { scene: {}, objects: {} },
         );
-        console.log("ifav", $itemFeaturesAvailableValues)
       })
       .catch((err) => console.error(err));
   });

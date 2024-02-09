@@ -47,9 +47,7 @@ class DatasetInfo(BaseModel):
     num_elements: int
     splits: list[str]
     tables: dict[str, list[DatasetTable]]
-    available_feat_values: Optional[dict[str, dict[str, list[str]]]] = (
-        None
-    )
+    available_feat_values: Optional[dict[str, dict[str, list[str]]]] = None
     preview: Optional[str] = None
     stats: Optional[list[DatasetStat]] = None
 
