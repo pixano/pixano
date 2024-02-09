@@ -1051,6 +1051,7 @@
                   {stage}
                   viewId={view.id}
                   bind:newShape
+                  {selectedTool}
                 />
               {/key}
             {/if}
@@ -1074,6 +1075,7 @@
                   {zoomFactor}
                   {mask}
                   color={colorScale(mask.id)}
+                  {selectedTool}
                 />
               {/if}
             {/key}
