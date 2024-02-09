@@ -27,7 +27,7 @@
   } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
-  import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
+  import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
 
   export let currentTab: "scene" | "objects";
@@ -82,17 +82,14 @@
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
 
-    // add new inputs to lists of available values
-    if ("objects" in $itemFeaturesAvailableValues) {
-      for (let feat in objectProperties) {
-        if (typeof objectProperties[feat] === "string") {
-          const new_val = objectProperties[feat] as string;
-          if (!$itemFeaturesAvailableValues.objects[feat]) {
-            $itemFeaturesAvailableValues.objects[feat] = [new_val];
-          } else if (!$itemFeaturesAvailableValues.objects[feat].includes(new_val)) {
-            $itemFeaturesAvailableValues.objects[feat].push(new_val);
-          }
-        }
+    for (let feat in objectProperties) {
+      if (typeof objectProperties[feat] === "string") {
+        addNewInput(
+          $itemFeaturesAvailableValues,
+          "objects",
+          feat,
+          objectProperties[feat] as string,
+        );
       }
     }
 

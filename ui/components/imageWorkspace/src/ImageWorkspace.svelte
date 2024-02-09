@@ -21,8 +21,6 @@
     SelectionTool,
     DatasetInfo,
     ItemObject,
-    InputFeaturesAvailableValues,
-    FeaturesAvailableValues,
   } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
@@ -111,30 +109,13 @@
   }
 
   onMount(() => {
-    //TMP: should be removed when available value written in db.json, so present in DatasetInfo[] from getDatasets (S)
-    // but right now, we compute available feats only in getDataset (no S) route, used only for stats, and here
-    // later, we should get itemFeaturesAvailableValues directly from DatasetInfo["available_feat_values"]
     api
       .getDataset(currentDatasetId)
       .then((datasetWithFeats) => {
-        const inputFeaturesAvailableValues: InputFeaturesAvailableValues =
-          datasetWithFeats.available_feat_values || {};
-        //convert from InputFeaturesAvailableValues to FeaturesAvailableValues
-        const outputFeaturesAvailableValues: FeaturesAvailableValues = Object.entries(
-          inputFeaturesAvailableValues,
-        ).reduce((tables, [tableName, tableValues]) => {
-          tables[tableName] = tableValues.reduce(
-            (features, feature) => {
-              if (feature.values) {
-                features[feature.name] = feature.values;
-              }
-              return features;
-            },
-            {} as FeaturesAvailableValues[""],
-          );
-          return tables;
-        }, {} as FeaturesAvailableValues);
-        itemFeaturesAvailableValues.set(outputFeaturesAvailableValues);
+        itemFeaturesAvailableValues.set(
+          datasetWithFeats.available_feat_values || { scene: {}, objects: {} },
+        );
+        console.log("ifav", $itemFeaturesAvailableValues)
       })
       .catch((err) => console.error(err));
   });

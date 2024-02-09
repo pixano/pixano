@@ -19,10 +19,6 @@ from pydantic import BaseModel
 from s3path import S3Path
 
 from pixano.core import Image
-from pixano.data.dataset.dataset_availablefeaturesvalues import (
-    DatasetAvailableFeatureValues,
-)
-from pixano.data.dataset.dataset_category import DatasetCategory
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 
@@ -51,8 +47,7 @@ class DatasetInfo(BaseModel):
     num_elements: int
     splits: list[str]
     tables: dict[str, list[DatasetTable]]
-    categories: Optional[list[DatasetCategory]] = None
-    available_feat_values: Optional[dict[str, list[DatasetAvailableFeatureValues]]] = (
+    available_feat_values: Optional[dict[str, dict[str, list[str]]]] = (
         None
     )
     preview: Optional[str] = None

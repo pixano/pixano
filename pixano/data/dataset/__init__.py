@@ -12,10 +12,6 @@
 # http://www.cecill.info
 
 from pixano.data.dataset.dataset import Dataset
-from pixano.data.dataset.dataset_availablefeaturesvalues import (
-    DatasetAvailableFeatureValues,
-)
-from pixano.data.dataset.dataset_category import DatasetCategory
 from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
@@ -23,10 +19,8 @@ from pixano.data.dataset.dataset_table import DatasetTable
 
 __all__ = [
     "Dataset",
-    "DatasetCategory",
     "DatasetInfo",
     "DatasetItem",
     "DatasetStat",
     "DatasetTable",
-    "DatasetAvailableFeatureValues",
 ]

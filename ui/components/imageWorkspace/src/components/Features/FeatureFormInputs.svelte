@@ -16,9 +16,9 @@
 
   import { Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemFeature } from "@pixano/core";
-  import TextInputs from "./TextInputs.svelte";
 
   import { itemMetas, itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
+
   import {
     createObjectInputsSchema,
     createSchemaFromFeatures,
@@ -95,21 +95,12 @@
           <span>*</span>
         {/if}
       </span>
-      <TextInputs
-        placeholder={`Select a ${feature.label}`}
-        listItems={$itemFeaturesAvailableValues.objects[feature.name]
-          .sort()
-          .map((val) => ({ value: val, label: val }))}
-        saveValue={(value) =>
-          handleInputChange(feature.type === "str" ? value : Number(value), feature.name)}
-      />
-      <!--
       <Input
         type={feature.type === "str" ? "text" : "number"}
         step={feature.type === "int" ? "1" : "any"}
         autofocus={i === 0 ? true : false}
         value={initialValues[feature.name]?.value || ""}
-        list="obj_availableValues_{feature.name}"
+        list="objAvailableValues_{feature.name}"
         on:keyup={(e) => e.stopPropagation()}
         on:input={(e) =>
           handleInputChange(
@@ -117,14 +108,13 @@
             feature.name,
           )}
       />
-      <datalist id="obj_availableValues_{feature.name}">
-        {#if "objects" in $itemFeaturesAvailableValues && feature.name in $itemFeaturesAvailableValues.objects}
+      <datalist id="objAvailableValues_{feature.name}">
+        {#if $itemFeaturesAvailableValues.objects && feature.name in $itemFeaturesAvailableValues.objects}
           {#each $itemFeaturesAvailableValues.objects[feature.name].sort() as proposedValue}
             <option value={proposedValue} />
           {/each}
         {/if}
       </datalist>
-      -->
     </div>
   {/if}
 {/each}

@@ -1,5 +1,10 @@
 import { createObjectInputsSchema } from "../../lib/settings/objectValidationSchemas";
-import type { DatasetItem, FeatureValues, ItemFeature } from "@pixano/core";
+import type {
+  DatasetItem,
+  FeatureValues,
+  ItemFeature,
+  FeaturesAvailableValues,
+} from "@pixano/core";
 import type {
   CheckboxFeature,
   CreateObjectInputs,
@@ -42,3 +47,19 @@ export const mapShapeInputsToFeatures = (
     },
     {} as Record<string, ItemFeature>,
   );
+
+export const addNewInput = (
+  store: FeaturesAvailableValues,
+  feature_class: string,
+  feature: string,
+  value: string,
+) => {
+  // add new inputs to lists of available values
+  if (feature_class === "objects" || feature_class === "scene") {
+    if (!store[feature_class][feature]) {
+      store[feature_class][feature] = [value];
+    } else if (!store[feature_class][feature].includes(value)) {
+      store[feature_class][feature].push(value);
+    }
+  }
+};

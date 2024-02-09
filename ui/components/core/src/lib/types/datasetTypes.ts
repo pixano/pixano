@@ -27,7 +27,7 @@ export interface DatasetInfo {
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
-  available_feat_values?: InputFeaturesAvailableValues;
+  available_feat_values?: FeaturesAvailableValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
@@ -141,16 +141,8 @@ export interface ItemFeature {
 }
 
 export interface FeaturesAvailableValues {
-  [key: string]: {
-    [innerKey: string]: Array<string>;
-  };
-}
-
-export interface InputFeaturesAvailableValues {
-  [key: string]: Array<{
-    name: string;
-    values: Array<string>;
-  }>;
+  scene: Record<string, Array<string>>;
+  objects: Record<string, Array<string>>;
 }
 
 // UI DATA

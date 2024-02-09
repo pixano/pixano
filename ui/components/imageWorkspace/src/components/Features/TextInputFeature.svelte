@@ -19,6 +19,7 @@
   import { Input } from "@pixano/core/src";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
   import { itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
+  import { addNewInput } from "../../lib/api/featuresApi";
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
@@ -28,6 +29,7 @@
 
   let isSaved = false;
 
+  //const getAvailableValues()
   const onTextInputChange = (value: string, propertyName: string) => {
     let formattedValue: string | number = value;
     if (inputType === "int") {
@@ -36,15 +38,13 @@
       formattedValue = Number(value);
     }
 
-    // add new inputs to lists of available values
-    if (feature_class in $itemFeaturesAvailableValues) {
-      if (typeof formattedValue === "string") {
-        if (!$itemFeaturesAvailableValues[feature_class][propertyName]) {
-          $itemFeaturesAvailableValues[feature_class][propertyName] = [formattedValue];
-        } else if (!$itemFeaturesAvailableValues[feature_class][propertyName].includes(formattedValue)) {
-          $itemFeaturesAvailableValues[feature_class][propertyName].push(formattedValue);
-        }
-      }
+    if (typeof formattedValue === "string") {
+      addNewInput(
+        $itemFeaturesAvailableValues,
+        feature_class,
+        propertyName,
+        formattedValue as string,
+      );
     }
 
     saveInputChange(formattedValue, propertyName);
@@ -64,10 +64,18 @@
       on:keyup={(e) => e.stopPropagation()}
     />
     <datalist id="{feature_class}_availableValues_{textFeature.name}">
-      {#if feature_class in $itemFeaturesAvailableValues && textFeature.name in $itemFeaturesAvailableValues[feature_class]}
-        {#each $itemFeaturesAvailableValues[feature_class][textFeature.name].sort() as proposedValue}
-          <option value={proposedValue} />
-        {/each}
+      {#if feature_class === "objects"}
+        {#if $itemFeaturesAvailableValues.objects && textFeature.name in $itemFeaturesAvailableValues.objects}
+          {#each $itemFeaturesAvailableValues.objects[textFeature.name].sort() as proposedValue}
+            <option value={proposedValue} />
+          {/each}
+        {/if}
+      {:else if feature_class === "scene"}
+        {#if $itemFeaturesAvailableValues.scene && textFeature.name in $itemFeaturesAvailableValues.scene}
+          {#each $itemFeaturesAvailableValues.scene[textFeature.name].sort() as proposedValue}
+            <option value={proposedValue} />
+          {/each}
+        {/if}
       {/if}
     </datalist>
 

@@ -20,7 +20,6 @@ from urllib.parse import urlparse
 import shortuuid
 
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
 
@@ -62,19 +61,9 @@ class COCOImporter(Importer):
             },
         )
 
-        # Create categories
-        categories = []
-        for split in splits:
-            with open(
-                input_dirs["objects"] / f"instances_{split}.json", "r", encoding="utf-8"
-            ) as f:
-                coco_instances = json.load(f)
-                for category in coco_instances["categories"]:
-                    categories.append(DatasetCategory.model_validate(category))
-
         # Initialize Importer
         self.input_dirs = input_dirs
-        super().__init__(name, description, tables, splits, categories)
+        super().__init__(name, description, tables, splits)
 
     def import_rows(self) -> Iterator:
         """Process dataset rows for import

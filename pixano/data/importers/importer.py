@@ -27,7 +27,7 @@ import shortuuid
 from PIL import Image
 from tqdm.auto import tqdm
 
-from pixano.data.dataset import Dataset, DatasetCategory, DatasetInfo, DatasetTable
+from pixano.data.dataset import Dataset, DatasetInfo, DatasetTable
 from pixano.data.fields import Fields
 from pixano.utils import estimate_size
 
@@ -49,7 +49,6 @@ class Importer(ABC):
         description: str,
         tables: dict[str, list[DatasetTable]],
         splits: list[str],
-        categories: list[DatasetCategory] = None,
     ):
         """Initialize Importer
 
@@ -58,7 +57,6 @@ class Importer(ABC):
             description (str): Dataset description
             tables (dict[str, list[DatasetTable]]): Dataset tables
             splits (list[str]): Dataset splits
-            categories (list[DatasetCategory], optional): Dataset categories
         """
 
         # Check input directories
@@ -77,7 +75,6 @@ class Importer(ABC):
             num_elements=0,
             splits=splits,
             tables=tables,
-            categories=categories,
         )
 
     def create_tables(

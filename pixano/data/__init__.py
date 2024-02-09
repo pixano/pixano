@@ -13,12 +13,10 @@
 
 from pixano.data.dataset import (
     Dataset,
-    DatasetCategory,
     DatasetInfo,
     DatasetItem,
     DatasetStat,
     DatasetTable,
-    DatasetAvailableFeatureValues,
 )
 from pixano.data.exporters import COCOExporter, Exporter
 from pixano.data.fields import Fields, field_to_pyarrow, field_to_python
@@ -28,12 +26,10 @@ from pixano.data.settings import Settings, get_settings
 
 __all__ = [
     "Dataset",
-    "DatasetCategory",
     "DatasetInfo",
     "DatasetItem",
     "DatasetStat",
     "DatasetTable",
-    "DatasetAvailableFeatureValues",
     "ItemEmbedding",
     "ItemFeature",
     "ItemObject",

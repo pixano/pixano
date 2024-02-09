@@ -35,8 +35,6 @@ export * as Tabs from "./components/ui/tabs";
 export { Skeleton } from "./components/ui/skeleton";
 export { Checkbox } from "./components/ui/checkbox";
 export { default as Combobox } from "./components/ui/combobox/combobox.svelte";
-export * as Command from "./components/ui/command";
-export * as Popover from "./components/ui/popover";
 export { Input } from "./components/ui/input";
 export { Slider } from "./components/ui/slider";
 export { Switch } from "./components/ui/switch";
