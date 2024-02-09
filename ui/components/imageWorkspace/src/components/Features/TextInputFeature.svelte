@@ -24,6 +24,7 @@
   export let isEditing: boolean;
   export let saveInputChange: (value: string | number, propertyName: string) => void;
   export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
+  export let feature_class: string;
 
   let isSaved = false;
 
@@ -36,12 +37,12 @@
     }
 
     // add new inputs to lists of available values
-    if ("scene" in $itemFeaturesAvailableValues) {
+    if (feature_class in $itemFeaturesAvailableValues) {
       if (typeof formattedValue === "string") {
-        if (!$itemFeaturesAvailableValues.scene[propertyName]) {
-          $itemFeaturesAvailableValues.scene[propertyName] = [formattedValue];
-        } else if (!$itemFeaturesAvailableValues.scene[propertyName].includes(formattedValue)) {
-          $itemFeaturesAvailableValues.scene[propertyName].push(formattedValue);
+        if (!$itemFeaturesAvailableValues[feature_class][propertyName]) {
+          $itemFeaturesAvailableValues[feature_class][propertyName] = [formattedValue];
+        } else if (!$itemFeaturesAvailableValues[feature_class][propertyName].includes(formattedValue)) {
+          $itemFeaturesAvailableValues[feature_class][propertyName].push(formattedValue);
         }
       }
     }
@@ -57,14 +58,14 @@
       value={textFeature.value}
       type={inputType === "str" ? "text" : "number"}
       step={inputType === "int" ? "1" : "any"}
-      list="scene_availableValues_{textFeature.name}"
+      list="{feature_class}_availableValues_{textFeature.name}"
       on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
       on:input={() => (isSaved = false)}
       on:keyup={(e) => e.stopPropagation()}
     />
-    <datalist id="scene_availableValues_{textFeature.name}">
-      {#if "scene" in $itemFeaturesAvailableValues && textFeature.name in $itemFeaturesAvailableValues.scene}
-        {#each $itemFeaturesAvailableValues.scene[textFeature.name].sort() as proposedValue}
+    <datalist id="{feature_class}_availableValues_{textFeature.name}">
+      {#if feature_class in $itemFeaturesAvailableValues && textFeature.name in $itemFeaturesAvailableValues[feature_class]}
+        {#each $itemFeaturesAvailableValues[feature_class][textFeature.name].sort() as proposedValue}
           <option value={proposedValue} />
         {/each}
       {/if}

@@ -119,19 +119,24 @@
       .then((datasetWithFeats) => {
         const inputFeaturesAvailableValues: InputFeaturesAvailableValues =
           datasetWithFeats.available_feat_values || {};
-        let outputFeaturesAvailableValues: FeaturesAvailableValues = {};
         //convert from InputFeaturesAvailableValues to FeaturesAvailableValues
-        for (let table in inputFeaturesAvailableValues) {
-          outputFeaturesAvailableValues[table] = {};
-          for (let feat of inputFeaturesAvailableValues[table]) {
-            if (feat.values.length) {
-              outputFeaturesAvailableValues[table][feat.name] = feat.values;
-            }
-          }
-        }
+        const outputFeaturesAvailableValues: FeaturesAvailableValues = Object.entries(
+          inputFeaturesAvailableValues,
+        ).reduce((tables, [tableName, tableValues]) => {
+          tables[tableName] = tableValues.reduce(
+            (features, feature) => {
+              if (feature.values) {
+                features[feature.name] = feature.values;
+              }
+              return features;
+            },
+            {} as FeaturesAvailableValues[""],
+          );
+          return tables;
+        }, {} as FeaturesAvailableValues);
         itemFeaturesAvailableValues.set(outputFeaturesAvailableValues);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => console.error(err));
   });
 </script>
 

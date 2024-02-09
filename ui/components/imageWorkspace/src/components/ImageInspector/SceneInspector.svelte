@@ -79,7 +79,7 @@
     </IconButton>
   </h3>
   <div class="mx-4">
-    <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
+    <FeatureInputs feature_class="scene" {features} {isEditing} saveInputChange={handleTextInputChange} />
   </div>
 </div>
 <div class="p-4 text-slate-800">

@@ -21,6 +21,7 @@
   import ListFeature from "./ListInputFeature.svelte";
 
   export let features: Feature[];
+  export let feature_class: string;
 
   export let isEditing: boolean;
   export let saveInputChange: (value: string | boolean | number, propertyName: string) => void;
@@ -48,6 +49,7 @@
     {/if}
     {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
       <FeatureTextInput
+        {feature_class}
         saveInputChange={(value, name) => saveInputChange(value, name)}
         textFeature={{ value: feature.value, name: feature.name }}
         inputType={feature.type}

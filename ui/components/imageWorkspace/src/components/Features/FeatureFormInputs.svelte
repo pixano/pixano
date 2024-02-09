@@ -16,6 +16,7 @@
 
   import { Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemFeature } from "@pixano/core";
+  import TextInputs from "./TextInputs.svelte";
 
   import { itemMetas, itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
   import {
@@ -94,6 +95,15 @@
           <span>*</span>
         {/if}
       </span>
+      <TextInputs
+        placeholder={`Select a ${feature.label}`}
+        listItems={$itemFeaturesAvailableValues.objects[feature.name]
+          .sort()
+          .map((val) => ({ value: val, label: val }))}
+        saveValue={(value) =>
+          handleInputChange(feature.type === "str" ? value : Number(value), feature.name)}
+      />
+      <!--
       <Input
         type={feature.type === "str" ? "text" : "number"}
         step={feature.type === "int" ? "1" : "any"}
@@ -114,6 +124,7 @@
           {/each}
         {/if}
       </datalist>
+      -->
     </div>
   {/if}
 {/each}
