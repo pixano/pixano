@@ -57,11 +57,18 @@
   $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
   $: itemMasks.subscribe((masks) => (allMasks = masks));
 
-  $: itemObjects.set(
-    Object.values(selectedItem.objects || {})
+  $: itemObjects.update((old) => {
+    return Object.values(selectedItem.objects || {})
       .flat()
-      .map((obj) => ({ ...obj, displayControl: { hidden: false } })),
-  );
+      .map((obj) => {
+        const oldObj = old.find((o) => o.id === obj.id);
+        if (oldObj) {
+          return { ...oldObj, ...obj };
+        }
+        return obj;
+      });
+  });
+
   $: itemMetas.set({
     features: selectedItem.features,
     itemFeatures: Object.values(selectedItem.objects || {})[0]?.features,

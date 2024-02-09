@@ -38,10 +38,7 @@
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
-        console.log({ item });
         selectedItem = item;
-        // if (selectedItem?.id !== item.id) {
-        // }
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {
