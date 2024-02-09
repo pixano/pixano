@@ -81,7 +81,7 @@
     return event.key;
   };
 
-  const handleSaveandContinue = async () => {
+  const handleSaveAndContinue = async () => {
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: true }));
     await handleContinue();
   };
@@ -155,7 +155,7 @@
     message="You have unsaved changes"
     confirm="Save and continue"
     alternativeAction="Continue without saving"
-    on:confirm={handleSaveandContinue}
+    on:confirm={handleSaveAndContinue}
     on:alternative={handleContinue}
     on:cancel={() => (showConfirmModal = "none")}
   />
