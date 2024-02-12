@@ -113,7 +113,7 @@
       .getDataset(currentDatasetId)
       .then((datasetWithFeats) => {
         itemFeaturesAvailableValues.set(
-          datasetWithFeats.features_values || { scene: {}, objects: {} }
+          datasetWithFeats.features_values || { scene: {}, objects: {} },
         );
       })
       .catch((err) => console.error(err));

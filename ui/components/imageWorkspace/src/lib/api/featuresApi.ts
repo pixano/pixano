@@ -1,10 +1,5 @@
 import { createObjectInputsSchema } from "../../lib/settings/objectValidationSchemas";
-import type {
-  DatasetItem,
-  FeatureValues,
-  ItemFeature,
-  FeaturesValues,
-} from "@pixano/core";
+import type { DatasetItem, FeatureValues, ItemFeature, FeaturesValues } from "@pixano/core";
 import type {
   CheckboxFeature,
   CreateObjectInputs,
