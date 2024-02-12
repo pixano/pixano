@@ -28,7 +28,7 @@ from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.fields import Fields, field_to_pyarrow
-from pixano.data.item.item_feature import ItemFeature
+from pixano.data.item.item_feature import FeaturesValues, ItemFeature
 from pixano.data.item.item_object import ItemObject
 
 
@@ -744,12 +744,11 @@ class Dataset(BaseModel):
 
     def get_features_values(
         self,
-    ) -> dict[str, dict[str, list[str]]]:
+    ) -> FeaturesValues:
         """get distinct existing values for each scene and object string features
 
         Returns:
-            dict[str, dict[str, list[str]]]: dict ("scene", "objects") of existing values
-                                             for each scene and object string feature
+            FeaturesValues: existing values for each scene and object string feature
         """
 
         # Load tables
@@ -776,14 +775,12 @@ class Dataset(BaseModel):
                         )
             return {key: list(values) for key, values in avail_values.items()}
 
-        return {
-            "scene": get_distinct_values(
-                "main", ["id", "split", "views", "original_id"]
-            ),
-            "objects": get_distinct_values(
+        return FeaturesValues(
+            scene=get_distinct_values("main", ["id", "split", "views", "original_id"]),
+            objects=get_distinct_values(
                 "objects", ["id", "item_id", "view_id", "bbox", "mask", "review_state"]
             ),
-        }
+        )
 
     @staticmethod
     def find(
