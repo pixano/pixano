@@ -53,10 +53,12 @@
           ...baseObject,
           bbox: {
             coords: [
-              shape.attrs.x / shape.imageWidth,
-              shape.attrs.y / shape.imageHeight,
-              shape.attrs.width / shape.imageWidth,
-              shape.attrs.height / shape.imageHeight,
+              (shape.attrs.width < 0 ? shape.attrs.x + shape.attrs.width : shape.attrs.x) /
+                shape.imageWidth,
+              (shape.attrs.height < 0 ? shape.attrs.y + shape.attrs.height : shape.attrs.y) /
+                shape.imageHeight,
+              Math.abs(shape.attrs.width) / shape.imageWidth,
+              Math.abs(shape.attrs.height) / shape.imageHeight,
             ],
             format: "xywh",
             is_normalized: true,
