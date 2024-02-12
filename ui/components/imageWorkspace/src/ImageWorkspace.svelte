@@ -60,12 +60,12 @@
   $: itemObjects.update((old) => {
     return Object.values(selectedItem.objects || {})
       .flat()
-      .map((obj) => {
-        const oldObj = old.find((o) => o.id === obj.id);
-        if (oldObj) {
-          return { ...oldObj, ...obj };
+      .map((object) => {
+        const oldObject = old.find((o) => o.id === object.id);
+        if (oldObject) {
+          return { ...oldObject, ...object };
         }
-        return obj;
+        return object;
       });
   });
 
