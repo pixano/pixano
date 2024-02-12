@@ -34,13 +34,11 @@
   $: saveCurrentItemStore.update((old) => ({ ...old, canSave: canSaveCurrentItem }));
 
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
-    if (!dataset || id === selectedItem?.id) return;
+    if (!dataset) return;
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
-        if (selectedItem?.id !== item.id) {
-          selectedItem = item;
-        }
+        selectedItem = item;
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {
@@ -65,6 +63,7 @@
 
   $: {
     if (currentItemId !== selectedItem?.id) {
+      console.log("Loading new item");
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
