@@ -44,17 +44,19 @@ export const mapShapeInputsToFeatures = (
   );
 
 export const addNewInput = (
-  store: FeaturesValues,
+  store: FeaturesValues | undefined,
   feature_class: string,
   feature: string,
   value: string,
 ) => {
-  // add new inputs to lists of available values
-  if (feature_class === "objects" || feature_class === "scene") {
-    if (!store[feature_class][feature]) {
-      store[feature_class][feature] = [value];
-    } else if (!store[feature_class][feature].includes(value)) {
-      store[feature_class][feature].push(value);
+  if (store) {
+    // add new inputs to lists of available values
+    if (feature_class === "objects" || feature_class === "scene") {
+      if (!store[feature_class][feature]) {
+        store[feature_class][feature] = [value];
+      } else if (!store[feature_class][feature].includes(value)) {
+        store[feature_class][feature].push(value);
+      }
     }
   }
 };

@@ -9,6 +9,7 @@
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
   import {
     datasetsStore,
+    currentDatasetIdStore,
     modelsStore,
     datasetTableStore,
     defaultDatasetTableValues,
@@ -19,6 +20,7 @@
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
 
   let datasets: DatasetInfo[];
+  let datasetWithFeats: DatasetInfo;
   let models: Array<string>;
   let pageId: string | null;
   let currentDatasetName: string;
@@ -60,13 +62,21 @@
     } else {
       try {
         datasetItems = await api.getDatasetItems(datasetId, page, size);
+        datasetWithFeats = await api.getDataset(datasetId);
       } catch (err) {
         isErrored = true;
       }
     }
     datasetsStore.update((value = []) =>
       value.map((dataset) =>
-        dataset.id === datasetId ? { ...dataset, page: datasetItems, isErrored } : dataset,
+        dataset.id === datasetId
+          ? {
+              ...dataset,
+              features_values: datasetWithFeats.features_values,
+              page: datasetItems,
+              isErrored,
+            }
+          : dataset,
       ),
     );
   };
@@ -80,6 +90,7 @@
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
     if (currentDatasetId) {
       datasetTableStore.set(defaultDatasetTableValues);
+      currentDatasetIdStore.set(currentDatasetId);
     }
   }
 

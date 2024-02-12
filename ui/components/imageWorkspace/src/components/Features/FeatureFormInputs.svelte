@@ -17,7 +17,8 @@
   import { Input, Checkbox, Combobox } from "@pixano/core/src";
   import type { FeatureValues, ItemFeature } from "@pixano/core";
 
-  import { itemMetas, itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
+  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
+  import { datasetsStore, currentDatasetIdStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   import {
     createObjectInputsSchema,
@@ -46,6 +47,8 @@
     objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
     formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
   });
+
+  $: featuresValues = $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values
 
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
@@ -124,8 +127,8 @@
         />
       {/if}
       <datalist id="objAvailableValues_{feature.name}">
-        {#if $itemFeaturesAvailableValues.objects && feature.name in $itemFeaturesAvailableValues.objects}
-          {#each $itemFeaturesAvailableValues.objects[feature.name].sort() as proposedValue}
+        {#if featuresValues?.objects && feature.name in featuresValues.objects}
+          {#each featuresValues.objects[feature.name].sort() as proposedValue}
             <option value={proposedValue} />
           {/each}
         {/if}

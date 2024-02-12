@@ -32,15 +32,12 @@
     itemBboxes,
     itemMasks,
     itemMetas,
-    itemFeaturesAvailableValues,
     newShape,
     canSave,
   } from "./lib/stores/imageWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/imageWorkspaceTypes";
   import { Loader2Icon } from "lucide-svelte";
-  import { onMount } from "svelte";
-  import { api } from "@pixano/core/src";
 
   export let currentDatasetId: DatasetInfo["id"];
   export let selectedItem: DatasetItem;
@@ -107,17 +104,6 @@
       onSave().catch((err) => console.error(err));
     }
   }
-
-  onMount(() => {
-    api
-      .getDataset(currentDatasetId)
-      .then((datasetWithFeats) => {
-        itemFeaturesAvailableValues.set(
-          datasetWithFeats.features_values || { scene: {}, objects: {} },
-        );
-      })
-      .catch((err) => console.error(err));
-  });
 </script>
 
 <div class="w-full h-full grid grid-cols-[48px_calc(100%-380px-48px)_380px]">

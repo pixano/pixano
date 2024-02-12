@@ -18,7 +18,7 @@
 
   import { Input } from "@pixano/core/src";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
-  import { itemFeaturesAvailableValues } from "../../lib/stores/imageWorkspaceStores";
+  import { datasetsStore, currentDatasetIdStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput } from "../../lib/api/featuresApi";
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
@@ -29,7 +29,8 @@
 
   let isSaved = false;
 
-  //const getAvailableValues()
+  $: featuresValues = $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values
+
   const onTextInputChange = (value: string, propertyName: string) => {
     let formattedValue: string | number = value;
     if (inputType === "int") {
@@ -40,7 +41,7 @@
 
     if (typeof formattedValue === "string") {
       addNewInput(
-        $itemFeaturesAvailableValues,
+        $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values,
         feature_class,
         propertyName,
         formattedValue as string,
@@ -65,14 +66,14 @@
     />
     <datalist id="{feature_class}_availableValues_{textFeature.name}">
       {#if feature_class === "objects"}
-        {#if $itemFeaturesAvailableValues.objects && textFeature.name in $itemFeaturesAvailableValues.objects}
-          {#each $itemFeaturesAvailableValues.objects[textFeature.name].sort() as proposedValue}
+        {#if featuresValues?.objects && textFeature.name in featuresValues.objects}
+          {#each featuresValues.objects[textFeature.name].sort() as proposedValue}
             <option value={proposedValue} />
           {/each}
         {/if}
       {:else if feature_class === "scene"}
-        {#if $itemFeaturesAvailableValues.scene && textFeature.name in $itemFeaturesAvailableValues.scene}
-          {#each $itemFeaturesAvailableValues.scene[textFeature.name].sort() as proposedValue}
+        {#if featuresValues?.scene && textFeature.name in featuresValues.scene}
+          {#each featuresValues.scene[textFeature.name].sort() as proposedValue}
             <option value={proposedValue} />
           {/each}
         {/if}

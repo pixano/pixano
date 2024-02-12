@@ -111,6 +111,7 @@
     on:confirm={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
   />
 {/if}
+<!--
 {#if currentModalOpen === "noEmbeddings"}
   <WarningModal
     message="No embeddings found for model {selectedModelName}."
@@ -119,3 +120,4 @@
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
   />
 {/if}
+-->
