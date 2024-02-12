@@ -3,7 +3,7 @@ import type {
   DatasetItem,
   FeatureValues,
   ItemFeature,
-  FeaturesAvailableValues,
+  FeaturesValues,
 } from "@pixano/core";
 import type {
   CheckboxFeature,
@@ -49,7 +49,7 @@ export const mapShapeInputsToFeatures = (
   );
 
 export const addNewInput = (
-  store: FeaturesAvailableValues,
+  store: FeaturesValues,
   feature_class: string,
   feature: string,
   value: string,

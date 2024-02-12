@@ -65,7 +65,7 @@ async def get_dataset(
 
     # Return dataset info
     if dataset:
-        return dataset.load_info(load_stats=True, load_available_values=True)
+        return dataset.load_info(load_stats=True, load_features_values=True)
     raise HTTPException(
         status_code=404,
         detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",

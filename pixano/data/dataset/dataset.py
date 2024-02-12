@@ -148,14 +148,14 @@ class Dataset(BaseModel):
         self,
         load_stats: bool = False,
         load_thumbnail: bool = False,
-        load_available_values: bool = False,
+        load_features_values: bool = False,
     ) -> DatasetInfo:
         """Return dataset info with thumbnail and stats inside
 
         Args:
             load_stats (bool, optional): Load dataset stats. Defaults to False.
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
-            load_available_values (bool, optional): Load available values. Defaults to False.
+            load_features_values (bool, optional): Load available values. Defaults to False.
 
         Returns:
             DatasetInfo: Dataset info
@@ -166,12 +166,8 @@ class Dataset(BaseModel):
             load_stats=load_stats,
             load_thumbnail=load_thumbnail,
         )
-        # TMP
-        # right now we get available values directly from tables.
-        # Later we could build them at import and write it in db.json, in order to read it directly from file
-        # and avoid some table access
-        if load_available_values:
-            info.available_feat_values = self.get_available_features_values()
+        if load_features_values:
+            info.features_values = self.get_features_values()
 
         return info
 
@@ -746,7 +742,7 @@ class Dataset(BaseModel):
         # Delete removed item objects
         item.delete_objects(ds_tables)
 
-    def get_available_features_values(
+    def get_features_values(
         self,
     ) -> dict[str, dict[str, list[str]]]:
         """get distinct existing values for each scene and object string features

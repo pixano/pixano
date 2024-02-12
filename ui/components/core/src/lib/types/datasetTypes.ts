@@ -27,7 +27,7 @@ export interface DatasetInfo {
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
-  available_feat_values?: FeaturesAvailableValues;
+  features_values?: FeaturesValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
@@ -139,7 +139,7 @@ export interface ItemFeature {
   required?: boolean;
 }
 
-export interface FeaturesAvailableValues {
+export interface FeaturesValues {
   scene: Record<string, Array<string>>;
   objects: Record<string, Array<string>>;
 }

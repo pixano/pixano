@@ -36,7 +36,7 @@ class DatasetInfo(BaseModel):
         splits (list[str]): Dataset splits
         tables (dict[str, list[DatasetTable]]): Dataset tables
         categories (list[DatasetCategory], optional): Dataset categories
-        available_feat_values: (dict[str, list[DatasetAvailableFeatureValues]], optional): existing values for each custom feature
+        features_values: (dict[str, dict[str, list[str]]], optional): existing values for each custom feature
         preview (str, optional): Dataset preview
         stats (list[DatasetStat], optional): Dataset stats
     """
@@ -49,7 +49,7 @@ class DatasetInfo(BaseModel):
     splits: list[str]
     tables: dict[str, list[DatasetTable]]
     categories: Optional[list[DatasetCategory]] = None
-    available_feat_values: Optional[dict[str, dict[str, list[str]]]] = None
+    features_values: Optional[dict[str, dict[str, list[str]]]] = None
     preview: Optional[str] = None
     stats: Optional[list[DatasetStat]] = None
 
