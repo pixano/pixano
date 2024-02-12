@@ -127,6 +127,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) => {
     if (newShape.highlighted === "self") {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
     }
+    if (newShape.shapeId !== object.id) return object;
     if (newShape.type === "mask" && object.mask) {
       return {
         ...object,
