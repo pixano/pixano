@@ -18,7 +18,10 @@
 
   import { Input } from "@pixano/core/src";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
-  import { datasetsStore, currentDatasetIdStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import {
+    datasetsStore,
+    currentDatasetIdStore,
+  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import { addNewInput } from "../../lib/api/featuresApi";
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
@@ -29,7 +32,9 @@
 
   let isSaved = false;
 
-  $: featuresValues = $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values
+  $: featuresValues = $datasetsStore.find(
+    (ds) => ds.id === $currentDatasetIdStore,
+  )?.features_values;
 
   const onTextInputChange = (value: string, propertyName: string) => {
     let formattedValue: string | number = value;
@@ -41,7 +46,7 @@
 
     if (typeof formattedValue === "string") {
       addNewInput(
-        $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values,
+        $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
         feature_class,
         propertyName,
         formattedValue as string,

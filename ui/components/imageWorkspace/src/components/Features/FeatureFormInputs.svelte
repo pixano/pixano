@@ -18,7 +18,10 @@
   import type { FeatureValues, ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import { datasetsStore, currentDatasetIdStore } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import {
+    datasetsStore,
+    currentDatasetIdStore,
+  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   import {
     createObjectInputsSchema,
@@ -48,7 +51,9 @@
     formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
   });
 
-  $: featuresValues = $datasetsStore.find((ds)=>ds.id === $currentDatasetIdStore)?.features_values
+  $: featuresValues = $datasetsStore.find(
+    (ds) => ds.id === $currentDatasetIdStore,
+  )?.features_values;
 
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
