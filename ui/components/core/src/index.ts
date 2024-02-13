@@ -38,6 +38,7 @@ export { default as Combobox } from "./components/ui/combobox/combobox.svelte";
 export { Input } from "./components/ui/input";
 export { Slider } from "./components/ui/slider";
 export { Switch } from "./components/ui/switch";
+export * as Command from "./components/ui/command";
 
 // lib
 // utils

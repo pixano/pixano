@@ -16,19 +16,21 @@
 
   import { CheckCheckIcon } from "lucide-svelte";
 
-  import { Input } from "@pixano/core/src";
+  // import { Input } from "@pixano/core/src";
+
+  import AutocompleteTextFeature from "./AutoCompleteFeature.svelte";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
   import {
     datasetsStore,
     currentDatasetIdStore,
   } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  import { addNewInput } from "../../lib/api/featuresApi";
+  // import { addNewInput } from "../../lib/api/featuresApi";
 
   export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
   export let isEditing: boolean;
-  export let saveInputChange: (value: string | number, propertyName: string) => void;
-  export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
-  export let feature_class: string;
+  // export let saveInputChange: (value: string | number, propertyName: string) => void;
+  // export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
+  // export let feature_class: string;
 
   let isSaved = false;
 
@@ -36,31 +38,36 @@
     (ds) => ds.id === $currentDatasetIdStore,
   )?.features_values;
 
-  const onTextInputChange = (value: string, propertyName: string) => {
-    let formattedValue: string | number = value;
-    if (inputType === "int") {
-      formattedValue = Math.round(Number(value));
-    } else if (inputType === "float") {
-      formattedValue = Number(value);
-    }
+  // const onTextInputChange = (value: string, propertyName: string) => {
+  //   let formattedValue: string | number = value;
+  //   if (inputType === "int") {
+  //     formattedValue = Math.round(Number(value));
+  //   } else if (inputType === "float") {
+  //     formattedValue = Number(value);
+  //   }
 
-    if (typeof formattedValue === "string") {
-      addNewInput(
-        $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
-        feature_class,
-        propertyName,
-        formattedValue as string,
-      );
-    }
+  //   if (typeof formattedValue === "string") {
+  //     addNewInput(
+  //       $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
+  //       feature_class,
+  //       propertyName,
+  //       formattedValue,
+  //     );
+  //   }
 
-    saveInputChange(formattedValue, propertyName);
-    isSaved = true;
-  };
+  //   saveInputChange(formattedValue, propertyName);
+  //   isSaved = true;
+  // };
+
+  $: listItems = featuresValues?.scene[textFeature.name].map((feature) => ({
+    label: feature,
+    value: feature,
+  }));
 </script>
 
-<div class="flex justify-start items-center gap-4">
+<div class="flex justify-start items-center gap-4 flex-col">
   {#if isEditing}
-    <Input
+    <!-- <Input
       value={textFeature.value}
       type={inputType === "str" ? "text" : "number"}
       step={inputType === "int" ? "1" : "any"}
@@ -68,8 +75,10 @@
       on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
       on:input={() => (isSaved = false)}
       on:keyup={(e) => e.stopPropagation()}
-    />
-    <datalist id="{feature_class}_availableValues_{textFeature.name}">
+    /> -->
+    <AutocompleteTextFeature {listItems} />
+
+    <!-- <datalist id="{feature_class}_availableValues_{textFeature.name}">
       {#if feature_class === "objects"}
         {#if featuresValues?.objects && textFeature.name in featuresValues.objects}
           {#each featuresValues.objects[textFeature.name].sort() as proposedValue}
@@ -83,7 +92,7 @@
           {/each}
         {/if}
       {/if}
-    </datalist>
+    </datalist> -->
 
     {#if isSaved}
       <span class="text-green-700">
