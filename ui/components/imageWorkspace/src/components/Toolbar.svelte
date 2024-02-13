@@ -41,11 +41,11 @@
   } from "../lib/stores/imageWorkspaceStores";
   import { onMount } from "svelte";
 
-  export let selectedTool: SelectionTool | null;
+  export let selectedTool: SelectionTool;
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
 
-  const selectTool = (tool: SelectionTool | null) => {
+  const selectTool = (tool: SelectionTool) => {
     if (tool !== selectedTool) selectedTool = tool;
   };
 
@@ -53,7 +53,7 @@
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
-    } else selectTool(null);
+    } else selectTool(panTool);
     showSmartTools = !showSmartTools;
   };
 
