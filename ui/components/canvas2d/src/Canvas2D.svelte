@@ -725,13 +725,19 @@
           rect.destroy();
         } else {
           if (!selectedTool.isSmart) {
+            const correctedRect = rect.getClientRect({
+              skipTransform: false,
+              skipShadow: true,
+              skipStroke: true,
+              relativeTo: viewLayer,
+            });
             newShape = {
               status: "inProgress",
               attrs: {
-                x: rect.x(),
-                y: rect.y(),
-                width: rect.width(),
-                height: rect.height(),
+                x: correctedRect.x,
+                y: correctedRect.y,
+                width: correctedRect.width,
+                height: correctedRect.height,
               },
               type: "rectangle",
               viewId,

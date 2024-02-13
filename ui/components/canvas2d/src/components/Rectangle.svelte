@@ -52,9 +52,19 @@
   }
 
   const resizeStroke = () => {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const correctedRect = currentRect.getClientRect({
+      skipTransform: false,
+      skipShadow: true,
+      skipStroke: true,
+      relativeTo: viewLayer,
+    });
     currentRect.setAttrs({
-      width: currentRect.width() * currentRect.scaleX(),
-      height: currentRect.height() * currentRect.scaleY(),
+      x: correctedRect.x,
+      y: correctedRect.y,
+      width: correctedRect.width,
+      height: correctedRect.height,
+      rotation: 0,
       scaleX: 1,
       scaleY: 1,
     });
