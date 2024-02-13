@@ -69,8 +69,8 @@ class App:
     def __init__(
         self,
         library_dir: str,
-        endpoint_url: str = None,
-        region_name: str = None,
+        aws_endpoint: str = None,
+        aws_region: str = None,
         aws_access_key: str = None,
         aws_secret_key: str = None,
         local_model_dir: str = None,
@@ -81,8 +81,8 @@ class App:
 
         Args:
             library_dir (str): Local or S3 path to dataset library
-            endpoint_url (str, optional): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path. Defaults to None.
-            region_name (str, optional): S3 region name, not always required for private storages. Used if library_dir is an S3 path. Defaults to None.
+            aws_endpoint (str, optional): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path. Defaults to None.
+            aws_region (str, optional): S3 region name, not always required for private storages. Used if library_dir is an S3 path. Defaults to None.
             aws_access_key (str, optional): S3 AWS access key. Used if library_dir is an S3 path. Defaults to None.
             aws_secret_key (str, optional): S3 AWS secret key. Used if library_dir is an S3 path. Defaults to None.
             local_model_dir (str, optional): Local path to models. Used if library_dir is an S3 path. Defaults to None.
@@ -95,8 +95,8 @@ class App:
         def get_settings_override():
             return Settings(
                 library_dir=library_dir,
-                endpoint_url=endpoint_url,
-                region_name=region_name,
+                aws_endpoint=aws_endpoint,
+                aws_region=aws_region,
                 aws_access_key=aws_access_key,
                 aws_secret_key=aws_secret_key,
                 local_model_dir=local_model_dir,
@@ -173,12 +173,12 @@ class App:
 @click.command(context_settings={"auto_envvar_prefix": "UVICORN"})
 @click.argument("library_dir", type=str)
 @click.option(
-    "--endpoint_url",
+    "--aws_endpoint",
     type=str,
     help="S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path",
 )
 @click.option(
-    "--region_name",
+    "--aws_region",
     type=str,
     help="S3 region name, not always required for private storages. Used if library_dir is an S3 path",
 )
@@ -213,8 +213,8 @@ class App:
 )
 def main(
     library_dir: str,
-    endpoint_url: str,
-    region_name: str,
+    aws_endpoint: str,
+    aws_region: str,
     aws_access_key: str,
     aws_secret_key: str,
     local_model_dir: str,
@@ -228,8 +228,8 @@ def main(
 
     App(
         library_dir,
-        endpoint_url,
-        region_name,
+        aws_endpoint,
+        aws_region,
         aws_access_key,
         aws_secret_key,
         local_model_dir,
