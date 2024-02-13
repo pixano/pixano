@@ -22,6 +22,7 @@
   import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
   import { interactiveSegmenterModel, modelsStore } from "../lib/stores/imageWorkspaceStores";
   import type { Embeddings, ModelSelection } from "../lib/types/imageWorkspaceTypes";
+  import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
   export let models: Array<string>;
   export let currentDatasetId: DatasetInfo["id"];
@@ -112,10 +113,11 @@
   />
 {/if}
 {#if currentModalOpen === "noEmbeddings"}
-  <WarningModal
+  <ConfirmModal
     message="No embeddings found for model {selectedModelName}."
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
     on:confirm={() =>
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
+    on:cancel={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
   />
 {/if}
