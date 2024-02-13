@@ -53,7 +53,7 @@
     if (!showSmartTools) {
       selectTool(addSmartPointTool);
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
-    } else selectTool(null);
+    } else selectTool(panTool);
     showSmartTools = !showSmartTools;
   };
 
