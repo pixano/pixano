@@ -97,7 +97,7 @@
     currentTab = "objects";
   };
 
-  async function handleKeyDown(event: KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       newShape.set({ status: "none", shouldReset: true });
     }

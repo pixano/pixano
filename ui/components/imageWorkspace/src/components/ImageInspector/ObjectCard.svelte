@@ -189,7 +189,7 @@
               {/if}
             </div>
           </div>
-          <ItemFeatures feature_class="objects" {features} {isEditing} {saveInputChange} />
+          <ItemFeatures featureClass="objects" {features} {isEditing} {saveInputChange} />
         </div>
       </div>
     </div>

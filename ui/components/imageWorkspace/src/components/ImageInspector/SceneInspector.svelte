@@ -84,7 +84,7 @@
   </h3>
   <div class="mx-4">
     <FeatureInputs
-      feature_class="scene"
+      featureClass="scene"
       {features}
       {isEditing}
       saveInputChange={handleTextInputChange}

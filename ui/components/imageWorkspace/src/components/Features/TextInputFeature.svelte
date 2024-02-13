@@ -16,7 +16,7 @@
 
   import { CheckCheckIcon } from "lucide-svelte";
 
-  // import { Input } from "@pixano/core/src";
+  import { Input, type FeaturesValues } from "@pixano/core/src";
 
   import AutocompleteTextFeature from "./AutoCompleteFeature.svelte";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
@@ -24,13 +24,12 @@
     datasetsStore,
     currentDatasetIdStore,
   } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
-  // import { addNewInput } from "../../lib/api/featuresApi";
+  import { addNewInput } from "../../lib/api/featuresApi";
 
-  export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
+  export let feature: TextFeature | NumberFeature;
   export let isEditing: boolean;
-  // export let saveInputChange: (value: string | number, propertyName: string) => void;
-  // export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
-  // export let feature_class: string;
+  export let saveInputChange: (value: string | number, propertyName: string) => void;
+  export let featureClass: keyof FeaturesValues;
 
   let isSaved = false;
 
@@ -38,70 +37,58 @@
     (ds) => ds.id === $currentDatasetIdStore,
   )?.features_values;
 
-  // const onTextInputChange = (value: string, propertyName: string) => {
-  //   let formattedValue: string | number = value;
-  //   if (inputType === "int") {
-  //     formattedValue = Math.round(Number(value));
-  //   } else if (inputType === "float") {
-  //     formattedValue = Number(value);
-  //   }
+  const onTextInputChange = (value: string, propertyName: string) => {
+    let formattedValue: string | number = value;
+    if (feature.type === "int") {
+      formattedValue = Math.round(Number(value));
+    } else if (feature.type === "float") {
+      formattedValue = Number(value);
+    }
 
-  //   if (typeof formattedValue === "string") {
-  //     addNewInput(
-  //       $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
-  //       feature_class,
-  //       propertyName,
-  //       formattedValue,
-  //     );
-  //   }
+    if (typeof formattedValue === "string") {
+      addNewInput(
+        $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
+        featureClass,
+        propertyName,
+        formattedValue,
+      );
+    }
+    saveInputChange(formattedValue, propertyName);
+    isSaved = true;
+  };
 
-  //   saveInputChange(formattedValue, propertyName);
-  //   isSaved = true;
-  // };
-
-  $: listItems = featuresValues?.scene[textFeature.name].map((feature) => ({
-    label: feature,
-    value: feature,
+  $: listItems = featuresValues?.[featureClass][feature.name].map((feat) => ({
+    label: feat,
+    value: feat,
   }));
 </script>
 
-<div class="flex justify-start items-center gap-4 flex-col">
+<div class="flex justify-start items-center gap-4">
   {#if isEditing}
-    <!-- <Input
-      value={textFeature.value}
-      type={inputType === "str" ? "text" : "number"}
-      step={inputType === "int" ? "1" : "any"}
-      list="{feature_class}_availableValues_{textFeature.name}"
-      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
-      on:input={() => (isSaved = false)}
-      on:keyup={(e) => e.stopPropagation()}
-    /> -->
-    <AutocompleteTextFeature {listItems} />
-
-    <!-- <datalist id="{feature_class}_availableValues_{textFeature.name}">
-      {#if feature_class === "objects"}
-        {#if featuresValues?.objects && textFeature.name in featuresValues.objects}
-          {#each featuresValues.objects[textFeature.name].sort() as proposedValue}
-            <option value={proposedValue} />
-          {/each}
-        {/if}
-      {:else if feature_class === "scene"}
-        {#if featuresValues?.scene && textFeature.name in featuresValues.scene}
-          {#each featuresValues.scene[textFeature.name].sort() as proposedValue}
-            <option value={proposedValue} />
-          {/each}
-        {/if}
-      {/if}
-    </datalist> -->
-
+    {#if feature.type === "str"}
+      <AutocompleteTextFeature
+        value={feature.value}
+        onTextInputChange={(value) => onTextInputChange(value, feature.name)}
+        {listItems}
+      />
+    {:else}
+      <Input
+        value={feature.value}
+        type="number"
+        step={feature.type === "int" ? "1" : "any"}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, feature.name)}
+        on:input={() => (isSaved = false)}
+        on:keyup={(e) => e.stopPropagation()}
+      />
+    {/if}
     {#if isSaved}
       <span class="text-green-700">
         <CheckCheckIcon />
       </span>
     {/if}
-  {:else if textFeature.value || textFeature.value === 0}
+  {:else if feature.value || feature.value === 0}
     <p class="first-letter:uppercase">
-      {textFeature.value}
+      {feature.value}
     </p>
   {/if}
 </div>
