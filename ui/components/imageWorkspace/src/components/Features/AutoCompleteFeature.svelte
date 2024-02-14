@@ -13,6 +13,7 @@
 
   const onSelect = (currentValue: string) => {
     value = currentValue;
+    onTextInputChange(value);
     open = false;
   };
 
