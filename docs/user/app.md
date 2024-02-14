@@ -1,5 +1,3 @@
-[comment]: <> (TODO: Update screenshots and descriptions for new Pixano app)
-
 # Using the Pixano app
 
 ## Home page
