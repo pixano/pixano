@@ -70,6 +70,7 @@
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
         {listItems}
+        isFixed={isEditing && featureClass === "objects"}
       />
     {:else}
       <Input

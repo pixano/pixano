@@ -7,6 +7,7 @@
   export let value: string = "";
   export let onTextInputChange: (value: string) => void;
   export let autofocus: boolean = false;
+  export let isFixed: boolean = false;
 
   let open = false;
 
@@ -23,7 +24,7 @@
   };
 </script>
 
-<Command.Root class="overflow-visible" on:blur={() => console.log("blurred")}>
+<Command.Root class="overflow-visible">
   <Command.Input
     {placeholder}
     bind:value
@@ -33,15 +34,19 @@
     {autofocus}
   />
   {#if open}
-    <Command.Group
-      class="z-10 bg-white absolute top-full w-full max-h-[50vh] overflow-auto overflow-x-hidden"
-    >
-      {#each listItems as val}
-        <Command.Item value={val.value} {onSelect}>
-          <Check class={cn("mr-2 h-4 w-4", value !== val.value && "text-transparent")} />
-          {val.label}
-        </Command.Item>
-      {/each}
-    </Command.Group>
+    <div class={cn({ "fixed mt-8 z-10": isFixed })}>
+      <Command.Group
+        class={cn("z-10 bg-white top-full w-full max-h-[50vh] overflow-auto overflow-x-hidden", {
+          absolute: !isFixed,
+        })}
+      >
+        {#each listItems as val}
+          <Command.Item value={val.value} {onSelect}>
+            <Check class={cn("mr-2 h-4 w-4", value !== val.value && "text-transparent")} />
+            {val.label}
+          </Command.Item>
+        {/each}
+      </Command.Group>
+    </div>
   {/if}
 </Command.Root>
