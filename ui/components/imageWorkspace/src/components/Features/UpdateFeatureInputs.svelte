@@ -17,8 +17,8 @@
   import { Checkbox, type FeaturesValues } from "@pixano/core/src";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
 
-  import FeatureTextInput from "./TextInputFeature.svelte";
-  import ListFeature from "./ListInputFeature.svelte";
+  import FeatureTextInput from "./TextFeatureInput.svelte";
+  import ListFeature from "./SelectFeatureInput.svelte";
 
   export let features: Feature[];
   export let featureClass: keyof FeaturesValues;

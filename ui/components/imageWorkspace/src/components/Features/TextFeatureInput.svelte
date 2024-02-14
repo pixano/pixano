@@ -18,7 +18,7 @@
 
   import { Input, type FeaturesValues } from "@pixano/core/src";
 
-  import AutocompleteTextFeature from "./AutoCompleteFeature.svelte";
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
   import {
     datasetsStore,

@@ -19,7 +19,7 @@
   import { IconButton } from "@pixano/core/src";
 
   import { canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import FeatureInputs from "../Features/FeatureInputs.svelte";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
@@ -83,7 +83,7 @@
     </IconButton>
   </h3>
   <div class="mx-4">
-    <FeatureInputs
+    <UpdateFeatureInputs
       featureClass="scene"
       {features}
       {isEditing}

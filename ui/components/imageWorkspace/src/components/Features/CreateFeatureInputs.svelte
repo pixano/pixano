@@ -28,7 +28,7 @@
     createSchemaFromFeatures,
   } from "../../lib/settings/objectValidationSchemas";
   import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
-  import AutocompleteTextFeature from "./AutoCompleteFeature.svelte";
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
   import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
   import { mapFeatureList } from "../../lib/api/featuresApi";

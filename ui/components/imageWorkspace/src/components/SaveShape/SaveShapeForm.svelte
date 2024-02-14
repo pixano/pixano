@@ -27,7 +27,7 @@
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
-  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -107,7 +107,7 @@
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
-    <FeatureFormInputs bind:isFormValid bind:formInputs bind:objectProperties />
+    <CreateFeatureInputs bind:isFormValid bind:formInputs bind:objectProperties />
     <div class="flex gap-4">
       <Button
         class="text-white"
