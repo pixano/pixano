@@ -10,6 +10,7 @@
   export let isFixed: boolean = false;
 
   let open = false;
+  let isHovering = false;
 
   const onSelect = (currentValue: string) => {
     value = currentValue;
@@ -19,24 +20,31 @@
 
   const onInputBlur = () => {
     onTextInputChange(value);
-    setTimeout(() => {
+    if (!isHovering) {
       open = false;
-    }, 200);
+    }
   };
 </script>
 
 <Command.Root class="overflow-visible">
   <Command.Input
     {placeholder}
+    {autofocus}
     bind:value
     on:blur={onInputBlur}
     on:focus={() => (open = true)}
     class="h-9"
-    {autofocus}
   />
   {#if open}
-    <div class={cn({ "fixed mt-8 z-10": isFixed })}>
+    <div
+      class={cn({ "fixed mt-8 z-10": isFixed })}
+      on:mouseenter={() => (isHovering = true)}
+      on:mouseleave={() => (isHovering = false)}
+      role="listbox"
+      tabindex="0"
+    >
       <Command.Group
+        on:click={() => console.log("click")}
         class={cn("z-10 bg-white top-full w-full max-h-[50vh] overflow-auto overflow-x-hidden", {
           absolute: !isFixed,
         })}
