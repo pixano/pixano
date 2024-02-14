@@ -57,7 +57,7 @@
     isSaved = true;
   };
 
-  $: listItems = featuresValues?.[featureClass][feature.name].map((feat) => ({
+  $: featureList = featuresValues?.[featureClass][feature.name]?.map((feat) => ({
     label: feat,
     value: feat,
   }));
@@ -69,7 +69,7 @@
       <AutocompleteTextFeature
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
-        {listItems}
+        {featureList}
         isFixed={isEditing && featureClass === "objects"}
       />
     {:else}

@@ -2,7 +2,7 @@
   import { Check } from "lucide-svelte";
   import { Command, cn } from "@pixano/core/src";
 
-  export let listItems: { value: string; label: string }[] = [];
+  export let featureList: { value: string; label: string }[] = [];
   export let placeholder: string = "Select an item";
   export let value: string = "";
   export let onTextInputChange: (value: string) => void;
@@ -41,10 +41,10 @@
           absolute: !isFixed,
         })}
       >
-        {#each listItems as val}
-          <Command.Item value={val.value} {onSelect}>
-            <Check class={cn("mr-2 h-4 w-4", value !== val.value && "text-transparent")} />
-            {val.label}
+        {#each featureList as feat}
+          <Command.Item value={feat.value} {onSelect}>
+            <Check class={cn("mr-2 h-4 w-4", value !== feat.value && "text-transparent")} />
+            {feat.label}
           </Command.Item>
         {/each}
       </Command.Group>

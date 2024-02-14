@@ -116,7 +116,7 @@
         <AutocompleteTextFeature
           value={findStringValue(feature.name)}
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
-          listItems={featuresValues?.objects[feature.name].map((feat) => ({
+          featureList={featuresValues?.objects[feature.name]?.map((feat) => ({
             label: feat,
             value: feat,
           }))}
