@@ -19,11 +19,7 @@
 
   import type { ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
-  import {
-    datasetsStore,
-    currentDatasetIdStore,
-  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { newShape, itemObjects, itemMetas, canSave } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
@@ -83,12 +79,7 @@
 
     for (let feat in objectProperties) {
       if (typeof objectProperties[feat] === "string") {
-        addNewInput(
-          $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
-          "objects",
-          feat,
-          objectProperties[feat] as string,
-        );
+        addNewInput($itemMetas.featuresValues, "objects", feat, objectProperties[feat] as string);
       }
     }
 

@@ -20,10 +20,7 @@
 
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
-  import {
-    datasetsStore,
-    currentDatasetIdStore,
-  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
+  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
   import { addNewInput, mapFeatureList } from "../../lib/api/featuresApi";
 
   export let feature: TextFeature | NumberFeature;
@@ -32,10 +29,6 @@
   export let featureClass: keyof FeaturesValues;
 
   let isSaved = false;
-
-  $: featuresValues = $datasetsStore.find(
-    (ds) => ds.id === $currentDatasetIdStore,
-  )?.features_values;
 
   const onTextInputChange = (value: string, propertyName: string) => {
     let formattedValue: string | number = value;
@@ -46,12 +39,7 @@
     }
 
     if (typeof formattedValue === "string") {
-      addNewInput(
-        $datasetsStore.find((ds) => ds.id === $currentDatasetIdStore)?.features_values,
-        featureClass,
-        propertyName,
-        formattedValue,
-      );
+      addNewInput($itemMetas.featuresValues, featureClass, propertyName, formattedValue);
     }
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
@@ -64,7 +52,7 @@
       <AutocompleteTextFeature
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
-        featureList={mapFeatureList(featuresValues?.[featureClass][feature.name])}
+        featureList={mapFeatureList($itemMetas.featuresValues?.[featureClass][feature.name])}
         isFixed={isEditing && featureClass === "objects"}
       />
     {:else}

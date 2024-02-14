@@ -39,7 +39,7 @@
   import type { Embeddings } from "./lib/types/imageWorkspaceTypes";
   import { Loader2Icon } from "lucide-svelte";
 
-  export let currentDatasetId: DatasetInfo["id"];
+  export let currentDataset: DatasetInfo;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
@@ -65,6 +65,7 @@
   $: itemMetas.set({
     features: selectedItem.features,
     itemFeatures: Object.values(selectedItem.objects || {})[0]?.features,
+    featuresValues: currentDataset.features_values || { scene: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
   });
@@ -126,7 +127,7 @@
   <ImageInspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
-    {currentDatasetId}
+    currentDatasetId={currentDataset.id}
     selectedItemId={selectedItem.id}
     bind:embeddings
     {selectedTool}

@@ -18,10 +18,6 @@
   import type { FeatureValues, ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import {
-    datasetsStore,
-    currentDatasetIdStore,
-  } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   import {
     createObjectInputsSchema,
@@ -52,10 +48,6 @@
     objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
     formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
   });
-
-  $: featuresValues = $datasetsStore.find(
-    (ds) => ds.id === $currentDatasetIdStore,
-  )?.features_values;
 
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
     objectProperties[propertyLabel] = value;
@@ -117,7 +109,7 @@
         <AutocompleteTextFeature
           value={findStringValue(feature.name)}
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
-          featureList={mapFeatureList(featuresValues?.objects[feature.name])}
+          featureList={mapFeatureList($itemMetas.featuresValues?.objects[feature.name])}
           autofocus={i === 0}
         />
       {:else}

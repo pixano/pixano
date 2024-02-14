@@ -9,7 +9,6 @@
   import DatasetHeader from "../components/layout/DatasetHeader.svelte";
   import {
     datasetsStore,
-    currentDatasetIdStore,
     modelsStore,
     datasetTableStore,
     defaultDatasetTableValues,
@@ -90,7 +89,6 @@
     const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
     if (currentDatasetId) {
       datasetTableStore.set(defaultDatasetTableValues);
-      currentDatasetIdStore.set(currentDatasetId);
     }
   }
 

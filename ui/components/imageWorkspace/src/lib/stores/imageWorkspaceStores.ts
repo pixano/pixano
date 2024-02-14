@@ -23,6 +23,7 @@ import type {
   Mask,
   BBox,
   ItemFeature,
+  FeaturesValues,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
@@ -35,6 +36,7 @@ export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<{
   features: DatasetItem["features"];
   itemFeatures: Record<string, ItemFeature>;
+  featuresValues: FeaturesValues;
   views: DatasetItem["views"];
   id: DatasetItem["id"];
 }>();
