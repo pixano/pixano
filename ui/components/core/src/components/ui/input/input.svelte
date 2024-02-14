@@ -9,6 +9,7 @@
   let className: $$Props["class"] = undefined;
   export let value: $$Props["value"] = undefined;
   export { className as class };
+  export let autofocus: $$Props["autofocus"] = false;
 </script>
 
 <div
@@ -18,6 +19,7 @@
   )}
 >
   <slot />
+  <!-- svelte-ignore a11y-autofocus -->
   <input
     class={cn(
       "w-full p-2 placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
@@ -37,5 +39,6 @@
     on:paste
     on:input
     {...$$restProps}
+    {autofocus}
   />
 </div>
