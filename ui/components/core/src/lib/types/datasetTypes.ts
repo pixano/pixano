@@ -139,9 +139,11 @@ export interface ItemFeature {
   required?: boolean;
 }
 
+export type FeatureList = Array<string>;
+
 export interface FeaturesValues {
   scene: Record<string, Array<string>>;
-  objects: Record<string, Array<string>>;
+  objects: Record<string, FeatureList>;
 }
 
 // UI DATA

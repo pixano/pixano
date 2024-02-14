@@ -1,5 +1,11 @@
 import { createObjectInputsSchema } from "../../lib/settings/objectValidationSchemas";
-import type { DatasetItem, FeatureValues, ItemFeature, FeaturesValues } from "@pixano/core";
+import type {
+  DatasetItem,
+  FeatureValues,
+  ItemFeature,
+  FeaturesValues,
+  FeatureList,
+} from "@pixano/core";
 import type {
   CheckboxFeature,
   CreateObjectInputs,
@@ -60,3 +66,11 @@ export const addNewInput = (
     }
   }
 };
+
+export const mapFeatureList = (featureList: FeatureList = []) =>
+  featureList
+    .sort((a, b) => a.localeCompare(b))
+    .map((value) => ({
+      value,
+      label: value,
+    }));

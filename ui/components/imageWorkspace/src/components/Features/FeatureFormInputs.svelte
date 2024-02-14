@@ -31,6 +31,7 @@
   import AutocompleteTextFeature from "./AutoCompleteFeature.svelte";
 
   import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  import { mapFeatureList } from "../../lib/api/featuresApi";
 
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
@@ -116,10 +117,7 @@
         <AutocompleteTextFeature
           value={findStringValue(feature.name)}
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
-          featureList={featuresValues?.objects[feature.name]?.map((feat) => ({
-            label: feat,
-            value: feat,
-          }))}
+          featureList={mapFeatureList(featuresValues?.objects[feature.name])}
           autofocus={i === 0}
         />
       {:else}
