@@ -4,94 +4,90 @@
 
 ## Home page
 
-![Pixano App Home Page](../assets/user/app_home.png)
+![Pixano home page](../assets/user/app_home.png)
 
 From the app home page, you will be greeted with a list of all the Pixano format datasets found in the directory you provided.
 
-For each dataset, you can see its name, the number of items inside it, and a thumbnail composed from six sample items.
+## Dataset page
 
-You can hover over a dataset name to check the dataset description if it has one.
+![Pixano dataset page - top](../assets/user/app_dataset_1.png)
 
-You can click on a dataset to open its annotation page on its first item.
+On the dataset page, you will see a list of all the items it contains, organized in pages.
+
+![Pixano dataset page - bottom](../assets/user/app_dataset_2.png)
+
+When scrolling to the bottom of the page, you will see navigation buttons to move through the pages of your dataset.
+
+## Dashboard page
+
+![Pixano dataset dashboard](../assets/user/app_dashboard.png)
+
+From the dataset page, you can go to the dashboard page, which contains more information about your datasets and also displays all the computed statistics available.
 
 ## Item page
 
-### Item view
+When opening an item, the item media will be displayed in the center on the screen (in case of multi-view datasets, the images will be tiled).
 
-![Pixano App Item View](../assets/user/app_elementview.png)
+On the left, a toolbar is available. On the right, two panels will display information on the item objects and scene.
 
-The selected element (image or images for multi-view datasets) is displayed.
+### Scene panel
 
-You can zoom in and out with the mouse wheel.
+![Pixano item view - scene](../assets/user/exploration_scene.png)
 
-You can grab and move images with the middle click or with the **_Pan_** tool available in the left-hand _toolbar_.
+The scene panel will display all the scene features, like the item label, or any other feature created when importing your dataset, as well as metadata information on all the images in the item.
 
-You can double click on an image to move it above other images.
+You can edit the scene features and then click the save changes button to write them to the dataset.
 
-Annotations, in form of segmentation mask, are displayed.
-Each object category is given a color.
+### Object panel
 
-On the top of the image, when you have an input Tool selected, a panel is displayed that allows to choose a category.
+![Pixano item view - objects](../assets/user/exploration_objects.png)
 
-### Left toolbar
+The objects panel will display all the item objects.
 
-A _toolbar_ is available on the left-hand side of the page with the following tools:
+On the top, you will see the ground truth objects, which are the objects you imported with your dataset, and objects you create within the app. On the bottom, a dropdown menu will let you go through all the objects created by models like the ones available in Pixano Inference.
 
-- **_Pan_**: Allows you to grab and move an image
-- **_Points_**: Allows you to place input points to interactively segment your image
-  - You can place positive points with the **+** tool (points shown in green) to indicate what must be included in the segmentation
-  - You can place negative points with **-** tool (points shown in red) to indicate what must not be included in the segmentation
-  - You can hover over any point and press the _Del_ key to remove it
-  - You can click and hold on any point to relocate it
-- **_Rectangle_**: Allows you to draw rectangles approximatively around the objects of interest to interactively segment them
-  - You can click and drag on the image to draw a rectangle
-  - There can only be one rectangle at a time, so drawing a new rectangle will discard the previous one. You have to validate the obtained segmentation, if satisfactory, before drawing a new rectangle
+You have visibility toggles for objects and object group, and when hovering on an object, you will have access to an edit tool and a delete tool.
 
-The **_Points_** and **_Rectangle_** tools depend on an ONNX segmentation model you have to provide. Please look at the interactive annotation documentation and notebook for more information.
+![Pixano item view - object edition](../assets/user/exploration_object_edition.png)
 
-_More tools will be coming soon._
+The edit tool will allow you to edit the object features, for example its category and category ID, and also allow you to edit the object bounding box and mask on the image.
 
-### Center toolbar
+To create new objects, you have multiple tools at your disposal on the left toolbar.
 
-When an annotation tool is selected, a _toolbar_ is available at the center on the page.
+### Toolbar
 
-Enter the label name for your annotation in the text box or select the label from the list of existing labels.
+#### Pan tool
 
-If the **_Points_** tool is selected, a **+** icon and a **-** icon allow to quickly switch between positive and negative points
+With the pan tool selected, you can move the image around. This is especially useful for multi-view datasets for organizing multiple images.
 
-Validate your annotation with the entered label by cliking on the Validate icon, or press _Enter_ key.
+Moving the images is still possible while any other tools is selected by using your mouse middle click. You can also zoom in and out of an image with the mouse wheel, and double click an image to bring it in front of the others.
 
-### Right toolbar
+#### Bounding box tool
 
-A _toolbar_ is available on the right side of the page with the following tabs:
+![Pixano tools - bounding box](../assets/user/annotation_bounding_box.png)
 
-- **_Labels_**: This tab displays your annotations grouped by views and by labels
-  - Each annotation group can be opened or closed by clicking on it
-  - Each annotation and annotation group can be shown or hidden on the relevant image by clicking on the _Visibility_ icon
-  - Each annotation can be deleted by clicking on the _Delete_ icon
-  - Each annotation is represented by its unique ID.
-- **_Dataset_**: This tab allows you to navigate through the dataset
-  - Each element of the dataset is displayed with its ID and its thumbnail
-  - The list will automatically expand as you scroll down
-  - You can click on any element to change the current element
+With the bounding box tool, you can create a bounding box object by click and dragging a rectangle over the image. Once you are done with your selection, you will be prompted to enter values for your object features depending on your dataset (in this case category_id and category), and to confirm the object.
 
-### Annotating
+Then, click save changes in the object panels to save the created object to your dataset.
 
-![Pixano App Annotation](../assets/user/app_annotation.png)
+#### Polygon tool
 
-You can currently annotate with the **_Points_** (**+** and **-**), and **_Rectangle_** tools available in the left toolbar as described above.
+![Pixano tools - polygon](../assets/user/annotation_polygon.png)
 
-When using these tools, the generated annotation will be displayed in green. You can use both tools together to refine your annotation.
+With the polygon tool, you can create a segmentation mask manually by adding points with the granularity of your choice.
 
-You can press the _Enter_ key or click the Validate icon of the center toolbar to validate your annotation.
-You can press the _Esc_ key to reset all your **_Points_** and **_Rectangle_** inputs.
+Once you save this mask, a matching bounding box will automatically be created.
 
-### Saving
+#### Smart segmentation tool
 
-To save your annotations, a _Save_ icon is available in the top right-hand corner. It will be highlighted if there are unsaved changes.
+With Pixano, you can segment with smart segmentation tool like SAM (Segment Anything Model). Please follow our documentation on how to precompute the embeddings required by SAM and export its ONNX model to be able to use it.
 
-If you try to go back to the home page or change element with unsaved changes, you will see a confirmation window. You can choose "OK" to discard your changes, or cancel to be able to go back save them.
+![Pixano tools - SAM points](../assets/user/annotation_sam_points.png)
 
-### Going home
+With the positive and negative points, you can inform SAM on which part of the image you are trying to segment, and SAM will generate the mask for you.
 
-To go back to the home page, click on the Pixano logo in the top left corner.
+![Pixano tools - SAM rectangle](../assets/user/annotation_sam_rectangle.png)
+
+When relevant, you can also use the rectangle tool to select the thing you want SAM to segment.
+
+When saving the mask created by SAM, like with the polygon tool, a matching bounding box will automatically be created.
