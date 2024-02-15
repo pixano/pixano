@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd ui
-          pnpm i
+          pnpm i --frozen-lockfile
 
       - name: Lint frontend code with eslint
         run: |
