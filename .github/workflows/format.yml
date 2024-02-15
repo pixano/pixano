@@ -49,7 +49,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd ui
-          pnpm i
+          pnpm i --frozen-lockfile
 
       - name: Format frontend code with Prettier
         run: |

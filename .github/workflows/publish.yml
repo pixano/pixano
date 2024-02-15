@@ -55,7 +55,7 @@ jobs:
       - name: Build app
         run: |
           cd ui
-          pnpm i
+          pnpm i --frozen-lockfile
           cd apps/pixano
           pnpm build
           cd ../../..
