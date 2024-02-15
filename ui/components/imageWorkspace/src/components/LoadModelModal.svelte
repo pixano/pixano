@@ -39,7 +39,12 @@
   });
 
   const loadEmbeddings = () => {
-    if (!selectedItemId || !selectedModelName || !currentDatasetId) {
+    if (
+      !selectedItemId ||
+      !selectedModelName ||
+      !currentDatasetId ||
+      selectedModelName === "none"
+    ) {
       return;
     }
     loadEmbeddingsApi(selectedItemId, selectedModelName, currentDatasetId)
@@ -118,6 +123,11 @@
     details="Please refer to our interactive annotation notebook for information on how to compute embeddings on your dataset."
     on:confirm={() =>
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }))}
-    on:cancel={() => modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }))}
+    on:cancel={() =>
+      modelsStore.update((store) => ({
+        ...store,
+        currentModalOpen: "none",
+        selectedModelName: "none",
+      }))}
   />
 {/if}
