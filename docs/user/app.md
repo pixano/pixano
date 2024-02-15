@@ -50,7 +50,7 @@ If you have used an inference model for pre-annotating the dataset, a "Pre-annot
 
 ![Pixano item view - object edition](../assets/user/exploration_object_edition.png)
 
-The edit tool will allow you to edit the object features, for example its category and category ID, and also allow you to edit the object bounding box and mask on the image.
+The edit tool will allow you to edit the object features, for example its category and category ID, and also allow you to edit the object bounding box and mask on the image. For text features, auto-completion based on existing feature values in the dataset is available.
 
 To create new objects, you have multiple tools at your disposal on the left toolbar.
 
