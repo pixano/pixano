@@ -8,13 +8,13 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add features auto-completion (pixano#127)
-- Add object highlight by double clicking on image or clicking on its color in the inspector (pixano#105, pixano#121)
+- Add **features auto-completion** (pixano#127)
+- Add **object highlighting** by double clicking on image or clicking on its color in the inspector (pixano#105, pixano#121)
+- Add **new MobileSAM model** as a lighter alternative to SAM (pixano#102)
 - Add choice between Pre-annotation or Model run in InferenceModel and pre-annotation notebook (pixano#91)
 - Create fixed size sections for Ground truth and Model run (pixano#87, pixano#109)
 - Sort pre-annotation objects by bounding box top coordinate (pixano#108)
 - Ask for confirmation before leaving unsaved item with all buttons (pixano#126)
-- Add new MobileSAM model as a lighter alternative to SAM (pixano#102)
 - Add issue and pull request templates on GitHub repository (pixano#130, pixano#146)
 
 ### Changed
@@ -47,7 +47,7 @@ All notable changes to Pixano will be documented in this file.
 
 ### Added
 
-- Add pre-annotation feature (pixano#58)
+- Add **pre-annotation** feature (pixano#58)
 - Allow creating concave polygons (pixano#65)
 - Allow dragging rectangle when edit mode is on (pixano#68)
 
