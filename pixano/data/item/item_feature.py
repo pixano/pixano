@@ -116,3 +116,15 @@ class ItemFeature(BaseModel):
                 )
 
         return features
+
+
+class FeaturesValues(BaseModel):
+    """Features availables values
+
+    Attributes:
+        scene (dict[str, list[str]]): Scene features available values
+        objects (dict[str, list[str]]): Objects features available values
+    """
+
+    scene: dict[str, list[str]]
+    objects: dict[str, list[str]]

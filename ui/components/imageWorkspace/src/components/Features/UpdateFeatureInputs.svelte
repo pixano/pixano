@@ -14,13 +14,14 @@
    * http://www.cecill.info
    */
 
-  import { Checkbox } from "@pixano/core/src";
+  import { Checkbox, type FeaturesValues } from "@pixano/core/src";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
 
-  import FeatureTextInput from "./TextInputFeature.svelte";
-  import ListFeature from "./ListInputFeature.svelte";
+  import FeatureTextInput from "./TextFeatureInput.svelte";
+  import ListFeature from "./SelectFeatureInput.svelte";
 
   export let features: Feature[];
+  export let featureClass: keyof FeaturesValues;
 
   export let isEditing: boolean;
   export let saveInputChange: (value: string | boolean | number, propertyName: string) => void;
@@ -41,18 +42,13 @@
     {/if}
     {#if feature.type === "list"}
       <ListFeature
-        handleInputChange={(value, name) => saveInputChange(value, name)}
         {isEditing}
+        handleInputChange={(value, name) => saveInputChange(value, name)}
         listFeature={{ value: feature.value, name: feature.name, options: feature.options }}
       />
     {/if}
     {#if feature.type === "str" || feature.type === "int" || feature.type === "float"}
-      <FeatureTextInput
-        saveInputChange={(value, name) => saveInputChange(value, name)}
-        textFeature={{ value: feature.value, name: feature.name }}
-        inputType={feature.type}
-        {isEditing}
-      />
+      <FeatureTextInput {featureClass} {feature} {saveInputChange} {isEditing} />
     {/if}
   </div>
 {/each}

@@ -19,11 +19,11 @@
 
   import type { ItemObject, Shape } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave } from "../../lib/stores/imageWorkspaceStores";
+  import { newShape, itemObjects, itemMetas, canSave } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import type { CreateObjectInputs, ObjectProperties } from "../../lib/types/imageWorkspaceTypes";
-  import { mapShapeInputsToFeatures } from "../../lib/api/featuresApi";
-  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+  import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -76,12 +76,19 @@
 
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
+
+    for (let feat in objectProperties) {
+      if (typeof objectProperties[feat] === "string") {
+        addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
+      }
+    }
+
     newShape.set({ status: "none", shouldReset: true });
     canSave.set(true);
     currentTab = "objects";
   };
 
-  async function handleKeyDown(event: KeyboardEvent) {
+  function handleKeyDown(event: KeyboardEvent) {
     if (event.key === "Escape") {
       newShape.set({ status: "none", shouldReset: true });
     }
@@ -91,7 +98,7 @@
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
-    <FeatureFormInputs bind:isFormValid bind:formInputs bind:objectProperties />
+    <CreateFeatureInputs bind:isFormValid bind:formInputs bind:objectProperties />
     <div class="flex gap-4">
       <Button
         class="text-white"

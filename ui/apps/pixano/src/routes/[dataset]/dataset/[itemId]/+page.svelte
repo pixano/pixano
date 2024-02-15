@@ -85,7 +85,7 @@
     <ImageWorkspace
       {selectedItem}
       {models}
-      currentDatasetId={selectedDataset.id}
+      currentDataset={selectedDataset}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem

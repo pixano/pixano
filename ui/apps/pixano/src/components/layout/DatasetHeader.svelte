@@ -72,7 +72,8 @@
     }
   };
 
-  const onKeyDown = async (event: KeyboardEvent) => {
+  const onKeyUp = async (event: KeyboardEvent) => {
+    if ((event.target as Element)?.tagName === "INPUT") return event.preventDefault();
     if (event.key === "ArrowLeft") {
       await goToNeighborItem("previous");
     } else if (event.key === "ArrowRight") {
@@ -160,4 +161,4 @@
     on:cancel={() => (showConfirmModal = "none")}
   />
 {/if}
-<svelte:window on:keyup={onKeyDown} />
+<svelte:window on:keyup={onKeyUp} />

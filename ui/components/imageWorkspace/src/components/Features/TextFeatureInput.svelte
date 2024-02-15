@@ -16,23 +16,30 @@
 
   import { CheckCheckIcon } from "lucide-svelte";
 
-  import { Input } from "@pixano/core/src";
+  import { Input, type FeaturesValues } from "@pixano/core/src";
 
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
   import type { TextFeature, NumberFeature } from "../../lib/types/imageWorkspaceTypes";
+  import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
+  import { addNewInput, mapFeatureList } from "../../lib/api/featuresApi";
 
-  export let textFeature: Pick<NumberFeature | TextFeature, "name" | "value">;
+  export let feature: TextFeature | NumberFeature;
   export let isEditing: boolean;
   export let saveInputChange: (value: string | number, propertyName: string) => void;
-  export let inputType: NumberFeature["type"] | TextFeature["type"] = "str";
+  export let featureClass: keyof FeaturesValues;
 
   let isSaved = false;
 
   const onTextInputChange = (value: string, propertyName: string) => {
     let formattedValue: string | number = value;
-    if (inputType === "int") {
+    if (feature.type === "int") {
       formattedValue = Math.round(Number(value));
-    } else if (inputType === "float") {
+    } else if (feature.type === "float") {
       formattedValue = Number(value);
+    }
+
+    if (typeof formattedValue === "string") {
+      addNewInput($itemMetas.featuresList, featureClass, propertyName, formattedValue);
     }
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
@@ -41,22 +48,31 @@
 
 <div class="flex justify-start items-center gap-4">
   {#if isEditing}
-    <Input
-      value={textFeature.value}
-      on:change={(e) => onTextInputChange(e.currentTarget.value, textFeature.name)}
-      on:input={() => (isSaved = false)}
-      type={inputType === "str" ? "text" : "number"}
-      step={inputType === "int" ? "1" : "any"}
-      on:keyup={(e) => e.stopPropagation()}
-    />
+    {#if feature.type === "str"}
+      <AutocompleteTextFeature
+        value={feature.value}
+        onTextInputChange={(value) => onTextInputChange(value, feature.name)}
+        featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
+        isFixed={isEditing && featureClass === "objects"}
+      />
+    {:else}
+      <Input
+        value={feature.value}
+        type="number"
+        step={feature.type === "int" ? "1" : "any"}
+        on:change={(e) => onTextInputChange(e.currentTarget.value, feature.name)}
+        on:input={() => (isSaved = false)}
+        on:keyup={(e) => e.stopPropagation()}
+      />
+    {/if}
     {#if isSaved}
       <span class="text-green-700">
         <CheckCheckIcon />
       </span>
     {/if}
-  {:else if textFeature.value || textFeature.value === 0}
+  {:else if feature.value || feature.value === 0}
     <p class="first-letter:uppercase">
-      {textFeature.value}
+      {feature.value}
     </p>
   {/if}
 </div>

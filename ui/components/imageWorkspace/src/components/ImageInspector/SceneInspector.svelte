@@ -19,7 +19,7 @@
   import { IconButton } from "@pixano/core/src";
 
   import { canSave, itemMetas } from "../../lib/stores/imageWorkspaceStores";
-  import FeatureInputs from "../Features/FeatureInputs.svelte";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/imageWorkspaceTypes";
@@ -45,8 +45,8 @@
       format: view.uri.split(".").at(-1)?.toUpperCase() as string,
       id: view.id,
     }));
-    const sceneFeatures = Object.values(metas.features).length
-      ? metas.features
+    const sceneFeatures = Object.values(metas.sceneFeatures).length
+      ? metas.sceneFeatures
       : defaultSceneFeatures;
     features = createFeature(sceneFeatures);
   });
@@ -58,10 +58,10 @@
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
-      newMetas.features = {
-        ...newMetas.features,
+      newMetas.sceneFeatures = {
+        ...newMetas.sceneFeatures,
         [propertyName]: {
-          ...(newMetas.features?.[propertyName] || defaultSceneFeatures[propertyName]),
+          ...(newMetas.sceneFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
           value,
         },
       };
@@ -83,7 +83,12 @@
     </IconButton>
   </h3>
   <div class="mx-4">
-    <FeatureInputs {features} {isEditing} saveInputChange={handleTextInputChange} />
+    <UpdateFeatureInputs
+      featureClass="scene"
+      {features}
+      {isEditing}
+      saveInputChange={handleTextInputChange}
+    />
   </div>
 </div>
 <div class="p-4 text-slate-800">

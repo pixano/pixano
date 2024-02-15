@@ -19,7 +19,7 @@
 
   import { PrimaryButton, Slider, IconButton, Switch, cn } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
-  import FeatureFormInputs from "../Features/FeatureFormInputs.svelte";
+  import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import { canSave, itemObjects } from "../../lib/stores/imageWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import {
@@ -143,7 +143,7 @@
           <span>{objectToAnnotate.id}</span>
         </p>
         <div class="flex flex-col gap-4 py-4">
-          <FeatureFormInputs
+          <CreateFeatureInputs
             bind:isFormValid
             initialValues={objectToAnnotate.features}
             bind:objectProperties

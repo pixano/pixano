@@ -22,7 +22,7 @@
   import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
-  import ItemFeatures from "../Features/FeatureInputs.svelte";
+  import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
@@ -189,7 +189,7 @@
               {/if}
             </div>
           </div>
-          <ItemFeatures {features} {isEditing} {saveInputChange} />
+          <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
         </div>
       </div>
     </div>

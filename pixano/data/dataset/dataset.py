@@ -28,7 +28,7 @@ from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.fields import Fields, field_to_pyarrow
-from pixano.data.item.item_feature import ItemFeature
+from pixano.data.item.item_feature import FeaturesValues, ItemFeature
 from pixano.data.item.item_object import ItemObject
 
 
@@ -148,22 +148,28 @@ class Dataset(BaseModel):
         self,
         load_stats: bool = False,
         load_thumbnail: bool = False,
+        load_features_values: bool = False,
     ) -> DatasetInfo:
         """Return dataset info with thumbnail and stats inside
 
         Args:
             load_stats (bool, optional): Load dataset stats. Defaults to False.
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
+            load_features_values (bool, optional): Load available values. Defaults to False.
 
         Returns:
             DatasetInfo: Dataset info
         """
 
-        return DatasetInfo.from_json(
+        info = DatasetInfo.from_json(
             self.path / "db.json",
             load_stats=load_stats,
             load_thumbnail=load_thumbnail,
         )
+        if load_features_values:
+            info.features_values = self.get_features_values()
+
+        return info
 
     def save_info(self):
         """Save updated dataset info"""
@@ -735,6 +741,46 @@ class Dataset(BaseModel):
 
         # Delete removed item objects
         item.delete_objects(ds_tables)
+
+    def get_features_values(
+        self,
+    ) -> FeaturesValues:
+        """get distinct existing values for each scene and object string features
+
+        Returns:
+            FeaturesValues: existing values for each scene and object string feature
+        """
+
+        # Load tables
+        ds_tables = self.open_tables()
+
+        def get_distinct_values(table_name: str, ignore_list: list[str]):
+            avail_values = defaultdict(set)
+            for table in ds_tables[table_name].values():
+                table_arrow = table.to_arrow()
+                feats = [f for f in table_arrow.column_names if f not in ignore_list]
+                for feat in feats:
+                    v = (
+                        duckdb.sql(f"select DISTINCT {feat} from table_arrow")
+                        .to_arrow_table()
+                        .to_pydict()
+                    )
+                    if v[feat] is not None and v[feat] != [None]:
+                        avail_values[feat].update(
+                            [
+                                val
+                                for val in v[feat]
+                                if val is not None and isinstance(val, str)
+                            ]
+                        )
+            return {key: list(values) for key, values in avail_values.items()}
+
+        return FeaturesValues(
+            scene=get_distinct_values("main", ["id", "split", "views", "original_id"]),
+            objects=get_distinct_values(
+                "objects", ["id", "item_id", "view_id", "bbox", "mask", "review_state"]
+            ),
+        )
 
     @staticmethod
     def find(
