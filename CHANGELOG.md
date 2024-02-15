@@ -4,6 +4,45 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0b4] - 2024-02-15
+
+### Added
+
+- Add features auto-completion (pixano#127)
+- Add object highlight by double clicking on image or clicking on its color in the inspector (pixano#105, pixano#121)
+- Add choice between Pre-annotation or Model run in InferenceModel and pre-annotation notebook (pixano#91)
+- Create fixed size sections for Ground truth and Model run (pixano#87, pixano#109)
+- Sort pre-annotation objects by bounding box top coordinate (pixano#108)
+- Ask for confirmation before leaving unsaved item with all buttons (pixano#126)
+- Add new MobileSAM model as a lighter alternative to SAM (pixano#102)
+- Add issue and pull request templates on GitHub repository (pixano#130, pixano#146)
+
+### Changed
+
+- Update documentation for 0.5.0 release (pixano#144)
+- Refetch saved item automatically to update objects (pixano#131)
+- Remove unused object lock feature (pixano#111)
+- Switch "Objects" and "Scene" tabs order in the inspector (pixano#107)
+
+### Fixed
+
+- Fix issues with S3 paths and image URLs (pixano#93, pixano#138)
+- Fix resetting semantic search when changing dataset (pixano#84)
+- Fix creating bounding box from mask automatically (pixano#92)
+- Fix "Save changes" not available after deleting a selected object (pixano#136)
+- Fix object edition also updating unrelated objects (pixano#129)
+- Fix saving dragged polygons (pixano#110)
+- Fix removing smart segmentation inputs after validation or cancel (pixano#94)
+- Fix saving review_state only in pre-annotation tables (pixano#104)
+- Fix focusing the the first feature field when creating object (pixano#122)
+- Fix issues with loading segmentation models (pixano#/124, pixano#140, pixano#151, pixano#153)
+- Fix random shapes appearing after deleting an object (pixano#150)
+- Fix bounding boxes to always have positive dimensions (pixano#139)
+- Fix buttons in Toolbar (pixano#115, pixano#142)
+- Fix buttons in ImageInspector (pixano#117)
+- Fix buttons in DatasetHeader (pixano#120)
+- Freeze pnpm lockfile for more stable frontend CI (pixano#135)
+
 ## [0.5.0b3] - 2024-02-02
 
 ### Added
@@ -240,6 +279,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.5.0b4]: https://github.com/pixano/pixano/compare/v0.5.0b3...v0.5.0b4
 [0.5.0b3]: https://github.com/pixano/pixano/compare/v0.5.0b2...v0.5.0b3
 [0.5.0b2]: https://github.com/pixano/pixano/compare/v0.5.0b1...v0.5.0b2
 [0.5.0b1]: https://github.com/pixano/pixano/compare/v0.4.1...v0.5.0b1
