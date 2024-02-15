@@ -27,6 +27,7 @@ export interface DatasetInfo {
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
   categories: Array<DatasetCategory>;
+  features_values?: FeaturesValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
   isFiltered?: boolean;
@@ -136,6 +137,13 @@ export interface ItemFeature {
   dtype: string;
   value: number | string | boolean | DatasetStat;
   required?: boolean;
+}
+
+export type FeatureList = Array<string>;
+
+export interface FeaturesValues {
+  scene: Record<string, Array<string>>;
+  objects: Record<string, FeatureList>;
 }
 
 // UI DATA

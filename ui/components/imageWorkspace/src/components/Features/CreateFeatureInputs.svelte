@@ -18,13 +18,16 @@
   import type { FeatureValues, ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/imageWorkspaceStores";
+
   import {
     createObjectInputsSchema,
     createSchemaFromFeatures,
   } from "../../lib/settings/objectValidationSchemas";
   import type { CreateObjectInputs, CreateObjectSchema } from "../../lib/types/imageWorkspaceTypes";
+  import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
   import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  import { mapFeatureList } from "../../lib/api/featuresApi";
 
   export let isFormValid: boolean = false;
   export let formInputs: CreateObjectInputs = [];
@@ -34,7 +37,7 @@
   let objectValidationSchema: CreateObjectSchema;
 
   itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
+    const itemFeaturesArray = Object.values(metas.objectFeatures || defaultObjectFeatures).map(
       (feature) => ({
         ...feature,
         label: feature.name,
@@ -62,6 +65,14 @@
     const result = objectValidationSchema.safeParse(objectProperties);
     isFormValid = result.success;
   }
+
+  const findStringValue = (featureName: string) => {
+    const value = initialValues[featureName]?.value;
+    if (typeof value === "string") {
+      return value;
+    }
+    return "";
+  };
 </script>
 
 {#each formInputs as feature, i}
@@ -94,30 +105,21 @@
           <span>*</span>
         {/if}
       </span>
-      {#if i === 0}
-        <Input
-          type={feature.type === "str" ? "text" : "number"}
-          step={feature.type === "int" ? "1" : "any"}
-          value={initialValues[feature.name]?.value || ""}
-          autofocus
-          on:keyup={(e) => e.stopPropagation()}
-          on:input={(e) =>
-            handleInputChange(
-              feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
-              feature.name,
-            )}
+      {#if feature.type === "str"}
+        <AutocompleteTextFeature
+          value={findStringValue(feature.name)}
+          onTextInputChange={(value) => handleInputChange(value, feature.name)}
+          featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
+          autofocus={i === 0}
         />
       {:else}
         <Input
-          type={feature.type === "str" ? "text" : "number"}
+          type="number"
           step={feature.type === "int" ? "1" : "any"}
           value={initialValues[feature.name]?.value || ""}
+          autofocus={i === 0}
           on:keyup={(e) => e.stopPropagation()}
-          on:input={(e) =>
-            handleInputChange(
-              feature.type === "str" ? e.currentTarget.value : Number(e.currentTarget.value),
-              feature.name,
-            )}
+          on:input={(e) => handleInputChange(Number(e.currentTarget.value), feature.name)}
         />
       {/if}
     </div>
