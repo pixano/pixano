@@ -94,14 +94,15 @@
     }
     await goto(showConfirmModal);
     showConfirmModal = "none";
+    saveCurrentItemStore.set({ canSave: false, shouldSave: false });
   };
 
-  async function navigateTo(route: string) {
+  const navigateTo = async (route: string) => {
     if (canSaveCurrentItem) {
       return (showConfirmModal = route);
     }
     await goto(route);
-  }
+  };
 </script>
 
 <header class="w-full fixed z-40">
