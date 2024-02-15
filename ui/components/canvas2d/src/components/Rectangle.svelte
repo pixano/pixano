@@ -15,6 +15,7 @@
    */
 
   // Imports
+  import { onDestroy } from "svelte";
   import Konva from "konva";
   import { Rect, Label, Tag, Text, Group } from "svelte-konva";
   import type { BBox, SelectionTool, Shape } from "@pixano/core";
@@ -103,6 +104,13 @@
       };
     }
   };
+
+  onDestroy(() => {
+    const transformer: Konva.Transformer = stage.findOne("#transformer");
+    if (transformer) {
+      transformer.nodes([]);
+    }
+  });
 </script>
 
 <Group
