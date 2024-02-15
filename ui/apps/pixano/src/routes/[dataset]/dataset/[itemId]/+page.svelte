@@ -63,7 +63,6 @@
 
   $: {
     if (currentItemId !== selectedItem?.id) {
-      console.log("Loading new item");
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
