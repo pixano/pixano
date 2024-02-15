@@ -63,9 +63,9 @@
       .map((obj) => ({ ...obj, displayControl: { hidden: false } })),
   );
   $: itemMetas.set({
-    features: selectedItem.features,
-    itemFeatures: Object.values(selectedItem.objects || {})[0]?.features,
-    featuresValues: currentDataset.features_values || { scene: {}, objects: {} },
+    sceneFeatures: selectedItem.features,
+    objectFeatures: Object.values(selectedItem.objects || {})[0]?.features,
+    featuresList: currentDataset.features_values || { scene: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
   });
@@ -93,7 +93,7 @@
       );
     });
     itemMetas.subscribe((value) => {
-      savedItem.features = value.features;
+      savedItem.features = value.sceneFeatures;
     });
     await handleSaveItem(savedItem);
     canSave.set(false);

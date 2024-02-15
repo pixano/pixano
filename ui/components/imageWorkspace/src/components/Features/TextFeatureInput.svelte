@@ -39,7 +39,7 @@
     }
 
     if (typeof formattedValue === "string") {
-      addNewInput($itemMetas.featuresValues, featureClass, propertyName, formattedValue);
+      addNewInput($itemMetas.featuresList, featureClass, propertyName, formattedValue);
     }
     saveInputChange(formattedValue, propertyName);
     isSaved = true;
@@ -52,7 +52,7 @@
       <AutocompleteTextFeature
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
-        featureList={mapFeatureList($itemMetas.featuresValues?.[featureClass][feature.name])}
+        featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
         isFixed={isEditing && featureClass === "objects"}
       />
     {:else}

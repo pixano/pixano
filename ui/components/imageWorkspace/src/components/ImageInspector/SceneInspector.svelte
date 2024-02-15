@@ -45,8 +45,8 @@
       format: view.uri.split(".").at(-1)?.toUpperCase() as string,
       id: view.id,
     }));
-    const sceneFeatures = Object.values(metas.features).length
-      ? metas.features
+    const sceneFeatures = Object.values(metas.sceneFeatures).length
+      ? metas.sceneFeatures
       : defaultSceneFeatures;
     features = createFeature(sceneFeatures);
   });
@@ -58,10 +58,10 @@
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
-      newMetas.features = {
-        ...newMetas.features,
+      newMetas.sceneFeatures = {
+        ...newMetas.sceneFeatures,
         [propertyName]: {
-          ...(newMetas.features?.[propertyName] || defaultSceneFeatures[propertyName]),
+          ...(newMetas.sceneFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
           value,
         },
       };

@@ -37,7 +37,7 @@
   let objectValidationSchema: CreateObjectSchema;
 
   itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.itemFeatures || defaultObjectFeatures).map(
+    const itemFeaturesArray = Object.values(metas.objectFeatures || defaultObjectFeatures).map(
       (feature) => ({
         ...feature,
         label: feature.name,
@@ -109,7 +109,7 @@
         <AutocompleteTextFeature
           value={findStringValue(feature.name)}
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
-          featureList={mapFeatureList($itemMetas.featuresValues?.objects[feature.name])}
+          featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
           autofocus={i === 0}
         />
       {:else}

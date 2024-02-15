@@ -79,7 +79,7 @@
 
     for (let feat in objectProperties) {
       if (typeof objectProperties[feat] === "string") {
-        addNewInput($itemMetas.featuresValues, "objects", feat, objectProperties[feat] as string);
+        addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
       }
     }
 

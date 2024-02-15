@@ -34,9 +34,9 @@ export const newShape = writable<Shape>();
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<{
-  features: DatasetItem["features"];
-  itemFeatures: Record<string, ItemFeature>;
-  featuresValues: FeaturesValues;
+  sceneFeatures: DatasetItem["features"]; // features
+  objectFeatures: Record<string, ItemFeature>; // itemFeatures
+  featuresList: FeaturesValues; // featuresValues
   views: DatasetItem["views"];
   id: DatasetItem["id"];
 }>();
