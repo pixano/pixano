@@ -35,7 +35,7 @@ All notable changes to Pixano will be documented in this file.
 - Fix removing smart segmentation inputs after validation or cancel (pixano#94)
 - Fix saving review_state only in pre-annotation tables (pixano#104)
 - Fix focusing the the first feature field when creating object (pixano#122)
-- Fix issues with loading segmentation models (pixano#/124, pixano#140, pixano#151, pixano#153)
+- Fix issues with loading segmentation models (pixano#124, pixano#140, pixano#151, pixano#153)
 - Fix random shapes appearing after deleting an object (pixano#150)
 - Fix bounding boxes to always have positive dimensions (pixano#139)
 - Fix buttons in Toolbar (pixano#115, pixano#142)
