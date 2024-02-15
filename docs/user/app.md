@@ -46,6 +46,8 @@ On the top, you will see the ground truth objects, which are the objects you imp
 
 You have visibility toggles for objects and object group, and when hovering on an object, you will have access to an edit tool and a delete tool.
 
+If you have used an inference model for pre-annotating the dataset, a "Pre-annotation" toggle will also appear above the ground truth section. Activating this toggle will let you go through each object and accept or reject them individually. You will also be able to edit the object features before accepting it.
+
 ![Pixano item view - object edition](../assets/user/exploration_object_edition.png)
 
 The edit tool will allow you to edit the object features, for example its category and category ID, and also allow you to edit the object bounding box and mask on the image.
