@@ -38,9 +38,9 @@ importers:
       '@pixano/core':
         specifier: workspace:^0.3.0
         version: link:../../components/core
-      '@pixano/imageworkspace':
+      '@pixano/dataset-item-workspace':
         specifier: workspace:^0.3.0
-        version: link:../../components/imageWorkspace
+        version: link:../../components/datasetItemWorkspace
       '@pixano/models':
         specifier: workspace:^0.3.0
         version: link:../../components/models
@@ -237,7 +237,7 @@ importers:
         specifier: ^5.0.3
         version: 5.0.11
 
-  components/imageWorkspace:
+  components/datasetItemWorkspace:
     dependencies:
       '@pixano/canvas2d':
         specifier: workspace:^0.3.0
@@ -380,9 +380,9 @@ importers:
       '@pixano/core':
         specifier: workspace:^0.3.0
         version: link:../../components/core
-      '@pixano/imageworkspace':
+      '@pixano/dataset-item-workspace':
         specifier: workspace:^0.3.0
-        version: link:../../components/imageWorkspace
+        version: link:../../components/datasetItemWorkspace
       '@pixano/models':
         specifier: workspace:^0.3.0
         version: link:../../components/models

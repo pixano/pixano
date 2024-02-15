@@ -39,7 +39,7 @@
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/table": "workspace:^0.3.0",
     "@pixano/models": "workspace:^0.3.0",
-    "@pixano/imageworkspace": "workspace:^0.3.0",
+    "@pixano/dataset-item-workspace": "workspace:^0.3.0",
     "@storybook/addon-styling": "^1.3.4",
     "@storybook/client-api": "7.1.1",
     "autoprefixer": "^10.4.13",

@@ -6,7 +6,7 @@ export default {
     "./src/routes/**/*.{svelte,js,ts,jsx,tsx}",
     "./src/components/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/core/src/**/*.{svelte,js,ts,jsx,tsx}",
-    "../../components/imageWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
+    "../../components/datasetItemWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
   ],
   theme: {

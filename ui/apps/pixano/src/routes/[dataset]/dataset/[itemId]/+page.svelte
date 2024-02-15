@@ -1,9 +1,8 @@
 <script lang="ts">
   import { page } from "$app/stores";
   import { type DatasetItem, type DatasetInfo, PrimaryButton } from "@pixano/core/src";
-  import ImageWorkspace from "@pixano/imageworkspace/src/ImageWorkspace.svelte";
+  import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
-
   import {
     datasetsStore,
     isLoadingNewItemStore,
@@ -81,7 +80,7 @@
 
 {#if selectedItem && selectedDataset}
   <div class="pt-20 h-1 min-h-screen">
-    <ImageWorkspace
+    <DatasetItemWorkspace
       {selectedItem}
       {models}
       currentDataset={selectedDataset}
