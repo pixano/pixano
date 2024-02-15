@@ -8,18 +8,14 @@ export const toggleIsEditingBBox = (
   bboxId: BBox["id"],
 ) => {
   const rect: Konva.Rect = stage.findOne(`#rect${bboxId}`);
+  const transformer: Konva.Transformer = stage.findOne("#transformer");
   if (rect) {
-    const transformer: Konva.Transformer = stage.findOne("#transformer");
     const nodes = transformer?.nodes();
     transformer?.nodes(
       value === "on" ? [rect] : [...nodes.filter((node) => node.id() !== rect.id())],
     );
-    //   return bboxes.map((bbox) => {
-    //     if (bbox.id === currentBox.id) {
-    //       bbox.editing = value === "on";
-    //     }
-    //     return bbox;
-    //   });
+  } else {
+    transformer?.nodes([]);
   }
 };
 
