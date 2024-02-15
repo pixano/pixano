@@ -25,7 +25,7 @@
 
   import Toolbar from "./components/Toolbar.svelte";
   import ImageCanvas from "./components/ImageCanvas.svelte";
-  import ImageInspector from "./components/ImageInspector/ImageInspector.svelte";
+  import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
   import {
     itemObjects,
@@ -131,7 +131,7 @@
     {embeddings}
     {isLoading}
   />
-  <ImageInspector on:click={onSave} {isLoading} />
+  <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
     currentDatasetId={currentDataset.id}
