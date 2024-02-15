@@ -33,7 +33,6 @@ todo.*
 *.njsproj
 *.sln
 *.sw?
-*lock.yaml
 *.code-workspace
 makefile
 
