@@ -14,29 +14,20 @@
    * http://www.cecill.info
    */
 
-  import type {
-    DatasetItem,
-    BBox,
-    Mask,
-    SelectionTool,
-    DatasetInfo,
-    ItemObject,
-  } from "@pixano/core";
+  import type { DatasetItem, SelectionTool, DatasetInfo, ItemObject } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
-  import ImageCanvas from "./components/ImageCanvas.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
   import {
     itemObjects,
-    itemBboxes,
-    itemMasks,
     itemMetas,
     newShape,
     canSave,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
+  import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
 
   export let currentDataset: DatasetInfo;
@@ -50,12 +41,8 @@
   let isSaving: boolean = false;
 
   let selectedTool: SelectionTool;
-  let allBBoxes: BBox[] = [];
-  let allMasks: Mask[] = [];
-  let embeddings: Embeddings = {};
 
-  $: itemBboxes.subscribe((boxes) => (allBBoxes = boxes));
-  $: itemMasks.subscribe((masks) => (allMasks = masks));
+  let embeddings: Embeddings = {};
 
   $: itemObjects.update((old) => {
     return Object.values(selectedItem.objects || {})
@@ -123,14 +110,7 @@
     </div>
   {/if}
   <Toolbar bind:selectedTool />
-  <ImageCanvas
-    {selectedTool}
-    {selectedItem}
-    bind:bboxes={allBBoxes}
-    bind:masks={allMasks}
-    {embeddings}
-    {isLoading}
-  />
+  <DatasetItemViewer {selectedTool} {selectedItem} {embeddings} {isLoading} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
