@@ -30,7 +30,9 @@ for path in sorted(Path(SRC_PATH).rglob("*.py")):
         doc_path = doc_path.with_name("index.md")
         full_doc_path = full_doc_path.with_name("index.md")
         nav["index"] = doc_path.as_posix()
-        with open(f"../pixano/docs/{REF_PATH}/index.md", "r") as index_file:
+        with open(
+            f"../pixano/docs/{REF_PATH}/index.md", "r", encoding="utf-8"
+        ) as index_file:
             lines = index_file.readlines()
             with mkdocs_gen_files.open(full_doc_path, "w") as fd:
                 fd.writelines(lines)
@@ -40,8 +42,7 @@ for path in sorted(Path(SRC_PATH).rglob("*.py")):
     elif not any(ignored in path.name for ignored in IGNORED_FILES):
         nav[parts] = doc_path.as_posix()
         with mkdocs_gen_files.open(full_doc_path, "w") as fd:
-            identifier = ".".join(parts)
-            print("::: pixano." + identifier, file=fd)
+            print("::: pixano." + ".".join(parts), file=fd)
         mkdocs_gen_files.set_edit_path(full_doc_path, path)
 
 

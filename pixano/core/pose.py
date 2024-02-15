@@ -21,7 +21,7 @@ class Pose(PixanoType, BaseModel):
     """Pose type using orientation and translation matrices
 
     Attributes:
-        _cam_r_w2c (list[float]): 3*3 orientation matrix
+        _cam_r_m2c (list[float]): 3*3 orientation matrix
         _cam_t_m2c (list[float]): 3*1 translation matrix
     """
 
@@ -32,7 +32,7 @@ class Pose(PixanoType, BaseModel):
         """Initialize pose from orientation and translation matrices
 
         Args:
-            cam_r_w2c (list[float]): 3*3 orientation matrix
+            cam_r_m2c (list[float]): 3*3 orientation matrix
             cam_t_m2c (list[float]): 3*1 translation matrix
         """
 
