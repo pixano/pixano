@@ -49,10 +49,19 @@
       objectsToAnnotate,
       confidenceFilterValue,
     );
+  });
+
+  $: {
     if (objectsToAnnotate.length === 0) {
       preAnnotationIsActive = false;
+      itemObjects.update((objects) =>
+        objects.map((object) => {
+          object.highlighted = "all";
+          return object;
+        }),
+      );
     }
-  });
+  }
 
   const onAcceptItem = () => {
     itemObjects.update((objects) => [
