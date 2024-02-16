@@ -1,0 +1,37 @@
+{
+  "name": "@pixano/dataset-item-workspace",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "postinstall": "pnpm -r generate:types"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.0.1",
+    "@tsconfig/svelte": "^5.0.0",
+    "postcss": "^8.4.21",
+    "svelte": "^4.2.7",
+    "svelte-check": "^3.4.6",
+    "tailwindcss": "3.2.4",
+    "tslib": "^2.6.0",
+    "typescript": "^5.0.2",
+    "vite": "^5.0.3"
+  },
+  "dependencies": {
+    "@pixano/canvas2d": "workspace:^0.3.0",
+    "@pixano/canvas3d": "workspace:^0.3.0",
+    "@pixano/core": "workspace:^0.3.0",
+    "@pixano/models": "workspace:^0.3.0",
+    "clsx": "^2.0.0",
+    "lucide-svelte": "^0.292.0",
+    "nanoid": "^5.0.0",
+    "onnxruntime-web": "~1.16.0",
+    "tailwind-merge": "^2.0.0",
+    "tailwind-variants": "^0.1.18",
+    "zod": "^3.22.4"
+  }
+}
