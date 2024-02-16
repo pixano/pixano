@@ -39,10 +39,10 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if itemType === "image"}
-    <ThreeDimensionsViewer />
+    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
   {:else if itemType === "video"}
     <VideoViewer />
   {:else if itemType === "3d"}
-    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
+    <ThreeDimensionsViewer />
   {/if}
 </div>
