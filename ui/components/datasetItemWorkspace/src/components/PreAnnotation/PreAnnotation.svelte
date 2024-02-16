@@ -143,11 +143,13 @@
           <span>{objectToAnnotate.id}</span>
         </p>
         <div class="flex flex-col gap-4 py-4">
-          <CreateFeatureInputs
-            bind:isFormValid
-            initialValues={objectToAnnotate.features}
-            bind:objectProperties
-          />
+          {#key objectToAnnotate.id}
+            <CreateFeatureInputs
+              bind:isFormValid
+              initialValues={objectToAnnotate.features}
+              bind:objectProperties
+            />
+          {/key}
         </div>
         <div class="flex gap-4 mt-4 justify-center sticky bottom-0 pb-2 left-[50%] bg-white">
           <PrimaryButton on:click={onAcceptItem} isSelected disabled={!isFormValid}
