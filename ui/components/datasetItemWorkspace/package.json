@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@pixano/canvas2d": "workspace:^0.3.0",
+    "@pixano/canvas3d": "workspace:^0.3.0",
     "@pixano/core": "workspace:^0.3.0",
     "@pixano/models": "workspace:^0.3.0",
     "clsx": "^2.0.0",

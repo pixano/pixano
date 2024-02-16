@@ -20,8 +20,8 @@
   import type { DatasetItem, SelectionTool } from "@pixano/core";
 
   import ImageViewer from "./ImageViewer.svelte";
-  //   import VideoViewer from "./VideoViewer.svelte";
-  //   import ThreeDimensionsViewer from "./3dViewer.svelte";
+  import VideoViewer from "./VideoViewer.svelte";
+  import ThreeDimensionsViewer from "./3DViewer.svelte";
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -39,10 +39,10 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if itemType === "image"}
-    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
+    <ThreeDimensionsViewer />
   {:else if itemType === "video"}
-    <div>salut</div>
+    <VideoViewer />
   {:else if itemType === "3d"}
-    <div>salut</div>
+    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
   {/if}
 </div>

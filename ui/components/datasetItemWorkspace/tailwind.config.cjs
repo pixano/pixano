@@ -4,6 +4,7 @@ module.exports = {
     "./index.html",
     "./src/**/*.{svelte,js,ts}",
     "../canvas2d/src/**/*.{svelte,js,ts}",
+    "../canvas3d/src/**/*.{svelte,js,ts}",
     "../core/src/**/*.{svelte,js,ts}",
     "../../apps/annotator/src/.{svelte,js,ts}",
   ],
