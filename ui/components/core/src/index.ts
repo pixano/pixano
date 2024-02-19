@@ -39,6 +39,7 @@ export { Input } from "./components/ui/input";
 export { Slider } from "./components/ui/slider";
 export { Switch } from "./components/ui/switch";
 export * as Command from "./components/ui/command";
+export * as Popover from "./components/ui/popover";
 
 // lib
 // utils
