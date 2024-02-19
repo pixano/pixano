@@ -304,29 +304,26 @@ class InferenceModel(ABC):
         # Main table
         # pylint: disable=unused-variable
         pyarrow_table = ds_tables["main"]["db"].to_lance()
-        pyarrow_batch = duckdb.query(
-            f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-        ).to_arrow_table()
+        if splits:
+            pyarrow_batch = duckdb.query(
+                f"SELECT * FROM pyarrow_table WHERE split IN {tuple(splits)} ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            ).to_arrow_table()
+        else:
+            pyarrow_batch = duckdb.query(
+                f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            ).to_arrow_table()
+        id_list = tuple(pyarrow_batch.to_pydict()["id"])
 
         # Media tables
         for media_table in ds_tables["media"].values():
             # pylint: disable=unused-variable
-            pyarrow_media_table = media_table.to_lance().to_table(
-                limit=limit, offset=offset
-            )
+            pyarrow_media_table = media_table.to_lance()
             # pylint: disable=unused-variable
             pyarrow_media_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_media_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                f"SELECT * FROM pyarrow_media_table WHERE id in {id_list}"
             ).to_arrow_table()
             pyarrow_batch = duckdb.query(
                 "SELECT * FROM pyarrow_batch LEFT JOIN pyarrow_media_batch USING (id) ORDER BY len(id), id"
-            ).to_arrow_table()
-
-        # Filter splits
-        if splits:
-            split_ids = "'" + "', '".join(splits) + "'"
-            pyarrow_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_batch WHERE split in ({split_ids})"
             ).to_arrow_table()
 
         # Convert to RecordBatch
