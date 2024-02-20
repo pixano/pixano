@@ -108,7 +108,19 @@ class App:
         self.app.dependency_overrides[get_settings] = get_settings_override
 
         @self.app.get("/", response_class=HTMLResponse)
-        def app_main(request: fastapi.Request):
+        def main_page(request: fastapi.Request):
+            return templates.TemplateResponse("index.html", {"request": request})
+
+        @self.app.get("/{ds_id}/dataset", response_class=HTMLResponse)
+        async def dataset_page(request: fastapi.Request):
+            return templates.TemplateResponse("index.html", {"request": request})
+
+        @self.app.get("/{ds_id}/dashboard", response_class=HTMLResponse)
+        async def dashboard_page(request: fastapi.Request):
+            return templates.TemplateResponse("index.html", {"request": request})
+
+        @self.app.get("/{ds_id}/dataset/{item_id}", response_class=HTMLResponse)
+        async def item_page(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
         self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
