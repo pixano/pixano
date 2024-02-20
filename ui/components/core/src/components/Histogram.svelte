@@ -33,11 +33,12 @@
     labels = [...new Set(hist.histogram.map((item: any) => item[hist.name]))];
 
   // Prepare chart data and options
-  let data = {
+  let data: any = {
     labels: labels,
     datasets: datasets,
   };
-  let options = {
+  let options: any = {
+    maintainAspectRatio: false,
     plugins: {
       title: {
         display: true,

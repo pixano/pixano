@@ -38,7 +38,7 @@
         >
       {/each}
     </div>
-    <div class="w-full z-10 p-8">
+    <div class="w-full flex flex-col z-10 p-8">
       {#if selectedTab === "source feature"}
         <!-- Overview -->
         <div class="w-full flex flex-row justify-between">
@@ -68,10 +68,10 @@
         <span class="text-5xl font-bold"> Statistics </span>
 
         {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
-          <div class="mt-12 h-full flex flex-wrap justify-evenly overflow-y-auto">
+          <div class="mt-6 h-full overflow-y-auto flex flex-wrap justify-between gap-6">
             <!-- If charts are ready to be displayed, display them -->
             {#each selectedDataset.stats as chart}
-              <div class="w-5/12 mb-12">
+              <div class="w-[47%] min-h-80">
                 <Histogram hist={chart} />
               </div>
             {/each}
