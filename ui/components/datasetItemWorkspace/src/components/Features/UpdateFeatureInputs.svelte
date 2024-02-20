@@ -28,9 +28,11 @@
 </script>
 
 {#each features as feature}
-  <div class="grid gap-4 grid-cols-[150px_auto] mt-2">
+  <div class="grid gap-4 grid-cols-[150px_auto] mt-2 pr-4">
     {#if isEditing || feature.value !== undefined}
-      <p class="font-medium first-letter:uppercase">{feature.label.replace("_", " ")}</p>
+      <p class="font-medium first-letter:uppercase flex items-center">
+        {feature.label.replace("_", " ")}
+      </p>
     {/if}
 
     {#if feature.type === "bool" && (feature.value !== undefined || isEditing)}

@@ -20,9 +20,10 @@
 
   export let onTextInputChange: (value: string) => void;
   export let featureList: { value: string; label: string; isTemp?: boolean }[] = [];
-  export let placeholder: string = "Select an item";
+  export let placeholder: string = "Select a feature";
   export let value: string = "";
   export let autofocus: boolean = false;
+  export let className = "";
 
   let open = autofocus;
   let selectedValue = value || placeholder;
@@ -58,14 +59,19 @@
 
 <Popover.Root bind:open let:ids>
   <Popover.Trigger asChild let:builder>
-    <button placeholder="Search feature" use:builder.action {...builder}>
+    <button
+      type="button"
+      use:builder.action
+      {...builder}
+      class={cn("flex h-11 rounded-md bg-transparent py-3 text-sm", className)}
+    >
       {selectedValue}
     </button>
   </Popover.Trigger>
-  <Popover.Content class="w-[200px] p-0" tabindex={-1}>
+  <Popover.Content class="w-[200px] p-0 " tabindex={-1}>
     <Command.Root>
       <Command.Input
-        placeholder="Search framework..."
+        {placeholder}
         on:change={() => console.log("changed")}
         bind:value={inputValue}
         on:input={onSearchInput}
