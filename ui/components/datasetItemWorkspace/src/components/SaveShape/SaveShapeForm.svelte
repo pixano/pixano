@@ -106,7 +106,9 @@
 {#if shape.status === "inProgress"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
-    <CreateFeatureInputs bind:isFormValid bind:formInputs bind:objectProperties />
+    <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">
+      <CreateFeatureInputs bind:isFormValid bind:formInputs bind:objectProperties />
+    </div>
     <div class="flex gap-4">
       <Button
         class="text-white"

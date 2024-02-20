@@ -19,7 +19,6 @@
   )}
 >
   <slot />
-  <!-- svelte-ignore a11y-autofocus -->
   <input
     class={cn(
       "w-full p-2 placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
@@ -39,6 +38,6 @@
     on:paste
     on:input
     {...$$restProps}
-    {autofocus}
+    {...autofocus ? { autofocus: true } : {}}
   />
 </div>

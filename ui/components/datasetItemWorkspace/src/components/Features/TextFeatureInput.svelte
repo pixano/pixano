@@ -53,7 +53,6 @@
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
         featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
-        isFixed={isEditing && featureClass === "objects"}
       />
     {:else}
       <Input
