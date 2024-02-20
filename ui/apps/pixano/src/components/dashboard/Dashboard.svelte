@@ -68,10 +68,12 @@
         <span class="text-5xl font-bold"> Statistics </span>
 
         {#if selectedDataset.stats != null && selectedDataset.stats.length != 0}
-          <div class="mt-8 flex flex-wrap justify-center gap-6 mx-8">
+          <div class="mt-12 h-full flex flex-wrap justify-evenly overflow-y-auto">
             <!-- If charts are ready to be displayed, display them -->
             {#each selectedDataset.stats as chart}
-              <Histogram hist={chart} />
+              <div class="w-5/12 mb-12">
+                <Histogram hist={chart} />
+              </div>
             {/each}
           </div>
         {:else}
