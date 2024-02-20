@@ -63,12 +63,15 @@
       type="button"
       use:builder.action
       {...builder}
-      class={cn("flex h-11 rounded-md bg-transparent py-3 text-sm", className)}
+      class={cn(
+        "py-0 rounded-md bg-transparent flex h-10 items-center border border-input bg-white px-3 text-sm ring-offset-background w-full",
+        className,
+      )}
     >
       {selectedValue}
     </button>
   </Popover.Trigger>
-  <Popover.Content class="w-[200px] p-0 " tabindex={-1}>
+  <Popover.Content class="p-0 " tabindex={-1}>
     <Command.Root>
       <Command.Input
         {placeholder}

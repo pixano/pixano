@@ -53,7 +53,6 @@
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
         featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
-        className="py-0 flex h-10 items-center rounded-md border border-input bg-white px-3 text-sm ring-offset-background w-full"
       />
     {:else}
       <Input
