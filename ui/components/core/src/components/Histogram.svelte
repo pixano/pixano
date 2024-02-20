@@ -28,25 +28,20 @@
   } from "chart.js";
   import zoomPlugin from "chartjs-plugin-zoom";
   import type { DatasetStat } from "..";
+  import { colors } from "./colors";
 
   // Define props
   export let hist: DatasetStat;
 
-  // Color palette for stacked charts
-  const colors = ["#771E5F", "#1E7736", "#1E5F77", "#77361E"];
-
   // Separate splits
   let splits: string[] = [...new Set(hist.histogram.map((item) => String(item.split)))];
-  let datasets: ChartDataset[] = [];
-  for (let i = 0; i < splits.length; ++i) {
-    datasets.push({
-      label: splits[i],
-      backgroundColor: colors[i] + "40",
-      borderColor: colors[i],
-      borderWidth: 2,
-      data: hist.histogram.filter((item) => item.split === splits[i]).map((item) => item.counts),
-    });
-  }
+  let chartDatasets: ChartDataset[] = splits.map((split, i) => ({
+    label: split,
+    backgroundColor: colors[i] + "40",
+    borderColor: colors[i],
+    borderWidth: 2,
+    data: hist.histogram.filter((item) => item.split === split).map((item) => item.counts),
+  }));
 
   // Define label names
   let labels;
@@ -57,8 +52,8 @@
 
   // Prepare chart data and options
   let data = {
-    labels: labels,
-    datasets: datasets,
+    labels,
+    datasets: chartDatasets,
   };
   let options = {
     maintainAspectRatio: false,
