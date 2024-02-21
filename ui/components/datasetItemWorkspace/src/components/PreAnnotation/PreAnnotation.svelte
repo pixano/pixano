@@ -20,7 +20,11 @@
   import { PrimaryButton, Slider, IconButton, Switch, cn } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { canSave, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    canSave,
+    itemObjects,
+    preAnnotationIsActive,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import {
     getObjectsToPreAnnotate,
@@ -31,7 +35,6 @@
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
 
   export let colorScale: (id: string) => string;
-  export let preAnnotationIsActive: boolean = false;
 
   let objectsToAnnotate: ItemObject[] = [];
   let filteredObjectsToAnnotate: ItemObject[] = [];
@@ -52,8 +55,8 @@
   });
 
   $: {
-    if (preAnnotationIsActive && objectsToAnnotate.length === 0) {
-      preAnnotationIsActive = false;
+    if ($preAnnotationIsActive && objectsToAnnotate.length === 0) {
+      preAnnotationIsActive.set(false);
       itemObjects.update((objects) =>
         objects.map((object) => {
           object.highlighted = "all";
@@ -85,7 +88,7 @@
   };
 
   const onSwitchChange = (checked: boolean | undefined) => {
-    preAnnotationIsActive = checked || false;
+    $preAnnotationIsActive = checked || false;
     itemObjects.update((objects) => {
       const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
       const tempObjects = sortAndFilterObjectsToAnnotate(
@@ -93,8 +96,8 @@
         confidenceFilterValue,
       );
       return objects.map((object) => {
-        object.highlighted = preAnnotationIsActive ? "none" : "all";
-        if (object.id === tempObjects[0]?.id && preAnnotationIsActive) {
+        object.highlighted = $preAnnotationIsActive ? "none" : "all";
+        if (object.id === tempObjects[0]?.id && $preAnnotationIsActive) {
           object.highlighted = "self";
         }
         return object;
@@ -109,7 +112,7 @@
       confidenceFilterValue,
     );
     if (objectsToAnnotate.length === 0) {
-      preAnnotationIsActive = false;
+      preAnnotationIsActive.set(false);
     }
   };
 </script>
@@ -132,11 +135,11 @@
       </Tooltip.Root>
       <h3 class="uppercase font-medium">PRE ANNOTATION</h3>
     </div>
-    {#if preAnnotationIsActive}
+    {#if $preAnnotationIsActive}
       <span>{filteredObjectsToAnnotate.length}</span>
     {/if}
   </div>
-  {#if preAnnotationIsActive}
+  {#if $preAnnotationIsActive}
     <div class="my-2 flex items-center">
       <IconButton tooltipContent="confidence slider">
         <Filter />
@@ -157,6 +160,7 @@
               bind:isFormValid
               initialValues={objectToAnnotate.features}
               bind:objectProperties
+              enableAutofocus={false}
             />
           {/key}
         </div>
