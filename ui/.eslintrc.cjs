@@ -40,5 +40,11 @@ module.exports = {
   rules: {
     "@typescript-eslint/no-unsafe-argument": "off", // no types for event.detail in Canvas2D, AnnotationWorkspace and App
     "@typescript-eslint/no-unsafe-member-access": "off", // no types for event.detail.evt in Canvas2D
+    "@typescript-eslint/no-misused-promises": [
+      "error",
+      {
+        checksVoidReturn: false,
+      },
+    ],
   },
 };
