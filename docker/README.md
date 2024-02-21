@@ -25,7 +25,7 @@ You can also change the default port (EXPOSE line and CMD line)
 
 Run
 ```
-docker -p 28005:28005 -t pixano/pixano:<pixano_version>
+docker run -p 28005:28005 -t pixano/pixano:<pixano_version>
 ```
 
 Then open your browser and go to [http://127.0.0.1:28005](http://127.0.0.1:28005)
@@ -43,6 +43,17 @@ You can copy a dataset in the Docker container, once started, with
 ```
 docker cp <local_dataset_path> <pixano_container_id>:library
 ```
+
+## Add models
+
+Interactive segmentation need a model to work.
+Please refer to [Interactive annotation Notebook](https://github.com/pixano/pixano/blob/develop/notebooks/models/interactive_annotation.ipynb) for instructions on how to generate the .onnx model file for interactive segmentation.
+
+Once you have the .onnx model file, you can copy it in the docker container
+```
+docker cp <local_onnx_file> <pixano_container_id>:library/models
+```
+
 
 ## S3 Storage
 
