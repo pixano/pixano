@@ -13,6 +13,8 @@
  * http://www.cecill.info
  */
 
+import "../src/tailwind.css";
+
 // Exports
 export const parameters = {
   backgrounds: {
