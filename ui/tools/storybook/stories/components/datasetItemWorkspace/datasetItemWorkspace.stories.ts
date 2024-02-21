@@ -24,6 +24,7 @@ import {
   mockedImageItem,
   mockedCurrentDataset,
   mockHandleSaveItem,
+  mockedVideoItem,
 } from "./datasetItemWorkspaceMocks";
 
 type Story = StoryObj<typeof meta>;
@@ -52,5 +53,17 @@ export const SimpleImage: Story = {
     handleSaveItem: mockHandleSaveItem,
     currentDataset: mockedCurrentDataset,
     selectedItem: mockedImageItem,
+  },
+};
+
+export const SimpleVideo: Story = {
+  args: {
+    canSaveCurrentItem: false,
+    isLoading: false,
+    shouldSaveCurrentItem: false,
+    models: [],
+    handleSaveItem: mockHandleSaveItem,
+    currentDataset: mockedCurrentDataset,
+    selectedItem: mockedVideoItem,
   },
 };
