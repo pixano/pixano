@@ -52,7 +52,7 @@
   });
 
   $: {
-    if (objectsToAnnotate.length === 0) {
+    if (preAnnotationIsActive && objectsToAnnotate.length === 0) {
       preAnnotationIsActive = false;
       itemObjects.update((objects) =>
         objects.map((object) => {
