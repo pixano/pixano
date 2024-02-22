@@ -18,14 +18,14 @@
   export let value: string;
 
   // Video
-  let video;
+  let video: HTMLVideoElement;
   let isHovered = false;
 
   function toggleHover() {
     isHovered = !isHovered;
     if (isHovered) {
       video.playbackRate = 4;
-      video.play();
+      video.play().catch(() => console.error("video playback error"));
     } else {
       video.pause();
     }
