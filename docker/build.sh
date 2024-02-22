@@ -1,6 +1,6 @@
 #!/bin/bash
  
-echo "Pixano - Creation image docker, upload dockerHub,"
+echo "Pixano - Creation image docker"
 
 # get pixano & pixano-inference versions from cli or default
 pixano_ver=$1
@@ -12,7 +12,7 @@ echo "pixano version: " $pixano_ver
 pixano_inference_ver=$2
 if [ -z "$pixano_inference_ver" ]
 then
-pixano_inference_ver=0.3.0b1
+pixano_inference_ver=v0.3.0b2
 fi
 echo "pixano-inference version: " $pixano_inference_ver
 

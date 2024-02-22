@@ -12,8 +12,6 @@ RUN pip install --upgrade pip \
 # pixano-inference is required for semantic search, but heavy, so if you don't need semantic search you can comment it
 RUN pip install pixano-inference@git+https://github.com/pixano/pixano-inference@$pixano_inference_version
 
-COPY library library
-
 # env vars
 ENV LANCEDB_CONFIG_DIR="/tmp"
 
