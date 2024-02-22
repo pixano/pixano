@@ -160,7 +160,7 @@
               bind:isFormValid
               initialValues={objectToAnnotate.features}
               bind:objectProperties
-              enableAutofocus={false}
+              isAutofocusEnabled={false}
             />
           {/key}
         </div>

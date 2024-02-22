@@ -36,7 +36,7 @@
   export let formInputs: CreateObjectInputs = [];
   export let objectProperties: { [key: string]: FeatureValues } = {};
   export let initialValues: Record<string, ItemFeature> = {};
-  export let enableAutofocus: boolean = true;
+  export let isAutofocusEnabled: boolean = true;
 
   let objectValidationSchema: CreateObjectSchema;
 
@@ -114,7 +114,7 @@
           value={findStringValue(feature.name)}
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
           featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
-          autofocus={i === 0 && enableAutofocus}
+          autofocus={i === 0 && isAutofocusEnabled}
         />
       {:else}
         <Input
