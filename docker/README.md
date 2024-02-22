@@ -2,7 +2,7 @@
 
 ## Docker Explore
 
-For a more user-friendly experience, you can use (Docker Desktop)[https://www.docker.com/products/docker-desktop/], available on Windows, Mac, Linux
+For a more user-friendly experience, you can use [Docker Desktop](https://www.docker.com/products/docker-desktop), available on Windows, Mac, Linux
 
 TODO: Docker Desktop build/run
 
