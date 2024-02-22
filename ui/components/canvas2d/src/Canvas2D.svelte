@@ -97,8 +97,8 @@
   }
 
   $: {
-    if (views && isReady) {
-      loadImages();
+    if (views) {
+      loadNewImage();
     }
   }
   let timerId: ReturnType<typeof setTimeout>;
@@ -106,6 +106,7 @@
   // References to HTML Elements
   let stageContainer: HTMLElement;
   let images: Record<string, HTMLImageElement> = {};
+  let imagesArray: Record<string, HTMLImageElement[]> = {};
 
   // References to Konva Elements
   let stage: Konva.Stage;
@@ -189,29 +190,17 @@
     }
   });
 
-  function loadImages() {
+  function loadNewImage() {
     for (const view of Object.values(views)) {
-      // zoomFactor[view.id] = 1;
-      images[view.id] = new Image();
+      const newImage = new Image();
       if (utils.isValidURL(view.uri)) {
-        images[view.id].src = `${view.uri}` || view.url;
+        newImage.src = `${view.uri}` || view.url;
       } else {
-        images[view.id].src = view.uri; // TODO
+        newImage.src = view.uri; // TODO
         // images[view.id].src = `/${view.uri}` || view.url;
       }
-      images[view.id].onload = () => {
-        // Find existing Konva elements in case a previous item was already loaded
-        if (currentId) {
-          const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
-          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${view.id}`);
-          konvaImg.image(images[view.id]);
-        }
-        // scaleView(view);
-        // scaleElements(view);
-        // hack to refresh view (display masks/bboxes)
-        // masks = masks;
-        // bboxes = bboxes;
-      };
+      // imagesArray[view.id] = [...(imagesArray?.[view.id] || []), newImage];
+      imagesArray[view.id] = imagesArray[view.id].slice(-2);
     }
   }
 
@@ -246,6 +235,7 @@
         masks = masks;
         bboxes = bboxes;
       };
+      imagesArray[view.id] = [images[view.id]];
     }
     currentId = selectedItemId;
   }
@@ -293,6 +283,7 @@
 
     // Scale input points
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
+    if (!inputGroup) return;
     for (const point of inputGroup.children) {
       if (point instanceof Konva.Circle) {
         point.radius(INPUTPOINT_RADIUS / zoomFactor[view.id]);
@@ -1068,17 +1059,19 @@
     on:mouseleave={handleMouseLeaveStage}
   >
     {#each Object.values(views) as view}
-      {#if images[view.id]}
+      {#if imagesArray[view.id]}
         <Layer
           config={{ id: view.id }}
           on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
         >
-          <KonvaImage
-            config={{ image: images[view.id], id: `image-${view.id}` }}
-            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
-            on:pointerup={() => handlePointerUpOnImage(view.id)}
-            on:dblclick={() => handleDoubleClickOnImage(view.id)}
-          />
+          {#each imagesArray[view.id] as image}
+            <KonvaImage
+              config={{ image, id: `image-${view.id}`, zIndex: 1 }}
+              on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
+              on:pointerup={() => handlePointerUpOnImage(view.id)}
+              on:dblclick={() => handleDoubleClickOnImage(view.id)}
+            />
+          {/each}
           <Group config={{ id: "currentAnnotation" }} />
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />

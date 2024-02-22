@@ -116,7 +116,7 @@
 <Group
   on:dblclick={onDoubleClick}
   on:click={onClick}
-  config={{ listening: selectedTool?.type === "PAN" }}
+  config={{ listening: selectedTool?.type === "PAN", zIndex: 2 }}
 >
   <Rect
     config={{
