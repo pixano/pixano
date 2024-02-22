@@ -23,6 +23,6 @@
   export let value: DatasetStat;
 </script>
 
-<div class="w-full flex flex-row items-center overflow-y-scroll">
-  <Histogram hist={value} maxHeight={20} hideTitle />
+<div class="h-40 w-40 mx-auto object-cover rounded">
+  <Histogram hist={value} />
 </div>
