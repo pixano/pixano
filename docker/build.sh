@@ -1,6 +1,6 @@
 #!/bin/bash
  
-echo "Pixano - Creation image docker"
+echo "Pixano - Create Docker image"
 
 # get pixano & pixano-inference versions from cli or default
 pixano_ver=$1
