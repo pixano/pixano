@@ -27,4 +27,4 @@ if ! docker inspect "$pixano_image" &>/dev/null; then
     docker pull "$pixano_image"
 fi
 
-docker run -v $absolute_library_path:/library -p 28005:28005 -t $pixano_image
+docker run -v $absolute_library_path:/library -p 28005:28005 -t "$pixano_image"
