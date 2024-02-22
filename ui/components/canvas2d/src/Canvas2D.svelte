@@ -197,10 +197,8 @@
         newImage.src = `${view.uri}` || view.url;
       } else {
         newImage.src = view.uri; // TODO
-        // images[view.id].src = `/${view.uri}` || view.url;
       }
-      // imagesArray[view.id] = [...(imagesArray?.[view.id] || []), newImage];
-      imagesArray[view.id] = imagesArray[view.id].slice(-2);
+      imagesArray[view.id] = [...(imagesArray?.[view.id] || []), newImage].slice(-2);
     }
   }
 

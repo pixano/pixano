@@ -35,7 +35,7 @@
   let currentImageIndex = 0;
   let intervalId: number;
   let currentImageUrl: string;
-  let videoSpeed = 300;
+  let videoSpeed = 100;
   let views = selectedItem.views;
   let isLoaded = false;
   let currentTime: string;
@@ -73,7 +73,7 @@
     if (!isLoaded) return;
     clearInterval(intervalId);
     const interval = setInterval(async () => {
-      currentImageIndex = currentImageIndex + 1;
+      currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
       currentImageUrl = await getCurrentImage(currentImageIndex);
       updateViews();
     }, videoSpeed);
@@ -91,25 +91,25 @@
     currentTime = `${minutes}:${Number(seconds) < 10 ? "0" : ""}${seconds}`;
   }
 
-  function dragMe(node: HTMLButtonElement) {
+  const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
     let left = node.offsetLeft;
 
-    node.style.left = `${left}px`;
-
     node.addEventListener("mousedown", () => {
+      console.log("mousedown");
       moving = true;
       clearInterval(intervalId);
     });
 
-    window.addEventListener("mousemove", async (e) => {
+    window.addEventListener("mousemove", async (event) => {
       if (moving) {
-        left += e.movementX;
+        left = event.clientX - (node.parentElement?.offsetLeft || 0);
         if (left < 0) left = 0;
         const max = node.parentElement?.offsetWidth || left;
         if (left > max) left = max;
         node.style.left = `${left}px`;
-        currentImageIndex = Math.floor((left / max) * Object.keys(imageFiles).length);
+        const index = Math.floor((left / max) * Object.keys(imageFiles).length) - 1;
+        currentImageIndex = index < 0 ? 0 : index;
         currentImageUrl = await getCurrentImage(currentImageIndex);
         updateViews();
       }
@@ -118,7 +118,21 @@
     window.addEventListener("mouseup", () => {
       moving = false;
     });
-  }
+  };
+
+  const onPlayerClick = async (event: MouseEvent | KeyboardEvent) => {
+    let targetElement = event.target as HTMLElement;
+    if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
+    clearInterval(intervalId);
+    const distance = event.clientX - targetElement.offsetLeft;
+    currentImageIndex = Math.floor(
+      (distance / targetElement.offsetWidth) * Object.keys(imageFiles).length,
+    );
+    currentImageUrl = await getCurrentImage(currentImageIndex);
+    updateViews();
+  };
+
+  $: console.log({ currentImageIndex });
 </script>
 
 {#if isLoaded}
@@ -142,7 +156,14 @@
       <button on:click={playVideo}>play</button>
       <button on:click={stopVideo}>pause</button>
       <p>{currentTime}</p>
-      <div class="w-full flex justify-between bg-red-500 relative">
+      <div
+        class="w-full flex justify-between bg-red-500 relative"
+        role="slider"
+        tabindex="0"
+        on:click={onPlayerClick}
+        on:keydown={onPlayerClick}
+        aria-valuenow={currentImageIndex}
+      >
         <button
           use:dragMe
           class="h-full w-2 bg-slate-900 absolute z-10"
