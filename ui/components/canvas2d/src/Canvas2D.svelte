@@ -48,7 +48,9 @@
   import Rectangle from "./components/Rectangle.svelte";
 
   // Exports
-  export let selectedItem: DatasetItem;
+
+  export let selectedItemId: DatasetItem["id"];
+  export let views: DatasetItem["views"];
   export let colorRange: string[] = ["0", "10"];
   export let masks: Mask[];
   export let bboxes: BBox[];
@@ -93,11 +95,17 @@
     }
     numberOfBBoxes = bboxes.length;
   }
+
+  $: {
+    if (views && isReady) {
+      loadImages();
+    }
+  }
   let timerId: ReturnType<typeof setTimeout>;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
-  let images: Record<string, HTMLImageElement> = {}; // {viewId: HTMLImageElement}
+  let images: Record<string, HTMLImageElement> = {};
 
   // References to Konva Elements
   let stage: Konva.Stage;
@@ -152,6 +160,7 @@
   // ********** INIT ********** //
 
   onMount(() => {
+    console.log("mounting");
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
@@ -162,7 +171,7 @@
   });
 
   afterUpdate(() => {
-    if (currentId !== selectedItem.id) loadItem();
+    if (currentId !== selectedItemId) loadItem();
 
     if (selectedTool) {
       handleChangeTool();
@@ -174,27 +183,54 @@
       validateCurrentAnn();
     }
 
-    for (const viewId of Object.keys(selectedItem.views)) {
+    for (const viewId of Object.keys(views)) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
     }
   });
 
+  function loadImages() {
+    for (const view of Object.values(views)) {
+      // zoomFactor[view.id] = 1;
+      images[view.id] = new Image();
+      if (utils.isValidURL(view.uri)) {
+        images[view.id].src = `${view.uri}` || view.url;
+      } else {
+        images[view.id].src = view.uri; // TODO
+        // images[view.id].src = `/${view.uri}` || view.url;
+      }
+      images[view.id].onload = () => {
+        // Find existing Konva elements in case a previous item was already loaded
+        if (currentId) {
+          const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
+          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${view.id}`);
+          konvaImg.image(images[view.id]);
+        }
+        // scaleView(view);
+        // scaleElements(view);
+        // hack to refresh view (display masks/bboxes)
+        // masks = masks;
+        // bboxes = bboxes;
+      };
+    }
+  }
+
   function loadItem() {
     // Calculate new grid size
-    gridSize.cols = Math.ceil(Math.sqrt(Object.keys(selectedItem.views).length));
-    gridSize.rows = Math.ceil(Object.keys(selectedItem.views).length / gridSize.cols);
+    gridSize.cols = Math.ceil(Math.sqrt(Object.keys(views).length));
+    gridSize.rows = Math.ceil(Object.keys(views).length / gridSize.cols);
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
 
-    for (const view of Object.values(selectedItem.views)) {
+    for (const view of Object.values(views)) {
       zoomFactor[view.id] = 1;
       images[view.id] = new Image();
       if (utils.isValidURL(view.uri)) {
         images[view.id].src = `${view.uri}` || view.url;
       } else {
-        images[view.id].src = `/${view.uri}` || view.url;
+        images[view.id].src = view.uri;
+        // images[view.id].src = `/${view.uri}` || view.url;
       }
       images[view.id].onload = () => {
         // Find existing Konva elements in case a previous item was already loaded
@@ -211,7 +247,7 @@
         bboxes = bboxes;
       };
     }
-    currentId = selectedItem.id;
+    currentId = selectedItemId;
   }
 
   function scaleView(view: ItemView) {
@@ -224,7 +260,7 @@
       //calculate view pos in grid
       let i = 0;
       //get view index
-      for (const viewId of Object.keys(selectedItem.views)) {
+      for (const viewId of Object.keys(views)) {
         if (viewId === view.id) break;
         i++;
       }
@@ -337,7 +373,7 @@
           rle: results.rle,
           type: "mask",
           viewId,
-          itemId: selectedItem.id,
+          itemId: selectedItemId,
           imageWidth: images[viewId].width,
           imageHeight: images[viewId].height,
           status: "inProgress",
@@ -741,7 +777,7 @@
               },
               type: "rectangle",
               viewId,
-              itemId: selectedItem.id,
+              itemId: selectedItemId,
               imageWidth: images[viewId].width,
               imageHeight: images[viewId].height,
             };
@@ -778,7 +814,7 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    for (const viewId of Object.keys(selectedItem.views)) {
+    for (const viewId of Object.keys(views)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
     }
@@ -1005,7 +1041,7 @@
       console.log("bboxes", bboxes);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
-      for (const viewId of Object.keys(selectedItem.views)) {
+      for (const viewId of Object.keys(views)) {
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
         const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
@@ -1031,7 +1067,7 @@
     on:mouseenter={handleMouseEnterStage}
     on:mouseleave={handleMouseLeaveStage}
   >
-    {#each Object.values(selectedItem.views) as view}
+    {#each Object.values(views) as view}
       {#if images[view.id]}
         <Layer
           config={{ id: view.id }}
@@ -1067,7 +1103,7 @@
             {stage}
             {images}
             {zoomFactor}
-            selectedItemId={selectedItem.id}
+            {selectedItemId}
             bind:newShape
           />
           {#each masks as mask}

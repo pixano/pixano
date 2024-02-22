@@ -29,7 +29,6 @@
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
@@ -62,7 +61,8 @@
 
 {#key selectedItem.id}
   <Canvas2D
-    {selectedItem}
+    selectedItemId={selectedItem.id}
+    views={selectedItem.views}
     colorRange={allIds}
     bboxes={$itemBboxes}
     masks={$itemMasks}

@@ -16,7 +16,19 @@
    * http://www.cecill.info
    */
 
+  import * as ort from "onnxruntime-web";
+
+  import type { DatasetItem, SelectionTool } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import { Canvas2D } from "@pixano/canvas2d";
+  import { newShape, itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
+
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png");
+
+  export let selectedItem: DatasetItem;
+  export let embeddings: Record<string, ort.Tensor>;
+  export let selectedTool: SelectionTool;
+  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   let currentImageIndex = 0;
   let intervalId: number;
@@ -61,7 +73,6 @@
   const allSec = [...Array(Math.floor(videoTotalLengthInMs / 1000)).keys()];
 
   function dragMe(node: HTMLButtonElement) {
-    // https://svelte.dev/repl/25a1141c007b4d2097367b12a559f63a?version=4.2.11
     let moving = false;
     let left = node.offsetLeft;
 
@@ -86,19 +97,41 @@
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      playVideo();
     });
   }
 
   onMount(async () => {
     currentImageUrl = await getCurrentImage(currentImageIndex);
   });
+
+  let views = selectedItem.views;
+
+  $: {
+    views = {
+      ...selectedItem.views,
+      image: {
+        ...selectedItem.views.image,
+        uri: currentImageUrl || selectedItem.views.image.uri,
+      },
+    };
+  }
 </script>
 
 <div class="bg-white p-5 w-full">
   <div class="">
     {#if currentImageUrl}
-      <img src={currentImageUrl} alt="video" class="w-full" />
+      <Canvas2D
+        selectedItemId={selectedItem.id}
+        {views}
+        colorRange={[]}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        {embeddings}
+        bind:selectedTool
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+      <!-- <img src={currentImageUrl} alt="video" class="w-full" /> -->
     {/if}
   </div>
   <div class="bg-white flex gap-4">

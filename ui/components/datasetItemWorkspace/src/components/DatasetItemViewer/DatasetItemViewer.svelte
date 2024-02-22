@@ -25,7 +25,6 @@
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
@@ -39,7 +38,7 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if itemType === "image"}
-    <VideoViewer />
+    <VideoViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
   {:else if itemType === "video"}
     <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
   {:else if itemType === "3d"}
