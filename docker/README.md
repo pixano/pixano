@@ -39,7 +39,7 @@ In the popup, open the "Optional settings".
 
 - Enter "28005" in the Ports (Host port) field. You can choose any available port, just note that you will have to use this port in your browser instead of the default 28005 given in logs (As Pixano running in Docker container is not aware of the port mapping).
 
-- Select your pixano library directory in "Volumes" field "Host path", and enter "/library" (don't forget the '/') in the "Container path".
+- Select your [local library directory](#local-library-directory) in "Volumes" field "Host path", and enter "/library" (don't forget the '/') in the "Container path".
 
 - Press "RUN".
 
@@ -81,7 +81,7 @@ With pixano-inference module, the image will be heavier (~12Go), because pixano-
 
 ### Docker image Run
 
-- Run the pixano script
+- Run the pixano script with your [local library directory](#local-library-directory)
 ```
 ./pixano.sh <local_library_directory> [<pixano_version>]
 ```
