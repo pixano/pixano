@@ -15,6 +15,7 @@
    */
   import { onMount } from "svelte";
   import * as ort from "onnxruntime-web";
+  import { PlayIcon, PauseIcon } from "lucide-svelte";
 
   import type { DatasetItem, SelectionTool } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
@@ -41,7 +42,7 @@
   let currentTime: string;
 
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
-  const allSec = [...Array(Math.floor(videoTotalLengthInMs / 1000)).keys()];
+  const all100ms = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
 
   onMount(async () => {
     currentImageUrl = await getCurrentImage(currentImageIndex);
@@ -78,10 +79,6 @@
       updateViews();
     }, videoSpeed);
     intervalId = Number(interval);
-  };
-
-  const stopVideo = () => {
-    clearInterval(intervalId);
   };
 
   $: {
@@ -132,51 +129,81 @@
     updateViews();
   };
 
-  $: console.log({ currentImageIndex });
+  const onPlayClick = () => {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = 0;
+    } else {
+      playVideo();
+    }
+  };
 </script>
 
 {#if isLoaded}
-  <div class="bg-white p-5 w-full">
-    <div class="">
-      {#if currentImageUrl}
-        <Canvas2D
-          selectedItemId={selectedItem.id}
-          {views}
-          colorRange={[]}
-          bboxes={$itemBboxes}
-          masks={$itemMasks}
-          {embeddings}
-          bind:selectedTool
-          bind:currentAnn
-          bind:newShape={$newShape}
-        />
-      {/if}
-    </div>
-    <div class="bg-white flex gap-4">
-      <button on:click={playVideo}>play</button>
-      <button on:click={stopVideo}>pause</button>
-      <p>{currentTime}</p>
-      <div
-        class="w-full flex justify-between bg-red-500 relative"
-        role="slider"
-        tabindex="0"
-        on:click={onPlayerClick}
-        on:keydown={onPlayerClick}
-        aria-valuenow={currentImageIndex}
-      >
-        <button
-          use:dragMe
-          class="h-full w-2 bg-slate-900 absolute z-10"
-          style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
-        />
-        <span>0</span>
-        {#each allSec as sec}
-          <span
-            class="absolute bg-green-500 translate-x-[-50%]"
-            style={`left: ${(((sec + 1) * 1000) / videoTotalLengthInMs) * 100}%`}>{sec + 1}</span
+  <div class="pl-4 w-full flex flex-col h-full">
+    {#if currentImageUrl}
+      <Canvas2D
+        selectedItemId={selectedItem.id}
+        {views}
+        colorRange={[]}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        {embeddings}
+        bind:selectedTool
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    {/if}
+
+    <div class="bg-white flex gap-4 h-full">
+      <div class="h-10 flex w-full border-b border-slate-200">
+        <div class="flex justify-between w-1/3 p-2 items-center border-r border-slate-200">
+          <p>
+            {currentTime}
+          </p>
+          <button on:click={onPlayClick} class="text-primary">
+            {#if intervalId}
+              <PauseIcon />
+            {:else}
+              <PlayIcon />
+            {/if}
+          </button>
+        </div>
+        <div class="px-4 w-full">
+          <div
+            class="flex justify-between relative border-b border-slate-200 pt-8"
+            role="slider"
+            tabindex="0"
+            on:click={onPlayerClick}
+            on:keydown={onPlayerClick}
+            aria-valuenow={currentImageIndex}
           >
-        {/each}
-        <span>{videoTotalLengthInMs / 1000}</span>
+            <button
+              use:dragMe
+              class="h-6 w-1 bg-primary absolute z-10 bottom-0"
+              style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+            />
+            {#each all100ms as ms}
+              {#if ms % 10 === 0 && ms > 0}
+                <span
+                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-2 bg-slate-300 bottom-0"
+                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                />
+                <span
+                  class="absolute translate-x-[-50%] text-slate-300 bottom-2"
+                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                  >{ms / 10}s</span
+                >
+              {:else}
+                <span
+                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0"
+                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                />
+              {/if}
+            {/each}
+            <!-- <span>{videoTotalLengthInMs / 1000}</span> -->
+          </div>
+        </div>
       </div>
     </div>
   </div>
