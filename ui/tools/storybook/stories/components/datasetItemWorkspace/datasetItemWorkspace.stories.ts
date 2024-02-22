@@ -19,7 +19,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
-import { MockInteractiveImageSegmenter } from "../canvas2d/mocks";
+import { MockInteractiveImageSegmenter } from "./mocks";
 import {
   mockedImageItem,
   mockedCurrentDataset,
@@ -30,7 +30,7 @@ type Story = StoryObj<typeof meta>;
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/Dataset Item/simple image",
+  title: "Components/DatasetItemWorkspace/DatasetItemWorkspace",
   component: DatasetItemWorkspace,
   tags: ["autodocs"],
 } satisfies Meta<DatasetItemWorkspace>;
@@ -43,7 +43,7 @@ interactiveSegmenterModel.set(mock);
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 
-export const SimpleImage: Story = {
+export const BasicImageWorkspace: Story = {
   args: {
     canSaveCurrentItem: false,
     isLoading: false,
