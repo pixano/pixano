@@ -5,9 +5,15 @@ module.exports = {
   content: {
     relative: true,
     files: [
-      "../../components/**/*.{html, js, svelte, ts}",
+      "./.storybook/preview-head.html",
       "./stories/**/*.{html,js,svelte,ts}",
-      "../../components/core/src/**/*.svelte",
+      "./src/routes/**/*.{svelte,js,ts,jsx,tsx}",
+      "./src/components/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/core/src/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/datasetItemWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
     ],
   },
   safelist: ["bg-primary", "text-3xl", "lg:text-4xl"],

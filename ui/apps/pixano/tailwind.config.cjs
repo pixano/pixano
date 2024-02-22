@@ -9,6 +9,7 @@ export default {
     "../../components/datasetItemWorkspace/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
     "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
+    "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
