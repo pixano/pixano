@@ -24,7 +24,7 @@ Pixano Docker image will be downloaded from DockerHub (~7Go).
 
 - Open Docker Desktop.
 
-Note: If you have already run a Pixano image, you can run the Pixano Container again from "Containers" tab.
+Note: If you have already run a Pixano image, you can run the Pixano Container again from "Containers" tab. See [Container Run](#container-run).
 
 For the first run, or if you want to change some settings:
  - go to "Images" tab.
@@ -49,7 +49,11 @@ In the popup, open the "Optional settings".
 
 If you have choosen a different port, replace 28005 with your choosen port.
 
-Now, Pixano container can be stopped and run again with the same config from "Container" tab.
+#### Container Run
+
+Now, Pixano container can be stopped and run again with the same settings from "Container" tab.
+
+![container run](assets/container-run.png)
 
 ## Command line
 
