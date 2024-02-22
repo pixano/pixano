@@ -4,10 +4,10 @@ Two options are available to pull (or build) and launch Pixano Docker Image:
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop), available on Windows, Mac, Linux, for a more user-friendly experience.
 
-- Command line (this documentation cover optionnal build of Pixano Docker Image only with command line).
+- [Command line](#command-line) (this documentation cover optionnal build of Pixano Docker Image only with command line).
 
 
-## Docker Explore
+## Docker Desktop
 
 ### Pull Image
 
@@ -61,9 +61,9 @@ Now, Pixano container can be stopped and run again with the same settings from "
 
 This is not required, as the run script will get Pixano docker image from DockerHub, if the desired Pixano image is not present on your system.
 
-But if you want to build your own image with different versions of pixano and/or pixano-inference, you can do it with the "build.sh" script.
+To build your own image with different versions of pixano and/or pixano-inference:
 
-- Run the build script:
+- Run the build script
 ```
 ./build.sh [<pixano_version>] [<pixano-inference_version>]
 ```
@@ -81,7 +81,7 @@ With pixano-inference module, the image will be heavier (~12Go), because pixano-
 
 ### Docker image Run
 
-- Run the pixano script:
+- Run the pixano script
 ```
 ./pixano.sh <local_library_directory> [<pixano_version>]
 ```
