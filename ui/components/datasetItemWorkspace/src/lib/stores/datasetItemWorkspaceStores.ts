@@ -41,6 +41,7 @@ export const itemMetas = writable<{
   id: DatasetItem["id"];
 }>();
 export const canSave = writable<boolean>(false);
+export const preAnnotationIsActive = writable<boolean>(false);
 export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",

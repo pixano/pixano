@@ -24,6 +24,7 @@
     canSave,
     itemBboxes,
     itemMasks,
+    preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
 
@@ -37,7 +38,7 @@
 
   $: {
     newShapeStore.set(newShape);
-    if (newShape?.status === "editing") {
+    if (newShape?.status === "editing" && !$preAnnotationIsActive) {
       itemObjects.update((oldObjects) => updateExistingObject(oldObjects, newShape));
       canSave.update((old) => {
         if (old) return old;
