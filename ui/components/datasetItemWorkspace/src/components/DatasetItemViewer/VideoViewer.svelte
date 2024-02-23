@@ -166,11 +166,10 @@
         bind:newShape={$newShape}
       />
     {/if}
-    <div class="bg-white flex flex-col gap-4 h-full overflow-x-auto overflow-y-hidden">
-      <div class="h-12 flex w-full border-b border-slate-200">
-        <div
-          class="sticky bg-white z-10 left-0 flex justify-between w-1/3 p-2 items-center border-r border-slate-200"
-        >
+    <div class="bg-white flex h-full">
+      <!-- left section -->
+      <div class="w-1/4 min-w-[25%] border-r border-slate-200">
+        <div class="h-12 flex justify-between p-2 items-center">
           <p>
             {currentTime}
           </p>
@@ -182,57 +181,54 @@
             {/if}
           </button>
         </div>
-        <div class="p-2 w-full">
-          <div
-            class="flex justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
-            style={`width: ${zoomLevel}%`}
-            role="slider"
-            tabindex="0"
-            on:click={onPlayerClick}
-            on:keydown={onPlayerClick}
-            aria-valuenow={currentImageIndex}
-          >
-            <button
-              use:dragMe
-              class="h-8 w-1 absolute z-10 bottom-0 flex flex-col translate-x-[-4px]"
-              style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
-            >
-              <span class="block h-[60%] bg-primary w-2 rounded-t" />
-              <span
-                class="block w-0 h-0 border-l-[4px] border-l-transparent border-t-[8px] border-t-primary border-r-[4px] border-r-transparent"
-              >
-              </span>
-              <span class="h-32 w-[1px] bg-primary absolute ml-1" />
-            </button>
-            {#each timeScaleInMs as ms}
-              {#if ms % 10 === 0}
-                <span
-                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-500 bottom-0 pointer-events-none"
-                  style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
-                />
-                {#if ms > 0}
-                  <span
-                    class="absolute translate-x-[-50%] text-slate-300 bottom-1 pointer-events-none font-light text-xs"
-                    style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
-                  >
-                {/if}
-              {:else}
-                <span
-                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0 pointer-events-none"
-                  style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
-                />
-              {/if}
-            {/each}
-          </div>
+        <div class="flex gap-2 flex-col p-4">
+          <button on:click={increaseTimeScale} class="border border-red-200">increase</button>
+          <button on:click={decreaseTimeScale} class="border border-blue-500">decrease</button>
         </div>
       </div>
-      <div class="flex gap-8">
-        <button on:click={increaseTimeScale} class="border border-red-200"
-          >increase time scale</button
+      <!-- right section -->
+      <div class="h-32 p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
+        <div
+          class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
+          style={`width: ${zoomLevel}%`}
+          role="slider"
+          tabindex="0"
+          on:click={onPlayerClick}
+          on:keydown={onPlayerClick}
+          aria-valuenow={currentImageIndex}
         >
-        <button on:click={decreaseTimeScale} class="border border-blue-500"
-          >decrease time scale</button
-        >
+          <button
+            use:dragMe
+            class="h-8 w-1 absolute z-10 bottom-0 flex flex-col translate-x-[-4px]"
+            style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+          >
+            <span class="block h-[60%] bg-primary w-2 rounded-t" />
+            <span
+              class="block w-0 h-0 border-l-[4px] border-l-transparent border-t-[8px] border-t-primary border-r-[4px] border-r-transparent"
+            >
+            </span>
+            <span class="h-32 w-[1px] bg-primary absolute ml-1" />
+          </button>
+          {#each timeScaleInMs as ms}
+            {#if ms % 10 === 0}
+              <span
+                class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-500 bottom-0 pointer-events-none"
+                style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
+              />
+              {#if ms > 0}
+                <span
+                  class="absolute translate-x-[-50%] text-slate-300 bottom-1 pointer-events-none font-light text-xs"
+                  style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
+                >
+              {/if}
+            {:else}
+              <span
+                class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0 pointer-events-none"
+                style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
+              />
+            {/if}
+          {/each}
+        </div>
       </div>
     </div>
   </div>
