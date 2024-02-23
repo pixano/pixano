@@ -29,6 +29,6 @@ type Story = StoryObj<typeof meta>;
 export const BasicPromptModal: Story = {
   args: {
     message: "Some message",
-    placeholder: "Some placeholder"
+    placeholder: "Some placeholder",
   },
 };

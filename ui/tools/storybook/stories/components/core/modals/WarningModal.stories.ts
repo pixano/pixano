@@ -30,6 +30,6 @@ export const BasicWarningModal: Story = {
   args: {
     message: "Some warning message",
     details: "Some details",
-    moreDetails: "Some more details"
+    moreDetails: "Some more details",
   },
 };
