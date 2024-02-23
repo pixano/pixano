@@ -12,9 +12,10 @@ RUN pip install --upgrade pip \
 # pixano-inference is required for semantic search, but heavy, so if you don't need semantic search you can comment it
 RUN pip install pixano-inference@git+https://github.com/pixano/pixano-inference@$pixano_inference_version
 
+# port 80 is exposed by default, but Docker Desktop requires explicit EXPOSE to allow port mapping
+EXPOSE 80
+
 # env vars
-ENV LANCEDB_CONFIG_DIR="/tmp"
+ENV LANCEDB_CONFIG_DIR "/tmp"
 
-EXPOSE 28005
-
-CMD ["pixano", "--host", "0.0.0.0", "--port", "28005", "library"]
+CMD ["pixano", "--host", "0.0.0.0", "--port", "80", "library"]

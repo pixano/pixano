@@ -37,17 +37,16 @@ In the popup, open the "Optional settings".
 
 ![settings](assets/settings.png)
 
-- Enter "28005" in the Ports (Host port) field. You can choose any available port, just note that you will have to use this port in your browser instead of the default 28005 given in logs (As Pixano running in Docker container is not aware of the port mapping).
+- Choose any available port in the Host port field, or 0 for a random available one.
 
 - Select your [local library directory](#local-library-directory) in "Volumes" field "Host path", and enter "/library" (don't forget the '/') in the "Container path".
 
 - Press "RUN".
 
-![logs: pixano instance link](assets/logs-pixano-link.png)
+![settings](assets/map-link.png)
 
-- Click on the link provided [http://0.0.0.0:28005](http://0.0.0.0:28005) to open Pixano in your browser.
+- Click on the link provided here to open Pixano in your browser.
 
-If you have choosen a different port, replace 28005 with your choosen port.
 
 #### Container Run
 
@@ -65,10 +64,18 @@ To build your own image with different versions of pixano and/or pixano-inferenc
 
 - Run the build script
 ```
-./build.sh [<pixano_version>] [<pixano-inference_version>]
+./build.sh [<pixano_version>] [<pixano-inference_version>] [<tag>]
 ```
 
-If you don't provide pixano and pixano-inference versions, defaults version specified in this script will be used.
+If you don't provide pixano version, pixano-inference version, and tag, defaults values specified in this script will be used.
+
+| Arguments | Defaults |
+|:---|:---|
+| pixano_version | 0.5.0b4 |
+| pixano-inference_version | v0.3.0b2 |
+| tag | \<pixano_version> |
+
+Give a *tag* if you want to overwrite the default (pixano_version)
 
 #### Side-note on image weight
 
@@ -83,15 +90,17 @@ With pixano-inference module, the image will be heavier (~12Go), because pixano-
 
 - Run the pixano script with your [local library directory](#local-library-directory)
 ```
-./pixano.sh <local_library_directory> [<pixano_version>]
+./pixano.sh <local_library_directory> [<tag>] [<port>]
 ```
-If you don't provide pixano version, default version specified in this script will be used.
+If you don't provide pixano version and port, default values specified in this script will be used.
+| Arguments | Defaults |
+|:---|:---|
+| tag | 0.5.0b4 |
+| port | 80 |
 
 Pixano Docker image will be pull from DockerHub if there is no local image build or previous image pull.
 
-- Open your browser and go to provided link [http://127.0.0.1:28005](http://127.0.0.1:28005).
-
-You can change port in the script if needed.
+- Open your browser and go to provided link [http://0.0.0.0:80](http://0.0.0.0:80).
 
 #### S3 Storage
 
@@ -109,9 +118,12 @@ Pixano allows connection to a S3 compatible storage.
 
 This is the directory from where Pixano will read your datasets
 
+Plese note that running Pixano as a Docker image is not well-suited for importing and exporting datasets, as it use Pixano python package.
+To import and export datasets, it's recommanded to use "pip install" (see [Installing Pixano](https://github.com/pixano/pixano?tab=readme-ov-file#installing-pixano))
+
 Refer to [Import datasets Notebook](https://github.com/pixano/pixano/blob/main/notebooks/datasets/import_dataset.ipynb) for instructions on how to import datasets to Pixano format.
 
-## Interactive Segmentation Model
+### Interactive Segmentation Model
 
 Your local library directory must contains a "models" directory with .onnx model(s) weights for interactive segmentation to work.
 
