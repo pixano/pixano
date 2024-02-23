@@ -98,6 +98,18 @@ class Image(PixanoType, BaseModel):
         return self.uri
 
     @property
+    def path(self) -> Path:
+        """Return image path using URI and URI prefix
+
+        Returns:
+            Path: Image path
+        """
+
+        path_from_uri = urlparse(self.complete_uri).path
+
+        return Path(path_from_uri)
+
+    @property
     def url(self) -> str:
         """Return image base 64 URL
 
