@@ -18,4 +18,4 @@
   export let value: string;
 </script>
 
-<div>{value}</div>
+{value}

@@ -13,23 +13,30 @@
  * http://www.cecill.info
  */
 
+// Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Table } from "@pixano/table";
-import { items } from "./tableMocks";
+import { SelectModal } from "@pixano/core";
 
-// More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/Table/Table",
-  component: Table,
+  title: "Components/Core/Modals/SelectModal",
+  component: SelectModal,
   tags: ["autodocs"],
-} satisfies Meta<Table>;
+} satisfies Meta<SelectModal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
-export const BasicTable: Story = {
+export const BasicSelectModal: Story = {
   args: {
-    items,
+    message: "Some message",
+    choices: ["First choice", "Second choice", "Third choice"],
+    selected: "Second choice",
+  },
+};
+
+export const NoChoicesSelectModal: Story = {
+  args: {
+    message: "Some message",
+    ifNoChoices: "No choices",
   },
 };

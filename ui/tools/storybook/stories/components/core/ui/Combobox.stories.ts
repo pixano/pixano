@@ -13,23 +13,25 @@
  * http://www.cecill.info
  */
 
+// Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Table } from "@pixano/table";
-import { items } from "./tableMocks";
+import { Combobox } from "@pixano/core";
 
-// More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/Table/Table",
-  component: Table,
+  title: "Components/Core/UI/Combobox",
+  component: Combobox,
   tags: ["autodocs"],
-} satisfies Meta<Table>;
+} satisfies Meta<Combobox>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
-export const BasicTable: Story = {
+export const BasicCombobox: Story = {
   args: {
-    items,
+    listItems: [
+      { value: "value 1", label: "Some value" },
+      { value: "value 2", label: "Another value" },
+    ],
+    placeholder: "Some placeholder",
   },
 };

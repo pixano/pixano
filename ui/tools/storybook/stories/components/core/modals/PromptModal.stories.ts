@@ -13,23 +13,22 @@
  * http://www.cecill.info
  */
 
+// Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Table } from "@pixano/table";
-import { items } from "./tableMocks";
+import { PromptModal } from "@pixano/core";
 
-// More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/Table/Table",
-  component: Table,
+  title: "Components/Core/Modals/PromptModal",
+  component: PromptModal,
   tags: ["autodocs"],
-} satisfies Meta<Table>;
+} satisfies Meta<PromptModal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
-export const BasicTable: Story = {
+export const BasicPromptModal: Story = {
   args: {
-    items,
+    message: "Some message",
+    placeholder: "Some placeholder",
   },
 };
