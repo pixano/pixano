@@ -50,7 +50,7 @@ In the popup, open the "Optional settings".
 
 #### Container Run
 
-Now, Pixano container can be stopped and run again with the same settings from "Container" tab.
+Now, Pixano container can be stopped and run again with the same settings from "Container" tab. A link to Pixano web application is available in the Port(s) column.
 
 ![container run](assets/container-run.png)
 
