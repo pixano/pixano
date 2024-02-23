@@ -32,6 +32,6 @@ if ! docker inspect "$pixano_image" &>/dev/null; then
     docker pull "$pixano_image"
 fi
 
-echo -e "Acces Pixano Docker on \033[1mhttp://0.0.0.0:"${port}"\033[0m"
+echo -e "Acces Pixano on \033[1mhttp://0.0.0.0:"${port}"\033[0m"
 
 docker run -v $absolute_library_path:/library -p $port:80 -t "$pixano_image"

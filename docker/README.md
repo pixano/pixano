@@ -67,15 +67,12 @@ To build your own image with different versions of pixano and/or pixano-inferenc
 ./build.sh [<pixano_version>] [<pixano-inference_version>] [<tag>]
 ```
 
-If you don't provide pixano version, pixano-inference version, and tag, defaults values specified in this script will be used.
+| Argument | Description | Default |
+|:---|:---|:---|
+| pixano_version | GIT version of pixano to use | 0.5.0b4 |
+| pixano-inference_version | GIT version of pixano-inference to use | v0.3.0b2 |
+| tag | Docker image tag | \<pixano_version> |
 
-| Arguments | Defaults |
-|:---|:---|
-| pixano_version | 0.5.0b4 |
-| pixano-inference_version | v0.3.0b2 |
-| tag | \<pixano_version> |
-
-Give a *tag* if you want to overwrite the default (pixano_version)
 
 #### Side-note on image weight
 
@@ -92,15 +89,17 @@ With pixano-inference module, the image will be heavier (~12Go), because pixano-
 ```
 ./pixano.sh <local_library_directory> [<tag>] [<port>]
 ```
-If you don't provide pixano version and port, default values specified in this script will be used.
-| Arguments | Defaults |
-|:---|:---|
-| tag | 0.5.0b4 |
-| port | 80 |
+| Argument | Description | Default |
+|:---|:---|:---|
+| local_library_directory | [local path to datasets](#local-library-directory) | *required* |
+| tag | Docker image tag | 0.5.0b4 |
+| port | Host port | 80 |
 
-Pixano Docker image will be pull from DockerHub if there is no local image build or previous image pull.
+Pixano Docker image will be pull from DockerHub if there is no local image build or previous image pull, then Pixano start running.
 
-- Open your browser and go to provided link [http://0.0.0.0:80](http://0.0.0.0:80).
+![bash link](assets/bash-link.png)
+
+- Follow the provided link [http://0.0.0.0:80](http://0.0.0.0:80) to Pixano web application.
 
 #### S3 Storage
 
