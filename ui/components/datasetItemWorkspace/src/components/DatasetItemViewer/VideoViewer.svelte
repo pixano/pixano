@@ -158,9 +158,8 @@
         bind:newShape={$newShape}
       />
     {/if}
-
     <div class="bg-white flex gap-4 h-full">
-      <div class="h-10 flex w-full border-b border-slate-200">
+      <div class="h-12 flex w-full border-b border-slate-200">
         <div class="flex justify-between w-1/3 p-2 items-center border-r border-slate-200">
           <p>
             {currentTime}
@@ -173,7 +172,7 @@
             {/if}
           </button>
         </div>
-        <div class="px-4 w-full">
+        <div class="p-2 w-full">
           <div
             class="flex justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
             role="slider"
@@ -184,26 +183,32 @@
           >
             <button
               use:dragMe
-              class="h-6 w-1 bg-primary absolute z-10 bottom-0"
+              class="h-8 w-1 absolute z-10 bottom-0 flex flex-col translate-x-[-4px]"
               style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
-            />
+            >
+              <span class="block h-[60%] bg-primary w-2 rounded-t" />
+              <span
+                class="block w-0 h-0 border-l-[4px] border-l-transparent border-t-[8px] border-t-primary border-r-[4px] border-r-transparent"
+              >
+              </span>
+              <span class="h-32 w-[1px] bg-primary absolute ml-1" />
+            </button>
             {#each all100ms as ms}
               {#if ms % 10 === 0}
                 <span
-                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-2 bg-slate-300 bottom-0 pointer-events-none"
+                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-500 bottom-0 pointer-events-none"
                   style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
                 />
                 {#if ms > 0}
                   <span
-                    class="absolute translate-x-[-50%] text-slate-300 bottom-2 pointer-events-none"
-                    style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
-                    >{ms / 10}s</span
+                    class="absolute translate-x-[-50%] text-slate-300 bottom-1 pointer-events-none font-light text-xs"
+                    style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
                   >
                 {/if}
               {:else}
                 <span
                   class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0 pointer-events-none"
-                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                  style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
                 />
               {/if}
             {/each}
