@@ -14,7 +14,7 @@ Two options are available to pull (or build) and launch Pixano Docker Image:
 This only need to be done once, or each time you want to pull another version.
 
 - Open Docker Desktop, tab "Images".
-- Search image "pixano", press the "PULL" button for "pixano/pixano:<version>"
+- Search image "pixano", look for line "pixano/pixano", select the desired tag (usually last available version) and press the "PULL" button
 
 ![docker explore search image](assets/search-image.png)
 
