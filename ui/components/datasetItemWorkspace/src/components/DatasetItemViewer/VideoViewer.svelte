@@ -13,7 +13,7 @@
    *
    * http://www.cecill.info
    */
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import * as ort from "onnxruntime-web";
   import { PlayIcon, PauseIcon } from "lucide-svelte";
 
@@ -48,6 +48,10 @@
     currentImageUrl = await getCurrentImage(currentImageIndex);
     updateViews();
     isLoaded = true;
+  });
+
+  onDestroy(() => {
+    clearInterval(intervalId);
   });
 
   const getCurrentImage = async (index: number) => {
@@ -93,7 +97,6 @@
     let left = node.offsetLeft;
 
     node.addEventListener("mousedown", () => {
-      console.log("mousedown");
       moving = true;
       clearInterval(intervalId);
     });
@@ -106,6 +109,7 @@
         if (left > max) left = max;
         node.style.left = `${left}px`;
         const index = Math.floor((left / max) * Object.keys(imageFiles).length) - 1;
+        if (index === currentImageIndex) return;
         currentImageIndex = index < 0 ? 0 : index;
         currentImageUrl = await getCurrentImage(currentImageIndex);
         updateViews();
@@ -171,7 +175,7 @@
         </div>
         <div class="px-4 w-full">
           <div
-            class="flex justify-between relative border-b border-slate-200 pt-8"
+            class="flex justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
             role="slider"
             tabindex="0"
             on:click={onPlayerClick}
@@ -184,24 +188,25 @@
               style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
             />
             {#each all100ms as ms}
-              {#if ms % 10 === 0 && ms > 0}
+              {#if ms % 10 === 0}
                 <span
-                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-2 bg-slate-300 bottom-0"
-                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-2 bg-slate-300 bottom-0 pointer-events-none"
+                  style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
                 />
-                <span
-                  class="absolute translate-x-[-50%] text-slate-300 bottom-2"
-                  style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
-                  >{ms / 10}s</span
-                >
+                {#if ms > 0}
+                  <span
+                    class="absolute translate-x-[-50%] text-slate-300 bottom-2 pointer-events-none"
+                    style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
+                    >{ms / 10}s</span
+                  >
+                {/if}
               {:else}
                 <span
-                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0"
+                  class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-0 pointer-events-none"
                   style={`left: ${(((ms + 1) * 100) / videoTotalLengthInMs) * 100}%`}
                 />
               {/if}
             {/each}
-            <!-- <span>{videoTotalLengthInMs / 1000}</span> -->
           </div>
         </div>
       </div>
