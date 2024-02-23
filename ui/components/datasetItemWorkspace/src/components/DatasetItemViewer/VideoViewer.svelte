@@ -107,7 +107,6 @@
         if (left < 0) left = 0;
         const max = node.parentElement?.offsetWidth || left;
         if (left > max) left = max;
-        node.style.left = `${left}px`;
         const index = Math.floor((left / max) * Object.keys(imageFiles).length) - 1;
         if (index === currentImageIndex) return;
         currentImageIndex = index < 0 ? 0 : index;
