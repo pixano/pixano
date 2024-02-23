@@ -42,7 +42,7 @@
   let currentTime: string;
 
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
-  const all100ms = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
+  let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
 
   onMount(async () => {
     currentImageUrl = await getCurrentImage(currentImageIndex);
@@ -140,6 +140,15 @@
       playVideo();
     }
   };
+
+  let zoomLevel = 100;
+  const increaseTimeScale = () => {
+    zoomLevel = zoomLevel + 10;
+  };
+
+  const decreaseTimeScale = () => {
+    zoomLevel = zoomLevel - 10;
+  };
 </script>
 
 {#if isLoaded}
@@ -157,9 +166,11 @@
         bind:newShape={$newShape}
       />
     {/if}
-    <div class="bg-white flex gap-4 h-full">
+    <div class="bg-white flex flex-col gap-4 h-full overflow-x-auto overflow-y-hidden">
       <div class="h-12 flex w-full border-b border-slate-200">
-        <div class="flex justify-between w-1/3 p-2 items-center border-r border-slate-200">
+        <div
+          class="sticky bg-white z-10 left-0 flex justify-between w-1/3 p-2 items-center border-r border-slate-200"
+        >
           <p>
             {currentTime}
           </p>
@@ -174,6 +185,7 @@
         <div class="p-2 w-full">
           <div
             class="flex justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
+            style={`width: ${zoomLevel}%`}
             role="slider"
             tabindex="0"
             on:click={onPlayerClick}
@@ -192,7 +204,7 @@
               </span>
               <span class="h-32 w-[1px] bg-primary absolute ml-1" />
             </button>
-            {#each all100ms as ms}
+            {#each timeScaleInMs as ms}
               {#if ms % 10 === 0}
                 <span
                   class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-500 bottom-0 pointer-events-none"
@@ -213,6 +225,14 @@
             {/each}
           </div>
         </div>
+      </div>
+      <div class="flex gap-8">
+        <button on:click={increaseTimeScale} class="border border-red-200"
+          >increase time scale</button
+        >
+        <button on:click={decreaseTimeScale} class="border border-blue-500"
+          >decrease time scale</button
+        >
       </div>
     </div>
   </div>
