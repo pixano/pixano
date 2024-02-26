@@ -118,13 +118,23 @@ class ItemFeature(BaseModel):
         return features
 
 
+class FeatureValues(BaseModel):
+    """Feature available values, as a restricted list or open list
+
+    Attributes:
+        restricted (bool): restricted list or open list
+        values (list[str]): list of available values
+    """
+    restricted: bool
+    values: list[str]
+
+
 class FeaturesValues(BaseModel):
     """Features availables values
 
     Attributes:
-        scene (dict[str, list[str]]): Scene features available values
-        objects (dict[str, list[str]]): Objects features available values
+        main (dict[str, FeatureValues]): Scene features available values ("main" table)
+        objects (dict[str, FeatureValues]): Objects features available values
     """
-
-    scene: dict[str, list[str]]
-    objects: dict[str, list[str]]
+    main: dict[str, FeatureValues]
+    objects: dict[str, FeatureValues]

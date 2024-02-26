@@ -166,8 +166,19 @@ class Dataset(BaseModel):
             load_stats=load_stats,
             load_thumbnail=load_thumbnail,
         )
+
         if load_features_values:
-            info.features_values = self.get_features_values()
+            def merge_dicts(dict1, dict2):
+                merged = dict1.copy()
+                if dict2 is not None:
+                    for key, value in dict2.items():
+                        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+                            merged[key] = merge_dicts(merged[key], value)
+                        else:
+                            merged[key] = value
+                return merged
+
+            info.features_values = merge_dicts(self.get_features_values(), info.features_values)
 
         return info
 
@@ -773,10 +784,13 @@ class Dataset(BaseModel):
                                 if val is not None and isinstance(val, str)
                             ]
                         )
-            return {key: list(values) for key, values in avail_values.items()}
+            return {
+                key: {"restricted": False, "values": list(values)}
+                for key, values in avail_values.items()
+            }
 
         return FeaturesValues(
-            scene=get_distinct_values("main", ["id", "split", "views", "original_id"]),
+            main=get_distinct_values("main", ["id", "split", "views", "original_id"]),
             objects=get_distinct_values(
                 "objects", ["id", "item_id", "view_id", "bbox", "mask", "review_state"]
             ),
