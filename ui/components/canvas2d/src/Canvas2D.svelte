@@ -161,7 +161,6 @@
   // ********** INIT ********** //
 
   onMount(() => {
-    console.log("mounting");
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
