@@ -18,6 +18,7 @@
   import { PlayIcon, PauseIcon } from "lucide-svelte";
 
   import type { DatasetItem, SelectionTool } from "@pixano/core";
+  import { SliderRoot } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import { newShape, itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -40,8 +41,8 @@
   let views = selectedItem.views;
   let isLoaded = false;
   let currentTime: string;
-  let zoomLevel = 100;
   let cursorElement: HTMLButtonElement;
+  let zoomLevel: number[] = [0];
 
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
@@ -142,14 +143,6 @@
       playVideo();
     }
   };
-
-  const increaseTimeScale = () => {
-    zoomLevel = zoomLevel + 10;
-  };
-
-  const decreaseTimeScale = () => {
-    zoomLevel = zoomLevel - 10;
-  };
 </script>
 
 {#if isLoaded}
@@ -183,15 +176,14 @@
           </button>
         </div>
         <div class="flex gap-2 flex-col p-4">
-          <button on:click={increaseTimeScale} class="border border-red-200">increase</button>
-          <button on:click={decreaseTimeScale} class="border border-blue-500">decrease</button>
+          <SliderRoot bind:value={zoomLevel} min={100} max={200} />
         </div>
       </div>
       <!-- right section -->
       <div class="h-32 p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
         <div
           class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
-          style={`width: ${zoomLevel}%`}
+          style={`width: ${zoomLevel[0]}%`}
           role="slider"
           tabindex="0"
           on:click={onPlayerClick}

@@ -17,7 +17,7 @@
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
   import { nanoid } from "nanoid";
 
-  import { PrimaryButton, Slider, IconButton, Switch, cn } from "@pixano/core";
+  import { PrimaryButton, SliderWithValue, IconButton, Switch, cn } from "@pixano/core";
   import type { ItemObject } from "@pixano/core";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import { canSave, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -142,7 +142,7 @@
         <Filter />
       </IconButton>
       <div class="px-8 w-full">
-        <Slider onChange={onSliderChange} max={1} step={0.01} />
+        <SliderWithValue onChange={onSliderChange} max={1} step={0.01} />
       </div>
     </div>
     {#if objectToAnnotate}
