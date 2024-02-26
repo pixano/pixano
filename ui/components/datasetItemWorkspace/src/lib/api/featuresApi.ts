@@ -57,20 +57,22 @@ export const addNewInput = (
 ) => {
   if (store) {
     // add new inputs to lists of available values
-    if (feature_class === "objects" || feature_class === "scene") {
+    if (feature_class === "objects" || feature_class === "main") {
       if (!store[feature_class][feature]) {
-        store[feature_class][feature] = [value];
-      } else if (!store[feature_class][feature].includes(value)) {
-        store[feature_class][feature].push(value);
+        store[feature_class][feature] = {restricted: false, values: [value]};
+      } else if (!store[feature_class][feature].values.includes(value)) {
+        store[feature_class][feature].values.push(value);
       }
     }
   }
 };
 
-export const mapFeatureList = (featureList: FeatureList = []) =>
-  featureList
+export const mapFeatureList = (featureList: FeatureList = {restricted: false, values:[]}) => {
+  console.log("aaaa", featureList)
+  return featureList.values
     .sort((a, b) => a.localeCompare(b))
     .map((value) => ({
       value,
       label: value,
     }));
+};
