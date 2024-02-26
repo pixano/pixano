@@ -41,6 +41,7 @@
   let isLoaded = false;
   let currentTime: string;
   let zoomLevel = 100;
+  let cursorElement: HTMLButtonElement;
 
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
@@ -80,6 +81,7 @@
     clearInterval(intervalId);
     const interval = setInterval(async () => {
       currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
+      cursorElement.scrollIntoView({ block: "start", inline: "center" });
       currentImageUrl = await getCurrentImage(currentImageIndex);
       updateViews();
     }, videoSpeed);
@@ -200,6 +202,7 @@
             use:dragMe
             class="h-8 w-1 absolute z-10 bottom-0 flex flex-col translate-x-[-4px]"
             style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+            bind:this={cursorElement}
           >
             <span class="block h-[60%] bg-primary w-2 rounded-t" />
             <span
