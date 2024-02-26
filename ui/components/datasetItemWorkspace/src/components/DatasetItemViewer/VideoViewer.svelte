@@ -40,6 +40,7 @@
   let views = selectedItem.views;
   let isLoaded = false;
   let currentTime: string;
+  let zoomLevel = 100;
 
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
@@ -124,9 +125,8 @@
     let targetElement = event.target as HTMLElement;
     if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
     clearInterval(intervalId);
-    const distance = event.clientX - targetElement.offsetLeft;
     currentImageIndex = Math.floor(
-      (distance / targetElement.offsetWidth) * Object.keys(imageFiles).length,
+      (event.offsetX / targetElement.offsetWidth) * Object.keys(imageFiles).length,
     );
     currentImageUrl = await getCurrentImage(currentImageIndex);
     updateViews();
@@ -141,7 +141,6 @@
     }
   };
 
-  let zoomLevel = 100;
   const increaseTimeScale = () => {
     zoomLevel = zoomLevel + 10;
   };
