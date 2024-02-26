@@ -82,7 +82,7 @@
     clearInterval(intervalId);
     const interval = setInterval(async () => {
       currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
-      cursorElement.scrollIntoView({ block: "start", inline: "center" });
+      cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
       currentImageUrl = await getCurrentImage(currentImageIndex);
       updateViews();
     }, videoSpeed);
