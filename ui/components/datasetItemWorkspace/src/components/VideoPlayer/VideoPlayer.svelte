@@ -17,6 +17,7 @@
   import { PlayIcon, PauseIcon } from "lucide-svelte";
 
   import { SliderRoot } from "@pixano/core";
+  import { getCurrentImageTime, getImageIndexFromMouseMove } from "../../lib/api/videoApi";
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
@@ -38,9 +39,19 @@
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
 
+  const updateCurrentImage = async (index: number) => {
+    try {
+      const image = await Object.values(imageFiles)[index]();
+      const typedImage = image as ImageModule;
+      currentImageUrl = typedImage.default;
+      updateViews(currentImageUrl);
+    } catch (e) {
+      return new Error("Error while updating current image");
+    }
+  };
+
   onMount(async () => {
-    currentImageUrl = await getCurrentImage(currentImageIndex);
-    updateViews(currentImageUrl);
+    await updateCurrentImage(currentImageIndex);
     isLoaded = true;
   });
 
@@ -48,38 +59,21 @@
     clearInterval(intervalId);
   });
 
-  const getCurrentImage = async (index: number) => {
-    try {
-      const image = await Object.values(imageFiles)[index]();
-      const typedImage = image as ImageModule;
-      return typedImage.default;
-    } catch (e) {
-      return "";
-    }
-  };
-
   const playVideo = () => {
     if (!isLoaded) return;
     clearInterval(intervalId);
     const interval = setInterval(async () => {
       currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
       cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
-      currentImageUrl = await getCurrentImage(currentImageIndex);
-      updateViews(currentImageUrl);
+      await updateCurrentImage(currentImageIndex);
     }, videoSpeed);
     intervalId = Number(interval);
   };
 
-  $: {
-    const currentTimestamp = currentImageIndex * videoSpeed;
-    const minutes = Math.floor(currentTimestamp / 60000);
-    const seconds = ((currentTimestamp % 60000) / 1000).toFixed(0);
-    currentTime = `${minutes}:${Number(seconds) < 10 ? "0" : ""}${seconds}`;
-  }
+  $: currentTime = getCurrentImageTime(currentImageIndex, videoSpeed);
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
-    let left = node.offsetLeft;
 
     node.addEventListener("mousedown", () => {
       moving = true;
@@ -88,15 +82,8 @@
 
     window.addEventListener("mousemove", async (event) => {
       if (moving) {
-        left = event.clientX - (node.parentElement?.offsetLeft || 0);
-        if (left < 0) left = 0;
-        const max = node.parentElement?.offsetWidth || left;
-        if (left > max) left = max;
-        const index = Math.floor((left / max) * Object.keys(imageFiles).length) - 1;
-        if (index === currentImageIndex) return;
-        currentImageIndex = index < 0 ? 0 : index;
-        currentImageUrl = await getCurrentImage(currentImageIndex);
-        updateViews(currentImageUrl);
+        currentImageIndex = getImageIndexFromMouseMove(event, node, Object.keys(imageFiles).length);
+        await updateCurrentImage(currentImageIndex);
       }
     });
 
@@ -112,8 +99,7 @@
     currentImageIndex = Math.floor(
       (event.offsetX / targetElement.offsetWidth) * Object.keys(imageFiles).length,
     );
-    currentImageUrl = await getCurrentImage(currentImageIndex);
-    updateViews(currentImageUrl);
+    await updateCurrentImage(currentImageIndex);
   };
 
   const onPlayClick = () => {
