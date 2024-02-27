@@ -16,7 +16,7 @@
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { DatasetItem, SelectionTool, Shape } from "@pixano/core";
+  import type { ImageDatasetItem, SelectionTool, Shape } from "@pixano/core";
 
   import {
     newShape as newShapeStore,
@@ -27,10 +27,26 @@
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
 
-  export let selectedItem: DatasetItem;
+  export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+
+  let imagesPerView: Record<string, HTMLImageElement[]> = {};
+
+  $: {
+    if (selectedItem.views) {
+      imagesPerView = Object.entries(selectedItem.views).reduce(
+        (acc, [key, value]) => {
+          const image = new Image();
+          image.src = `/${value.uri}`;
+          acc[key] = [image];
+          return acc;
+        },
+        {} as Record<string, HTMLImageElement[]>,
+      );
+    }
+  }
 
   let newShape: Shape;
 
@@ -61,8 +77,8 @@
 
 {#key selectedItem.id}
   <Canvas2D
+    {imagesPerView}
     selectedItemId={selectedItem.id}
-    views={selectedItem.views}
     colorRange={allIds}
     bboxes={$itemBboxes}
     masks={$itemMasks}

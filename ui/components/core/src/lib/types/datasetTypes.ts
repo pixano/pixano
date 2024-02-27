@@ -54,15 +54,30 @@ export interface DatasetStat {
 }
 
 // DATASET ITEM
-
-export interface DatasetItem {
+interface BaseDatasetItem {
   id: string;
   split: string;
-  views: Record<string, ItemView>;
   objects: Record<string, ItemObject>;
   features: Record<string, ItemFeature>;
   embeddings: Record<string, ItemEmbedding>;
 }
+
+export type ImageDatasetItem = BaseDatasetItem & {
+  type: "image";
+  views: Record<string, ItemView>;
+};
+
+export type VideoDatasetItem = BaseDatasetItem & {
+  type: "video";
+  views: Record<string, ItemView[]>;
+};
+
+export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
+  type: "3d";
+  views: Record<string, ItemView>;
+};
+
+export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
 
 export interface DatasetItems {
   items: Array<DatasetItem>;

@@ -29,7 +29,7 @@
   export let selectedItemId: DatasetItem["id"];
   export let newShape: Shape;
   export let stage: Konva.Stage;
-  export let images: Record<string, HTMLImageElement> = {};
+  export let currentImage: HTMLImageElement;
   export let zoomFactor: Record<string, number>;
   const POLYGON_ID = "creating";
 
@@ -57,19 +57,19 @@
   function handlePolygonPointsClick(i: number, viewId: string) {
     if (i === 0) {
       const svg = polygonPoints.map((point) => convertPointToSvg(point));
-      const counts = runLengthEncode(svg, images[viewId].width, images[viewId].height);
+      const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
       newShape = {
         status: "inProgress",
         masksImageSVG: [],
         rle: {
           counts,
-          size: [images[viewId].height, images[viewId].width],
+          size: [currentImage.height, currentImage.width],
         },
         type: "mask",
         viewId: viewId,
         itemId: selectedItemId,
-        imageWidth: images[viewId].width,
-        imageHeight: images[viewId].height,
+        imageWidth: currentImage.width,
+        imageHeight: currentImage.height,
       };
       isClosed = true;
     }

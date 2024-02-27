@@ -1,4 +1,12 @@
-import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
+import type {
+  ItemObject,
+  BBox,
+  DisplayControl,
+  Mask,
+  DatasetItem,
+  Shape,
+  ItemView,
+} from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
 import {
@@ -30,8 +38,10 @@ const defineTooltip = (object: ItemObject) => {
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   if (!obj.bbox) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
-  const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
-  const imageWidth = (views?.[obj.view_id]?.features.width.value as number) || 1;
+  const view = views?.[obj.view_id];
+  const image: ItemView = Array.isArray(view) ? view[0] : view;
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
   const x = obj.bbox.coords[0] * imageWidth;
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;

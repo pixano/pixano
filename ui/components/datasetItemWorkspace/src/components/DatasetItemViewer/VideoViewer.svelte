@@ -16,28 +16,62 @@
 
   import * as ort from "onnxruntime-web";
 
-  import type { DatasetItem, SelectionTool } from "@pixano/core";
+  import type { SelectionTool, VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import { newShape, itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
+  import { onMount } from "svelte";
 
-  export let selectedItem: DatasetItem;
+  export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
+  let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
-  let views = selectedItem.views;
+  // let views = selectedItem.views;
   let isLoaded = false; // TODO : refactor when images come from the server
 
-  const updateViews = (imageUrl: string) => {
-    views = {
-      ...selectedItem.views,
-      image: {
-        ...selectedItem.views.image,
-        uri: imageUrl || selectedItem.views.image.uri,
-      },
+  interface ImageModule {
+    default: string;
+  }
+
+  onMount(async () => {
+    const imagesFilesPromises = await Promise.all(
+      Object.values(imageFiles).map((image) => image()),
+    );
+    const imagesFilesUrl = imagesFilesPromises.map((image) => {
+      const typedImage = image as ImageModule;
+      return typedImage.default;
+    });
+    console.log("selectedItem", {
+      selectedItem,
+      imageFiles,
+      imagesFilesUrl,
+      images: imagesPerView,
+    });
+
+    // const views: VideoDatasetItem["views"] = {
+    //   ...selectedItem.views,
+    //   images: imagesFilesUrl.map((image) => ({
+    //     ...(selectedItem.views.image as unknown as ItemView),
+    //     uri: image,
+    //   })) as ItemView[],
+    // };
+    // selectedItem.views = views;
+    const image = new Image();
+    image.src = imagesFilesUrl[0];
+    imagesPerView = {
+      ...imagesPerView,
+      image: [image],
     };
+  });
+
+  const updateImages = (imageUrl: string) => {
+    const image = new Image();
+    image.src = imageUrl;
+    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
     isLoaded = true;
   };
 </script>
@@ -46,7 +80,7 @@
   {#if isLoaded}
     <Canvas2D
       selectedItemId={selectedItem.id}
-      {views}
+      {imagesPerView}
       colorRange={[]}
       bboxes={$itemBboxes}
       masks={$itemMasks}
@@ -56,5 +90,5 @@
       bind:newShape={$newShape}
     />
   {/if}
-  <VideoPlayer {updateViews} />
+  <VideoPlayer updateViews={updateImages} />
 </div>

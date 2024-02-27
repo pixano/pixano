@@ -28,8 +28,6 @@
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
-
-  $: itemType = Object.values(selectedItem.views).map((view) => view.type)[0];
 </script>
 
 <div class="max-w-[100%] bg-slate-800">
@@ -37,11 +35,11 @@
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
     </div>
-  {:else if itemType === "image"}
+  {:else if selectedItem.type === "video"}
     <VideoViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
-  {:else if itemType === "video"}
+  {:else if selectedItem.type === "image" || !selectedItem.type}
     <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
-  {:else if itemType === "3d"}
+  {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}
 </div>

@@ -50,7 +50,6 @@
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
-  export let views: DatasetItem["views"];
   export let colorRange: string[] = ["0", "10"];
   export let masks: Mask[];
   export let bboxes: BBox[];
@@ -58,6 +57,7 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
+  export let imagesPerView: Record<string, HTMLImageElement[]>;
 
   let isReady = false;
 
@@ -96,17 +96,10 @@
     numberOfBBoxes = bboxes.length;
   }
 
-  $: {
-    if (views) {
-      loadNewImage();
-    }
-  }
   let timerId: ReturnType<typeof setTimeout>;
 
   // References to HTML Elements
   let stageContainer: HTMLElement;
-  let images: Record<string, HTMLImageElement> = {};
-  let imagesArray: Record<string, HTMLImageElement[]> = {};
 
   // References to Konva Elements
   let stage: Konva.Stage;
@@ -183,62 +176,54 @@
       validateCurrentAnn();
     }
 
-    for (const viewId of Object.keys(views)) {
+    for (const viewId of Object.keys(imagesPerView)) {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
     }
   });
 
-  function loadNewImage() {
-    for (const view of Object.values(views)) {
-      const newImage = new Image();
-      if (utils.isValidURL(view.uri)) {
-        newImage.src = `${view.uri}` || view.url;
-      } else {
-        newImage.src = view.uri; // TODO
-      }
-      imagesArray[view.id] = [...(imagesArray?.[view.id] || []), newImage].slice(-2);
-    }
-  }
+  const getCurrentImage = (viewId: string) =>
+    imagesPerView[viewId][imagesPerView[viewId].length - 1];
 
   function loadItem() {
     // Calculate new grid size
-    gridSize.cols = Math.ceil(Math.sqrt(Object.keys(views).length));
-    gridSize.rows = Math.ceil(Object.keys(views).length / gridSize.cols);
+    gridSize.cols = Math.ceil(Math.sqrt(Object.keys(imagesPerView).length));
+    gridSize.rows = Math.ceil(Object.keys(imagesPerView).length / gridSize.cols);
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
 
-    for (const view of Object.values(views)) {
-      zoomFactor[view.id] = 1;
-      images[view.id] = new Image();
-      if (utils.isValidURL(view.uri)) {
-        images[view.id].src = `${view.uri}` || view.url;
-      } else {
-        images[view.id].src = view.uri;
-        // images[view.id].src = `/${view.uri}` || view.url;
-      }
-      images[view.id].onload = () => {
+    for (const viewId of Object.keys(imagesPerView)) {
+      zoomFactor[viewId] = 1;
+      // images[view.id] = new Image();
+      // if (utils.isValidURL(view.uri)) {
+      //   images[view.id].src = `${view.uri}` || view.url;
+      // } else {
+      //   images[view.id].src = view.uri;
+      //   // images[view.id].src = `/${view.uri}` || view.url;
+      // }
+      getCurrentImage(viewId).onload = () => {
+        console.log("image loaded");
         // Find existing Konva elements in case a previous item was already loaded
         if (currentId) {
-          const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
-          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${view.id}`);
-          konvaImg.image(images[view.id]);
+          const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
+          konvaImg.image(imagesPerView[viewId][0]);
         }
-        scaleView(view);
-        scaleElements(view);
+        scaleView(viewId);
+        scaleElements(viewId);
         isReady = true;
         // hack to refresh view (display masks/bboxes)
         masks = masks;
         bboxes = bboxes;
       };
-      imagesArray[view.id] = [images[view.id]];
+      // imagesArray[view.id] = [images[view.id]];
     }
     currentId = selectedItemId;
   }
 
-  function scaleView(view: ItemView) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
+  function scaleView(viewId: ItemView["id"]) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     if (viewLayer) {
       // Calculate max dims for every image in the grid
       const maxWidth = stage.width() / gridSize.cols;
@@ -247,8 +232,8 @@
       //calculate view pos in grid
       let i = 0;
       //get view index
-      for (const viewId of Object.keys(views)) {
-        if (viewId === view.id) break;
+      for (const view of Object.keys(imagesPerView)) {
+        if (view === viewId) break;
         i++;
       }
       const grid_pos = {
@@ -257,17 +242,18 @@
       };
 
       // Fit stage
-      const scaleByHeight = maxHeight / images[view.id].height;
-      const scaleByWidth = maxWidth / images[view.id].width;
+      const currentImage = getCurrentImage(viewId);
+      const scaleByHeight = maxHeight / currentImage.height;
+      const scaleByWidth = maxWidth / currentImage.width;
       const scale = Math.min(scaleByWidth, scaleByHeight);
       //set zoomFactor for view
-      zoomFactor[view.id] = scale;
+      zoomFactor[viewId] = scale;
 
       viewLayer.scale({ x: scale, y: scale });
 
       // Center view
-      const offsetX = (maxWidth - images[view.id].width * scale) / 2 + grid_pos.x * maxWidth;
-      const offsetY = (maxHeight - images[view.id].height * scale) / 2 + grid_pos.y * maxHeight;
+      const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
+      const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
       viewLayer.x(offsetX);
       viewLayer.y(offsetY);
     } else {
@@ -275,19 +261,19 @@
     }
   }
 
-  function scaleElements(view: ItemView) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${view.id}`);
+  function scaleElements(viewId: ItemView["id"]) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
     // Scale input points
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
     if (!inputGroup) return;
     for (const point of inputGroup.children) {
       if (point instanceof Konva.Circle) {
-        point.radius(INPUTPOINT_RADIUS / zoomFactor[view.id]);
-        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[view.id]);
+        point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
+        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[viewId]);
       }
       if (point instanceof Konva.Rect) {
-        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[view.id]);
+        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[viewId]);
       }
     }
 
@@ -298,12 +284,12 @@
       if (bboxKonva instanceof Konva.Group) {
         for (const bboxElement of bboxKonva.children) {
           if (bboxElement instanceof Konva.Rect) {
-            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[view.id]);
+            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[viewId]);
           }
           if (bboxElement instanceof Konva.Label) {
             bboxElement.scale({
-              x: 1 / zoomFactor[view.id],
-              y: 1 / zoomFactor[view.id],
+              x: 1 / zoomFactor[viewId],
+              y: 1 / zoomFactor[viewId],
             });
           }
         }
@@ -314,13 +300,13 @@
     const maskGroup: Konva.Group = viewLayer.findOne("#masks");
     for (const maskKonva of maskGroup.children) {
       if (maskKonva instanceof Konva.Shape) {
-        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
+        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
       }
     }
-    const currentMaskGroup = findOrCreateCurrentMask(view.id, stage);
+    const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
     for (const maskKonva of currentMaskGroup.children) {
       if (maskKonva instanceof Konva.Shape) {
-        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[view.id]);
+        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
       }
     }
   }
@@ -341,7 +327,7 @@
     const points = getInputPoints(viewId);
     const box = getInputRect(viewId);
     const input = {
-      image: images[viewId],
+      image: getCurrentImage(viewId),
       embedding: viewId in embeddings ? embeddings[viewId] : null,
       points: points,
       box: box,
@@ -362,8 +348,8 @@
           type: "mask",
           viewId,
           itemId: selectedItemId,
-          imageWidth: images[viewId].width,
-          imageHeight: images[viewId].height,
+          imageWidth: getCurrentImage(viewId).width,
+          imageHeight: getCurrentImage(viewId).height,
           status: "inProgress",
         };
 
@@ -766,8 +752,8 @@
               type: "rectangle",
               viewId,
               itemId: selectedItemId,
-              imageWidth: images[viewId].width,
-              imageHeight: images[viewId].height,
+              imageWidth: getCurrentImage(viewId).width,
+              imageHeight: getCurrentImage(viewId).height,
             };
           }
           selectedTool.isSmart && (await updateCurrentMask(viewId));
@@ -802,7 +788,7 @@
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    for (const viewId of Object.keys(views)) {
+    for (const viewId of Object.keys(imagesPerView)) {
       clearInputs(viewId);
       clearCurrentAnn(viewId, stage, selectedTool);
     }
@@ -984,7 +970,7 @@
     return newScale;
   }
 
-  function handleWheelOnImage(event: WheelEvent, view: ItemView) {
+  function handleWheelOnImage(event: WheelEvent, viewId: ItemView["id"]) {
     // Prevent default scrolling
     event.preventDefault();
 
@@ -995,11 +981,11 @@
     if (event.ctrlKey) direction = -direction;
 
     // Zoom
-    zoomFactor[view.id] = zoom(stage, direction, view.id);
-    scaleElements(view);
+    zoomFactor[viewId] = zoom(stage, direction, viewId);
+    scaleElements(viewId);
 
     // Keep highlighted point scaling
-    if (highlighted_point) highlightInputPoint(highlighted_point, view.id);
+    if (highlighted_point) highlightInputPoint(highlighted_point, viewId);
   }
 
   // ********** KEY EVENTS ********** //
@@ -1029,7 +1015,7 @@
       console.log("bboxes", bboxes);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
-      for (const viewId of Object.keys(views)) {
+      for (const viewId of Object.keys(imagesPerView)) {
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
         const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
@@ -1055,66 +1041,65 @@
     on:mouseenter={handleMouseEnterStage}
     on:mouseleave={handleMouseLeaveStage}
   >
-    {#each Object.values(views) as view}
-      {#if imagesArray[view.id]}
-        <Layer
-          config={{ id: view.id }}
-          on:wheel={(event) => handleWheelOnImage(event.detail.evt, view)}
-        >
-          {#each imagesArray[view.id] as image}
-            <KonvaImage
-              config={{ image, id: `image-${view.id}`, zIndex: 1 }}
-              on:pointerdown={(event) => handleClickOnImage(event.detail.evt, view.id)}
-              on:pointerup={() => handlePointerUpOnImage(view.id)}
-              on:dblclick={() => handleDoubleClickOnImage(view.id)}
-            />
-          {/each}
-          <Group config={{ id: "currentAnnotation" }} />
-          <Group config={{ id: "masks" }} />
-          <Group config={{ id: "bboxes" }} />
-          <Group config={{ id: "input" }} />
-          {#each bboxes as bbox}
-            {#if bbox.viewId === view.id}
-              {#key bbox.id}
-                <Rectangle
-                  {bbox}
-                  {colorScale}
-                  zoomFactor={zoomFactor[view.id]}
-                  {stage}
-                  viewId={view.id}
-                  bind:newShape
-                  {selectedTool}
-                />
-              {/key}
-            {/if}
-          {/each}
-          <CreatePolygon
-            viewId={view.id}
-            {stage}
-            {images}
-            {zoomFactor}
-            {selectedItemId}
-            bind:newShape
+    {#each Object.entries(imagesPerView) as [viewId, images]}
+      <Layer
+        config={{ id: viewId }}
+        on:wheel={(event) => handleWheelOnImage(event.detail.evt, viewId)}
+      >
+        {#each images as image}
+          <KonvaImage
+            config={{ image, id: `image-${viewId}`, zIndex: 1 }}
+            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
+            on:pointerup={() => handlePointerUpOnImage(viewId)}
+            on:dblclick={() => handleDoubleClickOnImage(viewId)}
           />
-          {#each masks as mask}
-            {#key mask.id}
-              {#if mask.viewId === view.id}
-                <PolygonGroup
-                  viewId={view.id}
-                  bind:newShape
-                  {stage}
-                  {images}
-                  {zoomFactor}
-                  {mask}
-                  color={colorScale(mask.id)}
-                  {selectedTool}
-                />
-              {/if}
+        {/each}
+        <Group config={{ id: "currentAnnotation" }} />
+        <Group config={{ id: "masks" }} />
+        <Group config={{ id: "bboxes" }} />
+        <Group config={{ id: "input" }} />
+        {#each bboxes as bbox}
+          {#if bbox.viewId === viewId}
+            {#key bbox.id}
+              <Rectangle
+                {bbox}
+                {colorScale}
+                zoomFactor={zoomFactor[viewId]}
+                {stage}
+                {viewId}
+                bind:newShape
+                {selectedTool}
+              />
             {/key}
-          {/each}
-        </Layer>
-      {/if}
+          {/if}
+        {/each}
+        <CreatePolygon
+          {viewId}
+          {stage}
+          currentImage={getCurrentImage(viewId)}
+          {zoomFactor}
+          {selectedItemId}
+          bind:newShape
+        />
+        {#each masks as mask}
+          {#key mask.id}
+            {#if mask.viewId === viewId}
+              <PolygonGroup
+                {viewId}
+                bind:newShape
+                {stage}
+                currentImage={getCurrentImage(viewId)}
+                {zoomFactor}
+                {mask}
+                color={colorScale(mask.id)}
+                {selectedTool}
+              />
+            {/if}
+          {/key}
+        {/each}
+      </Layer>
     {/each}
+
     <Layer config={{ name: "tools" }} bind:handle={toolsLayer} />
   </Stage>
 </div>
