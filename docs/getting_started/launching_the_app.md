@@ -1,5 +1,3 @@
-# Launching the app
-
 ## From a terminal
 
 You can start the Pixano app with the following command:

@@ -88,12 +88,12 @@ nav:
 
   - "Pixano":
       - "Getting started":
-          - user/index.md
-          - "Installing Pixano": user/install.md
-          - "Importing datasets": user/import.md
-          - "Exporting datasets": user/export.md
-          - "Launching the app": user/launch.md
-          - "Using the app": user/app.md
-      - "API reference": code/
+          - getting_started/index.md
+          - "Installing Pixano": getting_started/installing_pixano.md
+          - "Importing datasets": getting_started/importing_datasets.md
+          - "Exporting datasets": getting_started/exporting_datasets.md
+          - "Launching the app": getting_started/launching_the_app.md
+          - "Using the app": getting_started/using_the_app.md
+      - "API reference": api_reference/
 
   - "Pixano Inference": https://pixano.github.io/pixano-inference/
