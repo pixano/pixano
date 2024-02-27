@@ -21,15 +21,10 @@
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
-  interface ImageModule {
-    default: string;
-  }
-
-  export let updateViews: (imageUrl: string) => void;
+  export let updateView: (imageIndex: number) => void;
 
   let currentImageIndex = 0;
   let intervalId: number;
-  let currentImageUrl: string;
   let videoSpeed = 100;
   let isLoaded = false;
   let currentTime: string;
@@ -39,19 +34,8 @@
   const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
 
-  const updateCurrentImage = async (index: number) => {
-    try {
-      const image = await Object.values(imageFiles)[index]();
-      const typedImage = image as ImageModule;
-      currentImageUrl = typedImage.default;
-      updateViews(currentImageUrl);
-    } catch (e) {
-      return new Error("Error while updating current image");
-    }
-  };
-
-  onMount(async () => {
-    await updateCurrentImage(currentImageIndex);
+  onMount(() => {
+    updateView(currentImageIndex);
     isLoaded = true;
   });
 
@@ -62,10 +46,10 @@
   const playVideo = () => {
     if (!isLoaded) return;
     clearInterval(intervalId);
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
       cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
-      await updateCurrentImage(currentImageIndex);
+      updateView(currentImageIndex);
     }, videoSpeed);
     intervalId = Number(interval);
   };
@@ -80,10 +64,10 @@
       clearInterval(intervalId);
     });
 
-    window.addEventListener("mousemove", async (event) => {
+    window.addEventListener("mousemove", (event) => {
       if (moving) {
         currentImageIndex = getImageIndexFromMouseMove(event, node, Object.keys(imageFiles).length);
-        await updateCurrentImage(currentImageIndex);
+        updateView(currentImageIndex);
       }
     });
 
@@ -92,14 +76,14 @@
     });
   };
 
-  const onPlayerClick = async (event: MouseEvent | KeyboardEvent) => {
+  const onPlayerClick = (event: MouseEvent | KeyboardEvent) => {
     let targetElement = event.target as HTMLElement;
     if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
     clearInterval(intervalId);
     currentImageIndex = Math.floor(
       (event.offsetX / targetElement.offsetWidth) * Object.keys(imageFiles).length,
     );
-    await updateCurrentImage(currentImageIndex);
+    updateView(currentImageIndex);
   };
 
   const onPlayClick = () => {

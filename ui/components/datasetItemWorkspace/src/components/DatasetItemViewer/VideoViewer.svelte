@@ -27,8 +27,11 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
+
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
+  let imagesFilesUrl: string[] = [];
 
   // let views = selectedItem.views;
   let isLoaded = false; // TODO : refactor when images come from the server
@@ -41,38 +44,26 @@
     const imagesFilesPromises = await Promise.all(
       Object.values(imageFiles).map((image) => image()),
     );
-    const imagesFilesUrl = imagesFilesPromises.map((image) => {
+    imagesFilesUrl = imagesFilesPromises.map((image) => {
       const typedImage = image as ImageModule;
       return typedImage.default;
     });
-    console.log("selectedItem", {
-      selectedItem,
-      imageFiles,
-      imagesFilesUrl,
-      images: imagesPerView,
-    });
 
-    // const views: VideoDatasetItem["views"] = {
-    //   ...selectedItem.views,
-    //   images: imagesFilesUrl.map((image) => ({
-    //     ...(selectedItem.views.image as unknown as ItemView),
-    //     uri: image,
-    //   })) as ItemView[],
-    // };
-    // selectedItem.views = views;
     const image = new Image();
     image.src = imagesFilesUrl[0];
     imagesPerView = {
       ...imagesPerView,
       image: [image],
     };
+    isLoaded = true;
   });
 
-  const updateImages = (imageUrl: string) => {
+  const updateView = (imageIndex: number) => {
     const image = new Image();
-    image.src = imageUrl;
+    const src = imagesFilesUrl[imageIndex];
+    if (!src) return;
+    image.src = src;
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
-    isLoaded = true;
   };
 </script>
 
@@ -90,5 +81,5 @@
       bind:newShape={$newShape}
     />
   {/if}
-  <VideoPlayer updateViews={updateImages} />
+  <VideoPlayer {updateView} />
 </div>
