@@ -84,16 +84,16 @@ plugins:
               - pydantic
 
 nav:
-  - "Home": index.md
+  - "Home": https://pixano.github.io/
 
-  - "Getting started":
-      - user/index.md
-      - "Installing Pixano": user/install.md
-      - "Importing datasets": user/import.md
-      - "Exporting datasets": user/export.md
-      - "Launching the app": user/launch.md
-      - "Using the app": user/app.md
-
-  - "API reference": code/
+  - "Pixano":
+      - "Getting started":
+          - user/index.md
+          - "Installing Pixano": user/install.md
+          - "Importing datasets": user/import.md
+          - "Exporting datasets": user/export.md
+          - "Launching the app": user/launch.md
+          - "Using the app": user/app.md
+      - "API reference": code/
 
   - "Pixano Inference": https://pixano.github.io/pixano-inference/
