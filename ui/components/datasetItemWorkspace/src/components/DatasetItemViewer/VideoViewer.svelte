@@ -80,6 +80,6 @@
       bind:currentAnn
       bind:newShape={$newShape}
     />
+    <VideoPlayer {updateView} />
   {/if}
-  <VideoPlayer {updateView} />
 </div>

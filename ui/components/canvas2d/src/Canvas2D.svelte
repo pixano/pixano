@@ -195,21 +195,7 @@
 
     for (const viewId of Object.keys(imagesPerView)) {
       zoomFactor[viewId] = 1;
-      // images[view.id] = new Image();
-      // if (utils.isValidURL(view.uri)) {
-      //   images[view.id].src = `${view.uri}` || view.url;
-      // } else {
-      //   images[view.id].src = view.uri;
-      //   // images[view.id].src = `/${view.uri}` || view.url;
-      // }
       getCurrentImage(viewId).onload = () => {
-        console.log("image loaded");
-        // Find existing Konva elements in case a previous item was already loaded
-        if (currentId) {
-          const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-          const konvaImg: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
-          konvaImg.image(imagesPerView[viewId][0]);
-        }
         scaleView(viewId);
         scaleElements(viewId);
         isReady = true;
@@ -217,7 +203,6 @@
         masks = masks;
         bboxes = bboxes;
       };
-      // imagesArray[view.id] = [images[view.id]];
     }
     currentId = selectedItemId;
   }
