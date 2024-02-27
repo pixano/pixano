@@ -55,6 +55,9 @@ plugins:
         - ../pixano/docs/gen_ref_pages.py
   - literate-nav:
       nav_file: SUMMARY.md
+  - redirects:
+      redirect_maps:
+        "index.md": "getting_started/index.md"
   - mkdocstrings:
       enable_inventory: true
       handlers:
