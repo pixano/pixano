@@ -357,15 +357,14 @@ export const mockedCurrentDataset: DatasetInfo = {
       },
     ],
   },
-  categories: [],
   features_values: {
-    scene: {
-      label: ["arbre", "oranges", "poire", "None", "abeille", "printemps"],
-      category_name: ["foo", "None"],
+    main: {
+      label: {restricted: false, values:["arbre", "oranges", "poire", "None", "abeille", "printemps"]},
+      category_name: {restricted: false, values:["foo", "None"]},
     },
     objects: {
-      category_id: [],
-      category_name: [
+      category_id: {restricted: false, values:[]},
+      category_name: {restricted: false, values:[
         "toilet",
         "chair",
         "oranges",
@@ -394,8 +393,8 @@ export const mockedCurrentDataset: DatasetInfo = {
         "foo",
         "choubidou",
         "bottle",
-      ],
-      category: ["vzfe", "front", "None", "seed", "foo", "bar"],
+      ]},
+      category: {restricted: false, values:["vzfe", "front", "None", "seed", "foo", "bar"]},
     },
   },
   preview:

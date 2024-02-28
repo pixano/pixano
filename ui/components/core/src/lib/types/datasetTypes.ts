@@ -26,7 +26,6 @@ export interface DatasetInfo {
   preview: string;
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
-  categories: Array<DatasetCategory>;
   features_values?: FeaturesValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;

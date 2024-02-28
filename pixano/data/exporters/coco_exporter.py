@@ -38,6 +38,7 @@ class COCOExporter(Exporter):
 
     dataset: Dataset
     coco_json: dict[str, Any]
+    _category_id_count: int  # for dataset without category_id
 
     def export_dataset(
         self,
@@ -75,6 +76,8 @@ class COCOExporter(Exporter):
         ann_dir = export_dir / f"annotations [{', '.join(objects_sources)}]"
         ann_dir.mkdir(parents=True, exist_ok=True)
 
+        self._category_id_count = 0  # used if no category_id in dataset (TODO: get from prebuilt coco id/name mapping)
+
         # Iterate on splits
         with tqdm(desc="Processing dataset", total=self.dataset.num_rows) as progress:
             for split in splits:
@@ -97,10 +100,7 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": sorted(
-                        [cat.model_dump() for cat in self.dataset.info.categories],
-                        key=lambda c: c["id"],
-                    ),
+                    "categories": [],
                 }
 
                 batch_size = 1024
@@ -230,17 +230,28 @@ class COCOExporter(Exporter):
         # Mask
         mask = obj.mask.to_pyarrow().to_urle() if obj.mask else None
 
-        # Category
-        category = {
-            "id": None,
-            "name": (
-                obj.features["category"].value if "category" in obj.features else None
-            ),
-        }
-        if category["name"] is not None:
-            for cat in self.dataset.info.categories:
-                if cat.name == category["name"]:
-                    category["id"] = cat.id
+        # Add to categories
+        category = {}
+        if "category" in obj.features and obj.features["category"].value not in [
+            cat["name"] for cat in self.coco_json["categories"]
+        ]:
+            if "category_id" in obj.features:
+                category["id"] = (obj.features["category_id"].value,)
+            else:
+                category["id"] = self._category_id_count
+                self._category_id_count += 1
+            if "category" in obj.features:
+                category["name"] = (obj.features["category"].value,)
+                self.coco_json["categories"].append(category)
+        else:
+            category = {
+                "id": [
+                    cat["id"]
+                    for cat in self.coco_json["categories"]
+                    if cat["name"] == obj.features["category"].value
+                ],
+                "name": obj.features["category"].value,
+            }
 
         # Add object
         self.coco_json["annotations"].append(
