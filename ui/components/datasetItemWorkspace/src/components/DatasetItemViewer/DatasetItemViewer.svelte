@@ -17,7 +17,7 @@
   import { Loader2Icon } from "lucide-svelte";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { DatasetItem, SelectionTool } from "@pixano/core";
+  import type { DatasetItem } from "@pixano/core";
 
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
@@ -25,8 +25,6 @@
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-
-  export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
 
@@ -39,7 +37,7 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if itemType === "image"}
-    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if itemType === "video"}
     <VideoViewer />
   {:else if itemType === "3d"}
