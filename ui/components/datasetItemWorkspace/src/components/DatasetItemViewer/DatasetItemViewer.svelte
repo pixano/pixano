@@ -17,7 +17,7 @@
   import { Loader2Icon } from "lucide-svelte";
 
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { DatasetItem, SelectionTool } from "@pixano/core";
+  import type { DatasetItem } from "@pixano/core";
 
   import { newShape, itemObjects, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -27,7 +27,6 @@
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-  export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
 
@@ -58,18 +57,11 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer
-      {selectedItem}
-      {embeddings}
-      colorRange={allIds}
-      bind:selectedTool
-      bind:currentAnn
-    />
+    <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
     <ImageViewer
       {selectedItem}
       {embeddings}
-      bind:selectedTool
       bind:currentAnn
       bind:newShape={$newShape}
       colorRange={allIds}

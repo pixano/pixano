@@ -16,16 +16,20 @@
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { ImageDatasetItem, SelectionTool, Shape } from "@pixano/core";
+  import type { ImageDatasetItem } from "@pixano/core";
 
-  import { itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    newShape,
+    itemBboxes,
+    itemMasks,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-  export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
-  export let newShape: Shape;
+  // export let newShape: Shape;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -42,6 +46,8 @@
       );
     }
   }
+
+  $: selectedTool.set($selectedTool);
 </script>
 
 {#key selectedItem.id}
@@ -52,8 +58,8 @@
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
-    bind:selectedTool
+    bind:selectedTool={$selectedTool}
     bind:currentAnn
-    bind:newShape
+    bind:newShape={$newShape}
   />
 {/key}

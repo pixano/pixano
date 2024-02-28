@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { utils, type SelectionTool, type VideoDatasetItem } from "@pixano/core";
+  import { utils, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -24,6 +24,7 @@
     itemMasks,
     itemObjects,
     newShape,
+    selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
@@ -34,7 +35,6 @@
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
-  export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
 
@@ -90,6 +90,8 @@
       }
     }
   }
+
+  $: selectedTool.set($selectedTool);
 </script>
 
 <section class="pl-4 h-full w-full flex flex-col">
@@ -102,7 +104,7 @@
         bboxes={$itemBboxes}
         masks={$itemMasks}
         {embeddings}
-        bind:selectedTool
+        bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
       />

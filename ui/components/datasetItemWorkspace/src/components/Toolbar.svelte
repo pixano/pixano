@@ -38,15 +38,15 @@
     interactiveSegmenterModel,
     newShape,
     modelsStore,
+    selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
 
-  export let selectedTool: SelectionTool;
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
 
   const selectTool = (tool: SelectionTool) => {
-    if (tool !== selectedTool) selectedTool = tool;
+    if (tool !== $selectedTool) selectedTool.set(tool);
   };
 
   const handleSmartToolClick = () => {
@@ -70,10 +70,10 @@
   });
 
   $: {
-    if (!previousSelectedTool?.isSmart || !selectedTool?.isSmart) {
+    if (!previousSelectedTool?.isSmart || !$selectedTool?.isSmart) {
       newShape.set({ status: "none" });
     }
-    previousSelectedTool = selectedTool;
+    previousSelectedTool = $selectedTool;
   }
 </script>
 
@@ -82,21 +82,21 @@
     <IconButton
       tooltipContent={panTool.name}
       on:click={() => selectTool(panTool)}
-      selected={selectedTool?.type === "PAN"}
+      selected={$selectedTool?.type === "PAN"}
     >
       <MousePointer />
     </IconButton>
     <IconButton
       tooltipContent={rectangleTool.name}
       on:click={() => selectTool(rectangleTool)}
-      selected={selectedTool?.type === "RECTANGLE" && !selectedTool.isSmart}
+      selected={$selectedTool?.type === "RECTANGLE" && !$selectedTool.isSmart}
     >
       <Square />
     </IconButton>
     <IconButton
       tooltipContent={polygonTool.name}
       on:click={() => selectTool(polygonTool)}
-      selected={selectedTool?.type === "POLYGON"}
+      selected={$selectedTool?.type === "POLYGON"}
     >
       <Share2 />
     </IconButton>
@@ -118,7 +118,7 @@
       <IconButton
         tooltipContent={addSmartPointTool.name}
         on:click={() => selectTool(addSmartPointTool)}
-        selected={selectedTool?.type === "POINT_SELECTION" && !!selectedTool.label}
+        selected={$selectedTool?.type === "POINT_SELECTION" && !!$selectedTool.label}
       >
         <PlusCircleIcon />
         <MagicIcon />
@@ -126,7 +126,7 @@
       <IconButton
         tooltipContent={removeSmartPointTool.name}
         on:click={() => selectTool(removeSmartPointTool)}
-        selected={selectedTool?.type === "POINT_SELECTION" && !selectedTool.label}
+        selected={$selectedTool?.type === "POINT_SELECTION" && !$selectedTool.label}
       >
         <MinusCircleIcon />
         <MagicIcon />
@@ -134,7 +134,7 @@
       <IconButton
         tooltipContent={smartRectangleTool.name}
         on:click={() => selectTool(smartRectangleTool)}
-        selected={selectedTool?.type === "RECTANGLE" && selectedTool.isSmart}
+        selected={$selectedTool?.type === "RECTANGLE" && $selectedTool.isSmart}
       >
         <Square />
         <MagicIcon />
