@@ -28,7 +28,7 @@ from pixano.data.dataset.dataset_item import DatasetItem
 from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_table import DatasetTable
 from pixano.data.fields import Fields, field_to_pyarrow
-from pixano.data.item.item_feature import FeaturesValues, ItemFeature
+from pixano.data.item.item_feature import FeaturesValues, FeatureValues, ItemFeature
 from pixano.data.item.item_object import ItemObject
 
 
@@ -166,19 +166,8 @@ class Dataset(BaseModel):
             load_stats=load_stats,
             load_thumbnail=load_thumbnail,
         )
-
         if load_features_values:
-            def merge_dicts(dict1, dict2):
-                merged = dict1.copy()
-                if dict2 is not None:
-                    for key, value in dict2.items():
-                        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-                            merged[key] = merge_dicts(merged[key], value)
-                        else:
-                            merged[key] = value
-                return merged
-
-            info.features_values = merge_dicts(self.get_features_values(), info.features_values)
+            info.features_values = self.get_features_values(info.features_values)
 
         return info
 
@@ -753,11 +742,12 @@ class Dataset(BaseModel):
         # Delete removed item objects
         item.delete_objects(ds_tables)
 
-    def get_features_values(
-        self,
-    ) -> FeaturesValues:
-        """get distinct existing values for each scene and object string features
+    def get_features_values(self, config_values: FeaturesValues) -> FeaturesValues:
+        """get config values
+           merge with distinct existing values for each scene and object string features, if not restricted
 
+        Args:
+            config_values (FeaturesValues): features values from db.json
         Returns:
             FeaturesValues: existing values for each scene and object string feature
         """
@@ -765,34 +755,46 @@ class Dataset(BaseModel):
         # Load tables
         ds_tables = self.open_tables()
 
-        def get_distinct_values(table_name: str, ignore_list: list[str]):
-            avail_values = defaultdict(set)
+        def get_distinct_values(
+            table_name: str,
+            ignore_list: list[str],
+            config_vals: dict[str, FeatureValues],
+        ) -> dict[str, FeatureValues]:
+            avail_values = defaultdict(FeatureValues)
             for table in ds_tables[table_name].values():
                 table_arrow = table.to_arrow()
                 feats = [f for f in table_arrow.column_names if f not in ignore_list]
                 for feat in feats:
-                    v = (
-                        duckdb.sql(f"select DISTINCT {feat} from table_arrow")
-                        .to_arrow_table()
-                        .to_pydict()
-                    )
-                    if v[feat] is not None and v[feat] != [None]:
-                        avail_values[feat].update(
-                            [
-                                val
-                                for val in v[feat]
-                                if val is not None and isinstance(val, str)
-                            ]
+                    avail_values[feat] = FeatureValues(restricted=False, values=[])
+                    if config_vals and feat in config_vals:
+                        avail_values[feat].restricted = config_vals[feat].restricted
+                        avail_values[feat].values.extend(config_vals[feat].values)
+                    if not avail_values[feat].restricted:
+                        v = (
+                            duckdb.sql(f"select DISTINCT {feat} from table_arrow")
+                            .to_arrow_table()
+                            .to_pydict()
                         )
-            return {
-                key: {"restricted": False, "values": list(values)}
-                for key, values in avail_values.items()
-            }
+                        if v[feat] is not None and v[feat] != [None]:
+                            avail_values[feat].values.extend(
+                                [
+                                    val
+                                    for val in v[feat]
+                                    if val is not None and isinstance(val, str)
+                                ]
+                            )
+            return avail_values
 
         return FeaturesValues(
-            main=get_distinct_values("main", ["id", "split", "views", "original_id"]),
+            main=get_distinct_values(
+                "main",
+                ["id", "split", "views", "original_id"],
+                config_values.main if config_values else None,
+            ),
             objects=get_distinct_values(
-                "objects", ["id", "item_id", "view_id", "bbox", "mask", "review_state"]
+                "objects",
+                ["id", "item_id", "view_id", "bbox", "mask", "review_state"],
+                config_values.objects if config_values else None,
             ),
         )
 

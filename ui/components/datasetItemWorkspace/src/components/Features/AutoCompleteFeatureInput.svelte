@@ -24,6 +24,7 @@
   export let value: string = "";
   export let autofocus: boolean = false;
   export let className = "";
+  export let isInputEnabled: boolean = true;
 
   let open = autofocus;
   let selectedValue = value || placeholder;
@@ -73,12 +74,14 @@
   </Popover.Trigger>
   <Popover.Content class="p-0 " tabindex={-1}>
     <Command.Root>
+      {#if isInputEnabled}
       <Command.Input
         {placeholder}
         on:change={() => console.log("changed")}
         bind:value={inputValue}
         on:input={onSearchInput}
       />
+      {/if}
       <Command.List>
         {#each featureList as feature}
           <Command.Item

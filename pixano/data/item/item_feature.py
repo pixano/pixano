@@ -133,8 +133,8 @@ class FeaturesValues(BaseModel):
     """Features availables values
 
     Attributes:
-        main (dict[str, FeatureValues]): Scene features available values ("main" table)
-        objects (dict[str, FeatureValues]): Objects features available values
+        main (dict[str, FeatureValues], optional): Scene features available values ("main" table)
+        objects (dict[str, FeatureValues], optional): Objects features available values
     """
-    main: dict[str, FeatureValues]
-    objects: dict[str, FeatureValues]
+    main: Optional[dict[str, FeatureValues]] = None
+    objects: Optional[dict[str, FeatureValues]] = None
