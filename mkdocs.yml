@@ -55,6 +55,9 @@ plugins:
         - ../pixano/docs/gen_ref_pages.py
   - literate-nav:
       nav_file: SUMMARY.md
+  - redirects:
+      redirect_maps:
+        "index.md": "getting_started/index.md"
   - mkdocstrings:
       enable_inventory: true
       handlers:
@@ -84,16 +87,16 @@ plugins:
               - pydantic
 
 nav:
-  - "Home": index.md
+  - "Home": https://pixano.github.io/
 
-  - "Getting started":
-      - user/index.md
-      - "Installing Pixano": user/install.md
-      - "Importing datasets": user/import.md
-      - "Exporting datasets": user/export.md
-      - "Launching the app": user/launch.md
-      - "Using the app": user/app.md
-
-  - "API reference": code/
+  - "Pixano":
+      - "Getting started":
+          - getting_started/index.md
+          - "Installing Pixano": getting_started/installing_pixano.md
+          - "Importing datasets": getting_started/importing_datasets.md
+          - "Exporting datasets": getting_started/exporting_datasets.md
+          - "Launching the app": getting_started/launching_the_app.md
+          - "Using the app": getting_started/using_the_app.md
+      - "API reference": api_reference/
 
   - "Pixano Inference": https://pixano.github.io/pixano-inference/
