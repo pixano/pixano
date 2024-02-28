@@ -75,12 +75,12 @@
   <Popover.Content class="p-0 " tabindex={-1}>
     <Command.Root>
       {#if isInputEnabled}
-      <Command.Input
-        {placeholder}
-        on:change={() => console.log("changed")}
-        bind:value={inputValue}
-        on:input={onSearchInput}
-      />
+        <Command.Input
+          {placeholder}
+          on:change={() => console.log("changed")}
+          bind:value={inputValue}
+          on:input={onSearchInput}
+        />
       {/if}
       <Command.List>
         {#each featureList as feature}

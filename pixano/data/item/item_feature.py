@@ -125,6 +125,7 @@ class FeatureValues(BaseModel):
         restricted (bool): restricted list or open list
         values (list[str]): list of available values
     """
+
     restricted: bool
     values: list[str]
 
@@ -136,5 +137,6 @@ class FeaturesValues(BaseModel):
         main (dict[str, FeatureValues], optional): Scene features available values ("main" table)
         objects (dict[str, FeatureValues], optional): Objects features available values
     """
+
     main: Optional[dict[str, FeatureValues]] = None
     objects: Optional[dict[str, FeatureValues]] = None
