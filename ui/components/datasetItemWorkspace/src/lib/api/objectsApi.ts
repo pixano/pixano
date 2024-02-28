@@ -45,15 +45,17 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   const image: ItemView = Array.isArray(view) ? view[0] : view;
   let imageHeight = (image.features.height.value as number) || 1;
   let imageWidth = (image.features.width.value as number) || 1;
-  let coordinates: BBoxCoordinates[] = [];
+  if (IS_DEV) {
+    imageHeight = 338;
+    imageWidth = 600;
+  }
   const x = obj.bbox.coords[0] * imageWidth;
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
   const tooltip = defineTooltip(obj);
+  let coordinates: BBoxCoordinates[] = [];
   if (IS_DEV) {
-    imageHeight = 338;
-    imageWidth = 600;
     coordinates = [
       {
         start: [x, y, w, h],

@@ -17,6 +17,7 @@
   import { PlayIcon, PauseIcon } from "lucide-svelte";
 
   import { SliderRoot } from "@pixano/core";
+  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { getCurrentImageTime, getImageIndexFromMouseMove } from "../../lib/api/videoApi";
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
@@ -97,13 +98,15 @@
 </script>
 
 {#if isLoaded}
-  <div class="bg-white flex h-full">
+  <div class="h-full bg-white flex">
     <!-- left section -->
-    <div class="w-1/4 min-w-[25%] border-r border-slate-200">
-      <div class="h-12 flex justify-between p-2 items-center">
+    <div class="w-1/4 min-w-[25%] border-r border-slate-200 flex flex-col gap-4 h-full">
+      <div class="flex justify-between items-center gap-4 p-4">
+        <!-- <div class="h-12 flex justify-between p-2 items-center"> -->
         <p>
           {currentTime}
         </p>
+        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
         <button on:click={onPlayClick} class="text-primary">
           {#if intervalId}
             <PauseIcon />
@@ -112,12 +115,16 @@
           {/if}
         </button>
       </div>
-      <div class="flex gap-2 flex-col p-4">
-        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
+      <div class="overflow-auto grow flex flex-col max-h-[150px] gap-2">
+        {#each Object.values($itemObjects) as object}
+          <p class="border-b border-slate-200 h-12 p-2">
+            {object.id}
+          </p>
+        {/each}
       </div>
     </div>
     <!-- right section -->
-    <div class="h-32 p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
+    <div class="p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
       <div
         class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
         style={`width: ${zoomLevel[0]}%`}
@@ -138,7 +145,7 @@
             class="block w-0 h-0 border-l-[4px] border-l-transparent border-t-[8px] border-t-primary border-r-[4px] border-r-transparent"
           >
           </span>
-          <span class="h-32 w-[1px] bg-primary absolute ml-1" />
+          <span class="w-[1px] bg-primary absolute ml-1" />
         </button>
         {#each timeScaleInMs as ms}
           {#if ms % 10 === 0}

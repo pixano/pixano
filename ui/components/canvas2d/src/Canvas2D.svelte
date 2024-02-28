@@ -1014,7 +1014,7 @@
 </script>
 
 <div
-  class={cn("flex h-full w-full bg-slate-800 transition-opacity duration-300 delay-100", {
+  class={cn("flex h-full bg-slate-800 transition-opacity duration-300 delay-100", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}

@@ -34,7 +34,6 @@
   let imagesFilesUrl: string[] = [];
   let isLoaded = false;
   let bboxes = $itemBboxes;
-  $: console.log({ selectedItem, boxes: bboxes, masks: $itemMasks });
 
   interface ImageModule {
     default: string;
@@ -79,7 +78,6 @@
       const xInterpolation =
         (currentCoordinates?.end[0] - currentCoordinates?.start[0]) /
         (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
-      console.log({ currentCoordinates, xInterpolation });
       const yInterpolation =
         (currentCoordinates?.end[1] - currentCoordinates?.start[1]) /
         (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
@@ -93,19 +91,23 @@
   };
 </script>
 
-<div class="pl-4 w-full flex flex-col h-full">
+<div class="pl-4 h-full w-full flex flex-col">
   {#if isLoaded}
-    <Canvas2D
-      selectedItemId={selectedItem.id}
-      {imagesPerView}
-      colorRange={[]}
-      {bboxes}
-      masks={$itemMasks}
-      {embeddings}
-      bind:selectedTool
-      bind:currentAnn
-      bind:newShape={$newShape}
-    />
-    <VideoPlayer {updateView} />
+    <div class="overflow-hidden grow bg-blue-500">
+      <Canvas2D
+        selectedItemId={selectedItem.id}
+        {imagesPerView}
+        colorRange={[]}
+        {bboxes}
+        masks={$itemMasks}
+        {embeddings}
+        bind:selectedTool
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    </div>
+    <div class="h-full grow max-h-[25%]">
+      <VideoPlayer {updateView} objects={selectedItem.objects} />
+    </div>
   {/if}
 </div>
