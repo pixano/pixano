@@ -72,7 +72,7 @@ class COCOImporter(Importer):
             ) as f:
                 coco_instances = json.load(f)
                 for category in coco_instances["categories"]:
-                    features_values.objects["category"].values.append(category)
+                    features_values.objects["category"].values.append(category["name"])
         FeaturesValues.model_validate(features_values)
 
         # Initialize Importer
