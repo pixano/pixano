@@ -32,9 +32,9 @@
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = [];
-
-  // let views = selectedItem.views;
-  let isLoaded = false; // TODO : refactor when images come from the server
+  let isLoaded = false;
+  let bboxes = $itemBboxes;
+  $: console.log({ selectedItem, boxes: bboxes, masks: $itemMasks });
 
   interface ImageModule {
     default: string;
@@ -51,11 +51,16 @@
 
     const image = new Image();
     image.src = imagesFilesUrl[0];
+
     imagesPerView = {
       ...imagesPerView,
       image: [image],
     };
     isLoaded = true;
+  });
+
+  itemBboxes.subscribe((value) => {
+    bboxes = value;
   });
 
   const updateView = (imageIndex: number) => {
@@ -64,6 +69,27 @@
     if (!src) return;
     image.src = src;
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
+    bboxes = bboxes.map((box) => {
+      const currentCoordinates = box.coordinates?.find(
+        (coord) => coord.startIndex < imageIndex && coord.endIndex > imageIndex,
+      );
+      if (!currentCoordinates) return box;
+      const startX = currentCoordinates.start[0];
+      const startY = currentCoordinates.start[1];
+      const xInterpolation =
+        (currentCoordinates?.end[0] - currentCoordinates?.start[0]) /
+        (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
+      console.log({ currentCoordinates, xInterpolation });
+      const yInterpolation =
+        (currentCoordinates?.end[1] - currentCoordinates?.start[1]) /
+        (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
+      const newX = startX + xInterpolation * (imageIndex - currentCoordinates?.startIndex);
+      const newY = startY + yInterpolation * (imageIndex - currentCoordinates?.startIndex);
+      return {
+        ...box,
+        bbox: [newX, newY, box.bbox[2], box.bbox[3]],
+      };
+    });
   };
 </script>
 
@@ -73,7 +99,7 @@
       selectedItemId={selectedItem.id}
       {imagesPerView}
       colorRange={[]}
-      bboxes={$itemBboxes}
+      {bboxes}
       masks={$itemMasks}
       {embeddings}
       bind:selectedTool

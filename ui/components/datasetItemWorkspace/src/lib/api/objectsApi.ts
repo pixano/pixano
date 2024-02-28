@@ -6,6 +6,7 @@ import type {
   DatasetItem,
   Shape,
   ItemView,
+  BBoxCoordinates,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -35,18 +36,45 @@ const defineTooltip = (object: ItemObject) => {
   return tooltip;
 };
 
+const IS_DEV = true; // TODO : remove when dataset is ready for video
+
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   if (!obj.bbox) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
-  const imageHeight = (image.features.height.value as number) || 1;
-  const imageWidth = (image.features.width.value as number) || 1;
+  let imageHeight = (image.features.height.value as number) || 1;
+  let imageWidth = (image.features.width.value as number) || 1;
+  let coordinates: BBoxCoordinates[] = [];
   const x = obj.bbox.coords[0] * imageWidth;
   const y = obj.bbox.coords[1] * imageHeight;
   const w = obj.bbox.coords[2] * imageWidth;
   const h = obj.bbox.coords[3] * imageHeight;
   const tooltip = defineTooltip(obj);
+  if (IS_DEV) {
+    imageHeight = 338;
+    imageWidth = 600;
+    coordinates = [
+      {
+        start: [x, y, w, h],
+        end: [x + 10, y + 50, w, h],
+        startIndex: 0,
+        endIndex: 20,
+      },
+      {
+        start: [x + 10, y + 50, w, h],
+        end: [x, y, w, h],
+        startIndex: 21,
+        endIndex: 50,
+      },
+      {
+        start: [x, y, w, h],
+        end: [x - 50, y - 100, w, h],
+        startIndex: 51,
+        endIndex: 90,
+      },
+    ];
+  }
   return {
     id: obj.id,
     viewId: obj.view_id,
@@ -58,6 +86,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     editing: obj.displayControl?.editing,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     highlighted: obj.highlighted,
+    coordinates,
   } as BBox;
 };
 

@@ -179,6 +179,12 @@ export interface Mask {
 
 export type MaskSVG = string[];
 
+export interface BBoxCoordinates {
+  startIndex: number;
+  endIndex: number;
+  start: Array<number>;
+  end: Array<number>;
+}
 export interface BBox {
   id: string;
   viewId: string;
@@ -190,6 +196,7 @@ export interface BBox {
   editing?: boolean;
   strokeFactor?: number;
   highlighted?: "none" | "self" | "all";
+  coordinates?: BBoxCoordinates[];
 }
 
 // LABELS DATA
