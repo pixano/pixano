@@ -24,6 +24,7 @@ import type {
   BBox,
   ItemFeature,
   FeaturesValues,
+  SelectionTool,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
@@ -31,6 +32,7 @@ import type { ModelSelection } from "../types/datasetItemWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
+export const selectedTool = writable<SelectionTool>();
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<{
