@@ -78,7 +78,7 @@ jobs:
           python -m pip install .
           python -m pip install torch~=2.2.0 torchaudio~=2.2.0 torchvision~=0.17.0 --index-url https://download.pytorch.org/whl/cpu
           python -m pip install tensorflow-cpu~=2.15.0
-          python -m pip install pixano-inference@git+https://github.com/pixano/pixano-inference
+          python -m pip install pixano-inference~=0.3.0
 
       - name: Lint backend code with Pylint
         run: |
