@@ -18,11 +18,12 @@
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
-  import { canSave, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { canSave, itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
@@ -104,6 +105,11 @@
       }),
     );
   };
+
+  const onEditIconClick = () => {
+    handleIconClick("editing", !isEditing), (open = true);
+    !isEditing && selectedTool.set(panTool);
+  };
 </script>
 
 <article
@@ -136,12 +142,8 @@
     </div>
     <div class="flex items-center">
       {#if showIcons || isEditing}
-        <IconButton
-          tooltipContent="Edit object"
-          selected={isEditing}
-          on:click={() => {
-            handleIconClick("editing", !isEditing), (open = true);
-          }}><Pencil class="h-4" /></IconButton
+        <IconButton tooltipContent="Edit object" selected={isEditing} on:click={onEditIconClick}
+          ><Pencil class="h-4" /></IconButton
         >
         <IconButton tooltipContent="Delete object" on:click={deleteObject}
           ><Trash2 class="h-4" /></IconButton

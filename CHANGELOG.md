@@ -4,6 +4,34 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2024-02-29
+
+### Added
+
+- Use PyPI trusted publishing (pixano#194)
+- Update docs deployment (pixano#188)
+- Update uses of Pixano Inference from GitHub to PyPI (pixano#199)
+- Prepare frontend for future video and 3D workspaces (pixano#160)
+
+### Changed
+
+- Improve autocomplete UX and placement (pixano#171)
+- Improve how stats are displayed in the app (pixano#172)
+
+### Fixed
+
+- Fix InferenceModel to stop relying on table order (pixano#169)
+- Allow page refresh in the deployed app (pixano#173)
+- Switch to pan tool when editing an object (pixano#195)
+- Fix highlighted objects disappearing in pre-annotation mode (pixano#180)
+- Update object in pre-annotation only if its active (pixano#179)
+- Fix updating default values for pre-annotation objects (pixano#164)
+- Fix home page background color (pixano#175)
+- Fix storybook (pixano#177, pixano#182)
+- Fix 404 error with app favicon (pixano#176)
+- Prevent CUDA installation in lint and test GitHub actions (pixano#197)
+- Update deprecated GitHub actions (pixano#192)
+
 ## [0.5.0b4] - 2024-02-15
 
 ### Added
@@ -279,6 +307,7 @@ All notable changes to Pixano will be documented in this file.
 - Create first public release
 
 [Unreleased]: https://github.com/pixano/pixano/compare/main...develop
+[0.5.0]: https://github.com/pixano/pixano/compare/v0.5.0b4...v0.5.0
 [0.5.0b4]: https://github.com/pixano/pixano/compare/v0.5.0b3...v0.5.0b4
 [0.5.0b3]: https://github.com/pixano/pixano/compare/v0.5.0b2...v0.5.0b3
 [0.5.0b2]: https://github.com/pixano/pixano/compare/v0.5.0b1...v0.5.0b2

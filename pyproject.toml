@@ -57,6 +57,7 @@ documentation = [
   "mkdocstrings-python ~= 1.7.0",
   "mkdocs-gen-files ~= 0.5.0",
   "mkdocs-literate-nav ~= 0.6.0",
+  "mkdocs-redirects ~= 1.2.1",
 ]
 
 [project.urls]
