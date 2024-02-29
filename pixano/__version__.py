@@ -11,4 +11,4 @@
 #
 # http://www.cecill.info
 
-__version__ = "0.5.0b4"
+__version__ = "0.5.0"
