@@ -107,7 +107,7 @@
       />
     </div>
     <div class="h-full grow max-h-[25%]">
-      <VideoPlayer {updateView} objects={selectedItem.objects} />
+      <VideoPlayer {updateView} />
     </div>
   {/if}
 </div>

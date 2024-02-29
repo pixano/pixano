@@ -98,32 +98,21 @@
 </script>
 
 {#if isLoaded}
-  <div class="h-full bg-white flex">
-    <!-- left section -->
-    <div class="w-1/4 min-w-[25%] border-r border-slate-200 flex flex-col gap-4 h-full">
-      <div class="flex justify-between items-center gap-4 p-4">
-        <!-- <div class="h-12 flex justify-between p-2 items-center"> -->
-        <p>
-          {currentTime}
-        </p>
-        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
-        <button on:click={onPlayClick} class="text-primary">
-          {#if intervalId}
-            <PauseIcon />
-          {:else}
-            <PlayIcon />
-          {/if}
-        </button>
-      </div>
-      <div class="overflow-auto grow flex flex-col max-h-[150px] gap-2">
-        {#each Object.values($itemObjects) as object}
-          <p class="border-b border-slate-200 h-12 p-2">
-            {object.id}
-          </p>
-        {/each}
-      </div>
+  <div class="h-full bg-white grid grid-cols-[25%_1fr]">
+    <div class="flex justify-between items-center gap-4 p-4">
+      <!-- <div class="h-12 flex justify-between p-2 items-center"> -->
+      <p>
+        {currentTime}
+      </p>
+      <SliderRoot bind:value={zoomLevel} min={100} max={200} />
+      <button on:click={onPlayClick} class="text-primary">
+        {#if intervalId}
+          <PauseIcon />
+        {:else}
+          <PlayIcon />
+        {/if}
+      </button>
     </div>
-    <!-- right section -->
     <div class="p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
       <div
         class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
@@ -168,5 +157,18 @@
         {/each}
       </div>
     </div>
+    <div class="overflow-auto grow flex flex-col max-h-[150px] gap-2 col-span-2">
+      {#each Object.values($itemObjects) as object}
+        <div class="border-b border-slate-200 h-12 p-2 flex">
+          <p>{object.id}</p>
+          <p class="bg-red-500">foo</p>
+        </div>
+      {/each}
+    </div>
+    <!-- left section -->
+    <!-- <div class="w-1/4 min-w-[25%] border-r border-slate-200 flex flex-col gap-4 h-full">
+
+    </div> -->
+    <!-- right section -->
   </div>
 {/if}
