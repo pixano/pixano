@@ -55,7 +55,7 @@ class DOTAImporterTestCase(unittest.TestCase):
             # Check db.json content
             self.assertEqual("DOTA", dataset.info.name)
             self.assertEqual(dataset.info.num_elements, 1)
-            self.assertEqual(18, len(dataset.info.categories))
+            self.assertEqual(18, len(dataset.info.features_values.objects["category"].values))
 
             # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"

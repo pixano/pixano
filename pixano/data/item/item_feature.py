@@ -123,11 +123,11 @@ class FeatureValues(BaseModel):
 
     Attributes:
         restricted (bool): restricted list or open list
-        values (list[str]): list of available values
+        values (list[str | int]): list of available values
     """
 
     restricted: bool
-    values: list[str]
+    values: list[str | int]
 
 
 class FeaturesValues(BaseModel):

@@ -81,6 +81,33 @@ class COCOExporter(Exporter):
         # Iterate on splits
         with tqdm(desc="Processing dataset", total=self.dataset.num_rows) as progress:
             for split in splits:
+                # build categories field from features_values
+                if (
+                    self.dataset.info.features_values
+                    and self.dataset.info.features_values.objects
+                    and "category" in self.dataset.info.features_values.objects
+                ):
+                    if "category_id" in self.dataset.info.features_values.objects:
+                        categories = [
+                            {"id": id, "name": name, "supercategory": ""}
+                            for id, name in zip(
+                                self.dataset.info.features_values.objects[
+                                    "category_id"
+                                ].values,
+                                self.dataset.info.features_values.objects[
+                                    "category"
+                                ].values,
+                            )
+                        ]
+                    else:
+                        for i, val in enumerate(
+                            self.dataset.info.features_values.objects["category"].values
+                        ):
+                            categories.append({"id": i, "name": val})
+
+                else:
+                    categories = []
+
                 # Create COCO json
                 self.coco_json = {
                     "info": {
@@ -100,7 +127,7 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": [],
+                    "categories": categories,
                 }
 
                 batch_size = 1024
@@ -236,33 +263,47 @@ class COCOExporter(Exporter):
             cat["name"] for cat in self.coco_json["categories"]
         ]:
             if "category_id" in obj.features:
-                category["id"] = (obj.features["category_id"].value,)
+                category["id"] = obj.features["category_id"].value
             else:
                 category["id"] = self._category_id_count
                 self._category_id_count += 1
-            if "category" in obj.features:
-                category["name"] = (obj.features["category"].value,)
-                self.coco_json["categories"].append(category)
+            category["name"] = obj.features["category"].value
+            category["supercategory"] = (
+                obj.features["supercategory"].value
+                if "supercategory" in obj.features
+                else ""
+            )
+            self.coco_json["categories"].append(category)
         else:
             category = {
                 "id": [
                     cat["id"]
                     for cat in self.coco_json["categories"]
                     if cat["name"] == obj.features["category"].value
-                ],
+                ][0],
                 "name": obj.features["category"].value,
             }
+            if "supercategory" in obj.features:
+                category["supercategory"] = obj.features["supercategory"].value
+                for cat in self.coco_json["categories"]:
+                    if cat["name"] == category["name"]:
+                        cat["supercategory"] = category["supercategory"]
+            else:
+                for cat in self.coco_json["categories"]:
+                    if cat["name"] == category["name"]:
+                        cat["supercategory"] = ""
 
         # Add object
-        self.coco_json["annotations"].append(
-            {
-                "id": obj.original_id if obj.original_id else obj.id,
-                "image_id": item.original_id if item.original_id else item.id,
-                "segmentation": mask,
-                "bbox": bbox,
-                "area": 0,
-                "iscrowd": 0,
-                "category_id": category["id"],
-                "category_name": category["name"],
-            }
-        )
+        object = {
+            "id": obj.original_id if obj.original_id else obj.id,
+            "image_id": item.original_id if item.original_id else item.id,
+            "segmentation": mask,
+            "bbox": bbox,
+            "area": 0,
+            "iscrowd": 0,
+            "category_id": category["id"],
+            "category_name": category["name"],
+        }
+        if category["supercategory"] != "":
+            object["supercategory"] = category["supercategory"]
+        self.coco_json["annotations"].append(object)

@@ -57,9 +57,12 @@ class DatasetInfo(BaseModel):
         Args:
             save_dir (Path | S3Path): Save directory
         """
-
-        with open(save_dir / "db.json", "w", encoding="utf-8") as f:
-            json.dump(self.model_dump(), f)
+        if isinstance(save_dir, S3Path):
+            with (save_dir / "db.json").open(encoding="utf-8") as f:
+                json.dump(self.model_dump(), f)
+        else:
+            with open(save_dir / "db.json", "w", encoding="utf-8") as f:
+                json.dump(self.model_dump(), f)
 
     @staticmethod
     def from_json(
