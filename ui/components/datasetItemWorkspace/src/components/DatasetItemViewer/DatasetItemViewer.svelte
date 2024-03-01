@@ -64,7 +64,6 @@
       colorRange={allIds}
       bind:selectedTool
       bind:currentAnn
-      bind:newShape={$newShape}
     />
   {:else if selectedItem.type === "image"}
     <ImageViewer

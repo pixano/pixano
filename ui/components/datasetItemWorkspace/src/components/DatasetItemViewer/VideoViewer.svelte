@@ -16,19 +16,26 @@
 
   import * as ort from "onnxruntime-web";
 
-  import type { SelectionTool, Shape, VideoDatasetItem } from "@pixano/core";
+  import type { SelectionTool, VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
-  import { itemBboxes, itemMasks, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    itemBboxes,
+    itemMasks,
+    itemObjects,
+    newShape,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { inflexionPointBeingEdited } from "../../lib/stores/videoViewerStores";
+
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
-  export let newShape: Shape;
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
@@ -93,9 +100,44 @@
       }),
     );
   };
+
+  $: console.log({ point: $inflexionPointBeingEdited });
+
+  $: {
+    const shape = $newShape;
+    if ($newShape?.status === "editing") {
+      if ($inflexionPointBeingEdited) {
+        itemObjects.update((objects) =>
+          objects.map((object) => {
+            if (
+              shape.status === "editing" &&
+              shape.type === "rectangle" &&
+              shape.coords &&
+              object.id === shape.shapeId &&
+              object.bbox
+            ) {
+              object.bbox = {
+                ...object.bbox,
+                coordinates: object.bbox.coordinates?.map((coord) => {
+                  if (coord.startIndex === $inflexionPointBeingEdited?.startIndex) {
+                    coord.start = shape.coords;
+                    return coord;
+                  }
+                  return coord;
+                }),
+              };
+            }
+            return object;
+          }),
+        );
+      } else {
+        itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
+      }
+    }
+  }
 </script>
 
-<div class="pl-4 h-full w-full flex flex-col">
+<section class="pl-4 h-full w-full flex flex-col">
   {#if isLoaded}
     <div class="overflow-hidden grow bg-blue-500">
       <Canvas2D
@@ -107,11 +149,11 @@
         {embeddings}
         bind:selectedTool
         bind:currentAnn
-        bind:newShape
+        bind:newShape={$newShape}
       />
     </div>
     <div class="h-full grow max-h-[25%]">
       <VideoPlayer {updateView} />
     </div>
   {/if}
-</div>
+</section>
