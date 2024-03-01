@@ -97,9 +97,13 @@ class COCOExporter(Exporter):
                     ],
                     "images": [],
                     "annotations": [],
-                    "categories": sorted(
-                        [cat.model_dump() for cat in self.dataset.info.categories],
-                        key=lambda c: c["id"],
+                    "categories": (
+                        sorted(
+                            [cat.model_dump() for cat in self.dataset.info.categories],
+                            key=lambda c: c["id"],
+                        )
+                        if self.dataset.info.categories is not None
+                        else []
                     ),
                 }
 
@@ -237,7 +241,7 @@ class COCOExporter(Exporter):
                 obj.features["category"].value if "category" in obj.features else None
             ),
         }
-        if category["name"] is not None:
+        if category["name"] is not None and self.dataset.info.categories is not None:
             for cat in self.dataset.info.categories:
                 if cat.name == category["name"]:
                     category["id"] = cat.id
