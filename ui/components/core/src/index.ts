@@ -40,6 +40,7 @@ export { SliderWithValue, SliderRoot } from "./components/ui/slider";
 export { Switch } from "./components/ui/switch";
 export * as Command from "./components/ui/command";
 export * as Popover from "./components/ui/popover";
+export * as ContextMenu from "./components/ui/context-menu";
 
 // lib
 // utils

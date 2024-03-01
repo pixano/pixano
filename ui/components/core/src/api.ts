@@ -110,6 +110,8 @@ export async function searchDatasetItems(
   return datasetItems;
 }
 
+const IS_DEV = true;
+
 export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
   let item: DatasetItem | undefined;
   try {
@@ -128,6 +130,45 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   } catch (e) {
     item = {} as DatasetItem;
     console.log("api.getDatasetItem -", e);
+  }
+
+  if (IS_DEV) {
+    item.objects = Object.values(item.objects).reduce(
+      (acc, obj) => {
+        if (obj.bbox) {
+          const x = obj.bbox.coords[0];
+          const y = obj.bbox.coords[1];
+          const w = obj.bbox.coords[2];
+          const h = obj.bbox.coords[3];
+          obj.bbox = {
+            ...obj.bbox,
+            coordinates: [
+              {
+                start: obj.bbox.coords,
+                end: [x + 10, y + 50, w, h],
+                startIndex: 0,
+                endIndex: 20,
+              },
+              {
+                start: [x + 10, y + 50, w, h],
+                end: [x, y, w, h],
+                startIndex: 21,
+                endIndex: 50,
+              },
+              {
+                start: [x, y, w, h],
+                end: [x - 50, y - 100, w, h],
+                startIndex: 51,
+                endIndex: 90,
+              },
+            ],
+          };
+        }
+        acc[obj.id] = obj;
+        return acc;
+      },
+      {} as DatasetItem["objects"],
+    );
   }
 
   return item;

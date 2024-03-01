@@ -132,6 +132,7 @@ export interface ItemRLE {
 
 export interface ItemBBox {
   coords: Array<number>;
+  coordinates?: BBoxCoordinates[];
   format: string;
   is_normalized: boolean;
   confidence: number;

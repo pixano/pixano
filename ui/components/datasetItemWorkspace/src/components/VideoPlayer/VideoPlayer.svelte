@@ -19,6 +19,7 @@
   import { SliderRoot } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { getCurrentImageTime, getImageIndexFromMouseMove } from "../../lib/api/videoApi";
+  import ObjectsTimescale from "./ObjectsTimescale.svelte";
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
@@ -95,12 +96,15 @@
       playVideo();
     }
   };
+
+  const lastImageIndex = Object.keys(imageFiles).length - 1;
+  $: console.log({ objects: $itemObjects, lastImageIndex });
 </script>
 
 {#if isLoaded}
-  <div class="h-full bg-white grid grid-cols-[25%_1fr]">
-    <div class="flex justify-between items-center gap-4 p-4">
-      <!-- <div class="h-12 flex justify-between p-2 items-center"> -->
+  <div class="h-full bg-white grid grid-cols-[25%_1fr] overflow-x-auto">
+    <!-- top section -->
+    <div class="flex justify-between items-center gap-4 p-4 sticky top-0 left-0 bg-white z-20">
       <p>
         {currentTime}
       </p>
@@ -113,7 +117,7 @@
         {/if}
       </button>
     </div>
-    <div class="p-2 w-full border-b border-slate-200 overflow-x-auto overflow-y-hidden">
+    <div class="p-2 w-full border-b border-slate-200 sticky top-0 bg-white z-10">
       <div
         class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
         style={`width: ${zoomLevel[0]}%`}
@@ -157,18 +161,17 @@
         {/each}
       </div>
     </div>
-    <div class="overflow-auto grow flex flex-col max-h-[150px] gap-2 col-span-2">
+    <!-- bottom section -->
+    <div class="grow flex flex-col max-h-[150px] gap-2 col-span-2">
       {#each Object.values($itemObjects) as object}
-        <div class="border-b border-slate-200 h-12 p-2 flex">
-          <p>{object.id}</p>
-          <p class="bg-red-500">foo</p>
-        </div>
+        <ObjectsTimescale
+          {videoSpeed}
+          {zoomLevel}
+          {object}
+          {videoTotalLengthInMs}
+          {lastImageIndex}
+        />
       {/each}
     </div>
-    <!-- left section -->
-    <!-- <div class="w-1/4 min-w-[25%] border-r border-slate-200 flex flex-col gap-4 h-full">
-
-    </div> -->
-    <!-- right section -->
   </div>
 {/if}
