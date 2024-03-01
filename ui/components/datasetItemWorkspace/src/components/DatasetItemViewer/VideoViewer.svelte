@@ -16,10 +16,10 @@
 
   import * as ort from "onnxruntime-web";
 
-  import type { SelectionTool, VideoDatasetItem } from "@pixano/core";
+  import type { SelectionTool, Shape, VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
-  import { newShape, itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
 
@@ -27,6 +27,8 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let colorRange: string[];
+  export let newShape: Shape;
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
@@ -97,13 +99,13 @@
       <Canvas2D
         selectedItemId={selectedItem.id}
         {imagesPerView}
-        colorRange={[]}
+        {colorRange}
         {bboxes}
         masks={$itemMasks}
         {embeddings}
         bind:selectedTool
         bind:currentAnn
-        bind:newShape={$newShape}
+        bind:newShape
       />
     </div>
     <div class="h-full grow max-h-[25%]">

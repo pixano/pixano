@@ -18,19 +18,14 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { ImageDatasetItem, SelectionTool, Shape } from "@pixano/core";
 
-  import {
-    newShape as newShapeStore,
-    itemObjects,
-    canSave,
-    itemBboxes,
-    itemMasks,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let colorRange: string[];
+  export let newShape: Shape;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -47,39 +42,13 @@
       );
     }
   }
-
-  let newShape: Shape;
-
-  $: {
-    newShapeStore.set(newShape);
-    if (newShape?.status === "editing") {
-      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, newShape));
-      canSave.update((old) => {
-        if (old) return old;
-        if (newShape?.status === "editing" && newShape.type !== "none") {
-          return true;
-        }
-        return false;
-      });
-    }
-  }
-
-  $: newShapeStore.subscribe((value) => {
-    newShape = value;
-  });
-
-  let allIds: string[] = [];
-
-  itemObjects.subscribe((value) => {
-    allIds = value.map((item) => item.id);
-  });
 </script>
 
 {#key selectedItem.id}
   <Canvas2D
     {imagesPerView}
     selectedItemId={selectedItem.id}
-    colorRange={allIds}
+    {colorRange}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}

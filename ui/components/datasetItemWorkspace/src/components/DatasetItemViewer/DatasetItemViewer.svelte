@@ -19,6 +19,8 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { DatasetItem, SelectionTool } from "@pixano/core";
 
+  import { newShape, itemObjects, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
@@ -28,6 +30,26 @@
   export let selectedTool: SelectionTool;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
+
+  let allIds: string[] = [];
+
+  $: {
+    newShape.set($newShape);
+    if ($newShape?.status === "editing") {
+      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
+      canSave.update((old) => {
+        if (old) return old;
+        if ($newShape?.status === "editing" && $newShape.type !== "none") {
+          return true;
+        }
+        return false;
+      });
+    }
+  }
+
+  itemObjects.subscribe((value) => {
+    allIds = value.map((item) => item.id);
+  });
 </script>
 
 <div class="max-w-[100%] bg-slate-800">
@@ -36,9 +58,23 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video" || !selectedItem.type}
-    <VideoViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
+    <VideoViewer
+      {selectedItem}
+      {embeddings}
+      colorRange={allIds}
+      bind:selectedTool
+      bind:currentAnn
+      bind:newShape={$newShape}
+    />
   {:else if selectedItem.type === "image"}
-    <ImageViewer {selectedItem} {embeddings} bind:selectedTool bind:currentAnn />
+    <ImageViewer
+      {selectedItem}
+      {embeddings}
+      bind:selectedTool
+      bind:currentAnn
+      bind:newShape={$newShape}
+      colorRange={allIds}
+    />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}
