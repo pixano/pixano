@@ -294,7 +294,7 @@ class COCOExporter(Exporter):
                         cat["supercategory"] = ""
 
         # Add object
-        object = {
+        ann_object = {
             "id": obj.original_id if obj.original_id else obj.id,
             "image_id": item.original_id if item.original_id else item.id,
             "segmentation": mask,
@@ -305,5 +305,5 @@ class COCOExporter(Exporter):
             "category_name": category["name"],
         }
         if category["supercategory"] != "":
-            object["supercategory"] = category["supercategory"]
-        self.coco_json["annotations"].append(object)
+            ann_object["supercategory"] = category["supercategory"]
+        self.coco_json["annotations"].append(ann_object)

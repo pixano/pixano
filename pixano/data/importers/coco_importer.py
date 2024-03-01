@@ -201,7 +201,7 @@ class COCOImporter(Importer):
                                 ),
                                 "category": str(categories[ann["category_id"]]),
                                 "category_id": ann["category_id"],
-                                "supercategory": supercategories[ann["category_id"]]
+                                "supercategory": supercategories[ann["category_id"]],
                             }
                             for ann in im_anns
                         ]
