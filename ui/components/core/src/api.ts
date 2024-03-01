@@ -145,19 +145,19 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             coordinates: [
               {
                 start: obj.bbox.coords,
-                end: [x + 10, y + 50, w, h],
+                end: [x + 0.1, y + 0.5, w, h],
                 startIndex: 0,
                 endIndex: 20,
               },
               {
-                start: [x + 10, y + 50, w, h],
+                start: [x + 0.1, y + 0.5, w, h],
                 end: [x, y, w, h],
                 startIndex: 21,
                 endIndex: 50,
               },
               {
                 start: [x, y, w, h],
-                end: [x - 50, y - 100, w, h],
+                end: [x - 0.5, y - 0.7, w, h],
                 startIndex: 51,
                 endIndex: 90,
               },

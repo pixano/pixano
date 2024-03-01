@@ -37,6 +37,10 @@
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
+        // IS_DEV : keep only one object
+        // item.objects = {
+        //   ...{ [Object.keys(item.objects)[0]]: item.objects[Object.keys(item.objects)[0]] },
+        // };
         selectedItem = item;
         if (Object.keys(item).length === 0) {
           noItemFound = true;

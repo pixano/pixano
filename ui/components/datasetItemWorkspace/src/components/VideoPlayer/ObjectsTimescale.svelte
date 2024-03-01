@@ -22,43 +22,52 @@
   export let object: ItemObject;
   export let videoTotalLengthInMs: number;
   export let lastImageIndex: number;
+  export let onPlayerClick: (event: MouseEvent) => void;
 
-  const onContextMenu = (e: MouseEvent) => {
-    console.log(e);
+  const onContextMenu = (event: MouseEvent) => {
     newShape.set({
       status: "editing",
       type: "none",
       shapeId: object.id,
       highlighted: "self",
     });
+    onPlayerClick(event);
   };
+
+  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.startIndex || 1;
+  let startPosition = ((firstBoxStartIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+
+  const lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.endIndex || 1;
+  let width =
+    (((lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex - firstBoxStartIndex) *
+      videoSpeed) /
+      videoTotalLengthInMs) *
+    100;
+
+  const inflexionCoordinates = object.bbox?.coordinates?.filter((c) => c.startIndex !== 0) || [];
 </script>
 
 <div class="border-b border-slate-200 h-12 p-2 pl-0 w-full grid grid-cols-[25%_1fr]">
   <p class="sticky left-0 z-10 bg-white pl-2">{object.id}</p>
   <div class="w-full flex gap-5 relative" style={`width: ${zoomLevel[0]}%`}>
-    {#if object.bbox && object.bbox.coordinates}
-      {#each object.bbox.coordinates as bbox}
-        <ContextMenu.Root>
-          <ContextMenu.Trigger
-            class="h-full bg-emerald-500 absolute"
-            style={`left: ${((bbox.startIndex * videoSpeed) / videoTotalLengthInMs) * 100}%; width: ${((((bbox.endIndex > lastImageIndex ? lastImageIndex : bbox.endIndex) - bbox.startIndex) * videoSpeed) / videoTotalLengthInMs) * 100}%`}
-          >
-            <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
-            <span
-              class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%]"
-            />
-            <span
-              class="w-4 h-4 block bg-orange-500 rounded-full absolute right-[-0.5rem] top-1/2 translate-y-[-50%]"
-            />
-          </ContextMenu.Trigger>
-          <ContextMenu.Content class="w-64">
-            <ContextMenu.Item inset>Add a point</ContextMenu.Item>
-            <ContextMenu.Item inset>Remove point</ContextMenu.Item>
-            <ContextMenu.Item inset>Edit point</ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Root>
-      {/each}
-    {/if}
+    <ContextMenu.Root>
+      <ContextMenu.Trigger
+        class="h-full w-full bg-emerald-500 absolute"
+        style={`left: ${startPosition}% ; width: ${width}%`}
+      >
+        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+        {#each inflexionCoordinates as inflexionPoint}
+          <span
+            class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%]"
+            style={`left: ${((inflexionPoint.startIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+          />
+        {/each}
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item inset>Add a point</ContextMenu.Item>
+        <ContextMenu.Item inset>Remove point</ContextMenu.Item>
+        <ContextMenu.Item inset>Edit point</ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   </div>
 </div>

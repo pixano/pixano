@@ -19,7 +19,7 @@
   import type { SelectionTool, Shape, VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
-  import { itemBboxes, itemMasks } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemBboxes, itemMasks, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
 
@@ -35,7 +35,6 @@
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = [];
   let isLoaded = false;
-  let bboxes = $itemBboxes;
 
   interface ImageModule {
     default: string;
@@ -60,36 +59,39 @@
     isLoaded = true;
   });
 
-  itemBboxes.subscribe((value) => {
-    bboxes = value;
-  });
-
   const updateView = (imageIndex: number) => {
     const image = new Image();
     const src = imagesFilesUrl[imageIndex];
     if (!src) return;
     image.src = src;
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
-    bboxes = bboxes.map((box) => {
-      const currentCoordinates = box.coordinates?.find(
-        (coord) => coord.startIndex < imageIndex && coord.endIndex > imageIndex,
-      );
-      if (!currentCoordinates) return box;
-      const startX = currentCoordinates.start[0];
-      const startY = currentCoordinates.start[1];
-      const xInterpolation =
-        (currentCoordinates?.end[0] - currentCoordinates?.start[0]) /
-        (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
-      const yInterpolation =
-        (currentCoordinates?.end[1] - currentCoordinates?.start[1]) /
-        (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
-      const newX = startX + xInterpolation * (imageIndex - currentCoordinates?.startIndex);
-      const newY = startY + yInterpolation * (imageIndex - currentCoordinates?.startIndex);
-      return {
-        ...box,
-        bbox: [newX, newY, box.bbox[2], box.bbox[3]],
-      };
-    });
+    itemObjects.update((objects) =>
+      objects.map((object) => {
+        const box = object.bbox;
+        if (!box) return object;
+        const currentCoordinates = box.coordinates?.find(
+          (coord) => coord.startIndex < imageIndex && coord.endIndex > imageIndex,
+        );
+        if (!currentCoordinates) return object;
+        const startX = currentCoordinates.start[0];
+        const startY = currentCoordinates.start[1];
+        const xInterpolation =
+          (currentCoordinates?.end[0] - currentCoordinates?.start[0]) /
+          (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
+        const yInterpolation =
+          (currentCoordinates?.end[1] - currentCoordinates?.start[1]) /
+          (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
+        const newX = startX + xInterpolation * (imageIndex - currentCoordinates?.startIndex);
+        const newY = startY + yInterpolation * (imageIndex - currentCoordinates?.startIndex);
+        return {
+          ...object,
+          bbox: {
+            ...box,
+            coords: [newX, newY, box.coords[2], box.coords[3]],
+          },
+        };
+      }),
+    );
   };
 </script>
 
@@ -100,7 +102,7 @@
         selectedItemId={selectedItem.id}
         {imagesPerView}
         {colorRange}
-        {bboxes}
+        bboxes={$itemBboxes}
         masks={$itemMasks}
         {embeddings}
         bind:selectedTool

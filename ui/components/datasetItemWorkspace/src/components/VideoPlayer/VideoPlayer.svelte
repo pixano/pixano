@@ -98,7 +98,6 @@
   };
 
   const lastImageIndex = Object.keys(imageFiles).length - 1;
-  $: console.log({ objects: $itemObjects, lastImageIndex });
 </script>
 
 {#if isLoaded}
@@ -170,6 +169,7 @@
           {object}
           {videoTotalLengthInMs}
           {lastImageIndex}
+          {onPlayerClick}
         />
       {/each}
     </div>
