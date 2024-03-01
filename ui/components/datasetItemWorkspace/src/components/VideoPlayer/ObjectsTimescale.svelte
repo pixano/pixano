@@ -15,12 +15,23 @@
    */
 
   import { ContextMenu, type ItemObject } from "@pixano/core";
+  import { newShape } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let videoSpeed: number;
   export let zoomLevel: number[];
   export let object: ItemObject;
   export let videoTotalLengthInMs: number;
   export let lastImageIndex: number;
+
+  const onContextMenu = (e: MouseEvent) => {
+    console.log(e);
+    newShape.set({
+      status: "editing",
+      type: "none",
+      shapeId: object.id,
+      highlighted: "self",
+    });
+  };
 </script>
 
 <div class="border-b border-slate-200 h-12 p-2 pl-0 w-full grid grid-cols-[25%_1fr]">
@@ -33,7 +44,7 @@
             class="h-full bg-emerald-500 absolute"
             style={`left: ${((bbox.startIndex * videoSpeed) / videoTotalLengthInMs) * 100}%; width: ${((((bbox.endIndex > lastImageIndex ? lastImageIndex : bbox.endIndex) - bbox.startIndex) * videoSpeed) / videoTotalLengthInMs) * 100}%`}
           >
-            <p on:contextmenu|preventDefault={(e) => console.log(e)} class="h-full w-full" />
+            <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
             <span
               class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%]"
             />
