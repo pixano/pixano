@@ -21,6 +21,7 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - Fix InferenceModel to stop relying on table order (pixano#169)
+- Check if categories is null before iterating in COCOExporter (pixano#202)
 - Allow page refresh in the deployed app (pixano#173)
 - Switch to pan tool when editing an object (pixano#195)
 - Fix highlighted objects disappearing in pre-annotation mode (pixano#180)
