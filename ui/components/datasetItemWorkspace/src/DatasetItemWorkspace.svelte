@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import type { DatasetItem, SelectionTool, DatasetInfo, ItemObject } from "@pixano/core";
+  import type { DatasetItem, DatasetInfo, ItemObject } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -39,8 +39,6 @@
   export let shouldSaveCurrentItem: boolean;
 
   let isSaving: boolean = false;
-
-  let selectedTool: SelectionTool;
 
   let embeddings: Embeddings = {};
 
@@ -109,14 +107,13 @@
       <Loader2Icon class="animate-spin" />
     </div>
   {/if}
-  <Toolbar bind:selectedTool />
-  <DatasetItemViewer {selectedTool} {selectedItem} {embeddings} {isLoading} />
+  <Toolbar />
+  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
     currentDatasetId={currentDataset.id}
     selectedItemId={selectedItem.id}
     bind:embeddings
-    {selectedTool}
   />
 </div>

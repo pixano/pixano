@@ -18,9 +18,13 @@
 
   import { SelectModal, WarningModal } from "@pixano/core";
   import { SAM } from "@pixano/models";
-  import type { DatasetInfo, DatasetItem, SelectionTool } from "@pixano/core";
+  import type { DatasetInfo, DatasetItem } from "@pixano/core";
   import { loadEmbeddings as loadEmbeddingsApi } from "../lib/api/modelsApi";
-  import { interactiveSegmenterModel, modelsStore } from "../lib/stores/datasetItemWorkspaceStores";
+  import {
+    interactiveSegmenterModel,
+    modelsStore,
+    selectedTool,
+  } from "../lib/stores/datasetItemWorkspaceStores";
   import type { Embeddings, ModelSelection } from "../lib/types/datasetItemWorkspaceTypes";
   import ConfirmModal from "@pixano/core/src/components/modals/ConfirmModal.svelte";
 
@@ -28,7 +32,6 @@
   export let currentDatasetId: DatasetInfo["id"];
   export let selectedItemId: DatasetItem["id"];
   export let embeddings: Embeddings;
-  export let selectedTool: SelectionTool;
 
   let currentModalOpen: ModelSelection["currentModalOpen"] = "none";
   let selectedModelName: ModelSelection["selectedModelName"];
@@ -83,10 +86,10 @@
   });
 
   $: {
-    if (selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
+    if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
       modelsStore.update((store) => ({ ...store, currentModalOpen: "selectModel" }));
     }
-    if (selectedTool?.isSmart && models.length == 0) {
+    if ($selectedTool?.isSmart && models.length == 0) {
       modelsStore.update((store) => ({ ...store, currentModalOpen: "noModel" }));
     }
   }
