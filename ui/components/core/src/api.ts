@@ -144,22 +144,20 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             ...obj.bbox,
             coordinates: [
               {
-                start: obj.bbox.coords,
-                end: [x + 0.1, y + 0.5, w, h],
-                startIndex: 0,
-                endIndex: 20,
+                coordinates: obj.bbox.coords,
+                frameIndex: 0,
               },
               {
-                start: [x + 0.1, y + 0.5, w, h],
-                end: [x, y, w, h],
-                startIndex: 21,
-                endIndex: 50,
+                coordinates: [x + 0.1, y + 0.5, w, h],
+                frameIndex: 21,
               },
               {
-                start: [x, y, w, h],
-                end: [x - 0.5, y - 0.7, w, h],
-                startIndex: 51,
-                endIndex: 90,
+                coordinates: [x + 0.3, y + 0.3, w, h],
+                frameIndex: 51,
+              },
+              {
+                coordinates: [x, y, w, h],
+                frameIndex: 91,
               },
             ],
           };

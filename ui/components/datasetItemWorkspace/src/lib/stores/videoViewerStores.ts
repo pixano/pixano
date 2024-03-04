@@ -15,7 +15,7 @@
 
 // Imports
 import { writable } from "svelte/store";
-import type { BBoxCoordinates } from "@pixano/core";
+import type { BBoxCoordinate } from "@pixano/core";
 
 // Exports
-export const inflexionPointBeingEdited = writable<BBoxCoordinates | null>();
+export const inflexionPointBeingEdited = writable<BBoxCoordinate | null>();

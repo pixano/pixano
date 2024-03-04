@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import { ContextMenu, type BBoxCoordinates, type ItemObject } from "@pixano/core";
+  import { ContextMenu, type BBoxCoordinate, type ItemObject } from "@pixano/core";
   import { newShape, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { inflexionPointBeingEdited } from "../../lib/stores/videoViewerStores";
 
@@ -35,21 +35,28 @@
     onPlayerClick(event);
   };
 
-  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.startIndex || 1;
+  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.frameIndex || 1;
   let startPosition = ((firstBoxStartIndex * videoSpeed) / videoTotalLengthInMs) * 100;
 
-  const lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.endIndex || 1;
-  let width =
-    (((lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex - firstBoxStartIndex) *
-      videoSpeed) /
-      videoTotalLengthInMs) *
-    100;
+  let lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.frameIndex || 1;
+  lastBoxEndIndex = lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex;
+  let width = (((lastBoxEndIndex - firstBoxStartIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
 
-  const inflexionCoordinates = object.bbox?.coordinates?.filter((c) => c.startIndex !== 0) || [];
+  const inflexionCoordinates =
+    object.bbox?.coordinates?.map((coordinate) => {
+      if (coordinate.frameIndex > lastImageIndex) {
+        return {
+          ...coordinate,
+          frameIndex: lastImageIndex - 1,
+        };
+      }
+      return coordinate;
+    }) || [];
 
-  const onEditPointClick = (inflexionPoint: BBoxCoordinates) => {
+  $: console.log({ inflexionCoordinates, lastImageIndex });
+
+  const onEditPointClick = (inflexionPoint: BBoxCoordinate) => {
     inflexionPointBeingEdited.set(inflexionPoint);
-    console.log({ inflexionPoint });
     itemObjects.update((objects) =>
       objects.map((o) => {
         if (o.id === object.id) {
@@ -84,7 +91,7 @@
       <ContextMenu.Root>
         <ContextMenu.Trigger
           class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%]"
-          style={`left: ${((inflexionPoint.startIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+          style={`left: ${((inflexionPoint.frameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
         />
         <ContextMenu.Content>
           <ContextMenu.Item inset>Remove point</ContextMenu.Item>

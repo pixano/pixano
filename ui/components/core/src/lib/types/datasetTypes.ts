@@ -132,7 +132,7 @@ export interface ItemRLE {
 
 export interface ItemBBox {
   coords: Array<number>;
-  coordinates?: BBoxCoordinates[];
+  coordinates?: BBoxCoordinate[];
   format: string;
   is_normalized: boolean;
   confidence: number;
@@ -180,16 +180,14 @@ export interface Mask {
 
 export type MaskSVG = string[];
 
-export interface BBoxCoordinates {
-  startIndex: number;
-  endIndex: number;
-  start: Array<number>;
-  end: Array<number>;
+export interface BBoxCoordinate {
+  frameIndex: number;
+  coordinates: Array<number>;
 }
 export interface BBox {
   id: string;
   viewId: string;
-  bbox: Array<number>;
+  bbox: Array<number>; // should be rename - current coordinate
   tooltip: string;
   catId: number;
   visible: boolean;
@@ -197,7 +195,7 @@ export interface BBox {
   editing?: boolean;
   strokeFactor?: number;
   highlighted?: "none" | "self" | "all";
-  coordinates?: BBoxCoordinates[];
+  coordinates?: BBoxCoordinate[];
 }
 
 // LABELS DATA

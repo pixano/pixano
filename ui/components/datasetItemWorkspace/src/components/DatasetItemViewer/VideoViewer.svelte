@@ -30,6 +30,7 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -75,21 +76,8 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         const box = object.bbox;
-        if (!box) return object;
-        const currentCoordinates = box.coordinates?.find(
-          (coord) => coord.startIndex < imageIndex && coord.endIndex > imageIndex,
-        );
-        if (!currentCoordinates) return object;
-        const startX = currentCoordinates.start[0];
-        const startY = currentCoordinates.start[1];
-        const xInterpolation =
-          (currentCoordinates?.end[0] - currentCoordinates?.start[0]) /
-          (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
-        const yInterpolation =
-          (currentCoordinates?.end[1] - currentCoordinates?.start[1]) /
-          (currentCoordinates?.endIndex - currentCoordinates?.startIndex);
-        const newX = startX + xInterpolation * (imageIndex - currentCoordinates?.startIndex);
-        const newY = startY + yInterpolation * (imageIndex - currentCoordinates?.startIndex);
+        if (!box || !box.coordinates) return object;
+        const [newX, newY] = linearInterpolation(box.coordinates, imageIndex);
         return {
           ...object,
           bbox: {
@@ -100,8 +88,6 @@
       }),
     );
   };
-
-  $: console.log({ point: $inflexionPointBeingEdited });
 
   $: {
     const shape = $newShape;
@@ -118,12 +104,12 @@
             ) {
               object.bbox = {
                 ...object.bbox,
-                coordinates: object.bbox.coordinates?.map((coord) => {
-                  if (coord.startIndex === $inflexionPointBeingEdited?.startIndex) {
-                    coord.start = shape.coords;
-                    return coord;
+                coordinates: object.bbox.coordinates?.map((coordinate) => {
+                  if (coordinate.frameIndex === $inflexionPointBeingEdited?.frameIndex) {
+                    coordinate.coordinates = shape.coords;
+                    return coordinate;
                   }
-                  return coord;
+                  return coordinate;
                 }),
               };
             }
