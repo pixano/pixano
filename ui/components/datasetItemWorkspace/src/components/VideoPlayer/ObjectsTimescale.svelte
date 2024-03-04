@@ -25,6 +25,14 @@
   export let lastImageIndex: number;
   export let onPlayerClick: (event: MouseEvent) => void;
 
+  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.frameIndex || 1;
+
+  let inflexionCoordinates: BBoxCoordinate[] = [];
+  let startPosition = ((firstBoxStartIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+  let lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.frameIndex || 1;
+  lastBoxEndIndex = lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex;
+  let width = (((lastBoxEndIndex - firstBoxStartIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
       status: "editing",
@@ -35,14 +43,7 @@
     onPlayerClick(event);
   };
 
-  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.frameIndex || 1;
-  let startPosition = ((firstBoxStartIndex * videoSpeed) / videoTotalLengthInMs) * 100;
-
-  let lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.frameIndex || 1;
-  lastBoxEndIndex = lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex;
-  let width = (((lastBoxEndIndex - firstBoxStartIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
-
-  const inflexionCoordinates =
+  $: inflexionCoordinates =
     object.bbox?.coordinates?.map((coordinate) => {
       if (coordinate.frameIndex > lastImageIndex) {
         return {
@@ -52,8 +53,6 @@
       }
       return coordinate;
     }) || [];
-
-  $: console.log({ inflexionCoordinates, lastImageIndex });
 
   const onEditPointClick = (inflexionPoint: BBoxCoordinate) => {
     inflexionPointBeingEdited.set(inflexionPoint);
@@ -66,6 +65,19 @@
           };
         }
         return o;
+      }),
+    );
+  };
+
+  const onDeletePointClick = (inflexionPoint: BBoxCoordinate) => {
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        if (object.id === obj.id && obj.bbox?.coordinates) {
+          obj.bbox.coordinates = obj.bbox?.coordinates?.filter(
+            (coordinate) => coordinate.frameIndex !== inflexionPoint.frameIndex,
+          );
+        }
+        return obj;
       }),
     );
   };
@@ -94,7 +106,9 @@
           style={`left: ${((inflexionPoint.frameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
         />
         <ContextMenu.Content>
-          <ContextMenu.Item inset>Remove point</ContextMenu.Item>
+          <ContextMenu.Item inset on:click={() => onDeletePointClick(inflexionPoint)}
+            >Remove point</ContextMenu.Item
+          >
           <ContextMenu.Item inset on:click={() => onEditPointClick(inflexionPoint)}
             >Edit point</ContextMenu.Item
           >

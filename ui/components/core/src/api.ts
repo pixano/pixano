@@ -136,10 +136,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     item.objects = Object.values(item.objects).reduce(
       (acc, obj) => {
         if (obj.bbox) {
-          const x = obj.bbox.coords[0];
-          const y = obj.bbox.coords[1];
-          const w = obj.bbox.coords[2];
-          const h = obj.bbox.coords[3];
+          const [x, y, w, h] = obj.bbox.coords;
           obj.bbox = {
             ...obj.bbox,
             coordinates: [
@@ -156,7 +153,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
                 frameIndex: 51,
               },
               {
-                coordinates: [x, y, w, h],
+                coordinates: [x - 0.1, y - 0.3, w, h],
                 frameIndex: 91,
               },
             ],

@@ -6,7 +6,6 @@ import type {
   DatasetItem,
   Shape,
   ItemView,
-  BBoxCoordinates,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -49,46 +48,22 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     imageHeight = 338;
     imageWidth = 600;
   }
-  const x = obj.bbox.coords[0] * imageWidth;
-  const y = obj.bbox.coords[1] * imageHeight;
-  const w = obj.bbox.coords[2] * imageWidth;
-  const h = obj.bbox.coords[3] * imageHeight;
+  const [x, y, width, height] = obj.bbox.coords;
+  const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
+
   const tooltip = defineTooltip(obj);
-  let coordinates: BBoxCoordinates[] = [];
-  if (IS_DEV) {
-    coordinates = [
-      {
-        start: [x, y, w, h],
-        end: [x + 10, y + 50, w, h],
-        startIndex: 0,
-        endIndex: 20,
-      },
-      {
-        start: [x + 10, y + 50, w, h],
-        end: [x, y, w, h],
-        startIndex: 21,
-        endIndex: 50,
-      },
-      {
-        start: [x, y, w, h],
-        end: [x - 50, y - 100, w, h],
-        startIndex: 51,
-        endIndex: 90,
-      },
-    ];
-  }
+
   return {
     id: obj.id,
     viewId: obj.view_id,
     catId: (obj.features.category_id?.value || 1) as number,
-    bbox: [x, y, w, h],
+    bbox,
     tooltip,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     visible: !obj.bbox.displayControl?.hidden && !obj.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     highlighted: obj.highlighted,
-    coordinates,
   } as BBox;
 };
 
