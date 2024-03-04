@@ -23,7 +23,7 @@ export const getImageIndexFromMouseMove = (
 export const linearInterpolation = (coordinates: BBoxCoordinate[], imageIndex: number) => {
   const nextFrameIndex =
     coordinates?.findIndex((coordinate) => coordinate.frameIndex > imageIndex) || 0;
-  const start = coordinates?.[nextFrameIndex - 1];
+  const start = coordinates?.[nextFrameIndex - 1] || coordinates?.[0];
   const end = coordinates?.[nextFrameIndex];
   const [startX, startY] = start.coordinates;
   const [endX, endY] = end.coordinates;

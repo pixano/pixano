@@ -32,6 +32,7 @@
   let lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.frameIndex || 1;
   lastBoxEndIndex = lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex;
   let width = (((lastBoxEndIndex - firstBoxStartIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+  let rightClickPosition: number;
 
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
@@ -41,6 +42,8 @@
       highlighted: "self",
     });
     onPlayerClick(event);
+    const target = event.target as HTMLDivElement;
+    rightClickPosition = event.offsetX / target.clientWidth;
   };
 
   $: inflexionCoordinates =
@@ -81,6 +84,28 @@
       }),
     );
   };
+
+  const onAddPointClick = () => {
+    const frameIndex = Math.round((rightClickPosition * videoTotalLengthInMs) / videoSpeed);
+    const pointCoordinate: BBoxCoordinate = {
+      frameIndex,
+      coordinates: object.bbox?.coords || [0, 0, 0, 0],
+    };
+
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        if (object.id === obj.id && obj.bbox) {
+          if (!obj.bbox?.coordinates) {
+            obj.bbox.coordinates = [];
+          }
+          obj.bbox.coordinates.push(pointCoordinate);
+          obj.bbox.coordinates.sort((a, b) => a.frameIndex - b.frameIndex);
+        }
+        return obj;
+      }),
+    );
+    onEditPointClick(pointCoordinate);
+  };
 </script>
 
 <div class="border-b border-slate-200 h-12 p-2 pl-0 w-full grid grid-cols-[25%_1fr]">
@@ -94,7 +119,7 @@
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
       <ContextMenu.Content>
-        <ContextMenu.Item inset>Add a point</ContextMenu.Item>
+        <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
         <ContextMenu.Item inset>Remove point</ContextMenu.Item>
         <ContextMenu.Item inset on:click={() => console.log("edit")}>Edit point</ContextMenu.Item>
       </ContextMenu.Content>
