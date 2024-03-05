@@ -31,12 +31,12 @@
   let breakPointIntervals: Interval[] = [];
   let rightClickPosition: number;
 
-  const startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
-  let endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
+  $: startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
+  $: endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
   endIndex = endIndex > $lastFrameIndex ? $lastFrameIndex : endIndex;
 
-  let startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
-  let width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+  $: startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+  $: width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
 
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
