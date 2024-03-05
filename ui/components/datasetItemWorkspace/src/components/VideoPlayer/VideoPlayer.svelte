@@ -35,8 +35,6 @@
   let cursorElement: HTMLButtonElement;
   let zoomLevel: number[] = [0];
 
-  const videoTotalLengthInMs = Object.keys(imageFiles).length * videoSpeed;
-
   onMount(() => {
     updateView(currentImageIndex);
     isLoaded = true;
@@ -77,7 +75,7 @@
 {#if isLoaded}
   <div class="h-full bg-white grid grid-cols-[25%_1fr] overflow-x-auto">
     <!-- top section -->
-    <div class="flex justify-between items-center gap-4 p-4 sticky top-0 left-0 bg-white z-20">
+    <div class="flex justify-between items-center gap-4 p-4 sticky top-0 left-0 bg-white z-40">
       <p>
         {currentTime}
       </p>
@@ -100,15 +98,9 @@
       {zoomLevel}
     />
     <!-- bottom section -->
-    <div class="grow flex flex-col max-h-[150px] gap-2 col-span-2">
+    <div class="flex flex-col max-h-[150px] gap-2 col-span-2">
       {#each Object.values($itemObjects) as object}
-        <ObjectsTimescale
-          {videoSpeed}
-          {zoomLevel}
-          {object}
-          {videoTotalLengthInMs}
-          {onTimeTrackClick}
-        />
+        <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} />
       {/each}
     </div>
   </div>

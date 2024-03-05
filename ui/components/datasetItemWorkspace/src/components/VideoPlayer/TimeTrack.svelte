@@ -59,7 +59,7 @@
   };
 </script>
 
-<div class="p-2 w-full border-b border-slate-200 sticky top-0 bg-white z-30">
+<div class="py-2 w-full border-b border-slate-200 sticky top-0 bg-white z-30">
   <div
     class="flex w-full justify-between relative border-b border-slate-200 pt-8 cursor-pointer"
     style={`width: ${zoomLevel[0]}%`}

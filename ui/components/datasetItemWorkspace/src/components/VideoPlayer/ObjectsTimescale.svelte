@@ -20,10 +20,9 @@
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
-  export let videoSpeed: number;
   export let zoomLevel: number[];
   export let object: ItemObject;
-  export let videoTotalLengthInMs: number;
+
   export let onTimeTrackClick: (imageIndex: number) => void;
 
   type Interval = BreakPointInterval & { width: number };
@@ -36,7 +35,7 @@
 
   $: {
     startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
-    startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+    startPosition = (startIndex / $lastFrameIndex) * 100;
   }
 
   const onContextMenu = (event: MouseEvent) => {
@@ -55,7 +54,7 @@
   $: breakPointIntervals =
     object.bbox?.breakPointsIntervals?.map((interval) => {
       const end = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
-      const width = (((end - interval.start) * videoSpeed) / videoTotalLengthInMs) * 100;
+      const width = ((end - interval.start) / ($lastFrameIndex + 1)) * 100;
       return { ...interval, width };
     }) || [];
 
@@ -92,27 +91,29 @@
   };
 
   const getIntervalLeftPosition = (interval: Interval) => {
-    return (interval.start / $lastFrameIndex) * 100;
+    return (interval.start / ($lastFrameIndex + 1)) * 100;
   };
 
   const getBreakPointLeftPosition = (breakPoint: BreakPoint) => {
     const breakPointFrameIndex =
       breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex;
-    return (breakPointFrameIndex / $lastFrameIndex) * 100;
+    return (breakPointFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
+
+  $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 </script>
 
-<div class="border-b border-slate-200 h-12 p-2 pl-0 w-full grid grid-cols-[25%_1fr]">
-  <p class="sticky left-0 z-10 bg-white pl-2">{object.id}</p>
+<div class="border-b border-slate-200 h-12 w-full grid grid-cols-[25%_1fr]">
+  <p class="sticky left-0 z-10 p-2 bg-white">{object.id}</p>
   <div
-    class="w-full flex gap-5 relative"
+    class="flex gap-5 relative w-[calc(100%-1rem)] z-0"
     style={`width: ${zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
   >
     <ContextMenu.Root>
       <ContextMenu.Trigger
         class="h-full w-full bg-emerald-100 absolute"
-        style={`left: ${startPosition}%`}
+        style={`left: ${startPosition}%; width: ${totalWidth}%`}
       >
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
@@ -135,7 +136,10 @@
       {#each interval.breakPoints as breakPoint}
         <ContextMenu.Root>
           <ContextMenu.Trigger
-            class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
+            class={cn(
+              "w-3 h-3 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
+              "hover:scale-150",
+            )}
             style={`left: ${getBreakPointLeftPosition(breakPoint)}%`}
           />
           <ContextMenu.Content>
