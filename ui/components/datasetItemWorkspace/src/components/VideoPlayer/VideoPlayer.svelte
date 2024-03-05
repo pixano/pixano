@@ -59,13 +59,8 @@
 
   $: currentTime = getCurrentImageTime(currentImageIndex, videoSpeed);
 
-  const onPlayerClick = (event: MouseEvent | KeyboardEvent) => {
-    let targetElement = event.target as HTMLElement;
-    if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
-    clearInterval(intervalId);
-    currentImageIndex = Math.floor(
-      (event.offsetX / targetElement.offsetWidth) * Object.keys(imageFiles).length,
-    );
+  const onTimeTrackClick = (index: number) => {
+    currentImageIndex = index;
     updateView(currentImageIndex);
   };
 
@@ -112,7 +107,7 @@
           {zoomLevel}
           {object}
           {videoTotalLengthInMs}
-          {onPlayerClick}
+          {onTimeTrackClick}
         />
       {/each}
     </div>

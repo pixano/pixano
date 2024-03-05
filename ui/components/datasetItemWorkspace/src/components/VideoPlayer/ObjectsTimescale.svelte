@@ -24,23 +24,19 @@
   export let zoomLevel: number[];
   export let object: ItemObject;
   export let videoTotalLengthInMs: number;
-  export let onPlayerClick: (event: MouseEvent) => void;
+  export let onTimeTrackClick: (imageIndex: number) => void;
 
   type Interval = BreakPointInterval & { width: number };
 
   let breakPointIntervals: Interval[] = [];
-  let rightClickPosition: number;
+  let rightClickFrameIndex: number;
   let startIndex: number = 0;
-  let endIndex: number = 1;
   let startPosition: number = 0;
-  let width: number = 0;
+  let objectTimeTrack: HTMLElement;
 
   $: {
     startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
-    endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
-    endIndex = endIndex > $lastFrameIndex ? $lastFrameIndex : endIndex;
     startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
-    width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
   }
 
   const onContextMenu = (event: MouseEvent) => {
@@ -50,9 +46,10 @@
       shapeId: object.id,
       highlighted: "self",
     });
-    onPlayerClick(event);
-    const target = event.target as HTMLDivElement;
-    rightClickPosition = event.offsetX / target.clientWidth;
+    const rightClickFrame =
+      (event.clientX - objectTimeTrack.offsetLeft) / objectTimeTrack.clientWidth;
+    rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
+    onTimeTrackClick(rightClickFrameIndex);
   };
 
   $: breakPointIntervals =
@@ -79,18 +76,17 @@
     itemObjects.update((objects) => deleteBreakPointInInterval(objects, breakPoint, object.id));
   };
 
-  $: {
-    if (object.id === "LS-p8EZDiC") {
-      console.log({ breakPointIntervals, intervals: object.bbox?.breakPointsIntervals });
-    }
-  }
-
   const onAddPointClick = () => {
-    const frameIndex = Math.round((rightClickPosition * videoTotalLengthInMs) / videoSpeed);
     const [x, y] = object.bbox?.coords || [0, 0];
-    const breakPoint: BreakPoint = { frameIndex, x, y };
+    const breakPoint: BreakPoint = { frameIndex: rightClickFrameIndex, x, y };
     itemObjects.update((objects) =>
-      addBreakPointInInterval(objects, breakPoint, object.id, frameIndex, $lastFrameIndex),
+      addBreakPointInInterval(
+        objects,
+        breakPoint,
+        object.id,
+        rightClickFrameIndex,
+        $lastFrameIndex,
+      ),
     );
     onEditPointClick(breakPoint);
   };
@@ -109,11 +105,15 @@
 
 <div class="border-b border-slate-200 h-12 p-2 pl-0 w-full grid grid-cols-[25%_1fr]">
   <p class="sticky left-0 z-10 bg-white pl-2">{object.id}</p>
-  <div class="w-full flex gap-5 relative" style={`width: ${zoomLevel[0]}%`}>
+  <div
+    class="w-full flex gap-5 relative"
+    style={`width: ${zoomLevel[0]}%`}
+    bind:this={objectTimeTrack}
+  >
     <ContextMenu.Root>
       <ContextMenu.Trigger
         class="h-full w-full bg-emerald-100 absolute"
-        style={`left: ${startPosition}% ; width: ${width}%`}
+        style={`left: ${startPosition}%`}
       >
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
@@ -123,7 +123,34 @@
     </ContextMenu.Root>
 
     {#each breakPointIntervals as interval}
-      <div
+      <ContextMenu.Root>
+        <ContextMenu.Trigger
+          class={cn("h-full w-full absolute z-0 bg-orange-200")}
+          style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
+        >
+          <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+          {#each interval.breakPoints as breakPoint}
+            <ContextMenu.Root>
+              <ContextMenu.Trigger
+                class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
+                style={`left: ${getBreakPointLeftPosition(breakPoint, interval)}%`}
+              />
+              <ContextMenu.Content>
+                <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+                  >Remove point</ContextMenu.Item
+                >
+                <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
+                  >Edit point</ContextMenu.Item
+                >
+              </ContextMenu.Content>
+            </ContextMenu.Root>
+          {/each}
+        </ContextMenu.Trigger>
+        <ContextMenu.Content>
+          <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+        </ContextMenu.Content>
+      </ContextMenu.Root>
+      <!-- <div
         class={cn("h-full w-full absolute z-0 bg-orange-200")}
         style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
       >
@@ -143,7 +170,7 @@
             </ContextMenu.Content>
           </ContextMenu.Root>
         {/each}
-      </div>
+      </div> -->
     {/each}
 
     <!-- {#each inflexionCoordinates as inflexionPoint}
