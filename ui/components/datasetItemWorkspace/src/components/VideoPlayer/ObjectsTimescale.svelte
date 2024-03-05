@@ -17,7 +17,8 @@
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, BreakPointInterval, BreakPoint } from "@pixano/core";
   import { newShape, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { inflexionPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
   export let videoSpeed: number;
   export let zoomLevel: number[];
@@ -49,7 +50,6 @@
     rightClickPosition = event.offsetX / target.clientWidth;
   };
 
-  $: console.log({ videoTotalLengthInMs, lastImageIndex: $lastFrameIndex });
   $: breakPointIntervals =
     object.bbox?.breakPointsIntervals?.map((interval) => {
       const end = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
@@ -57,10 +57,10 @@
       return { ...interval, width };
     }) || [];
 
-  const onEditPointClick = (inflexionPoint: BreakPoint) => {
-    console.log("onEditPointClick", inflexionPoint);
+  const onEditPointClick = (breakPoint: BreakPoint) => {
+    console.log("onEditPointClick", breakPoint);
 
-    inflexionPointBeingEdited.set(inflexionPoint);
+    breakPointBeingEdited.set(breakPoint);
     itemObjects.update((objects) =>
       objects.map((o) => {
         o.displayControl = {
@@ -70,6 +70,10 @@
         return o;
       }),
     );
+  };
+
+  const onDeletePointClick = (breakPoint: BreakPoint) => {
+    itemObjects.update((objects) => deleteBreakPointInInterval(objects, breakPoint, object.id));
   };
 
   const onAddPointClick = () => {
@@ -95,10 +99,7 @@
       onEditPointClick(breakPoint);
   };
 
-  $: console.log({ breakPointIntervals });
-
   const getIntervalLeftPosition = (interval: Interval) => {
-    console.log({ interval, lastFrameIndex: $lastFrameIndex });
     return (interval.start / $lastFrameIndex) * 100;
   };
 
@@ -129,20 +130,25 @@
 
     {#each breakPointIntervals as interval}
       <div
-        class={cn("h-full w-full absolute z-0", {
-          "bg-blue-500": interval.type === "blank",
-          "bg-orange-500": interval.type === "annotated",
-        })}
+        class={cn("h-full w-full absolute z-0 bg-orange-500")}
         style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
       >
-        {#if interval.type === "annotated"}
-          {#each interval.breakPoints as breakPoint}
-            <div
+        {#each interval.breakPoints as breakPoint}
+          <ContextMenu.Root>
+            <ContextMenu.Trigger
               class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
               style={`left: ${getBreakPointLeftPosition(breakPoint, interval)}%`}
             />
-          {/each}
-        {/if}
+            <ContextMenu.Content>
+              <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+                >Remove point</ContextMenu.Item
+              >
+              <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
+                >Edit point</ContextMenu.Item
+              >
+            </ContextMenu.Content>
+          </ContextMenu.Root>
+        {/each}
       </div>
     {/each}
 

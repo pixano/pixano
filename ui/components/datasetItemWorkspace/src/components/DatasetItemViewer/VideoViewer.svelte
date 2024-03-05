@@ -25,7 +25,7 @@
     itemObjects,
     newShape,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { inflexionPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -94,7 +94,7 @@
   $: {
     const shape = $newShape;
     if ($newShape?.status === "editing") {
-      if ($inflexionPointBeingEdited) {
+      if ($breakPointBeingEdited) {
         itemObjects.update((objects) =>
           objects.map((object) => {
             if (

@@ -136,19 +136,11 @@ export interface BreakPoint {
   y: number;
 }
 
-export interface BlankInterval {
-  type: "blank";
-}
-
-export interface AnnotatedInterval {
+export interface BreakPointInterval {
   breakPoints: BreakPoint[];
-  type: "annotated";
-}
-
-export type BreakPointInterval = (BlankInterval | AnnotatedInterval) & {
   start: number;
   end: number;
-};
+}
 export interface ItemBBox {
   coords: Array<number>;
   breakPointsIntervals?: BreakPointInterval[];

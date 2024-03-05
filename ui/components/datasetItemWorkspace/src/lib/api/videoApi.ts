@@ -1,4 +1,4 @@
-import type { BreakPointInterval } from "@pixano/core";
+import type { BreakPoint, BreakPointInterval, ItemObject } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -27,7 +27,7 @@ export const linearInterpolation = (
   const currentInterval = breakPointIntervals.find(
     (interval) => interval.start <= imageIndex && interval.end >= imageIndex,
   );
-  if (!currentInterval || currentInterval.type === "blank") return [0, 0]; // should be null
+  if (!currentInterval) return [0, 0]; // should be null
   const endIndex = currentInterval.breakPoints.findIndex(
     (breakPoint) => breakPoint.frameIndex > imageIndex,
   );
@@ -41,3 +41,26 @@ export const linearInterpolation = (
   const y = startY + yInterpolation * (imageIndex - start.frameIndex);
   return [x, y];
 };
+
+export const deleteBreakPointInInterval = (
+  objects: ItemObject[],
+  breakPoint: BreakPoint,
+  objectId: ItemObject["id"],
+) =>
+  objects.map((object) => {
+    if (objectId === object.id && object.bbox?.breakPointsIntervals) {
+      object.bbox.breakPointsIntervals = object.bbox.breakPointsIntervals
+        .map((interval) => {
+          if (interval.start <= breakPoint.frameIndex && interval.end >= breakPoint.frameIndex) {
+            interval.breakPoints = interval.breakPoints.filter(
+              (bp) => bp.frameIndex !== breakPoint.frameIndex,
+            );
+            interval.start = interval.breakPoints[0].frameIndex;
+            interval.end = interval.breakPoints.at(-1)?.frameIndex || interval.start;
+          }
+          return interval;
+        })
+        .filter((interval) => interval.breakPoints.length > 1);
+    }
+    return object;
+  });

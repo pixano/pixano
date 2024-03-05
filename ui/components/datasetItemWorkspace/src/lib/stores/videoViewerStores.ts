@@ -18,5 +18,5 @@ import { writable } from "svelte/store";
 import type { BreakPoint } from "@pixano/core";
 
 // Exports
-export const inflexionPointBeingEdited = writable<BreakPoint | null>();
+export const breakPointBeingEdited = writable<BreakPoint | null>();
 export const lastFrameIndex = writable<number>();

@@ -141,7 +141,6 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             ...obj.bbox,
             breakPointsIntervals: [
               {
-                type: "annotated",
                 start: 0,
                 end: 41,
                 breakPoints: [
@@ -151,12 +150,6 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
                 ],
               },
               {
-                type: "blank",
-                start: 42,
-                end: 51,
-              },
-              {
-                type: "annotated",
                 start: 52,
                 end: 91,
                 breakPoints: [
