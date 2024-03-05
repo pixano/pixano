@@ -95,11 +95,10 @@
     return (interval.start / $lastFrameIndex) * 100;
   };
 
-  const getBreakPointLeftPosition = (breakPoint: BreakPoint, interval: Interval) => {
+  const getBreakPointLeftPosition = (breakPoint: BreakPoint) => {
     const breakPointFrameIndex =
       breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex;
-    const intervalEnd = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
-    return ((breakPointFrameIndex - interval.start) / (intervalEnd - interval.start)) * 100;
+    return (breakPointFrameIndex / $lastFrameIndex) * 100;
   };
 </script>
 
@@ -121,7 +120,6 @@
         <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu.Root>
-
     {#each breakPointIntervals as interval}
       <ContextMenu.Root>
         <ContextMenu.Trigger
@@ -129,27 +127,27 @@
           style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
         >
           <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
-          {#each interval.breakPoints as breakPoint}
-            <ContextMenu.Root>
-              <ContextMenu.Trigger
-                class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
-                style={`left: ${getBreakPointLeftPosition(breakPoint, interval)}%`}
-              />
-              <ContextMenu.Content>
-                <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
-                  >Remove point</ContextMenu.Item
-                >
-                <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
-                  >Edit point</ContextMenu.Item
-                >
-              </ContextMenu.Content>
-            </ContextMenu.Root>
-          {/each}
         </ContextMenu.Trigger>
         <ContextMenu.Content>
           <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Root>
+      {#each interval.breakPoints as breakPoint}
+        <ContextMenu.Root>
+          <ContextMenu.Trigger
+            class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
+            style={`left: ${getBreakPointLeftPosition(breakPoint)}%`}
+          />
+          <ContextMenu.Content>
+            <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+              >Remove point</ContextMenu.Item
+            >
+            <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
+              >Edit point</ContextMenu.Item
+            >
+          </ContextMenu.Content>
+        </ContextMenu.Root>
+      {/each}
       <!-- <div
         class={cn("h-full w-full absolute z-0 bg-orange-200")}
         style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}

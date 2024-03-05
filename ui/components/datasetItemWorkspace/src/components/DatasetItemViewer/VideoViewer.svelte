@@ -79,13 +79,12 @@
         const bbox = object.bbox;
         if (!bbox || !bbox.breakPointsIntervals) return object;
         const frameCoords = linearInterpolation(bbox.breakPointsIntervals, imageIndex);
-        if (!frameCoords) {
-          bbox.displayControl = { ...bbox.displayControl, hidden: true };
-        } else {
-          bbox.displayControl = { ...bbox.displayControl, hidden: false, editing: false };
+        if (frameCoords) {
           const [x, y] = frameCoords;
           bbox.coords = [x, y, bbox.coords[2], bbox.coords[3]];
         }
+        bbox.displayControl = { ...bbox.displayControl, hidden: !frameCoords };
+        console.log({ frameCoords, objectId: object.id, bbox });
         return { ...object, bbox };
       }),
     );

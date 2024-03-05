@@ -32,6 +32,7 @@
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -68,7 +69,16 @@
           ...baseObject,
           bbox: {
             coords,
-
+            breakPointsIntervals: [
+              {
+                start: 0,
+                end: $lastFrameIndex,
+                breakPoints: [
+                  { frameIndex: 0, x: coords[0], y: coords[1] },
+                  { frameIndex: $lastFrameIndex, x: coords[0], y: coords[1] },
+                ],
+              },
+            ],
             format: "xywh",
             is_normalized: true,
             confidence: 1,
