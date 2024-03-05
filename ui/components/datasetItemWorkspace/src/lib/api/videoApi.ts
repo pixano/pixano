@@ -1,4 +1,4 @@
-import type { BreakPoint, BreakPointInterval, ItemObject } from "@pixano/core";
+import type { BreakPoint, BreakPointInterval, EditShape, ItemObject } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -61,6 +61,37 @@ export const deleteBreakPointInInterval = (
           return interval;
         })
         .filter((interval) => interval.breakPoints.length > 1);
+    }
+    return object;
+  });
+
+export const editBreakPointInInterval = (
+  objects: ItemObject[],
+  breakPointBeingEdited: BreakPoint,
+  shape: EditShape,
+) =>
+  objects.map((object) => {
+    if (shape.type === "rectangle" && object.id === shape.shapeId && object.bbox) {
+      object.bbox = {
+        ...object.bbox,
+        breakPointsIntervals: object.bbox.breakPointsIntervals?.map((interval) => {
+          if (
+            interval.start <= breakPointBeingEdited.frameIndex &&
+            interval.end >= breakPointBeingEdited.frameIndex
+          ) {
+            interval.breakPoints = interval.breakPoints?.map((breakPoint) => {
+              if (breakPoint.frameIndex === breakPointBeingEdited.frameIndex) {
+                breakPoint.x = shape.coords[0];
+                breakPoint.y = shape.coords[1];
+                return breakPoint;
+              }
+              return breakPoint;
+            });
+            return interval;
+          }
+          return interval;
+        }),
+      };
     }
     return object;
   });

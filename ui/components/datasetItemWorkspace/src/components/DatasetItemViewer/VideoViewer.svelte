@@ -30,7 +30,7 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { linearInterpolation } from "../../lib/api/videoApi";
+  import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -80,44 +80,17 @@
         if (!box || !box.breakPointsIntervals) return object;
         const [x, y] = linearInterpolation(box.breakPointsIntervals, imageIndex);
         const coords = [x, y, box.coords[2], box.coords[3]];
-        return {
-          ...object,
-          bbox: {
-            ...box,
-            coords,
-          },
-        };
+        return { ...object, bbox: { ...box, coords } };
       }),
     );
   };
 
   $: {
     const shape = $newShape;
-    if ($newShape?.status === "editing") {
-      if ($breakPointBeingEdited) {
-        itemObjects.update((objects) =>
-          objects.map((object) => {
-            if (
-              shape.status === "editing" &&
-              shape.type === "rectangle" &&
-              shape.coords &&
-              object.id === shape.shapeId &&
-              object.bbox
-            ) {
-              object.bbox = {
-                ...object.bbox,
-                // coordinates: object.bbox.coordinates?.map((coordinate) => {
-                //   if (coordinate.frameIndex === $inflexionPointBeingEdited?.frameIndex) {
-                //     coordinate.coordinates = shape.coords;
-                //     return coordinate;
-                //   }
-                //   return coordinate;
-                // }),
-              };
-            }
-            return object;
-          }),
-        );
+    const breakPoint = $breakPointBeingEdited;
+    if (shape.status === "editing") {
+      if (breakPoint) {
+        itemObjects.update((objects) => editBreakPointInInterval(objects, breakPoint, shape));
       } else {
         itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
       }
