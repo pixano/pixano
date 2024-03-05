@@ -95,3 +95,40 @@ export const editBreakPointInInterval = (
     }
     return object;
   });
+
+export const addBreakPointInInterval = (
+  objects: ItemObject[],
+  breakPoint: BreakPoint,
+  objectId: string,
+  frameIndex: number,
+  lastFrameIndex: number,
+) => {
+  return objects.map((object) => {
+    if (objectId !== object.id || !object.bbox) return object;
+    if (!object.bbox.breakPointsIntervals) {
+      object.bbox.breakPointsIntervals = [];
+    }
+    const interval: BreakPointInterval = object.bbox.breakPointsIntervals.find(
+      (i) => i.start <= frameIndex && i.end >= frameIndex,
+    ) ??
+      object.bbox.breakPointsIntervals.find((i) => i.start < frameIndex) ??
+      object.bbox.breakPointsIntervals[0] ?? { start: frameIndex, end: lastFrameIndex };
+
+    if (!interval) {
+      object.bbox.breakPointsIntervals.push(interval);
+    }
+    object.bbox.breakPointsIntervals = object.bbox.breakPointsIntervals.map((i) => {
+      if (i.start === interval.start && i.end === interval.end) {
+        if (!i.breakPoints) {
+          i.breakPoints = [];
+        }
+        i.breakPoints.push(breakPoint);
+        i.breakPoints.sort((a, b) => a.frameIndex - b.frameIndex);
+        i.start = i.breakPoints[0].frameIndex;
+        i.end = i.breakPoints.at(-1)?.frameIndex || i.start;
+      }
+      return i;
+    });
+    return object;
+  });
+};

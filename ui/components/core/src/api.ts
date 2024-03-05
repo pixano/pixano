@@ -142,11 +142,11 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             breakPointsIntervals: [
               {
                 start: 0,
-                end: 41,
+                end: 10,
                 breakPoints: [
                   { frameIndex: 0, x, y },
-                  { frameIndex: 21, x: x + 0.1, y: y + 0.5 },
-                  { frameIndex: 41, x: x + 0.3, y: y + 0.5 },
+                  { frameIndex: 10, x: x + 0.1, y: y + 0.5 },
+                  // { frameIndex: 41, x: x + 0.3, y: y + 0.5 },
                 ],
               },
               {

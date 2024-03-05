@@ -18,7 +18,7 @@
   import type { ItemObject, BreakPointInterval, BreakPoint } from "@pixano/core";
   import { newShape, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { deleteBreakPointInInterval } from "../../lib/api/videoApi";
+  import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
   export let videoSpeed: number;
   export let zoomLevel: number[];
@@ -79,27 +79,20 @@
     itemObjects.update((objects) => deleteBreakPointInInterval(objects, breakPoint, object.id));
   };
 
+  $: {
+    if (object.id === "LS-p8EZDiC") {
+      console.log({ breakPointIntervals, intervals: object.bbox?.breakPointsIntervals });
+    }
+  }
+
   const onAddPointClick = () => {
     const frameIndex = Math.round((rightClickPosition * videoTotalLengthInMs) / videoSpeed);
-    const breakPoint: BreakPoint = {
-      frameIndex,
-      x: object.bbox?.coords[0] || 0,
-      y: object.bbox?.coords[1] || 0,
-    };
-
+    const [x, y] = object.bbox?.coords || [0, 0];
+    const breakPoint: BreakPoint = { frameIndex, x, y };
     itemObjects.update((objects) =>
-      objects.map((obj) => {
-        // if (object.id === obj.id && obj.bbox) {
-        //   if (!obj.bbox?.coordinates) {
-        //     obj.bbox.coordinates = [];
-        //   }
-        //   obj.bbox.coordinates.push(pointCoordinate);
-        //   obj.bbox.coordinates.sort((a, b) => a.frameIndex - b.frameIndex);
-        // }
-        return obj;
-      }),
-    ),
-      onEditPointClick(breakPoint);
+      addBreakPointInInterval(objects, breakPoint, object.id, frameIndex, $lastFrameIndex),
+    );
+    onEditPointClick(breakPoint);
   };
 
   const getIntervalLeftPosition = (interval: Interval) => {
@@ -131,7 +124,7 @@
 
     {#each breakPointIntervals as interval}
       <div
-        class={cn("h-full w-full absolute z-0 bg-orange-500")}
+        class={cn("h-full w-full absolute z-0 bg-orange-200")}
         style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
       >
         {#each interval.breakPoints as breakPoint}
