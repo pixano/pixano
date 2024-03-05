@@ -77,8 +77,6 @@
       playVideo();
     }
   };
-
-  const lastImageIndex = Object.keys(imageFiles).length - 1;
 </script>
 
 {#if isLoaded}
@@ -114,7 +112,6 @@
           {zoomLevel}
           {object}
           {videoTotalLengthInMs}
-          {lastImageIndex}
           {onPlayerClick}
         />
       {/each}

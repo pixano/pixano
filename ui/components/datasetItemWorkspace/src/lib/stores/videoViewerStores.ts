@@ -15,7 +15,8 @@
 
 // Imports
 import { writable } from "svelte/store";
-import type { BBoxCoordinate } from "@pixano/core";
+import type { BreakPoint } from "@pixano/core";
 
 // Exports
-export const inflexionPointBeingEdited = writable<BBoxCoordinate | null>();
+export const inflexionPointBeingEdited = writable<BreakPoint | null>();
+export const lastFrameIndex = writable<number>();

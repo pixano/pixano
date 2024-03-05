@@ -1,4 +1,4 @@
-import type { BBoxCoordinate } from "@pixano/core";
+import type { BreakPointInterval } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -20,17 +20,24 @@ export const getImageIndexFromMouseMove = (
   return index < 0 ? 0 : index;
 };
 
-export const linearInterpolation = (coordinates: BBoxCoordinate[], imageIndex: number) => {
-  const nextFrameIndex =
-    coordinates?.findIndex((coordinate) => coordinate.frameIndex > imageIndex) || 0;
-  const start = coordinates?.[nextFrameIndex - 1] || coordinates?.[0];
-  const end = coordinates?.[nextFrameIndex];
-  const [startX, startY] = start.coordinates;
-  const [endX, endY] = end.coordinates;
-
+export const linearInterpolation = (
+  breakPointIntervals: BreakPointInterval[],
+  imageIndex: number,
+) => {
+  const currentInterval = breakPointIntervals.find(
+    (interval) => interval.start <= imageIndex && interval.end >= imageIndex,
+  );
+  if (!currentInterval || currentInterval.type === "blank") return [0, 0]; // should be null
+  const endIndex = currentInterval.breakPoints.findIndex(
+    (breakPoint) => breakPoint.frameIndex > imageIndex,
+  );
+  const start = currentInterval.breakPoints[endIndex - 1] || currentInterval.breakPoints[0];
+  const end = currentInterval.breakPoints[endIndex];
+  const { x: startX, y: startY } = start;
+  const { x: endX, y: endY } = end;
   const xInterpolation = (endX - startX) / (end.frameIndex - start?.frameIndex);
   const yInterpolation = (endY - startY) / (end.frameIndex - start?.frameIndex);
-  const newX = startX + xInterpolation * (imageIndex - start.frameIndex);
-  const newY = startY + yInterpolation * (imageIndex - start.frameIndex);
-  return [newX, newY];
+  const x = startX + xInterpolation * (imageIndex - start.frameIndex);
+  const y = startY + yInterpolation * (imageIndex - start.frameIndex);
+  return [x, y];
 };

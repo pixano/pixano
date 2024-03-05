@@ -25,7 +25,7 @@
     itemObjects,
     newShape,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { inflexionPointBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { inflexionPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -65,6 +65,7 @@
       image: [image],
     };
     isLoaded = true;
+    lastFrameIndex.set(imagesFilesUrl.length - 1);
   });
 
   const updateView = (imageIndex: number) => {
@@ -76,13 +77,14 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         const box = object.bbox;
-        if (!box || !box.coordinates) return object;
-        const [newX, newY] = linearInterpolation(box.coordinates, imageIndex);
+        if (!box || !box.breakPointsIntervals) return object;
+        const [x, y] = linearInterpolation(box.breakPointsIntervals, imageIndex);
+        const coords = [x, y, box.coords[2], box.coords[3]];
         return {
           ...object,
           bbox: {
             ...box,
-            coords: [newX, newY, box.coords[2], box.coords[3]],
+            coords,
           },
         };
       }),
@@ -104,13 +106,13 @@
             ) {
               object.bbox = {
                 ...object.bbox,
-                coordinates: object.bbox.coordinates?.map((coordinate) => {
-                  if (coordinate.frameIndex === $inflexionPointBeingEdited?.frameIndex) {
-                    coordinate.coordinates = shape.coords;
-                    return coordinate;
-                  }
-                  return coordinate;
-                }),
+                // coordinates: object.bbox.coordinates?.map((coordinate) => {
+                //   if (coordinate.frameIndex === $inflexionPointBeingEdited?.frameIndex) {
+                //     coordinate.coordinates = shape.coords;
+                //     return coordinate;
+                //   }
+                //   return coordinate;
+                // }),
               };
             }
             return object;

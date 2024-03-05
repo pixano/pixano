@@ -14,25 +14,28 @@
    * http://www.cecill.info
    */
 
-  import { ContextMenu, type BBoxCoordinate, type ItemObject } from "@pixano/core";
+  import { ContextMenu, cn } from "@pixano/core";
+  import type { ItemObject, BreakPointInterval, BreakPoint } from "@pixano/core";
   import { newShape, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { inflexionPointBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { inflexionPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let videoSpeed: number;
   export let zoomLevel: number[];
   export let object: ItemObject;
   export let videoTotalLengthInMs: number;
-  export let lastImageIndex: number;
   export let onPlayerClick: (event: MouseEvent) => void;
 
-  const firstBoxStartIndex = object.bbox?.coordinates?.[0]?.frameIndex || 1;
+  type Interval = BreakPointInterval & { width: number };
 
-  let inflexionCoordinates: BBoxCoordinate[] = [];
-  let startPosition = ((firstBoxStartIndex * videoSpeed) / videoTotalLengthInMs) * 100;
-  let lastBoxEndIndex = object.bbox?.coordinates?.at(-1)?.frameIndex || 1;
-  lastBoxEndIndex = lastBoxEndIndex > lastImageIndex ? lastImageIndex : lastBoxEndIndex;
-  let width = (((lastBoxEndIndex - firstBoxStartIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+  let breakPointIntervals: Interval[] = [];
   let rightClickPosition: number;
+
+  const startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
+  let endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
+  endIndex = endIndex > $lastFrameIndex ? $lastFrameIndex : endIndex;
+
+  let startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+  let width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
 
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
@@ -46,65 +49,64 @@
     rightClickPosition = event.offsetX / target.clientWidth;
   };
 
-  $: inflexionCoordinates =
-    object.bbox?.coordinates?.map((coordinate) => {
-      if (coordinate.frameIndex > lastImageIndex) {
-        return {
-          ...coordinate,
-          frameIndex: lastImageIndex - 1,
-        };
-      }
-      return coordinate;
+  $: console.log({ videoTotalLengthInMs, lastImageIndex: $lastFrameIndex });
+  $: breakPointIntervals =
+    object.bbox?.breakPointsIntervals?.map((interval) => {
+      const end = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
+      const width = (((end - interval.start) * videoSpeed) / videoTotalLengthInMs) * 100;
+      return { ...interval, width };
     }) || [];
 
-  const onEditPointClick = (inflexionPoint: BBoxCoordinate) => {
+  const onEditPointClick = (inflexionPoint: BreakPoint) => {
+    console.log("onEditPointClick", inflexionPoint);
+
     inflexionPointBeingEdited.set(inflexionPoint);
     itemObjects.update((objects) =>
       objects.map((o) => {
-        if (o.id === object.id) {
-          o.displayControl = {
-            ...o.displayControl,
-            editing: true,
-          };
-        }
+        o.displayControl = {
+          ...o.displayControl,
+          editing: o.id === object.id,
+        };
         return o;
-      }),
-    );
-  };
-
-  const onDeletePointClick = (inflexionPoint: BBoxCoordinate) => {
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        if (object.id === obj.id && obj.bbox?.coordinates) {
-          obj.bbox.coordinates = obj.bbox?.coordinates?.filter(
-            (coordinate) => coordinate.frameIndex !== inflexionPoint.frameIndex,
-          );
-        }
-        return obj;
       }),
     );
   };
 
   const onAddPointClick = () => {
     const frameIndex = Math.round((rightClickPosition * videoTotalLengthInMs) / videoSpeed);
-    const pointCoordinate: BBoxCoordinate = {
+    const breakPoint: BreakPoint = {
       frameIndex,
-      coordinates: object.bbox?.coords || [0, 0, 0, 0],
+      x: object.bbox?.coords[0] || 0,
+      y: object.bbox?.coords[1] || 0,
     };
 
     itemObjects.update((objects) =>
       objects.map((obj) => {
-        if (object.id === obj.id && obj.bbox) {
-          if (!obj.bbox?.coordinates) {
-            obj.bbox.coordinates = [];
-          }
-          obj.bbox.coordinates.push(pointCoordinate);
-          obj.bbox.coordinates.sort((a, b) => a.frameIndex - b.frameIndex);
-        }
+        // if (object.id === obj.id && obj.bbox) {
+        //   if (!obj.bbox?.coordinates) {
+        //     obj.bbox.coordinates = [];
+        //   }
+        //   obj.bbox.coordinates.push(pointCoordinate);
+        //   obj.bbox.coordinates.sort((a, b) => a.frameIndex - b.frameIndex);
+        // }
         return obj;
       }),
-    );
-    onEditPointClick(pointCoordinate);
+    ),
+      onEditPointClick(breakPoint);
+  };
+
+  $: console.log({ breakPointIntervals });
+
+  const getIntervalLeftPosition = (interval: Interval) => {
+    console.log({ interval, lastFrameIndex: $lastFrameIndex });
+    return (interval.start / $lastFrameIndex) * 100;
+  };
+
+  const getBreakPointLeftPosition = (breakPoint: BreakPoint, interval: Interval) => {
+    const breakPointFrameIndex =
+      breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex;
+    const intervalEnd = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
+    return ((breakPointFrameIndex - interval.start) / (intervalEnd - interval.start)) * 100;
   };
 </script>
 
@@ -113,7 +115,7 @@
   <div class="w-full flex gap-5 relative" style={`width: ${zoomLevel[0]}%`}>
     <ContextMenu.Root>
       <ContextMenu.Trigger
-        class="h-full w-full bg-emerald-500 absolute"
+        class="h-full w-full bg-emerald-100 absolute"
         style={`left: ${startPosition}% ; width: ${width}%`}
       >
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
@@ -124,10 +126,30 @@
         <ContextMenu.Item inset on:click={() => console.log("edit")}>Edit point</ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu.Root>
-    {#each inflexionCoordinates as inflexionPoint}
+
+    {#each breakPointIntervals as interval}
+      <div
+        class={cn("h-full w-full absolute z-0", {
+          "bg-blue-500": interval.type === "blank",
+          "bg-orange-500": interval.type === "annotated",
+        })}
+        style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
+      >
+        {#if interval.type === "annotated"}
+          {#each interval.breakPoints as breakPoint}
+            <div
+              class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
+              style={`left: ${getBreakPointLeftPosition(breakPoint, interval)}%`}
+            />
+          {/each}
+        {/if}
+      </div>
+    {/each}
+
+    <!-- {#each inflexionCoordinates as inflexionPoint}
       <ContextMenu.Root>
         <ContextMenu.Trigger
-          class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%]"
+          class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
           style={`left: ${((inflexionPoint.frameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
         />
         <ContextMenu.Content>
@@ -139,6 +161,12 @@
           >
         </ContextMenu.Content>
       </ContextMenu.Root>
-    {/each}
+    {/each} -->
+    <!-- {#each directionSlots as slot}
+      <div
+        class="h-full w-full bg-yellow-500 absolute z-0"
+        style={`left: ${slot.start}% ; width: ${slot.width}%`}
+      />
+    {/each} -->
   </div>
 </div>

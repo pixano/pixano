@@ -130,9 +130,28 @@ export interface ItemRLE {
   displayControl?: DisplayControl;
 }
 
+export interface BreakPoint {
+  frameIndex: number;
+  x: number;
+  y: number;
+}
+
+export interface BlankInterval {
+  type: "blank";
+}
+
+export interface AnnotatedInterval {
+  breakPoints: BreakPoint[];
+  type: "annotated";
+}
+
+export type BreakPointInterval = (BlankInterval | AnnotatedInterval) & {
+  start: number;
+  end: number;
+};
 export interface ItemBBox {
   coords: Array<number>;
-  coordinates?: BBoxCoordinate[];
+  breakPointsIntervals?: BreakPointInterval[];
   format: string;
   is_normalized: boolean;
   confidence: number;
@@ -180,10 +199,6 @@ export interface Mask {
 
 export type MaskSVG = string[];
 
-export interface BBoxCoordinate {
-  frameIndex: number;
-  coordinates: Array<number>;
-}
 export interface BBox {
   id: string;
   viewId: string;
@@ -195,7 +210,6 @@ export interface BBox {
   editing?: boolean;
   strokeFactor?: number;
   highlighted?: "none" | "self" | "all";
-  coordinates?: BBoxCoordinate[];
 }
 
 // LABELS DATA

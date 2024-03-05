@@ -57,15 +57,18 @@
         features,
       };
       if (shape.type === "rectangle") {
+        const { x, y, width, height } = shape.attrs;
+        const coords = [
+          x / shape.imageWidth,
+          y / shape.imageHeight,
+          width / shape.imageWidth,
+          height / shape.imageHeight,
+        ];
         newObject = {
           ...baseObject,
           bbox: {
-            coords: [
-              shape.attrs.x / shape.imageWidth,
-              shape.attrs.y / shape.imageHeight,
-              shape.attrs.width / shape.imageWidth,
-              shape.attrs.height / shape.imageHeight,
-            ],
+            coords,
+
             format: "xywh",
             is_normalized: true,
             confidence: 1,
