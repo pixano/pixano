@@ -27,7 +27,7 @@ export const linearInterpolation = (
   const currentInterval = breakPointIntervals.find(
     (interval) => interval.start <= imageIndex && interval.end >= imageIndex,
   );
-  if (!currentInterval) return [0, 0]; // should be null
+  if (!currentInterval) return null;
   const endIndex = currentInterval.breakPoints.findIndex(
     (breakPoint) => breakPoint.frameIndex > imageIndex,
   );

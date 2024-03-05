@@ -76,11 +76,17 @@
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
     itemObjects.update((objects) =>
       objects.map((object) => {
-        const box = object.bbox;
-        if (!box || !box.breakPointsIntervals) return object;
-        const [x, y] = linearInterpolation(box.breakPointsIntervals, imageIndex);
-        const coords = [x, y, box.coords[2], box.coords[3]];
-        return { ...object, bbox: { ...box, coords } };
+        const bbox = object.bbox;
+        if (!bbox || !bbox.breakPointsIntervals) return object;
+        const frameCoords = linearInterpolation(bbox.breakPointsIntervals, imageIndex);
+        if (!frameCoords) {
+          bbox.displayControl = { ...bbox.displayControl, hidden: true };
+        } else {
+          bbox.displayControl = { ...bbox.displayControl, hidden: false, editing: false };
+          const [x, y] = frameCoords;
+          bbox.coords = [x, y, bbox.coords[2], bbox.coords[3]];
+        }
+        return { ...object, bbox };
       }),
     );
   };

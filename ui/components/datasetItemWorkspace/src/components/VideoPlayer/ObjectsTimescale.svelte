@@ -30,13 +30,18 @@
 
   let breakPointIntervals: Interval[] = [];
   let rightClickPosition: number;
+  let startIndex: number = 0;
+  let endIndex: number = 1;
+  let startPosition: number = 0;
+  let width: number = 0;
 
-  $: startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
-  $: endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
-  endIndex = endIndex > $lastFrameIndex ? $lastFrameIndex : endIndex;
-
-  $: startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
-  $: width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+  $: {
+    startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
+    endIndex = object.bbox?.breakPointsIntervals?.at(-1)?.end || 1;
+    endIndex = endIndex > $lastFrameIndex ? $lastFrameIndex : endIndex;
+    startPosition = ((startIndex * videoSpeed) / videoTotalLengthInMs) * 100;
+    width = (((endIndex - startIndex) * videoSpeed) / videoTotalLengthInMs) * 100;
+  }
 
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
@@ -58,8 +63,6 @@
     }) || [];
 
   const onEditPointClick = (breakPoint: BreakPoint) => {
-    console.log("onEditPointClick", breakPoint);
-
     breakPointBeingEdited.set(breakPoint);
     itemObjects.update((objects) =>
       objects.map((o) => {
@@ -123,8 +126,6 @@
       </ContextMenu.Trigger>
       <ContextMenu.Content>
         <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
-        <ContextMenu.Item inset>Remove point</ContextMenu.Item>
-        <ContextMenu.Item inset on:click={() => console.log("edit")}>Edit point</ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu.Root>
 
