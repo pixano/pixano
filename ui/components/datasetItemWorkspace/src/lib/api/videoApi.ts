@@ -29,11 +29,13 @@ export const linearInterpolation = (
     (interval) => interval.start <= imageIndex && interval.end >= imageIndex,
   );
   if (!currentInterval) return null;
-  const endIndex = currentInterval.breakPoints.findIndex(
+  let endIndex = currentInterval.breakPoints.findIndex(
     (breakPoint) => breakPoint.frameIndex > imageIndex,
   );
+  endIndex = endIndex < 0 ? currentInterval.breakPoints.length - 1 : endIndex;
   const start = currentInterval.breakPoints[endIndex - 1] || currentInterval.breakPoints[0];
   const end = currentInterval.breakPoints[endIndex];
+  console.log({ currentInterval, breakPointIntervals, imageIndex, endIndex, start, end });
   const { x: startX, y: startY } = start;
   const { x: endX, y: endY } = end;
   const xInterpolation = (endX - startX) / (end.frameIndex - start?.frameIndex);
