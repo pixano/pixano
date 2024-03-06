@@ -17,7 +17,7 @@
   let className: string | undefined | null = undefined;
 
   export { className as class };
-  export let hasBorder: boolean = false;
+  export let isTopRow: boolean = false;
 </script>
 
 <div class={cn("flex", className)}>
@@ -26,7 +26,7 @@
   >
     <slot name="name" />
   </div>
-  <div class={cn("w-3", { "border-b border-slate-200": hasBorder })} />
+  <div class={cn("w-3", { "border-b border-slate-200": isTopRow })} />
   <div class={cn("w-full sticky top-0 bg-white z-20")}>
     <slot name="timeTrack" />
   </div>
