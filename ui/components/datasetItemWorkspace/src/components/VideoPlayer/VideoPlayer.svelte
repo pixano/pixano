@@ -75,12 +75,12 @@
 </script>
 
 {#if isLoaded}
-  <div class="h-full bg-white overflow-x-auto z-0 relative">
+  <div class="h-full bg-white overflow-x-auto">
     <!-- top section -->
     <VideoPlayerRow class="sticky top-0 bg-white z-20" hasBorder>
       <div
         slot="name"
-        class="z-50 relative bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200"
+        class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200"
       >
         <p>
           {currentTime}
@@ -108,7 +108,13 @@
     <!-- bottom section -->
     <div class="flex flex-col max-h-[150px] z-10 relative">
       {#each Object.values($itemObjects) as object}
-        <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} {colorScale} />
+        <ObjectsTimescale
+          {zoomLevel}
+          {object}
+          {onTimeTrackClick}
+          {colorScale}
+          {currentImageIndex}
+        />
       {/each}
     </div>
   </div>

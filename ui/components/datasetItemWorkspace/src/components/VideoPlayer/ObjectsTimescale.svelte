@@ -23,6 +23,7 @@
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
   export let zoomLevel: number[];
+  export let currentImageIndex: number;
   export let object: ItemObject;
   export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
@@ -117,6 +118,10 @@
     style={`width: ${zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
   >
+    <span
+      class="w-[1px] bg-primary h-full absolute top-0 z-30"
+      style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
+    />
     <ContextMenu.Root>
       <ContextMenu.Trigger
         class="h-full w-full absolute"

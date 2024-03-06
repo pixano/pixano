@@ -22,15 +22,12 @@
 
 <div class={cn("flex", className)}>
   <div
-    class={cn(
-      "grow w-1/3 max-w-[25%] sticky top-0 left-0 bg-white border-r border-slate-200 z-10",
-      { "z-30": hasBorder },
-    )}
+    class={cn("grow w-1/3 max-w-[25%] sticky top-0 left-0 bg-white border-r border-slate-200 z-40")}
   >
     <slot name="name" />
   </div>
   <div class={cn("w-3", { "border-b border-slate-200": hasBorder })} />
-  <div class={cn("w-full sticky top-0 bg-white")}>
+  <div class={cn("w-full sticky top-0 bg-white z-20")}>
     <slot name="timeTrack" />
   </div>
 </div>
