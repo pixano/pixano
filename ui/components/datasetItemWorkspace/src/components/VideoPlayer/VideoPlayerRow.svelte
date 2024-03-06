@@ -19,11 +19,12 @@
   export { className as class };
 </script>
 
-<div class={cn("flex gap-2", className)}>
+<div class={cn("flex", className)}>
   <div class="grow w-1/3 max-w-[25%] sticky top-0 left-0 bg-white z-40 border-r border-slate-200">
     <slot name="name" />
   </div>
-  <div class={cn("w-full sticky top-0 bg-white z-30 ")}>
+  <div class="w-3 border-b border-slate-200" />
+  <div class={cn("w-full sticky top-0 bg-white z-30")}>
     <slot name="timeTrack" />
   </div>
 </div>

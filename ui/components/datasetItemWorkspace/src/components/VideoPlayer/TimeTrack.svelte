@@ -57,7 +57,7 @@
 </script>
 
 <div
-  class="py-2 flex w-full h-full justify-between relative cursor-pointer bg-white"
+  class="py-2 flex w-full h-full justify-between relative cursor-pointer bg-white border-b border-slate-200"
   style={`width: ${zoomLevel[0]}%`}
   role="slider"
   tabindex="0"
