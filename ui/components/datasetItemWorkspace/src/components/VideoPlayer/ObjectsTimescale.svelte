@@ -49,8 +49,8 @@
       shapeId: object.id,
       highlighted: "self",
     });
-    const rightClickFrame =
-      (event.clientX - objectTimeTrack.offsetLeft) / objectTimeTrack.clientWidth;
+    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
+    const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
     onTimeTrackClick(rightClickFrameIndex);
   };
