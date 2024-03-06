@@ -59,7 +59,7 @@
     }) || [];
 
   const onEditPointClick = (breakPoint: BreakPoint) => {
-    breakPointBeingEdited.set(breakPoint);
+    breakPointBeingEdited.set({ ...breakPoint, objectId: object.id });
     onTimeTrackClick(breakPoint.frameIndex);
     itemObjects.update((objects) =>
       objects.map((o) => {
@@ -140,6 +140,11 @@
           class={cn(
             "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
             "hover:scale-150",
+            {
+              "bg-primary !border-primary":
+                $breakPointBeingEdited?.objectId === object.id &&
+                breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex,
+            },
           )}
           style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
         />
