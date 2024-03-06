@@ -68,7 +68,7 @@
   <span class="bg-slate-200 w-full h-[1px] absolute top-2/3" />
   <button
     use:dragMe
-    class="h-8 w-1 absolute z-10 bottom-1/3 flex flex-col translate-x-[-4px]"
+    class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
     style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
     bind:this={cursorElement}
   >

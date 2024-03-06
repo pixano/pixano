@@ -108,12 +108,12 @@
 </script>
 
 <VideoPlayerRow>
-  <p slot="name" class="z-40 py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
+  <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
     {object.id}
   </p>
   <div
     slot="timeTrack"
-    class="flex gap-5 relative z-0 h-full my-auto"
+    class="flex gap-5 relative h-full my-auto"
     style={`width: ${zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
   >
@@ -131,7 +131,7 @@
     {#each breakPointIntervals as interval}
       <ContextMenu.Root>
         <ContextMenu.Trigger
-          class={cn("h-4/5 w-full absolute z-0 top-1/2 -translate-y-1/2")}
+          class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
           style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
         >
           <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />

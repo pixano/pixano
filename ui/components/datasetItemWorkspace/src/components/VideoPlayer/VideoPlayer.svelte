@@ -75,12 +75,12 @@
 </script>
 
 {#if isLoaded}
-  <div class="h-full bg-white overflow-x-auto">
+  <div class="h-full bg-white overflow-x-auto z-0 relative">
     <!-- top section -->
-    <VideoPlayerRow class="sticky z-20 top-0 bg-white" hasBorder>
+    <VideoPlayerRow class="sticky top-0 bg-white z-20" hasBorder>
       <div
         slot="name"
-        class="flex justify-between items-center gap-4 p-4 border-b border-slate-200"
+        class="z-50 relative bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200"
       >
         <p>
           {currentTime}
