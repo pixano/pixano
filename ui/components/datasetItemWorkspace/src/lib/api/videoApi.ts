@@ -12,7 +12,8 @@ export const getImageIndexFromMouseMove = (
   node: HTMLButtonElement,
   length: number,
 ) => {
-  let left = event.clientX - (node.parentElement?.offsetLeft || 0);
+  const parentBounding = node.parentElement?.getBoundingClientRect();
+  let left = event.clientX - (parentBounding?.left || 0);
   if (left < 0) left = 0;
   const max = node.parentElement?.offsetWidth || left;
   if (left > max) left = max;
