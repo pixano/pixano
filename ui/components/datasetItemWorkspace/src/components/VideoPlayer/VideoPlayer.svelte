@@ -77,7 +77,7 @@
 {#if isLoaded}
   <div class="h-full bg-white overflow-x-auto">
     <!-- top section -->
-    <VideoPlayerRow class="sticky top-0 z-50 bg-white">
+    <VideoPlayerRow class="sticky z-20 top-0 bg-white">
       <div
         slot="name"
         class="flex justify-between items-center gap-4 p-4 border-b border-slate-200"
@@ -106,7 +106,7 @@
       />
     </VideoPlayerRow>
     <!-- bottom section -->
-    <div class="flex flex-col max-h-[150px]">
+    <div class="flex flex-col max-h-[150px] z-10 relative">
       {#each Object.values($itemObjects) as object}
         <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} {colorScale} />
       {/each}
