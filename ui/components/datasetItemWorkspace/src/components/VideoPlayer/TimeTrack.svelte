@@ -88,7 +88,7 @@
       />
       {#if ms > 0}
         <span
-          class="absolute -translate-x-1/2 text-slate-300 bottom-1/3 pointer-events-none font-light text-xs"
+          class="absolute -translate-x-1/2 text-slate-300 bottom-1/3 pointer-events-none font-light text-xs pb-1"
           style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
         >
       {/if}
