@@ -77,7 +77,7 @@
   }
 </script>
 
-<div class="h-full shadow-md bg-popover py-4 px-2 w-16 border-l border-slate-200 z-10">
+<div class="h-full shadow-md py-4 px-2 w-16 border-l bg-slate-100 z-10">
   <div class="flex items-center flex-col gap-4">
     <IconButton
       tooltipContent={panTool.name}

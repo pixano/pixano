@@ -24,7 +24,7 @@
 
   export let zoomLevel: number[];
   export let object: ItemObject;
-
+  export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
 
   type Interval = BreakPointInterval & { width: number };
@@ -34,6 +34,8 @@
   let startIndex: number = 0;
   let startPosition: number = 0;
   let objectTimeTrack: HTMLElement;
+
+  $: color = colorScale(object.id);
 
   $: {
     startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
@@ -106,16 +108,18 @@
 </script>
 
 <VideoPlayerRow>
-  <p slot="name" class="sticky left-0 z-10 bg-white text-ellipsis overflow-hidden">{object.id}</p>
+  <p slot="name" class="py-4 sticky left-0 z-10 bg-white text-ellipsis overflow-hidden p-2">
+    {object.id}
+  </p>
   <div
     slot="timeTrack"
-    class="flex gap-5 relative z-0 h-full bg-red-400"
+    class="flex gap-5 relative z-0 h-full my-auto"
     style={`width: ${zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
   >
     <ContextMenu.Root>
       <ContextMenu.Trigger
-        class="h-full w-full bg-emerald-100 absolute"
+        class="h-full w-full absolute"
         style={`left: ${startPosition}%; width: ${totalWidth}%`}
       >
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
@@ -127,8 +131,8 @@
     {#each breakPointIntervals as interval}
       <ContextMenu.Root>
         <ContextMenu.Trigger
-          class={cn("h-full w-full absolute z-0 bg-orange-200")}
-          style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
+          class={cn("h-4/5 w-full absolute z-0 top-1/2 -translate-y-1/2")}
+          style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
         >
           <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
         </ContextMenu.Trigger>
@@ -140,10 +144,10 @@
         <ContextMenu.Root>
           <ContextMenu.Trigger
             class={cn(
-              "w-3 h-3 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
+              "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
               "hover:scale-150",
             )}
-            style={`left: ${getBreakPointLeftPosition(breakPoint)}%`}
+            style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
           />
           <ContextMenu.Content>
             <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}

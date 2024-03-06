@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import type { SelectionTool, VideoDatasetItem } from "@pixano/core";
+  import { utils, type SelectionTool, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -43,6 +43,7 @@
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = [];
   let isLoaded = false;
+  let colorScale = utils.ordinalColorScale(colorRange);
 
   interface ImageModule {
     default: string;
@@ -84,7 +85,6 @@
           bbox.coords = [x, y, bbox.coords[2], bbox.coords[3]];
         }
         bbox.displayControl = { ...bbox.displayControl, hidden: !frameCoords };
-        console.log({ frameCoords, objectId: object.id, bbox });
         return { ...object, bbox };
       }),
     );
@@ -119,7 +119,7 @@
       />
     </div>
     <div class="h-full grow max-h-[25%]">
-      <VideoPlayer {updateView} />
+      <VideoPlayer {updateView} {colorScale} />
     </div>
   {/if}
 </section>

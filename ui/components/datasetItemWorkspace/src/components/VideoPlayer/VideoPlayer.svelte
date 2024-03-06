@@ -27,6 +27,7 @@
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
   export let updateView: (imageIndex: number) => void;
+  export let colorScale: (id: string) => string;
 
   let currentImageIndex = 0;
   let intervalId: number;
@@ -76,8 +77,8 @@
 {#if isLoaded}
   <div class="h-full bg-white overflow-x-auto">
     <!-- top section -->
-    <VideoPlayerRow class="sticky top-0 z-50 bg-white">
-      <div slot="name" class="flex justify-between items-center gap-4">
+    <VideoPlayerRow class="sticky top-0 z-50 bg-white border-b border-slate-200">
+      <div slot="name" class="flex justify-between items-center gap-4 p-4">
         <p>
           {currentTime}
         </p>
@@ -102,9 +103,9 @@
       />
     </VideoPlayerRow>
     <!-- bottom section -->
-    <div class="flex flex-col max-h-[150px] gap-2">
+    <div class="flex flex-col max-h-[150px]">
       {#each Object.values($itemObjects) as object}
-        <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} />
+        <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} {colorScale} />
       {/each}
     </div>
   </div>
