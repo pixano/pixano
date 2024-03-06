@@ -60,7 +60,9 @@
 
   const onEditPointClick = (breakPoint: BreakPoint) => {
     breakPointBeingEdited.set({ ...breakPoint, objectId: object.id });
-    onTimeTrackClick(breakPoint.frameIndex);
+    onTimeTrackClick(
+      breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex,
+    );
     itemObjects.update((objects) =>
       objects.map((o) => {
         o.highlighted = o.id === object.id ? "self" : "none";
