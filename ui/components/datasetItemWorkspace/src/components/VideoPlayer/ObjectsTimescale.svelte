@@ -20,6 +20,8 @@
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
+  import VideoPlayerRow from "./VideoPlayerRow.svelte";
+
   export let zoomLevel: number[];
   export let object: ItemObject;
 
@@ -103,10 +105,11 @@
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 </script>
 
-<div class="border-b border-slate-200 h-12 w-full grid grid-cols-[25%_1fr]">
-  <p class="sticky left-0 z-10 p-2 bg-white">{object.id}</p>
+<VideoPlayerRow>
+  <p slot="name" class="sticky left-0 z-10 bg-white text-ellipsis overflow-hidden">{object.id}</p>
   <div
-    class="flex gap-5 relative w-[calc(100%-1rem)] z-0"
+    slot="timeTrack"
+    class="flex gap-5 relative z-0 h-full bg-red-400"
     style={`width: ${zoomLevel[0]}%`}
     bind:this={objectTimeTrack}
   >
@@ -152,7 +155,60 @@
           </ContextMenu.Content>
         </ContextMenu.Root>
       {/each}
-      <!-- <div
+    {/each}
+  </div>
+</VideoPlayerRow>
+<!-- <div class="border-b border-slate-200 h-12 w-full flex">
+  <p class="sticky left-0 z-10 p-2 bg-white w-1/3">{object.id}</p>
+  <div
+    class="flex gap-5 relative z-0"
+    style={`width: ${zoomLevel[0]}%`}
+    bind:this={objectTimeTrack}
+  >
+    <ContextMenu.Root>
+      <ContextMenu.Trigger
+        class="h-full w-full bg-emerald-100 absolute"
+        style={`left: ${startPosition}%; width: ${totalWidth}%`}
+      >
+        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
+    {#each breakPointIntervals as interval}
+      <ContextMenu.Root>
+        <ContextMenu.Trigger
+          class={cn("h-full w-full absolute z-0 bg-orange-200")}
+          style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
+        >
+          <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+        </ContextMenu.Trigger>
+        <ContextMenu.Content>
+          <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+        </ContextMenu.Content>
+      </ContextMenu.Root>
+      {#each interval.breakPoints as breakPoint}
+        <ContextMenu.Root>
+          <ContextMenu.Trigger
+            class={cn(
+              "w-3 h-3 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
+              "hover:scale-150",
+            )}
+            style={`left: ${getBreakPointLeftPosition(breakPoint)}%`}
+          />
+          <ContextMenu.Content>
+            <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+              >Remove point</ContextMenu.Item
+            >
+            <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
+              >Edit point</ContextMenu.Item
+            >
+          </ContextMenu.Content>
+        </ContextMenu.Root>
+      {/each}
+      <div class="comment">
+        <div
         class={cn("h-full w-full absolute z-0 bg-orange-200")}
         style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%`}
       >
@@ -160,7 +216,7 @@
           <ContextMenu.Root>
             <ContextMenu.Trigger
               class="w-4 h-4 block bg-red-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
-              style={`left: ${getBreakPointLeftPosition(breakPoint, interval)}%`}
+              style={`left: ${getBreakPointLeftPosition(breakPoint)}%`}
             />
             <ContextMenu.Content>
               <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
@@ -172,10 +228,13 @@
             </ContextMenu.Content>
           </ContextMenu.Root>
         {/each}
-      </div> -->
+      </div>
+      </div>
     {/each}
+      <div class="comment">
 
-    <!-- {#each inflexionCoordinates as inflexionPoint}
+
+    {#each inflexionCoordinates as inflexionPoint}
       <ContextMenu.Root>
         <ContextMenu.Trigger
           class="w-4 h-4 block bg-indigo-500 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] z-10"
@@ -190,12 +249,13 @@
           >
         </ContextMenu.Content>
       </ContextMenu.Root>
-    {/each} -->
-    <!-- {#each directionSlots as slot}
+    {/each}
+    {#each directionSlots as slot}
       <div
         class="h-full w-full bg-yellow-500 absolute z-0"
         style={`left: ${slot.start}% ; width: ${slot.width}%`}
       />
-    {/each} -->
+    {/each}
+    </div>
   </div>
-</div>
+</div> -->

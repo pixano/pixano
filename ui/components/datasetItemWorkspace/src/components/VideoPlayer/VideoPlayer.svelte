@@ -22,6 +22,7 @@
 
   import ObjectsTimescale from "./ObjectsTimescale.svelte";
   import TimeTrack from "./TimeTrack.svelte";
+  import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
   const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
@@ -73,32 +74,35 @@
 </script>
 
 {#if isLoaded}
-  <div class="h-full bg-white grid grid-cols-[25%_1fr] overflow-x-auto">
+  <div class="h-full bg-white overflow-x-auto">
     <!-- top section -->
-    <div class="flex justify-between items-center gap-4 p-4 sticky top-0 left-0 bg-white z-40">
-      <p>
-        {currentTime}
-      </p>
-      <SliderRoot bind:value={zoomLevel} min={100} max={200} />
-      <button on:click={onPlayClick} class="text-primary">
-        {#if intervalId}
-          <PauseIcon />
-        {:else}
-          <PlayIcon />
-        {/if}
-      </button>
-    </div>
-    <TimeTrack
-      {updateView}
-      {currentImageIndex}
-      imageFilesLength={Object.keys(imageFiles).length}
-      {videoSpeed}
-      {intervalId}
-      bind:cursorElement
-      {zoomLevel}
-    />
+    <VideoPlayerRow class="sticky top-0 z-50 bg-white">
+      <div slot="name" class="flex justify-between items-center gap-4">
+        <p>
+          {currentTime}
+        </p>
+        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
+        <button on:click={onPlayClick} class="text-primary">
+          {#if intervalId}
+            <PauseIcon />
+          {:else}
+            <PlayIcon />
+          {/if}
+        </button>
+      </div>
+      <TimeTrack
+        slot="timeTrack"
+        {updateView}
+        {currentImageIndex}
+        imageFilesLength={Object.keys(imageFiles).length}
+        {videoSpeed}
+        {intervalId}
+        bind:cursorElement
+        {zoomLevel}
+      />
+    </VideoPlayerRow>
     <!-- bottom section -->
-    <div class="flex flex-col max-h-[150px] gap-2 col-span-2">
+    <div class="flex flex-col max-h-[150px] gap-2">
       {#each Object.values($itemObjects) as object}
         <ObjectsTimescale {zoomLevel} {object} {onTimeTrackClick} />
       {/each}
