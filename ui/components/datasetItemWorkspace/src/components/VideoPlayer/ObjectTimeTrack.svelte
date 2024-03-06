@@ -16,7 +16,7 @@
 
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, BreakPointInterval, BreakPoint } from "@pixano/core";
-  import { newShape, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
@@ -35,12 +35,16 @@
   $: color = colorScale(object.id);
 
   const onContextMenu = (event: MouseEvent) => {
-    newShape.set({
-      status: "editing",
-      type: "none",
-      shapeId: object.id,
-      highlighted: "self",
-    });
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.displayControl = {
+          ...obj.displayControl,
+          editing: false,
+        };
+        return obj;
+      }),
+    );
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
     const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
@@ -56,8 +60,10 @@
 
   const onEditPointClick = (breakPoint: BreakPoint) => {
     breakPointBeingEdited.set(breakPoint);
+    onTimeTrackClick(breakPoint.frameIndex);
     itemObjects.update((objects) =>
       objects.map((o) => {
+        o.highlighted = o.id === object.id ? "self" : "none";
         o.displayControl = {
           ...o.displayControl,
           editing: o.id === object.id,

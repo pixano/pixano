@@ -42,9 +42,10 @@
     value: boolean,
     properties: ("bbox" | "mask")[] = ["bbox", "mask"],
   ) => {
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((object) => {
+    itemObjects.update((objects) =>
+      objects.map((object) => {
         if (displayControlProperty === "editing") {
+          object.highlighted = object.id === itemObject.id ? "self" : "none";
           object.displayControl = {
             ...object.displayControl,
             editing: false,
@@ -52,9 +53,6 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-        }
-        if (value && itemObject.highlighted === "self") {
-          object.highlighted = "all";
         }
         return object;
       }),
