@@ -77,7 +77,7 @@
 {#if isLoaded}
   <div class="h-full bg-white overflow-x-auto">
     <!-- top section -->
-    <VideoPlayerRow class="sticky z-20 top-0 bg-white">
+    <VideoPlayerRow class="sticky z-20 top-0 bg-white" hasBorder>
       <div
         slot="name"
         class="flex justify-between items-center gap-4 p-4 border-b border-slate-200"

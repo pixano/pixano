@@ -78,7 +78,7 @@
     >
     </span>
     <span class="w-[1px] bg-primary absolute ml-1" />
-    <span class="w-[1px] bg-primary h-[calc(150%+150px)] absolute top-full ml-1" />
+    <span class="w-[1px] bg-primary h-[calc(140%+150px)] absolute top-full ml-1" />
   </button>
   {#each timeScaleInMs as ms}
     {#if ms % 10 === 0}
