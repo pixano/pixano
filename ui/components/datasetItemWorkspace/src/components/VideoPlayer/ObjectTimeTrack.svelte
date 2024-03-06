@@ -20,8 +20,6 @@
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
 
-  import VideoPlayerRow from "./VideoPlayerRow.svelte";
-
   export let zoomLevel: number[];
   export let currentImageIndex: number;
   export let object: ItemObject;
@@ -99,62 +97,55 @@
   };
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
-  $: console.log({ totalWidth, $lastFrameIndex });
 </script>
 
-<VideoPlayerRow>
-  <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
-    {object.id}
-  </p>
-  <div
-    slot="timeTrack"
-    class="flex gap-5 relative h-full my-auto"
-    style={`width: ${zoomLevel[0]}%`}
-    bind:this={objectTimeTrack}
-  >
-    <span
-      class="w-[1px] bg-primary h-full absolute top-0 z-30"
-      style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
-    />
+<div
+  class="flex gap-5 relative h-full my-auto"
+  style={`width: ${zoomLevel[0]}%`}
+  bind:this={objectTimeTrack}
+>
+  <span
+    class="w-[1px] bg-primary h-full absolute top-0 z-30"
+    style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
+  />
+  <ContextMenu.Root>
+    <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
+      <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+    </ContextMenu.Trigger>
+    <ContextMenu.Content>
+      <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+    </ContextMenu.Content>
+  </ContextMenu.Root>
+  {#each breakPointIntervals as interval}
     <ContextMenu.Root>
-      <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
+      <ContextMenu.Trigger
+        class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
+        style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
+      >
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
       <ContextMenu.Content>
         <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu.Root>
-    {#each breakPointIntervals as interval}
+    {#each interval.breakPoints as breakPoint}
       <ContextMenu.Root>
         <ContextMenu.Trigger
-          class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
-          style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
-        >
-          <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
-        </ContextMenu.Trigger>
+          class={cn(
+            "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
+            "hover:scale-150",
+          )}
+          style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
+        />
         <ContextMenu.Content>
-          <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+          <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+            >Remove point</ContextMenu.Item
+          >
+          <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
+            >Edit point</ContextMenu.Item
+          >
         </ContextMenu.Content>
       </ContextMenu.Root>
-      {#each interval.breakPoints as breakPoint}
-        <ContextMenu.Root>
-          <ContextMenu.Trigger
-            class={cn(
-              "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
-              "hover:scale-150",
-            )}
-            style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
-          />
-          <ContextMenu.Content>
-            <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
-              >Remove point</ContextMenu.Item
-            >
-            <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
-              >Edit point</ContextMenu.Item
-            >
-          </ContextMenu.Content>
-        </ContextMenu.Root>
-      {/each}
     {/each}
-  </div>
-</VideoPlayerRow>
+  {/each}
+</div>
