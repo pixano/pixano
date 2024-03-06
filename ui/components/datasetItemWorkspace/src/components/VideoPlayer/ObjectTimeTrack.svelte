@@ -58,8 +58,13 @@
       return { ...interval, width };
     }) || [];
 
+  const isBreakPointBeingEdited = (breakPoint: BreakPoint) =>
+    $breakPointBeingEdited?.objectId === object.id &&
+    breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
+
   const onEditPointClick = (breakPoint: BreakPoint) => {
-    breakPointBeingEdited.set({ ...breakPoint, objectId: object.id });
+    const isBeingEdited = isBreakPointBeingEdited(breakPoint);
+    breakPointBeingEdited.set(isBeingEdited ? null : { ...breakPoint, objectId: object.id });
     onTimeTrackClick(
       breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex,
     );
@@ -68,7 +73,7 @@
         o.highlighted = o.id === object.id ? "self" : "none";
         o.displayControl = {
           ...o.displayControl,
-          editing: o.id === object.id,
+          editing: !isBeingEdited && o.id === object.id,
         };
         return o;
       }),
@@ -113,7 +118,7 @@
   bind:this={objectTimeTrack}
 >
   <span
-    class="w-[1px] bg-primary h-full absolute top-0 z-30"
+    class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
     style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
   />
   <ContextMenu.Root>
@@ -142,11 +147,7 @@
           class={cn(
             "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
             "hover:scale-150",
-            {
-              "bg-primary !border-primary":
-                $breakPointBeingEdited?.objectId === object.id &&
-                breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex,
-            },
+            { "bg-primary !border-primary": isBreakPointBeingEdited(breakPoint) },
           )}
           style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
         />
@@ -154,9 +155,9 @@
           <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
             >Remove point</ContextMenu.Item
           >
-          <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}
-            >Edit point</ContextMenu.Item
-          >
+          <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}>
+            {isBreakPointBeingEdited(breakPoint) ? "Stop editing" : "Edit point"}
+          </ContextMenu.Item>
         </ContextMenu.Content>
       </ContextMenu.Root>
     {/each}
