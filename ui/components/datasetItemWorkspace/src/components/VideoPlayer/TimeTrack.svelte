@@ -78,23 +78,23 @@
     >
     </span>
     <span class="w-[1px] bg-primary absolute ml-1" />
-    <span class="w-[1px] bg-slate-300 h-[400px] absolute top-full ml-1" />
+    <span class="w-[1px] bg-primary h-[calc(150%+150px)] absolute top-full ml-1" />
   </button>
   {#each timeScaleInMs as ms}
     {#if ms % 10 === 0}
       <span
-        class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-500 bottom-1/3 pointer-events-none"
+        class="absolute text-slate-300 w-[1px] h-1 bg-slate-500 bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
       />
       {#if ms > 0}
         <span
-          class="absolute translate-x-[-50%] text-slate-300 bottom-1/3 pointer-events-none font-light text-xs"
+          class="absolute -translate-x-1/2 text-slate-300 bottom-1/3 pointer-events-none font-light text-xs"
           style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
         >
       {/if}
     {:else}
       <span
-        class="absolute translate-x-[-50%] text-slate-300 w-[1px] h-1 bg-slate-300 bottom-1/3 pointer-events-none"
+        class="absolute text-slate-300 w-[1px] h-1 bg-slate-300 bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
       />
     {/if}
