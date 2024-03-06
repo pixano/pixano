@@ -32,16 +32,9 @@
 
   let breakPointIntervals: Interval[] = [];
   let rightClickFrameIndex: number;
-  let startIndex: number = 0;
-  let startPosition: number = 0;
   let objectTimeTrack: HTMLElement;
 
   $: color = colorScale(object.id);
-
-  $: {
-    startIndex = object.bbox?.breakPointsIntervals?.[0]?.start || 0;
-    startPosition = (startIndex / $lastFrameIndex) * 100;
-  }
 
   const onContextMenu = (event: MouseEvent) => {
     newShape.set({
@@ -106,6 +99,7 @@
   };
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
+  $: console.log({ totalWidth, $lastFrameIndex });
 </script>
 
 <VideoPlayerRow>
@@ -123,10 +117,7 @@
       style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
     />
     <ContextMenu.Root>
-      <ContextMenu.Trigger
-        class="h-full w-full absolute"
-        style={`left: ${startPosition}%; width: ${totalWidth}%`}
-      >
+      <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
       <ContextMenu.Content>
