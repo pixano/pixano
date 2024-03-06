@@ -97,12 +97,12 @@
       <TimeTrack
         slot="timeTrack"
         {updateView}
-        {currentImageIndex}
         imageFilesLength={Object.keys(imageFiles).length}
         {videoSpeed}
         {intervalId}
-        bind:cursorElement
         {zoomLevel}
+        bind:cursorElement
+        bind:currentImageIndex
       />
     </VideoPlayerRow>
     <!-- bottom section -->
