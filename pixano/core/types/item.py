@@ -11,13 +11,48 @@
 #
 # http://www.cecill.info
 
-
+import pydantic
 from lancedb.pydantic import LanceModel
+
+
+# TODO add accessor to the view records
+class ViewRecords(pydantic.BaseModel):
+    """
+    Represents a view record.
+
+    Attributes:
+        id (str): The ID of the view record.
+        name (str): The name of the view record.
+        type (ViewType): The type of the view record.
+    """
+
+    ids: list[str]
+    names: list[str]
+    paths: list[str]
+
+    def get_by_id(self, id: str):
+        for curr_id in self.ids:
+            if curr_id == id:
+                return {"id": self.id, "name": self.name, "path": self.path}
+        return None
+
+    def get_by_name(self, name: str):
+        for curr_name in self.names:
+            if curr_name == name:
+                return {"id": self.id, "name": self.name, "path": self.path}
+        return None
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        ids = [d["id"] for d in data]
+        names = [d["name"] for d in data]
+        paths = [d["path"] for d in data]
+        return cls(ids=ids, names=names, paths=paths)
 
 
 class Item(LanceModel):
     """Image Lance Model"""
 
     id: str
-    views: list[bool]
+    views: ViewRecords
     split: str

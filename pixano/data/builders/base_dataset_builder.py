@@ -4,22 +4,18 @@ import json
 import os
 import pathlib
 from enum import Enum
-from typing import Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import duckdb
 import lancedb
 import pyarrow as pa
 import pydantic
-import shortuuid
 import tqdm
 from lancedb.pydantic import LanceModel
 
-from ...core import types as pix_types
-
 # from ...... import sequence_utils
-# from ...core import pydantic as pix_pydantic
-# from ...core import pydantic_utils
-
+from ...core import pydantic_utils
+from ...core import types as pix_types
 
 DEFAULT_DATASET_INFO_FILE = "db.json"
 DEFAULT_DATASET_PATH = "db"
@@ -79,8 +75,9 @@ class BaseDatasetBuilder(abc.ABC):
         self,
         source_dir: os.PathLike,
         target_dir: os.PathLike,
-        schemas: dict[str, LanceModel],
+        schemas: dict[str, Any],
         info: DatasetInfo,
+        mode: str = "create",
     ):
         self._schemas = schemas
         self._target_dir = pathlib.Path(target_dir)
@@ -90,44 +87,37 @@ class BaseDatasetBuilder(abc.ABC):
 
         self._previews_path = self._target_dir / DEFAULT_PREVEWS_PATH
 
-        self._info = info.model_copy(update={"id": shortuuid.uuid()})
+        self._mode = mode
+        # self._info = info.model_copy(update={"id": shortuuid.uuid()})
 
     def build(self) -> Dataset:
 
-        self._create_tables()
+        self._create_tables(self._schemas)
 
         # todo asset item in schema keys
         items_table = self._db.open_table("item")
-        images_tables = self._db.open_table(TableType.RGB_IMAGE)
 
         # first import the main items table
         items_table.add(
-            map(
-                pydantic_utils.list_to_record_batch,
-                tqdm.tqdm(self._read_items(), desc="Import items"),
-            )
+            # map(
+            # pydantic_utils.list_to_record_batch,
+            tqdm.tqdm(self._read_items(), desc="Import items")
+            # )
         )
 
         # import views
         items_table_lance = items_table.to_lance()
+        view_tables = {
+            name: self._db.open_table(name) for name in self._schemas["views"].keys()
+        }
 
-        for view_name in self._schemas["views"].keys():
-            views_table = self._db.open_table(view_name)
+        for items_batch in items_table_lance.to_batches():
+            items_batch = items_batch.to_pylist()
+            items_batch = [self._schemas["item"](**item) for item in items_batch]
+            views = self._read_views_for_items(items_batch)
 
-            # check the view schema class and choose the correct read function
-            if issubclass(self._schemas["views"][view_name], pix_types.Image):
-                read_view_for_item = self._read_images_for_item
-            else:
-                raise ValueError(f"Unknown view type: {view_name}")
-
-            views_table.add(
-                map(
-                    lambda x: pydantic_utils.flatmap_record_batch(
-                        x, read_view_for_item
-                    ),
-                    tqdm.tqdm(items_table_lance.to_batches(), desc="Import sequences"),
-                )
-            )
+            for view_name, view_data in views.items():
+                view_tables[view_name].add(view_data)
 
         # self._info = self._info.model_copy(
         #     update={
@@ -142,6 +132,7 @@ class BaseDatasetBuilder(abc.ABC):
         # return self._create_dataset()
 
     def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
+
         items_table = self._db.open_table(TableType.ITEM).to_lance()
         ids_and_views = duckdb.query("SELECT id, views FROM items_table").to_df()
 
@@ -180,14 +171,7 @@ class BaseDatasetBuilder(abc.ABC):
     def _read_items(self) -> Iterator[list[pix_types.Item]]:
         raise NotImplementedError
 
-    def _read_images_for_item(
-        self, item: pix_pydantic.DatasetItem
-    ) -> List[pix_pydantic.Image]:
-        pass
-
-    def _read_sequences_for_item(
-        self, item: pix_pydantic.DatasetItem
-    ) -> List[pix_pydantic.SequenceFrame]:
+    def read_views_for_items(self, items: List[pix_types.Item]) -> Dict[str, Any]:
         pass
 
     def _create_table_element(self, klass: TableType, **kwargs) -> LanceModel:
@@ -213,6 +197,9 @@ class BaseDatasetBuilder(abc.ABC):
     def _create_dataset(self):
         return Dataset(self._target_dir, self._info)
 
-    def _create_tables(self):
-        for key, schema in self._schemas.items():
-            self._db.create_table(key, schema=schema)
+    def _create_tables(self, schemas: dict[str, Any] = None):
+        for key, schema in schemas.items():
+            if isinstance(schema, dict):
+                self._create_tables(schema)
+            else:
+                self._db.create_table(key, schema=schema, mode=self._mode)

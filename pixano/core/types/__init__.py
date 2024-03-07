@@ -12,8 +12,8 @@
 # http://www.cecill.info
 
 
-from .item import Item
+from .item import Item, ViewRecords
 from .image import Image
 
 
-__all__ = ["Item", "Image"]
+__all__ = ["Item", "Image", "ViewRecords"]
