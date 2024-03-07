@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { ItemObject, BreakPoint, DisplayedInterval } from "@pixano/core";
+  import type { ItemObject, BreakPoint } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval } from "../../lib/api/videoApi";
@@ -27,7 +27,6 @@
   export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
 
-  let breakPointIntervals: DisplayedInterval[] = [];
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
 
@@ -47,13 +46,6 @@
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
     onTimeTrackClick(rightClickFrameIndex);
   };
-
-  $: breakPointIntervals =
-    object.bbox?.breakPointsIntervals?.map((interval) => {
-      const end = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
-      const width = ((end - interval.start) / ($lastFrameIndex + 1)) * 100;
-      return { ...interval, width };
-    }) || [];
 
   const isBreakPointBeingEdited = (breakPoint: BreakPoint) =>
     $breakPointBeingEdited?.objectId === object.id &&
@@ -112,7 +104,7 @@
       <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
     </ContextMenu.Content>
   </ContextMenu.Root>
-  {#each breakPointIntervals as interval}
+  {#each object.bbox?.breakPointsIntervals || [] as interval}
     <ObjectTimeInterval
       {interval}
       {object}

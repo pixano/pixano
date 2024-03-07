@@ -15,13 +15,13 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, BreakPoint, DisplayedInterval } from "@pixano/core";
+  import type { ItemObject, BreakPoint, BreakPointInterval } from "@pixano/core";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import IntervalBreakPoint from "./IntervalBreakPoint.svelte";
 
   export let object: ItemObject;
   export let color: string;
-  export let interval: DisplayedInterval;
+  export let interval: BreakPointInterval;
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditPointClick: (breakPoint: BreakPoint) => void;
   export let onAddPointClick: () => void;
@@ -30,15 +30,21 @@
     $breakPointBeingEdited?.objectId === object.id &&
     breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
 
-  const getIntervalLeftPosition = (interval: DisplayedInterval) => {
+  const getIntervalLeftPosition = (interval: BreakPointInterval) => {
     return (interval.start / ($lastFrameIndex + 1)) * 100;
+  };
+
+  const getIntervalWidth = (interval: BreakPointInterval) => {
+    const end = interval.end > $lastFrameIndex ? $lastFrameIndex : interval.end;
+    const width = ((end - interval.start) / ($lastFrameIndex + 1)) * 100;
+    return width;
   };
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
-    style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
+    style={`left: ${getIntervalLeftPosition(interval)}%; width: ${getIntervalWidth(interval)}%; background-color: ${color}`}
   >
     <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
   </ContextMenu.Trigger>

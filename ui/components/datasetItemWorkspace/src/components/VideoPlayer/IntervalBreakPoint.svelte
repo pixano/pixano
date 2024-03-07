@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, BreakPoint, DisplayedInterval } from "@pixano/core";
+  import type { ItemObject, BreakPoint, BreakPointInterval } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteBreakPointInInterval } from "../../lib/api/videoApi";
@@ -23,7 +23,7 @@
   export let objectId: ItemObject["id"];
 
   export let breakPoint: BreakPoint;
-  export let interval: DisplayedInterval;
+  export let interval: BreakPointInterval;
   export let isBeingEdited: boolean;
   export let onEditPointClick: (breakPoint: BreakPoint) => void;
   export let color: string;
@@ -65,14 +65,14 @@
               //   const left = event.clientX - (parentDimensions?.left || 0);
               //   const max = parentDimensions?.width || 1;
               //   const newFrameIndex = Math.floor((left / max) * $lastFrameIndex);
-              const oneFrameDistance =
-                interval.width / (currentInterval.end - currentInterval.start);
+              //   const oneFrameDistance =
+              //     interval.width / (currentInterval.end - currentInterval.start);
               const distance = event.clientX - startPosition;
-              const newFrameIndex = breakPoint.frameIndex + Math.floor(distance / oneFrameDistance);
+              //   const newFrameIndex = breakPoint.frameIndex + Math.floor(distance / oneFrameDistance);
               console.log({
                 distance,
-                oneFrameDistance,
-                newFrameIndex,
+                // oneFrameDistance,
+                // newFrameIndex,
                 parentDimensions,
                 parent: node.parentElement,
                 interval,
