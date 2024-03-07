@@ -141,6 +141,10 @@ export interface BreakPointInterval {
   start: number;
   end: number;
 }
+
+export type DisplayedInterval = BreakPointInterval & {
+  width: number;
+};
 export interface ItemBBox {
   coords: Array<number>;
   breakPointsIntervals?: BreakPointInterval[];

@@ -14,11 +14,12 @@
    * http://www.cecill.info
    */
 
-  import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, BreakPointInterval, BreakPoint } from "@pixano/core";
+  import { ContextMenu } from "@pixano/core";
+  import type { ItemObject, BreakPoint, DisplayedInterval } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { addBreakPointInInterval, deleteBreakPointInInterval } from "../../lib/api/videoApi";
+  import { addBreakPointInInterval } from "../../lib/api/videoApi";
+  import ObjectTimeInterval from "./ObjectTimeInterval.svelte";
 
   export let zoomLevel: number[];
   export let currentImageIndex: number;
@@ -26,13 +27,9 @@
   export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
 
-  type Interval = BreakPointInterval & { width: number };
-
-  let breakPointIntervals: Interval[] = [];
+  let breakPointIntervals: DisplayedInterval[] = [];
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
-
-  $: color = colorScale(object.id);
 
   const onContextMenu = (event: MouseEvent) => {
     itemObjects.update((objects) =>
@@ -80,10 +77,6 @@
     );
   };
 
-  const onDeletePointClick = (breakPoint: BreakPoint) => {
-    itemObjects.update((objects) => deleteBreakPointInInterval(objects, breakPoint, object.id));
-  };
-
   const onAddPointClick = () => {
     const [x, y] = object.bbox?.coords || [0, 0];
     const breakPoint: BreakPoint = { frameIndex: rightClickFrameIndex, x, y };
@@ -97,16 +90,6 @@
       ),
     );
     onEditPointClick(breakPoint);
-  };
-
-  const getIntervalLeftPosition = (interval: Interval) => {
-    return (interval.start / ($lastFrameIndex + 1)) * 100;
-  };
-
-  const getBreakPointLeftPosition = (breakPoint: BreakPoint) => {
-    const breakPointFrameIndex =
-      breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex;
-    return (breakPointFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
@@ -130,36 +113,13 @@
     </ContextMenu.Content>
   </ContextMenu.Root>
   {#each breakPointIntervals as interval}
-    <ContextMenu.Root>
-      <ContextMenu.Trigger
-        class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
-        style={`left: ${getIntervalLeftPosition(interval)}%; width: ${interval.width}%; background-color: ${color}`}
-      >
-        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
-      </ContextMenu.Trigger>
-      <ContextMenu.Content>
-        <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
-      </ContextMenu.Content>
-    </ContextMenu.Root>
-    {#each interval.breakPoints as breakPoint}
-      <ContextMenu.Root>
-        <ContextMenu.Trigger
-          class={cn(
-            "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
-            "hover:scale-150",
-            { "bg-primary !border-primary": isBreakPointBeingEdited(breakPoint) },
-          )}
-          style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
-        />
-        <ContextMenu.Content>
-          <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
-            >Remove point</ContextMenu.Item
-          >
-          <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}>
-            {isBreakPointBeingEdited(breakPoint) ? "Stop editing" : "Edit point"}
-          </ContextMenu.Item>
-        </ContextMenu.Content>
-      </ContextMenu.Root>
-    {/each}
+    <ObjectTimeInterval
+      {interval}
+      {object}
+      color={colorScale(object.id)}
+      {onAddPointClick}
+      {onContextMenu}
+      {onEditPointClick}
+    />
   {/each}
 </div>
