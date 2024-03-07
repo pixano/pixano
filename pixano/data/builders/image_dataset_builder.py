@@ -22,7 +22,9 @@ class ImageDatasetBuilder(base_dataset_builder.BaseDatasetBuilder):
                 yield [
                     self._schemas["item"](
                         id=shortuuid.uuid(),
-                        views=pix_types.ViewRecords(names=["image"], paths=[view_file]),
+                        views=pix_types.ViewRecords(
+                            ids=["0"], names=["image"], paths=[view_file]
+                        ),
                         split=split,
                     )
                 ]
