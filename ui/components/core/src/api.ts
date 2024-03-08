@@ -141,10 +141,10 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             ...obj.bbox,
             breakPointsIntervals: [
               {
-                start: 1,
+                start: 0,
                 end: 10,
                 breakPoints: [
-                  { frameIndex: 1, x, y },
+                  { frameIndex: 0, x, y },
                   { frameIndex: 10, x: x + 0.1, y: y + 0.5 },
                   // { frameIndex: 41, x: x + 0.3, y: y + 0.5 },
                 ],

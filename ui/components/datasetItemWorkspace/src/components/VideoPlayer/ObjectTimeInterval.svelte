@@ -37,31 +37,19 @@
   $: width = getWidth(interval);
   $: left = getLeft(interval);
 
-  let intervalWidth: number | undefined;
-  let tempInterval: BreakPointInterval | undefined;
-  //   let tempWidth: number = width;
-  //   let tempLeft: number = left;
   let tempFrameIndex: number | undefined;
   let oneFrameInPixel: number | undefined;
 
   const updateWidth = (distance: number, frameIndex: BreakPoint["frameIndex"]) => {
-    // if isEnd, move width
-    // if isMiddle, move only breakpoint.
-    // borner les movements
-    // manage index = 0
-
     if (!distance) return;
-    intervalWidth = intervalWidth || intervalElement?.getBoundingClientRect().width;
-    tempInterval = tempInterval || interval;
     tempFrameIndex = tempFrameIndex || frameIndex || 1;
     oneFrameInPixel =
-      oneFrameInPixel || intervalWidth / (tempInterval.end - tempInterval.start + 1);
+      oneFrameInPixel ||
+      intervalElement?.getBoundingClientRect().width / (interval.end - interval.start + 1);
 
-    // const updatedWidth = intervalWidth + distance;
     const raise = distance / oneFrameInPixel;
     const newFrameIndex = tempFrameIndex + raise;
 
-    console.log({ intervalWidth, tempInterval, tempFrameIndex, raise, distance });
     if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
 
     interval.breakPoints = interval.breakPoints.map((breakPoint) => {
@@ -81,11 +69,7 @@
 
   const onBreakPointDragEnd = () => {
     // TODO : save new values
-    // tempWidth = width;
-    // tempLeft = left;
-    intervalWidth = undefined;
     tempFrameIndex = undefined;
-    tempInterval = undefined;
     oneFrameInPixel = undefined;
   };
 
