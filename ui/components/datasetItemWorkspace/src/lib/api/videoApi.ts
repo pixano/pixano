@@ -98,6 +98,47 @@ export const editBreakPointInInterval = (
     return object;
   });
 
+const createNewInterval = (
+  intervals: BreakPointInterval[],
+  frameIndex: number,
+  lastFrameIndex: number,
+  breakPoint: BreakPoint,
+) => {
+  let nextIntervalStart = intervals.find((i) => i.start > frameIndex)?.start;
+  nextIntervalStart = nextIntervalStart ? nextIntervalStart - 1 : lastFrameIndex;
+  return {
+    start: frameIndex,
+    end: nextIntervalStart,
+    breakPoints: [
+      {
+        frameIndex,
+        x: breakPoint.x,
+        y: breakPoint.y,
+      },
+      {
+        frameIndex: nextIntervalStart,
+        x: breakPoint.x,
+        y: breakPoint.y,
+      },
+    ],
+  } as BreakPointInterval;
+};
+
+const addBreakPointToInterval = (
+  intervals: BreakPointInterval[],
+  breakpointInterval: BreakPointInterval,
+  breakPoint: BreakPoint,
+) =>
+  intervals.map((interval) => {
+    if (interval.start === breakpointInterval.start && interval.end === breakpointInterval.end) {
+      interval.breakPoints.push(breakPoint);
+      interval.breakPoints.sort((a, b) => a.frameIndex - b.frameIndex);
+      interval.start = interval.breakPoints[0].frameIndex;
+      interval.end = interval.breakPoints.at(-1)?.frameIndex || interval.start;
+    }
+    return interval;
+  });
+
 export const addBreakPointInInterval = (
   objects: ItemObject[],
   breakPoint: BreakPoint,
@@ -110,27 +151,24 @@ export const addBreakPointInInterval = (
     if (!object.bbox.breakPointsIntervals) {
       object.bbox.breakPointsIntervals = [];
     }
-    const interval: BreakPointInterval = object.bbox.breakPointsIntervals.find(
+    const breakpointInterval = object.bbox.breakPointsIntervals.find(
       (i) => i.start <= frameIndex && i.end >= frameIndex,
-    ) ??
-      object.bbox.breakPointsIntervals.find((i) => i.start < frameIndex) ??
-      object.bbox.breakPointsIntervals[0] ?? { start: frameIndex, end: lastFrameIndex };
-
-    if (!interval) {
-      object.bbox.breakPointsIntervals.push(interval);
+    );
+    if (!breakpointInterval) {
+      const newInterval = createNewInterval(
+        object.bbox.breakPointsIntervals,
+        frameIndex,
+        lastFrameIndex,
+        breakPoint,
+      );
+      object.bbox.breakPointsIntervals.push(newInterval);
+    } else {
+      object.bbox.breakPointsIntervals = addBreakPointToInterval(
+        object.bbox.breakPointsIntervals,
+        breakpointInterval,
+        breakPoint,
+      );
     }
-    object.bbox.breakPointsIntervals = object.bbox.breakPointsIntervals.map((i) => {
-      if (i.start === interval.start && i.end === interval.end) {
-        if (!i.breakPoints) {
-          i.breakPoints = [];
-        }
-        i.breakPoints.push(breakPoint);
-        i.breakPoints.sort((a, b) => a.frameIndex - b.frameIndex);
-        i.start = i.breakPoints[0].frameIndex;
-        i.end = i.breakPoints.at(-1)?.frameIndex || i.start;
-      }
-      return i;
-    });
     return object;
   });
 };
