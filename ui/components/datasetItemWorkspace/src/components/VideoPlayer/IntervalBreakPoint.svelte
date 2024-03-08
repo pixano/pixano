@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, BreakPoint, BreakPointInterval } from "@pixano/core";
+  import type { ItemObject, BreakPoint } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteBreakPointInInterval } from "../../lib/api/videoApi";
@@ -23,10 +23,11 @@
   export let objectId: ItemObject["id"];
 
   export let breakPoint: BreakPoint;
-  export let interval: BreakPointInterval;
   export let isBeingEdited: boolean;
   export let onEditPointClick: (breakPoint: BreakPoint) => void;
   export let color: string;
+  export let updateWidth: (distance: number, frameIndex: BreakPoint["frameIndex"]) => void;
+  export let onBreakPointDragEnd: () => void;
 
   $breakPointBeingEdited?.objectId === objectId &&
     breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
@@ -51,51 +52,15 @@
     });
 
     window.addEventListener("mousemove", (event) => {
-      if (moving) {
-        console.log("moving", event);
-        itemObjects.update((objects) => {
-          const newObjects = objects.map((obj) => {
-            if (obj.id === objectId && obj.bbox) {
-              const currentInterval = obj.bbox.breakPointsIntervals?.find(
-                (i) => i.start === interval.start,
-              );
-
-              const parentDimensions = node.parentElement?.getBoundingClientRect();
-              if (!currentInterval || !parentDimensions) return obj;
-              //   const left = event.clientX - (parentDimensions?.left || 0);
-              //   const max = parentDimensions?.width || 1;
-              //   const newFrameIndex = Math.floor((left / max) * $lastFrameIndex);
-              //   const oneFrameDistance =
-              //     interval.width / (currentInterval.end - currentInterval.start);
-              const distance = event.clientX - startPosition;
-              //   const newFrameIndex = breakPoint.frameIndex + Math.floor(distance / oneFrameDistance);
-              console.log({
-                distance,
-                // oneFrameDistance,
-                // newFrameIndex,
-                parentDimensions,
-                parent: node.parentElement,
-                interval,
-              });
-              //   const newBreakPoints = obj.bbox?.breakPoints?.map((bp) => {
-              //     if (bp.frameIndex === breakPoint.frameIndex) {
-              //       bp.frameIndex = 0;
-              //     }
-              //     return bp;
-              //   });
-              const newBreakPoints = obj.bbox?.breakPointsIntervals;
-              obj.bbox = { ...obj.bbox, breakPointsIntervals: newBreakPoints };
-            }
-            return obj;
-          });
-          return newObjects;
-        });
-        // currentImageIndex = getImageIndexFromMouseMove(event, node, imageFilesLength);
+      if (moving && isBeingEdited) {
+        const distance = event.clientX - startPosition;
+        updateWidth(distance, breakPoint.frameIndex);
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
+      onBreakPointDragEnd();
     });
   };
 </script>
