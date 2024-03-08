@@ -30,6 +30,8 @@
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
 
+  $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
+
   const onContextMenu = (event: MouseEvent) => {
     itemObjects.update((objects) =>
       objects.map((obj) => {
@@ -91,8 +93,6 @@
     if (!object.bbox?.breakPointsIntervals) return [0, 0];
     return findNeighbors(object.bbox.breakPointsIntervals, interval, frameIndex, $lastFrameIndex);
   };
-
-  $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 </script>
 
 <div

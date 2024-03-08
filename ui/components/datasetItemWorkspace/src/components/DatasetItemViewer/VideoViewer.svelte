@@ -97,7 +97,7 @@
       if (breakPoint) {
         itemObjects.update((objects) => editBreakPointInInterval(objects, breakPoint, shape));
       } else {
-        itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
+        itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }
     }
   }
