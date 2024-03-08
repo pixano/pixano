@@ -134,3 +134,34 @@ export const addBreakPointInInterval = (
     return object;
   });
 };
+
+export const findNeighbors = (
+  intervals: BreakPointInterval[],
+  currentInterval: BreakPointInterval,
+  frameIndex: BreakPoint["frameIndex"],
+  lastFrameIndex: number,
+): [number, number] => {
+  const currentIntervalIndex = intervals.findIndex(
+    (int) => int.start === currentInterval.start && int.end === currentInterval.end,
+  );
+  if (currentIntervalIndex < 0) return [0, 0];
+  const prevInterval = intervals[currentIntervalIndex - 1];
+  let prevNeighbor = currentInterval.breakPoints.find(
+    (bp) => bp.frameIndex < frameIndex,
+  )?.frameIndex;
+  if (!prevNeighbor && prevInterval) {
+    prevNeighbor = prevInterval.breakPoints[prevInterval.breakPoints.length - 1]?.frameIndex;
+  }
+  prevNeighbor = prevNeighbor || 0;
+
+  let nextNeighbor = currentInterval.breakPoints.find(
+    (bp) => bp.frameIndex > frameIndex,
+  )?.frameIndex;
+  const nextInterval = intervals[currentIntervalIndex + 1];
+  if (!nextNeighbor && nextInterval) {
+    nextNeighbor = nextInterval.breakPoints[0]?.frameIndex;
+  }
+  nextNeighbor = nextNeighbor || lastFrameIndex;
+
+  return [prevNeighbor, nextNeighbor];
+};
