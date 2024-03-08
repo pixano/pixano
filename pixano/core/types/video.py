@@ -12,12 +12,10 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
+from .view import View
 
 
-class Video(LanceModel):
-    id: str
-    item_id: str
+class Video(View):
     url: str
     num_frames: int
     fps: float

@@ -12,18 +12,23 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
+from enum import Enum
+from .view import View
+from .object import Object
+from .item import Item
+from .embedding import Embedding
 
-from pixano.core import BBox, CompressedRLE
+
+class TableGroup(Enum):
+    ITEM = "item"
+    VIEW = "views"
+    OBJECT = "objects"
+    EMBEDDING = "embeddings"
 
 
-class Object(LanceModel):
-    """Object Lance Model"""
-
-    id: str
-    item_id: str
-    view_id: str
-    track_id: str
-    timestamp: float
-    bbox: BBox
-    mask: CompressedRLE
+TABLE_GROUP_TYPE_DICT = {
+    TableGroup.ITEM: Item,
+    TableGroup.VIEW: View,
+    TableGroup.OBJECT: Object,
+    TableGroup.EMBEDDING: Embedding
+}

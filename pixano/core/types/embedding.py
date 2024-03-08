@@ -14,16 +14,9 @@
 
 from lancedb.pydantic import LanceModel
 
-from pixano.core import BBox, CompressedRLE
 
-
-class Object(LanceModel):
-    """Object Lance Model"""
+class Embedding(LanceModel):
+    """Embedding Lance Model"""
 
     id: str
     item_id: str
-    view_id: str
-    track_id: str
-    timestamp: float
-    bbox: BBox
-    mask: CompressedRLE
