@@ -118,6 +118,7 @@ export type ItemObject = (BBoxObject | MaskObject) & {
   item_id: string;
   source_id: string;
   view_id: string;
+  // tracks: bboxes[];
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
@@ -145,6 +146,7 @@ export interface BreakPointInterval {
 export interface ItemBBox {
   coords: Array<number>;
   breakPointsIntervals?: BreakPointInterval[];
+  // frameIndex: number
   format: string;
   is_normalized: boolean;
   confidence: number;

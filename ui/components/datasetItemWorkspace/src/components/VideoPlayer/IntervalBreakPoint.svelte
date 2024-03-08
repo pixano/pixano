@@ -24,10 +24,13 @@
 
   export let breakPoint: BreakPoint;
   export let isBeingEdited: boolean;
-  export let onEditPointClick: (breakPoint: BreakPoint) => void;
   export let color: string;
-  export let updateWidth: (distance: number, frameIndex: BreakPoint["frameIndex"]) => void;
-  export let onBreakPointDragEnd: () => void;
+  export let oneFrameInPixel: number;
+  export let onEditPointClick: (breakPoint: BreakPoint) => void;
+  export let updateIntervalWidth: (
+    newIndex: BreakPoint["frameIndex"],
+    draggedIndex: BreakPoint["frameIndex"],
+  ) => void;
 
   $breakPointBeingEdited?.objectId === objectId &&
     breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
@@ -45,22 +48,27 @@
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
     let startPosition: number;
+    let startFrameIndex: number;
+    let startOneFrameInPixel: number;
 
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
+      startFrameIndex = breakPoint.frameIndex;
+      startOneFrameInPixel = oneFrameInPixel;
     });
 
     window.addEventListener("mousemove", (event) => {
       if (moving && isBeingEdited) {
         const distance = event.clientX - startPosition;
-        updateWidth(distance, breakPoint.frameIndex);
+        const raise = distance / startOneFrameInPixel;
+        const newFrameIndex = startFrameIndex + raise;
+        updateIntervalWidth(newFrameIndex, breakPoint.frameIndex);
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      onBreakPointDragEnd();
     });
   };
 </script>

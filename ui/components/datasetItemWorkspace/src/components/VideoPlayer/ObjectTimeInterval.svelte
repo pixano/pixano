@@ -38,28 +38,21 @@
 
   let width: number = getWidth(interval);
   let left: number = getLeft(interval);
+  let intervalElement: HTMLElement;
+
   $: width = getWidth(interval);
   $: left = getLeft(interval);
+  $: oneFrameInPixel =
+    intervalElement?.getBoundingClientRect().width / (interval.end - interval.start + 1);
 
-  let tempFrameIndex: number | undefined;
-  let oneFrameInPixel: number | undefined;
-
-  const updateWidth = (distance: number, frameIndex: BreakPoint["frameIndex"]) => {
-    if (!distance) return;
-    tempFrameIndex = tempFrameIndex || frameIndex || 0;
-    oneFrameInPixel =
-      oneFrameInPixel ||
-      intervalElement?.getBoundingClientRect().width / (interval.end - interval.start + 1);
-
-    const raise = distance / oneFrameInPixel;
-    const newFrameIndex = tempFrameIndex + raise;
-
-    const [prevFrameIndex, nextFrameIndex] = findNeighborBreakPoints(interval, frameIndex);
-
+  const updateIntervalWidth = (
+    newFrameIndex: BreakPoint["frameIndex"],
+    draggedFrameIndex: BreakPoint["frameIndex"],
+  ) => {
+    const [prevFrameIndex, nextFrameIndex] = findNeighborBreakPoints(interval, draggedFrameIndex);
     if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex > nextFrameIndex - 1) return;
-
     interval.breakPoints = interval.breakPoints.map((breakPoint) => {
-      if (tempFrameIndex && breakPoint.frameIndex === frameIndex) {
+      if (breakPoint.frameIndex === draggedFrameIndex) {
         breakPoint.frameIndex = Math.round(newFrameIndex);
         breakPointBeingEdited.set({
           ...breakPoint,
@@ -73,16 +66,9 @@
     interval.end = interval.breakPoints[interval.breakPoints.length - 1].frameIndex;
   };
 
-  const onBreakPointDragEnd = () => {
-    // TODO : save new values
-    tempFrameIndex = undefined;
-    oneFrameInPixel = undefined;
-  };
-
   const isBreakPointBeingEdited = (breakPoint: BreakPoint) =>
     $breakPointBeingEdited?.objectId === object.id &&
     breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
-  let intervalElement: HTMLElement;
 </script>
 
 <ContextMenu.Root>
@@ -107,7 +93,7 @@
     isBeingEdited={isBreakPointBeingEdited(breakPoint)}
     {onEditPointClick}
     objectId={object.id}
-    {updateWidth}
-    {onBreakPointDragEnd}
+    {updateIntervalWidth}
+    {oneFrameInPixel}
   />
 {/each}
