@@ -63,7 +63,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateIntervalWidth(newFrameIndex, breakPoint.frameIndex);
+        updateIntervalWidth(Math.round(newFrameIndex), breakPoint.frameIndex);
       }
     });
 

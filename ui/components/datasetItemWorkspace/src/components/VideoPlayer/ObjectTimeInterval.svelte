@@ -50,15 +50,13 @@
     draggedFrameIndex: BreakPoint["frameIndex"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborBreakPoints(interval, draggedFrameIndex);
-    console.log({ prevFrameIndex, nextFrameIndex, newFrameIndex });
-    if (newFrameIndex < prevFrameIndex || newFrameIndex > nextFrameIndex) return;
+    if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     interval.breakPoints = interval.breakPoints.map((breakPoint) => {
       if (breakPoint.frameIndex === draggedFrameIndex) {
-        breakPoint.frameIndex = Math.round(newFrameIndex);
+        breakPoint.frameIndex = newFrameIndex;
         breakPointBeingEdited.set({
           ...breakPoint,
           objectId: object.id,
-          frameIndex: breakPoint.frameIndex,
         });
       }
       return breakPoint;
