@@ -25,6 +25,10 @@
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditPointClick: (breakPoint: BreakPoint) => void;
   export let onAddPointClick: () => void;
+  export let findNeighborBreakPoints: (
+    interval: BreakPointInterval,
+    frameIndex: number,
+  ) => [number, number];
 
   const getLeft = (interval: BreakPointInterval) => (interval.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (interval: BreakPointInterval) => {
@@ -42,7 +46,7 @@
 
   const updateWidth = (distance: number, frameIndex: BreakPoint["frameIndex"]) => {
     if (!distance) return;
-    tempFrameIndex = tempFrameIndex || frameIndex || 1;
+    tempFrameIndex = tempFrameIndex || frameIndex || 0;
     oneFrameInPixel =
       oneFrameInPixel ||
       intervalElement?.getBoundingClientRect().width / (interval.end - interval.start + 1);
@@ -50,7 +54,9 @@
     const raise = distance / oneFrameInPixel;
     const newFrameIndex = tempFrameIndex + raise;
 
-    if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
+    const [prevFrameIndex, nextFrameIndex] = findNeighborBreakPoints(interval, frameIndex);
+
+    if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex > nextFrameIndex - 1) return;
 
     interval.breakPoints = interval.breakPoints.map((breakPoint) => {
       if (tempFrameIndex && breakPoint.frameIndex === frameIndex) {

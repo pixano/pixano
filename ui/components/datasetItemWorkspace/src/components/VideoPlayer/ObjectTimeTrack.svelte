@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { ItemObject, BreakPoint } from "@pixano/core";
+  import type { ItemObject, BreakPoint, BreakPointInterval } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addBreakPointInInterval } from "../../lib/api/videoApi";
@@ -84,6 +84,32 @@
     onEditPointClick(breakPoint);
   };
 
+  const findNeighborBreakPoints = (
+    interval: BreakPointInterval,
+    frameIndex: BreakPoint["frameIndex"],
+  ): [number, number] => {
+    if (!object.bbox?.breakPointsIntervals) return [0, 0];
+    const currentIntervalIndex = object.bbox.breakPointsIntervals.findIndex(
+      (int) => int.start === interval.start && int.end === interval.end,
+    );
+    if (currentIntervalIndex < 0) return [0, 0]; // should be null
+    const prevInterval = object.bbox?.breakPointsIntervals?.[currentIntervalIndex - 1];
+    let prevNeighbor = interval.breakPoints.find((bp) => bp.frameIndex < frameIndex)?.frameIndex;
+    if (!prevNeighbor && prevInterval) {
+      prevNeighbor = prevInterval.breakPoints[prevInterval.breakPoints.length - 1]?.frameIndex;
+    }
+    prevNeighbor = prevNeighbor || 0;
+
+    let nextNeighbor = interval.breakPoints.find((bp) => bp.frameIndex > frameIndex)?.frameIndex;
+    const nextInterval = object.bbox?.breakPointsIntervals?.[currentIntervalIndex + 1];
+    if (!nextNeighbor && nextInterval) {
+      nextNeighbor = nextInterval.breakPoints[0]?.frameIndex;
+    }
+    nextNeighbor = nextNeighbor || $lastFrameIndex;
+
+    return [prevNeighbor, nextNeighbor];
+  };
+
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 </script>
 
@@ -112,6 +138,7 @@
       {onAddPointClick}
       {onContextMenu}
       {onEditPointClick}
+      {findNeighborBreakPoints}
     />
   {/each}
 </div>
