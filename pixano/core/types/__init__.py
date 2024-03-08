@@ -10,3 +10,14 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
+from pixano.core.types.item import Item, ViewRecords
+from pixano.core.types.image import Image
+from pixano.core.types.sequence_frame import SequenceFrame
+
+__all__ = [
+    "Item",
+    "ViewRecords",
+    "Image",
+    "SequenceFrame",
+]
