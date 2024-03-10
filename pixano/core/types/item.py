@@ -13,6 +13,7 @@
 
 import pydantic
 from lancedb.pydantic import LanceModel
+from .registry import _register_table_type_internal
 
 
 class ViewRecords(pydantic.BaseModel):
@@ -53,6 +54,7 @@ class ViewRecords(pydantic.BaseModel):
         )
 
 
+@_register_table_type_internal()
 class Item(LanceModel):
     """Image Lance Model"""
 

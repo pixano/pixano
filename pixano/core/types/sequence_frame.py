@@ -14,7 +14,9 @@
 
 from .image import Image
 
+from .registry import _register_table_type_internal
 
+@_register_table_type_internal()
 class SequenceFrame(Image):
     """Sequence Frame Lance Model"""
 

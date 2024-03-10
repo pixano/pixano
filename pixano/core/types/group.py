@@ -13,6 +13,7 @@
 
 
 from enum import Enum
+
 from .view import View
 from .object import Object
 from .item import Item

@@ -16,7 +16,9 @@ from lancedb.pydantic import LanceModel
 
 from pixano.core import BBox, CompressedRLE
 
+from .registry import _register_table_type_internal
 
+@_register_table_type_internal()
 class Object(LanceModel):
     """Object Lance Model"""
 

@@ -12,17 +12,20 @@
 # http://www.cecill.info
 
 
-from typing import Type
 from pydantic import BaseModel, create_model
 from pixano.core.types.group import TableGroup, TABLE_GROUP_TYPE_DICT
 
 
-DatasetItem: Type[BaseModel] = create_model(
+class BaseDatasetItem(BaseModel):
+    id: str
+
+
+DatasetItem: type[BaseDatasetItem] = create_model(
     "DatasetItem",
-    id = (str, ...),
     **{
         table_group.value: (dict[str, TABLE_GROUP_TYPE_DICT[table_group]], None)
         for table_group in TableGroup
-    }
+    },
+    __base__=BaseDatasetItem
 )
 DatasetItem.__doc__ = "DatasetItem"
