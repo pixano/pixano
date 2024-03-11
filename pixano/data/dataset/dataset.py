@@ -22,9 +22,13 @@ from lancedb.query import LanceQueryBuilder
 from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
+from pixano.core import Image
 from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
+from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
+from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import DatasetItem, TableGroup
 from pixano.data.dataset.dataset_schema import DatasetSchema
+from pixano.data.dataset.dataset_stat import DatasetStat
 
 
 DEFAULT_DB_PATH = "db"
@@ -35,7 +39,7 @@ class Dataset(BaseModel):
 
     Attributes:
         path (Path | S3Path): Dataset path
-        summary (DatasetSummary, optional): Dataset summary
+        info (DatasetInfo, optional): Dataset info
         dataset_schema (DatasetSchema, optional): Dataset schema
         features_values (DatasetFeaturesValues, optional): Dataset features values
         stats (list[DatasetStat], optional): Dataset stats
@@ -43,11 +47,11 @@ class Dataset(BaseModel):
     """
 
     path: Path | S3Path
-    # summary: Optional[DatasetSummary] = None
+    info: Optional[DatasetInfo] = None
     dataset_schema: Optional[DatasetSchema] = None
-    # features_values: Optional[DatasetFeaturesValues] = None
-    # stats: Optional[list[DatasetStat]] = None
-    # thumbnail: Optional[str] = None
+    features_values: Optional[DatasetFeaturesValues] = None
+    stats: Optional[list[DatasetStat]] = None
+    thumbnail: Optional[str] = None
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -60,7 +64,7 @@ class Dataset(BaseModel):
         Args:
             path (Path | S3Path): Dataset path
         """
-        summary_file = path / "summary.json"  # noqa: F841
+        info_file = path / "info.json"
         schema_file = path / "schema.json"
         features_values_file = path / "features_values.json"  # noqa: F841
         stats_file = path / "stats.json"  # noqa: F841
@@ -68,15 +72,15 @@ class Dataset(BaseModel):
 
         super().__init__(
             path=path,
-            # summary=DatasetSummary.from_json(summary_file),
+            info=DatasetInfo.from_json(info_file),
             dataset_schema=DatasetSchema.from_json(schema_file),
-            # features_values=DatasetFeaturesValues.from_json(features_values_file),
-            # stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
-            # thumbnail=(
-            #     Image(uri=thumb_file.absolute().as_uri()).url
-            #     if thumb_file.is_file()
-            #     else None
-            # ),
+            features_values=DatasetFeaturesValues.from_json(features_values_file),
+            stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
+            thumbnail=(
+                Image(uri=thumb_file.absolute().as_uri()).url
+                if thumb_file.is_file()
+                else None
+            ),
         )
 
     @property
@@ -210,6 +214,9 @@ class Dataset(BaseModel):
                 lance_query = self._search_values_by_field_in_table(
                     table, item_id_field, sql_ids
                 )
+                lance_query = self._search_values_by_field_in_table(
+                    table, item_id_field, sql_ids
+                )
                 pydantic_table = lance_query.to_pydantic(table_type)
 
                 for row in pydantic_table:
@@ -221,6 +228,10 @@ class Dataset(BaseModel):
         # Raise error if some ids are not found
         ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
         if len(ids_not_found) > 0:
+            raise ValueError(
+                f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
+            )
+
             raise ValueError(
                 f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
             )
@@ -243,6 +254,10 @@ class Dataset(BaseModel):
             list[DatasetItem] | DatasetItem: Dataset items
         """
         if select_table_groups:
+            select_table_groups = [
+                TableGroup(table_group) if isinstance(table_group, str) else table_group
+                for table_group in select_table_groups
+            ]
             select_table_groups = [
                 TableGroup(table_group) if isinstance(table_group, str) else table_group
                 for table_group in select_table_groups
@@ -271,7 +286,11 @@ class Dataset(BaseModel):
         if not isinstance(id, str):
             raise ValueError("id should be a string")
 
-        return self.read_items([id], select_table_groups, select_tables_per_group)[0]
+        return self.read_items(
+            [id],
+            select_table_groups,
+            select_tables_per_group,
+        )[0]
 
     def get_items(
         self,
@@ -284,6 +303,7 @@ class Dataset(BaseModel):
 
         Args:
             offset (int): Offset
+            limit (int): Limit
             limit (int): Limit
             select_table_groups (list[str], optional): Table groups to read
             select_tables_per_group (list[str], optional): Tables to read per group
@@ -308,8 +328,21 @@ class Dataset(BaseModel):
             ](**row)
             for row in item_rows
         ]
+        items_models = [
+            _TABLE_TYPE_REGISTRY[
+                self.dataset_schema.schemas[TableGroup.ITEM.value][
+                    TableGroup.ITEM.value
+                ]
+            ](**row)
+            for row in item_rows
+        ]
 
         if select_table_groups:
+            select_table_groups = [
+                TableGroup(table_group) if isinstance(table_group, str) else table_group
+                for table_group in select_table_groups
+                if TableGroup(table_group) != TableGroup.ITEM
+            ]
             select_table_groups = [
                 TableGroup(table_group) if isinstance(table_group, str) else table_group
                 for table_group in select_table_groups
@@ -329,11 +362,17 @@ class Dataset(BaseModel):
             select_table_groups,
             select_tables_per_group,
         )
+        data_dict = self._get_items_data(
+            [item.id for item in items_models],
+            select_table_groups,
+            select_tables_per_group,
+        )
 
         for item in items_models:
             data_dict[item.id][TableGroup.ITEM.value] = {}
             data_dict[item.id][TableGroup.ITEM.value][TableGroup.ITEM.value] = item
 
+        dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in data_dict.keys()]
         dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in data_dict.keys()]
 
         return dataset_items
