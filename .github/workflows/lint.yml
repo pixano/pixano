@@ -84,12 +84,4 @@ jobs:
 
       - name: Lint backend code with Ruff
         run: |
-          ruff check pixano/ --fix
-
-      - name: Lint backend tests with Pylint
-        run: |
-          pylint tests/ --rcfile .github/workflows/.pylintrc --disable=R0801
-
-      - name: Lint Jupyter notebooks with Pylint
-        run: |
-          pylint notebooks/ --rcfile .github/workflows/.pylintrc
+          ruff check --fix

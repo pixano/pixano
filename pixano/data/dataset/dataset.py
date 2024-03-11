@@ -66,9 +66,9 @@ class Dataset(BaseModel):
         """
         info_file = path / "info.json"
         schema_file = path / "schema.json"
-        features_values_file = path / "features_values.json"  # noqa: F841
-        stats_file = path / "stats.json"  # noqa: F841
-        thumb_file = path / "preview.png"  # noqa: F841
+        features_values_file = path / "features_values.json"
+        stats_file = path / "stats.json"
+        thumb_file = path / "preview.png"
 
         super().__init__(
             path=path,
@@ -214,9 +214,6 @@ class Dataset(BaseModel):
                 lance_query = self._search_values_by_field_in_table(
                     table, item_id_field, sql_ids
                 )
-                lance_query = self._search_values_by_field_in_table(
-                    table, item_id_field, sql_ids
-                )
                 pydantic_table = lance_query.to_pydantic(table_type)
 
                 for row in pydantic_table:
@@ -228,10 +225,6 @@ class Dataset(BaseModel):
         # Raise error if some ids are not found
         ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
         if len(ids_not_found) > 0:
-            raise ValueError(
-                f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
-            )
-
             raise ValueError(
                 f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
             )
@@ -254,10 +247,6 @@ class Dataset(BaseModel):
             list[DatasetItem] | DatasetItem: Dataset items
         """
         if select_table_groups:
-            select_table_groups = [
-                TableGroup(table_group) if isinstance(table_group, str) else table_group
-                for table_group in select_table_groups
-            ]
             select_table_groups = [
                 TableGroup(table_group) if isinstance(table_group, str) else table_group
                 for table_group in select_table_groups
@@ -328,21 +317,8 @@ class Dataset(BaseModel):
             ](**row)
             for row in item_rows
         ]
-        items_models = [
-            _TABLE_TYPE_REGISTRY[
-                self.dataset_schema.schemas[TableGroup.ITEM.value][
-                    TableGroup.ITEM.value
-                ]
-            ](**row)
-            for row in item_rows
-        ]
 
         if select_table_groups:
-            select_table_groups = [
-                TableGroup(table_group) if isinstance(table_group, str) else table_group
-                for table_group in select_table_groups
-                if TableGroup(table_group) != TableGroup.ITEM
-            ]
             select_table_groups = [
                 TableGroup(table_group) if isinstance(table_group, str) else table_group
                 for table_group in select_table_groups
@@ -362,17 +338,11 @@ class Dataset(BaseModel):
             select_table_groups,
             select_tables_per_group,
         )
-        data_dict = self._get_items_data(
-            [item.id for item in items_models],
-            select_table_groups,
-            select_tables_per_group,
-        )
 
         for item in items_models:
             data_dict[item.id][TableGroup.ITEM.value] = {}
             data_dict[item.id][TableGroup.ITEM.value][TableGroup.ITEM.value] = item
 
-        dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in data_dict.keys()]
         dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in data_dict.keys()]
 
         return dataset_items
@@ -382,7 +352,7 @@ class Dataset(BaseModel):
         num_item: int,
         select_table_groups: Optional[list[TableGroup | str]] = None,
         select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> DatasetItem:
+    ) -> DatasetItem:  # type: ignore
         """Get items from dataset.
 
         Args:
