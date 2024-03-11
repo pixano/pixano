@@ -18,12 +18,15 @@ from lancedb.pydantic import LanceModel
 # from ...core import pydantic_utils
 from ...core import types as pix_types
 
+
 DEFAULT_DATASET_INFO_FILE = "db.json"
 DEFAULT_DATASET_PATH = "db"
 DEFAULT_PREVEWS_PATH = "previews"
 
 
 class TableType(Enum):
+    """TableType."""
+
     ITEM = "item"
     RGB_IMAGE = "image"
     RGB_SEQUENCE = "rgb_sequence"
@@ -32,11 +35,13 @@ class TableType(Enum):
     PCL_SEQUENCE = "pcl_sequence"
     OBJECT = "object"
 
-    def __str__(self):
+    def __str__(self):  # noqa: D105
         return self.value
 
 
 class DatasetInfo(pydantic.BaseModel):
+    """DatasetInfo."""
+
     # initial metadata set by the user from config file or dict
     name: str
     description: Optional[str] = None
@@ -50,13 +55,21 @@ class DatasetInfo(pydantic.BaseModel):
 
     @classmethod
     def from_json(cls, path: os.PathLike):
+        """Read DatasetInfo from JSON file."""
         with open(path, "r") as f:
             data = json.load(f)
         return cls(**data)
 
 
 class Dataset:
-    def __init__(self, path: os.PathLike, info: Optional[DatasetInfo] = None):
+    """Dataset.
+
+    Args:
+        path (os.PathLike): Dataset path
+        info (Optional[DatasetInfo], optional): Dataset info. Defaults to None.
+    """
+
+    def __init__(self, path: os.PathLike, info: Optional[DatasetInfo] = None):  # noqa: D107
         self._path = pathlib.Path(path)
         self._db = lancedb.connect(self._path / DEFAULT_DATASET_PATH)
 
@@ -71,8 +84,17 @@ class Dataset:
 
 
 class BaseDatasetBuilder(abc.ABC):
+    """BaseDatasetBuilder.
 
-    def __init__(
+    Args:
+        source_dir (os.PathLike): Source directory
+        target_dir (os.PathLike): Target directory
+        schemas (dict[str, Any]): Schemas
+        info (DatasetInfo): Dataset info
+        mode (str, optional): Mode. Defaults to "create".
+    """
+
+    def __init__(  # noqa: D107
         self,
         source_dir: os.PathLike,
         target_dir: os.PathLike,
@@ -91,8 +113,7 @@ class BaseDatasetBuilder(abc.ABC):
         self._mode = mode
         # self._info = info.model_copy(update={"id": shortuuid.uuid()})
 
-    def build(self) -> Dataset:
-
+    def build(self) -> Dataset:  # noqa: D102
         self._create_tables(self._schemas)
 
         # todo asset item in schema keys
@@ -122,7 +143,8 @@ class BaseDatasetBuilder(abc.ABC):
             for views in view_batch:
                 for view_id, view_data in views.items():
                     if isinstance(view_data, list) and isinstance(view_data[0], list):
-                        # sequence case (like SequenceFrame): each item view have a list of media
+                        # sequence case (like SequenceFrame): each item view have
+                        # a list of media
                         for frame in view_data:
                             view_tables[view_id].add(frame)
                     else:
@@ -141,18 +163,19 @@ class BaseDatasetBuilder(abc.ABC):
 
         # return self._create_dataset()
 
-    def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
-        items_table = self._db.open_table(TableType.ITEM).to_lance()
+    def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):  # noqa: D102
+        items_table = self._db.open_table(TableType.ITEM).to_lance()  # noqa: F841
         ids_and_views = duckdb.query("SELECT id, views FROM items_table").to_df()
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            sequences_table = self._db.open_table(TableType.RGB_SEQUENCE).to_lance()
+            sequences_table = self._db.open_table(TableType.RGB_SEQUENCE).to_lance()  # noqa: F841
 
             futures = []
             for _, row in ids_and_views.iterrows():
                 for n, view_id in enumerate(row["views"]["ids"]):
                     im_urls = duckdb.query(
-                        f"SELECT url FROM sequences_table WHERE item_id LIKE '{row['id']}' AND view_id LIKE '{view_id}' ORDER BY timestamp "
+                        "SELECT url FROM sequences_table WHERE item_id LIKE "
+                        f"'{row['id']}' AND view_id LIKE '{view_id}' ORDER BY timestamp"
                     ).to_df()
                     im_urls = im_urls["url"].tolist()
                     previews_path = self._previews_path / f"{row['views']['names'][n]}"
@@ -161,7 +184,7 @@ class BaseDatasetBuilder(abc.ABC):
                     output_path = previews_path / f"{row['id']}.mp4"
                     futures.append(
                         executor.submit(
-                            sequence_utils.create_video_preview,
+                            sequence_utils.create_video_preview,  # noqa: F821
                             output_path,
                             im_urls,
                             fps=fps,
@@ -180,7 +203,7 @@ class BaseDatasetBuilder(abc.ABC):
     def _read_items(self) -> Iterator[list[pix_types.Item]]:
         raise NotImplementedError
 
-    def read_views_for_items(
+    def read_views_for_items(  # noqa: D102
         self, items: list[pix_types.Item]
     ) -> Iterator[dict[str, list]]:
         pass
@@ -191,8 +214,7 @@ class BaseDatasetBuilder(abc.ABC):
     #     pass
 
     def _create_table_element(self, klass: TableType, **kwargs) -> LanceModel:
-        """
-        Create an instance of the given class with the provided keyword arguments.
+        """Create an instance of the given class with the provided keyword arguments.
 
         Args:
             klass (type): The class type to instantiate.
@@ -202,7 +224,8 @@ class BaseDatasetBuilder(abc.ABC):
             object: An instance of the given class.
 
         Raises:
-            ValueError: If the class type is unknown or if no schema is defined for the class type.
+            ValueError: If the class type is unknown or if no schema is defined for
+                the class type.
         """
         if klass not in self._schemas:
             raise ValueError(f"Unknown type: {type}")

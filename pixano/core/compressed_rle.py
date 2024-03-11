@@ -29,7 +29,7 @@ from pixano.utils import (
 
 
 class CompressedRLE(PixanoType, BaseModel):
-    """Compressed RLE mask type
+    """Compressed RLE mask type.
 
     Attributes:
         _size (list[int]): Mask size
@@ -40,13 +40,12 @@ class CompressedRLE(PixanoType, BaseModel):
     _counts: bytes = PrivateAttr()
 
     def __init__(self, size: list[int], counts: bytes):
-        """Initalize compressed RLE mask
+        """Initalize compressed RLE mask.
 
         Args:
             size (list[int]): Mask size
             counts (bytes): Mask RLE encoding
         """
-
         # Define public attributes through Pydantic BaseModel
         super().__init__()
 
@@ -56,54 +55,49 @@ class CompressedRLE(PixanoType, BaseModel):
 
     @property
     def size(self) -> list[int]:
-        """Return mask size
+        """Return mask size.
 
         Returns:
             list[int]: Mask size
         """
-
         return self._size
 
     @property
     def counts(self) -> bytes:
-        """Return mask RLE encoding
+        """Return mask RLE encoding.
 
         Returns:
             bytes: Mask RLE encoding
         """
-
         return self._counts if not None else b""
 
     def to_mask(self) -> np.ndarray:
-        """Convert compressed RLE mask to NumPy array
+        """Convert compressed RLE mask to NumPy array.
 
         Returns:
             np.ndarray: Mask as NumPy array
         """
-
         return rle_to_mask(self.to_dict())
 
     def to_urle(self) -> dict[str, list[int]]:
-        """Convert compressed RLE mask to uncompressed RLE
+        """Convert compressed RLE mask to uncompressed RLE.
 
         Returns:
             dict[str, list[int]]: Mask as uncompressed RLE
         """
-
         return rle_to_urle(self.to_dict())
 
     def to_polygons(self) -> list[list]:
-        """Convert compressed RLE mask to poylgons
+        """Convert compressed RLE mask to poylgons.
 
         Returns:
             list[list]: Mask as polygons
         """
-
         return rle_to_polygons(self.to_dict())
 
     @staticmethod
     def from_mask(mask: Image.Image | np.ndarray) -> "CompressedRLE":
-        """Create compressed RLE mask from NumPy array
+        """Create compressed RLE mask from NumPy array.
 
         Args:
             mask (Image.Image | np.ndarray): Mask as NumPy array
@@ -111,12 +105,11 @@ class CompressedRLE(PixanoType, BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(mask_to_rle(mask))
 
     @staticmethod
     def from_urle(urle: dict[str, list[int]]) -> "CompressedRLE":
-        """Create compressed RLE mask from uncompressed RLE
+        """Create compressed RLE mask from uncompressed RLE.
 
         Args:
             urle (dict[str, list[int]]): Mask as uncompressed RLE
@@ -124,7 +117,6 @@ class CompressedRLE(PixanoType, BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(urle_to_rle(urle))
 
     @staticmethod
@@ -133,7 +125,7 @@ class CompressedRLE(PixanoType, BaseModel):
         height: int,
         width: int,
     ) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons
+        """Create compressed RLE mask from polygons.
 
         Args:
             polygons (list[list]): Mask as polygons
@@ -143,34 +135,32 @@ class CompressedRLE(PixanoType, BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(polygons_to_rle(polygons, height, width))
 
     @staticmethod
     def encode(
         mask: list[list] | dict[str, list[int]], height: int, width: int
     ) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE
+        """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
 
         Args:
-            mask (list[list] | dict[str, list[int]]): Mask as polygons / uncompressed RLE / compressed RLE
+            mask (list[list] | dict[str, list[int]]):
+                Mask as polygons / uncompressed RLE / compressed RLE
             height (int): Image height
             width (int): Image width
 
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(encode_rle(mask, height, width))
 
     @staticmethod
     def to_struct() -> pa.StructType:
-        """Return CompressedRLE type as PyArrow Struct
+        """Return CompressedRLE type as PyArrow Struct.
 
         Returns:
             pa.StructType: Custom type corresponding PyArrow Struct
         """
-
         return pa.struct(
             [
                 pa.field("size", pa.list_(pa.int32(), list_size=2)),

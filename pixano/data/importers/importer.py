@@ -33,7 +33,7 @@ from pixano.utils import estimate_size
 
 
 class Importer(ABC):
-    """Dataset Importer class
+    """Dataset Importer class.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -51,7 +51,7 @@ class Importer(ABC):
         splits: list[str],
         categories: list[DatasetCategory] = None,
     ):
-        """Initialize Importer
+        """Initialize Importer.
 
         Args:
             name (str): Dataset name
@@ -60,7 +60,6 @@ class Importer(ABC):
             splits (list[str]): Dataset splits
             categories (list[DatasetCategory], optional): Dataset categories
         """
-
         # Check input directories
         for source_path in self.input_dirs.values():
             if not source_path.exists():
@@ -83,7 +82,7 @@ class Importer(ABC):
     def create_tables(
         self, media_fields: dict[str, str] = None, object_fields: dict[str, str] = None
     ):
-        """Create dataset tables
+        """Create dataset tables.
 
         Args:
             media_fields (dict[str, str], optional): Media fields. Defaults to None.
@@ -92,7 +91,6 @@ class Importer(ABC):
         Returns:
             dict[str, list[DatasetTable]]: Tables
         """
-
         if media_fields is None:
             media_fields = {"image": "image"}
 
@@ -149,13 +147,12 @@ class Importer(ABC):
         import_dir: Path,
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
     ):
-        """Create dataset preview image
+        """Create dataset preview image.
 
         Args:
             import_dir (Path): Import directory
             ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
         """
-
         # Get list of image fields
         if "media" in ds_tables:
             if "image" in ds_tables["media"]:
@@ -186,14 +183,13 @@ class Importer(ABC):
         ds_tables: dict[str, dict[str, lancedb.db.LanceTable]],
         copy: bool,
     ):
-        """Copy or move dataset files
+        """Copy or move dataset files.
 
         Args:
             import_dir (Path): Import directory
             ds_tables (dict[str, dict[str, lancedb.db.LanceTable]]): Dataset tables
             copy (bool): True to copy files, False to move them
         """
-
         if copy:
             for table in tqdm(
                 ds_tables["media"].values(), desc="Copying media directories"
@@ -220,7 +216,7 @@ class Importer(ABC):
 
     @abstractmethod
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows
@@ -231,16 +227,16 @@ class Importer(ABC):
         import_dir: Path,
         copy: bool = True,
     ) -> Dataset:
-        """Import dataset to Pixano format
+        """Import dataset to Pixano format.
 
         Args:
             import_dir (Path): Import directory
-            copy (bool, optional): True to copy files to the import directory, False to move them. Defaults to True.
+            copy (bool, optional): True to copy files to the import directory,
+                False to move them. Defaults to True.
 
         Returns:
             Dataset: Imported dataset
         """
-
         # Create dataset
         dataset = Dataset.create(import_dir, self.info)
 
@@ -302,7 +298,9 @@ class Importer(ABC):
         # Raise error if generated dataset is empty
         if len(ds_tables["main"]["db"]) == 0:
             raise FileNotFoundError(
-                "Generated dataset is empty. Please make sure that the paths to your media files are correct, and that they each contain subfolders for your splits."
+                "Generated dataset is empty. Please make sure that the paths to your "
+                "media files are correct, and that they each contain subfolders for "
+                "your splits."
             )
 
         # Create DatasetInfo

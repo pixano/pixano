@@ -22,7 +22,7 @@ from pycocotools import mask as mask_api
 
 
 def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
-    """Encode image from Pillow to binary
+    """Encode image from Pillow to binary.
 
     Args:
         image (Image.Image): Image as Pillow
@@ -31,7 +31,6 @@ def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
     Returns:
         bytes: Image as binary
     """
-
     if image is None:
         return None
 
@@ -43,7 +42,7 @@ def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
 
 
 def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
-    """Generate image thumbnail
+    """Generate image thumbnail.
 
     Args:
         image (bytes | Image.Image): Image as binary or as Pillow
@@ -51,7 +50,6 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     Returns:
         bytes: Image thumbnail as binary
     """
-
     if isinstance(image, bytes):
         image = Image.open(BytesIO(image))
 
@@ -60,7 +58,7 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
 
 
 def binary_to_url(im_bytes: bytes) -> str:
-    """Encode image from binary to base 64 URL
+    """Encode image from binary to base 64 URL.
 
     Args:
         im_bytes (bytes): Image as binary
@@ -68,7 +66,6 @@ def binary_to_url(im_bytes: bytes) -> str:
     Returns:
         str: Image base 64 URL
     """
-
     if im_bytes is not None:
         encoded = base64.b64encode(im_bytes).decode("utf-8")
         return f"data:image;base64,{encoded}"
@@ -76,7 +73,7 @@ def binary_to_url(im_bytes: bytes) -> str:
 
 
 def depth_file_to_binary(depth_path: str) -> bytes:
-    """Encode depth file to RGB image in binary
+    """Encode depth file to RGB image in binary.
 
     Args:
         depth_path (str): Depth file path
@@ -84,7 +81,6 @@ def depth_file_to_binary(depth_path: str) -> bytes:
     Returns:
         bytes: Depth file as RGB image in binary
     """
-
     depth = cv2.imread(depth_path, cv2.IMREAD_ANYDEPTH).astype(np.float32)
     depth = depth_array_to_gray(depth)
     depth_rgb = Image.fromarray(depth)
@@ -98,7 +94,7 @@ def depth_array_to_gray(
     valid_end: float = 1,
     scale: float = 1.0,
 ) -> np.ndarray:
-    """Encode depth array to gray levels
+    """Encode depth array to gray levels.
 
     Args:
         depth (np.ndarray): Depth array
@@ -109,7 +105,6 @@ def depth_array_to_gray(
     Returns:
         np.ndarray: Depth array in gray levels
     """
-
     mask = depth > 1
 
     # Scale gives depth in mm
@@ -129,7 +124,7 @@ def depth_array_to_gray(
 
 
 def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
-    """Encode mask from polygons / uncompressed RLE / RLE to RLE
+    """Encode mask from polygons / uncompressed RLE / RLE to RLE.
 
     Args:
         mask (list[list] | dict): Mask as polygons / uncompressed RLE / RLE
@@ -139,7 +134,6 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
     Returns:
         dict: Mask as RLE
     """
-
     if isinstance(mask, list):
         return polygons_to_rle(mask, height, width)
     if isinstance(mask, dict):
@@ -150,7 +144,7 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
 
 
 def mask_to_rle(mask: Image.Image) -> dict:
-    """Encode mask from Pillow or NumPy array to RLE
+    """Encode mask from Pillow or NumPy array to RLE.
 
     Args:
         mask (Image.Image): Mask as Pillow or NumPy array
@@ -158,7 +152,6 @@ def mask_to_rle(mask: Image.Image) -> dict:
     Returns:
         dict: Mask as RLE
     """
-
     if mask is not None:
         mask_array = np.asfortranarray(mask)
         return mask_api.encode(mask_array)
@@ -166,7 +159,7 @@ def mask_to_rle(mask: Image.Image) -> dict:
 
 
 def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
-    """Decode mask from RLE to NumPy array
+    """Decode mask from RLE to NumPy array.
 
     Args:
         rle (dict[str, list[int] | bytes]): Mask as RLE
@@ -174,14 +167,13 @@ def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
     Returns:
         np.ndarray: Mask as NumPy array
     """
-
     if rle is not None:
         return mask_api.decode(rle)
     return None
 
 
 def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
-    """Encode mask from polygons to RLE
+    """Encode mask from polygons to RLE.
 
     Args:
         polygons (list[list]): Mask as polygons
@@ -191,7 +183,6 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
     Returns:
         dict: Mask as RLE
     """
-
     if polygons is not None:
         rles = mask_api.frPyObjects(polygons, height, width)
         return mask_api.merge(rles)
@@ -199,7 +190,7 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
 
 
 def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
-    """Encode mask from RLE to polygons
+    """Encode mask from RLE to polygons.
 
     Args:
         rle (dict[str, list[int] | bytes]): Mask as RLE
@@ -207,7 +198,6 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
     Returns:
         list[list]: Mask as polygons
     """
-
     if rle is not None and "size" in rle:
         h, w = rle["size"]
         polygons, _ = mask_to_polygons(rle_to_mask(rle))
@@ -222,7 +212,7 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
 
 
 def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
-    """Encode mask from NumPy array to polygons
+    """Encode mask from NumPy array to polygons.
 
     Args:
         mask (np.ndarray): Mask as NumPy array
@@ -231,12 +221,12 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
         list[list]: Mask as polygons
         bool: True if mask has holes
     """
-
     if mask is not None:
         # Some versions of cv2 does not support incontiguous arr
         mask = np.ascontiguousarray(mask)
 
-        # cv2.RETR_CCOMP flag retrieves all the contours and arranges them to a 2-level hierarchy.
+        # cv2.RETR_CCOMP flag retrieves all the contours and arranges them
+        # to a 2-level hierarchy.
         # External contours (boundary) of the object are placed in hierarchy-1.
         # Internal contours (holes) are placed in hierarchy-2.
         # cv2.CHAIN_APPROX_NONE flag gets vertices of polygons from contours.
@@ -269,7 +259,7 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
 
 
 def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
-    """Encode mask from uncompressed RLE to RLE
+    """Encode mask from uncompressed RLE to RLE.
 
     Args:
         urle (dict[str, list[int]]): Mask as uncompressed RLE
@@ -277,7 +267,6 @@ def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
     Returns:
         dict[str, list[int] | bytes]: Mask as RLE
     """
-
     if urle is not None:
         height, width = urle["size"]
         return mask_api.frPyObjects(urle, height, width)
@@ -285,7 +274,7 @@ def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
 
 
 def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
-    """Encode mask from RLE to uncompressed RLE
+    """Encode mask from RLE to uncompressed RLE.
 
     Args:
         rle (dict[str, list[int] | bytes]): Mask as RLE
@@ -293,7 +282,6 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     Returns:
         dict[str, list[int]]: Mask as uncompressed RLE
     """
-
     if rle is not None and rle["counts"] is not None:
         mask = rle_to_mask(rle)
         urle = {"counts": [], "size": list(mask.shape)}

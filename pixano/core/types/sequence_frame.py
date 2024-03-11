@@ -13,14 +13,13 @@
 
 
 from .image import Image
-
 from .registry import _register_table_type_internal
+
 
 @_register_table_type_internal()
 class SequenceFrame(Image):
-    """Sequence Frame Lance Model"""
+    """Sequence Frame Lance Model."""
 
     sequence_id: str
     timestamp: float
     frame_index: int
-

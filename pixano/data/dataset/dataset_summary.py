@@ -22,7 +22,7 @@ from pixano.core import Image
 
 
 class DatasetSummary(BaseModel):
-    """DatasetSummary
+    """DatasetSummary.
 
     Attributes:
         id (str): Dataset ID
@@ -45,19 +45,17 @@ class DatasetSummary(BaseModel):
     _path: Path | S3Path = PrivateAttr()
 
     def save(self):
-        """Save DatasetSummary to json file"""
-
+        """Save DatasetSummary to json file."""
         with open(self._path / "summary.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
-    
+
     def load(self):
-        """Load DatasetSummary from json file"""
-        
+        """Load DatasetSummary from json file."""
         with open(self._path / "summary.json", "r", encoding="utf-8") as f:
             summary_json = json.load(f)
-        
+
         summary = DatasetSummary.model_validate(summary_json)
-        
+
         return summary
 
     @staticmethod
@@ -65,7 +63,7 @@ class DatasetSummary(BaseModel):
         json_fp: Path | S3Path,
         load_thumbnail: bool = False,
     ) -> "DatasetSummary":
-        """Read DatasetSummary from JSON file
+        """Read DatasetSummary from JSON file.
 
         Args:
             json_fp (Path | S3Path): JSON file path
@@ -74,7 +72,6 @@ class DatasetSummary(BaseModel):
         Returns:
             DatasetSummary: DatasetSummary
         """
-
         if isinstance(json_fp, S3Path):
             with json_fp.open(encoding="utf-8") as json_file:
                 summary_json = json.load(json_file)
@@ -103,7 +100,7 @@ class DatasetSummary(BaseModel):
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetSummary"]:
-        """Load list of DatasetSummary from directory
+        """Load list of DatasetSummary from directory.
 
         Args:
             directory (Path | S3Path): Directory to load
@@ -113,7 +110,6 @@ class DatasetSummary(BaseModel):
         Returns:
             list[DatasetSummary]: List of DatasetSummary
         """
-
         summarys = []
 
         # Browse directory

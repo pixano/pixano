@@ -8,13 +8,22 @@ from . import base_dataset_builder
 
 
 class ImageDatasetBuilder(base_dataset_builder.BaseDatasetBuilder):
+    """ImageDatasetBuilder."""
 
-    def __init__(self, source_dir, target_dir, schemas, info, mode="create"):
+    def __init__(self, source_dir, target_dir, schemas, info, mode="create"):  # noqa: D107
         super().__init__(source_dir, target_dir, schemas, info, mode=mode)
 
     def _read_items(self) -> Iterator[list[pix_types.Item]]:
         for f in self._source_dir.glob("**/*"):
-            if f.is_file() and f.suffix in [".jpg", ".jpeg", ".png", ".gif", ".tif", ".svg", ".bmp"]:
+            if f.is_file() and f.suffix in [
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".gif",
+                ".tif",
+                ".svg",
+                ".bmp",
+            ]:
                 split = f.parent.stem
                 parts = list(f.parts)
                 view_file = "/".join(parts[-2:])

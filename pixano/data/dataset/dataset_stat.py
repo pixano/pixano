@@ -21,7 +21,7 @@ from s3path import S3Path
 
 
 class DatasetStat(BaseModel):
-    """DatasetStat
+    """DatasetStat.
 
     Attributes:
         name (str): Stats name
@@ -36,7 +36,7 @@ class DatasetStat(BaseModel):
 
     @staticmethod
     def from_json(json_fp: Path | S3Path) -> list["DatasetStat"]:
-        """Read list of DatasetStats from JSON file
+        """Read list of DatasetStats from JSON file.
 
         Args:
             json_fp (Path | S3Path): JSON file path
@@ -44,7 +44,6 @@ class DatasetStat(BaseModel):
         Returns:
             list[DatasetStats]: List of DatasetStat
         """
-
         if isinstance(json_fp, S3Path):
             with json_fp.open(encoding="utf-8") as json_file:
                 stats_json = json.load(json_file)
@@ -56,12 +55,11 @@ class DatasetStat(BaseModel):
 
     def save(self, save_dir: Path | S3Path):
         """Save DatasetInfo to json file
-           replace existing histogram with same name in json_fp
+           replace existing histogram with same name in json_fp.
 
         Args:
             save_dir (Path | S3Path): Save directory
         """
-
         try:
             if isinstance(save_dir, S3Path):
                 with (save_dir / "stats.json").open(encoding="utf-8") as json_file:

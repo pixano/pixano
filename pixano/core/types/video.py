@@ -12,12 +12,14 @@
 # http://www.cecill.info
 
 
+from .registry import _register_table_type_internal
 from .view import View
 
-from .registry import _register_table_type_internal
 
 @_register_table_type_internal()
 class Video(View):
+    """Video Lance Model."""
+
     url: str
     num_frames: int
     fps: float

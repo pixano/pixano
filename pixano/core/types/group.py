@@ -14,13 +14,15 @@
 
 from enum import Enum
 
-from .view import View
-from .object import Object
-from .item import Item
 from .embedding import Embedding
+from .item import Item
+from .object import Object
+from .view import View
 
 
 class TableGroup(Enum):
+    """Table group."""
+
     ITEM = "item"
     VIEW = "views"
     OBJECT = "objects"
@@ -37,5 +39,5 @@ TABLE_GROUP_TYPE_DICT = {
     TableGroup.ITEM: Item,
     TableGroup.VIEW: View,
     TableGroup.OBJECT: Object,
-    TableGroup.EMBEDDING: Embedding
+    TableGroup.EMBEDDING: Embedding,
 }

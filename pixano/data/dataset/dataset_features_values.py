@@ -18,9 +18,8 @@ from pydantic import BaseModel, PrivateAttr
 from s3path import S3Path
 
 
-
 class DatasetFeaturesValues(BaseModel):
-    """DatasetFeaturesValues
+    """DatasetFeaturesValues.
 
     Attributes:
         items (dict[str, list]): Dataset tables
@@ -35,26 +34,24 @@ class DatasetFeaturesValues(BaseModel):
     _path: Path | S3Path = PrivateAttr()
 
     def save(self):
-        """Save DatasetFeaturesValues to json file"""
-
+        """Save DatasetFeaturesValues to json file."""
         with open(self._path / "features_values.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
 
     def load(self):
-        """Load DatasetFeaturesValues from json file"""
-        
+        """Load DatasetFeaturesValues from json file."""
         with open(self._path / "schema.json", "r", encoding="utf-8") as f:
             schema_json = json.load(f)
-        
+
         schema = DatasetFeaturesValues.model_validate(schema_json)
-        
+
         return schema
 
     @staticmethod
     def from_json(
         json_fp: Path | S3Path,
     ) -> "DatasetFeaturesValues":
-        """Read DatasetFeaturesValues from JSON file
+        """Read DatasetFeaturesValues from JSON file.
 
         Args:
             json_fp (Path | S3Path): JSON file path
@@ -62,17 +59,14 @@ class DatasetFeaturesValues(BaseModel):
         Returns:
             DatasetFeaturesValues: DatasetFeaturesValues
         """
-
         if isinstance(json_fp, S3Path):
             with json_fp.open(encoding="utf-8") as json_file:
                 features_values_json = json.load(json_file)
         else:
             with open(json_fp, encoding="utf-8") as json_file:
                 features_values_json = json.load(json_file)
-        
 
         features_values_json["_path"] = json_fp.parent
         features_values = DatasetFeaturesValues.model_validate(features_values_json)
 
         return features_values
-

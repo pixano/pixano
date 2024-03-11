@@ -19,7 +19,7 @@ from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class GtInfo(PixanoType, BaseModel):
-    """GtInfo type
+    """GtInfo type.
 
     Attributes:
         bbox_obj (BBox): bbox_obj
@@ -46,7 +46,7 @@ class GtInfo(PixanoType, BaseModel):
         px_count_visib: int,
         visib_fract: float,
     ):
-        """Initialize GtInfo
+        """Initialize GtInfo.
 
         Args:
             bbox_obj (BBox): bbox_obj
@@ -56,7 +56,6 @@ class GtInfo(PixanoType, BaseModel):
             px_count_visib (int): px_count_visib
             visib_fract (float): visib_fract
         """
-
         # Define public attributes through Pydantic BaseModel
         super().__init__(
             bbox_obj=bbox_obj,
@@ -69,12 +68,11 @@ class GtInfo(PixanoType, BaseModel):
 
     @staticmethod
     def to_struct() -> pa.StructType:
-        """Return GtInfo type as PyArrow Struct
+        """Return GtInfo type as PyArrow Struct.
 
         Returns:
             pa.StructType: Custom type corresponding PyArrow Struct
         """
-
         return pa.struct(
             [
                 pa.field("bbox_obj", BBoxType),

@@ -26,7 +26,7 @@ from pixano.utils import image_to_thumbnail, natural_key
 
 
 class COCOImporter(Importer):
-    """Importer class for COCO instances format datasets
+    """Importer class for COCO instances format datasets.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -41,16 +41,16 @@ class COCOImporter(Importer):
         splits: list[str],
         media_fields: dict[str, str] = None,
     ):
-        """Initialize COCO Importer
+        """Initialize COCO Importer.
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
             input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
-            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to None.
+            media_fields (dict[str, str]): Dataset media fields, with field names as
+                keys and field types as values. Default to None.
         """
-
         # Create tables
         tables = super().create_tables(
             media_fields,
@@ -77,12 +77,11 @@ class COCOImporter(Importer):
         super().__init__(name, description, tables, splits, categories)
 
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows
         """
-
         # Iterate on splits
         for split in self.info.splits:
             # Open annotation files

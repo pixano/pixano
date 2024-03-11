@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 
 class DatasetTable(BaseModel):
-    """DatasetTable
+    """DatasetTable.
 
     Attributes:
         name (str): Table name

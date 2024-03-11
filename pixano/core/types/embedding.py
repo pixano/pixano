@@ -16,9 +16,10 @@ from lancedb.pydantic import LanceModel
 
 from .registry import _register_table_type_internal
 
+
 @_register_table_type_internal()
 class Embedding(LanceModel):
-    """Embedding Lance Model"""
+    """Embedding Lance Model."""
 
     id: str
     item_id: str

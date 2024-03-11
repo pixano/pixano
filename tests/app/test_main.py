@@ -231,7 +231,8 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response_2.status_code, 200)
 
     def test_get_dataset_item_embeddings(self):
-        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id} endpoint (GET)"""
+        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id}
+        endpoint (GET)"""
 
         response = self.client.get("/datasets/coco_dataset/items/139/embeddings/SAM")
 

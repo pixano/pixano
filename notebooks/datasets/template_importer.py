@@ -21,7 +21,7 @@ from pixano.utils import coco_names_91, image_to_thumbnail
 
 
 class TemplateImporter(Importer):
-    """Template Dataset Importer class template
+    """Template Dataset Importer class template.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -35,7 +35,7 @@ class TemplateImporter(Importer):
         input_dirs: dict[str, Path],
         splits: list[str],
     ):
-        """Initialize Template Importer
+        """Initialize Template Importer.
 
         Args:
             name (str): Dataset name
@@ -43,7 +43,6 @@ class TemplateImporter(Importer):
             input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
         """
-
         tables = {
             "main": [
                 {
@@ -101,12 +100,11 @@ class TemplateImporter(Importer):
         )
 
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows
         """
-
         for split in self.info.splits:
             ##### Retrieve your annotations #####
             annotations = self.input_dirs["objects"] / "......"

@@ -13,10 +13,13 @@
 
 
 from pydantic import BaseModel, create_model
-from pixano.core.types.group import TableGroup, TABLE_GROUP_TYPE_DICT
+
+from pixano.core.types.group import TABLE_GROUP_TYPE_DICT, TableGroup
 
 
 class BaseDatasetItem(BaseModel):
+    """BaseDatasetItem."""
+
     id: str
 
 
@@ -26,6 +29,6 @@ DatasetItem: type[BaseDatasetItem] = create_model(
         table_group.value: (dict[str, TABLE_GROUP_TYPE_DICT[table_group]], None)
         for table_group in TableGroup
     },
-    __base__=BaseDatasetItem
+    __base__=BaseDatasetItem,
 )
 DatasetItem.__doc__ = "DatasetItem"

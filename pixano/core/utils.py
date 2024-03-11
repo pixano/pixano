@@ -17,7 +17,7 @@ from pixano.core.image import ImageType
 
 
 def is_integer(t: pa.DataType) -> bool:
-    """Check if DataType is an integer
+    """Check if DataType is an integer.
 
     Args:
         t (pa.DataType): DataType to check
@@ -25,12 +25,11 @@ def is_integer(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is an integer
     """
-
     return pa.types.is_integer(t)
 
 
 def is_float(t: pa.DataType) -> bool:
-    """Check if DataType is a float
+    """Check if DataType is a float.
 
     Args:
         t (pa.DataType): DataType to check
@@ -38,12 +37,11 @@ def is_float(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is a float
     """
-
     return pa.types.is_floating(t)
 
 
 def is_string(t: pa.DataType) -> bool:
-    """Check if DataType is a string
+    """Check if DataType is a string.
 
     Args:
         t (pa.DataType): DataType to check
@@ -51,12 +49,11 @@ def is_string(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is a string
     """
-
     return pa.types.is_string(t) or pa.types.is_large_string(t)
 
 
 def is_boolean(t: pa.DataType) -> bool:
-    """Check if DataType is boolean
+    """Check if DataType is boolean.
 
     Args:
         t (pa.DataType): DataType to check
@@ -64,12 +61,11 @@ def is_boolean(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is boolean
     """
-
     return pa.types.is_boolean(t)
 
 
 def is_binary(t: pa.DataType) -> bool:
-    """Check if DataType is binary
+    """Check if DataType is binary.
 
     Args:
         t (pa.DataType): DataType to check
@@ -77,12 +73,11 @@ def is_binary(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is binary
     """
-
     return pa.types.is_binary(t)
 
 
 def is_image_type(t: pa.DataType) -> bool:
-    """Check if DataType is an Image
+    """Check if DataType is an Image.
 
     Args:
         t (pa.DataType): DataType to check
@@ -90,7 +85,6 @@ def is_image_type(t: pa.DataType) -> bool:
     Returns:
         bool: True if DataType is an Image
     """
-
     return (
         ImageType.equals(t)
         or str(t) == "struct<uri: string, bytes: binary, preview_bytes: binary>"

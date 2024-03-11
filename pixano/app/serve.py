@@ -25,6 +25,7 @@ from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
 from pixano.data.settings import Settings, get_settings
 
+
 LOGO = """
                              ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒
                            ▒▓▒                                       ▓
@@ -54,7 +55,7 @@ display_functions = {
 
 
 class App:
-    """Pixano app
+    """Pixano app.
 
     Attributes:
         app (fastapi.FastAPI): FastAPI App
@@ -77,15 +78,20 @@ class App:
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
-        """Initialize and run Pixano app
+        """Initialize and run Pixano app.
 
         Args:
             library_dir (str): Local or S3 path to dataset library
-            aws_endpoint (str, optional): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path. Defaults to None.
-            aws_region (str, optional): S3 region name, not always required for private storages. Used if library_dir is an S3 path. Defaults to None.
-            aws_access_key (str, optional): S3 AWS access key. Used if library_dir is an S3 path. Defaults to None.
-            aws_secret_key (str, optional): S3 AWS secret key. Used if library_dir is an S3 path. Defaults to None.
-            local_model_dir (str, optional): Local path to models. Used if library_dir is an S3 path. Defaults to None.
+            aws_endpoint (str, optional): S3 endpoint URL, use 'AWS' if not provided.
+                Used if library_dir is an S3 path. Defaults to None.
+            aws_region (str, optional): S3 region name, not always required for
+                private storages. Used if library_dir is an S3 path. Defaults to None.
+            aws_access_key (str, optional): S3 AWS access key. Used if library_dir is
+                an S3 path. Defaults to None.
+            aws_secret_key (str, optional): S3 AWS secret key. Used if library_dir
+                is an S3 path. Defaults to None.
+            local_model_dir (str, optional): Local path to models. Used if library_dir
+                is an S3 path. Defaults to None.
             host (str, optional): App host. Defaults to "127.0.0.1".
             port (int, optional): App port. Defaults to 8000.
         """
@@ -131,12 +137,11 @@ class App:
         task_functions[self.get_env()](self.server.serve())
 
     def display(self, height: int = 1000) -> None:
-        """Display Pixano app
+        """Display Pixano app.
 
         Args:
             height (int, optional): Frame height. Defaults to 1000.
         """
-
         # Wait for app to be online
         while not self.server.started:
             task_functions[self.get_env()](asyncio.wait(0.1))
@@ -150,16 +155,14 @@ class App:
                 )
 
     def get_env(self) -> str:
-        """Get the app's current running environment
+        """Get the app's current running environment.
 
         Returns:
             str: Running environment
         """
-
         # If Google colab import succeeds
         try:
-            # pylint: disable=import-outside-toplevel, unused-import
-            import google.colab
+            import google.colab  # noqa: F401, I001
             import IPython
         except ImportError:
             pass
@@ -169,7 +172,6 @@ class App:
 
         # If IPython import succeeds
         try:
-            # pylint: disable=import-outside-toplevel
             import IPython
         except ImportError:
             pass
@@ -187,12 +189,18 @@ class App:
 @click.option(
     "--aws_endpoint",
     type=str,
-    help="S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path",
+    help=(
+        "S3 endpoint URL, use 'AWS' if not provided. "
+        "Used if library_dir is an S3 path",
+    ),
 )
 @click.option(
     "--aws_region",
     type=str,
-    help="S3 region name, not always required for private storages. Used if library_dir is an S3 path",
+    help=(
+        "S3 region name, not always required for private storages."
+        "Used if library_dir is an S3 path"
+    ),
 )
 @click.option(
     "--aws_access_key",
@@ -233,11 +241,10 @@ def main(
     host: str,
     port: int,
 ):
-    """Launch Pixano App in LIBRARY_DIR
+    """Launch Pixano App in LIBRARY_DIR.
 
     LIBRARY_DIR is the local or S3 path to your dataset library
     """
-
     App(
         library_dir,
         aws_endpoint,

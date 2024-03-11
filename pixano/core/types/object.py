@@ -18,9 +18,10 @@ from pixano.core import BBox, CompressedRLE
 
 from .registry import _register_table_type_internal
 
+
 @_register_table_type_internal()
 class Object(LanceModel):
-    """Object Lance Model"""
+    """Object Lance Model."""
 
     id: str
     item_id: str

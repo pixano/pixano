@@ -26,7 +26,7 @@ from pixano.data.item.item_feature import FeaturesValues
 
 
 class DatasetInfo(BaseModel):
-    """DatasetInfo
+    """DatasetInfo.
 
     Attributes:
         id (str): Dataset ID
@@ -37,7 +37,8 @@ class DatasetInfo(BaseModel):
         splits (list[str]): Dataset splits
         tables (dict[str, list[DatasetTable]]): Dataset tables
         categories (list[DatasetCategory], optional): Dataset categories
-        features_values: (FeaturesValues, optional): existing values for each custom feature
+        features_values: (FeaturesValues, optional): existing values for each custom
+            feature
         preview (str, optional): Dataset preview
         stats (list[DatasetStat], optional): Dataset stats
     """
@@ -55,12 +56,11 @@ class DatasetInfo(BaseModel):
     stats: Optional[list[DatasetStat]] = None
 
     def save(self, save_dir: Path | S3Path):
-        """Save DatasetInfo to json file
+        """Save DatasetInfo to json file.
 
         Args:
             save_dir (Path | S3Path): Save directory
         """
-
         with open(save_dir / "db.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
 
@@ -70,7 +70,7 @@ class DatasetInfo(BaseModel):
         load_stats: bool = False,
         load_thumbnail: bool = False,
     ) -> "DatasetInfo":
-        """Read DatasetInfo from JSON file
+        """Read DatasetInfo from JSON file.
 
         Args:
             json_fp (Path | S3Path): JSON file path
@@ -80,7 +80,6 @@ class DatasetInfo(BaseModel):
         Returns:
             DatasetInfo: DatasetInfo
         """
-
         if isinstance(json_fp, S3Path):
             with json_fp.open(encoding="utf-8") as json_file:
                 info_json = json.load(json_file)
@@ -114,7 +113,7 @@ class DatasetInfo(BaseModel):
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetInfo"]:
-        """Load list of DatasetInfo from directory
+        """Load list of DatasetInfo from directory.
 
         Args:
             directory (Path | S3Path): Directory to load
@@ -124,7 +123,6 @@ class DatasetInfo(BaseModel):
         Returns:
             list[DatasetInfo]: List of DatasetInfo
         """
-
         infos = []
 
         # Browse directory

@@ -23,7 +23,7 @@ from pixano.utils import image_to_thumbnail, natural_key
 
 
 class ImageImporter(Importer):
-    """Importer class for image datasets
+    """Importer class for image datasets.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -38,16 +38,17 @@ class ImageImporter(Importer):
         splits: list[str] = None,
         media_fields: dict[str, str] = None,
     ):
-        """Initialize Image Importer
+        """Initialize Image Importer.
 
         Args:
             name (str): Dataset name
             description (str): Dataset description
             input_dirs (dict[str, Path]): Dataset input directories
-            splits (list[str], optional): Dataset splits. Defaults to None for datasets with no subfolders for splits.
-            media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to None.
+            splits (list[str], optional): Dataset splits. Defaults to None for datasets
+                with no subfolders for splits.
+            media_fields (dict[str, str]): Dataset media fields, with field names as
+                keys and field types as values. Default to None.
         """
-
         # Create dataset tables
         tables = super().create_tables(media_fields)
 
@@ -60,12 +61,11 @@ class ImageImporter(Importer):
         super().__init__(name, description, tables, splits)
 
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows
         """
-
         for split in self.info.splits:
             # Get images paths
             image_paths = []

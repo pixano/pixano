@@ -11,16 +11,10 @@
 #
 # http://www.cecill.info
 
-from pixano.core.types.item import Item, ViewRecords
 from pixano.core.types.image import Image
-from pixano.core.types.sequence_frame import SequenceFrame
+from pixano.core.types.item import Item, ViewRecords
 from pixano.core.types.registry import register_table_type
+from pixano.core.types.sequence_frame import SequenceFrame
 
 
-__all__ = [
-    "Item",
-    "ViewRecords",
-    "Image",
-    "SequenceFrame",
-    "register_table_type"
-]
+__all__ = ["Item", "ViewRecords", "Image", "SequenceFrame", "register_table_type"]

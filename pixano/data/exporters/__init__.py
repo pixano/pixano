@@ -14,6 +14,7 @@
 from pixano.data.exporters.coco_exporter import COCOExporter
 from pixano.data.exporters.exporter import Exporter
 
+
 __all__ = [
     "Exporter",
     "COCOExporter",
