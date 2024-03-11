@@ -26,6 +26,12 @@ class TableGroup(Enum):
     OBJECT = "objects"
     EMBEDDING = "embeddings"
 
+    @classmethod
+    def _missing_(cls, name):
+        for member in cls:
+            if member.value == name.lower():
+                return member
+
 
 TABLE_GROUP_TYPE_DICT = {
     TableGroup.ITEM: Item,

@@ -18,6 +18,7 @@ import duckdb
 
 import lancedb
 from lancedb.pydantic import LanceModel
+from lancedb.query import LanceQueryBuilder
 from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
@@ -112,7 +113,6 @@ class Dataset(BaseModel):
 
         return lancedb.connect(self._db_path)
 
-
     def open_tables(self) -> dict[TableGroup, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB
 
@@ -145,7 +145,13 @@ class Dataset(BaseModel):
                     return ds.open_table(table_name)
         
         raise ValueError(f"Table {name} not found in dataset")
-
+    
+    def _search_values_by_field_in_table(self, table: lancedb.db.LanceTable, field: str, values: str, limit: Optional[int]= None) -> LanceQueryBuilder:
+        return (
+            table.search().where(
+                f"{field} in {values}",
+            ).limit(limit)
+        )
 
     def read_items(
         self,
@@ -164,10 +170,15 @@ class Dataset(BaseModel):
         """
 
         if select_table_groups:
-            select_table_groups = [TableGroup(table_group.lower()) if isinstance(table_group, str) else table_group for table_group in select_table_groups]
+            select_table_groups = [TableGroup(table_group) if isinstance(table_group, str) else table_group for table_group in select_table_groups]
+            if TableGroup.ITEM not in select_table_groups:
+                select_table_groups.append(TableGroup.ITEM)
+        else:
+            if select_tables_per_group:
+                select_table_groups = [TableGroup.ITEM]
 
         if select_tables_per_group:
-            select_tables_per_group = {TableGroup(table_group.lower()) if isinstance(table_group, str) else table_group: [table.lower() for table in tables] for table_group, tables in select_tables_per_group.items()}
+            select_tables_per_group = {TableGroup(table_group) if isinstance(table_group, str) else table_group: [table.lower() for table in tables] for table_group, tables in select_tables_per_group.items() if TableGroup(table_group) != TableGroup.ITEM}
 
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
@@ -177,31 +188,11 @@ class Dataset(BaseModel):
         # Load tables
         ds_tables = self.open_tables()
 
-        # Load PyArrow item from tables
-        pydantic_items: dict[TableGroup, dict[str, list[LanceModel]]] = defaultdict(dict)
-
-        # Load PyArrow item from items table
-        lance_query = (
-            ds_tables[TableGroup.ITEM][TableGroup.ITEM.value].search().where(
-                f"id in {sql_ids}",
-            ).limit(None)
-        )
-
-        item_type = _TABLE_TYPE_REGISTRY[self.dataset_schema.schemas[TableGroup.ITEM.value][TableGroup.ITEM.value]]
-        pydantic_items[TableGroup.ITEM][TableGroup.ITEM.value] = lance_query.to_pydantic(item_type)
-
-        # Raise error if some ids are not found
-        ids_not_found = []
-        for id in ids:
-            if all(id != pydantic_item.id for pydantic_item in pydantic_items[TableGroup.ITEM][TableGroup.ITEM.value]):
-                ids_not_found.append(id)
-        if len(ids_not_found) > 0:
-            raise ValueError(f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table")
         
-        # Load PyArrow item data from other tables
+        # Load items data from the tables
+        data_dict: dict[str, dict[str, dict[str, LanceModel]]] = {id: {} for id in ids}
         for table_group in ds_tables.keys():
-            if table_group == TableGroup.ITEM:
-                continue
+            item_id_field = "id" if table_group == TableGroup.ITEM else "item_id"
             
             if (select_table_groups and 
                select_tables_per_group and 
@@ -220,24 +211,21 @@ class Dataset(BaseModel):
                 if table_name not in ds_tables[table_group]:
                     raise ValueError(f"Table {table_name} not found in {table_group.value} table group")
                 table = ds_tables[table_group][table_name]
-        
-                lance_query = table.search().where(
-                    f"item_id in {sql_ids}",
-                ).limit(None)
                 table_type = _TABLE_TYPE_REGISTRY[self.dataset_schema.schemas[table_group.value][table_name]]
-                pydantic_items[table_group][table_name] = lance_query.to_pydantic(table_type)
-        
-        # Create DatasetItem from PyArrow items
-        data_dict: dict[str, dict[str, dict[str, LanceModel]]] = {}
-        for table_group, tables in pydantic_items.items():
-            for table_name, table in tables.items():
-                for row in table:
+
+                lance_query = self._search_values_by_field_in_table(table, item_id_field, sql_ids)
+                pydantic_table = lance_query.to_pydantic(table_type)
+
+                for row in pydantic_table:
                     id = row.id if table_group == TableGroup.ITEM else row.item_id
-                    if id not in data_dict:
-                        data_dict[id] = {}
-                    if table_group.value not in data_dict[id]:
+                    if table_group.value not in data_dict[id].keys():
                         data_dict[id][table_group.value] = {}
                     data_dict[id][table_group.value][table_name] = row
+        
+        # Raise error if some ids are not found
+        ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
+        if len(ids_not_found) > 0:
+            raise ValueError(f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table")
         
         dataset_items = [
             DatasetItem(id=id, **data_dict[id])
