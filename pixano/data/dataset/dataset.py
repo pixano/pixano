@@ -152,34 +152,13 @@ class Dataset(BaseModel):
                 f"{field} in {values}",
             ).limit(limit)
         )
-
-    def read_items(
-        self,
-        ids: list[str],
-        select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> list[DatasetItem]: # type: ignore
-        """Read items from dataset.
-
-        Args:
-            ids (list[str]): Item ids
-            select_table_groups (list[str], optional): Table groups to read
-            select_tables_per_group (list[str], optional): Tables to read per group
-        Returns:
-            list[DatasetItem] | DatasetItem: Dataset items
-        """
-
-        if select_table_groups:
-            select_table_groups = [TableGroup(table_group) if isinstance(table_group, str) else table_group for table_group in select_table_groups]
-            if TableGroup.ITEM not in select_table_groups:
-                select_table_groups.append(TableGroup.ITEM)
-        else:
-            if select_tables_per_group:
-                select_table_groups = [TableGroup.ITEM]
-
-        if select_tables_per_group:
-            select_tables_per_group = {TableGroup(table_group) if isinstance(table_group, str) else table_group: [table.lower() for table in tables] for table_group, tables in select_tables_per_group.items() if TableGroup(table_group) != TableGroup.ITEM}
-
+    
+    def _get_items_data(
+        self, 
+        ids: list[str], 
+        select_table_groups: list[TableGroup] = None, 
+        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None
+    ) -> dict[str, dict[str, dict[str, LanceModel]]]:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
         # Reload schema
@@ -221,11 +200,40 @@ class Dataset(BaseModel):
                     if table_group.value not in data_dict[id].keys():
                         data_dict[id][table_group.value] = {}
                     data_dict[id][table_group.value][table_name] = row
-        
+    
         # Raise error if some ids are not found
         ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
         if len(ids_not_found) > 0:
             raise ValueError(f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table")
+        
+        return data_dict
+
+
+    def read_items(
+        self,
+        ids: list[str],
+        select_table_groups: Optional[list[TableGroup | str]] = None,
+        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
+    ) -> list[DatasetItem]: # type: ignore
+        """Read items from dataset.
+
+        Args:
+            ids (list[str]): Item ids
+            select_table_groups (list[str], optional): Table groups to read
+            select_tables_per_group (list[str], optional): Tables to read per group
+        Returns:
+            list[DatasetItem] | DatasetItem: Dataset items
+        """
+
+        if select_table_groups:
+            select_table_groups = [TableGroup(table_group) if isinstance(table_group, str) else table_group for table_group in select_table_groups]
+            if TableGroup.ITEM not in select_table_groups:
+                select_table_groups.append(TableGroup.ITEM)
+        else:
+            if select_tables_per_group:
+                select_table_groups = [TableGroup.ITEM]
+
+        data_dict = self._get_items_data(ids, select_table_groups, select_tables_per_group)
         
         dataset_items = [
             DatasetItem(id=id, **data_dict[id])
@@ -264,14 +272,30 @@ class Dataset(BaseModel):
             list[DatasetItem]: Dataset items
         """
 
-        items_table = self.open_table(TableGroup.ITEM.value).to_lance()
-        ids = duckdb.query(
-            f"SELECT id FROM items_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-        ).to_arrow_table()["id"].to_pylist()
+        item_table = self.open_table(TableGroup.ITEM.value).to_lance()
+        item_rows = duckdb.query(
+            f"SELECT * FROM item_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+        ).to_arrow_table().to_pylist()
 
-        items = self.read_items(ids, select_table_groups, select_tables_per_group)
+        items_models = [_TABLE_TYPE_REGISTRY[self.dataset_schema.schemas[TableGroup.ITEM.value][TableGroup.ITEM.value]](**row) for row in item_rows]
 
-        return items
+        if select_table_groups:
+            select_table_groups = [TableGroup(table_group) if isinstance(table_group, str) else table_group for table_group in select_table_groups  if TableGroup(table_group) != TableGroup.ITEM]
+        if select_tables_per_group:
+            select_tables_per_group = {TableGroup(table_group) if isinstance(table_group, str) else table_group: select_tables for table_group, select_tables in select_tables_per_group.items() if TableGroup(table_group) != TableGroup.ITEM}
+
+        data_dict = self._get_items_data([item.id for item in items_models], select_table_groups, select_tables_per_group)
+
+        for item in items_models:
+            data_dict[item.id][TableGroup.ITEM.value] = {}
+            data_dict[item.id][TableGroup.ITEM.value][TableGroup.ITEM.value] = item
+
+        dataset_items = [
+            DatasetItem(id=id, **data_dict[id])
+            for id in data_dict.keys()
+        ]
+
+        return dataset_items
     
     def get_item(
         self,
