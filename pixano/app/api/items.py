@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 
+from pixano.core.types.group import TableGroup
 from pixano.data import Dataset, DatasetItem, Settings, get_settings
 
 
@@ -28,7 +29,7 @@ async def get_dataset_items(  # noqa: D417
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> Page[DatasetItem]:
+) -> Page[DatasetItem]:  # type: ignore
     """Load dataset items.
 
     Args:
@@ -58,7 +59,7 @@ async def get_dataset_items(  # noqa: D417
             )
 
         # Load dataset items
-        items = dataset.load_items(raw_params.limit, raw_params.offset)
+        items = dataset.get_items(raw_params.offset, raw_params.limit)
 
         # Return dataset items
         if items:
@@ -82,7 +83,7 @@ async def search_dataset_items(  # noqa: D417
     query: dict[str, str],
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> Page[DatasetItem]:
+) -> Page[DatasetItem]:  # type: ignore
     """Load dataset items with a query.
 
     Args:
@@ -129,7 +130,7 @@ async def get_dataset_item(  # noqa: D417
     ds_id: str,
     item_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetItem:
+) -> DatasetItem:  # type: ignore
     """Load dataset item.
 
     Args:
@@ -144,7 +145,10 @@ async def get_dataset_item(  # noqa: D417
 
     if dataset:
         # Load dataset item
-        item = dataset.load_item(item_id, load_objects=True)
+        item = dataset.get_item(
+            item_id,
+            select_table_groups=[TableGroup.VIEW, TableGroup.OBJECT],
+        )
 
         # Return dataset item
         if item:
@@ -162,7 +166,7 @@ async def get_dataset_item(  # noqa: D417
 @router.post("/items/{item_id}", response_model=DatasetItem)
 async def post_dataset_item(  # noqa: D417
     ds_id: str,
-    item: DatasetItem,
+    item: DatasetItem,  # type: ignore
     settings: Annotated[Settings, Depends(get_settings)],
 ):
     """Save dataset item.
@@ -195,7 +199,7 @@ async def get_item_embeddings(  # noqa: D417
     item_id: str,
     model_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetItem:
+) -> DatasetItem:  # type: ignore
     """Load dataset item embeddings.
 
     Args:
@@ -207,12 +211,9 @@ async def get_item_embeddings(  # noqa: D417
     dataset = Dataset.find(ds_id, settings.data_dir)
 
     if dataset:
-        item = dataset.load_item(
+        item = dataset.get_item(
             item_id,
-            load_media=False,
-            load_active_learning=False,
-            load_embeddings=True,
-            model_id=model_id,
+            select_tables_per_group={TableGroup.EMBEDDING: [model_id]},
         )
 
         # Return dataset item embeddings
