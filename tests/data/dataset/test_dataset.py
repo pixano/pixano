@@ -27,14 +27,21 @@ class DatasetTestCase(unittest.TestCase):
     def setUp(self):
         """Tests setup"""
 
-        self.import_dir = Path("tests/assets/output4")
-        self.dataset = Dataset(Path("tests/assets/output4"))
+        self.library_dir = Path("tests/assets")
+        self.dataset_dir = self.library_dir / "output4"
+        self.dataset = Dataset(self.dataset_dir)
 
     def test_path(self):
         """Test Dataset path property"""
 
         self.assertIsInstance(self.dataset.path, Path)
-        self.assertEqual(self.dataset.path, self.import_dir)
+        self.assertEqual(self.dataset.path, self.dataset_dir)
+
+    def test_num_rows(self):
+        """Test Dataset num_rows property"""
+
+        self.assertIsInstance(self.dataset.num_rows, int)
+        self.assertEqual(self.dataset.num_rows, 25)
 
     def test_info(self):
         """Test Dataset info property"""
@@ -121,3 +128,11 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
         self.assertIsInstance(item.views, dict)
+
+    def test_find(self):
+        """Test Dataset find method"""
+
+        found_dataset = Dataset.find("output4", self.library_dir)
+
+        self.assertIsInstance(found_dataset, Dataset)
+        self.assertEqual(found_dataset, self.dataset)

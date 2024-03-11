@@ -84,6 +84,16 @@ class Dataset(BaseModel):
         )
 
     @property
+    def num_rows(self) -> int:
+        """Return number of rows in dataset.
+
+        Returns:
+            int: Number of rows
+        """
+        # Return number of rows of item table
+        return len(self.open_table(TableGroup.ITEM.value))
+
+    @property
     def _media_dir(self) -> Path | S3Path:
         """Return dataset media directory.
 
@@ -365,3 +375,25 @@ class Dataset(BaseModel):
         return self.get_items(
             num_item, 1, select_table_groups, select_tables_per_group
         )[0]
+
+    @staticmethod
+    def find(
+        dataset_id: str,
+        directory: Path | S3Path,
+    ) -> "Dataset":
+        """Find Dataset in directory.
+
+        Args:
+            dataset_id (str): Dataset ID
+            directory (Path): Directory to search in
+
+        Returns:
+            Dataset: Dataset
+        """
+        # Browse directory
+        for json_fp in directory.glob("*/info.json"):
+            info = DatasetInfo.from_json(json_fp)
+            if info.id == dataset_id:
+                # Return dataset
+                return Dataset(json_fp.parent)
+        return None
