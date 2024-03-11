@@ -40,7 +40,8 @@ class DatasetTestCase(unittest.TestCase):
         """Test Dataset info property"""
 
         self.assertIsInstance(self.dataset.info, DatasetInfo)
-        self.assertEqual(self.dataset.info.id, "coco_dataset")
+        self.assertEqual(self.dataset.info.id, "output4")
+        self.assertEqual(self.dataset.info.name, "output4")
 
     def test_open_tables(self):
         """Test Dataset open_tables method"""
