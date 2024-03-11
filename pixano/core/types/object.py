@@ -16,11 +16,14 @@ from lancedb.pydantic import LanceModel
 
 from pixano.core import BBox, CompressedRLE
 
+from .registry import _register_table_type_internal
 
+@_register_table_type_internal()
 class Object(LanceModel):
     """Object Lance Model"""
 
     id: str
+    item_id: str
     view_id: str
     track_id: str
     timestamp: float

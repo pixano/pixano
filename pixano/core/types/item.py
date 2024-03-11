@@ -13,9 +13,9 @@
 
 import pydantic
 from lancedb.pydantic import LanceModel
+from .registry import _register_table_type_internal
 
 
-# TODO add accessor to the view records
 class ViewRecords(pydantic.BaseModel):
     """
     Represents a view record.
@@ -47,9 +47,14 @@ class ViewRecords(pydantic.BaseModel):
         ids = [d["id"] for d in data]
         names = [d["name"] for d in data]
         paths = [d["path"] for d in data]
-        return cls(ids=ids, names=names, paths=paths)
+        return cls(
+            ids=ids,
+            names=names,
+            paths=paths
+        )
 
 
+@_register_table_type_internal()
 class Item(LanceModel):
     """Image Lance Model"""
 

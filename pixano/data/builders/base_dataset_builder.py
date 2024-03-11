@@ -4,17 +4,18 @@ import json
 import os
 import pathlib
 from enum import Enum
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Iterator, Optional
 
 import duckdb
 import lancedb
-import pyarrow as pa
+
+# import pyarrow as pa
 import pydantic
 import tqdm
 from lancedb.pydantic import LanceModel
 
 # from ...... import sequence_utils
-from ...core import pydantic_utils
+# from ...core import pydantic_utils
 from ...core import types as pix_types
 
 DEFAULT_DATASET_INFO_FILE = "db.json"
@@ -111,13 +112,22 @@ class BaseDatasetBuilder(abc.ABC):
             name: self._db.open_table(name) for name in self._schemas["views"].keys()
         }
 
-        for items_batch in items_table_lance.to_batches():
+        for items_batch in tqdm.tqdm(
+            items_table_lance.to_batches(batch_size=20), desc="Import views"
+        ):
             items_batch = items_batch.to_pylist()
             items_batch = [self._schemas["item"](**item) for item in items_batch]
-            views = self._read_views_for_items(items_batch)
+            view_batch = self._read_views_for_items(items_batch)
 
-            for view_name, view_data in views.items():
-                view_tables[view_name].add(view_data)
+            for views in view_batch:
+                for view_id, view_data in views.items():
+                    if isinstance(view_data, list) and isinstance(view_data[0], list):
+                        # sequence case (like SequenceFrame): each item view have a list of media
+                        for frame in view_data:
+                            view_tables[view_id].add(frame)
+                    else:
+                        # one media by view
+                        view_tables[view_id].add(view_data)
 
         # self._info = self._info.model_copy(
         #     update={
@@ -132,7 +142,6 @@ class BaseDatasetBuilder(abc.ABC):
         # return self._create_dataset()
 
     def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
-
         items_table = self._db.open_table(TableType.ITEM).to_lance()
         ids_and_views = duckdb.query("SELECT id, views FROM items_table").to_df()
 
@@ -171,8 +180,15 @@ class BaseDatasetBuilder(abc.ABC):
     def _read_items(self) -> Iterator[list[pix_types.Item]]:
         raise NotImplementedError
 
-    def read_views_for_items(self, items: List[pix_types.Item]) -> Dict[str, Any]:
+    def read_views_for_items(
+        self, items: list[pix_types.Item]
+    ) -> Iterator[dict[str, list]]:
         pass
+
+    # def _read_sequences_for_item(
+    #     self, item: pix_pydantic.DatItem
+    # ) -> list[pix_pydantic.SequenceFrame]:
+    #     pass
 
     def _create_table_element(self, klass: TableType, **kwargs) -> LanceModel:
         """

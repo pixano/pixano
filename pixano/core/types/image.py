@@ -12,14 +12,14 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
+from .view import View
 
+from .registry import _register_table_type_internal
 
-class Image(LanceModel):
+@_register_table_type_internal()
+class Image(View):
     """Image Lance Model"""
 
-    id: str
-    item_id: str
     url: str
     width: int
     height: int

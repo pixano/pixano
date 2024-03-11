@@ -12,18 +12,15 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
+from .image import Image
 
+from .registry import _register_table_type_internal
 
-class SequenceFrame(LanceModel):
+@_register_table_type_internal()
+class SequenceFrame(Image):
     """Sequence Frame Lance Model"""
 
-    id: str
-    item_id: str
     sequence_id: str
     timestamp: float
     frame_index: int
-    width: int
-    height: int
-    url: str
-    format: str
+

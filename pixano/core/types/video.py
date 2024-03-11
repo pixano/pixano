@@ -12,12 +12,12 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
+from .view import View
 
+from .registry import _register_table_type_internal
 
-class Video(LanceModel):
-    id: str
-    item_id: str
+@_register_table_type_internal()
+class Video(View):
     url: str
     num_frames: int
     fps: float

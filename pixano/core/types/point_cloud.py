@@ -14,7 +14,9 @@
 
 from lancedb.pydantic import LanceModel
 
+from .registry import _register_table_type_internal
 
+@_register_table_type_internal()
 class PointCloud(LanceModel):
     """Point Cloud Lance Model"""
 

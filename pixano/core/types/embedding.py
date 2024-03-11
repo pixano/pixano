@@ -11,16 +11,14 @@
 #
 # http://www.cecill.info
 
-from pixano.core.types.item import Item, ViewRecords
-from pixano.core.types.image import Image
-from pixano.core.types.sequence_frame import SequenceFrame
-from pixano.core.types.registry import register_table_type
 
+from lancedb.pydantic import LanceModel
 
-__all__ = [
-    "Item",
-    "ViewRecords",
-    "Image",
-    "SequenceFrame",
-    "register_table_type"
-]
+from .registry import _register_table_type_internal
+
+@_register_table_type_internal()
+class Embedding(LanceModel):
+    """Embedding Lance Model"""
+
+    id: str
+    item_id: str

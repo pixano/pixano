@@ -11,16 +11,25 @@
 #
 # http://www.cecill.info
 
-from pixano.core.types.item import Item, ViewRecords
-from pixano.core.types.image import Image
-from pixano.core.types.sequence_frame import SequenceFrame
-from pixano.core.types.registry import register_table_type
+
+from enum import Enum
+
+from .view import View
+from .object import Object
+from .item import Item
+from .embedding import Embedding
 
 
-__all__ = [
-    "Item",
-    "ViewRecords",
-    "Image",
-    "SequenceFrame",
-    "register_table_type"
-]
+class TableGroup(Enum):
+    ITEM = "item"
+    VIEW = "views"
+    OBJECT = "objects"
+    EMBEDDING = "embeddings"
+
+
+TABLE_GROUP_TYPE_DICT = {
+    TableGroup.ITEM: Item,
+    TableGroup.VIEW: View,
+    TableGroup.OBJECT: Object,
+    TableGroup.EMBEDDING: Embedding
+}
