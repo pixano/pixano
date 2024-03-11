@@ -15,14 +15,10 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr
 from s3path import S3Path
 
 from pixano.core import Image
-from pixano.data.dataset.dataset_category import DatasetCategory
-from pixano.data.dataset.dataset_stat import DatasetStat
-from pixano.data.dataset.dataset_table import DatasetTable
-from pixano.data.item.item_feature import FeaturesValues
 
 
 class DatasetInfo(BaseModel):
@@ -35,11 +31,8 @@ class DatasetInfo(BaseModel):
         estimated_size (str): Dataset estimated size
         num_elements (int): Number of elements in dataset
         splits (list[str]): Dataset splits
-        tables (dict[str, list[DatasetTable]]): Dataset tables
-        categories (list[DatasetCategory], optional): Dataset categories
-        features_values: (FeaturesValues, optional): existing values for each custom feature
-        preview (str, optional): Dataset preview
-        stats (list[DatasetStat], optional): Dataset stats
+        thumbnail (str, optional): Dataset thumbnail
+        _path (Path | S3Path): Dataset path
     """
 
     id: str
@@ -48,33 +41,34 @@ class DatasetInfo(BaseModel):
     estimated_size: str
     num_elements: int
     splits: list[str]
-    tables: dict[str, list[DatasetTable]]
-    categories: Optional[list[DatasetCategory]] = None
-    features_values: Optional[FeaturesValues] = None
-    preview: Optional[str] = None
-    stats: Optional[list[DatasetStat]] = None
+    thumbnail: Optional[str] = None
+    _path: Path | S3Path = PrivateAttr()
 
-    def save(self, save_dir: Path | S3Path):
-        """Save DatasetInfo to json file
+    def save(self):
+        """Save DatasetInfo to json file"""
 
-        Args:
-            save_dir (Path | S3Path): Save directory
-        """
-
-        with open(save_dir / "db.json", "w", encoding="utf-8") as f:
+        with open(self._path / "info.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
+
+    def load(self):
+        """Load DatasetInfo from json file"""
+
+        with open(self._path / "info.json", "r", encoding="utf-8") as f:
+            info_json = json.load(f)
+
+        info = DatasetInfo.model_validate(info_json)
+
+        return info
 
     @staticmethod
     def from_json(
         json_fp: Path | S3Path,
-        load_stats: bool = False,
         load_thumbnail: bool = False,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file
 
         Args:
             json_fp (Path | S3Path): JSON file path
-            load_stats (bool, optional): Load dataset stats. Defaults to False.
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
 
         Returns:
@@ -88,23 +82,18 @@ class DatasetInfo(BaseModel):
             with open(json_fp, encoding="utf-8") as json_file:
                 info_json = json.load(json_file)
 
+        info_json["_path"] = json_fp.parent
         info = DatasetInfo.model_validate(info_json)
-
-        # Load dataset stats file
-        if load_stats:
-            stats_fp = json_fp.parent / "stats.json"
-            if stats_fp.is_file():
-                info.stats = DatasetStat.from_json(stats_fp)
 
         # Load thumbnail
         if load_thumbnail:
-            thumb_fp = json_fp.parent / "preview.png"
+            thumb_fp = json_fp.parent / "thumbnail.png"
             if thumb_fp.is_file():
                 if isinstance(json_fp, S3Path):
-                    info.preview = thumb_fp.get_presigned_url()
+                    info.thumbnail = thumb_fp.get_presigned_url()
                 else:
                     im = Image(uri=thumb_fp.absolute().as_uri())
-                    info.preview = im.url
+                    info.thumbnail = im.url
 
         return info
 
@@ -112,7 +101,6 @@ class DatasetInfo(BaseModel):
     def load_directory(
         directory: Path | S3Path,
         load_thumbnail: bool = False,
-        load_stats: bool = False,
     ) -> list["DatasetInfo"]:
         """Load list of DatasetInfo from directory
 
@@ -128,13 +116,12 @@ class DatasetInfo(BaseModel):
         infos = []
 
         # Browse directory
-        for json_fp in sorted(directory.glob("*/db.json")):
+        for json_fp in sorted(directory.glob("*/info.json")):
             # Add dataset info to list
             infos.append(
                 DatasetInfo.from_json(
                     json_fp,
                     load_thumbnail=load_thumbnail,
-                    load_stats=load_stats,
                 )
             )
 
