@@ -38,7 +38,7 @@ const defineTooltip = (object: ItemObject) => {
 const IS_DEV = true; // TODO : remove when dataset is ready for video
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  const box = obj.datasetType === "video" ? obj.displayedBox : obj.bbox;
+  const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
   if (!box) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];

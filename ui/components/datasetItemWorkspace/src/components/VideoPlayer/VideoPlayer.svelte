@@ -108,7 +108,7 @@
     <!-- bottom section -->
     <div class="flex flex-col max-h-[150px] z-10 relative">
       {#each Object.values($itemObjects) as object}
-        {#if object.datasetType === "video"}
+        {#if object.datasetItemType === "video"}
           <VideoPlayerRow>
             <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
               {object.id}

@@ -135,8 +135,8 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   if (IS_DEV) {
     item.objects = Object.values(item.objects).reduce(
       (acc, obj) => {
-        obj.datasetType = "video";
-        if (obj.datasetType === "video" && obj.bbox) {
+        obj.datasetItemType = "video";
+        if (obj.datasetItemType === "video" && obj.bbox) {
           const [x, y, w, h] = obj.bbox.coords;
           const box = obj.bbox;
           obj.displayedBox = obj.bbox;

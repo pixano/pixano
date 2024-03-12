@@ -78,7 +78,7 @@
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
     itemObjects.update((objects) =>
       objects.map((object) => {
-        if (object.datasetType !== "video") return object;
+        if (object.datasetItemType !== "video") return object;
         const { displayedBox } = object;
         const currentBoxCoords = linearInterpolation(object.track, imageIndex);
         console.log({ currentBoxCoords });

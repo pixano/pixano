@@ -46,7 +46,7 @@ export const deleteKeyBoxFromTracklet = (
   objectId: ItemObject["id"],
 ) =>
   objects.map((object) => {
-    if (objectId === object.id && object.datasetType === "video") {
+    if (objectId === object.id && object.datasetItemType === "video") {
       object.track = object.track
         .map((tracklet) => {
           if (tracklet.start <= box.frameIndex && tracklet.end >= box.frameIndex) {

@@ -124,13 +124,13 @@ export interface Tracklet {
 }
 
 export type VideoObject = ItemObjectBase & {
-  datasetType: "video";
+  datasetItemType: "video";
   track: Tracklet[];
   displayedBox: ItemBBox;
 };
 
 export type ImageObject = ItemObjectBase & {
-  datasetType: "image";
+  datasetItemType: "image";
   bbox?: ItemBBox;
   mask?: ItemRLE;
 };
