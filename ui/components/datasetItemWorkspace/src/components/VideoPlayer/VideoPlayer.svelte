@@ -20,7 +20,7 @@
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { getCurrentImageTime } from "../../lib/api/videoApi";
 
-  import ObjectsTimescale from "./ObjectTimeTrack.svelte";
+  import ObjectTimeTrack from "./ObjectTimeTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
@@ -108,19 +108,21 @@
     <!-- bottom section -->
     <div class="flex flex-col max-h-[150px] z-10 relative">
       {#each Object.values($itemObjects) as object}
-        <VideoPlayerRow>
-          <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
-            {object.id}
-          </p>
-          <ObjectsTimescale
-            slot="timeTrack"
-            {zoomLevel}
-            {object}
-            {onTimeTrackClick}
-            {colorScale}
-            {currentImageIndex}
-          />
-        </VideoPlayerRow>
+        {#if object.datasetType === "video"}
+          <VideoPlayerRow>
+            <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
+              {object.id}
+            </p>
+            <ObjectTimeTrack
+              slot="timeTrack"
+              {zoomLevel}
+              {object}
+              {onTimeTrackClick}
+              {colorScale}
+              {currentImageIndex}
+            />
+          </VideoPlayerRow>
+        {/if}
       {/each}
     </div>
   </div>

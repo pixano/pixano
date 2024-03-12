@@ -38,7 +38,8 @@ const defineTooltip = (object: ItemObject) => {
 const IS_DEV = true; // TODO : remove when dataset is ready for video
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  if (!obj.bbox) return;
+  const box = obj.datasetType === "video" ? obj.displayedBox : obj.bbox;
+  if (!box) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
@@ -48,7 +49,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     imageHeight = 338;
     imageWidth = 600;
   }
-  const [x, y, width, height] = obj.bbox.coords;
+  const [x, y, width, height] = box.coords;
   const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
 
   const tooltip = defineTooltip(obj);
@@ -60,7 +61,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
     bbox,
     tooltip,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    visible: !obj.bbox.displayControl?.hidden && !obj.displayControl?.hidden,
+    visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     highlighted: obj.highlighted,

@@ -60,21 +60,22 @@ interface BaseDatasetItem {
   objects: Record<string, ItemObject>;
   features: Record<string, ItemFeature>;
   embeddings: Record<string, ItemEmbedding>;
+  views: Record<string, ItemView>;
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
   type: "image";
-  views: Record<string, ItemView>;
+  objects: Record<string, ImageObject>;
 };
 
 export type VideoDatasetItem = BaseDatasetItem & {
   type: "video";
+  objects: Record<string, VideoObject>;
   views: Record<string, ItemView[]>;
 };
 
 export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
   type: "3d";
-  views: Record<string, ItemView>;
 };
 
 export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
@@ -103,27 +104,38 @@ export interface DisplayControl {
   editing?: boolean;
 }
 
-export interface BBoxObject {
-  bbox: ItemBBox;
-  mask?: ItemRLE;
-}
-
-export interface MaskObject {
-  bbox?: ItemBBox;
-  mask: ItemRLE;
-}
-
-export type ItemObject = (BBoxObject | MaskObject) & {
+export type ItemObjectBase = {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  // tracks: bboxes[];
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
 };
+
+export interface Tracklet {
+  keyBoxes: ItemBBox[];
+  start: number;
+  end: number;
+}
+
+export type VideoObject = ItemObjectBase & {
+  datasetType: "video";
+  track: Tracklet[];
+  displayedBox: ItemBBox;
+};
+
+export type ImageObject = ItemObjectBase & {
+  datasetType: "image";
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
+};
+
+export type ItemObject = ImageObject | VideoObject;
 
 export interface ItemRLE {
   counts: Array<number>;
@@ -145,8 +157,7 @@ export interface BreakPointInterval {
 
 export interface ItemBBox {
   coords: Array<number>;
-  breakPointsIntervals?: BreakPointInterval[];
-  // frameIndex: number
+  frameIndex: number;
   format: string;
   is_normalized: boolean;
   confidence: number;

@@ -23,7 +23,7 @@
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import { breakPointBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
@@ -51,7 +51,7 @@
             ...object.displayControl,
             editing: false,
           };
-          !value && breakPointBeingEdited.set(null);
+          !value && itemBoxBeingEdited.set(null);
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);

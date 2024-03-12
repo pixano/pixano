@@ -15,15 +15,16 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { ItemObject, BreakPoint, BreakPointInterval } from "@pixano/core";
+  import type { BreakPoint, ItemBBox, Tracklet, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { addBreakPointInInterval, findNeighbors } from "../../lib/api/videoApi";
+  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { findNeighbors } from "../../lib/api/videoApi";
+  // import { addBreakPointInInterval, findNeighbors } from "../../lib/api/videoApi";
   import ObjectTimeInterval from "./ObjectTimeInterval.svelte";
 
   export let zoomLevel: number[];
   export let currentImageIndex: number;
-  export let object: ItemObject;
+  export let object: VideoObject;
   export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
 
@@ -49,16 +50,14 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isBreakPointBeingEdited = (breakPoint: BreakPoint) =>
-    $breakPointBeingEdited?.objectId === object.id &&
-    breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
+  const isKeyPointBeingEdited = (box: ItemBBox) =>
+    $itemBoxBeingEdited?.objectId === object.id &&
+    box.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onEditPointClick = (breakPoint: BreakPoint) => {
-    const isBeingEdited = isBreakPointBeingEdited(breakPoint);
-    breakPointBeingEdited.set(isBeingEdited ? null : { ...breakPoint, objectId: object.id });
-    onTimeTrackClick(
-      breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex,
-    );
+  const onEditPointClick = (box: ItemBBox) => {
+    const isBeingEdited = isKeyPointBeingEdited(box);
+    itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
+    onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
     itemObjects.update((objects) =>
       objects.map((o) => {
         o.highlighted = o.id === object.id ? "self" : "none";
@@ -72,26 +71,27 @@
   };
 
   const onAddPointClick = () => {
-    const [x, y] = object.bbox?.coords || [0, 0];
-    const breakPoint: BreakPoint = { frameIndex: rightClickFrameIndex, x, y };
-    itemObjects.update((objects) =>
-      addBreakPointInInterval(
-        objects,
-        breakPoint,
-        object.id,
-        rightClickFrameIndex,
-        $lastFrameIndex,
-      ),
-    );
-    onEditPointClick(breakPoint);
+    console.log("should add point");
+    // TODO IS_DEV
+    // const [x, y] = object.bbox?.coords || [0, 0];
+    // const box: ItemBBox = { frameIndex: rightClickFrameIndex, x, y };
+    // itemObjects.update((objects) =>
+    //   addBreakPointInInterval(
+    //     objects,
+    //     breakPoint,
+    //     object.id,
+    //     rightClickFrameIndex,
+    //     $lastFrameIndex,
+    //   ),
+    // );
+    // onEditPointClick(breakPoint);
   };
 
   const findNeighborBreakPoints = (
-    interval: BreakPointInterval,
+    tracklet: Tracklet,
     frameIndex: BreakPoint["frameIndex"],
   ): [number, number] => {
-    if (!object.bbox?.breakPointsIntervals) return [0, 0];
-    return findNeighbors(object.bbox.breakPointsIntervals, interval, frameIndex, $lastFrameIndex);
+    return findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
   };
 </script>
 
@@ -112,9 +112,9 @@
       <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
     </ContextMenu.Content>
   </ContextMenu.Root>
-  {#each object.bbox?.breakPointsIntervals || [] as interval}
+  {#each object.track as tracklet}
     <ObjectTimeInterval
-      {interval}
+      {tracklet}
       {object}
       color={colorScale(object.id)}
       {onAddPointClick}

@@ -15,8 +15,8 @@
 
 // Imports
 import { writable } from "svelte/store";
-import type { BreakPoint } from "@pixano/core";
+import type { ItemBBox } from "@pixano/core";
 
 // Exports
-export const breakPointBeingEdited = writable<(BreakPoint & { objectId: string }) | null>();
+export const itemBoxBeingEdited = writable<(ItemBBox & { objectId: string }) | null>();
 export const lastFrameIndex = writable<number>();

@@ -135,30 +135,29 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
   if (IS_DEV) {
     item.objects = Object.values(item.objects).reduce(
       (acc, obj) => {
-        if (obj.bbox) {
-          const [x, y] = obj.bbox.coords;
-          obj.bbox = {
-            ...obj.bbox,
-            breakPointsIntervals: [
-              {
-                start: 0,
-                end: 10,
-                breakPoints: [
-                  { frameIndex: 0, x, y },
-                  { frameIndex: 10, x: x + 0.1, y: y + 0.5 },
-                  // { frameIndex: 41, x: x + 0.3, y: y + 0.5 },
-                ],
-              },
-              {
-                start: 52,
-                end: 91,
-                breakPoints: [
-                  { frameIndex: 52, x: x + 0.3, y: y + 0.5 },
-                  { frameIndex: 91, x: x - 0.1, y: y - 0.3 },
-                ],
-              },
-            ],
-          };
+        obj.datasetType = "video";
+        if (obj.datasetType === "video" && obj.bbox) {
+          const [x, y, w, h] = obj.bbox.coords;
+          const box = obj.bbox;
+          obj.displayedBox = obj.bbox;
+          obj.track = [
+            {
+              start: 0,
+              end: 10,
+              keyBoxes: [
+                { ...box, frameIndex: 0, coords: [x, y, w, h] },
+                { ...box, frameIndex: 10, coords: [x + 0.1, y + 0.5, w, h] },
+              ],
+            },
+            {
+              start: 52,
+              end: 91,
+              keyBoxes: [
+                { ...box, frameIndex: 52, coords: [x + 0.1, y + 0.5, w, h] },
+                { ...box, frameIndex: 91, coords: [x, y, w, h] },
+              ],
+            },
+          ];
         }
         acc[obj.id] = obj;
         return acc;

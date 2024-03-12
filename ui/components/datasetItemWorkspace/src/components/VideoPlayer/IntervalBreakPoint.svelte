@@ -15,34 +15,33 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, BreakPoint } from "@pixano/core";
+  import type { ItemObject, ItemBBox } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { deleteBreakPointInInterval } from "../../lib/api/videoApi";
+  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
 
-  export let breakPoint: BreakPoint;
+  export let keyBox: ItemBBox;
   export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
-  export let onEditPointClick: (breakPoint: BreakPoint) => void;
+  export let onEditPointClick: (keyBox: ItemBBox) => void;
   export let updateIntervalWidth: (
-    newIndex: BreakPoint["frameIndex"],
-    draggedIndex: BreakPoint["frameIndex"],
+    newIndex: ItemBBox["frameIndex"],
+    draggedIndex: ItemBBox["frameIndex"],
   ) => void;
 
-  $breakPointBeingEdited?.objectId === objectId &&
-    breakPoint.frameIndex === $breakPointBeingEdited?.frameIndex;
+  $itemBoxBeingEdited?.objectId === objectId &&
+    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onDeletePointClick = (breakPoint: BreakPoint) => {
-    itemObjects.update((objects) => deleteBreakPointInInterval(objects, breakPoint, objectId));
+  const onDeletePointClick = (box: ItemBBox) => {
+    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
-  const getBreakPointLeftPosition = (breakPoint: BreakPoint) => {
-    const breakPointFrameIndex =
-      breakPoint.frameIndex > $lastFrameIndex ? $lastFrameIndex : breakPoint.frameIndex;
-    return (breakPointFrameIndex / ($lastFrameIndex + 1)) * 100;
+  const getBreakPointLeftPosition = (box: ItemBBox) => {
+    const boxFrameIndex = box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex;
+    return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
 
   const dragMe = (node: HTMLButtonElement) => {
@@ -54,7 +53,7 @@
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = breakPoint.frameIndex;
+      startFrameIndex = keyBox.frameIndex;
       startOneFrameInPixel = oneFrameInPixel;
     });
 
@@ -63,7 +62,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateIntervalWidth(Math.round(newFrameIndex), breakPoint.frameIndex);
+        updateIntervalWidth(Math.round(newFrameIndex), keyBox.frameIndex);
       }
     });
 
@@ -80,15 +79,15 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBeingEdited },
     )}
-    style={`left: ${getBreakPointLeftPosition(breakPoint)}%; border-color: ${color}`}
+    style={`left: ${getBreakPointLeftPosition(keyBox)}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeletePointClick(breakPoint)}
+    <ContextMenu.Item inset on:click={() => onDeletePointClick(keyBox)}
       >Remove point</ContextMenu.Item
     >
-    <ContextMenu.Item inset on:click={() => onEditPointClick(breakPoint)}>
+    <ContextMenu.Item inset on:click={() => onEditPointClick(keyBox)}>
       {isBeingEdited ? "Stop editing" : "Edit point"}
     </ContextMenu.Item>
   </ContextMenu.Content>

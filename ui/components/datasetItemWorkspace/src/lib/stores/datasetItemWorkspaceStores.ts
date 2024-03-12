@@ -49,7 +49,7 @@ export const modelsStore = writable<ModelSelection>({
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {
     const box = mapObjectToBBox(object, $itemMetas?.views);
-    acc = [...acc, ...(box ? [box] : [])];
+    if (box) acc.push(box);
     return acc;
   }, [] as BBox[]),
 );
@@ -57,7 +57,7 @@ export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $ite
 export const itemMasks = derived(itemObjects, ($itemObjects) =>
   $itemObjects.reduce((acc, object) => {
     const mask = mapObjectToMasks(object);
-    acc = [...acc, ...(mask ? [mask] : [])];
+    if (mask) acc.push(mask);
     return acc;
   }, [] as Mask[]),
 );

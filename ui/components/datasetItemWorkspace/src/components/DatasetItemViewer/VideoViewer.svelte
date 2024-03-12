@@ -25,12 +25,13 @@
     itemObjects,
     newShape,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { breakPointBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
+  import { linearInterpolation } from "../../lib/api/videoApi";
+  // import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -77,25 +78,28 @@
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
     itemObjects.update((objects) =>
       objects.map((object) => {
-        const bbox = object.bbox;
-        if (!bbox || !bbox.breakPointsIntervals) return object;
-        const frameCoords = linearInterpolation(bbox.breakPointsIntervals, imageIndex);
-        if (frameCoords) {
-          const [x, y] = frameCoords;
-          bbox.coords = [x, y, bbox.coords[2], bbox.coords[3]];
+        if (object.datasetType !== "video") return object;
+        const { displayedBox } = object;
+        const currentBoxCoords = linearInterpolation(object.track, imageIndex);
+        console.log({ currentBoxCoords });
+        if (currentBoxCoords) {
+          const [x, y] = currentBoxCoords;
+          displayedBox.coords = [x, y, displayedBox.coords[2], displayedBox.coords[3]];
         }
-        bbox.displayControl = { ...bbox.displayControl, hidden: !frameCoords };
-        return { ...object, bbox };
+        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !currentBoxCoords };
+        return { ...object, displayedBox };
       }),
     );
   };
 
   $: {
     const shape = $newShape;
-    const breakPoint = $breakPointBeingEdited;
+    const box = $itemBoxBeingEdited;
     if (shape.status === "editing") {
-      if (breakPoint) {
-        itemObjects.update((objects) => editBreakPointInInterval(objects, breakPoint, shape));
+      console.log({ shape });
+      if (box) {
+        // TODO IS_DEV
+        // itemObjects.update((objects) => editBreakPointInInterval(objects, breakPoint, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }
