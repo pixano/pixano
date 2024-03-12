@@ -14,6 +14,7 @@ module.exports = {
       "../../components/canvas2d/src/**/*.{svelte,js,ts,jsx,tsx}",
       "../../components/canvas3d/src/**/*.{svelte,js,ts,jsx,tsx}",
       "../../components/table/src/**/*.{svelte,js,ts,jsx,tsx}",
+      "../../components/newTable/src/**/*.{svelte,js,ts,jsx,tsx}",
     ],
   },
   safelist: ["bg-primary", "text-3xl", "lg:text-4xl"],
