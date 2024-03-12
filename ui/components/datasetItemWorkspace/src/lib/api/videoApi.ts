@@ -65,31 +65,31 @@ export const deleteKeyBoxFromTracklet = (
 
 export const editBreakPointInInterval = (
   objects: ItemObject[],
-  breakPointBeingEdited: BreakPoint,
+  boxBeingEdited: ItemBBox,
   shape: EditShape,
 ) =>
   objects.map((object) => {
-    if (shape.type === "rectangle" && object.id === shape.shapeId && object.bbox) {
-      object.bbox = {
-        ...object.bbox,
-        // breakPointsIntervals: object.bbox.breakPointsIntervals?.map((interval) => {
-        //   if (
-        //     interval.start <= breakPointBeingEdited.frameIndex &&
-        //     interval.end >= breakPointBeingEdited.frameIndex
-        //   ) {
-        //     interval.breakPoints = interval.breakPoints?.map((breakPoint) => {
-        //       if (breakPoint.frameIndex === breakPointBeingEdited.frameIndex) {
-        //         breakPoint.x = shape.coords[0];
-        //         breakPoint.y = shape.coords[1];
-        //         return breakPoint;
-        //       }
-        //       return breakPoint;
-        //     });
-        //     return interval;
-        //   }
-        //   return interval;
-        // }),
-      };
+    if (
+      shape.type === "rectangle" &&
+      object.id === shape.shapeId &&
+      object.datasetItemType === "video"
+    ) {
+      object.track = object.track.map((tracklet) => {
+        if (
+          tracklet.start <= boxBeingEdited.frameIndex &&
+          tracklet.end >= boxBeingEdited.frameIndex
+        ) {
+          tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
+            if (keyBox.frameIndex === boxBeingEdited.frameIndex) {
+              keyBox.coords = shape.coords;
+              object.displayedBox.coords = shape.coords;
+              return keyBox;
+            }
+            return keyBox;
+          });
+        }
+        return tracklet;
+      });
     }
     return object;
   });

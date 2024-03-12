@@ -30,8 +30,7 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { linearInterpolation } from "../../lib/api/videoApi";
-  // import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
+  import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -80,13 +79,13 @@
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         const { displayedBox } = object;
-        const currentBoxCoords = linearInterpolation(object.track, imageIndex);
-        console.log({ currentBoxCoords });
-        if (currentBoxCoords) {
-          const [x, y] = currentBoxCoords;
+        const newCoords = linearInterpolation(object.track, imageIndex);
+        if (newCoords) {
+          const [x, y] = newCoords;
           displayedBox.coords = [x, y, displayedBox.coords[2], displayedBox.coords[3]];
+          displayedBox.frameIndex = imageIndex;
         }
-        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !currentBoxCoords };
+        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         return { ...object, displayedBox };
       }),
     );
@@ -96,10 +95,8 @@
     const shape = $newShape;
     const box = $itemBoxBeingEdited;
     if (shape.status === "editing") {
-      console.log({ shape });
       if (box) {
-        // TODO IS_DEV
-        // itemObjects.update((objects) => editBreakPointInInterval(objects, breakPoint, shape));
+        itemObjects.update((objects) => editBreakPointInInterval(objects, box, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }
