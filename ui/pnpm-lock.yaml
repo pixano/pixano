@@ -378,6 +378,46 @@ importers:
         specifier: ^0.30.1
         version: 0.30.1
 
+  components/newTable:
+    dependencies:
+      '@pixano/core':
+        specifier: workspace:^
+        version: link:../core
+      '@pixano/models':
+        specifier: workspace:^
+        version: link:../models
+      vite-plugin-externals:
+        specifier: ^0.6.2
+        version: 0.6.2(vite@5.1.3)
+    devDependencies:
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^3.0.2
+        version: 3.0.2(svelte@4.2.11)(vite@5.1.3)
+      '@tsconfig/svelte':
+        specifier: ^5.0.2
+        version: 5.0.2
+      svelte:
+        specifier: ^4.2.11
+        version: 4.2.11
+      svelte-check:
+        specifier: ^3.6.4
+        version: 3.6.4(@babel/core@7.23.9)(less@4.2.0)(postcss@8.4.35)(svelte@4.2.11)
+      svelte-headless-table:
+        specifier: ^0.18.2
+        version: 0.18.2(svelte@4.2.11)
+      tailwindcss:
+        specifier: ^3.4.1
+        version: 3.4.1
+      tslib:
+        specifier: ^2.6.2
+        version: 2.6.2
+      typescript:
+        specifier: ^5.3.3
+        version: 5.3.3
+      vite:
+        specifier: ^5.1.3
+        version: 5.1.3
+
   components/table:
     dependencies:
       '@pixano/core':
@@ -429,6 +469,9 @@ importers:
       '@pixano/models':
         specifier: workspace:^
         version: link:../../components/models
+      '@pixano/new-table':
+        specifier: workspace:^
+        version: link:../../components/newTable
       '@pixano/table':
         specifier: workspace:^
         version: link:../../components/table
@@ -10306,11 +10349,30 @@ packages:
       svelte: 4.2.11
     dev: true
 
+  /svelte-headless-table@0.18.2(svelte@4.2.11):
+    resolution: {integrity: sha512-dnDTaXW5CNzRUjHVbc/Hb0Zv80zU4VcIUnAja6OuZriXvim1AqcWYQCHPRzBGwqj1m3YEHHNvspSzY0o5HzA0A==}
+    peerDependencies:
+      svelte: ^4.0.0
+    dependencies:
+      svelte: 4.2.11
+      svelte-keyed: 2.0.0(svelte@4.2.11)
+      svelte-render: 2.0.1(svelte@4.2.11)
+      svelte-subscribe: 2.0.1(svelte@4.2.11)
+    dev: true
+
   /svelte-hmr@0.15.3(svelte@4.2.11):
     resolution: {integrity: sha512-41snaPswvSf8TJUhlkoJBekRrABDXDMdpNpT2tfHIv4JuhgvHqLMhEPGtaQn0BmbNSTkuz2Ed20DF2eHw0SmBQ==}
     engines: {node: ^12.20 || ^14.13.1 || >= 16}
     peerDependencies:
       svelte: ^3.19.0 || ^4.0.0
+    dependencies:
+      svelte: 4.2.11
+    dev: true
+
+  /svelte-keyed@2.0.0(svelte@4.2.11):
+    resolution: {integrity: sha512-7TeEn+QbJC2OJrHiuM0T8vMBkms3DNpTE+Ir+NtnVBnBMA78aL4f1ft9t0Hn/pBbD/TnIXi4YfjFRAgtN+DZ5g==}
+    peerDependencies:
+      svelte: ^4.0.0
     dependencies:
       svelte: 4.2.11
     dev: true
@@ -10373,6 +10435,23 @@ packages:
       strip-indent: 3.0.0
       svelte: 4.2.11
       typescript: 5.3.3
+    dev: true
+
+  /svelte-render@2.0.1(svelte@4.2.11):
+    resolution: {integrity: sha512-RpB0SurwXm4xhjvHHtjeqMmvd645FURb79GFOotScOSqnKK5vpqBgoBPGC0pp+E/eZgDSQ9rRAdn/+N4ys1mXQ==}
+    peerDependencies:
+      svelte: ^4.0.0
+    dependencies:
+      svelte: 4.2.11
+      svelte-subscribe: 2.0.1(svelte@4.2.11)
+    dev: true
+
+  /svelte-subscribe@2.0.1(svelte@4.2.11):
+    resolution: {integrity: sha512-eKXIjLxB4C7eQWPqKEdxcGfNXm2g/qJ67zmEZK/GigCZMfrTR3m7DPY93R6MX+5uoqM1FRYxl8LZ1oy4URWi2A==}
+    peerDependencies:
+      svelte: ^4.0.0
+    dependencies:
+      svelte: 4.2.11
     dev: true
 
   /svelte-vega@2.1.0(svelte@4.2.11)(vega-lite@5.16.3)(vega@5.27.0):
