@@ -23,10 +23,14 @@ from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
 from pixano.core import Image
+from pixano.core.types.group import TableGroup
 from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
 from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
 from pixano.data.dataset.dataset_info import DatasetInfo
-from pixano.data.dataset.dataset_item import DatasetItem, TableGroup
+from pixano.data.dataset.dataset_item import (
+    DatasetItem,
+    create_custom_dataset_item_class,
+)
 from pixano.data.dataset.dataset_schema import DatasetSchema
 from pixano.data.dataset.dataset_stat import DatasetStat
 
@@ -83,6 +87,10 @@ class Dataset(BaseModel):
             ),
         )
 
+        self._custom_dataset_item_class = create_custom_dataset_item_class(
+            self.dataset_schema
+        )
+
     @property
     def num_rows(self) -> int:
         """Return number of rows in dataset.
@@ -113,6 +121,26 @@ class Dataset(BaseModel):
             return self.path.as_uri() + "/" + DEFAULT_DB_PATH
 
         return self.path / DEFAULT_DB_PATH
+
+    def _reload_schema(self) -> DatasetSchema:
+        """Reload schema.
+
+        Returns:
+            DatasetSchema: Dataset schema
+        """
+        self.dataset_schema = DatasetSchema.from_json(self.path / "schema.json")
+        self._custom_dataset_item_class = create_custom_dataset_item_class(
+            self.dataset_schema
+        )
+
+    @property
+    def _CustomDatasetItem(self) -> DatasetItem:
+        """Return custom dataset item class.
+
+        Returns:
+            DatasetItem: Custom dataset item class
+        """
+        return self._custom_dataset_item_class
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.
@@ -172,22 +200,25 @@ class Dataset(BaseModel):
             .limit(limit)
         )
 
-    def _get_items_data(
+    def _read_items_data(
         self,
         ids: list[str],
         select_table_groups: list[TableGroup] = None,
         select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
+        remove_table_group_level: bool = True,
     ) -> dict[str, dict[str, dict[str, LanceModel]]]:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
         # Reload schema
-        self.dataset_schema.load()
+        self._reload_schema()
 
         # Load tables
         ds_tables = self.open_tables()
 
         # Load items data from the tables
-        data_dict: dict[str, dict[str, dict[str, LanceModel]]] = {id: {} for id in ids}
+        data_dict: dict[
+            str, dict[str, dict[str, LanceModel]] | dict[str, LanceModel]
+        ] = {id: {} for id in ids}
         for table_group in ds_tables.keys():
             item_id_field = "id" if table_group == TableGroup.ITEM else "item_id"
 
@@ -228,9 +259,12 @@ class Dataset(BaseModel):
 
                 for row in pydantic_table:
                     id = row.id if table_group == TableGroup.ITEM else row.item_id
-                    if table_group.value not in data_dict[id].keys():
-                        data_dict[id][table_group.value] = {}
-                    data_dict[id][table_group.value][table_name] = row
+                    if not remove_table_group_level:
+                        if table_group.value not in data_dict[id].keys():
+                            data_dict[id][table_group.value] = {}
+                        data_dict[id][table_group.value][table_name] = row
+                    else:
+                        data_dict[id][table_name] = row
 
         # Raise error if some ids are not found
         ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
@@ -241,92 +275,93 @@ class Dataset(BaseModel):
 
         return data_dict
 
-    def read_items(
+    def _read_data(
         self,
         ids: list[str],
-        select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
+        select_table_groups: Optional[list[TableGroup]] = None,
+        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
+        remove_table_group_level: bool = True,
     ) -> list[DatasetItem]:  # type: ignore
-        """Read items from dataset.
-
-        Args:
-            ids (list[str]): Item ids
-            select_table_groups (list[str], optional): Table groups to read
-            select_tables_per_group (list[str], optional): Tables to read per group
-        Returns:
-            list[DatasetItem] | DatasetItem: Dataset items
-        """
         if select_table_groups:
             select_table_groups = [
                 TableGroup(table_group) if isinstance(table_group, str) else table_group
                 for table_group in select_table_groups
             ]
-            if TableGroup.ITEM not in select_table_groups:
-                select_table_groups.append(TableGroup.ITEM)
-        else:
-            if select_tables_per_group:
-                select_table_groups = [TableGroup.ITEM]
 
-        data_dict = self._get_items_data(
-            ids, select_table_groups, select_tables_per_group
+        data_dict = self._read_items_data(
+            ids, select_table_groups, select_tables_per_group, remove_table_group_level
         )
 
-        dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in ids]
+        dataset_items = [self._CustomDatasetItem(id=id, **data_dict[id]) for id in ids]
 
         return dataset_items
 
-    def read_item(
+    def _read_table_group_data(
         self,
-        id: str,
-        select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> DatasetItem:  # type: ignore
-        """Read one item from dataset. Look :func:`read_items` for more details."""
-        if not isinstance(id, str):
-            raise ValueError("id should be a string")
+        ids: list[str],
+        group: TableGroup,
+        select: Optional[list[str]] = None,
+        remove_table_group_level: bool = True,
+    ) -> list[DatasetItem]:
+        if select:
+            select_tables_per_group = {
+                group: [DatasetSchema.format_table_name(table) for table in select]
+            }
+            return self._read_data(
+                ids, None, select_tables_per_group, remove_table_group_level
+            )
+        return self._read_data(ids, [group], None, remove_table_group_level)
 
-        return self.read_items(
-            [id],
-            select_table_groups,
-            select_tables_per_group,
-        )[0]
-
-    def get_items(
+    def _get_data(
         self,
         offset: int,
         limit: int,
-        select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> list[DatasetItem]:  # type: ignore
+        select_table_groups: Optional[list[TableGroup]] = None,
+        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
+        remove_table_group_level: bool = True,
+    ) -> list[DatasetItem]:
         """Get items from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            limit (int): Limit
             select_table_groups (list[str], optional): Table groups to read
             select_tables_per_group (list[str], optional): Tables to read per group
+            remove_table_group_level (bool, optional): Remove table group level.
+                Default is True.
+
         Returns:
             list[DatasetItem]: Dataset items
         """
         item_table = self.open_table(TableGroup.ITEM.value).to_lance()  # noqa: F841
+        select_item = (
+            select_table_groups is None
+            or (select_table_groups and TableGroup.ITEM in select_table_groups)
+            or (select_tables_per_group and TableGroup.ITEM in select_tables_per_group)
+        )
+        item_columns_selected = "*" if select_item else "id"
         item_rows = (
             duckdb.query(
-                f"SELECT * FROM item_table ORDER BY len(id), id LIMIT {limit} "
-                f"OFFSET {offset}"
+                f"SELECT {item_columns_selected} FROM item_table ORDER BY len(id),"
+                f"id LIMIT {limit} OFFSET {offset}"
             )
             .to_arrow_table()
             .to_pylist()
         )
 
-        items_models = [
-            _TABLE_TYPE_REGISTRY[
-                self.dataset_schema.schemas[TableGroup.ITEM.value][
-                    TableGroup.ITEM.value
-                ]
-            ](**row)
-            for row in item_rows
-        ]
+        if select_item:
+            item_models = {}
+        ids = []
+        for row in item_rows:
+            if select_item:
+                item_models[row["id"]] = _TABLE_TYPE_REGISTRY[
+                    self.dataset_schema.schemas[TableGroup.ITEM.value][
+                        TableGroup.ITEM.value
+                    ]
+                ](**row)
+                ids.append(row["id"])
+            else:
+                ids.append(row["id"])
 
         if select_table_groups:
             select_table_groups = [
@@ -334,6 +369,7 @@ class Dataset(BaseModel):
                 for table_group in select_table_groups
                 if TableGroup(table_group) != TableGroup.ITEM
             ]
+
         if select_tables_per_group:
             select_tables_per_group = {
                 TableGroup(table_group)
@@ -343,38 +379,276 @@ class Dataset(BaseModel):
                 if TableGroup(table_group) != TableGroup.ITEM
             }
 
-        data_dict = self._get_items_data(
-            [item.id for item in items_models],
-            select_table_groups,
-            select_tables_per_group,
+        data_dict = self._read_items_data(
+            ids, select_table_groups, select_tables_per_group, remove_table_group_level
         )
 
-        for item in items_models:
-            data_dict[item.id][TableGroup.ITEM.value] = {}
-            data_dict[item.id][TableGroup.ITEM.value][TableGroup.ITEM.value] = item
-
-        dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in data_dict.keys()]
+        dataset_items = []
+        for id in data_dict.keys():
+            if select_item:
+                if remove_table_group_level:
+                    data_dict[id][TableGroup.ITEM.value] = item_models.pop(id)
+                else:
+                    data_dict[id][TableGroup.ITEM.value] = {}
+                    data_dict[id][TableGroup.ITEM.value][TableGroup.ITEM.value] = (
+                        item_models.pop(id)
+                    )
+            dataset_items.append(self._CustomDatasetItem(id=id, **data_dict[id]))
 
         return dataset_items
 
-    def get_item(
+    def _get_table_group_data(
         self,
-        num_item: int,
-        select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> DatasetItem:  # type: ignore
-        """Get items from dataset.
+        offset: int,
+        limit: int,
+        group: TableGroup,
+        select: Optional[list[str]] = None,
+    ) -> list[DatasetItem]:
+        if select:
+            select_tables_per_group = {
+                group: [DatasetSchema.format_table_name(table) for table in select]
+            }
+            return self._get_data(offset, limit, None, select_tables_per_group)
+        return self._get_data(offset, limit, [group], None)
+
+    def read_items(
+        self,
+        ids: list[str],
+    ) -> list[DatasetItem]:  # type: ignore
+        """Read items from dataset.
 
         Args:
-            num_item (int): Offset
+            ids (list[str]): Item ids
             select_table_groups (list[str], optional): Table groups to read
             select_tables_per_group (list[str], optional): Tables to read per group
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self.get_items(
-            num_item, 1, select_table_groups, select_tables_per_group
-        )[0]
+        return self._read_data(ids, None, None)
+
+    def read_item(
+        self,
+        id: str,
+    ) -> DatasetItem:
+        """Read item from dataset.
+
+        Args:
+            id (str): Item id
+        Returns:
+            DatasetItem: Dataset item
+        """
+        return self.read_items([id])[0]
+
+    def get_items(
+        self,
+        offset: int,
+        limit: int,
+    ) -> list[DatasetItem]:
+        """Get items from dataset.
+
+        Args:
+            offset (int): Offset
+            limit (int): Limit
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._get_data(offset, limit)
+
+    def get_item(
+        self,
+        idx: int,
+    ) -> list[DatasetItem]:
+        """Get item from dataset.
+
+        Args:
+            idx (int): Index
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self.get_items(idx, 1)[0]
+
+    def read_views(
+        self, ids: list[str], select: Optional[list[str]] = None
+    ) -> list[DatasetItem]:  # type: ignore
+        """Read views from dataset.
+
+        Args:
+            ids (list[str]): Item ids.
+            select (list[str], optional): Views to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._read_table_group_data(ids, TableGroup.VIEW, select)
+
+    def read_view(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
+        """Read view from dataset.
+
+        Args:
+            id (str): Item id.
+            select (list[str], optional): Views to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset item
+        """
+        return self.read_views([id], select)[0]
+
+    def get_views(
+        self,
+        offset: int,
+        limit: int,
+        select: Optional[list[str]] = None,
+    ) -> list[DatasetItem]:
+        """Get views from dataset.
+
+        Args:
+            offset (int): Offset
+            limit (int): Limit
+            select (list[str], optional): Views to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._get_table_group_data(offset, limit, TableGroup.VIEW, select)
+
+    def get_view(
+        self,
+        idx: int,
+        select: Optional[list[str]] = None,
+    ) -> DatasetItem:
+        """Get view from dataset.
+
+        Args:
+            idx (int): Index.
+            select (list[str], optional): Views to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset items
+        """
+        return self.get_views(idx, 1, select)[0]
+
+    def read_objects(
+        self, ids: list[str], select: Optional[list[str]] = None
+    ) -> list[DatasetItem]:  # type: ignore
+        """Read objects from dataset.
+
+        Args:
+            ids (list[str]): Item ids.
+            select (list[str], optional): Objects to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._read_table_group_data(ids, TableGroup.OBJECT, select)
+
+    def read_object(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
+        """Read object from dataset.
+
+        Args:
+            id (str): Item id.
+            select (list[str], optional): Objects to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset item
+        """
+        return self.read_objects([id], select)[0]
+
+    def get_objects(
+        self,
+        offset: int,
+        limit: int,
+        select: Optional[list[str]] = None,
+    ) -> list[DatasetItem]:
+        """Get objects from dataset.
+
+        Args:
+            offset (int): Offset
+            limit (int): Limit
+            select (list[str], optional): Objects to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._get_table_group_data(offset, limit, TableGroup.OBJECT, select)
+
+    def get_object(
+        self,
+        idx: int,
+        select: Optional[list[str]] = None,
+    ) -> DatasetItem:
+        """Get object from dataset.
+
+        Args:
+            idx (int): Index.
+            select (list[str], optional): Objects to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset items
+        """
+        return self.get_objects(idx, 1, select)[0]
+
+    def read_embeddings(
+        self, ids: list[str], select: Optional[list[str]] = None
+    ) -> list[DatasetItem]:  # type: ignore
+        """Read embeddings from dataset.
+
+        Args:
+            ids (list[str]): Item ids.
+            select (list[str], optional): Embeddings to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._read_table_group_data(ids, TableGroup.EMBEDDING, select)
+
+    def read_embedding(
+        self, id: str, select: Optional[list[str]] = None
+    ) -> DatasetItem:
+        """Read embedding from dataset.
+
+        Args:
+            id (str): Item id.
+            select (list[str], optional): Embeddings to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset item
+        """
+        return self.read_embeddings([id], select)[0]
+
+    def get_embeddings(
+        self,
+        offset: int,
+        limit: int,
+        select: Optional[list[str]] = None,
+    ) -> list[DatasetItem]:
+        """Get embeddings from dataset.
+
+        Args:
+            offset (int): Offset
+            limit (int): Limit
+            select (list[str], optional): Embeddings to read. Default is None.
+
+        Returns:
+            list[DatasetItem]: Dataset items
+        """
+        return self._get_table_group_data(offset, limit, TableGroup.EMBEDDING, select)
+
+    def get_embedding(
+        self,
+        idx: int,
+        select: Optional[list[str]] = None,
+    ) -> DatasetItem:
+        """Get embedding from dataset.
+
+        Args:
+            idx (int): Index.
+            select (list[str], optional): Embeddings to read. Default is None.
+
+        Returns:
+            DatasetItem: Dataset items
+        """
+        return self.get_embedding(idx, 1, select)[0]
 
     @staticmethod
     def find(

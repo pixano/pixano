@@ -18,6 +18,8 @@ from pathlib import Path
 import lancedb
 
 from pixano.core.types.group import TableGroup
+from pixano.core.types.image import Image
+from pixano.core.types.item import Item
 from pixano.data import Dataset, DatasetInfo, DatasetItem
 
 
@@ -95,7 +97,8 @@ class DatasetTestCase(unittest.TestCase):
         for item in items:
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
-            self.assertIsInstance(item.views, dict)
+            self.assertIsInstance(item.item, Item)
+            self.assertIsInstance(item.image, Image)
 
     def test_read_item(self):
         """Test Dataset read_item method"""
@@ -105,7 +108,8 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        self.assertIsInstance(item.views, dict)
+        self.assertIsInstance(item.item, Item)
+        self.assertIsInstance(item.image, Image)
 
     def test_get_items(self):
         """Test Dataset get_items method"""
@@ -113,11 +117,13 @@ class DatasetTestCase(unittest.TestCase):
         # get item uuid from original id
         items = self.dataset.get_items(0, 5)
 
+        assert len(items) == 5
+
         for item in items:
-            print(item.id)
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
-            self.assertIsInstance(item.views, dict)
+            self.assertIsInstance(item.item, Item)
+            self.assertIsInstance(item.image, Image)
 
     def test_get_item(self):
         """Test Dataset get_item method"""
@@ -127,7 +133,33 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        self.assertIsInstance(item.views, dict)
+        self.assertIsInstance(item.item, Item)
+        self.assertIsInstance(item.image, Image)
+
+    def test_get_views(self):
+        """Test Dataset get_views method"""
+
+        # get item uuid from original id
+        items = self.dataset.get_views(0, 5)
+
+        assert len(items) == 5
+
+        for item in items:
+            self.assertIsInstance(item, DatasetItem)
+            self.assertIsInstance(item.id, str)
+            assert item.item is None
+            self.assertIsInstance(item.image, Image)
+
+    def test_get_view(self):
+        """Test Dataset get_view method"""
+
+        # get item uuid from original id
+        item = self.dataset.get_view(0)
+
+        self.assertIsInstance(item, DatasetItem)
+        self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
+        assert item.item is None
+        self.assertIsInstance(item.image, Image)
 
     def test_find(self):
         """Test Dataset find method"""

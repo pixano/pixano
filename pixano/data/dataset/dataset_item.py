@@ -14,21 +14,35 @@
 
 from pydantic import BaseModel, create_model
 
-from pixano.core.types.group import TABLE_GROUP_TYPE_DICT, TableGroup
+from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
+from pixano.data.dataset.dataset_schema import DatasetSchema
 
 
-class BaseDatasetItem(BaseModel):
-    """BaseDatasetItem."""
+class DatasetItem(BaseModel):
+    """DatasetItem."""
 
     id: str
 
 
-DatasetItem: type[BaseDatasetItem] = create_model(
-    "DatasetItem",
-    **{
-        table_group.value: (dict[str, TABLE_GROUP_TYPE_DICT[table_group]], None)
-        for table_group in TableGroup
-    },
-    __base__=BaseDatasetItem,
-)
-DatasetItem.__doc__ = "DatasetItem"
+def create_custom_dataset_item_class(schema: DatasetSchema) -> type[DatasetItem]:
+    """Create a custom dataset item class based on the schema.
+
+    Args:
+        schema (DatasetSchema): The dataset schema
+
+    Returns:
+        type[DatasetItem]: The custom dataset item class
+    """
+    tables = {
+        table: (_TABLE_TYPE_REGISTRY[table_type], None)
+        for table_group in schema.schemas.keys()
+        for table, table_type in schema.schemas[table_group].items()
+    }
+
+    CustomDatasetItem = create_model(
+        "CustomDatasetItem",
+        **tables,
+        __base__=DatasetItem,
+    )
+    CustomDatasetItem.__doc__ = "CustomDatasetItem"
+    return CustomDatasetItem

@@ -46,6 +46,28 @@ class DatasetSchema(BaseModel):
         return schema
 
     @staticmethod
+    def format_table_name(table_name: str) -> str:
+        """Format table name.
+
+        Args:
+            table_name (str): Table name
+
+        Returns:
+            str: Formatted table name
+        """
+        return table_name.lower().replace(" ", "_")
+
+    @staticmethod
+    def format_table_names(schema_json: dict[str : dict[str, str]]):
+        """Format table names."""
+        for group in schema_json.keys():
+            keys = list(schema_json[group].keys())
+            for table in keys:
+                formatted_table_name = DatasetSchema.format_table_name(table)
+                schema_json[group][formatted_table_name] = schema_json[group].pop(table)
+        return schema_json
+
+    @staticmethod
     def validate(schema_json: dict, *args, **kwargs) -> "DatasetSchema":  # noqa: D417
         """Validate DatasetSchema from json.
 
@@ -60,6 +82,8 @@ class DatasetSchema(BaseModel):
                 TableGroup(key)
             except ValueError:
                 raise ValueError(f"Invalid table group {key}")
+
+        schema_json = DatasetSchema.format_table_names(schema_json)
 
         if any(
             key not in schema_json["schemas"].keys()
