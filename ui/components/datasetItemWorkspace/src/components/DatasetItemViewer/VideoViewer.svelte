@@ -30,7 +30,8 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editBreakPointInInterval, linearInterpolation } from "../../lib/api/videoApi";
+  // import { linearInterpolation } from "../../lib/api/videoApi";
+  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -94,9 +95,10 @@
   $: {
     const shape = $newShape;
     const box = $itemBoxBeingEdited;
+
     if (shape.status === "editing") {
       if (box) {
-        itemObjects.update((objects) => editBreakPointInInterval(objects, box, shape));
+        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }

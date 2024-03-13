@@ -26,8 +26,8 @@
   export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
-  export let onEditPointClick: (keyBox: ItemBBox) => void;
-  export let updateIntervalWidth: (
+  export let onEditKeyBoxClick: (keyBox: ItemBBox) => void;
+  export let updateTrackletWidth: (
     newIndex: ItemBBox["frameIndex"],
     draggedIndex: ItemBBox["frameIndex"],
   ) => void;
@@ -35,11 +35,11 @@
   $itemBoxBeingEdited?.objectId === objectId &&
     keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onDeletePointClick = (box: ItemBBox) => {
+  const onDeleteKeyBoxClick = (box: ItemBBox) => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
-  const getBreakPointLeftPosition = (box: ItemBBox) => {
+  const getKeyBoxLeftPosition = (box: ItemBBox) => {
     const boxFrameIndex = box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
@@ -62,7 +62,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateIntervalWidth(Math.round(newFrameIndex), keyBox.frameIndex);
+        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frameIndex);
       }
     });
 
@@ -79,16 +79,16 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBeingEdited },
     )}
-    style={`left: ${getBreakPointLeftPosition(keyBox)}%; border-color: ${color}`}
+    style={`left: ${getKeyBoxLeftPosition(keyBox)}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeletePointClick(keyBox)}
-      >Remove point</ContextMenu.Item
+    <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyBox)}
+      >Remove key box</ContextMenu.Item
     >
-    <ContextMenu.Item inset on:click={() => onEditPointClick(keyBox)}>
-      {isBeingEdited ? "Stop editing" : "Edit point"}
+    <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>
+      {isBeingEdited ? "Stop editing" : "Edit box"}
     </ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>

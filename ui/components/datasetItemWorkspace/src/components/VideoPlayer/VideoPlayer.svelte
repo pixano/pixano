@@ -20,7 +20,7 @@
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { getCurrentImageTime } from "../../lib/api/videoApi";
 
-  import ObjectTimeTrack from "./ObjectTimeTrack.svelte";
+  import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
 
@@ -113,7 +113,7 @@
             <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
               {object.id}
             </p>
-            <ObjectTimeTrack
+            <ObjectTrack
               slot="timeTrack"
               {zoomLevel}
               {object}

@@ -18,8 +18,8 @@
   import type { BreakPoint, ItemBBox, Tracklet, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { addBreakPointInInterval, findNeighbors } from "../../lib/api/videoApi";
-  import ObjectTimeInterval from "./ObjectTimeInterval.svelte";
+  import { addKeyBox, findNeighbors } from "../../lib/api/videoApi";
+  import ObjectTracklet from "./ObjectTracklet.svelte";
 
   export let zoomLevel: number[];
   export let currentImageIndex: number;
@@ -49,12 +49,12 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isKeyPointBeingEdited = (box: ItemBBox) =>
+  const isKeyBoxBeingEdited = (box: ItemBBox) =>
     $itemBoxBeingEdited?.objectId === object.id &&
     box.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onEditPointClick = (box: ItemBBox) => {
-    const isBeingEdited = isKeyPointBeingEdited(box);
+  const onEditKeyBoxClick = (box: ItemBBox) => {
+    const isBeingEdited = isKeyBoxBeingEdited(box);
     itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
     onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
     itemObjects.update((objects) =>
@@ -69,20 +69,18 @@
     );
   };
 
-  const onAddPointClick = () => {
+  const onAddKeyBoxClick = () => {
     const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
     itemObjects.update((objects) =>
-      addBreakPointInInterval(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
+      addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
-    onEditPointClick(box);
+    onEditKeyBoxClick(box);
   };
 
-  const findNeighborBreakPoints = (
+  const findNeighborKeyBoxes = (
     tracklet: Tracklet,
     frameIndex: BreakPoint["frameIndex"],
-  ): [number, number] => {
-    return findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
-  };
+  ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
 </script>
 
 <div
@@ -99,18 +97,18 @@
       <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
     </ContextMenu.Trigger>
     <ContextMenu.Content>
-      <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+      <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
     </ContextMenu.Content>
   </ContextMenu.Root>
   {#each object.track as tracklet}
-    <ObjectTimeInterval
+    <ObjectTracklet
       {tracklet}
       {object}
       color={colorScale(object.id)}
-      {onAddPointClick}
+      {onAddKeyBoxClick}
       {onContextMenu}
-      {onEditPointClick}
-      {findNeighborBreakPoints}
+      {onEditKeyBoxClick}
+      {findNeighborKeyBoxes}
     />
   {/each}
 </div>

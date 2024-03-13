@@ -17,15 +17,15 @@
   import { ContextMenu, cn } from "@pixano/core";
   import type { Tracklet, VideoObject, ItemBBox } from "@pixano/core";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import IntervalBreakPoint from "./IntervalBreakPoint.svelte";
+  import TrackletKeyBox from "./TrackletKeyBox.svelte";
 
   export let object: VideoObject;
   export let color: string;
   export let tracklet: Tracklet;
   export let onContextMenu: (event: MouseEvent) => void;
-  export let onEditPointClick: (box: ItemBBox) => void;
-  export let onAddPointClick: () => void;
-  export let findNeighborBreakPoints: (tracklet: Tracklet, frameIndex: number) => [number, number];
+  export let onEditKeyBoxClick: (box: ItemBBox) => void;
+  export let onAddKeyBoxClick: () => void;
+  export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
@@ -42,11 +42,11 @@
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
 
-  const updateIntervalWidth = (
+  const updateTrackletWidth = (
     newFrameIndex: ItemBBox["frameIndex"],
     draggedFrameIndex: ItemBBox["frameIndex"],
   ) => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborBreakPoints(tracklet, draggedFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
       if (keyBox.frameIndex === draggedFrameIndex) {
@@ -79,17 +79,17 @@
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={onAddPointClick}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#each tracklet.keyBoxes as keyBox}
-  <IntervalBreakPoint
+  <TrackletKeyBox
     {keyBox}
     {color}
     isBeingEdited={isKeyBoxBeingEdited(keyBox)}
-    {onEditPointClick}
+    {onEditKeyBoxClick}
     objectId={object.id}
-    {updateIntervalWidth}
+    {updateTrackletWidth}
     {oneFrameInPixel}
   />
 {/each}

@@ -63,7 +63,7 @@ export const deleteKeyBoxFromTracklet = (
     return object;
   });
 
-export const editBreakPointInInterval = (
+export const editKeyBoxInTracklet = (
   objects: ItemObject[],
   boxBeingEdited: ItemBBox,
   shape: EditShape,
@@ -129,7 +129,7 @@ const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: Item
     return trackItem;
   });
 
-export const addBreakPointInInterval = (
+export const addKeyBox = (
   objects: ItemObject[],
   keyBox: ItemBBox,
   objectId: string,
