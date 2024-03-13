@@ -146,6 +146,7 @@ export const addKeyBox = (
     } else {
       object.track = addKeyBoxToTracklet(object.track, tracklet, keyBox);
     }
+    object.track.sort((a, b) => a.start - b.start);
     return object;
   });
 };
