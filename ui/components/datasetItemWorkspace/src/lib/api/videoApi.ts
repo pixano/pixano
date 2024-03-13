@@ -1,4 +1,4 @@
-import type { BreakPoint, EditShape, ItemBBox, ItemObject, Tracklet } from "@pixano/core";
+import type { EditShape, ItemBBox, ItemObject, Tracklet } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -94,77 +94,58 @@ export const editBreakPointInInterval = (
     return object;
   });
 
-// const createNewInterval = (
-//   intervals: BreakPointInterval[],
-//   frameIndex: number,
-//   lastFrameIndex: number,
-//   breakPoint: BreakPoint,
-// ) => {
-//   let nextIntervalStart = intervals.find((i) => i.start > frameIndex)?.start;
-//   nextIntervalStart = nextIntervalStart ? nextIntervalStart - 1 : lastFrameIndex;
-//   return {
-//     start: frameIndex,
-//     end: nextIntervalStart,
-//     breakPoints: [
-//       {
-//         frameIndex,
-//         x: breakPoint.x,
-//         y: breakPoint.y,
-//       },
-//       {
-//         frameIndex: nextIntervalStart,
-//         x: breakPoint.x,
-//         y: breakPoint.y,
-//       },
-//     ],
-//   } as BreakPointInterval;
-// };
+const createNewTracklet = (
+  track: Tracklet[],
+  frameIndex: number,
+  lastFrameIndex: number,
+  keyBox: ItemBBox,
+) => {
+  let nextIntervalStart = track.find((t) => t.start > frameIndex)?.start;
+  nextIntervalStart = nextIntervalStart ? nextIntervalStart - 1 : lastFrameIndex;
+  return {
+    start: frameIndex,
+    end: nextIntervalStart,
+    keyBoxes: [
+      {
+        ...keyBox,
+        frameIndex,
+      },
+      {
+        ...keyBox,
+        frameIndex: nextIntervalStart,
+      },
+    ],
+  } as Tracklet;
+};
 
-// const addBreakPointToInterval = (
-//   intervals: BreakPointInterval[],
-//   breakpointInterval: BreakPointInterval,
-//   breakPoint: BreakPoint,
-// ) =>
-//   intervals.map((interval) => {
-//     if (interval.start === breakpointInterval.start && interval.end === breakpointInterval.end) {
-//       interval.breakPoints.push(breakPoint);
-//       interval.breakPoints.sort((a, b) => a.frameIndex - b.frameIndex);
-//       interval.start = interval.breakPoints[0].frameIndex;
-//       interval.end = interval.breakPoints.at(-1)?.frameIndex || interval.start;
-//     }
-//     return interval;
-//   });
+const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: ItemBBox) =>
+  track.map((trackItem) => {
+    if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
+      trackItem.keyBoxes.push(keyBox);
+      trackItem.keyBoxes.sort((a, b) => a.frameIndex - b.frameIndex);
+      trackItem.start = trackItem.keyBoxes[0].frameIndex;
+      trackItem.end = trackItem.keyBoxes[trackItem.keyBoxes.length - 1].frameIndex;
+    }
+    return trackItem;
+  });
 
 export const addBreakPointInInterval = (
   objects: ItemObject[],
-  breakPoint: BreakPoint,
+  keyBox: ItemBBox,
   objectId: string,
-  // frameIndex: number,
-  // lastFrameIndex: number,
+  frameIndex: number,
+  lastFrameIndex: number,
 ) => {
   return objects.map((object) => {
     if (objectId !== object.id || !object.bbox) return object;
-    // if (!object.bbox.breakPointsIntervals) {
-    //   object.bbox.breakPointsIntervals = [];
-    // }
-    // const breakpointInterval = object.bbox.breakPointsIntervals.find(
-    //   (i) => i.start <= frameIndex && i.end >= frameIndex,
-    // );
-    // if (!breakpointInterval) {
-    //   const newInterval = createNewInterval(
-    //     object.bbox.breakPointsIntervals,
-    //     frameIndex,
-    //     lastFrameIndex,
-    //     breakPoint,
-    //   );
-    //   object.bbox.breakPointsIntervals.push(newInterval);
-    // } else {
-    //   object.bbox.breakPointsIntervals = addBreakPointToInterval(
-    //     object.bbox.breakPointsIntervals,
-    //     breakpointInterval,
-    //     breakPoint,
-    //   );
-    // }
+    if (object.datasetItemType !== "video") return object;
+    const tracklet = object.track.find((t) => t.start <= frameIndex && t.end >= frameIndex);
+    if (!tracklet) {
+      const newTracklet = createNewTracklet(object.track, frameIndex, lastFrameIndex, keyBox);
+      object.track.push(newTracklet);
+    } else {
+      object.track = addKeyBoxToTracklet(object.track, tracklet, keyBox);
+    }
     return object;
   });
 };

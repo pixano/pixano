@@ -18,8 +18,7 @@
   import type { BreakPoint, ItemBBox, Tracklet, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { findNeighbors } from "../../lib/api/videoApi";
-  // import { addBreakPointInInterval, findNeighbors } from "../../lib/api/videoApi";
+  import { addBreakPointInInterval, findNeighbors } from "../../lib/api/videoApi";
   import ObjectTimeInterval from "./ObjectTimeInterval.svelte";
 
   export let zoomLevel: number[];
@@ -71,20 +70,11 @@
   };
 
   const onAddPointClick = () => {
-    console.log("should add point");
-    // TODO IS_DEV
-    // const [x, y] = object.bbox?.coords || [0, 0];
-    // const box: ItemBBox = { frameIndex: rightClickFrameIndex, x, y };
-    // itemObjects.update((objects) =>
-    //   addBreakPointInInterval(
-    //     objects,
-    //     breakPoint,
-    //     object.id,
-    //     rightClickFrameIndex,
-    //     $lastFrameIndex,
-    //   ),
-    // );
-    // onEditPointClick(breakPoint);
+    const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
+    itemObjects.update((objects) =>
+      addBreakPointInInterval(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
+    );
+    onEditPointClick(box);
   };
 
   const findNeighborBreakPoints = (
