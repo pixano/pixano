@@ -191,7 +191,7 @@ class App:
     type=str,
     help=(
         "S3 endpoint URL, use 'AWS' if not provided. "
-        "Used if library_dir is an S3 path",
+        "Used if library_dir is an S3 path"
     ),
 )
 @click.option(
