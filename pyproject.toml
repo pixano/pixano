@@ -44,6 +44,7 @@ dependencies = [
   "pycocotools ~= 2.0.0",
   "pydantic ~= 2.4.0",
   "pydantic-settings ~= 2.0.0",
+  "pylance == 0.8.17",
   "ruff ~= 0.3.0",
   "s3path ~= 0.5.0",
   "setuptools ~= 65.6.0",
