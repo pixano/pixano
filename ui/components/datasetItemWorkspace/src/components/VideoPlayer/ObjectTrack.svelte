@@ -58,13 +58,13 @@
     itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
     onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
     itemObjects.update((objects) =>
-      objects.map((o) => {
-        o.highlighted = o.id === object.id ? "self" : "none";
-        o.displayControl = {
-          ...o.displayControl,
-          editing: !isBeingEdited && o.id === object.id,
+      objects.map((obj) => {
+        obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.displayControl = {
+          ...obj.displayControl,
+          editing: !isBeingEdited && obj.id === object.id,
         };
-        return o;
+        return obj;
       }),
     );
   };

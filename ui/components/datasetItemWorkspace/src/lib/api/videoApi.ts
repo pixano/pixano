@@ -176,7 +176,7 @@ export const findNeighbors = (
   if (!nextNeighbor && nextTracklet) {
     nextNeighbor = nextTracklet.keyBoxes[0]?.frameIndex;
   }
-  nextNeighbor = nextNeighbor || lastFrameIndex;
+  nextNeighbor = nextNeighbor || lastFrameIndex + 1;
 
   return [prevNeighbor, nextNeighbor];
 };
