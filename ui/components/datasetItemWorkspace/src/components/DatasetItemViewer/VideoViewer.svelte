@@ -38,27 +38,13 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
 
-  // const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
-
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
 
   let isLoaded = false;
   let colorScale = utils.ordinalColorScale(colorRange);
 
-  // interface ImageModule {
-  //   default: string;
-  // }
-
   onMount(() => {
-    // const imagesFilesPromises = await Promise.all(
-    //   Object.values(imageFiles).map((image) => image()),
-    // );
-    // imagesFilesUrl = imagesFilesPromises.map((image) => {
-    //   const typedImage = image as ImageModule;
-    //   return typedImage.default;
-    // });
-
     const image = new Image();
     image.src = imagesFilesUrl[0];
 

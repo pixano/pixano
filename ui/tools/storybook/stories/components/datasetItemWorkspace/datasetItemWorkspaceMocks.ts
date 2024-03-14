@@ -3,6 +3,7 @@ import type {
   DatasetItem,
   ImageDatasetItem,
   ItemView,
+  Tracklet,
   VideoDatasetItem,
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail, imgUri } from "../../assets/base64image";
@@ -25,17 +26,18 @@ const mockImage: ItemView = {
     width: {
       name: "width",
       dtype: "int",
-      value: 770,
+      value: 600,
     },
     height: {
       name: "height",
       dtype: "int",
-      value: 513,
+      value: 338,
     },
   },
 };
 
-export const mockedImageDataseItem: ImageDatasetItem = {
+
+export const mockedImageDatasetItem: ImageDatasetItem = {
   type: "image",
   id: "fleurs.jpg",
   split: "demo",
@@ -1045,7 +1047,39 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-export const mockedVideoItem: VideoDatasetItem = {
+const startCoords = [
+  0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153,
+];
+const [x, y, w, h] = startCoords;
+
+const displayedBox = {
+  coords: startCoords,
+  format: "xywh",
+  frameIndex: 0,
+  is_normalized: true,
+  confidence: 1,
+  displayControl: {
+    hidden: false,
+  },
+};
+
+const track: Tracklet[] = [
+  {
+    start: 0,
+    end: 10,
+    keyBoxes: [displayedBox, { ...displayedBox, frameIndex: 10, coords: [x + 0.2, y + 0.3, w, h] }],
+  },
+  {
+    start: 50,
+    end: 100,
+    keyBoxes: [
+      { ...displayedBox, frameIndex: 50, coords: [x + 0.2, y + 0.3, w, h] },
+      { ...displayedBox, frameIndex: 100 },
+    ],
+  },
+];
+
+export const mockedVideoDatasetItem: VideoDatasetItem = {
   id: "fleurs.jpg",
   type: "video",
   split: "demo",
@@ -1068,23 +1102,12 @@ export const mockedVideoItem: VideoDatasetItem = {
     EZ4s6R0E_y: {
       id: "EZ4s6R0E_y",
       datasetItemType: "video",
-      track: [],
+      track,
       item_id: "fleurs.jpg",
       view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
-      displayedBox: {
-        coords: [
-          0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153,
-        ],
-        format: "xywh",
-        frameIndex: 0,
-        is_normalized: true,
-        confidence: 1,
-        displayControl: {
-          hidden: false,
-        },
-      },
+      displayedBox,
       features: {
         category_name: {
           name: "category_name",

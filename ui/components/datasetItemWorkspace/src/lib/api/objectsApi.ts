@@ -6,6 +6,8 @@ import type {
   DatasetItem,
   Shape,
   ItemView,
+  inProgressShape,
+  ItemObjectBase,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -21,6 +23,7 @@ import type {
   ObjectsSortedByModelType,
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
+import { nanoid } from "nanoid";
 
 const defineTooltip = (object: ItemObject) => {
   if (!object.bbox) return null;
@@ -214,3 +217,69 @@ export const mapObjectWithNewStatus = (
 };
 
 export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
+
+export const defineCreatedObject = (
+  shape: inProgressShape,
+  videoType: DatasetItem["type"],
+  features: ItemObjectBase["features"],
+  lastFrameIndex: number,
+) => {
+  let newObject: ItemObject | null = null;
+  const baseObject = {
+    id: nanoid(10),
+    item_id: shape.itemId,
+    source_id: GROUND_TRUTH,
+    view_id: shape.viewId,
+    features,
+  };
+  if (shape.type === "rectangle") {
+    const { x, y, width, height } = shape.attrs;
+    const coords = [
+      x / shape.imageWidth,
+      y / shape.imageHeight,
+      width / shape.imageWidth,
+      height / shape.imageHeight,
+    ];
+    const bbox = {
+      coords,
+      format: "xywh",
+      is_normalized: true,
+      confidence: 1,
+    };
+    const isVideo = videoType === "video";
+    if (isVideo) {
+      newObject = {
+        ...baseObject,
+        datasetItemType: "video",
+        track: [
+          {
+            start: 0,
+            end: lastFrameIndex,
+            keyBoxes: [
+              { ...bbox, frameIndex: 0 },
+              { ...bbox, frameIndex: lastFrameIndex },
+            ],
+          },
+        ],
+        displayedBox: { ...bbox, frameIndex: 0 },
+      };
+    } else {
+      newObject = {
+        ...baseObject,
+        datasetItemType: "image",
+        bbox,
+      };
+    }
+  }
+  if (shape.type === "mask") {
+    newObject = {
+      ...baseObject,
+      datasetItemType: "image",
+      mask: {
+        counts: shape.rle.counts,
+        size: shape.rle.size,
+      },
+    };
+  }
+  return newObject;
+};

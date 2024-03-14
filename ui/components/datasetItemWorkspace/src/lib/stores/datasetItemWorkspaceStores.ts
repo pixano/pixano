@@ -39,6 +39,7 @@ export const itemMetas = writable<{
   featuresList: FeaturesValues; // featuresValues
   views: DatasetItem["views"];
   id: DatasetItem["id"];
+  type: DatasetItem["type"];
 }>();
 export const canSave = writable<boolean>(false);
 export const modelsStore = writable<ModelSelection>({

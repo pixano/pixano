@@ -21,10 +21,10 @@ import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/li
 
 import { MockInteractiveImageSegmenter } from "../canvas2d/mocks";
 import {
-  mockedImageDataseItem,
+  mockedImageDatasetItem,
   mockedCurrentDataset,
   mockHandleSaveItem,
-  mockedVideoItem,
+  mockedVideoDatasetItem,
 } from "./datasetItemWorkspaceMocks";
 
 type Story = StoryObj<typeof meta>;
@@ -52,7 +52,7 @@ export const SimpleImage: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     currentDataset: mockedCurrentDataset,
-    selectedItem: mockedImageDataseItem,
+    selectedItem: mockedImageDatasetItem,
   },
 };
 
@@ -64,6 +64,6 @@ export const SimpleVideo: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     currentDataset: mockedCurrentDataset,
-    selectedItem: mockedVideoItem,
+    selectedItem: mockedVideoDatasetItem,
   },
 };
