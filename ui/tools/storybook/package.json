@@ -40,7 +40,6 @@
     "@pixano/dataset-item-workspace": "workspace:^",
     "@pixano/models": "workspace:^",
     "@pixano/table": "workspace:^",
-    "@pixano/new-table": "workspace:^",
     "@storybook/addon-styling": "^1.3.7",
     "@storybook/client-api": "^7.6.17",
     "autoprefixer": "^10.4.17",
