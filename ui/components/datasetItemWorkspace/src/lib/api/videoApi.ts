@@ -1,4 +1,4 @@
-import type { EditShape, ItemBBox, ItemObject, Tracklet } from "@pixano/core";
+import type { EditShape, ItemObject, Tracklet, VideoItemBBox } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -42,7 +42,7 @@ export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
 
 export const deleteKeyBoxFromTracklet = (
   objects: ItemObject[],
-  box: ItemBBox,
+  box: VideoItemBBox,
   objectId: ItemObject["id"],
 ) =>
   objects.map((object) => {
@@ -65,7 +65,7 @@ export const deleteKeyBoxFromTracklet = (
 
 export const editKeyBoxInTracklet = (
   objects: ItemObject[],
-  boxBeingEdited: ItemBBox,
+  boxBeingEdited: VideoItemBBox,
   shape: EditShape,
 ) =>
   objects.map((object) => {
@@ -98,7 +98,7 @@ const createNewTracklet = (
   track: Tracklet[],
   frameIndex: number,
   lastFrameIndex: number,
-  keyBox: ItemBBox,
+  keyBox: VideoItemBBox,
 ) => {
   let nextIntervalStart = track.find((t) => t.start > frameIndex)?.start;
   nextIntervalStart = nextIntervalStart ? nextIntervalStart - 1 : lastFrameIndex;
@@ -118,7 +118,7 @@ const createNewTracklet = (
   } as Tracklet;
 };
 
-const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: ItemBBox) =>
+const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: VideoItemBBox) =>
   track.map((trackItem) => {
     if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
       trackItem.keyBoxes.push(keyBox);
@@ -131,14 +131,15 @@ const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: Item
 
 export const addKeyBox = (
   objects: ItemObject[],
-  keyBox: ItemBBox,
+  keyBox: VideoItemBBox,
   objectId: string,
   frameIndex: number,
   lastFrameIndex: number,
 ) => {
   return objects.map((object) => {
-    if (objectId !== object.id || !object.bbox) return object;
+    if (objectId !== object.id) return object;
     if (object.datasetItemType !== "video") return object;
+    console.log("object.track", object.track);
     const tracklet = object.track.find((t) => t.start <= frameIndex && t.end >= frameIndex);
     if (!tracklet) {
       const newTracklet = createNewTracklet(object.track, frameIndex, lastFrameIndex, keyBox);
@@ -154,7 +155,7 @@ export const addKeyBox = (
 export const findNeighbors = (
   track: Tracklet[],
   currentTracklet: Tracklet,
-  frameIndex: ItemBBox["frameIndex"],
+  frameIndex: VideoItemBBox["frameIndex"],
   lastFrameIndex: number,
 ): [number, number] => {
   const currentIntervalIndex = track.findIndex(

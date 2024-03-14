@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { BreakPoint, ItemBBox, Tracklet, VideoObject } from "@pixano/core";
+  import type { BreakPoint, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors } from "../../lib/api/videoApi";
@@ -49,11 +49,11 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isKeyBoxBeingEdited = (box: ItemBBox) =>
+  const isKeyBoxBeingEdited = (box: VideoItemBBox) =>
     $itemBoxBeingEdited?.objectId === object.id &&
     box.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onEditKeyBoxClick = (box: ItemBBox) => {
+  const onEditKeyBoxClick = (box: VideoItemBBox) => {
     const isBeingEdited = isKeyBoxBeingEdited(box);
     itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
     onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
@@ -71,6 +71,7 @@
 
   const onAddKeyBoxClick = () => {
     const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
+    console.log({ box });
     itemObjects.update((objects) =>
       addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );

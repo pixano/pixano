@@ -36,7 +36,6 @@ const mockImage: ItemView = {
   },
 };
 
-
 export const mockedImageDatasetItem: ImageDatasetItem = {
   type: "image",
   id: "fleurs.jpg",
@@ -1047,34 +1046,33 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const startCoords = [
-  0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153,
-];
-const [x, y, w, h] = startCoords;
-
 const displayedBox = {
-  coords: startCoords,
+  coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
   format: "xywh",
-  frameIndex: 0,
   is_normalized: true,
   confidence: 1,
-  displayControl: {
-    hidden: false,
-  },
+  frameIndex: 1,
 };
 
 const track: Tracklet[] = [
   {
     start: 0,
-    end: 10,
-    keyBoxes: [displayedBox, { ...displayedBox, frameIndex: 10, coords: [x + 0.2, y + 0.3, w, h] }],
-  },
-  {
-    start: 50,
-    end: 100,
+    end: 73,
     keyBoxes: [
-      { ...displayedBox, frameIndex: 50, coords: [x + 0.2, y + 0.3, w, h] },
-      { ...displayedBox, frameIndex: 100 },
+      {
+        coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
+        format: "xywh",
+        is_normalized: true,
+        confidence: 1,
+        frameIndex: 0,
+      },
+      {
+        coords: [0.5914342337390056, 0.2693339921343171, 0.09993766916635072, 0.18671048750633337],
+        format: "xywh",
+        is_normalized: true,
+        confidence: 1,
+        frameIndex: 73,
+      },
     ],
   },
 ];

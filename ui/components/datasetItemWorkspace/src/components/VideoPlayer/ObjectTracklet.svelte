@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { Tracklet, VideoObject, ItemBBox } from "@pixano/core";
+  import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
 
@@ -23,7 +23,7 @@
   export let color: string;
   export let tracklet: Tracklet;
   export let onContextMenu: (event: MouseEvent) => void;
-  export let onEditKeyBoxClick: (box: ItemBBox) => void;
+  export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
   export let onAddKeyBoxClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
 
@@ -43,8 +43,8 @@
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
 
   const updateTrackletWidth = (
-    newFrameIndex: ItemBBox["frameIndex"],
-    draggedFrameIndex: ItemBBox["frameIndex"],
+    newFrameIndex: VideoItemBBox["frameIndex"],
+    draggedFrameIndex: VideoItemBBox["frameIndex"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
@@ -62,7 +62,7 @@
     tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frameIndex;
   };
 
-  const isKeyBoxBeingEdited = (keyBox: ItemBBox) =>
+  const isKeyBoxBeingEdited = (keyBox: VideoItemBBox) =>
     $itemBoxBeingEdited?.objectId === object.id &&
     keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
 </script>

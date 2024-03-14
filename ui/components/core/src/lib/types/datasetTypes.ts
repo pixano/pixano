@@ -118,7 +118,7 @@ export type ItemObjectBase = {
   review_state?: "accepted" | "rejected";
 };
 
-type VideoItemBBox = ItemBBox & {
+export type VideoItemBBox = ItemBBox & {
   frameIndex: number;
 };
 export interface Tracklet {

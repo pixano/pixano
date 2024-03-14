@@ -15,31 +15,31 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, ItemBBox } from "@pixano/core";
+  import type { ItemObject, VideoItemBBox } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
 
-  export let keyBox: ItemBBox;
+  export let keyBox: VideoItemBBox;
   export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
-  export let onEditKeyBoxClick: (keyBox: ItemBBox) => void;
+  export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
   export let updateTrackletWidth: (
-    newIndex: ItemBBox["frameIndex"],
-    draggedIndex: ItemBBox["frameIndex"],
+    newIndex: VideoItemBBox["frameIndex"],
+    draggedIndex: VideoItemBBox["frameIndex"],
   ) => void;
 
   $itemBoxBeingEdited?.objectId === objectId &&
     keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
 
-  const onDeleteKeyBoxClick = (box: ItemBBox) => {
+  const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
-  const getKeyBoxLeftPosition = (box: ItemBBox) => {
+  const getKeyBoxLeftPosition = (box: VideoItemBBox) => {
     const boxFrameIndex = box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
