@@ -7,6 +7,13 @@ import type {
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail, imgUri } from "../../assets/base64image";
 
+const gallery: string[] = Object.values(
+  import.meta.glob("../../../assets/videos/mock/*.{png,jpg,jpeg,PNG,JPEG}", {
+    eager: true,
+    as: "url",
+  }),
+);
+
 const mockImage: ItemView = {
   id: "image",
   type: "image",
@@ -1055,22 +1062,7 @@ export const mockedVideoItem: VideoDatasetItem = {
     },
   },
   views: {
-    image: [mockImage],
-    //   frame_number: undefined,
-    //   total_frames: undefined,
-    //   features: {
-    //     width: {
-    //       name: "width",
-    //       dtype: "int",
-    //       value: 770,
-    //     },
-    //     height: {
-    //       name: "height",
-    //       dtype: "int",
-    //       value: 513,
-    //     },
-    //   },
-    // },
+    image: gallery.map((image) => ({ ...mockImage, uri: image })),
   },
   objects: {
     EZ4s6R0E_y: {
@@ -1086,6 +1078,7 @@ export const mockedVideoItem: VideoDatasetItem = {
           0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153,
         ],
         format: "xywh",
+        frameIndex: 0,
         is_normalized: true,
         confidence: 1,
         displayControl: {

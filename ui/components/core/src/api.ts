@@ -110,8 +110,6 @@ export async function searchDatasetItems(
   return datasetItems;
 }
 
-const IS_DEV = true;
-
 export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
   let item: DatasetItem | undefined;
   try {
@@ -132,39 +130,39 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     console.log("api.getDatasetItem -", e);
   }
 
-  if (IS_DEV) {
-    item.objects = Object.values(item.objects).reduce(
-      (acc, obj) => {
-        obj.datasetItemType = "video";
-        if (obj.datasetItemType === "video" && obj.bbox) {
-          const [x, y, w, h] = obj.bbox.coords;
-          const box = obj.bbox;
-          obj.displayedBox = obj.bbox; // TODO IS_DEV should be done on the frontend not api
-          obj.track = [
-            {
-              start: 0,
-              end: 10,
-              keyBoxes: [
-                { ...box, frameIndex: 0, coords: [x, y, w, h] },
-                { ...box, frameIndex: 10, coords: [x + 0.1, y + 0.5, w, h] },
-              ],
-            },
-            {
-              start: 52,
-              end: 91,
-              keyBoxes: [
-                { ...box, frameIndex: 52, coords: [x + 0.1, y + 0.5, w, h] },
-                { ...box, frameIndex: 91, coords: [x, y, w, h] },
-              ],
-            },
-          ];
-        }
-        acc[obj.id] = obj;
-        return acc;
-      },
-      {} as DatasetItem["objects"],
-    );
-  }
+  // if (IS_DEV) {
+  //   item.objects = Object.values(item.objects).reduce(
+  //     (acc, obj) => {
+  //       obj.datasetItemType = "video";
+  //       if (obj.datasetItemType === "video" && obj.bbox) {
+  //         const [x, y, w, h] = obj.bbox.coords;
+  //         const box = obj.bbox;
+  //         obj.displayedBox = obj.bbox; // TODO IS_DEV should be done on the frontend not api
+  //         obj.track = [
+  //           {
+  //             start: 0,
+  //             end: 10,
+  //             keyBoxes: [
+  //               { ...box, frameIndex: 0, coords: [x, y, w, h] },
+  //               { ...box, frameIndex: 10, coords: [x + 0.1, y + 0.5, w, h] },
+  //             ],
+  //           },
+  //           {
+  //             start: 52,
+  //             end: 91,
+  //             keyBoxes: [
+  //               { ...box, frameIndex: 52, coords: [x + 0.1, y + 0.5, w, h] },
+  //               { ...box, frameIndex: 91, coords: [x, y, w, h] },
+  //             ],
+  //           },
+  //         ];
+  //       }
+  //       acc[obj.id] = obj;
+  //       return acc;
+  //     },
+  //     {} as DatasetItem["objects"],
+  //   );
+  // }
 
   return item;
 }
