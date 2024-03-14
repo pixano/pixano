@@ -47,6 +47,7 @@
       objects.map((object) => {
         if (displayControlProperty === "editing") {
           object.highlighted = object.id === itemObject.id ? "self" : "none";
+          object.highlighted = value ? object.highlighted : "all";
           object.displayControl = {
             ...object.displayControl,
             editing: false,

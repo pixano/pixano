@@ -60,10 +60,12 @@
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.highlighted = isBeingEdited ? "all" : obj.highlighted;
         obj.displayControl = {
           ...obj.displayControl,
           editing: !isBeingEdited && obj.id === object.id,
         };
+        console.log({ obj });
         return obj;
       }),
     );
