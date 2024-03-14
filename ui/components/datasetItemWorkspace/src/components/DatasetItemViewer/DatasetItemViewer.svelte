@@ -57,7 +57,7 @@
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
     </div>
-  {:else if selectedItem.type === "video" || !selectedItem.type}
+  {:else if selectedItem.type === "video"}
     <VideoViewer
       {selectedItem}
       {embeddings}
@@ -65,7 +65,7 @@
       bind:selectedTool
       bind:currentAnn
     />
-  {:else if selectedItem.type === "image"}
+  {:else if selectedItem.type === "image" || !selectedItem.type}
     <ImageViewer
       {selectedItem}
       {embeddings}

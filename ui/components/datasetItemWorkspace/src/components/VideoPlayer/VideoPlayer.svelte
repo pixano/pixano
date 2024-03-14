@@ -23,8 +23,7 @@
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
-
-  const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
+  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let updateView: (imageIndex: number) => void;
   export let colorScale: (id: string) => string;
@@ -50,7 +49,7 @@
     if (!isLoaded) return;
     clearInterval(intervalId);
     const interval = setInterval(() => {
-      currentImageIndex = (currentImageIndex + 1) % Object.keys(imageFiles).length;
+      currentImageIndex = (currentImageIndex + 1) % ($lastFrameIndex + 1);
       cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
       updateView(currentImageIndex);
     }, videoSpeed);
@@ -97,7 +96,6 @@
       <TimeTrack
         slot="timeTrack"
         {updateView}
-        imageFilesLength={Object.keys(imageFiles).length}
         {videoSpeed}
         {intervalId}
         {zoomLevel}

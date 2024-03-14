@@ -60,12 +60,12 @@ interface BaseDatasetItem {
   objects: Record<string, ItemObject>;
   features: Record<string, ItemFeature>;
   embeddings: Record<string, ItemEmbedding>;
-  views: Record<string, ItemView>;
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
   type: "image";
   objects: Record<string, ImageObject>;
+  views: Record<string, ItemView>;
 };
 
 export type VideoDatasetItem = BaseDatasetItem & {
@@ -76,6 +76,7 @@ export type VideoDatasetItem = BaseDatasetItem & {
 
 export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
   type: "3d";
+  views: Record<string, ItemView>;
 };
 
 export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
@@ -117,8 +118,11 @@ export type ItemObjectBase = {
   review_state?: "accepted" | "rejected";
 };
 
+type VideoItemBBox = ItemBBox & {
+  frameIndex: number;
+};
 export interface Tracklet {
-  keyBoxes: ItemBBox[];
+  keyBoxes: VideoItemBBox[];
   start: number;
   end: number;
 }
@@ -157,7 +161,6 @@ export interface BreakPointInterval {
 
 export interface ItemBBox {
   coords: Array<number>;
-  frameIndex: number;
   format: string;
   is_normalized: boolean;
   confidence: number;
@@ -165,7 +168,6 @@ export interface ItemBBox {
 }
 
 // ITEM EMBEDDING
-
 export interface ItemEmbedding {
   view_id: string;
   data: string;

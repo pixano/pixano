@@ -139,7 +139,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
         if (obj.datasetItemType === "video" && obj.bbox) {
           const [x, y, w, h] = obj.bbox.coords;
           const box = obj.bbox;
-          obj.displayedBox = obj.bbox;
+          obj.displayedBox = obj.bbox; // TODO IS_DEV should be done on the frontend not api
           obj.track = [
             {
               start: 0,

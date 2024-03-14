@@ -21,7 +21,7 @@ import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/li
 
 import { MockInteractiveImageSegmenter } from "../canvas2d/mocks";
 import {
-  mockedImageItem,
+  mockedImageDataseItem,
   mockedCurrentDataset,
   mockHandleSaveItem,
   mockedVideoItem,
@@ -52,7 +52,7 @@ export const SimpleImage: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     currentDataset: mockedCurrentDataset,
-    selectedItem: mockedImageItem,
+    selectedItem: mockedImageDataseItem,
   },
 };
 

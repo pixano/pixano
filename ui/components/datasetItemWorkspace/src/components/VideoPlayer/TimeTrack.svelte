@@ -15,15 +15,16 @@
    */
 
   import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
+  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let updateView: (imageIndex: number) => void;
   export let intervalId: number;
-  export let imageFilesLength: number;
   export let videoSpeed: number;
   export let currentImageIndex: number;
   export let cursorElement: HTMLButtonElement;
   export let zoomLevel: number[];
 
+  let imageFilesLength = $lastFrameIndex + 1;
   const videoTotalLengthInMs = imageFilesLength * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
 

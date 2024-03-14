@@ -30,7 +30,6 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  // import { linearInterpolation } from "../../lib/api/videoApi";
   import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
@@ -39,25 +38,26 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
 
-  const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
+  // const imageFiles = import.meta.glob("../../assets/videos/mock/*.png") || {};
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
-  let imagesFilesUrl: string[] = [];
+  let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
+
   let isLoaded = false;
   let colorScale = utils.ordinalColorScale(colorRange);
 
-  interface ImageModule {
-    default: string;
-  }
+  // interface ImageModule {
+  //   default: string;
+  // }
 
-  onMount(async () => {
-    const imagesFilesPromises = await Promise.all(
-      Object.values(imageFiles).map((image) => image()),
-    );
-    imagesFilesUrl = imagesFilesPromises.map((image) => {
-      const typedImage = image as ImageModule;
-      return typedImage.default;
-    });
+  onMount(() => {
+    // const imagesFilesPromises = await Promise.all(
+    //   Object.values(imageFiles).map((image) => image()),
+    // );
+    // imagesFilesUrl = imagesFilesPromises.map((image) => {
+    //   const typedImage = image as ImageModule;
+    //   return typedImage.default;
+    // });
 
     const image = new Image();
     image.src = imagesFilesUrl[0];
@@ -108,7 +108,7 @@
 
 <section class="pl-4 h-full w-full flex flex-col">
   {#if isLoaded}
-    <div class="overflow-hidden grow bg-blue-500">
+    <div class="overflow-hidden grow">
       <Canvas2D
         selectedItemId={selectedItem.id}
         {imagesPerView}

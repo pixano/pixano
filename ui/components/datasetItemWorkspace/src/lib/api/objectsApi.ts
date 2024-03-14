@@ -35,7 +35,7 @@ const defineTooltip = (object: ItemObject) => {
   return tooltip;
 };
 
-const IS_DEV = true; // TODO : remove when dataset is ready for video
+const IS_DEV = false; // TODO : remove when dataset is ready for video
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
