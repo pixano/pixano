@@ -38,20 +38,15 @@ const defineTooltip = (object: ItemObject) => {
   return tooltip;
 };
 
-const IS_DEV = false; // TODO : remove when dataset is ready for video
-
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
   const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
-  if (!box) return;
+
+  if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
-  let imageHeight = (image.features.height.value as number) || 1;
-  let imageWidth = (image.features.width.value as number) || 1;
-  if (IS_DEV) {
-    imageHeight = 338;
-    imageWidth = 600;
-  }
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
   const [x, y, width, height] = box.coords;
   const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
 

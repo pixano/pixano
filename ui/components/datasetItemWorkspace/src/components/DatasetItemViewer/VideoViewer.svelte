@@ -73,6 +73,7 @@
           displayedBox.frameIndex = imageIndex;
         }
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+        displayedBox.hidden = !newCoords;
         return { ...object, displayedBox };
       }),
     );

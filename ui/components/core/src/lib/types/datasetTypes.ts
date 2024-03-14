@@ -120,6 +120,7 @@ export type ItemObjectBase = {
 
 export type VideoItemBBox = ItemBBox & {
   frameIndex: number;
+  hidden?: boolean;
 };
 export interface Tracklet {
   keyBoxes: VideoItemBBox[];
@@ -145,18 +146,6 @@ export interface ItemRLE {
   counts: Array<number>;
   size: Array<number>;
   displayControl?: DisplayControl;
-}
-
-export interface BreakPoint {
-  frameIndex: number;
-  x: number;
-  y: number;
-}
-
-export interface BreakPointInterval {
-  breakPoints: BreakPoint[];
-  start: number;
-  end: number;
 }
 
 export interface ItemBBox {
