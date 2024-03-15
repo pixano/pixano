@@ -16,16 +16,10 @@ import pyarrow as pa
 from pydantic import BaseModel
 
 from pixano.core import (
-    BBox,
-    BBoxType,
     Camera,
     CameraType,
-    CompressedRLE,
-    CompressedRLEType,
     DepthImage,
     DepthImageType,
-    GtInfo,
-    GtInfoType,
     Image,
     ImageType,
     Pose,
