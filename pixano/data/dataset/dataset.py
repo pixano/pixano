@@ -22,13 +22,13 @@ from lancedb.query import LanceQueryBuilder
 from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
-from pixano.core.types.image import Image
+from pixano.core import Image
+from pixano.core.types.group import TableGroup
 from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
 from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
 from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import (
     DatasetItem,
-    TableGroup,
     create_custom_dataset_item_class,
 )
 from pixano.data.dataset.dataset_schema import DatasetSchema

@@ -17,9 +17,11 @@ import lancedb
 import pyarrow as pa
 from pydantic import BaseModel
 
-from pixano.core import BBox, CompressedRLE
 from pixano.data.fields import field_to_python
 from pixano.data.item.item_feature import ItemFeature
+
+CompressedRLE = Any
+BBox = Any
 
 
 class ItemURLE(BaseModel):

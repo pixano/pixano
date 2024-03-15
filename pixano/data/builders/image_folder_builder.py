@@ -1,5 +1,6 @@
 from . import folder_based_builder
 
+
 # Image extensions supported by Pillow
 IMAGE_EXTENSIONS = [
     ".blp",
@@ -69,5 +70,4 @@ IMAGE_EXTENSIONS = [
 
 
 class ImageFolderBuilder(folder_based_builder.FolderBasedBuilder):
-
     EXTENSIONS = IMAGE_EXTENSIONS

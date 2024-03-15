@@ -75,8 +75,7 @@ def _generate_schema_mapping(cls):
 
 
 class DatasetInfo(pydantic.BaseModel):
-    """
-    Metadata for a dataset.
+    """Metadata for a dataset.
 
     Attributes:
         name (str): The name of the dataset.
@@ -98,8 +97,7 @@ class DatasetInfo(pydantic.BaseModel):
 
     @classmethod
     def from_json(cls, path: os.PathLike):
-        """
-        Create a DatasetInfo instance from a JSON file.
+        """Create a DatasetInfo instance from a JSON file.
 
         Args:
             path (os.PathLike): The path to the JSON file.
@@ -114,8 +112,7 @@ class DatasetInfo(pydantic.BaseModel):
 
 
 class DatasetBuilder(abc.ABC):
-    """
-    Abstract base class for dataset builders.
+    """Abstract base class for dataset builders.
 
     Attributes:
         _schemas (dict[str, Any]): The schemas for the dataset tables.
@@ -134,8 +131,7 @@ class DatasetBuilder(abc.ABC):
         info: DatasetInfo,
         mode: str = "create",
     ):
-        """
-        Initialize the BaseDatasetBuilder instance.
+        """Initialize the BaseDatasetBuilder instance.
 
         Args:
             source_dir (os.PathLike): The source directory for the dataset.
@@ -156,8 +152,7 @@ class DatasetBuilder(abc.ABC):
         # self._info = info.model_copy(update={"id": shortuuid.uuid()})
 
     def build(self) -> dataset.Dataset:
-        """
-        Build the dataset.
+        """Build the dataset.
 
         Returns:
             Dataset: The built dataset.
@@ -180,8 +175,7 @@ class DatasetBuilder(abc.ABC):
                 table.add(items[table_name])
 
     def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
-        """
-        Generate RGB sequence previews for the dataset.
+        """Generate RGB sequence previews for the dataset.
 
         Args:
             fps (int, optional): The frames per second for the preview.
@@ -224,8 +218,7 @@ class DatasetBuilder(abc.ABC):
 
     @abc.abstractmethod
     def _generate_items(self) -> Iterator[Dict[str, Any]]:
-        """
-        Read items from the source directory.
+        """Read items from the source directory.
 
         Returns:
             Iterator[Dict[str, Any]]: An iterator over the items following data schema.
@@ -234,8 +227,7 @@ class DatasetBuilder(abc.ABC):
         raise NotImplementedError
 
     def _create_tables(self, schemas: dict[str, Any] = None):
-        """
-        Create tables in the database.
+        """Create tables in the database.
 
         Args:
             schemas (dict[str, Any], optional): The schemas for the tables.

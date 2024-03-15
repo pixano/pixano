@@ -18,7 +18,7 @@ from pathlib import Path
 import shortuuid
 from PIL import Image as PILImage
 
-from pixano.core import BBox, Image
+from pixano.core import Image
 from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key

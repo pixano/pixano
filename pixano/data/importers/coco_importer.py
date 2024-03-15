@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 import shortuuid
 
-from pixano.core import BBox, CompressedRLE, Image
+from pixano.core import Image
 from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
 from pixano.utils import image_to_thumbnail, natural_key
