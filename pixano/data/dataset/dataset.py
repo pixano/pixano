@@ -21,7 +21,7 @@ from lancedb.pydantic import LanceModel
 from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
-from pixano.core.types.registry import _TABLE_TYPE_REGISTRY 
+from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
 from pixano.data.dataset.dataset_item import TableGroup
 from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
 from pixano.data.dataset.dataset_item import DatasetItem
@@ -30,6 +30,8 @@ from pixano.data.dataset.dataset_stat import DatasetStat
 from pixano.data.dataset.dataset_summary import DatasetSummary
 
 DEFAULT_DB_PATH = "db"
+DEFAULT_PREVIEWS_PATH = "previews"
+
 
 class Dataset(BaseModel):
     """Dataset
@@ -42,6 +44,7 @@ class Dataset(BaseModel):
         stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
+
     path: Path | S3Path
     # summary: Optional[DatasetSummary] = None
     dataset_schema: Optional[DatasetSchema] = None
@@ -69,17 +72,17 @@ class Dataset(BaseModel):
 
         super().__init__(
             path=path,
-            #summary=DatasetSummary.from_json(summary_file),
+            # summary=DatasetSummary.from_json(summary_file),
             dataset_schema=DatasetSchema.from_json(schema_file),
-            #features_values=DatasetFeaturesValues.from_json(features_values_file),
-            #stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
+            # features_values=DatasetFeaturesValues.from_json(features_values_file),
+            # stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
             # thumbnail=(
             #     Image(uri=thumb_file.absolute().as_uri()).url
             #     if thumb_file.is_file()
             #     else None
             # ),
         )
-    
+
     @property
     def _media_dir(self) -> Path | S3Path:
         """Return dataset media directory
@@ -89,7 +92,7 @@ class Dataset(BaseModel):
         """
 
         return self.path / "media"
-    
+
     @property
     def _db_path(self) -> Path | S3Path:
         """Return dataset db path
@@ -101,7 +104,6 @@ class Dataset(BaseModel):
             return self.path.as_uri() + "/" + DEFAULT_DB_PATH
 
         return self.path / DEFAULT_DB_PATH
-    
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB
@@ -112,7 +114,6 @@ class Dataset(BaseModel):
 
         return lancedb.connect(self._db_path)
 
-
     def open_tables(self) -> dict[TableGroup, dict[str, lancedb.db.LanceTable]]:
         """Open dataset tables with LanceDB
 
@@ -122,14 +123,18 @@ class Dataset(BaseModel):
 
         ds = self._connect()
 
-        ds_tables: dict[str, dict[TableGroup, lancedb.db.LanceTable]] = defaultdict(dict)
+        ds_tables: dict[str, dict[TableGroup, lancedb.db.LanceTable]] = defaultdict(
+            dict
+        )
 
         for table_group, tables in self.dataset_schema.schemas.items():
             for table_name in tables.keys():
-                ds_tables[TableGroup(table_group)][table_name] = ds.open_table(table_name)
+                ds_tables[TableGroup(table_group)][table_name] = ds.open_table(
+                    table_name
+                )
 
         return ds_tables
-    
+
     def open_table(self, name) -> lancedb.db.LanceTable:
         """Open dataset table with LanceDB
 
@@ -143,16 +148,15 @@ class Dataset(BaseModel):
             for table_name in tables.keys():
                 if table_name == name:
                     return ds.open_table(table_name)
-        
-        raise ValueError(f"Table {name} not found in dataset")
 
+        raise ValueError(f"Table {name} not found in dataset")
 
     def read_items(
         self,
         ids: list[str],
         select_table_groups: Optional[list[TableGroup | str]] = None,
         select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> list[DatasetItem]: # type: ignore
+    ) -> list[DatasetItem]:  # type: ignore
         """Read items from dataset.
 
         Args:
@@ -164,10 +168,24 @@ class Dataset(BaseModel):
         """
 
         if select_table_groups:
-            select_table_groups = [TableGroup(table_group.lower()) if isinstance(table_group, str) else table_group for table_group in select_table_groups]
+            select_table_groups = [
+                (
+                    TableGroup(table_group.lower())
+                    if isinstance(table_group, str)
+                    else table_group
+                )
+                for table_group in select_table_groups
+            ]
 
         if select_tables_per_group:
-            select_tables_per_group = {TableGroup(table_group.lower()) if isinstance(table_group, str) else table_group: [table.lower() for table in tables] for table_group, tables in select_tables_per_group.items()}
+            select_tables_per_group = {
+                (
+                    TableGroup(table_group.lower())
+                    if isinstance(table_group, str)
+                    else table_group
+                ): [table.lower() for table in tables]
+                for table_group, tables in select_tables_per_group.items()
+            }
 
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
@@ -178,38 +196,59 @@ class Dataset(BaseModel):
         ds_tables = self.open_tables()
 
         # Load PyArrow item from tables
-        pydantic_items: dict[TableGroup, dict[str, list[LanceModel]]] = defaultdict(dict)
+        pydantic_items: dict[TableGroup, dict[str, list[LanceModel]]] = defaultdict(
+            dict
+        )
 
         # Load PyArrow item from items table
         lance_query = (
-            ds_tables[TableGroup.ITEM][TableGroup.ITEM.value].search().where(
+            ds_tables[TableGroup.ITEM][TableGroup.ITEM.value]
+            .search()
+            .where(
                 f"id in {sql_ids}",
-            ).limit(None)
+            )
+            .limit(None)
         )
 
-        item_type = _TABLE_TYPE_REGISTRY[self.dataset_schema.schemas[TableGroup.ITEM.value][TableGroup.ITEM.value]]
-        pydantic_items[TableGroup.ITEM][TableGroup.ITEM.value] = lance_query.to_pydantic(item_type)
+        item_type = _TABLE_TYPE_REGISTRY[
+            self.dataset_schema.schemas[TableGroup.ITEM.value][TableGroup.ITEM.value]
+        ]
+        pydantic_items[TableGroup.ITEM][TableGroup.ITEM.value] = (
+            lance_query.to_pydantic(item_type)
+        )
 
         # Raise error if some ids are not found
         ids_not_found = []
         for id in ids:
-            if all(id != pydantic_item.id for pydantic_item in pydantic_items[TableGroup.ITEM][TableGroup.ITEM.value]):
+            if all(
+                id != pydantic_item.id
+                for pydantic_item in pydantic_items[TableGroup.ITEM][
+                    TableGroup.ITEM.value
+                ]
+            ):
                 ids_not_found.append(id)
         if len(ids_not_found) > 0:
-            raise ValueError(f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table")
-        
+            raise ValueError(
+                f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
+            )
+
         # Load PyArrow item data from other tables
         for table_group in ds_tables.keys():
             if table_group == TableGroup.ITEM:
                 continue
-            
-            if (select_table_groups and 
-               select_tables_per_group and 
-               table_group in select_table_groups and 
-               table_group in select_tables_per_group
+
+            if (
+                select_table_groups
+                and select_tables_per_group
+                and table_group in select_table_groups
+                and table_group in select_tables_per_group
             ):
-                raise ValueError(f"Table group {table_group} is in both select_table_groups and select_tables_per_group")
-            elif (not select_table_groups and not select_tables_per_group) or (select_table_groups and table_group in select_table_groups):
+                raise ValueError(
+                    f"Table group {table_group} is in both select_table_groups and select_tables_per_group"
+                )
+            elif (not select_table_groups and not select_tables_per_group) or (
+                select_table_groups and table_group in select_table_groups
+            ):
                 tables_to_read = ds_tables[table_group].keys()
             elif select_tables_per_group and table_group in select_tables_per_group:
                 tables_to_read = select_tables_per_group[table_group]
@@ -218,15 +257,25 @@ class Dataset(BaseModel):
 
             for table_name in tables_to_read:
                 if table_name not in ds_tables[table_group]:
-                    raise ValueError(f"Table {table_name} not found in {table_group.value} table group")
+                    raise ValueError(
+                        f"Table {table_name} not found in {table_group.value} table group"
+                    )
                 table = ds_tables[table_group][table_name]
-        
-                lance_query = table.search().where(
-                    f"item_id in {sql_ids}",
-                ).limit(None)
-                table_type = _TABLE_TYPE_REGISTRY[self.dataset_schema.schemas[table_group.value][table_name]]
-                pydantic_items[table_group][table_name] = lance_query.to_pydantic(table_type)
-        
+
+                lance_query = (
+                    table.search()
+                    .where(
+                        f"item_id in {sql_ids}",
+                    )
+                    .limit(None)
+                )
+                table_type = _TABLE_TYPE_REGISTRY[
+                    self.dataset_schema.schemas[table_group.value][table_name]
+                ]
+                pydantic_items[table_group][table_name] = lance_query.to_pydantic(
+                    table_type
+                )
+
         # Create DatasetItem from PyArrow items
         data_dict: dict[str, dict[str, dict[str, LanceModel]]] = {}
         for table_group, tables in pydantic_items.items():
@@ -238,20 +287,17 @@ class Dataset(BaseModel):
                     if table_group.value not in data_dict[id]:
                         data_dict[id][table_group.value] = {}
                     data_dict[id][table_group.value][table_name] = row
-        
-        dataset_items = [
-            DatasetItem(id=id, **data_dict[id])
-            for id in ids
-        ]
-        
+
+        dataset_items = [DatasetItem(id=id, **data_dict[id]) for id in ids]
+
         return dataset_items
-    
+
     def read_item(
-        self, 
+        self,
         id: str,
         select_table_groups: Optional[list[TableGroup | str]] = None,
-        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None
-    ) -> DatasetItem: # type: ignore
+        select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
+    ) -> DatasetItem:  # type: ignore
         """Read one item from dataset. Look :func:`read_items` for more details."""
         if not isinstance(id, str):
             raise ValueError("id should be a string")
@@ -264,12 +310,12 @@ class Dataset(BaseModel):
         limit: int,
         select_table_groups: Optional[list[TableGroup | str]] = None,
         select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> list[DatasetItem]: # type: ignore
+    ) -> list[DatasetItem]:  # type: ignore
         """Get items from dataset
 
         Args:
             offset (int): Offset
-            limit (int): Limit 
+            limit (int): Limit
             select_table_groups (list[str], optional): Table groups to read
             select_tables_per_group (list[str], optional): Tables to read per group
         Returns:
@@ -277,20 +323,24 @@ class Dataset(BaseModel):
         """
 
         items_table = self.open_table(TableGroup.ITEM.value).to_lance()
-        ids = duckdb.query(
-            f"SELECT id FROM items_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-        ).to_arrow_table()["id"].to_pylist()
+        ids = (
+            duckdb.query(
+                f"SELECT id FROM items_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            )
+            .to_arrow_table()["id"]
+            .to_pylist()
+        )
 
         items = self.read_items(ids, select_table_groups, select_tables_per_group)
 
         return items
-    
+
     def get_item(
         self,
         num_item: int,
         select_table_groups: Optional[list[TableGroup | str]] = None,
         select_tables_per_group: Optional[dict[TableGroup | str, list[str]]] = None,
-    ) -> DatasetItem: # type: ignore
+    ) -> DatasetItem:  # type: ignore
         """Get items from dataset
 
         Args:
@@ -301,4 +351,6 @@ class Dataset(BaseModel):
             list[DatasetItem]: Dataset items
         """
 
-        return self.get_items(num_item, 1, select_table_groups, select_tables_per_group)[0]
+        return self.get_items(
+            num_item, 1, select_table_groups, select_tables_per_group
+        )[0]

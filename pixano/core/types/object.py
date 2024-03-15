@@ -14,9 +14,12 @@
 
 from lancedb.pydantic import LanceModel
 
-from pixano.core import BBox, CompressedRLE
 
 from .registry import _register_table_type_internal
+
+from . import bbox
+from . import compressed_rle
+
 
 @_register_table_type_internal()
 class Object(LanceModel):
@@ -25,7 +28,25 @@ class Object(LanceModel):
     id: str
     item_id: str
     view_id: str
-    track_id: str
-    timestamp: float
-    bbox: BBox
-    mask: CompressedRLE
+
+    class Config:
+        extra = "ignore"
+
+
+class ObjectWithBBox(Object):
+    """Object with Bounding Box Lance Model"""
+
+    bbox: bbox.BBox
+
+
+class ObjectWithMask(Object):
+    """Object with Mask Lance Model"""
+
+    mask: compressed_rle.CompressedRLE
+
+
+class ObjectWithBBoxAndMask(Object):
+    """Object with Bounding Box and Mask Lance Model"""
+
+    bbox: bbox.BBox
+    mask: compressed_rle.CompressedRLE

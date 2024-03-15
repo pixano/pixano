@@ -13,7 +13,7 @@
 
 import pydantic
 
-from ..utils import boxes as bbox_utils
+from ...utils import boxes as bbox_utils
 
 
 class BBox(pydantic.BaseModel):

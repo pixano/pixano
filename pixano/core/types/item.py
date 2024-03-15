@@ -47,11 +47,7 @@ class ViewRecords(pydantic.BaseModel):
         ids = [d["id"] for d in data]
         names = [d["name"] for d in data]
         paths = [d["path"] for d in data]
-        return cls(
-            ids=ids,
-            names=names,
-            paths=paths
-        )
+        return cls(ids=ids, names=names, paths=paths)
 
 
 @_register_table_type_internal()
@@ -61,3 +57,6 @@ class Item(LanceModel):
     id: str
     views: ViewRecords
     split: str
+
+    class Config:
+        extra = "ignore"

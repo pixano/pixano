@@ -11,16 +11,29 @@
 #
 # http://www.cecill.info
 
-from pixano.core.types.item import Item, ViewRecords
-from pixano.core.types.image import Image
-from pixano.core.types.sequence_frame import SequenceFrame
-from pixano.core.types.registry import register_table_type
 
+import pydantic
+
+from pixano.core.types.image import Image
+from pixano.core.types.item import Item, ViewRecords
+from pixano.core.types.registry import register_table_type
+from pixano.core.types.sequence_frame import SequenceFrame
+
+from .bbox import BBox
+from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
+
+DataSchema = pydantic.BaseModel
 
 __all__ = [
+    "DataSchema",
+    "BBox",
     "Item",
+    "Object",
+    "ObjectWithBBox",
+    "ObjectWithMask",
+    "ObjectWithBBoxAndMask",
     "ViewRecords",
     "Image",
     "SequenceFrame",
-    "register_table_type"
+    "register_table_type",
 ]

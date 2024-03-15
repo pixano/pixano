@@ -12,11 +12,11 @@
 # http://www.cecill.info
 
 import numpy as np
-import pyarrow as pa
 import pydantic
-from PIL import Image
 
-from ..utils import image as image_utils
+from PIL import Image as pil_image
+
+from ...utils import image as image_utils
 
 
 class CompressedRLE(pydantic.BaseModel):
@@ -58,7 +58,7 @@ class CompressedRLE(pydantic.BaseModel):
         return image_utils.rle_to_polygons(self.to_dict())
 
     @staticmethod
-    def from_mask(mask: Image.Image | np.ndarray) -> "CompressedRLE":
+    def from_mask(mask: pil_image.Image | np.ndarray) -> "CompressedRLE":
         """Create compressed RLE mask from NumPy array
 
         Args:
