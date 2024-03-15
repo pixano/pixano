@@ -20,7 +20,7 @@ from pixano.core.pixano_type import PixanoType, create_pyarrow_type
 
 
 class Camera(PixanoType, BaseModel):
-    """Camera type
+    """Camera type.
 
     Attributes:
         depth_scale (float): Depth scale
@@ -41,7 +41,7 @@ class Camera(PixanoType, BaseModel):
         cam_r_w2c: list[float] = None,
         cam_t_w2c: list[float] = None,
     ):
-        """Initialize Camera
+        """Initialize Camera.
 
         Args:
             depth_scale (float): Depth scale
@@ -49,7 +49,6 @@ class Camera(PixanoType, BaseModel):
             cam_r_w2c (list[float], optional): 3*3 orientation matrix. Defaults to None.
             cam_t_w2c (list[float], optional): 3*1 translation matrix. Defaults to None.
         """
-
         if cam_r_w2c is None:
             cam_r_w2c = [0.0] * 9
         if cam_t_w2c is None:
@@ -65,12 +64,11 @@ class Camera(PixanoType, BaseModel):
 
     @staticmethod
     def to_struct() -> pa.StructType:
-        """Return Camera type as PyArrow Struct
+        """Return Camera type as PyArrow Struct.
 
         Returns:
             pa.StructType: Custom type corresponding PyArrow Struct
         """
-
         return pa.struct(
             [
                 pa.field("depth_scale", pa.float64()),

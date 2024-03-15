@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 
 class DatasetCategory(BaseModel):
-    """DatasetTable
+    """DatasetCategory.
 
     Attributes:
         id (int): Category ID

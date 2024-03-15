@@ -20,7 +20,7 @@ from pixano.core import is_boolean, is_float, is_integer, is_string
 
 
 class ItemFeature(BaseModel):
-    """Feature
+    """Feature.
 
     Attributes:
         name (str): Feature name
@@ -37,7 +37,7 @@ class ItemFeature(BaseModel):
         table: pa.Table,
         schema: pa.schema,
     ) -> dict[str, "ItemFeature"]:
-        """Create dictionary of ItemFeature from PyArrow Table
+        """Create dictionary of ItemFeature from PyArrow Table.
 
         Args:
             table (pa.Table): PyArrow table
@@ -46,7 +46,6 @@ class ItemFeature(BaseModel):
         Returns:
             dict[str, ItemFeature]: Dictionary of ItemFeature
         """
-
         item = table.to_pylist()[0]
         features = {}
         ignored_fields = [
@@ -72,7 +71,8 @@ class ItemFeature(BaseModel):
                 # Float fields
                 if is_float(field.type):
                     # Parse float value from string
-                    # (Float conversions from PyArrow to Python can currently add a lot of random decimal places)
+                    # (Float conversions from PyArrow to Python can currently add a
+                    # lot of random decimal places)
                     value_as_string: str = table[field.name].to_string()
                     value_as_string = (
                         value_as_string.replace("[", "").replace("]", "").strip()
@@ -119,7 +119,7 @@ class ItemFeature(BaseModel):
 
 
 class FeaturesValues(BaseModel):
-    """Features availables values
+    """Features availables values.
 
     Attributes:
         scene (dict[str, list[str]]): Scene features available values

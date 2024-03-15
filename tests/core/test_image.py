@@ -78,7 +78,8 @@ class ImageTestCase(unittest.TestCase):
 
         self.assertEqual(image_1.complete_uri, uri_1)
 
-        # 2. Relative URI, without prefix. The assertRaises does not count in code coverage, not sure why.
+        # 2. Relative URI, without prefix. The assertRaises does not count in code
+        # coverage, not sure why.
         image_2 = Image("relative_path.png")
 
         self.assertRaises(ValueError, getattr, image_2, "complete_uri")

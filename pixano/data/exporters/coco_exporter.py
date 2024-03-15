@@ -29,7 +29,7 @@ from pixano.data.item.item_object import ItemObject
 
 
 class COCOExporter(Exporter):
-    """Exporter class for COCO instances dataset
+    """Exporter class for COCO instances dataset.
 
     Attributes:
         dataset (Dataset): Dataset to export
@@ -46,15 +46,17 @@ class COCOExporter(Exporter):
         objects_sources: list[str] = None,
         copy: bool = True,
     ):
-        """Export dataset back to original format
+        """Export dataset back to original format.
 
         Args:
             export_dir (Path): Export directory
-            splits (list[str], optional): Dataset splits to export, all if None. Defaults to None.
-            objects_sources (list[str], optional): Objects sources to export, all if None. Defaults to None.
-            copy (bool, optional): True to copy files to export directory. Defaults to True.
+            splits (list[str], optional): Dataset splits to export, all if None.
+                Defaults to None.
+            objects_sources (list[str], optional): Objects sources to export,
+                all if None. Defaults to None.
+            copy (bool, optional): True to copy files to export directory.
+                Defaults to True.
         """
-
         # If no splits provided, select all splits
         if splits is None:
             splits = self.dataset.info.splits
@@ -64,9 +66,9 @@ class COCOExporter(Exporter):
 
         # If no object sources provided, select all object tables
         if objects_sources is None:
-            objects_sources = list(
+            objects_sources = [
                 table.source for table in self.dataset.info.tables["objects"]
-            )
+            ]
             # If no object tables, there is nothing to export
             if not objects_sources:
                 raise ValueError("Dataset has no objects tables to export.")
@@ -83,7 +85,9 @@ class COCOExporter(Exporter):
                     "info": {
                         "description": self.dataset.info.name,
                         "url": "N/A",
-                        "version": f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}",
+                        "version": (
+                            f"v{datetime.datetime.now().strftime('%y%m%d.%H%M%S')}"
+                        ),
                         "year": datetime.date.today().year,
                         "contributor": "Exported from Pixano",
                         "date_created": datetime.date.today().isoformat(),
@@ -147,7 +151,7 @@ class COCOExporter(Exporter):
     def _export_item(
         self, item: DatasetItem, objects_sources: list[str]
     ) -> dict[str, Image]:
-        """Export item to COCO format
+        """Export item to COCO format.
 
         Args:
             item (DatasetItem): Item to export
@@ -156,7 +160,6 @@ class COCOExporter(Exporter):
         Returns:
             dict[str, Image]: Loaded images
         """
-
         # Export images
         images = self._export_images(item)
         # Export objects
@@ -168,7 +171,7 @@ class COCOExporter(Exporter):
                 self._export_object(obj, item, images)
 
     def _export_images(self, item: DatasetItem) -> dict[str, Image]:
-        """Export item images to COCO format
+        """Export item images to COCO format.
 
         Args:
             item (DatasetItem): Item
@@ -176,7 +179,6 @@ class COCOExporter(Exporter):
         Returns:
             dict[str, Image]: Loaded images
         """
-
         images: dict[str, Image] = {}
         for view in item.views.values():
             if view.type == "image":
@@ -208,7 +210,7 @@ class COCOExporter(Exporter):
     def _export_object(
         self, obj: ItemObject, item: DatasetItem, images: dict[str, Image]
     ) -> dict[str, Any]:
-        """Export item object to COCO format
+        """Export item object to COCO format.
 
         Args:
             obj (ItemObject): Object to export
@@ -218,7 +220,6 @@ class COCOExporter(Exporter):
         Returns:
             dict[str, Any]: Object in COCO format
         """
-
         # Bounding box
         bbox = (
             obj.bbox.to_pyarrow()

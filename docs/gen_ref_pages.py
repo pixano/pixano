@@ -7,6 +7,7 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
+
 SRC_PATH = "../pixano/pixano"
 REF_PATH = "api_reference"
 IGNORED_FILES = ["__init__.py", "__version__.py"]

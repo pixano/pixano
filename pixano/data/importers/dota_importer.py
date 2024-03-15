@@ -25,7 +25,7 @@ from pixano.utils import image_to_thumbnail, natural_key
 
 
 class DOTAImporter(Importer):
-    """Importer class for DOTA dataset
+    """Importer class for DOTA dataset.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -39,7 +39,7 @@ class DOTAImporter(Importer):
         input_dirs: dict[str, Path],
         splits: list[str],
     ):
-        """Initialize DOTA Importer
+        """Initialize DOTA Importer.
 
         Args:
             name (str): Dataset name
@@ -47,7 +47,6 @@ class DOTAImporter(Importer):
             input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
         """
-
         # Create tables
         tables = super().create_tables(
             media_fields={"image": "image"},
@@ -85,7 +84,7 @@ class DOTAImporter(Importer):
         super().__init__(name, description, tables, splits, categories)
 
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows

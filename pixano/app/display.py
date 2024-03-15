@@ -19,14 +19,13 @@ import shortuuid
 
 
 def display_colab(url: str, port: int, height: int):
-    """Display a Pixano app inside a Google Colab
+    """Display a Pixano app inside a Google Colab.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
         height (int): Frame height
     """
-
     # Define frame template
     shell = """
         (() => {
@@ -59,14 +58,13 @@ def display_colab(url: str, port: int, height: int):
 
 
 def display_ipython(url: str, port: int, height: int):
-    """Display a Pixano app inside a Jupyter notebook
+    """Display a Pixano app inside a Jupyter notebook.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
         height (int): Frame height
     """
-
     # Define frame template
     shell = """
         <iframe id="%HTML_ID%" width="100%" height="%HEIGHT%" frameborder="0">
@@ -102,11 +100,10 @@ def display_ipython(url: str, port: int, height: int):
 
 
 def display_cli(url: str, port: int):
-    """Display a Pixano app inside a command line interface
+    """Display a Pixano app inside a command line interface.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
     """
-
     print(f"Please visit {url}:{port} in a web browser.")

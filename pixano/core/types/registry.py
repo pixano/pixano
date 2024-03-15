@@ -1,4 +1,5 @@
 from typing import Dict, Type
+
 from lancedb.pydantic import LanceModel
 
 
@@ -19,10 +20,9 @@ def _register_table_type_internal(allow_override: bool = False):
 
 
 def register_table_type(allow_override: bool = True):
-    """Register table type
+    """Register table type.
 
     Args:
         allow_override (bool, optional): Allow override. Defaults to False.
     """
     return _register_table_type_internal(allow_override=allow_override)
-

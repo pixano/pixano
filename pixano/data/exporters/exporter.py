@@ -18,7 +18,7 @@ from pixano.data.dataset import Dataset
 
 
 class Exporter(ABC):
-    """Abstract Data Exporter class
+    """Abstract Data Exporter class.
 
     Attributes:
         dataset (Dataset): Dataset to export
@@ -30,18 +30,17 @@ class Exporter(ABC):
         self,
         input_dir: Path,
     ):
-        """Initialize Exporter
+        """Initialize Exporter.
 
         Args:
             input_dir (Path): Input dataset directory
         """
-
         # Dataset to export
         self.dataset = Dataset(input_dir)
 
     @abstractmethod
     def export_dataset(self, export_dir: Path):
-        """Export dataset back to original format
+        """Export dataset back to original format.
 
         Args:
             export_dir (Path): Export directory

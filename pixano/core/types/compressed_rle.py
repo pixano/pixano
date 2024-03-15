@@ -13,14 +13,13 @@
 
 import numpy as np
 import pydantic
-
 from PIL import Image as pil_image
 
 from ...utils import image as image_utils
 
 
 class CompressedRLE(pydantic.BaseModel):
-    """Compressed RLE mask type
+    """Compressed RLE mask type.
 
     Attributes:
         _size (list[int]): Mask size
@@ -31,35 +30,32 @@ class CompressedRLE(pydantic.BaseModel):
     counts: bytes
 
     def to_mask(self) -> np.ndarray:
-        """Convert compressed RLE mask to NumPy array
+        """Convert compressed RLE mask to NumPy array.
 
         Returns:
             np.ndarray: Mask as NumPy array
         """
-
         return image_utils.rle_to_mask(self.to_dict())
 
     def to_urle(self) -> dict[str, list[int]]:
-        """Convert compressed RLE mask to uncompressed RLE
+        """Convert compressed RLE mask to uncompressed RLE.
 
         Returns:
             dict[str, list[int]]: Mask as uncompressed RLE
         """
-
         return image_utils.rle_to_urle(self.to_dict())
 
     def to_polygons(self) -> list[list]:
-        """Convert compressed RLE mask to poylgons
+        """Convert compressed RLE mask to poylgons.
 
         Returns:
             list[list]: Mask as polygons
         """
-
         return image_utils.rle_to_polygons(self.to_dict())
 
     @staticmethod
     def from_mask(mask: pil_image.Image | np.ndarray) -> "CompressedRLE":
-        """Create compressed RLE mask from NumPy array
+        """Create compressed RLE mask from NumPy array.
 
         Args:
             mask (Image.Image | np.ndarray): Mask as NumPy array
@@ -67,12 +63,11 @@ class CompressedRLE(pydantic.BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(image_utils.mask_to_rle(mask))
 
     @staticmethod
     def from_urle(urle: dict[str, list[int]]) -> "CompressedRLE":
-        """Create compressed RLE mask from uncompressed RLE
+        """Create compressed RLE mask from uncompressed RLE.
 
         Args:
             urle (dict[str, list[int]]): Mask as uncompressed RLE
@@ -80,7 +75,6 @@ class CompressedRLE(pydantic.BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(image_utils.urle_to_rle(urle))
 
     @staticmethod
@@ -89,7 +83,7 @@ class CompressedRLE(pydantic.BaseModel):
         height: int,
         width: int,
     ) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons
+        """Create compressed RLE mask from polygons.
 
         Args:
             polygons (list[list]): Mask as polygons
@@ -99,7 +93,6 @@ class CompressedRLE(pydantic.BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(
             image_utils.polygons_to_rle(polygons, height, width)
         )
@@ -108,15 +101,15 @@ class CompressedRLE(pydantic.BaseModel):
     def encode(
         mask: list[list] | dict[str, list[int]], height: int, width: int
     ) -> "CompressedRLE":
-        """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE
+        """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
 
         Args:
-            mask (list[list] | dict[str, list[int]]): Mask as polygons / uncompressed RLE / compressed RLE
+            mask (list[list] | dict[str, list[int]]):
+                Mask as polygons / uncompressed RLE / compressed RLE
             height (int): Image height
             width (int): Image width
 
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-
         return CompressedRLE.from_dict(image_utils.encode_rle(mask, height, width))

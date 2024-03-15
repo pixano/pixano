@@ -20,7 +20,7 @@ from pixano.core import is_binary
 
 
 class ItemEmbedding(BaseModel):
-    """Embedding type for DatasetItem
+    """Embedding type for DatasetItem.
 
     Attributes:
         view_id (str): Embedding view ID
@@ -32,7 +32,7 @@ class ItemEmbedding(BaseModel):
 
     @staticmethod
     def from_pyarrow(table: pa.Table, schema: pa.schema) -> dict[str, "ItemEmbedding"]:
-        """Create dictionary of ItemEmbedding from PyArrow Table
+        """Create dictionary of ItemEmbedding from PyArrow Table.
 
         Args:
             table (dict[str, Any]): PyArrow table
@@ -41,7 +41,6 @@ class ItemEmbedding(BaseModel):
         Returns:
             dict[str, ItemEmbedding]: Dictionary of ItemEmbedding
         """
-
         list_item = table.to_pylist()
         if len(list_item) == 0:
             return {}

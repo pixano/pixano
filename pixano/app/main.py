@@ -21,7 +21,7 @@ from pixano.data.settings import Settings
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:
-    """Run Pixano app
+    """Run Pixano app.
 
     Args:
         settings (Settings): App settings
@@ -29,7 +29,6 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     Returns:
         FastAPI: Pixano app
     """
-
     # Create app
     app = FastAPI()
     app.add_middleware(

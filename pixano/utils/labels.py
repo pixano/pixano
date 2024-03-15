@@ -13,7 +13,7 @@
 
 
 def coco_ids_80to91(cat_id: int) -> int:
-    """Return COCO category ID (80 to 91 classes)
+    """Return COCO category ID (80 to 91 classes).
 
     Args:
         cat_id (int): Category ID (80 classes)
@@ -21,7 +21,6 @@ def coco_ids_80to91(cat_id: int) -> int:
     Returns:
         int: Category ID (91 classes)
     """
-
     coco_dict = {
         1: 1,
         2: 2,
@@ -109,7 +108,7 @@ def coco_ids_80to91(cat_id: int) -> int:
 
 
 def coco_names_80(cat_id: int) -> str:
-    """Return COCO category name (80 classes)
+    """Return COCO category name (80 classes).
 
     Args:
         cat_id (int): Category ID
@@ -117,7 +116,6 @@ def coco_names_80(cat_id: int) -> str:
     Returns:
         str: Category name
     """
-
     coco_dict = {
         1: "person",
         2: "bicycle",
@@ -205,7 +203,7 @@ def coco_names_80(cat_id: int) -> str:
 
 
 def coco_names_91(cat_id: int) -> str:
-    """Return COCO category name (91 classes)
+    """Return COCO category name (91 classes).
 
     Args:
         cat_id (int): Category ID
@@ -213,7 +211,6 @@ def coco_names_91(cat_id: int) -> str:
     Returns:
         str: Category name
     """
-
     coco_dict = {
         1: "person",
         2: "bicycle",
@@ -312,7 +309,7 @@ def coco_names_91(cat_id: int) -> str:
 
 
 def dota_ids(name: str) -> int:
-    """Return DOTAv2 category ID (18 classes)
+    """Return DOTAv2 category ID (18 classes).
 
     Args:
         name (int): Category name
@@ -320,7 +317,6 @@ def dota_ids(name: str) -> int:
     Returns:
         str: Category ID
     """
-
     dota_dict = {
         "plane": 1,
         "ship": 2,
@@ -346,7 +342,7 @@ def dota_ids(name: str) -> int:
 
 
 def voc_names(cat_id: int) -> str:
-    """Return VOC category name (20 classes)
+    """Return VOC category name (20 classes).
 
     Args:
         cat_id (int): Category ID
@@ -354,7 +350,6 @@ def voc_names(cat_id: int) -> str:
     Returns:
         str: Category name
     """
-
     voc_dict = {
         1: "aeroplane",
         2: "bicycle",

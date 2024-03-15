@@ -23,7 +23,7 @@ from pixano.data.item.item_feature import ItemFeature
 
 
 class ItemView(BaseModel):
-    """View type for DatasetItem
+    """View type for DatasetItem.
 
     Attributes:
         id (str): View ID
@@ -50,18 +50,18 @@ class ItemView(BaseModel):
         media_dir: Path,
         media_features: bool = False,
     ) -> dict[str, "ItemView"]:
-        """Create dictionary of ItemView from PyArrow Table
+        """Create dictionary of ItemView from PyArrow Table.
 
         Args:
             table (dict[str, Any]): PyArrow table
             schema (pa.schema): PyArrow schema
             media_dir (Path): Dataset media directory
-            media_features (bool, optional): Load media features like image width and height (slow for large item batches)
+            media_features (bool, optional): Load media features like image width
+                and height (slow for large item batches)
 
         Returns:
             dict[ItemView]: Dictionary of ItemView
         """
-
         # NOTE: Potential change to flattened view fields with one row per view
         item = table.to_pylist()[0] if len(table.to_pylist()) > 0 else None
         views = {}

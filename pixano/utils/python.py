@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 def natural_key(string: str) -> list:
-    """Return key for string natural sort
+    """Return key for string natural sort.
 
     Args:
         string (str): Input string
@@ -25,12 +25,11 @@ def natural_key(string: str) -> list:
     Returns:
         list: Sort key
     """
-
     return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]
 
 
 def estimate_size(folder_path: Path) -> str:
-    """Estimate folder size and return it as a human-readable string
+    """Estimate folder size and return it as a human-readable string.
 
     Args:
         folder_path (Path): Folder path
@@ -38,7 +37,6 @@ def estimate_size(folder_path: Path) -> str:
     Returns:
         str: Folder size as a human-readable string
     """
-
     # Estimate size
     total_size = 0
     for dirpath, _, filenames in os.walk(folder_path):

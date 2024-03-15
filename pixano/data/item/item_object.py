@@ -23,7 +23,7 @@ from pixano.data.item.item_feature import ItemFeature
 
 
 class ItemURLE(BaseModel):
-    """Uncompressed URLE mask type for DatasetItem
+    """Uncompressed URLE mask type for DatasetItem.
 
     Type for CompressedRLE.to_urle()
 
@@ -39,7 +39,7 @@ class ItemURLE(BaseModel):
     def from_pyarrow(
         rle: CompressedRLE,
     ) -> "ItemURLE":
-        """Create ItemURLE from compressed RLE
+        """Create ItemURLE from compressed RLE.
 
         Args:
             rle (CompressedRLE): Compressed RLE
@@ -47,21 +47,19 @@ class ItemURLE(BaseModel):
         Returns:
             ItemURLE: ItemURLE
         """
-
         return ItemURLE.model_validate(rle.to_urle()) if rle.counts else None
 
     def to_pyarrow(self) -> CompressedRLE:
-        """Return ItemURLE as compressed RLE
+        """Return ItemURLE as compressed RLE.
 
         Returns:
             CompressedRLE: Compressed RLE
         """
-
         return CompressedRLE.from_urle(self.model_dump()) if self.counts else None
 
 
 class ItemBBox(BaseModel):
-    """BBox type for DatasetItem
+    """BBox type for DatasetItem.
 
     Type for BBox.to_dict()
 
@@ -81,7 +79,7 @@ class ItemBBox(BaseModel):
     def from_pyarrow(
         bbox: BBox,
     ) -> "ItemBBox":
-        """Create ItemBBox from bounding box
+        """Create ItemBBox from bounding box.
 
         Args:
             bbox (BBox): Bounding box
@@ -89,7 +87,6 @@ class ItemBBox(BaseModel):
         Returns:
             ItemBBox: ItemBBox
         """
-
         return (
             ItemBBox.model_validate(bbox.to_xywh().to_dict())
             if bbox.coords != [0.0, 0.0, 0.0, 0.0]
@@ -97,12 +94,11 @@ class ItemBBox(BaseModel):
         )
 
     def to_pyarrow(self) -> BBox:
-        """Return ItemBbox as BBox
+        """Return ItemBbox as BBox.
 
         Returns:
             BBox: Bounding box
         """
-
         return (
             BBox.from_dict(self.model_dump())
             if self.coords != [0.0, 0.0, 0.0, 0.0]
@@ -111,7 +107,7 @@ class ItemBBox(BaseModel):
 
 
 class ItemObject(BaseModel):
-    """Object type for DatasetItem
+    """Object type for DatasetItem.
 
     Attributes:
         id (str): Object ID
@@ -141,7 +137,7 @@ class ItemObject(BaseModel):
         schema: pa.schema,
         source_id: str,
     ) -> dict[str, "ItemObject"]:
-        """Create dictionary of ItemObject from PyArrow Table
+        """Create dictionary of ItemObject from PyArrow Table.
 
         Args:
             table (dict[str, Any]): PyArrow table
@@ -151,7 +147,6 @@ class ItemObject(BaseModel):
         Returns:
             dict[str, ItemObject]: Dictionary of ItemObject
         """
-
         items = table.to_pylist()
         objects = {}
 
@@ -181,12 +176,11 @@ class ItemObject(BaseModel):
         return objects
 
     def to_pyarrow(self) -> dict[str, Any]:
-        """Return ItemObject in PyArrow format
+        """Return ItemObject in PyArrow format.
 
         Returns:
             dict[str, Any]: Object in PyArrow format
         """
-
         pyarrow_object = {}
 
         # IDs
@@ -202,7 +196,9 @@ class ItemObject(BaseModel):
         pyarrow_bbox = (
             self.bbox.to_pyarrow()
             if self.bbox
-            else BBox.from_rle(pyarrow_mask) if pyarrow_mask else None
+            else BBox.from_rle(pyarrow_mask)
+            if pyarrow_mask
+            else None
         )
 
         pyarrow_object["mask"] = pyarrow_mask.to_dict() if pyarrow_mask else None
@@ -224,7 +220,9 @@ class ItemObject(BaseModel):
                     pyarrow_object[feat.name], field_to_python(feat.dtype)
                 ):
                     raise ValueError(
-                        f"Feature {feat.name} of object {self.id} is of type {type(self.features[feat.name].value)} instead of type {field_to_python(feat.dtype)}"
+                        f"Feature {feat.name} of object {self.id} is of type "
+                        f"{type(self.features[feat.name].value)} instead of "
+                        f"type {field_to_python(feat.dtype)}"
                     )
 
         return pyarrow_object
@@ -233,12 +231,11 @@ class ItemObject(BaseModel):
         self,
         ds_table: lancedb.db.LanceTable,
     ):
-        """Add or update item object
+        """Add or update item object.
 
         Args:
             ds_table (lancedb.db.LanceTable): Object table
         """
-
         # Convert object to PyArrow
         pyarrow_obj = self.to_pyarrow()
         table_obj = pa.Table.from_pylist(

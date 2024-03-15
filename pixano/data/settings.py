@@ -23,12 +23,14 @@ from s3path import S3Path, register_configuration_parameter
 
 
 class Settings(BaseSettings):
-    """Pixano app settings
+    """Pixano app settings.
 
     Attributes:
         library_dir (str): Local or S3 path to dataset library
-        aws_endpoint (str): S3 endpoint URL, use 'AWS' if not provided. Used if library_dir is an S3 path
-        aws_region (str): S3 region name, not always required for private storages. Used if library_dir is an S3 path
+        aws_endpoint (str): S3 endpoint URL, use 'AWS' if not provided.
+            Used if library_dir is an S3 path
+        aws_region (str): S3 region name, not always required for private storages.
+            Used if library_dir is an S3 path
         aws_access_key (str): S3 AWS access key. Used if library_dir is an S3 path
         aws_secret_key (str): S3 AWS secret key. Used if library_dir is an S3 path
         local_model_dir (str): Local path to models. Used if library_dir is an S3 path
@@ -44,12 +46,12 @@ class Settings(BaseSettings):
     local_model_dir: Optional[str] = None
     data_dir: Optional[Path | S3Path] = None
     model_dir: Optional[Path] = None
-    # Change Pydantic protected namespace from "model_" to "settings_" because of model_dir
+    # Change Pydantic protected namespace from "model_" to "settings_"
+    # because of model_dir
     model_config = ConfigDict(protected_namespaces=("settings_",))
 
     def __init__(self, *args, **kwargs):
-        """Initialize settings"""
-
+        """Initialize settings."""
         super().__init__(*args, **kwargs)
 
         # Setup data directory
@@ -72,7 +74,8 @@ class Settings(BaseSettings):
                     "ERROR: Could not register S3 dataset library.\n"
                     "You have to set the following environment variables:\n"
                     "- AWS_ENDPOINT: S3 endpoint URL, use 'AWS' if not provided\n"
-                    "- AWS_REGION: S3 region name, not always required for private storages\n"
+                    "- AWS_REGION: S3 region name, not always required "
+                    "for private storages\n"
                     "- AWS_ACCESS_KEY: S3 AWS access key\n"
                     "- AWS_SECRET_KEY: S3 AWS secret key"
                 ) from e
@@ -80,7 +83,9 @@ class Settings(BaseSettings):
             # Check if local model directory is provided
             if self.local_model_dir is None:
                 raise AttributeError(
-                    "When using S3 storage, runtime models (.onnx files) must be stored locally and their directory must be provided with LOCAL_MODEL_DIR."
+                    "When using S3 storage, runtime models (.onnx files) must be "
+                    "stored locally and their directory must be provided with "
+                    "LOCAL_MODEL_DIR."
                 )
             self.model_dir = Path(self.local_model_dir)
 
@@ -92,10 +97,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Get app settings
+    """Get app settings.
 
     Returns:
         Settings: App settings
     """
-
     return Settings()

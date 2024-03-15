@@ -28,6 +28,7 @@ from pixano.core.utils import (
     is_string,
 )
 
+
 __all__ = [
     "BBox",
     "BBoxType",

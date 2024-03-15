@@ -34,7 +34,7 @@ from pixano.core import (
 
 
 def field_to_python(field: str) -> type:
-    """Return Python type from string field
+    """Return Python type from string field.
 
     Args:
         field (str): String field
@@ -42,7 +42,6 @@ def field_to_python(field: str) -> type:
     Returns:
         type: Python type
     """
-
     python_dict = {
         "int": int,
         "float": float,
@@ -69,7 +68,7 @@ def field_to_python(field: str) -> type:
 
 
 def field_to_pyarrow(field: str) -> pa.DataType:
-    """Return PyArrpw type from string field
+    """Return PyArrpw type from string field.
 
     Args:
         field (str): String field
@@ -77,7 +76,6 @@ def field_to_pyarrow(field: str) -> pa.DataType:
     Returns:
         pa.DataType: PyArrow type
     """
-
     pyarrow_dict = {
         "int": pa.int64(),
         "float": pa.float32(),
@@ -108,7 +106,7 @@ def field_to_pyarrow(field: str) -> pa.DataType:
 
 
 class Fields(BaseModel):
-    """Dataset PyArrow fields as string dictionary
+    """Dataset PyArrow fields as string dictionary.
 
     Attributes:
         field_dict (dict[str, str]): PyArrow fields as string dictionary
@@ -118,17 +116,16 @@ class Fields(BaseModel):
     field_dict: dict[str, str]
 
     def __init__(self, field_dict: dict[str, str]) -> None:
-        """Create Fields from string dictionary
+        """Create Fields from string dictionary.
 
         Args:
             field_dict (dict[str, str]): PyArrow fields as string dictionary
         """
-
         # Define public attributes through Pydantic BaseModel
         super().__init__(field_dict=field_dict)
 
     def to_schema(self) -> pa.schema:
-        """Convert Fields string dictionary to PyArrow schema
+        """Convert Fields string dictionary to PyArrow schema.
 
         Returns:
             pa.schema: Fields as PyArrow schema

@@ -17,14 +17,15 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.data import Dataset, DatasetInfo, Settings, get_settings
 
+
 router = APIRouter(tags=["datasets"])
 
 
 @router.get("/datasets", response_model=list[DatasetInfo])
 async def get_datasets(
-    settings: Annotated[Settings, Depends(get_settings)]
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[DatasetInfo]:
-    """Load dataset list
+    """Load dataset list.
 
     Args:
         settings (Settings): App settings
@@ -32,7 +33,6 @@ async def get_datasets(
     Returns:
         list[DatasetInfo]: List of dataset infos
     """
-
     # Load datasets
     infos = DatasetInfo.load_directory(directory=settings.data_dir, load_thumbnail=True)
 
@@ -50,7 +50,7 @@ async def get_dataset(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetInfo:
-    """Load dataset
+    """Load dataset.
 
     Args:
         ds_id (str): Dataset ID
@@ -59,7 +59,6 @@ async def get_dataset(
     Returns:
         DatasetInfo: Dataset info
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 

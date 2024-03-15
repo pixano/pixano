@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.data import Settings, get_settings
 
+
 router = APIRouter(tags=["models"])
 
 
@@ -24,12 +25,11 @@ router = APIRouter(tags=["models"])
 async def get_models(
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[str]:
-    """Load models
+    """Load models.
 
     Returns:
         list[str]: List of models
     """
-
     # Load list of models
     models = []
     for model_path in settings.model_dir.glob("*.onnx"):

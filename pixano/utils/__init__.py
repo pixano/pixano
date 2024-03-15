@@ -43,6 +43,7 @@ from pixano.utils.labels import (
 )
 from pixano.utils.python import estimate_size, natural_key
 
+
 __all__ = [
     "normalize_coords",
     "denormalize_coords",

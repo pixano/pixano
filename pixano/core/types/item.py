@@ -13,12 +13,12 @@
 
 import pydantic
 from lancedb.pydantic import LanceModel
+
 from .registry import _register_table_type_internal
 
 
 class ViewRecords(pydantic.BaseModel):
-    """
-    Represents a view record.
+    """Represents a view record.
 
     Attributes:
         id (str): The ID of the view record.
@@ -30,20 +30,20 @@ class ViewRecords(pydantic.BaseModel):
     names: list[str]
     paths: list[str]
 
-    def get_by_id(self, id: str):
+    def get_by_id(self, id: str):  # noqa: D102
         for curr_id in self.ids:
             if curr_id == id:
                 return {"id": self.id, "name": self.name, "path": self.path}
         return None
 
-    def get_by_name(self, name: str):
+    def get_by_name(self, name: str):  # noqa: D102
         for curr_name in self.names:
             if curr_name == name:
                 return {"id": self.id, "name": self.name, "path": self.path}
         return None
 
     @classmethod
-    def from_dict(cls, data: dict):
+    def from_dict(cls, data: dict):  # noqa: D102
         ids = [d["id"] for d in data]
         names = [d["name"] for d in data]
         paths = [d["path"] for d in data]
@@ -52,7 +52,7 @@ class ViewRecords(pydantic.BaseModel):
 
 @_register_table_type_internal()
 class Item(LanceModel):
-    """Image Lance Model"""
+    """Image Lance Model."""
 
     id: str
     views: ViewRecords

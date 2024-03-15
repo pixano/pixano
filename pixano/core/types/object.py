@@ -14,39 +14,36 @@
 
 from lancedb.pydantic import LanceModel
 
-
+from . import bbox, compressed_rle
 from .registry import _register_table_type_internal
-
-from . import bbox
-from . import compressed_rle
 
 
 @_register_table_type_internal()
 class Object(LanceModel):
-    """Object Lance Model"""
+    """Object Lance Model."""
 
     id: str
     item_id: str
     view_id: str
 
-    class Config:
+    class Config:  # noqa: D106
         extra = "ignore"
 
 
 class ObjectWithBBox(Object):
-    """Object with Bounding Box Lance Model"""
+    """Object with Bounding Box Lance Model."""
 
     bbox: bbox.BBox
 
 
 class ObjectWithMask(Object):
-    """Object with Mask Lance Model"""
+    """Object with Mask Lance Model."""
 
     mask: compressed_rle.CompressedRLE
 
 
 class ObjectWithBBoxAndMask(Object):
-    """Object with Bounding Box and Mask Lance Model"""
+    """Object with Bounding Box and Mask Lance Model."""
 
     bbox: bbox.BBox
     mask: compressed_rle.CompressedRLE

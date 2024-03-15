@@ -17,27 +17,29 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 
+from pixano.core.types.group import TableGroup
 from pixano.data import Dataset, DatasetItem, Settings, get_settings
+
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
 
 
 @router.get("/items", response_model=Page[DatasetItem])
-async def get_dataset_items(
+async def get_dataset_items(  # noqa: D417
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> Page[DatasetItem]:
-    """Load dataset items
+) -> Page[DatasetItem]:  # type: ignore
+    """Load dataset items.
 
     Args:
         ds_id (str): Dataset ID
-        params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
+        params (Params, optional): Pagination parameters (offset and limit).
+            Defaults to Depends().
 
     Returns:
         Page[DatasetItem]: Dataset items page
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
@@ -57,14 +59,17 @@ async def get_dataset_items(
             )
 
         # Load dataset items
-        items = dataset.load_items(raw_params.limit, raw_params.offset)
+        items = dataset.get_items(raw_params.offset, raw_params.limit)
 
         # Return dataset items
         if items:
             return create_page(items, total=total, params=params)
         raise HTTPException(
             status_code=404,
-            detail=f"No items found with page parameters (start {start}, stop {stop}) in dataset",
+            detail=(
+                f"No items found with page parameters (start {start}, "
+                f"stop {stop}) in dataset",
+            ),
         )
     raise HTTPException(
         status_code=404,
@@ -73,23 +78,23 @@ async def get_dataset_items(
 
 
 @router.post("/search", response_model=Page[DatasetItem])
-async def search_dataset_items(
+async def search_dataset_items(  # noqa: D417
     ds_id: str,
     query: dict[str, str],
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> Page[DatasetItem]:
-    """Load dataset items with a query
+) -> Page[DatasetItem]:  # type: ignore
+    """Load dataset items with a query.
 
     Args:
         ds_id (str): Dataset ID
         query (dict[str, str]): Search query
-        params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
+        params (Params, optional): Pagination parameters (offset and limit).
+            Defaults to Depends().
 
     Returns:
         Page[DatasetItem]: Dataset items page
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
@@ -121,12 +126,12 @@ async def search_dataset_items(
 
 
 @router.get("/items/{item_id}", response_model=DatasetItem)
-async def get_dataset_item(
+async def get_dataset_item(  # noqa: D417
     ds_id: str,
     item_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetItem:
-    """Load dataset item
+) -> DatasetItem:  # type: ignore
+    """Load dataset item.
 
     Args:
         ds_id (str): Dataset ID
@@ -135,13 +140,15 @@ async def get_dataset_item(
     Returns:
         DatasetItem: Dataset item
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
     if dataset:
         # Load dataset item
-        item = dataset.load_item(item_id, load_objects=True)
+        item = dataset.get_item(
+            item_id,
+            select_table_groups=[TableGroup.VIEW, TableGroup.OBJECT],
+        )
 
         # Return dataset item
         if item:
@@ -157,18 +164,17 @@ async def get_dataset_item(
 
 
 @router.post("/items/{item_id}", response_model=DatasetItem)
-async def post_dataset_item(
+async def post_dataset_item(  # noqa: D417
     ds_id: str,
-    item: DatasetItem,
+    item: DatasetItem,  # type: ignore
     settings: Annotated[Settings, Depends(get_settings)],
 ):
-    """Save dataset item
+    """Save dataset item.
 
     Args:
         ds_id (str): Dataset ID
         item (DatasetItem): Item to save
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
@@ -188,30 +194,26 @@ async def post_dataset_item(
     "/items/{item_id}/embeddings/{model_id}",
     response_model=DatasetItem,
 )
-async def get_item_embeddings(
+async def get_item_embeddings(  # noqa: D417
     ds_id: str,
     item_id: str,
     model_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetItem:
-    """Load dataset item embeddings
+) -> DatasetItem:  # type: ignore
+    """Load dataset item embeddings.
 
     Args:
         ds_id (str): Dataset ID
         item_id (str): Item ID
         model_id (str): Model ID (ONNX file path)
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
     if dataset:
-        item = dataset.load_item(
+        item = dataset.get_item(
             item_id,
-            load_media=False,
-            load_active_learning=False,
-            load_embeddings=True,
-            model_id=model_id,
+            select_tables_per_group={TableGroup.EMBEDDING: [model_id]},
         )
 
         # Return dataset item embeddings
@@ -219,7 +221,10 @@ async def get_item_embeddings(
             return item
         raise HTTPException(
             status_code=404,
-            detail=f"No embeddings found for item '{item_id}' with model '{model_id}' in dataset",
+            detail=(
+                f"No embeddings found for item '{item_id}' "
+                f"with model '{model_id}' in dataset",
+            ),
         )
     raise HTTPException(
         status_code=404,

@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, Union, _GenericAlias, Callable
+from typing import Callable, List, _GenericAlias
 
 import pyarrow as pa
 import pydantic
@@ -9,8 +9,8 @@ from lancedb.pydantic import _pydantic_to_field
 def _convert_primitive_field(
     data: List[pydantic.BaseModel], name: str, dtype: pa.DataType
 ) -> pa.Array:
-    """
-    Convert a primitive field from a list of pydantic.BaseModel objects to a pyarrow.Array.
+    """Convert a primitive field from a list of pydantic.BaseModel
+    objects to a pyarrow.Array.
 
     Args:
         data (List[pydantic.BaseModel]): The list of pydantic.BaseModel objects.
@@ -26,8 +26,8 @@ def _convert_primitive_field(
 def _conver_list(
     data: List[pydantic.BaseModel], name: str, dtype: pa.DataType
 ) -> pa.Array:
-    """
-    Convert a list field from a list of pydantic.BaseModel objects to a pyarrow.Array.
+    """Convert a list field from a list of pydantic.BaseModel
+    objects to a pyarrow.Array.
 
     Args:
         data (List[pydantic.BaseModel]): The list of pydantic.BaseModel objects.
@@ -51,8 +51,8 @@ def _conver_list(
 def _convert_fixed_size_list(
     data: List[pydantic.BaseModel], name: str, list_size: int, dtype: pa.DataType
 ) -> pa.Array:
-    """
-    Convert a fixed size list field from a list of pydantic.BaseModel objects to a pyarrow.Array.
+    """Convert a fixed size list field from a list of pydantic.BaseModel
+    objects to a pyarrow.Array.
 
     Args:
         data (List[pydantic.BaseModel]): The list of pydantic.BaseModel objects.
@@ -68,8 +68,7 @@ def _convert_fixed_size_list(
 
 
 def _convert_nested_model(data: List[pydantic.BaseModel], name: str) -> pa.StructArray:
-    """
-    Convert a list of nested Pydantic models to a StructArray.
+    """Convert a list of nested Pydantic models to a StructArray.
 
     Args:
         data (List[pydantic.BaseModel]): The list of Pydantic models.
@@ -85,8 +84,7 @@ def _convert_nested_model(data: List[pydantic.BaseModel], name: str) -> pa.Struc
 
 
 def to_struct_array(data: List[pydantic.BaseModel]) -> pa.StructArray:
-    """
-    Convert a list of Pydantic BaseModels to a StructArray.
+    """Convert a list of Pydantic BaseModels to a StructArray.
 
     Args:
         data (List[pydantic.BaseModel]): The list of Pydantic BaseModels to convert.
@@ -94,7 +92,6 @@ def to_struct_array(data: List[pydantic.BaseModel]) -> pa.StructArray:
     Returns:
         pa.StructArray: The converted StructArray.
     """
-
     fields = []
     arrays = []
 
@@ -108,7 +105,7 @@ def to_struct_array(data: List[pydantic.BaseModel]) -> pa.StructArray:
         elif isinstance(field.annotation, _GenericAlias):
             # Handle GenericAlias types
             origin = field.annotation.__origin__
-            args = field.annotation.__args__
+            args = field.annotation.__args__  # noqa: F841
             if origin == list:
                 arrays.append(_conver_list(data, name, pa_field.type))
 
@@ -121,7 +118,7 @@ def to_struct_array(data: List[pydantic.BaseModel]) -> pa.StructArray:
         elif inspect.isclass(field.annotation):
             if issubclass(field.annotation, pydantic.BaseModel):
                 arrays.append(_convert_nested_model(data, name))
-            elif issubclass(field.annotation, FixedSizeListMixin):
+            elif issubclass(field.annotation, FixedSizeListMixin):  # noqa: F821
                 arrays.append(
                     _convert_fixed_size_list(
                         data,
@@ -137,8 +134,7 @@ def to_struct_array(data: List[pydantic.BaseModel]) -> pa.StructArray:
 
 
 def list_to_record_batch(data: List[pydantic.BaseModel]) -> pa.RecordBatch:
-    """
-    Convert a list of Pydantic models to a RecordBatch.
+    """Convert a list of Pydantic models to a RecordBatch.
 
     Args:
         data (List[pydantic.BaseModel]): The list of Pydantic models.
@@ -152,8 +148,7 @@ def list_to_record_batch(data: List[pydantic.BaseModel]) -> pa.RecordBatch:
 
 
 def flatmap_record_batch(data: pa.RecordBatch, func: Callable) -> pa.RecordBatch:
-    """
-    Apply a function to each row of a RecordBatch.
+    """Apply a function to each row of a RecordBatch.
 
     Args:
         data (pa.RecordBatch): The RecordBatch to apply the function to.

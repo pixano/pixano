@@ -22,6 +22,7 @@ from pixano.core.types.sequence_frame import SequenceFrame
 from .bbox import BBox
 from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
 
+
 DataSchema = pydantic.BaseModel
 
 __all__ = [
