@@ -8,7 +8,6 @@ export type TextFeature = {
   value: string;
 };
 
-// SHAPES: shapes drawn on the image not yet saved as objects
 export type SaveShapeBase = {
   viewId: string;
   itemId: string;
