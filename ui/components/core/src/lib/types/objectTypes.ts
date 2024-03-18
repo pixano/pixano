@@ -9,15 +9,15 @@ export type TextFeature = {
 };
 
 // SHAPES: shapes drawn on the image not yet saved as objects
-export type InProgressBase = {
+export type SaveShapeBase = {
   viewId: string;
   itemId: string;
   imageWidth: number;
   imageHeight: number;
-  status: "inProgress";
+  status: "saving";
 };
 
-export type InProgressRectangleShape = InProgressBase & {
+export type SaveRectangleShape = SaveShapeBase & {
   type: "rectangle";
   attrs: {
     x: number;
@@ -27,12 +27,12 @@ export type InProgressRectangleShape = InProgressBase & {
   };
 };
 
-type MaskShape = SegmentationResult &
-  InProgressBase & {
+type SaveMaskShape = SegmentationResult &
+  SaveShapeBase & {
     type: "mask";
   };
 
-export type inProgressShape = InProgressRectangleShape | MaskShape;
+export type SaveShape = SaveRectangleShape | SaveMaskShape;
 
 export type noShape = {
   status: "none";
@@ -80,7 +80,7 @@ export type EditShape = {
   highlighted?: "all" | "self" | "none";
 } & (EditRectangleShape | EditMaskShape | { type: "none" });
 
-export type Shape = inProgressShape | noShape | EditShape | CreateShape;
+export type Shape = SaveShape | noShape | EditShape | CreateShape;
 
 export type FeatureValues = string | number | boolean;
 

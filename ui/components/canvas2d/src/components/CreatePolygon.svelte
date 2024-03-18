@@ -59,7 +59,7 @@
       const svg = polygonPoints.map((point) => convertPointToSvg(point));
       const counts = runLengthEncode(svg, images[viewId].width, images[viewId].height);
       newShape = {
-        status: "inProgress",
+        status: "saving",
         masksImageSVG: [],
         rle: {
           counts,

@@ -341,7 +341,7 @@
           itemId: selectedItem.id,
           imageWidth: images[viewId].width,
           imageHeight: images[viewId].height,
-          status: "inProgress",
+          status: "saving",
         };
 
         const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
@@ -433,7 +433,7 @@
   // ********** POLYGON TOOL ********** //
 
   function drawPolygonPoints(viewId: string) {
-    if (newShape?.status === "inProgress") return;
+    if (newShape?.status === "saving") return;
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
     const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
     const x = Math.round(cursorPositionOnImage.x);
@@ -737,7 +737,7 @@
               relativeTo: viewLayer,
             });
             newShape = {
-              status: "inProgress",
+              status: "saving",
               attrs: {
                 x: correctedRect.x,
                 y: correctedRect.y,
@@ -1030,7 +1030,7 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
-          {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "inProgress" && newShape.type === "rectangle")}
+          {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
             <CreateRectangle zoomFactor={zoomFactor[view.id]} {newShape} {stage} viewId={view.id} />
           {/if}
           {#each bboxes as bbox}

@@ -21,11 +21,11 @@
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
 
   import LabelTag from "./LabelTag.svelte";
-  import type { CreateRectangleShape, InProgressRectangleShape } from "@pixano/core";
+  import type { CreateRectangleShape, SaveRectangleShape } from "@pixano/core";
   import type Konva from "konva";
 
   export let zoomFactor: number;
-  export let newShape: CreateRectangleShape | InProgressRectangleShape;
+  export let newShape: CreateRectangleShape | SaveRectangleShape;
   export let stage: Konva.Stage;
   export let viewId: string;
 
