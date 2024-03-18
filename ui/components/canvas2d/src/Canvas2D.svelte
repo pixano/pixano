@@ -46,6 +46,7 @@
   import PolygonGroup from "./components/PolygonGroup.svelte";
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
+  import CreateRectangle from "./components/CreateRectangle.svelte";
 
   // Exports
   export let selectedItem: DatasetItem;
@@ -438,7 +439,8 @@
     const x = Math.round(cursorPositionOnImage.x);
     const y = Math.round(cursorPositionOnImage.y);
 
-    const oldPoints = newShape.status === "creating" ? newShape.points : [];
+    const oldPoints =
+      newShape.status === "creating" && newShape.type === "mask" ? newShape.points : [];
     newShape = {
       status: "creating",
       type: "mask",
@@ -698,31 +700,34 @@
 
   function dragInputRectMove(viewId: string) {
     if (selectedTool?.type === "RECTANGLE") {
-      newShape = { status: "none" };
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
-      if (rect) {
-        const pos = viewLayer.getRelativePointerPosition();
-        rect.width(pos.x - rect.x());
-        rect.size({
-          width: pos.x - rect.x(),
-          height: pos.y - rect.y(),
-        });
-      }
+
+      const pos = viewLayer.getRelativePointerPosition();
+      const x =
+        newShape.status === "creating" && newShape.type === "rectangle" ? newShape.x : pos.x;
+      const y =
+        newShape.status === "creating" && newShape.type === "rectangle" ? newShape.y : pos.y;
+      newShape = {
+        status: "creating",
+        type: "rectangle",
+        x,
+        y,
+        width: pos.x - x,
+        height: pos.y - y,
+        viewId,
+      };
     }
   }
 
   async function dragInputRectEnd(viewId: string) {
     if (selectedTool?.type == "RECTANGLE") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      const rect: Konva.Rect = inputGroup.findOne("#drag-rect");
+      const rect: Konva.Rect = stage.findOne("#drag-rect");
       if (rect) {
         const { width, height } = rect.size();
         if (width == 0 || height == 0) {
           //rect with area = 0 -> delete it
-          rect.destroy();
+          newShape = { status: "none" };
         } else {
           if (!selectedTool.isSmart) {
             const correctedRect = rect.getClientRect({
@@ -901,28 +906,6 @@
 
       await updateCurrentMask(viewId);
     } else if (selectedTool?.type == "RECTANGLE") {
-      const pos = viewLayer.getRelativePointerPosition();
-      const inputGroup: Konva.Group = viewLayer.findOne("#input");
-      //add RECT
-      let rect: Konva.Rect = inputGroup.findOne("#drag-rect");
-      if (rect) {
-        rect.position({ x: pos.x, y: pos.y });
-        rect.size({ width: 0, height: 0 });
-      } else {
-        rect = new Konva.Rect({
-          id: "drag-rect",
-          x: pos.x + 1,
-          y: pos.y + 1,
-          width: 0,
-          height: 0,
-          stroke: "hsl(316deg 60% 29.41%)",
-          fill: "#f9f4f773",
-          strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
-          listening: false,
-        });
-        inputGroup.add(rect);
-      }
-      // TODO100: where magic happens
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
     }
@@ -1047,6 +1030,9 @@
           <Group config={{ id: "masks" }} />
           <Group config={{ id: "bboxes" }} />
           <Group config={{ id: "input" }} />
+          {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "inProgress" && newShape.type === "rectangle")}
+            <CreateRectangle zoomFactor={zoomFactor[view.id]} {newShape} {stage} viewId={view.id} />
+          {/if}
           {#each bboxes as bbox}
             {#if bbox.viewId === view.id}
               {#key bbox.id}

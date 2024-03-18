@@ -20,9 +20,9 @@
   export let id: string;
   export let x: number;
   export let y: number;
-  export let visible: boolean;
+  export let visible: boolean = true;
   export let zoomFactor: number;
-  export let opacity: number;
+  export let opacity: number = 1;
   export let tooltip: string | undefined;
   export let color: string;
 </script>

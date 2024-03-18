@@ -38,7 +38,7 @@
   let isClosed = false;
 
   $: {
-    if (newShape.status === "creating") {
+    if (newShape.status === "creating" && newShape.type === "mask") {
       const lastPolygonDetailsPoint = newShape.points.at(-1);
       const lastSimplifiedPoint = polygonPoints?.[0]?.at(-1);
       if (lastPolygonDetailsPoint && lastPolygonDetailsPoint?.id !== lastSimplifiedPoint?.id) {
