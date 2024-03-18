@@ -26,6 +26,7 @@
   "dependencies": {
     "@pixano/core": "workspace:^",
     "@pixano/models": "workspace:^",
+    "svelte-sortable-list": "^1.1.0",
     "vite-plugin-externals": "^0.6.2"
   }
 }

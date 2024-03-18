@@ -386,6 +386,9 @@ importers:
       '@pixano/models':
         specifier: workspace:^
         version: link:../models
+      svelte-sortable-list:
+        specifier: ^1.1.0
+        version: 1.1.0(svelte@4.2.11)
       vite-plugin-externals:
         specifier: ^0.6.2
         version: 0.6.2(vite@5.1.3)
@@ -10405,6 +10408,14 @@ packages:
       svelte: 4.2.11
       svelte-subscribe: 2.0.1(svelte@4.2.11)
     dev: true
+
+  /svelte-sortable-list@1.1.0(svelte@4.2.11):
+    resolution: {integrity: sha512-K8axS2OEJhN8KI/aXx1LEJkMGZTkR13U191nVhvN0BImZpNmFJ10Zy8K9T0EAg6chB6/hz3/hOeFoe2RVZylSw==}
+    peerDependencies:
+      svelte: ^3.4.1
+    dependencies:
+      svelte: 4.2.11
+    dev: false
 
   /svelte-subscribe@2.0.1(svelte@4.2.11):
     resolution: {integrity: sha512-eKXIjLxB4C7eQWPqKEdxcGfNXm2g/qJ67zmEZK/GigCZMfrTR3m7DPY93R6MX+5uoqM1FRYxl8LZ1oy4URWi2A==}

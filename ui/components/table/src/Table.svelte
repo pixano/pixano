@@ -19,6 +19,7 @@
   import { icons } from "@pixano/core";
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
+  import SortableList from "svelte-sortable-list";
   import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
   import { addSortBy, addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
@@ -59,7 +60,7 @@
       accessor: "split",
     }),
   ];
-  let colOrder = [];
+  let colOrder: string[] = [];
 
   // Parse views and add them to the columns
   const ImgCell = (feature) => {
@@ -85,6 +86,10 @@
     });
   }
 
+  // Add id and split to column order
+  colOrder.push("id");
+  colOrder.push("split");
+
   // Parse features and add them to the columns
   const FeatureCell = (feature) =>
     createRender(TableCell, {
@@ -102,6 +107,7 @@
           },
         }),
       );
+      colOrder.push(name);
     });
   }
 
@@ -109,17 +115,21 @@
   const columns = table.createColumns(itemColumns);
 
   // Create view model
-  const { flatColumns, headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
+  const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
     table.createViewModel(columns);
 
   // Order columns
   const { columnIdOrder } = pluginStates.colOrder;
-  $columnIdOrder = [...colOrder, "id", "split"];
+  $columnIdOrder = [...colOrder];
+
+  // Handle column re-order
+  const sortList = (ev: { detail: string[]; }) => {
+    $columnIdOrder = ev.detail;
+  };
 
   // Column visibility
   const { hiddenColumnIds } = pluginStates.hideCols;
-  const ids = flatColumns.map((c) => c.id);
-  let shownColumnsById = Object.fromEntries(ids.map((id) => [id, true]));
+  let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
   $: $hiddenColumnIds = Object.entries(shownColumnsById)
     .filter(([, hide]) => !hide)
     .map(([id]) => id);
@@ -129,6 +139,7 @@
 </script>
 
 <div class="flex flex-col">
+  <!-- Settings button -->
   <div class="pb-2 flex justify-end space-x-2">
     <Button
       variant="outline"
@@ -139,7 +150,7 @@
       Table settings
     </Button>
   </div>
-  <!-- Settings Popup -->
+  <!-- Settings popup -->
   <div
     class="fixed top-7/12 left-1/2 transform -translate-x-1/2 -translate-y-5/12 w-[90%] h-[80%] z-20 px-12 py-10
     flex flex-col
@@ -149,18 +160,30 @@
     <span class="text-3xl font-bold mb-6"> Table settings </span>
     <span class="text-lg font-medium mb-2"> Columns </span>
     <div class="flex flex-col space-y-2">
-      {#each ids as id}
-        <!-- svelte-ignore a11y-label-has-associated-control -->
-        <label class="text-lg select-none">
-          <Checkbox bind:checked={shownColumnsById[id]} class="mr-1"></Checkbox>
-          {id}
-        </label>
-      {/each}
+      <SortableList list={$columnIdOrder} on:sort={sortList} let:item>
+        <div class="py-1 px-2 flex items-center space-x-2 border rounded">
+          <Checkbox id={item} bind:checked={shownColumnsById[item]}></Checkbox>
+          <label for={item} class="text-lg select-none grow cursor-pointer">
+            {item}
+          </label>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="48"
+            viewBox="0 -960 960 960"
+            width="48"
+            class="h-6 w-6 cursor-move"
+          >
+            <title>Open</title>
+            <path d={icons.svg_drag_handle} fill="grey" />
+          </svg>
+        </div>
+      </SortableList>
     </div>
 
     <div class="grow flex justify-end items-end">
       <Button
         size="lg"
+        class="text-white font-bold text-base"
         on:click={() => {
           popupOpened = false;
         }}
