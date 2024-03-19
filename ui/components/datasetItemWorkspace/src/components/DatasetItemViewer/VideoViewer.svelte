@@ -68,8 +68,8 @@
         const { displayedBox } = object;
         const newCoords = linearInterpolation(object.track, imageIndex);
         if (newCoords) {
-          const [x, y] = newCoords;
-          displayedBox.coords = [x, y, displayedBox.coords[2], displayedBox.coords[3]];
+          const [x, y, width, height] = newCoords;
+          displayedBox.coords = [x, y, width, height];
           displayedBox.frameIndex = imageIndex;
         }
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
@@ -82,7 +82,7 @@
   $: {
     const shape = $newShape;
     const box = $itemBoxBeingEdited;
-
+    console.log({ shape, box });
     if (shape.status === "editing") {
       if (box) {
         itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));

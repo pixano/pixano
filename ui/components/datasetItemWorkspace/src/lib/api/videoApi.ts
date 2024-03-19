@@ -30,14 +30,18 @@ export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
   endIndex = endIndex < 0 ? currentTracklet.keyBoxes.length - 1 : endIndex;
   const start = currentTracklet.keyBoxes[endIndex - 1] || currentTracklet.keyBoxes[0];
   const end = currentTracklet.keyBoxes[endIndex];
-  const [startX, startY] = start.coords;
-  const [endX, endY] = end.coords;
+  const [startX, startY, startWidth, startHeight] = start.coords;
+  const [endX, endY, endWidth, endHeight] = end.coords;
 
   const xInterpolation = (endX - startX) / (end.frameIndex - start?.frameIndex);
   const yInterpolation = (endY - startY) / (end.frameIndex - start?.frameIndex);
+  const widthInterpolation = (endWidth - startWidth) / (end.frameIndex - start?.frameIndex);
+  const heightInterpolation = (endHeight - startHeight) / (end.frameIndex - start?.frameIndex);
   const x = startX + xInterpolation * (imageIndex - start.frameIndex);
   const y = startY + yInterpolation * (imageIndex - start.frameIndex);
-  return [x, y];
+  const width = startWidth + widthInterpolation * (imageIndex - start.frameIndex);
+  const height = startHeight + heightInterpolation * (imageIndex - start.frameIndex);
+  return [x, y, width, height];
 };
 
 export const deleteKeyBoxFromTracklet = (
