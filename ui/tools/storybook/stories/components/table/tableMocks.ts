@@ -21,6 +21,11 @@ export const items: Array<DatasetItem> = [
           ],
         },
       },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
+      },
     },
     views: {
       image: {
@@ -57,6 +62,11 @@ export const items: Array<DatasetItem> = [
           ],
         },
       },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
+      },
     },
     views: {
       image: {
@@ -92,6 +102,11 @@ export const items: Array<DatasetItem> = [
             { categories: "cat", counts: 150000, split: "train" },
           ],
         },
+      },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
       },
     },
     views: {

@@ -32,12 +32,14 @@
   }
 </script>
 
-<video
-  bind:this={video}
-  src={value}
-  loop
-  muted
-  class="h-20 w-20 mx-auto object-cover rounded"
-  on:mouseenter={toggleHover}
-  on:mouseleave={toggleHover}
-/>
+<div class="mx-8 h-20 aspect-square">
+  <video
+    bind:this={video}
+    src={value}
+    loop
+    muted
+    class="h-full w-full object-cover rounded"
+    on:mouseenter={toggleHover}
+    on:mouseleave={toggleHover}
+  />
+</div>

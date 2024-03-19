@@ -14,18 +14,21 @@
    * http://www.cecill.info
    */
 
-  // Imports
-  import TableCell from "./TableCell.svelte";
+  // Local Imports
+  import { DefaultCell, FeatureCell, ImgCell } from "./cells";
+
+  // Pixano Core Imports
   import { icons } from "@pixano/core";
+  import type { DatasetItem } from "@pixano/core";
+  import Button from "@pixano/core/src/components/ui/button/button.svelte";
+  import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
+
+  // Svelte Imports
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
+  import { createTable, Subscribe, Render } from "svelte-headless-table";
   import { addSortBy, addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
-
-  import type { DatasetItem, ItemFeature, ItemView } from "@pixano/core";
-  import Button from "@pixano/core/src/components/ui/button/button.svelte";
-  import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
   // Exports
   export let items: Array<DatasetItem>;
@@ -50,6 +53,7 @@
   let itemColumns = [
     table.column({
       header: "ID",
+      cell: DefaultCell,
       accessor: "id",
       plugins: {
         sort: { invert: true },
@@ -57,19 +61,13 @@
     }),
     table.column({
       header: "Split",
+      cell: DefaultCell,
       accessor: "split",
     }),
   ];
   let colOrder: string[] = [];
 
   // Parse views and add them to the columns
-  const ImgCell = (feature) => {
-    let img: ItemView = JSON.parse(feature.value) as ItemView; // 'as ItemView' will provoc a linting error if removed
-    //console.log({ name: img.id, dtype: img.type, value: img.thumbnail })
-    return createRender(TableCell, {
-      itemFeature: { name: img.id, dtype: img.type, value: img.thumbnail },
-    });
-  };
   if (items[0]?.views) {
     Object.values(items[0].views).forEach(({ id }) => {
       itemColumns.push(
@@ -91,10 +89,6 @@
   colOrder.push("split");
 
   // Parse features and add them to the columns
-  const FeatureCell = (feature) =>
-    createRender(TableCell, {
-      itemFeature: JSON.parse(feature.value) as ItemFeature, // 'as ItemFeature' will provoc a linting error if removed,
-    });
   if (items[0]?.features) {
     Object.values(items[0].features).forEach(({ name }) => {
       itemColumns.push(
@@ -123,7 +117,7 @@
   $columnIdOrder = [...colOrder];
 
   // Handle column re-order
-  const sortList = (ev: { detail: string[]; }) => {
+  const sortList = (ev: { detail: string[] }) => {
     $columnIdOrder = ev.detail;
   };
 
@@ -138,32 +132,25 @@
   let popupOpened = false;
 </script>
 
-<div class="flex flex-col">
-  <!-- Settings button -->
-  <div class="pb-2 flex justify-end space-x-2">
-    <Button
-      variant="outline"
-      on:click={() => {
-        popupOpened = true;
-      }}
-    >
-      Table settings
-    </Button>
-  </div>
-  <!-- Settings popup -->
-  <div
-    class="fixed top-7/12 left-1/2 transform -translate-x-1/2 -translate-y-5/12 w-[90%] h-[80%] z-20 px-12 py-10
-    flex flex-col
-    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded
+<!-- Settings popup -->
+<div
+  class="fixed w-full h-full z-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-500/30 backdrop:blur-lg
+    flex items-center justify-center font-Montserrat
     {popupOpened ? 'block' : 'hidden'}"
+>
+  <div
+    class="px-12 pt-10 flex flex-col
+    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
   >
-    <span class="text-3xl font-bold mb-6"> Table settings </span>
-    <span class="text-lg font-medium mb-2"> Columns </span>
+    <span class="text-3xl font-bold mb-4"> Column settings </span>
+    <span class="text-sm italic text-gray-500 font-medium mb-3">
+      Drag and drop to re-order, toggle box for visibility.
+    </span>
     <div class="flex flex-col space-y-2">
       <SortableList list={$columnIdOrder} on:sort={sortList} let:item>
-        <div class="py-1 px-2 flex items-center space-x-2 border rounded">
+        <div class="py-1 px-2 flex items-center space-x-2 border rounded-sm">
           <Checkbox id={item} bind:checked={shownColumnsById[item]}></Checkbox>
-          <label for={item} class="text-lg select-none grow cursor-pointer">
+          <label for={item} class="text-sm select-none grow cursor-pointer">
             {item}
           </label>
           <svg
@@ -173,17 +160,15 @@
             width="48"
             class="h-6 w-6 cursor-move"
           >
-            <title>Open</title>
             <path d={icons.svg_drag_handle} fill="grey" />
           </svg>
         </div>
       </SortableList>
     </div>
 
-    <div class="grow flex justify-end items-end">
+    <div class="my-6 flex justify-end items-end">
       <Button
-        size="lg"
-        class="text-white font-bold text-base"
+        class="text-white"
         on:click={() => {
           popupOpened = false;
         }}
@@ -192,71 +177,92 @@
       </Button>
     </div>
   </div>
-  <div
-    class="h-full w-full overflow-y-auto overflow-x-auto
-    rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300"
-  >
-    <table {...$tableAttrs} class="table-fixed z-0 w-full text-center text-base text-slate-800">
-      <!-- Header -->
-      <thead>
-        {#each $headerRows as headerRow (headerRow.id)}
-          <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
-            <tr
-              {...rowAttrs}
-              class="sticky top-0 z-10 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
-            >
-              {#each headerRow.cells as cell (cell.id)}
-                <Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
-                  <th {...attrs} on:click={props.sort.toggle} class="py-4 font-semibold">
-                    <Render of={cell.render()} />
-                    {#if props.sort.order === "asc"}
-                      ⬇️
-                    {:else if props.sort.order === "desc"}
-                      ⬆️
-                    {/if}
-                  </th>
-                </Subscribe>
-              {/each}
-              <th class="w-24" />
-            </tr>
-          </Subscribe>
-        {/each}
-      </thead>
-      <!-- Rows -->
-      <tbody {...$tableBodyAttrs}>
-        {#each $rows as row (row.id)}
-          <Subscribe rowAttrs={row.attrs()} let:rowAttrs>
-            <tr
-              {...rowAttrs}
-              class="cursor-pointer hover:bg-slate-100"
-              on:click={() => {
-                handleSelectItem(row.original.id); // or row.cellForId.id.value
-              }}
-            >
-              {#each row.cells as cell (cell.id)}
-                <Subscribe attrs={cell.attrs()} let:attrs>
-                  <td {...attrs} class="border-b border-slate-300">
-                    <Render of={cell.render()} />
-                  </td>
-                </Subscribe>
-              {/each}
-              <!-- Go Button -->
-              <td class="border-b border-slate-300">
+</div>
+<div
+  class="h-full w-full overflow-y-auto overflow-x-auto
+    rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
+>
+  <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
+    <!-- Header -->
+    <thead>
+      {#each $headerRows as headerRow (headerRow.id)}
+        <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
+          <tr
+            {...rowAttrs}
+            class="sticky top-0 z-10 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
+          >
+            {#each headerRow.cells as cell (cell.id)}
+              <Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
+                <th {...attrs} on:click={props.sort.toggle} class="py-4 font-semibold">
+                  <Render of={cell.render()} />
+                  {#if props.sort.order === "asc"}
+                    ⬇️
+                  {:else if props.sort.order === "desc"}
+                    ⬆️
+                  {/if}
+                </th>
+              </Subscribe>
+            {/each}
+            <th class="w-full"></th>
+            <th class="pr-4">
+              <!-- Settings button -->
+              <Button
+                variant="ghost"
+                on:click={() => {
+                  popupOpened = true;
+                }}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   height="48"
                   viewBox="0 -960 960 960"
                   width="48"
-                  class="h-8 w-8 mx-auto p-1 border rounded-full border-slate-300 transition-colors hover:bg-slate-200"
+                  class="h-6 w-6"
                 >
-                  <title>Open</title>
-                  <path d={icons.svg_right_arrow} fill="currentcolor" />
+                  <title></title>
+                  <path d={icons.svg_settings} fill="#111" />
                 </svg>
-              </td>
-            </tr>
-          </Subscribe>
-        {/each}
-      </tbody>
-    </table>
-  </div>
+              </Button>
+            </th>
+          </tr>
+        </Subscribe>
+      {/each}
+    </thead>
+    <!-- Rows -->
+    <tbody {...$tableBodyAttrs}>
+      {#each $rows as row (row.id)}
+        <Subscribe rowAttrs={row.attrs()} let:rowAttrs>
+          <tr
+            {...rowAttrs}
+            class="h-24 cursor-pointer hover:bg-slate-100"
+            on:click={() => {
+              handleSelectItem(row.original.id); // or row.cellForId.id.value
+            }}
+          >
+            {#each row.cells as cell (cell.id)}
+              <Subscribe attrs={cell.attrs()} let:attrs>
+                <td {...attrs} class="border-b border-slate-300">
+                  <Render of={cell.render()} />
+                </td>
+              </Subscribe>
+            {/each}
+            <td class="w-full border-b border-slate-300"></td>
+            <!-- Go Button -->
+            <td class="border-b border-slate-300">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="48"
+                viewBox="0 -960 960 960"
+                width="48"
+                class="h-8 w-8 mx-auto p-1 ml-3 border rounded-full border-slate-300 transition-colors hover:bg-slate-200"
+              >
+                <title>Open</title>
+                <path d={icons.svg_right_arrow} fill="currentcolor" />
+              </svg>
+            </td>
+          </tr>
+        </Subscribe>
+      {/each}
+    </tbody>
+  </table>
 </div>
