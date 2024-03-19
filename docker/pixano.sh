@@ -12,7 +12,7 @@ absolute_library_path=$(readlink -f "$1")
 tag=$2
 if [ -z "$tag" ]
 then
-tag=0.5.0b4
+tag=latest
 fi
 
 # get custom host port

@@ -3,26 +3,26 @@
 echo "Pixano - Build Docker image"
 
 # get pixano & pixano-inference versions from cli or default
+if [ -n "$1" ]
+then
 pixano_version=$1
-if [ -z "$pixano_version" ]
-then
-pixano_version=0.5.0b4
-fi
 echo "pixano version: " $pixano_version
-pixano_ver=$2
-if [ -z "$pixano_inference_version" ]
-then
-pixano_inference_version=v0.3.0b2
+else
+pixano_version=
 fi
-echo "pixano-inference version: " $pixano_inference_version
-
-tag=$3
-if [ -z "$tag" ]
+if [ -n "$2" ]
 then
-tag=$pixano_version
+pixano_inference_version=$2
+echo "pixano-inference version: " $pixano_inference_version
+else
+pixano_inference_version=
+fi
+
+if [ -n "$3" ]
+then
+tag=$3
+else
+tag=latest
 fi
 
 sudo docker build -t pixano/pixano:$tag --build-arg pixano_version=$pixano_version --build-arg pixano_inference_version=$pixano_inference_version -f Dockerfile .
-
-# uncomment to push image to DockerHub (restricted to owners of dockerHub pixano repositories)
-# sudo docker push pixano/pixano:$tag

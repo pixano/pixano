@@ -7,10 +7,18 @@ RUN apt-get update && apt-get install -y build-essential libgl1-mesa-glx && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip \
-  && pip install pixano==$pixano_version
+  && if [ -z "$pixano_version" ] ; then \
+       pip install pixano; \
+     else \
+       pip install pixano==$pixano_version; \
+    fi
 
 # pixano-inference is required for semantic search, but heavy, so if you don't need semantic search you can comment it
-RUN pip install pixano-inference@git+https://github.com/pixano/pixano-inference@$pixano_inference_version
+RUN if [ -z "$pixano_inference_version" ] ; then \
+    pip install pixano-inference; \
+  else \
+    pip install pixano-inference==$pixano_inference_version; \
+  fi
 
 # port 80 is exposed by default, but Docker Desktop requires explicit EXPOSE to allow port mapping
 EXPOSE 80

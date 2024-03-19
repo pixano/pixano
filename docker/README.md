@@ -69,9 +69,9 @@ To build your own image with different versions of pixano and/or pixano-inferenc
 
 | Argument | Description | Default |
 |:---|:---|:---|
-| pixano_version | GIT version of pixano to use | 0.5.0b4 |
-| pixano-inference_version | GIT version of pixano-inference to use | v0.3.0b2 |
-| tag | Docker image tag | \<pixano_version> |
+| pixano_version | GIT version of pixano to use | latest stable release |
+| pixano-inference_version | GIT version of pixano-inference to use | latest stable version |
+| tag | Docker image tag | latest |
 
 
 #### Side-note on image weight
@@ -92,7 +92,7 @@ With pixano-inference module, the image will be heavier (~12Go), because pixano-
 | Argument | Description | Default |
 |:---|:---|:---|
 | local_library_directory | [local path to datasets](#local-library-directory) | *required* |
-| tag | Docker image tag | 0.5.0b4 |
+| tag | Docker image tag | latest |
 | port | Host port | 80 |
 
 Pixano Docker image will be pull from DockerHub if there is no local image build or previous image pull, then Pixano start running.
