@@ -143,7 +143,6 @@ export const addKeyBox = (
   return objects.map((object) => {
     if (objectId !== object.id) return object;
     if (object.datasetItemType !== "video") return object;
-    console.log("object.track", object.track);
     const tracklet = object.track.find((t) => t.start <= frameIndex && t.end >= frameIndex);
     if (!tracklet) {
       const newTracklet = createNewTracklet(object.track, frameIndex, lastFrameIndex, keyBox);

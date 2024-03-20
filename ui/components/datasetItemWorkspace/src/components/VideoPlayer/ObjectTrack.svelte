@@ -65,7 +65,7 @@
           ...obj.displayControl,
           editing: !isBeingEdited && obj.id === object.id,
         };
-        console.log({ obj });
+
         return obj;
       }),
     );
@@ -73,7 +73,7 @@
 
   const onAddKeyBoxClick = () => {
     const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
-    console.log({ box });
+
     itemObjects.update((objects) =>
       addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
