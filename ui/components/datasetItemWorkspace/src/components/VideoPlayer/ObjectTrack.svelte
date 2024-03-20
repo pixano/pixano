@@ -92,6 +92,17 @@
     );
   };
 
+  const onDeleteTrackletClick = (trackletIndex: number) => {
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        if (obj.id === object.id && obj.datasetItemType === "video") {
+          obj.track.splice(trackletIndex, 1);
+        }
+        return obj;
+      }),
+    );
+  };
+
   const findNeighborKeyBoxes = (
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frameIndex"],
@@ -124,6 +135,7 @@
       {onContextMenu}
       {onEditKeyBoxClick}
       onSplitTrackletClick={() => onSplitTrackletClick(i)}
+      onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
       {findNeighborKeyBoxes}
     />
   {/each}
