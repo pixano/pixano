@@ -82,7 +82,6 @@
   $: {
     const shape = $newShape;
     const box = $itemBoxBeingEdited;
-    console.log({ shape, box });
     if (shape.status === "editing") {
       if (box) {
         itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));

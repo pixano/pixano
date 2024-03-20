@@ -33,6 +33,10 @@
   let showIcons: boolean = false;
 
   $: features = createFeature(itemObject.features);
+  $: isEditing = itemObject.displayControl?.editing || false;
+  $: isVisible = !itemObject.displayControl?.hidden;
+  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
+  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
   $: {
     color = colorScale(itemObject.id);
@@ -52,10 +56,16 @@
             ...object.displayControl,
             editing: false,
           };
-          !value && itemBoxBeingEdited.set(null);
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+          itemBoxBeingEdited.update(() => {
+            const startingBox = object.datasetItemType === "video" && object.track[0]?.keyBoxes[0];
+            if (value && startingBox) {
+              return { ...startingBox, objectId: object.id };
+            }
+            return null;
+          });
         }
         return object;
       }),
@@ -66,11 +76,6 @@
     itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
     canSave.set(true);
   };
-
-  $: isEditing = itemObject.displayControl?.editing || false;
-  $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
-  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     itemObjects.update((oldObjects) =>
