@@ -17,7 +17,7 @@ def _register_type_internal():
         if type_name in _TYPES_REGISTRY:
             raise ValueError(f"Type {type_name} already registered")
         _TYPES_REGISTRY[type_name] = type
-        return type_name
+        return type
 
     return decorator
 
