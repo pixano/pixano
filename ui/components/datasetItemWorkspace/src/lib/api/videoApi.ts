@@ -1,4 +1,4 @@
-import type { EditShape, ItemObject, Tracklet, VideoItemBBox } from "@pixano/core";
+import type { EditShape, ItemObject, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -185,4 +185,54 @@ export const findNeighbors = (
   nextNeighbor = nextNeighbor || lastFrameIndex + 1;
 
   return [prevNeighbor, nextNeighbor];
+};
+
+const filterKeyBoxes = (
+  keyBoxes: Tracklet["keyBoxes"],
+  newBox: VideoItemBBox,
+  shouldBeFiltered: (index: VideoItemBBox["frameIndex"]) => boolean,
+) =>
+  keyBoxes.reduce(
+    (acc, box, i) => {
+      if (i === 0) {
+        acc.push(newBox);
+      }
+      if (shouldBeFiltered(box.frameIndex)) {
+        acc.push(box);
+      }
+      return acc.sort((a, b) => a.frameIndex - b.frameIndex);
+    },
+    [] as Tracklet["keyBoxes"],
+  );
+
+export const splitTrackletInTwo = (
+  object: VideoObject,
+  trackletIndex: number,
+  rightClickFrameIndex: number,
+) => {
+  const tracklet = object.track[trackletIndex];
+  const startTracklet: Tracklet = {
+    start: tracklet.start,
+    end: rightClickFrameIndex,
+    keyBoxes: filterKeyBoxes(
+      tracklet.keyBoxes,
+      { ...object.displayedBox, frameIndex: rightClickFrameIndex },
+      (index) => index < rightClickFrameIndex,
+    ),
+  };
+  const endTracklet: Tracklet = {
+    start: rightClickFrameIndex + 1,
+    end: tracklet.end,
+    keyBoxes: filterKeyBoxes(
+      tracklet.keyBoxes,
+      { ...object.displayedBox, frameIndex: rightClickFrameIndex + 1 },
+      (index) => index > rightClickFrameIndex + 1,
+    ),
+  };
+  return [
+    ...object.track.slice(0, trackletIndex),
+    startTracklet,
+    endTracklet,
+    ...object.track.slice(trackletIndex + 1),
+  ];
 };

@@ -18,7 +18,7 @@
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { addKeyBox, findNeighbors } from "../../lib/api/videoApi";
+  import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
   export let zoomLevel: number[];
@@ -80,6 +80,18 @@
     onEditKeyBoxClick(box);
   };
 
+  const onSplitTrackletClick = (trackletIndex: number) => {
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        if (obj.id === object.id && obj.datasetItemType === "video") {
+          const newTrack = splitTrackletInTwo(obj, trackletIndex, rightClickFrameIndex);
+          return { ...obj, track: newTrack };
+        }
+        return obj;
+      }),
+    );
+  };
+
   const findNeighborKeyBoxes = (
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frameIndex"],
@@ -103,7 +115,7 @@
       <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
     </ContextMenu.Content>
   </ContextMenu.Root>
-  {#each object.track as tracklet}
+  {#each object.track as tracklet, i}
     <ObjectTracklet
       {tracklet}
       {object}
@@ -111,6 +123,7 @@
       {onAddKeyBoxClick}
       {onContextMenu}
       {onEditKeyBoxClick}
+      onSplitTrackletClick={() => onSplitTrackletClick(i)}
       {findNeighborKeyBoxes}
     />
   {/each}

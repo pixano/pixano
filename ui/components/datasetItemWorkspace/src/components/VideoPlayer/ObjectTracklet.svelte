@@ -25,6 +25,7 @@
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
   export let onAddKeyBoxClick: () => void;
+  export let onSplitTrackletClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
@@ -80,6 +81,7 @@
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#each tracklet.keyBoxes as keyBox}
