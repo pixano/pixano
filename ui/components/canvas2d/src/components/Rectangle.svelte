@@ -42,7 +42,7 @@
     toggleIsEditingBBox(bbox.editing ? "on" : "off", stage, bbox.id);
   }
 
-  function updateDimensions(rect: Konva.Rect) {
+  const updateDimensions = (rect: Konva.Rect) => {
     const coords = getNewRectangleDimensions(rect, stage, viewId);
     newShape = {
       status: "editing",
@@ -50,7 +50,7 @@
       shapeId: bbox.id,
       coords,
     };
-  }
+  };
 
   const resizeStroke = () => {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);

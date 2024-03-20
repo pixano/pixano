@@ -6,7 +6,8 @@ import type {
   Tracklet,
   VideoDatasetItem,
 } from "@pixano/core/src";
-import { datasetPreview, imgThumbnail, imgUri } from "../../assets/base64image";
+import { datasetPreview, imgThumbnail } from "../../assets/base64image";
+import fleurs from "../../../assets/fleurs.jpg";
 
 // IMPORT ALL IMAGES
 const gallery: string[] = Object.values(
@@ -16,10 +17,12 @@ const gallery: string[] = Object.values(
   }),
 );
 
+const fleursUrl = fleurs as string;
+
 const mockImage: ItemView = {
   id: "image",
   type: "image",
-  uri: imgUri,
+  uri: fleursUrl.slice(1),
   thumbnail: imgThumbnail,
   frame_number: undefined,
   total_frames: undefined,
@@ -27,12 +30,12 @@ const mockImage: ItemView = {
     width: {
       name: "width",
       dtype: "int",
-      value: 600,
+      value: 770,
     },
     height: {
       name: "height",
       dtype: "int",
-      value: 338,
+      value: 513,
     },
   },
 };
