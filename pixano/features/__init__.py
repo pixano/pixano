@@ -12,10 +12,27 @@
 # http://www.cecill.info
 
 from pixano.features.camera import Camera, CameraType
+from pixano.features.dataset import DatasetFeatures
 from pixano.features.depth_image import DepthImage, DepthImageType
-from pixano.features.image import Image, ImageType
+from pixano.features.image import ImageType
 from pixano.features.pixano_type import PixanoType, convert_field, create_pyarrow_type
 from pixano.features.pose import Pose, PoseType
+from pixano.features.schemas import (
+    BaseSchema,
+    Embedding,
+    Image,
+    Item,
+    Object,
+    ObjectWithBBox,
+    ObjectWithBBoxAndMask,
+    ObjectWithMask,
+    PointCloud,
+    SequenceFrame,
+    Video,
+    View,
+    register_schema,
+)
+from pixano.features.types import BBox, CompressedRLE
 from pixano.features.utils import (
     is_binary,
     is_boolean,
@@ -25,30 +42,6 @@ from pixano.features.utils import (
     is_string,
 )
 
-from pixano.features.schemas import (
-    BaseSchema,
-    Image,
-    Embedding,
-    Item,
-    PointCloud,
-    register_schema,
-    SequenceFrame,
-    Video,
-    View,
-    SCHEMA_GROUP_TO_SCHEMA_DICT,
-    SchemaGroup,
-    Object,
-    ObjectWithBBox,
-    ObjectWithBBoxAndMask,
-    ObjectWithMask,
-)
-
-from pixano.features.types import (
-    BBox,
-    CompressedRLE
-)
-
-from pixano.features.dataset import DatasetFeatures
 
 __all__ = [
     "BaseSchema",
@@ -71,8 +64,6 @@ __all__ = [
     "SequenceFrame",
     "Video",
     "View",
-    "SCHEMA_GROUP_TO_SCHEMA_DICT",
-    "SchemaGroup",
     "Object",
     "ObjectWithBBox",
     "ObjectWithBBoxAndMask",

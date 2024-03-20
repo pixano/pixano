@@ -13,7 +13,7 @@
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import duckdb
 import lancedb
@@ -22,21 +22,38 @@ from lancedb.query import LanceQueryBuilder
 from pydantic import BaseModel, ConfigDict
 from s3path import S3Path
 
-from pixano.core import Image
-from pixano.core.types.group import TableGroup
-from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
 from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
 from pixano.data.dataset.dataset_info import DatasetInfo
 from pixano.data.dataset.dataset_item import (
     DatasetItem,
-    create_custom_dataset_item_class,
+    create_custom_dataset_item_class_from_dataset_schema,
+    create_sub_dataset_item,
 )
 from pixano.data.dataset.dataset_schema import DatasetSchema
 from pixano.data.dataset.dataset_stat import DatasetStat
+from pixano.features.image import Image
+from pixano.features.schemas.group import _SchemaGroup
 
 
 DEFAULT_DB_PATH = "db"
 DEFAULT_PREVIEWS_PATH = "previews"
+
+
+def _lance_query_to_pydantic(
+    lance_query: LanceQueryBuilder,
+    model: type[LanceModel],
+    allow_extra_fields: bool = False,
+):
+    return [
+        model(
+            **{
+                k: v
+                for k, v in row.items()
+                if allow_extra_fields or k in model.field_names()
+            }
+        )
+        for row in lance_query.to_arrow().to_pylist()
+    ]
 
 
 class Dataset(BaseModel):
@@ -88,8 +105,8 @@ class Dataset(BaseModel):
             ),
         )
 
-        self._custom_dataset_item_class = create_custom_dataset_item_class(
-            self.dataset_schema
+        self._custom_dataset_item_class = (
+            create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
         )
 
     @property
@@ -100,7 +117,7 @@ class Dataset(BaseModel):
             int: Number of rows
         """
         # Return number of rows of item table
-        return len(self.open_table(TableGroup.ITEM.value))
+        return len(self.open_table(_SchemaGroup.ITEM.value))
 
     @property
     def _media_dir(self) -> Path | S3Path:
@@ -130,8 +147,8 @@ class Dataset(BaseModel):
             DatasetSchema: Dataset schema
         """
         self.dataset_schema = DatasetSchema.from_json(self.path / "schema.json")
-        self._custom_dataset_item_class = create_custom_dataset_item_class(
-            self.dataset_schema
+        self._custom_dataset_item_class = (
+            create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
         )
 
     @property
@@ -151,23 +168,24 @@ class Dataset(BaseModel):
         """
         return lancedb.connect(self._db_path)
 
-    def open_tables(self) -> dict[TableGroup, dict[str, lancedb.db.LanceTable]]:
+    def open_tables(
+        self, names: Optional[list[str]] = None
+    ) -> dict[str, lancedb.db.LanceTable]:
         """Open dataset tables with LanceDB.
 
+        Args:
+            names (list[str], optional): Table names to open. Default is None.
+
         Returns:
-            dict[str, dict[str, lancedb.db.LanceTable]]: Dataset tables
+            dict[str, lancedb.db.LanceTable]: Dataset tables
         """
         ds = self._connect()
 
-        ds_tables: dict[str, dict[TableGroup, lancedb.db.LanceTable]] = defaultdict(
-            dict
-        )
+        ds_tables: dict[str, lancedb.db.LanceTable] = defaultdict(dict)
 
-        for table_group, tables in self.dataset_schema.schemas.items():
-            for table_name in tables.keys():
-                ds_tables[TableGroup(table_group)][table_name] = ds.open_table(
-                    table_name
-                )
+        for table_name in self.dataset_schema.schemas.keys():
+            if names is None or table_name in names:
+                ds_tables[table_name] = ds.open_table(table_name)
 
         return ds_tables
 
@@ -179,10 +197,9 @@ class Dataset(BaseModel):
         """
         ds = self._connect()
 
-        for _, tables in self.dataset_schema.schemas.items():
-            for table_name in tables.keys():
-                if table_name == name:
-                    return ds.open_table(table_name)
+        for table_name in self.dataset_schema.schemas.keys():
+            if table_name == name:
+                return ds.open_table(table_name)
 
         raise ValueError(f"Table {name} not found in dataset")
 
@@ -204,74 +221,47 @@ class Dataset(BaseModel):
     def _read_items_data(
         self,
         ids: list[str],
-        select_table_groups: list[TableGroup] = None,
-        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
-        remove_table_group_level: bool = True,
+        select_schemas: Optional[list[str]] = None,
     ) -> dict[str, dict[str, dict[str, LanceModel]]]:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
-        # Reload schema
-        self._reload_schema()
-
         # Load tables
-        ds_tables = self.open_tables()
+        ds_tables = self.open_tables(select_schemas)
 
         # Load items data from the tables
-        data_dict: dict[
-            str, dict[str, dict[str, LanceModel]] | dict[str, LanceModel]
-        ] = {id: {} for id in ids}
-        for table_group in ds_tables.keys():
-            item_id_field = "id" if table_group == TableGroup.ITEM else "item_id"
-
-            if (
-                select_table_groups
-                and select_tables_per_group
-                and table_group in select_table_groups
-                and table_group in select_tables_per_group
-            ):
-                raise ValueError(
-                    f"Table group {table_group} is in both select_table_groups "
-                    "and select_tables_per_group"
-                )
-            elif (not select_table_groups and not select_tables_per_group) or (
-                select_table_groups and table_group in select_table_groups
-            ):
-                tables_to_read = ds_tables[table_group].keys()
-            elif select_tables_per_group and table_group in select_tables_per_group:
-                tables_to_read = select_tables_per_group[table_group]
-            else:
-                tables_to_read = []
-
-            for table_name in tables_to_read:
-                if table_name not in ds_tables[table_group]:
-                    raise ValueError(
-                        f"Table {table_name} not found in {table_group.value} "
-                        "table group"
-                    )
-                table = ds_tables[table_group][table_name]
-                table_type = _TABLE_TYPE_REGISTRY[
-                    self.dataset_schema.schemas[table_group.value][table_name]
+        data_dict: dict[str, dict[str, Union[LanceModel, list[LanceModel]]]] = {
+            id: {} for id in ids
+        }
+        for table_name, table in ds_tables.items():
+            is_item_table = table_name == _SchemaGroup.ITEM.value
+            item_id_field = "id" if is_item_table else "item_id"
+            if not is_item_table:
+                is_collection = self.dataset_schema.item_to_schema_collection[
+                    table_name
                 ]
+            table_schema = self.dataset_schema.schemas[table_name]
 
-                lance_query = self._search_values_by_field_in_table(
-                    table, item_id_field, sql_ids
-                )
-                pydantic_table = lance_query.to_pydantic(table_type)
+            lance_query = self._search_values_by_field_in_table(
+                table, item_id_field, sql_ids
+            )
+            pydantic_table = _lance_query_to_pydantic(lance_query, table_schema)
 
-                for row in pydantic_table:
-                    id = row.id if table_group == TableGroup.ITEM else row.item_id
-                    if not remove_table_group_level:
-                        if table_group.value not in data_dict[id].keys():
-                            data_dict[id][table_group.value] = {}
-                        data_dict[id][table_group.value][table_name] = row
-                    else:
-                        data_dict[id][table_name] = row
+            for row in pydantic_table:
+                id = row.id if is_item_table else row.item_id
+                if is_item_table:
+                    data_dict[id].update(row)
+                elif is_collection:
+                    if table_name not in data_dict[id]:
+                        data_dict[id][table_name] = []
+                    data_dict[id][table_name].append(row)
+                else:
+                    data_dict[id][table_name] = row
 
         # Raise error if some ids are not found
         ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
         if len(ids_not_found) > 0:
             raise ValueError(
-                f"Ids {ids_not_found} not found in {TableGroup.ITEM.value} table"
+                f"Ids {ids_not_found} not found in {_SchemaGroup.ITEM.value} table"
             )
 
         return data_dict
@@ -279,66 +269,105 @@ class Dataset(BaseModel):
     def _read_data(
         self,
         ids: list[str],
-        select_table_groups: Optional[list[TableGroup]] = None,
-        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
-        remove_table_group_level: bool = True,
+        select_schema_groups: Optional[list[_SchemaGroup]] = None,
+        select_schemas_per_group: Optional[dict[_SchemaGroup, list[str]]] = None,
     ) -> list[DatasetItem]:  # type: ignore
-        if select_table_groups:
-            select_table_groups = [
-                TableGroup(table_group) if isinstance(table_group, str) else table_group
-                for table_group in select_table_groups
-            ]
+        if select_schema_groups or select_schemas_per_group:
+            select_schemas = []
+        else:
+            select_schemas = None
 
-        data_dict = self._read_items_data(
-            ids, select_table_groups, select_tables_per_group, remove_table_group_level
-        )
+        if select_schema_groups:
+            for schema_group in select_schema_groups:
+                if schema_group not in _SchemaGroup:
+                    raise ValueError(f"Schema group {schema_group} not found")
+                else:
+                    select_schemas.extend(self.dataset_schema._groups[schema_group])
+        if select_schemas_per_group:
+            for schema_group, schemas in select_schemas_per_group.items():
+                if schema_group not in _SchemaGroup:
+                    raise ValueError(f"Schema group {schema_group} not found")
+                elif select_schema_groups and schema_group in select_schema_groups:
+                    raise ValueError(
+                        f"Schema group {schema_group} is in both select_schema_groups "
+                        "and select_schemas_per_group"
+                    )
+                else:
+                    select_schemas.extend(schemas)
 
-        dataset_items = [self._CustomDatasetItem(id=id, **data_dict[id]) for id in ids]
+        data_dict = self._read_items_data(ids, select_schemas)
+
+        if select_schemas is not None:
+            custom_dataset_item = create_sub_dataset_item(
+                self._CustomDatasetItem, select_schemas
+            )
+        else:
+            custom_dataset_item = self._CustomDatasetItem
+
+        dataset_items = [custom_dataset_item(**data_dict[id]) for id in ids]
 
         return dataset_items
 
-    def _read_table_group_data(
+    def _read_schema_group_data(
         self,
         ids: list[str],
-        group: TableGroup,
-        select: Optional[list[str]] = None,
-        remove_table_group_level: bool = True,
+        group: _SchemaGroup,
+        select_schemas: Optional[list[str]] = None,
     ) -> list[DatasetItem]:
-        if select:
-            select_tables_per_group = {
-                group: [DatasetSchema.format_table_name(table) for table in select]
+        if select_schemas:
+            select_schemas_per_group = {
+                group: [
+                    DatasetSchema.format_table_name(schema) for schema in select_schemas
+                ]
             }
-            return self._read_data(
-                ids, None, select_tables_per_group, remove_table_group_level
-            )
-        return self._read_data(ids, [group], None, remove_table_group_level)
+            return self._read_data(ids, None, select_schemas_per_group)
+        return self._read_data(ids, [group], None)
 
     def _get_data(
         self,
         offset: int,
         limit: int,
-        select_table_groups: Optional[list[TableGroup]] = None,
-        select_tables_per_group: Optional[dict[TableGroup, list[str]]] = None,
-        remove_table_group_level: bool = True,
+        select_schema_groups: Optional[list[_SchemaGroup]] = None,
+        select_schemas_per_group: Optional[dict[_SchemaGroup, list[str]]] = None,
     ) -> list[DatasetItem]:
         """Get items from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select_table_groups (list[str], optional): Table groups to read
-            select_tables_per_group (list[str], optional): Tables to read per group
-            remove_table_group_level (bool, optional): Remove table group level.
-                Default is True.
+            select_schema_groups (list[str], optional): Schema groups to read
+            select_schemas_per_group (list[str], optional): Tables to read per group
 
         Returns:
             list[DatasetItem]: Dataset items
         """
-        item_table = self.open_table(TableGroup.ITEM.value).to_lance()  # noqa: F841
+        if select_schema_groups or select_schemas_per_group:
+            select_schemas = []
+        else:
+            select_schemas = None
+
+        if select_schema_groups:
+            for schema_group in select_schema_groups:
+                if schema_group not in _SchemaGroup:
+                    raise ValueError(f"Schema group {schema_group} not found")
+                else:
+                    print(self.dataset_schema._groups)
+                    select_schemas.extend(self.dataset_schema._groups[schema_group])
+        if select_schemas_per_group:
+            for schema_group, schemas in select_schemas_per_group.items():
+                if schema_group not in _SchemaGroup:
+                    raise ValueError(f"Schema group {schema_group} not found")
+                elif select_schema_groups and schema_group in select_schema_groups:
+                    raise ValueError(
+                        f"Schema group {schema_group} is in both select_schema_groups "
+                        "and select_schemas_per_group"
+                    )
+                else:
+                    select_schemas.extend(schemas)
+
+        item_table = self.open_table(_SchemaGroup.ITEM.value).to_lance()  # noqa: F841
         select_item = (
-            select_table_groups is None
-            or (select_table_groups and TableGroup.ITEM in select_table_groups)
-            or (select_tables_per_group and TableGroup.ITEM in select_tables_per_group)
+            select_schemas is None or _SchemaGroup.ITEM.value in select_schemas
         )
         item_columns_selected = "*" if select_item else "id"
         item_rows = (
@@ -355,61 +384,53 @@ class Dataset(BaseModel):
         ids = []
         for row in item_rows:
             if select_item:
-                item_models[row["id"]] = _TABLE_TYPE_REGISTRY[
-                    self.dataset_schema.schemas[TableGroup.ITEM.value][
-                        TableGroup.ITEM.value
-                    ]
+                item_models[row["id"]] = self.dataset_schema.schemas[
+                    _SchemaGroup.ITEM.value
                 ](**row)
                 ids.append(row["id"])
             else:
                 ids.append(row["id"])
 
-        if select_table_groups:
-            select_table_groups = [
-                TableGroup(table_group) if isinstance(table_group, str) else table_group
-                for table_group in select_table_groups
-                if TableGroup(table_group) != TableGroup.ITEM
-            ]
-
-        if select_tables_per_group:
-            select_tables_per_group = {
-                TableGroup(table_group)
-                if isinstance(table_group, str)
-                else table_group: select_tables
-                for table_group, select_tables in select_tables_per_group.items()
-                if TableGroup(table_group) != TableGroup.ITEM
-            }
-
         data_dict = self._read_items_data(
-            ids, select_table_groups, select_tables_per_group, remove_table_group_level
+            ids,
+            [
+                schema
+                for schema in self.dataset_schema.schemas
+                if schema != _SchemaGroup.ITEM.value
+                and (select_schemas is None or schema in select_schemas)
+            ],
         )
+
+        if select_schemas is not None:
+            custom_dataset_item = create_sub_dataset_item(
+                self._CustomDatasetItem, select_schemas
+            )
+        else:
+            custom_dataset_item = self._CustomDatasetItem
 
         dataset_items = []
         for id in data_dict.keys():
             if select_item:
-                if remove_table_group_level:
-                    data_dict[id][TableGroup.ITEM.value] = item_models.pop(id)
-                else:
-                    data_dict[id][TableGroup.ITEM.value] = {}
-                    data_dict[id][TableGroup.ITEM.value][TableGroup.ITEM.value] = (
-                        item_models.pop(id)
-                    )
-            dataset_items.append(self._CustomDatasetItem(id=id, **data_dict[id]))
+                data_dict[id].update(item_models.pop(id))
+                dataset_items.append(custom_dataset_item(**data_dict[id]))
+            else:
+                data_dict[id].update({"id": id})
+                dataset_items.append(custom_dataset_item(**data_dict[id]))
 
         return dataset_items
 
-    def _get_table_group_data(
+    def _get_schema_group_data(
         self,
         offset: int,
         limit: int,
-        group: TableGroup,
+        group: _SchemaGroup,
         select: Optional[list[str]] = None,
     ) -> list[DatasetItem]:
         if select:
-            select_tables_per_group = {
+            select_schemas_per_group = {
                 group: [DatasetSchema.format_table_name(table) for table in select]
             }
-            return self._get_data(offset, limit, None, select_tables_per_group)
+            return self._get_data(offset, limit, None, select_schemas_per_group)
         return self._get_data(offset, limit, [group], None)
 
     def read_items(
@@ -420,8 +441,8 @@ class Dataset(BaseModel):
 
         Args:
             ids (list[str]): Item ids
-            select_table_groups (list[str], optional): Table groups to read
-            select_tables_per_group (list[str], optional): Tables to read per group
+            select_schema_groups (list[str], optional): Schema groups to read
+            select_schemas_per_group (list[str], optional): Tables to read per group
         Returns:
             list[DatasetItem]: Dataset items
         """
@@ -481,7 +502,7 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._read_table_group_data(ids, TableGroup.VIEW, select)
+        return self._read_schema_group_data(ids, _SchemaGroup.VIEW, select)
 
     def read_view(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
         """Read view from dataset.
@@ -511,7 +532,7 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._get_table_group_data(offset, limit, TableGroup.VIEW, select)
+        return self._get_schema_group_data(offset, limit, _SchemaGroup.VIEW, select)
 
     def get_view(
         self,
@@ -541,7 +562,7 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._read_table_group_data(ids, TableGroup.OBJECT, select)
+        return self._read_schema_group_data(ids, _SchemaGroup.OBJECT, select)
 
     def read_object(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
         """Read object from dataset.
@@ -571,7 +592,7 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._get_table_group_data(offset, limit, TableGroup.OBJECT, select)
+        return self._get_schema_group_data(offset, limit, _SchemaGroup.OBJECT, select)
 
     def get_object(
         self,
@@ -601,7 +622,7 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._read_table_group_data(ids, TableGroup.EMBEDDING, select)
+        return self._read_schema_group_data(ids, _SchemaGroup.EMBEDDING, select)
 
     def read_embedding(
         self, id: str, select: Optional[list[str]] = None
@@ -633,7 +654,9 @@ class Dataset(BaseModel):
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._get_table_group_data(offset, limit, TableGroup.EMBEDDING, select)
+        return self._get_schema_group_data(
+            offset, limit, _SchemaGroup.EMBEDDING, select
+        )
 
     def get_embedding(
         self,

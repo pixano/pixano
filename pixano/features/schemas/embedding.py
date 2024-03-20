@@ -13,7 +13,6 @@
 
 
 from .base_schema import BaseSchema
-
 from .registry import _register_schema_internal
 
 

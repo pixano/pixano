@@ -1,1 +1,51 @@
-{"schemas": {"item": {"item": "Item"}, "views": {"image": "Image"}}}
+{
+    "item_to_schema_collection": {
+        "image": false
+    },
+    "schemas": {
+        "image": {
+            "schema": "image",
+            "base_schema": "image",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "url": {
+                    "type": "str",
+                    "collection": false
+                },
+                "width": {
+                    "type": "int",
+                    "collection": false
+                },
+                "height": {
+                    "type": "int",
+                    "collection": false
+                },
+                "format": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        },
+        "item": {
+            "schema": "item",
+            "base_schema": "item",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "split": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        }
+    }
+}

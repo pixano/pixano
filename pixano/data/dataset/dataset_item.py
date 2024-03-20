@@ -11,38 +11,72 @@
 #
 # http://www.cecill.info
 
-
 from pydantic import BaseModel, create_model
 
-from pixano.core.types.registry import _TABLE_TYPE_REGISTRY
 from pixano.data.dataset.dataset_schema import DatasetSchema
+from pixano.features.schemas.group import _SchemaGroup
 
 
 class DatasetItem(BaseModel):
     """DatasetItem."""
 
-    id: str
+    pass
 
 
-def create_custom_dataset_item_class(schema: DatasetSchema) -> type[DatasetItem]:
+def create_custom_dataset_item_class_from_dataset_schema(
+    dataset_schema: DatasetSchema,
+) -> type[DatasetItem]:
     """Create a custom dataset item class based on the schema.
 
     Args:
-        schema (DatasetSchema): The dataset schema
+        dataset_schema (DatasetSchema): The dataset schema
 
     Returns:
         type[DatasetItem]: The custom dataset item class
     """
-    tables = {
-        table: (_TABLE_TYPE_REGISTRY[table_type], None)
-        for table_group in schema.schemas.keys()
-        for table, table_type in schema.schemas[table_group].items()
-    }
+    item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
+    fields = {}
+
+    for schema, is_collection in dataset_schema.item_to_schema_collection.items():
+        if is_collection:
+            fields[schema] = (list[dataset_schema.schemas[schema]], ...)
+        else:
+            fields[schema] = (dataset_schema.schemas[schema], ...)
+
+    for field_name, field in item_type.model_fields.items():
+        fields[field_name] = (field.annotation, ...)
 
     CustomDatasetItem = create_model(
         "CustomDatasetItem",
-        **tables,
+        **fields,
         __base__=DatasetItem,
     )
     CustomDatasetItem.__doc__ = "CustomDatasetItem"
+    return CustomDatasetItem
+
+
+def create_sub_dataset_item(
+    dataset_item: DatasetItem,
+    selected_fields: list[str],
+) -> DatasetItem:
+    """Create a sub dataset item based on the selected fields.
+
+    Args:
+        dataset_item (DatasetItem): The dataset item
+        selected_fields (list[str]): The selected fields
+
+    Returns:
+        DatasetItem: The sub dataset item
+    """
+    kept_fields = {}
+    for field_name, field in dataset_item.model_fields.items():
+        if field_name in selected_fields or field_name == "id":
+            kept_fields[field_name] = (field.annotation, ...)
+
+    CustomDatasetItem = create_model(
+        "CustomDatasetItem",
+        **kept_fields,
+        __base__=DatasetItem,
+    )
+
     return CustomDatasetItem

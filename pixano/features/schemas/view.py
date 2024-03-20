@@ -12,10 +12,8 @@
 # http://www.cecill.info
 
 
-from lancedb.pydantic import LanceModel
-
-from .registry import _register_schema_internal
 from .base_schema import BaseSchema
+from .registry import _register_schema_internal
 
 
 @_register_schema_internal()

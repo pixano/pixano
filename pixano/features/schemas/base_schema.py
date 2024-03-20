@@ -10,6 +10,7 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
+
 from lancedb.pydantic import LanceModel
 
 

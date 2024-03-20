@@ -12,14 +12,15 @@
 # http://www.cecill.info
 
 
-from ..types import bbox, compressed_rle
-from .registry import _register_schema_internal
+from ..types import BBox, CompressedRLE
 from .base_schema import BaseSchema
+from .registry import _register_schema_internal
 
 
 @_register_schema_internal()
 class Object(BaseSchema):
     """Object Lance Model."""
+
     id: str
     item_id: str
     view_id: str
@@ -29,19 +30,19 @@ class Object(BaseSchema):
 class ObjectWithBBox(Object):
     """Object with Bounding Box Lance Model."""
 
-    bbox: bbox.BBox
+    bbox: BBox
 
 
 @_register_schema_internal()
 class ObjectWithMask(Object):
     """Object with Mask Lance Model."""
 
-    mask: compressed_rle.CompressedRLE
+    mask: CompressedRLE
 
 
 @_register_schema_internal()
 class ObjectWithBBoxAndMask(Object):
     """Object with Bounding Box and Mask Lance Model."""
 
-    bbox: bbox.BBox
-    mask: compressed_rle.CompressedRLE
+    bbox: BBox
+    mask: CompressedRLE
