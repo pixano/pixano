@@ -18,6 +18,6 @@
   export let value: string;
 </script>
 
-<div class="px-8">
+<div class="min-w-24 px-2">
   {value}
 </div>

@@ -18,6 +18,4 @@
   export let value: number;
 </script>
 
-<div class="px-4">
-  {value}
-</div>
+<div class="min-w-16 px-2">{value}</div>
