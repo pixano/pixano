@@ -8,6 +8,7 @@ import type {
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail, imgUri } from "../../assets/base64image";
 
+// IMPORT ALL IMAGES
 const gallery: string[] = Object.values(
   import.meta.glob("../../../assets/videos/mock/*.{png,jpg,jpeg,PNG,JPEG}", {
     eager: true,

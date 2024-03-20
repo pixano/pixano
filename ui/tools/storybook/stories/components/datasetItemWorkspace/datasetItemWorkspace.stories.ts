@@ -31,7 +31,7 @@ type Story = StoryObj<typeof meta>;
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/Dataset Item/simple image",
+  title: "Components/Dataset Item",
   component: DatasetItemWorkspace,
   tags: ["autodocs"],
 } satisfies Meta<DatasetItemWorkspace>;
