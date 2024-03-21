@@ -17,7 +17,7 @@ from fastapi_pagination.api import add_pagination
 from s3path import S3Path
 
 from pixano.app.api import datasets, items, models
-from pixano.data.settings import Settings
+from pixano.app.settings import Settings
 
 
 def create_app(settings: Settings = Settings()) -> FastAPI:

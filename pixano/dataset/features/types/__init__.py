@@ -1,4 +1,4 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2024)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -10,16 +10,3 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
-from pixano.data.importers.coco_importer import COCOImporter
-from pixano.data.importers.dota_importer import DOTAImporter
-from pixano.data.importers.image_importer import ImageImporter
-from pixano.data.importers.importer import Importer
-
-
-__all__ = [
-    "Importer",
-    "ImageImporter",
-    "DOTAImporter",
-    "COCOImporter",
-]

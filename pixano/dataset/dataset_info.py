@@ -18,8 +18,6 @@ from typing import Optional
 from pydantic import BaseModel, PrivateAttr
 from s3path import S3Path
 
-from pixano.features.image import Image
-
 
 class DatasetInfo(BaseModel):
     """DatasetInfo.

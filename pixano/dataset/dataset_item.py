@@ -13,8 +13,8 @@
 
 from pydantic import BaseModel, create_model
 
-from pixano.data.dataset.dataset_schema import DatasetSchema
-from pixano.features.schemas.group import _SchemaGroup
+from .dataset_schema import DatasetSchema
+from .features.schemas.group import _SchemaGroup
 
 
 class DatasetItem(BaseModel):

@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from pixano.utils.boxes import (
+from .boxes import (
     denormalize_coords,
     mask_to_bbox,
     normalize_coords,
@@ -19,7 +19,7 @@ from pixano.utils.boxes import (
     xywh_to_xyxy,
     xyxy_to_xywh,
 )
-from pixano.utils.image import (
+from .image import (
     binary_to_url,
     depth_array_to_gray,
     depth_file_to_binary,
@@ -34,14 +34,14 @@ from pixano.utils.image import (
     rle_to_urle,
     urle_to_rle,
 )
-from pixano.utils.labels import (
+from .labels import (
     coco_ids_80to91,
     coco_names_80,
     coco_names_91,
     dota_ids,
     voc_names,
 )
-from pixano.utils.python import estimate_size, natural_key
+from .python import estimate_size, natural_key
 
 
 __all__ = [

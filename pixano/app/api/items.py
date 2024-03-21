@@ -18,7 +18,7 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 
 from pixano.core.types.group import TableGroup
-from pixano.data import Dataset, DatasetItem, Settings, get_settings
+from pixano.dataset import Dataset, DatasetItem, Settings, get_settings
 
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")

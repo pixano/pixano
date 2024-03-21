@@ -16,7 +16,7 @@ from fractions import Fraction
 import pyarrow as pa
 from PIL import Image as PILImage
 
-from pixano.data import Dataset
+from pixano.dataset import Dataset
 
 
 def compute_image_stats(ds: Dataset):

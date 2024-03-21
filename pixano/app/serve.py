@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 
 from pixano.app.display import display_cli, display_colab, display_ipython
 from pixano.app.main import create_app
-from pixano.data.settings import Settings, get_settings
+from pixano.app.settings import Settings, get_settings
 
 
 LOGO = """

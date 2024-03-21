@@ -5,8 +5,8 @@ import PIL
 import pyarrow.json as pa_json
 import shortuuid
 
-from ...features import schemas as table_schemas
-from ...features import types as feature_types
+from ..features import schemas as table_schemas
+from ..features import types as feature_types
 from . import dataset_builder
 
 

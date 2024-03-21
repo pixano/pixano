@@ -10,12 +10,3 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
-from pixano.data.exporters.coco_exporter import COCOExporter
-from pixano.data.exporters.exporter import Exporter
-
-
-__all__ = [
-    "Exporter",
-    "COCOExporter",
-]

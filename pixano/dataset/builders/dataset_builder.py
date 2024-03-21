@@ -19,9 +19,10 @@ import pydantic
 import pydantic_core
 import tqdm
 
+from .. import dataset
+
 # from ...... import sequence_utils
-from ...features import schemas as table_schemas
-from ..dataset import dataset
+from ..features import schemas as table_schemas
 
 
 def _generate_schema_mapping(cls):
@@ -144,10 +145,10 @@ class DatasetBuilder(abc.ABC):
         self._schemas = _generate_schema_mapping(schemas)
         self._target_dir = pathlib.Path(target_dir)
         self._source_dir = pathlib.Path(source_dir)
-        self._previews_path = self._target_dir / dataset.Dataset.DEFAULT_PREVIEWS_PATH
+        self._previews_path = self._target_dir / dataset.Dataset.PREVIEWS_PATH
         self._mode = mode
 
-        self._db = lancedb.connect(self._target_dir / dataset.Dataset.DEFAULT_DB_PATH)
+        self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
         # self._info = info.model_copy(update={"id": shortuuid.uuid()})
 

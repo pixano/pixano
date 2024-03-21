@@ -19,11 +19,11 @@ from typing import Any, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 from s3path import S3Path
 
-from pixano.features import BaseSchema, DatasetFeatures
-from pixano.features import schemas as pix_schemas
-from pixano.features.schemas.group import _SchemaGroup
-from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
-from pixano.features.types.registry import _TYPES_REGISTRY
+from .features import BaseSchema, DatasetFeatures
+from .features import schemas as pix_schemas
+from .features.schemas.group import _SchemaGroup
+from .features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
+from .features.types.registry import _TYPES_REGISTRY
 
 
 def _get_super_type_from_dict(

@@ -19,24 +19,20 @@ import duckdb
 import lancedb
 from lancedb.pydantic import LanceModel
 from lancedb.query import LanceQueryBuilder
-from pydantic import BaseModel, ConfigDict
+from pydantic import ConfigDict
 from s3path import S3Path
 
-from pixano.data.dataset.dataset_features_values import DatasetFeaturesValues
-from pixano.data.dataset.dataset_info import DatasetInfo
-from pixano.data.dataset.dataset_item import (
+from .dataset_features_values import DatasetFeaturesValues
+from .dataset_info import DatasetInfo
+from .dataset_item import (
     DatasetItem,
     create_custom_dataset_item_class_from_dataset_schema,
     create_sub_dataset_item,
 )
-from pixano.data.dataset.dataset_schema import DatasetSchema
-from pixano.data.dataset.dataset_stat import DatasetStat
-from pixano.features.image import Image
-from pixano.features.schemas.group import _SchemaGroup
-
-
-DEFAULT_DB_PATH = "db"
-DEFAULT_PREVIEWS_PATH = "previews"
+from .dataset_schema import DatasetSchema
+from .dataset_stat import DatasetStat
+from .features.schemas.group import _SchemaGroup
+from .features.schemas.image import Image
 
 
 def _lance_query_to_pydantic(
@@ -56,7 +52,7 @@ def _lance_query_to_pydantic(
     ]
 
 
-class Dataset(BaseModel):
+class Dataset:
     """Dataset.
 
     Attributes:
@@ -68,6 +64,14 @@ class Dataset(BaseModel):
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
+    DB_PATH = "db"
+    PREVIEWS_PATH = "previews"
+    INFO_FILE = "info.json"
+    SCHEMA_FILE = "schema.json"
+    FEATURES_VALUES = "features_values.json"
+    STAT_FILE = "stats.json"
+    THUMB_FILE = "preview.png"
+
     path: Path | S3Path
     info: Optional[DatasetInfo] = None
     dataset_schema: Optional[DatasetSchema] = None
@@ -77,20 +81,17 @@ class Dataset(BaseModel):
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(
-        self,
-        path: Path | S3Path,
-    ):
+    def __init__(self, path: Path | S3Path, info: Optional[DatasetInfo] = None):
         """Initialize dataset.
 
         Args:
             path (Path | S3Path): Dataset path
         """
-        info_file = path / "info.json"
-        schema_file = path / "schema.json"
-        features_values_file = path / "features_values.json"
-        stats_file = path / "stats.json"
-        thumb_file = path / "preview.png"
+        info_file = path / self.INFO_FILE
+        schema_file = path / self.SCHEMA_FILE
+        features_values_file = path / self.FEATURES_VALUES
+        stats_file = path / self.STAT_FILE
+        thumb_file = path / self.THUMB_FILE
 
         super().__init__(
             path=path,
