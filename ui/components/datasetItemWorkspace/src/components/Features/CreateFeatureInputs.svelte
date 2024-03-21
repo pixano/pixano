@@ -115,7 +115,7 @@
           onTextInputChange={(value) => handleInputChange(value, feature.name)}
           featureList={mapFeatureList($itemMetas.featuresList?.objects[feature.name])}
           autofocus={i === 0 && isAutofocusEnabled}
-          isInputEnabled={!$itemMetas.featuresList?.objects[feature.name].restricted}
+          isInputEnabled={!$itemMetas.featuresList?.objects[feature.name]?.restricted}
         />
       {:else}
         <Input

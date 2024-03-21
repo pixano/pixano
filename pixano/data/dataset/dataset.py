@@ -765,7 +765,8 @@ class Dataset(BaseModel):
                 table_arrow = table.to_arrow()
                 feats = [f for f in table_arrow.column_names if f not in ignore_list]
                 for feat in feats:
-                    avail_values[feat] = FeatureValues(restricted=False, values=[])
+                    if feat not in avail_values:
+                        avail_values[feat] = FeatureValues(restricted=False, values=[])
                     if config_vals and feat in config_vals:
                         avail_values[feat].restricted = config_vals[feat].restricted
                         avail_values[feat].values.extend(config_vals[feat].values)
@@ -780,7 +781,9 @@ class Dataset(BaseModel):
                                 [
                                     val
                                     for val in v[feat]
-                                    if val is not None and isinstance(val, str)
+                                    if val is not None
+                                    and isinstance(val, str)
+                                    and val not in avail_values[feat].values
                                 ]
                             )
             return avail_values
