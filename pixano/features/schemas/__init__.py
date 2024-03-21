@@ -11,30 +11,30 @@
 #
 # http://www.cecill.info
 
-
 from .base_schema import BaseSchema
+from .embedding import Embedding
 from .image import Image
+from .item import Item
+from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
+from .point_cloud import PointCloud
 from .registry import register_schema
 from .sequence_frame import SequenceFrame
 from .video import Video
 from .view import View
-from .embedding import Embedding
-from .item import Item
-from .point_cloud import PointCloud
-from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
+
 
 __all__ = [
-    'BaseSchema',
-    'Image',
-    'Embedding',
-    'Item',
-    'PointCloud',
-    'register_schema',
-    'SequenceFrame',
-    'Video',
-    'View',
-    'Object',
-    'ObjectWithBBox',
-    'ObjectWithBBoxAndMask',
-    'ObjectWithMask',
+    "BaseSchema",
+    "Image",
+    "Embedding",
+    "Item",
+    "PointCloud",
+    "register_schema",
+    "SequenceFrame",
+    "Video",
+    "View",
+    "Object",
+    "ObjectWithBBox",
+    "ObjectWithBBoxAndMask",
+    "ObjectWithMask",
 ]

@@ -18,11 +18,12 @@ from .base_schema import BaseSchema
 _PIXANO_SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
 _SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
 
+
 def _register_schema_internal():
     def decorator(table_type: type[BaseSchema]):
         if not issubclass(table_type, BaseSchema):
             raise ValueError(f"Table type {type} must be a subclass of BaseSchema")
-        table_type_name = table_type.__name__
+        table_type_name = table_type.__name__.lower().replace(" ", "_")
         if table_type_name in _PIXANO_SCHEMA_REGISTRY:
             raise ValueError(f"Table type {table_type_name} already registered")
         _PIXANO_SCHEMA_REGISTRY[table_type_name] = table_type
@@ -34,10 +35,11 @@ def _register_schema_internal():
 
 def register_schema():
     """Register table schema."""
+
     def decorator(table_type: type[BaseSchema]):
         if not issubclass(table_type, BaseSchema):
             raise ValueError(f"Table type {type} must be a subclass of BaseSchema")
-        table_type_name = table_type.__name__
+        table_type_name = table_type.__name__.lower().replace(" ", "_")
         if table_type_name in _SCHEMA_REGISTRY:
             raise ValueError(f"Table type {table_type_name} already registered")
         _SCHEMA_REGISTRY[table_type_name] = table_type

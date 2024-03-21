@@ -17,10 +17,10 @@ from pathlib import Path
 
 import lancedb
 
-from pixano.core.types.group import TableGroup
-from pixano.core.types.image import Image
-from pixano.core.types.item import Item
 from pixano.data import Dataset, DatasetInfo, DatasetItem
+from pixano.features.schemas.group import _SchemaGroup
+from pixano.features.schemas.image import Image
+from pixano.features.schemas.item import Item
 
 
 class DatasetTestCase(unittest.TestCase):
@@ -59,15 +59,15 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(ds_tables, dict)
         self.assertIsInstance(
-            ds_tables[TableGroup.ITEM]["item"],
+            ds_tables["item"],
             lancedb.db.LanceTable,
         )
         self.assertIsInstance(
-            ds_tables[TableGroup.VIEW]["image"],
+            ds_tables["image"],
             lancedb.db.LanceTable,
         )
-        self.assertEqual(len(ds_tables[TableGroup.ITEM]["item"]), 25)
-        self.assertEqual(len(ds_tables[TableGroup.VIEW]["image"]), 25)
+        self.assertEqual(len(ds_tables["item"]), 25)
+        self.assertEqual(len(ds_tables["image"]), 25)
 
     def test_open_table(self):
         """Test Dataset open_table method"""
@@ -97,7 +97,7 @@ class DatasetTestCase(unittest.TestCase):
         for item in items:
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
-            self.assertIsInstance(item.item, Item)
+            self.assertIsInstance(item.split, str)
             self.assertIsInstance(item.image, Image)
 
     def test_read_item(self):
@@ -108,7 +108,7 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        self.assertIsInstance(item.item, Item)
+        self.assertIsInstance(item.split, str)
         self.assertIsInstance(item.image, Image)
 
     def test_get_items(self):
@@ -122,7 +122,7 @@ class DatasetTestCase(unittest.TestCase):
         for item in items:
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
-            self.assertIsInstance(item.item, Item)
+            self.assertIsInstance(item.split, str)
             self.assertIsInstance(item.image, Image)
 
     def test_get_item(self):
@@ -133,7 +133,7 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        self.assertIsInstance(item.item, Item)
+        self.assertIsInstance(item.split, str)
         self.assertIsInstance(item.image, Image)
 
     def test_get_views(self):
@@ -147,7 +147,6 @@ class DatasetTestCase(unittest.TestCase):
         for item in items:
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
-            assert item.item is None
             self.assertIsInstance(item.image, Image)
 
     def test_get_view(self):
@@ -158,7 +157,6 @@ class DatasetTestCase(unittest.TestCase):
 
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        assert item.item is None
         self.assertIsInstance(item.image, Image)
 
     def test_find(self):
