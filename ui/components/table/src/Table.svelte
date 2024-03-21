@@ -193,12 +193,33 @@
           >
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
-                <th {...attrs} on:click={props.sort.toggle} class="py-4 font-semibold">
+                <th
+                  {...attrs}
+                  on:click={props.sort.toggle}
+                  class="relative py-4 font-semibold
+                  {props.sort.disabled ? '' : 'select-none cursor-pointer'}"
+                >
                   <Render of={cell.render()} />
                   {#if props.sort.order === "asc"}
-                    ⬇️
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6"
+                    >
+                      <path d={icons.svg_down_arrow} fill="currentColor" />
+                    </svg>
                   {:else if props.sort.order === "desc"}
-                    ⬆️
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="48"
+                      viewBox="0 -960 960 960"
+                      width="48"
+                      class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6"
+                    >
+                      <path d={icons.svg_up_arrow} fill="currentColor" />
+                    </svg>
                   {/if}
                 </th>
               </Subscribe>

@@ -77,6 +77,8 @@ export const svg_clear =
 // Arrows
 export const svg_left_arrow = "M400-240 160-480l241-241 43 42-169 169h526v60H275l168 168-43 42Z";
 export const svg_right_arrow = "m560-242-43-42 168-168H160v-60h525L516-681l43-42 241 241-240 240Z";
+export const svg_up_arrow = "M440-240v-368L296-464l-56-56 240-240 240 240-56 56-144-144v368h-80Z";
+export const svg_down_arrow = "M480-240 240-480l56-56 144 144v-368h80v368l144-144 56 56-240 240Z";
 
 // Loading
 export const svg_loading =
