@@ -15,6 +15,7 @@ All notable changes to Pixano will be documented in this file.
 ### Fixed
 
 - FeaturesList bugs (pixano#208)
+- Check viewId in rectangle creation to avoid multiview box duplication (pixano#210)
 
 ## [0.5.0] - 2024-02-29
 
