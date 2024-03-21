@@ -1,4 +1,4 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2024)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -14,13 +14,12 @@
 
 from lancedb.pydantic import LanceModel
 
-from .registry import _register_schema_internal
 from .base_schema import BaseSchema
+from .registry import _register_schema_internal
 
 
 @_register_schema_internal()
 class View(BaseSchema):
     """View Lance Model."""
 
-    id: str
     item_id: str

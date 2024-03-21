@@ -1,4 +1,4 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2024)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -13,14 +13,14 @@
 
 
 from ..types import bbox, compressed_rle
-from .registry import _register_schema_internal
 from .base_schema import BaseSchema
+from .registry import _register_schema_internal
 
 
 @_register_schema_internal()
 class Object(BaseSchema):
     """Object Lance Model."""
-    id: str
+
     item_id: str
     view_id: str
 

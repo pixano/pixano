@@ -5,11 +5,14 @@ import PIL
 import pyarrow.json as pa_json
 import shortuuid
 
-from ...core import types as pix_types
+from ...features import schemas as table_schemas
+from ...features import types as feature_types
 from . import dataset_builder
 
 
 class FolderBasedBuilder(dataset_builder.DatasetBuilder):
+    """This is a class for building datasets based on folder structure."""
+
     # build data from folder follwing a specific structure
     # - source_dir/{split}/{item}.{ext}
     # - source_dir/{split}/metadata.jsonl
@@ -18,6 +21,15 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
     EXTENSIONS: list[str]
 
     def __init__(self, source_dir, target_dir, schemas, info, mode="create"):
+        """Initializes the FolderBasedBuilder with the given parameters.
+
+        Args:
+            source_dir: The source directory.
+            target_dir: The target directory.
+            schemas: The schemas for the data.
+            info: Additional information.
+            mode: The mode of operation, default is "create".
+        """
         super().__init__(source_dir, target_dir, schemas, info, mode=mode)
 
     def _generate_items(
@@ -28,16 +40,30 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                 metadata = self._read_metadata(split / self.METADATA_FILENAME)
 
                 # only consider {split}/{item}.{ext} files
+
+                # For a single view expect only 1 schema to be an Image
+                # TODO: handle other view types
+                for k, s in self._schemas.items():
+                    if issubclass(table_schemas.Image, s):
+                        view_name = k
+                        break
+
                 for view_file in split.glob("*"):
                     if view_file.is_file() and view_file.suffix in self.EXTENSIONS:
                         # create item
-                        item = self._create_item(split.name, view_file, metadata)
+                        item_metadata = {}
+                        for m in metadata:
+                            if m[view_name] == view_file.name:
+                                item_metadata = m
+                                break
+
+                        item = self._create_item(split.name, item_metadata)
 
                         # create view
-                        view = self._create_view(item)
+                        view = self._create_view(item, view_file, view_name)
 
                         # creat objects
-                        objects = self._create_objects(item, metadata)
+                        objects = self._create_objects(item.id, view.id, item_metadata)
 
                         yield {
                             "item": [item],
@@ -45,46 +71,22 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                             "objects": objects,
                         }
 
-    def _create_item(self, split, view_file, metadata):
-        # For a single view expect only 1 schema to be an Image
-        # TODO: handle other view types
-        for k, s in self._schemas.items():
-            if issubclass(pix_types.Image, s):
-                view_name = k
-                break
-
-        # keep only the last two parts of the path to get the relative path
-        # {split}/*.ext
-        parts = list(view_file.parts)
-        relative_path = "/".join(parts[-2:])
-        view_records = pix_types.ViewRecords(
-            ids=["view0"],
-            names=[view_name],
-            paths=[relative_path],
-        )
-
+    def _create_item(self, split, item_metadata):
         # find in metadata if view_file.name is present in the unique views
-        item_metadata = {}
-        for m in metadata:
-            if m[view_name] == view_file.name:
-                item_metadata = m
-                break
 
         return self._schemas["item"](
             id=shortuuid.uuid(),
-            views=view_records,
             split=split,
             **item_metadata,
         )
 
-    def _create_view(self, item):
-        view_name = item.views.names[0]
-        if issubclass(pix_types.Image, self._schemas[view_name]):
-            img = PIL.Image.open(self._source_dir / item.views.paths[0])
-            view = pix_types.Image(
+    def _create_view(self, item, view_file, view_name):
+        if issubclass(table_schemas.Image, self._schemas[view_name]):
+            img = PIL.Image.open(view_file)
+            view = table_schemas.Image(
                 id=shortuuid.uuid(),
                 item_id=item.id,
-                url=item.views.paths[0],
+                url=view_file.relative_to(self._source_dir).as_posix(),
                 width=img.width,
                 height=img.height,
                 format=img.format,
@@ -96,43 +98,42 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
 
         return view
 
-    def _create_objects(self, item, metadata):
+    def _create_objects(self, item_id, view_id, item_metadata):
         # if item has objects annotated in the metadata return it
         # else return an empty list
         objects = []
-        for m in metadata:
-            if m[item.views.names[0]] == item.views.paths[0].split("/")[-1]:
-                # TODO: change this hardcoded key
-                obj_data = m["objects"]
 
-                # TODO: check obj_attrs match the schema
-                obj_attrs = list(obj_data.keys())
-                num_objects = len(obj_data[obj_attrs[0]])
+        # TODO: change this hardcoded key
+        obj_data = item_metadata["objects"]
 
-                for i in range(num_objects):
-                    obj = {}
-                    for attr in obj_attrs:
-                        if issubclass(
-                            self._schemas["objects"].model_fields[attr].annotation,
-                            pix_types.BBox,
-                        ):
-                            obj[attr] = pix_types.BBox(
-                                coords=obj_data[attr][i],
-                                format="xywh",
-                                is_normalized=False,
-                                confidence=1.0,
-                            )
-                        else:
-                            obj[attr] = obj_data[attr][i]
+        # TODO: check obj_attrs match the schema
+        obj_attrs = list(obj_data.keys())
+        num_objects = len(obj_data[obj_attrs[0]])
 
-                    objects.append(
-                        self._schemas["objects"](
-                            id=shortuuid.uuid(),
-                            item_id=item.id,
-                            view_id=item.views.ids[0],
-                            **obj,
-                        )
+        for i in range(num_objects):
+            obj = {}
+            for attr in obj_attrs:
+                if issubclass(
+                    feature_types.BBox,
+                    self._schemas["objects"].model_fields[attr].annotation,
+                ):
+                    obj[attr] = feature_types.BBox(
+                        coords=obj_data[attr][i],
+                        format="xywh",
+                        is_normalized=False,
+                        confidence=1.0,
                     )
+                else:
+                    obj[attr] = obj_data[attr][i]
+
+            objects.append(
+                self._schemas["objects"](
+                    id=shortuuid.uuid(),
+                    item_id=item_id,
+                    view_id=view_id,
+                    **obj,
+                )
+            )
 
         return objects
 

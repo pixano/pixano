@@ -20,7 +20,7 @@ import pydantic_core
 import tqdm
 
 # from ...... import sequence_utils
-from ...core import types as pix_types
+from ...features import schemas as table_schemas
 from ..dataset import dataset
 
 
@@ -37,7 +37,7 @@ def _generate_schema_mapping(cls):
             args = field.annotation.__args__
 
             if origin == list or origin == List:
-                if issubclass(args[0], pix_types.Object):
+                if issubclass(args[0], table_schemas.Object):
                     # Categorizing List of Object as objects
                     schemas[field_name] = args[0]
                 else:
@@ -53,7 +53,7 @@ def _generate_schema_mapping(cls):
             else:
                 # Default case: categorize as item attribute
                 item_fields[field_name] = (args[0], default_value)
-        elif issubclass(field.annotation, pix_types.Image):
+        elif issubclass(field.annotation, table_schemas.Image):
             # Categorizing Image as a view
             schemas[field_name] = field.annotation
         else:
@@ -66,7 +66,7 @@ def _generate_schema_mapping(cls):
             item_fields[field_name] = (field.annotation, default_value)
 
     DatasetItem = pydantic.create_model(
-        cls.__name__, **item_fields, __base__=pix_types.Item
+        cls.__name__, **item_fields, __base__=table_schemas.Item
     )
 
     schemas["item"] = DatasetItem
@@ -127,7 +127,7 @@ class DatasetBuilder(abc.ABC):
         self,
         source_dir: os.PathLike,
         target_dir: os.PathLike,
-        schemas: Type[pix_types.DataSchema],
+        schemas: Type[Any],
         info: DatasetInfo,
         mode: str = "create",
     ):
@@ -144,10 +144,10 @@ class DatasetBuilder(abc.ABC):
         self._schemas = _generate_schema_mapping(schemas)
         self._target_dir = pathlib.Path(target_dir)
         self._source_dir = pathlib.Path(source_dir)
-        self._previews_path = self._target_dir / dataset.DEFAULT_PREVIEWS_PATH
+        self._previews_path = self._target_dir / dataset.Dataset.DEFAULT_PREVIEWS_PATH
         self._mode = mode
 
-        self._db = lancedb.connect(self._target_dir / dataset.DEFAULT_DB_PATH)
+        self._db = lancedb.connect(self._target_dir / dataset.Dataset.DEFAULT_DB_PATH)
 
         # self._info = info.model_copy(update={"id": shortuuid.uuid()})
 

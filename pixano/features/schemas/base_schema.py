@@ -14,6 +14,6 @@ from lancedb.pydantic import LanceModel
 
 
 class BaseSchema(LanceModel):
-    """Base schema for all schemas."""
+    """Base class for all tables."""
 
     id: str

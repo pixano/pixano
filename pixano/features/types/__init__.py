@@ -1,4 +1,4 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
+# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2024)
 # @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
 # @License: CECILL-C
 #
@@ -12,9 +12,7 @@
 # http://www.cecill.info
 from .bbox import BBox
 from .compressed_rle import CompressedRLE
+from .nd_array_float import NDArrayFloat
 
 
-__all__ = [
-    "BBox",
-    "CompressedRLE",
-]
+__all__ = ["BBox", "CompressedRLE", "NDArrayFloat"]
