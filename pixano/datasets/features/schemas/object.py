@@ -10,7 +10,7 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
+import typing
 
 from ..types.bbox import BBox
 from ..types.compressed_rle import CompressedRLE
@@ -46,3 +46,15 @@ class ObjectWithBBoxAndMask(Object):
 
     bbox: BBox
     mask: CompressedRLE
+
+
+def is_object(cls: typing.Any) -> bool:
+    """Check if a class is a subclass of Object.
+
+    Args:
+        cls (typing.Any): The class to check.
+
+    Returns:
+        bool: True if the class is a subclass of Object, False otherwise.
+    """
+    return issubclass(cls, Object)

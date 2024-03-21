@@ -5,8 +5,8 @@ import PIL
 import pyarrow.json as pa_json
 import shortuuid
 
-from ..features import schemas as table_schemas
-from ..features import types as feature_types
+from ..features.schemas import image as image_schema
+from ..features.types import bbox as bbox_type
 from . import dataset_builder
 
 
@@ -44,7 +44,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                 # For a single view expect only 1 schema to be an Image
                 # TODO: handle other view types
                 for k, s in self._schemas.items():
-                    if issubclass(table_schemas.Image, s):
+                    if image_schema.is_image(s):
                         view_name = k
                         break
 
@@ -81,9 +81,9 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
         )
 
     def _create_view(self, item, view_file, view_name):
-        if issubclass(table_schemas.Image, self._schemas[view_name]):
+        if image_schema.is_image(self._schemas[view_name]):
             img = PIL.Image.open(view_file)
-            view = table_schemas.Image(
+            view = image_schema.Image(
                 id=shortuuid.uuid(),
                 item_id=item.id,
                 url=view_file.relative_to(self._source_dir).as_posix(),
@@ -113,11 +113,10 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
         for i in range(num_objects):
             obj = {}
             for attr in obj_attrs:
-                if issubclass(
-                    feature_types.BBox,
+                if bbox_type.is_bbox(
                     self._schemas["objects"].model_fields[attr].annotation,
                 ):
-                    obj[attr] = feature_types.BBox(
+                    obj[attr] = bbox_type.BBox(
                         coords=obj_data[attr][i],
                         format="xywh",
                         is_normalized=False,

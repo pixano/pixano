@@ -14,20 +14,21 @@
 from .dataset_features import DatasetFeatures
 from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
-from .schemas.image import Image
+from .schemas.image import Image, is_image
 from .schemas.item import Item
 from .schemas.object import (
     Object,
     ObjectWithBBox,
     ObjectWithBBoxAndMask,
     ObjectWithMask,
+    is_object,
 )
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
 from .schemas.sequence_frame import SequenceFrame
 from .schemas.video import Video
 from .schemas.view import View
-from .types.bbox import BBox
+from .types.bbox import BBox, is_bbox
 from .types.compressed_rle import CompressedRLE
 from .types.nd_array_float import NDArrayFloat
 
@@ -49,5 +50,8 @@ __all__ = [
     "SequenceFrame",
     "Video",
     "View",
+    "is_bbox",
+    "is_image",
+    "is_object",
     "register_schema",
 ]

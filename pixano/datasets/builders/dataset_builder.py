@@ -20,9 +20,9 @@ import pydantic_core
 import tqdm
 
 from .. import dataset
-
-# from ...... import sequence_utils
-from ..features import schemas as table_schemas
+from ..features.schemas import image as image_schema
+from ..features.schemas import item as item_schema
+from ..features.schemas import object as object_schema
 
 
 def _generate_schema_mapping(cls):
@@ -38,7 +38,7 @@ def _generate_schema_mapping(cls):
             args = field.annotation.__args__
 
             if origin == list or origin == List:
-                if issubclass(args[0], table_schemas.Object):
+                if object_schema.is_object(args[0]):
                     # Categorizing List of Object as objects
                     schemas[field_name] = args[0]
                 else:
@@ -54,7 +54,7 @@ def _generate_schema_mapping(cls):
             else:
                 # Default case: categorize as item attribute
                 item_fields[field_name] = (args[0], default_value)
-        elif issubclass(field.annotation, table_schemas.Image):
+        elif image_schema.is_image(field.annotation):
             # Categorizing Image as a view
             schemas[field_name] = field.annotation
         else:
@@ -67,7 +67,7 @@ def _generate_schema_mapping(cls):
             item_fields[field_name] = (field.annotation, default_value)
 
     DatasetItem = pydantic.create_model(
-        cls.__name__, **item_fields, __base__=table_schemas.Item
+        cls.__name__, **item_fields, __base__=item_schema.Item
     )
 
     schemas["item"] = DatasetItem

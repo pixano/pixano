@@ -5,7 +5,7 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
+import typing
 
 from .registry import _register_schema_internal
 from .view import View
@@ -19,3 +19,15 @@ class Image(View):
     width: int
     height: int
     format: str
+
+
+def is_image(cls: typing.Any) -> bool:
+    """Check if the given class is a subclass of Image.
+
+    Args:
+        cls (typing.Any): The class to check.
+
+    Returns:
+        bool: True if the class is a subclass of Image, False otherwise.
+    """
+    return issubclass(cls, Image)

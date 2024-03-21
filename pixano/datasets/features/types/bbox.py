@@ -11,6 +11,8 @@
 #
 # http://www.cecill.info
 
+import typing
+
 import pydantic
 
 from ...utils import boxes as bbox_utils
@@ -162,3 +164,15 @@ class BBox(pydantic.BaseModel):
     #     """
 
     #     return BBox.from_mask(rle.to_mask())
+
+
+def is_bbox(cls: typing.Any) -> bool:
+    """Check if a class is a subclass of BBox.
+
+    Parameters:
+        cls (typing.Any): The class to check.
+
+    Returns:
+        bool: True if the class is a subclass of BBox, False otherwise.
+    """
+    return issubclass(cls, BBox)
