@@ -60,28 +60,30 @@
   }
 </script>
 
-<Group bind:handle={rectangleGroup} config={{ id: "drag-rect-group" }}>
-  <Rect
-    config={{
-      id: "drag-rect",
-      x,
-      y,
-      width,
-      height,
-      stroke: "hsl(316deg 60% 29.41%)",
-      fill: "#f9f4f773",
-      strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor,
-      listening: false,
-    }}
-  />
-  {#if labelX && labelY}
-    <LabelTag
-      id="drag-rect-tag"
-      x={labelX}
-      y={labelY}
-      {zoomFactor}
-      tooltip={`${Math.round(Math.abs(width))}px x ${Math.round(Math.abs(height))}px`}
-      color="#fff"
+{#if newShape.viewId === viewId}
+  <Group bind:handle={rectangleGroup} config={{ id: "drag-rect-group" }}>
+    <Rect
+      config={{
+        id: "drag-rect",
+        x,
+        y,
+        width,
+        height,
+        stroke: "hsl(316deg 60% 29.41%)",
+        fill: "#f9f4f773",
+        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor,
+        listening: false,
+      }}
     />
-  {/if}
-</Group>
+    {#if labelX && labelY}
+      <LabelTag
+        id="drag-rect-tag"
+        x={labelX}
+        y={labelY}
+        {zoomFactor}
+        tooltip={`${Math.round(Math.abs(width))}px x ${Math.round(Math.abs(height))}px`}
+        color="#fff"
+      />
+    {/if}
+  </Group>
+{/if}
