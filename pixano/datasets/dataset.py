@@ -32,7 +32,7 @@ from .dataset_item import (
 from .dataset_schema import DatasetSchema
 from .dataset_stat import DatasetStat
 from .features.schemas.group import _SchemaGroup
-from .features.schemas.image import Image
+from .utils.thumbnail import Thumbnail
 
 
 def _lance_query_to_pydantic(
@@ -64,13 +64,13 @@ class Dataset:
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
 
-    DB_PATH = "db"
-    PREVIEWS_PATH = "previews"
-    INFO_FILE = "info.json"
-    SCHEMA_FILE = "schema.json"
-    FEATURES_VALUES = "features_values.json"
-    STAT_FILE = "stats.json"
-    THUMB_FILE = "preview.png"
+    DB_PATH: str = "db"
+    PREVIEWS_PATH: str = "previews"
+    INFO_FILE: str = "info.json"
+    SCHEMA_FILE: str = "schema.json"
+    FEATURES_VALUES: str = "features_values.json"
+    STAT_FILE: str = "stats.json"
+    THUMB_FILE: str = "preview.png"
 
     path: Path | S3Path
     info: Optional[DatasetInfo] = None
@@ -86,6 +86,7 @@ class Dataset:
 
         Args:
             path (Path | S3Path): Dataset path
+            info (DatasetInfo, optional): Dataset info. Default is None.
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE
@@ -93,17 +94,15 @@ class Dataset:
         stats_file = path / self.STAT_FILE
         thumb_file = path / self.THUMB_FILE
 
-        super().__init__(
-            path=path,
-            info=DatasetInfo.from_json(info_file),
-            dataset_schema=DatasetSchema.from_json(schema_file),
-            features_values=DatasetFeaturesValues.from_json(features_values_file),
-            stats=DatasetStat.from_json(stats_file) if stats_file.is_file() else None,
-            thumbnail=(
-                Image(uri=thumb_file.absolute().as_uri()).url
-                if thumb_file.is_file()
-                else None
-            ),
+        self.path = path
+        self.info = DatasetInfo.from_json(info_file)
+        self.dataset_schema = DatasetSchema.from_json(schema_file)
+        self.features_values = DatasetFeaturesValues.from_json(features_values_file)
+        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else None
+        self.thumbnail = (
+            Thumbnail(uri=thumb_file.absolute().as_uri()).url
+            if thumb_file.is_file()
+            else None
         )
 
         self._custom_dataset_item_class = (
@@ -137,9 +136,9 @@ class Dataset:
             Path | S3Path: Dataset db path
         """
         if isinstance(self.path, S3Path):
-            return self.path.as_uri() + "/" + DEFAULT_DB_PATH
+            return self.path.as_uri() + "/" + self.DB_PATH
 
-        return self.path / DEFAULT_DB_PATH
+        return self.path / self.DB_PATH
 
     def _reload_schema(self) -> DatasetSchema:
         """Reload schema.

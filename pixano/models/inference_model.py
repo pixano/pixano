@@ -22,7 +22,7 @@ import lancedb
 import pyarrow as pa
 from tqdm.auto import tqdm
 
-from pixano.dataset import Dataset, DatasetTable, Fields
+from pixano.datasets import Dataset, DatasetTable, Fields
 
 
 class InferenceModel(ABC):

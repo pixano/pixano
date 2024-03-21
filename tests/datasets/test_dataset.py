@@ -17,10 +17,10 @@ from pathlib import Path
 
 import lancedb
 
-from pixano.data import Dataset, DatasetInfo, DatasetItem
-from pixano.features.schemas.group import _SchemaGroup
-from pixano.features.schemas.image import Image
-from pixano.features.schemas.item import Item
+from pixano.datasets import Dataset, DatasetInfo, DatasetItem
+from pixano.datasets.features.schemas.group import _SchemaGroup
+from pixano.datasets.features.schemas.image import Image
+from pixano.datasets.features.schemas.item import Item
 
 
 class DatasetTestCase(unittest.TestCase):

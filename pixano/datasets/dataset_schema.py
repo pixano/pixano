@@ -19,8 +19,7 @@ from typing import Any, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 from s3path import S3Path
 
-from .features import BaseSchema, DatasetFeatures
-from .features import schemas as pix_schemas
+from .features import BaseSchema, DatasetFeatures, Embedding, Item, Object, View
 from .features.schemas.group import _SchemaGroup
 from .features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
 from .features.types.registry import _TYPES_REGISTRY
@@ -92,7 +91,7 @@ def _generate_dataset_schema_dict_from_dataset_features_schema(
             # Default case: categorize as item attribute
             item_fields[field_name] = (field.annotation, ...)
 
-    CustomItem = create_model("Item", **item_fields, __base__=pix_schemas.Item)
+    CustomItem = create_model("Item", **item_fields, __base__=Item)
 
     schemas[_SchemaGroup.ITEM.value] = CustomItem
     dataset_schema_dict["schemas"] = schemas
@@ -214,13 +213,13 @@ class DatasetSchema(BaseModel):
 
     def _assign_table_groups(self) -> None:
         for table, schema in self.schemas.items():
-            if issubclass(schema, pix_schemas.View):
+            if issubclass(schema, View):
                 self._groups[_SchemaGroup.VIEW].append(table)
-            elif issubclass(schema, pix_schemas.Object):
+            elif issubclass(schema, Object):
                 self._groups[_SchemaGroup.OBJECT].append(table)
-            elif issubclass(schema, pix_schemas.Embedding):
+            elif issubclass(schema, Embedding):
                 self._groups[_SchemaGroup.EMBEDDING].append(table)
-            elif issubclass(schema, pix_schemas.Item):
+            elif issubclass(schema, Item):
                 self._groups[_SchemaGroup.ITEM].append(table)
             else:
                 raise ValueError(f"Invalid table type {schema}")

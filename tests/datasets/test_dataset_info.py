@@ -15,7 +15,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pixano.data import DatasetInfo, DatasetTable
+from pixano.datasets import DatasetInfo, DatasetTable
 
 
 class DatasetInfoTestCase(unittest.TestCase):

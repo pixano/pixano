@@ -115,7 +115,8 @@ class BBox(pydantic.BaseModel):
 
         Args:
             xyxy (list[float]): List of coordinates in xyxy format
-            confidence (float, optional): Bounding box confidence if predicted. Defaults to None.
+            confidence (float, optional): Bounding box confidence if predicted.
+                Defaults to None.
 
         Returns:
             Bbox: Bounding box
@@ -128,7 +129,8 @@ class BBox(pydantic.BaseModel):
 
         Args:
             xywh (list[float]): List of coordinates in xywh format
-            confidence (float, optional): Bounding box confidence if predicted. Defaults to None.
+            confidence (float, optional): Bounding box confidence if predicted.
+                Defaults to None.
 
         Returns:
             Bbox: Bounding box

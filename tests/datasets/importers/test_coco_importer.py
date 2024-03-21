@@ -17,8 +17,7 @@ from pathlib import Path
 
 import pyarrow as pa
 
-from pixano.core import BBoxType, CompressedRLEType, ImageType
-from pixano.data import COCOImporter
+from pixano.datasets import BBoxType, COCOImporter, CompressedRLEType, ImageType
 
 
 class COCOImporterTestCase(unittest.TestCase):

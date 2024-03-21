@@ -18,6 +18,8 @@ from typing import Optional
 from pydantic import BaseModel, PrivateAttr
 from s3path import S3Path
 
+from .utils.thumbnail import Thumbnail
+
 
 class DatasetInfo(BaseModel):
     """DatasetInfo.
@@ -91,7 +93,7 @@ class DatasetInfo(BaseModel):
                 if isinstance(json_fp, S3Path):
                     info.thumbnail = thumb_fp.get_presigned_url()
                 else:
-                    im = Image(uri=thumb_fp.absolute().as_uri())
+                    im = Thumbnail(uri=thumb_fp.absolute().as_uri())
                     info.thumbnail = im.url
 
         return info

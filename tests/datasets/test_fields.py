@@ -15,8 +15,7 @@ import unittest
 
 import pyarrow as pa
 
-from pixano.core import ImageType
-from pixano.data import Fields
+from pixano.datasets import Fields, ImageType
 
 
 class FieldsTestCase(unittest.TestCase):

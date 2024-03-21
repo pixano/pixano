@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pixano.data import COCOExporter, COCOImporter
+from pixano.datasets.builders import COCOExporter, COCOImporter
 
 
 class COCOExporterTestCase(unittest.TestCase):

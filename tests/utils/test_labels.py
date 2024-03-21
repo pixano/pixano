@@ -13,7 +13,7 @@
 
 import unittest
 
-from pixano.utils.labels import (
+from pixano.datasets.utils.labels import (
     coco_ids_80to91,
     coco_names_80,
     coco_names_91,

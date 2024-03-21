@@ -11,7 +11,7 @@
 #
 # http://www.cecill.info
 
-from .dataset import DatasetFeatures
+from .dataset_features import DatasetFeatures
 from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
 from .schemas.image import Image

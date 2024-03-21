@@ -21,6 +21,7 @@ class NDArrayFloat(pydantic.BaseModel):
             arr (np.ndarray): The NumPy array to convert.
 
         Returns:
-            cls: An instance of the class with values and shape derived from the input array.
+            cls: An instance of the class with values and shape derived from
+                the input array.
         """
         return cls(values=arr.reshape(-1).tolist(), shape=list(arr.shape))

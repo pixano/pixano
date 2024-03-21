@@ -70,4 +70,6 @@ IMAGE_EXTENSIONS = [
 
 
 class ImageFolderBuilder(folder_based_builder.FolderBasedBuilder):
+    """Builder for image datasets stored in a folder."""
+
     EXTENSIONS = IMAGE_EXTENSIONS

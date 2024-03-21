@@ -14,7 +14,7 @@
 import unittest
 from pathlib import Path
 
-from pixano.data import Settings
+from pixano.datasets import Settings
 
 
 class SettingsTestCase(unittest.TestCase):

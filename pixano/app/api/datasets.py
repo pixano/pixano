@@ -15,7 +15,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from pixano.dataset import Dataset, DatasetInfo, Settings, get_settings
+from pixano.datasets import Dataset, DatasetInfo, Settings, get_settings
 
 
 router = APIRouter(tags=["datasets"])

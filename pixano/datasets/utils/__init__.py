@@ -42,6 +42,7 @@ from .labels import (
     voc_names,
 )
 from .python import estimate_size, natural_key
+from .thumbnail import Thumbnail
 
 
 __all__ = [
@@ -71,4 +72,5 @@ __all__ = [
     "voc_names",
     "estimate_size",
     "natural_key",
+    "Thumbnail",
 ]

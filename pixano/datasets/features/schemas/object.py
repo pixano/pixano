@@ -12,7 +12,8 @@
 # http://www.cecill.info
 
 
-from .. import types
+from ..types.bbox import BBox
+from ..types.compressed_rle import CompressedRLE
 from .base_schema import BaseSchema
 from .registry import _register_schema_internal
 
@@ -29,19 +30,19 @@ class Object(BaseSchema):
 class ObjectWithBBox(Object):
     """Object with Bounding Box Lance Model."""
 
-    bbox: types.BBox
+    bbox: BBox
 
 
 @_register_schema_internal()
 class ObjectWithMask(Object):
     """Object with Mask Lance Model."""
 
-    mask: types.CompressedRLE
+    mask: CompressedRLE
 
 
 @_register_schema_internal()
 class ObjectWithBBoxAndMask(Object):
     """Object with Bounding Box and Mask Lance Model."""
 
-    bbox: types.BBox
-    mask: types.CompressedRLE
+    bbox: BBox
+    mask: CompressedRLE
