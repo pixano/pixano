@@ -29,7 +29,7 @@ def _register_type_internal():
                 f"Table type {type} must be a an atomic python type or "
                 "derive from BaseModel."
             )
-        type_name = type.__name__
+        type_name = type.__name__.lower().replace(" ", "_")
         if type_name in _TYPES_REGISTRY:
             raise ValueError(f"Type {type_name} already registered")
         _TYPES_REGISTRY[type_name] = type
