@@ -25,6 +25,7 @@ from ..dataset_schema import (
     _generate_dataset_schema_dict_from_dataset_features_schema,
 )
 
+
 # def _generate_schema_mapping(cls):
 #     # extra item fields infered from the cls
 #     item_fields = {}
