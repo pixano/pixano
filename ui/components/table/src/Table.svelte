@@ -28,7 +28,7 @@
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
   import { createTable, Subscribe, Render } from "svelte-headless-table";
-  import { addSortBy, addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
+  import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
   export let items: Array<DatasetItem>;
@@ -44,7 +44,6 @@
 
   // Create table object
   const table = createTable(data, {
-    sort: addSortBy({ disableMultiSort: true }),
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
   });
@@ -55,9 +54,6 @@
       header: "ID",
       cell: DefaultCell,
       accessor: "id",
-      plugins: {
-        sort: { invert: true },
-      },
     }),
     table.column({
       header: "Split",
@@ -75,9 +71,6 @@
           header: id,
           cell: ImgCell,
           accessor: (item) => JSON.stringify(item.views[id]),
-          plugins: {
-            sort: { disable: true },
-          },
         }),
       );
       colOrder.push(id);
@@ -96,9 +89,6 @@
           header: name,
           cell: FeatureCell,
           accessor: (item) => JSON.stringify(item.features[name]),
-          plugins: {
-            sort: { disable: true },
-          },
         }),
       );
       colOrder.push(name);
@@ -192,35 +182,12 @@
             class="sticky top-0 z-10 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
           >
             {#each headerRow.cells as cell (cell.id)}
-              <Subscribe attrs={cell.attrs()} let:attrs props={cell.props()} let:props>
+              <Subscribe attrs={cell.attrs()} let:attrs>
                 <th
                   {...attrs}
-                  on:click={props.sort.toggle}
-                  class="relative py-4 font-semibold
-                  {props.sort.disabled ? '' : 'select-none cursor-pointer'}"
+                  class="relative py-4 font-semibold"
                 >
                   <Render of={cell.render()} />
-                  {#if props.sort.order === "asc"}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="48"
-                      viewBox="0 -960 960 960"
-                      width="48"
-                      class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6"
-                    >
-                      <path d={icons.svg_down_arrow} fill="currentColor" />
-                    </svg>
-                  {:else if props.sort.order === "desc"}
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="48"
-                      viewBox="0 -960 960 960"
-                      width="48"
-                      class="absolute top-1/2 -translate-y-1/2 right-0 h-6 w-6"
-                    >
-                      <path d={icons.svg_up_arrow} fill="currentColor" />
-                    </svg>
-                  {/if}
                 </th>
               </Subscribe>
             {/each}
