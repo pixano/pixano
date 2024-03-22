@@ -33,7 +33,7 @@
   // Exports
   export let items: Array<DatasetItem>;
 
-  // Select an item
+  // Handler to select an item
   const dispatch = createEventDispatcher();
   function handleSelectItem(id: number) {
     dispatch("selectItem", id);

@@ -16,7 +16,6 @@
    */
 
   // Imports
-
   import { svg_search } from "@pixano/core/src/icons";
   import pixanoLogoWhite from "@pixano/core/src/assets/pixano_white.png";
 
@@ -36,31 +35,34 @@
   };
 </script>
 
-<header class="p-4 w-full h-fit pt-10 px-20 xl:px-60 flex flex-col justify-evenly bg-primary z-10">
-  <div class="flex gap-2">
-    <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-10 h-10" />
-    <span class="text-3xl font-bold text-slate-50 uppercase"> Pixano </span>
+<header
+  class="p-4 w-full h-fit pt-8 px-20 xl:px-60 flex flex-col justify-evenly bg-primary font-Montserrat z-10"
+>
+  <div class="flex gap-4 items-center">
+    <img src={pixanoLogoWhite} alt="Logo Pixano" class="w-7 h-7" />
+    <span class="text-2xl font-semibold text-slate-50 uppercase"> Pixano </span>
   </div>
-  <div class="flex py-5 h-40 w-full items-center flex-wrap text-slate-50">
+  <div class="flex pt-4 h-36 w-full items-center flex-wrap text-slate-50">
     {#if datasets}
-      <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">
-        <span class="text-3xl"> {datasets?.length} </span>
-        <span class="ml-2 text-xl"> datasets </span>
+      <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
+        <span class="mr-2 text-4xl font-medium"> {datasets?.length} </span>
+        <span class="text-xl font-medium"> datasets </span>
       </div>
-      <div class="h-20 my-5 mr-10 p-5 border-2 rounded-lg border-secondary">
-        <span class="text-3xl">
+      <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
+        <span class="mr-2 text-4xl font-medium">
           {datasets.reduce((sum, dataset) => sum + dataset.num_elements, 0)}
         </span>
-        <span class="ml-2 text-xl"> items </span>
+        <span class="text-xl font-medium"> items </span>
       </div>
-      <div class="grow flex flex-row justify-end items-end">
+      <div class="grow self-end flex flex-row justify-end items-end">
         <div class="flex items-center space-x-2">
           <div class="h-20 relative flex items-center">
             <input
               id="search-input"
               type="text"
               placeholder="Search datasets"
-              class="h-10 pl-10 pr-4 rounded-full border-2 accent-main border-main text-slate-800 placeholder-slate-500 font-medium"
+              class="h-10 pl-10 pr-4 rounded border border-primary-foreground bg-primary-foreground
+              text-white placeholder-white font-medium focus:outline-none"
               on:input={handleSearch}
             />
             <svg
@@ -68,9 +70,9 @@
               height="48"
               viewBox="0 -960 960 960"
               width="48"
-              class="absolute left-3 h-5 w-5 pointer-events-none text-slate-800"
+              class="absolute left-3 h-5 w-5 pointer-events-none"
             >
-              <path d={svg_search} fill="currentcolor" />
+              <path d={svg_search} fill="white" />
             </svg>
           </div>
         </div>
