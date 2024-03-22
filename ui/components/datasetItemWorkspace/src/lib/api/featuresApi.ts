@@ -67,6 +67,8 @@ export const addNewInput = (
   }
 };
 export const mapFeatureList = (featureList: FeatureList = { restricted: false, values: [] }) => {
+  featureList.values ??= [];
+  featureList.restricted ??= false;
   return featureList.values
     .sort((a, b) => a.localeCompare(b))
     .map((value) => ({
