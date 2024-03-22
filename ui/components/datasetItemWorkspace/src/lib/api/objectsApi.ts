@@ -6,7 +6,7 @@ import type {
   DatasetItem,
   Shape,
   ItemView,
-  inProgressShape,
+  SaveShape,
   ItemObjectBase,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
@@ -214,7 +214,7 @@ export const mapObjectWithNewStatus = (
 export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
 
 export const defineCreatedObject = (
-  shape: inProgressShape,
+  shape: SaveShape,
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   lastFrameIndex: number,
