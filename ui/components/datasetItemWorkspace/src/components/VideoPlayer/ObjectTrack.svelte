@@ -73,7 +73,6 @@
 
   const onAddKeyBoxClick = () => {
     const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
-
     itemObjects.update((objects) =>
       addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
