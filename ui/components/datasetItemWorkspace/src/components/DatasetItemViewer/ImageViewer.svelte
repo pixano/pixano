@@ -29,7 +29,6 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
-  // export let newShape: Shape;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 

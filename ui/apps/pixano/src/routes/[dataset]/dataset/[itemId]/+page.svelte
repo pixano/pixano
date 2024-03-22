@@ -37,10 +37,6 @@
     api
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
-        // IS_DEV : keep only one object
-        // item.objects = {
-        //   ...{ [Object.keys(item.objects)[0]]: item.objects[Object.keys(item.objects)[0]] },
-        // };
         selectedItem = item;
         if (Object.keys(item).length === 0) {
           noItemFound = true;
@@ -59,6 +55,7 @@
 
   datasetsStore.subscribe((value) => {
     const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
+    console.log({ value });
     if (foundDataset) {
       selectedDataset = foundDataset;
     }
