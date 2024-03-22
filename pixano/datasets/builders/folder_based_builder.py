@@ -43,7 +43,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
 
                 # For a single view expect only 1 schema to be an Image
                 # TODO: handle other view types
-                for k, s in self._schemas.items():
+                for k, s in self.schemas.items():
                     if image_schema.is_image(s):
                         view_name = k
                         break
@@ -74,14 +74,14 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
     def _create_item(self, split, item_metadata):
         # find in metadata if view_file.name is present in the unique views
 
-        return self._schemas["item"](
+        return self.schemas["item"](
             id=shortuuid.uuid(),
             split=split,
             **item_metadata,
         )
 
     def _create_view(self, item, view_file, view_name):
-        if image_schema.is_image(self._schemas[view_name]):
+        if image_schema.is_image(self.schemas[view_name]):
             img = PIL.Image.open(view_file)
             view = image_schema.Image(
                 id=shortuuid.uuid(),
@@ -101,8 +101,10 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
     def _create_objects(self, item_id, view_id, item_metadata):
         # if item has objects annotated in the metadata return it
         # else return an empty list
-        objects = []
+        if "objects" not in item_metadata or item_metadata["objects"] is None:
+            return []
 
+        objects = []
         # TODO: change this hardcoded key
         obj_data = item_metadata["objects"]
 
@@ -114,7 +116,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
             obj = {}
             for attr in obj_attrs:
                 if bbox_type.is_bbox(
-                    self._schemas["objects"].model_fields[attr].annotation,
+                    self.schemas["objects"].model_fields[attr].annotation,
                 ):
                     obj[attr] = bbox_type.BBox(
                         coords=obj_data[attr][i],
@@ -126,7 +128,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                     obj[attr] = obj_data[attr][i]
 
             objects.append(
-                self._schemas["objects"](
+                self.schemas["objects"](
                     id=shortuuid.uuid(),
                     item_id=item_id,
                     view_id=view_id,

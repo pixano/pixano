@@ -35,22 +35,22 @@ class DatasetInfo(BaseModel):
         _path (Path | S3Path): Dataset path
     """
 
-    id: str
+    id: str = None
     name: str
     description: str
-    estimated_size: str
-    num_elements: int
-    splits: list[str]
+    estimated_size: str = "Unknown"
+    num_elements: int = 0
+    splits: list[str] = ["dataset"]
     thumbnail: Optional[str] = None
     _path: Path | S3Path = PrivateAttr()
 
-    def save(self, save_dir: Path | S3Path):
+    def save(self):
         """Save DatasetInfo to json file.
 
         Args:
             save_dir (Path | S3Path): Save directory
         """
-        with open(save_dir / "db.json", "w", encoding="utf-8") as f:
+        with open(self._path / "info.json", "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
 
     def load(self):

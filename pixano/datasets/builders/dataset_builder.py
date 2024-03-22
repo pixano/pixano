@@ -1,115 +1,79 @@
 import abc
 import concurrent
-import json
+
+# import json
 import os
 import pathlib
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Type,
-    _GenericAlias,
-)
+from typing import Any, Dict, Iterator, Type
 
 import duckdb
 import lancedb
-import pydantic
-import pydantic_core
+import shortuuid
+
+# import pydantic
+# import pydantic_core
 import tqdm
 
 from .. import dataset
-from ..features.schemas import image as image_schema
-from ..features.schemas import item as item_schema
-from ..features.schemas import object as object_schema
+from ..dataset_info import DatasetInfo
 
+# from ..features.schemas import image as image_schema
+# from ..features.schemas import item as item_schema
+# from ..features.schemas import object as object_schema
+from ..dataset_schema import (
+    DatasetSchema,
+    _generate_dataset_schema_dict_from_dataset_features_schema,
+)
 
-def _generate_schema_mapping(cls):
-    # extra item fields infered from the cls
-    item_fields = {}
+# def _generate_schema_mapping(cls):
+#     # extra item fields infered from the cls
+#     item_fields = {}
 
-    # table schemas
-    schemas = {}
+#     # table schemas
+#     schemas = {}
 
-    for field_name, field in cls.model_fields.items():
-        if isinstance(field.annotation, _GenericAlias):
-            origin = field.annotation.__origin__
-            args = field.annotation.__args__
+#     for field_name, field in cls.model_fields.items():
+#         print("AA", field_name, field)
+#         if isinstance(field.annotation, _GenericAlias):
+#             origin = field.annotation.__origin__
+#             args = field.annotation.__args__
 
-            if origin == list or origin == List:
-                if object_schema.is_object(args[0]):
-                    # Categorizing List of Object as objects
-                    schemas[field_name] = args[0]
-                else:
-                    # Handling list of simple types (e.g., List[float])
-                    default_value = (
-                        ...
-                        if isinstance(
-                            field.default, pydantic_core.PydanticUndefinedType
-                        )
-                        else field.default
-                    )
-                    item_fields[field_name] = (list[args[0]], default_value)
-            else:
-                # Default case: categorize as item attribute
-                item_fields[field_name] = (args[0], default_value)
-        elif image_schema.is_image(field.annotation):
-            # Categorizing Image as a view
-            schemas[field_name] = field.annotation
-        else:
-            default_value = (
-                ...
-                if isinstance(field.default, pydantic_core.PydanticUndefinedType)
-                else field.default
-            )
-            # Default case: categorize as item attribute
-            item_fields[field_name] = (field.annotation, default_value)
+#             if origin == list or origin == List:
+#                 if object_schema.is_object(args[0]):
+#                     # Categorizing List of Object as objects
+#                     schemas[field_name] = args[0]
+#                 else:
+#                     # Handling list of simple types (e.g., List[float])
+#                     default_value = (
+#                         ...
+#                         if isinstance(
+#                             field.default, pydantic_core.PydanticUndefinedType
+#                         )
+#                         else field.default
+#                     )
+#                     item_fields[field_name] = (list[args[0]], default_value)
+#             else:
+#                 # Default case: categorize as item attribute
+#                 item_fields[field_name] = (args[0], default_value)
+#         elif image_schema.is_image(field.annotation):
+#             # Categorizing Image as a view
+#             schemas[field_name] = field.annotation
+#         else:
+#             default_value = (
+#                 ...
+#                 if isinstance(field.default, pydantic_core.PydanticUndefinedType)
+#                 else field.default
+#             )
+#             # Default case: categorize as item attribute
+#             item_fields[field_name] = (field.annotation, default_value)
 
-    DatasetItem = pydantic.create_model(
-        cls.__name__, **item_fields, __base__=item_schema.Item
-    )
+#     DatasetItem = pydantic.create_model(
+#         cls.__name__, **item_fields, __base__=item_schema.Item
+#     )
 
-    schemas["item"] = DatasetItem
+#     schemas["item"] = DatasetItem
 
-    return schemas
-
-
-class DatasetInfo(pydantic.BaseModel):
-    """Metadata for a dataset.
-
-    Attributes:
-        name (str): The name of the dataset.
-        description (str, optional): The description of the dataset.
-        id (str, optional): The ID of the dataset.
-        estimated_size (int, optional): The estimated size of the dataset.
-        num_elements (int, optional): The number of elements in the dataset.
-
-    Methods:
-        from_json(cls, path): Create a DatasetInfo instance from a JSON file.
-
-    """
-
-    name: str
-    description: Optional[str] = None
-    id: Optional[str] = None
-    estimated_size: Optional[int] = None
-    num_elements: Optional[int] = None
-
-    @classmethod
-    def from_json(cls, path: os.PathLike):
-        """Create a DatasetInfo instance from a JSON file.
-
-        Args:
-            path (os.PathLike): The path to the JSON file.
-
-        Returns:
-            DatasetInfo: The created DatasetInfo instance.
-
-        """
-        with open(path, "r") as f:
-            data = json.load(f)
-        return cls(**data)
+#     return schemas
 
 
 class DatasetBuilder(abc.ABC):
@@ -138,19 +102,27 @@ class DatasetBuilder(abc.ABC):
             source_dir (os.PathLike): The source directory for the dataset.
             target_dir (os.PathLike): The target directory for the dataset.
             schemas (dict[str, Any]): The schemas for the dataset tables.
-            info (DatasetInfo): The DatasetInfo instance for the dataset.
+            info (dict[str, Any]): User informations (name, description, splits) for the dataset.
             mode (str, optional): The mode for creating the dataset.
 
         """
-        self._schemas = _generate_schema_mapping(schemas)
         self._target_dir = pathlib.Path(target_dir)
         self._source_dir = pathlib.Path(source_dir)
         self._previews_path = self._target_dir / dataset.Dataset.PREVIEWS_PATH
         self._mode = mode
-
+        self._info = info
         self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
-        # self._info = info.model_copy(update={"id": shortuuid.uuid()})
+        self._schemas = _generate_dataset_schema_dict_from_dataset_features_schema(
+            schemas
+        )
+
+        # save schema.json
+        DatasetSchema.from_dataset_features(schemas, self._target_dir).save()
+
+    @property
+    def schemas(self):
+        return self._schemas["schemas"]
 
     def build(self) -> dataset.Dataset:
         """Build the dataset.
@@ -159,11 +131,13 @@ class DatasetBuilder(abc.ABC):
             Dataset: The built dataset.
 
         """
-        self._create_tables(self._schemas)
+        self._create_tables(self.schemas)
 
-        tables = {k: self._db.open_table(k) for k in self._schemas.keys()}
+        tables = {k: self._db.open_table(k) for k in self.schemas.keys()}
 
-        for items in tqdm.tqdm(self._generate_items(), desc="Import items"):
+        for count, items in enumerate(
+            tqdm.tqdm(self._generate_items(), desc="Import items")
+        ):
             # Assert that items and tables have the same keys
             assert set(items.keys()) == set(
                 tables.keys()
@@ -174,6 +148,17 @@ class DatasetBuilder(abc.ABC):
                     continue
 
                 table.add(items[table_name])
+
+        # save info.json
+        # TODO compute estimated_size
+        self._info.model_copy(
+            update={
+                "id": shortuuid.uuid(),
+                "num_elements": count,
+                # "estimated_size": "??",
+                "_path": self._target_dir,
+            }
+        ).save()
 
     def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
         """Generate RGB sequence previews for the dataset.
