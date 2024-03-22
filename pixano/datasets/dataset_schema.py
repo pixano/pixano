@@ -140,7 +140,7 @@ def _generate_schema_json(schema: type[BaseSchema]) -> dict[str, dict[str, str]]
 
 
 def _generate_dataset_schema_json_from_dataset_schema_dict(
-    dataset_schema_dict: dict[str, dict[str, BaseSchema]],
+    dataset_schema_dict: dict[str, dict[str, BaseSchema] | dict[str, bool]],
 ) -> dict[str, dict[str, Any]]:
     dataset_schema_json = {
         "item_to_schema_collection": dataset_schema_dict["item_to_schema_collection"],
@@ -227,11 +227,25 @@ class DatasetSchema(BaseModel):
 
     def save(self):
         """Save DatasetSchema to json file."""
-        json_content = {}
-        with open(self._path / "schema.json", "w", encoding="utf-8") as f:
-            for table, schema in self.schemas.items():
-                schema["schema"] = schema["schema"].__name__
-            json.dump(json_content, f)
+        json_path = self._path / "schema.json"
+
+        if json_path.exists():
+            old_json_content = json.loads(json_path.read_text(encoding="utf-8"))
+        else:
+            old_json_content = None
+
+        json_content = _generate_dataset_schema_json_from_dataset_schema_dict(
+            {
+                "item_to_schema_collection": self.item_to_schema_collection,
+                "schemas": self.schemas,
+            }
+        )
+
+        if old_json_content is not None:
+            for table, schema in json_content["schemas"].items():
+                schema["schema"] = old_json_content["schemas"][table]["schema"]
+
+        json_path.write_text(json.dumps(json_content), encoding="utf-8")
 
     def load_json(self):
         """Load DatasetSchema from json file."""
