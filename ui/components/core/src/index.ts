@@ -20,7 +20,7 @@ export * as icons from "./icons";
 export * as utils from "./utils";
 
 // Components
-export { default as Histogram } from "./components/Histogram.svelte";
+export { default as Histogram } from "./components/ui/histogram/Histogram.svelte";
 // Modals
 export { default as ConfirmModal } from "./components/modals/ConfirmModal.svelte";
 export { default as LoadingModal } from "./components/modals/LoadingModal.svelte";

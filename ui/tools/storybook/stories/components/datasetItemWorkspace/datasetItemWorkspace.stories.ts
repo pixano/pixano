@@ -19,7 +19,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
-import { MockInteractiveImageSegmenter } from "../canvas2d/mocks";
+import { MockInteractiveImageSegmenter } from "./mocks";
 import {
   mockedImageDatasetItem,
   mockedCurrentDataset,
@@ -44,7 +44,7 @@ interactiveSegmenterModel.set(mock);
 
 // More on writing stories with args: https://storybook.js.org/docs/7.0/svelte/writing-stories/args
 
-export const SimpleImage: Story = {
+export const BasicImageWorkspace: Story = {
   args: {
     canSaveCurrentItem: false,
     isLoading: false,

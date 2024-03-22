@@ -1,5 +1,3 @@
-# Using the Pixano app
-
 ## Home page
 
 ![Pixano home page](../assets/user/app_home.png)

@@ -17,7 +17,7 @@
   // Imports
   import { onDestroy } from "svelte";
   import Konva from "konva";
-  import { Rect, Label, Tag, Text, Group } from "svelte-konva";
+  import { Rect, Group } from "svelte-konva";
   import type { BBox, SelectionTool, Shape } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
@@ -27,6 +27,7 @@
     stickLabelsToRectangle,
     toggleIsEditingBBox,
   } from "../api/rectangleApi";
+  import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;
   export let bbox: BBox;
@@ -132,37 +133,14 @@
       draggable: bbox.editing,
     }}
   />
-  <Label
-    config={{
-      id: `tooltip${bbox.id}`,
-      x: bbox.bbox[0],
-      y: bbox.bbox[1],
-      width: 500,
-      height: 50,
-      offsetY: 12,
-      visible: bbox.visible,
-      scale: {
-        x: 1 / zoomFactor,
-        y: 1 / zoomFactor,
-      },
-      opacity: bbox.opacity,
-    }}
-  >
-    <Tag
-      config={{
-        fill: colorScale(bbox.id),
-        stroke: bbox.tooltip ? colorScale(bbox.id) : "transparent",
-      }}
-    />
-    <Text
-      config={{
-        id: `text${bbox.id}`,
-        x: 0,
-        y: 0,
-        text: bbox.tooltip,
-        fontSize: 12,
-        fontStyle: "100",
-      }}
-    />
-  </Label>
+  <LabelTag
+    id={bbox.id}
+    x={bbox.bbox[0]}
+    y={bbox.bbox[1]}
+    visible={bbox.visible}
+    {zoomFactor}
+    opacity={bbox.opacity}
+    tooltip={bbox.tooltip}
+    color={colorScale(bbox.id)}
+  />
 </Group>

@@ -27,7 +27,7 @@
     type ChartDataset,
   } from "chart.js";
   import zoomPlugin from "chartjs-plugin-zoom";
-  import type { DatasetStat } from "..";
+  import type { DatasetStat } from "../../..";
   import { colors } from "./colors";
 
   // Define props

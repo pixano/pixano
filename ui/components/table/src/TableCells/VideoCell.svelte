@@ -18,18 +18,17 @@
   export let value: string;
 
   // Video
-  let video;
+  let video: HTMLVideoElement;
   let isHovered = false;
 
   function toggleHover() {
     isHovered = !isHovered;
-    // TODO
-    // if (isHovered) {
-    //   video.playbackRate = 4;
-    //   video.play();
-    // } else {
-    //   video.pause();
-    // }
+    if (isHovered) {
+      video.playbackRate = 4;
+      video.play().catch(() => console.error("video playback error"));
+    } else {
+      video.pause();
+    }
   }
 </script>
 
@@ -38,7 +37,7 @@
   src={value}
   loop
   muted
-  class="mx-auto h-20 w-20 min-w-20 min-h-20 object-cover rounded"
+  class="h-20 w-20 mx-auto object-cover rounded"
   on:mouseenter={toggleHover}
   on:mouseleave={toggleHover}
 />

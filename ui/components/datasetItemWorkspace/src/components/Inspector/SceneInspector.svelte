@@ -48,10 +48,10 @@
         id: image.id,
       };
     });
-    const sceneFeatures = Object.values(metas.sceneFeatures).length
-      ? metas.sceneFeatures
+    const mainFeatures = Object.values(metas.mainFeatures).length
+      ? metas.mainFeatures
       : defaultSceneFeatures;
-    features = createFeature(sceneFeatures);
+    features = createFeature(mainFeatures);
   });
 
   const handleEditIconClick = () => {
@@ -61,10 +61,10 @@
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
-      newMetas.sceneFeatures = {
-        ...newMetas.sceneFeatures,
+      newMetas.mainFeatures = {
+        ...newMetas.mainFeatures,
         [propertyName]: {
-          ...(newMetas.sceneFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
+          ...(newMetas.mainFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
           value,
         },
       };
@@ -87,7 +87,7 @@
   </h3>
   <div class="mx-4">
     <UpdateFeatureInputs
-      featureClass="scene"
+      featureClass="main"
       {features}
       {isEditing}
       saveInputChange={handleTextInputChange}

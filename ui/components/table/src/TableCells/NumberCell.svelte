@@ -18,4 +18,4 @@
   export let value: number;
 </script>
 
-<div>{value}</div>
+{value}

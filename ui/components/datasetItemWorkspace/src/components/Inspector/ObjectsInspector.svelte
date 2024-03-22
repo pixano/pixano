@@ -18,7 +18,7 @@
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects, preAnnotationIsActive } from "../../lib/stores/datasetItemWorkspaceStores";
   import { GROUND_TRUTH, PRE_ANNOTATION } from "../../lib/constants";
   import { createObjectCardId, sortObjectsByModel } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
@@ -29,7 +29,6 @@
     [PRE_ANNOTATION]: [],
   };
   let allIds: string[] = [];
-  let preAnnotationIsActive: boolean = false;
 
   itemObjects.subscribe((value) => {
     allIds = value.map((item) => item.id);
@@ -54,8 +53,8 @@
 </script>
 
 <div class="p-2 flex flex-col h-[calc(100vh-200px)]">
-  <PreAnnotation {colorScale} bind:preAnnotationIsActive />
-  {#if !preAnnotationIsActive}
+  <PreAnnotation {colorScale} />
+  {#if !$preAnnotationIsActive}
     <div
       class={cn("gap-4 grow grid grid-cols-1 grid-rows-2 h-full", {
         block: !selectedModel,

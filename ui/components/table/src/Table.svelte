@@ -48,14 +48,14 @@
   class="h-full w-full overflow-y-auto overflow-x-auto
   rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300"
 >
-  <table class="table-auto z-0 w-full text-center text-base text-slate-800">
+  <table class="table-fixed z-0 w-full text-center text-base text-slate-800">
     <!-- Header -->
     <thead>
       <tr class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400">
         {#each getColumnNames(items) as name}
           <th class="py-4 font-semibold">{name}</th>
         {/each}
-        <th />
+        <th class="w-24" />
       </tr>
     </thead>
     <!-- Rows -->

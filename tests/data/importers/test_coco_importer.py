@@ -55,7 +55,9 @@ class COCOImporterTestCase(unittest.TestCase):
             # Check db.json content
             self.assertEqual("COCO", dataset.info.name)
             self.assertEqual(3, dataset.info.num_elements)
-            self.assertEqual(91, len(dataset.info.categories))
+            self.assertEqual(
+                91, len(dataset.info.features_values.objects["category"].values)
+            )
 
             # Check that db.lance exists
             db_lance_path = import_dir / "db.lance"

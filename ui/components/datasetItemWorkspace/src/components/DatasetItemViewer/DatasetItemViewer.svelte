@@ -19,7 +19,12 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { DatasetItem } from "@pixano/core";
 
-  import { newShape, itemObjects, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    newShape,
+    itemObjects,
+    canSave,
+    preAnnotationIsActive,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
@@ -34,7 +39,7 @@
 
   $: {
     newShape.set($newShape);
-    if ($newShape?.status === "editing") {
+    if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
       itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
       canSave.update((old) => {
         if (old) return old;
@@ -59,13 +64,7 @@
   {:else if selectedItem.type === "video"}
     <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer
-      {selectedItem}
-      {embeddings}
-      bind:currentAnn
-      bind:newShape={$newShape}
-      colorRange={allIds}
-    />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

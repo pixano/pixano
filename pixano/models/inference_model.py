@@ -143,6 +143,7 @@ class InferenceModel(ABC):
         views: list[str],
         uri_prefix: str,
         threshold: float = 0.0,
+        prompt: str = "",
     ) -> list[dict]:
         """Generate annotations for dataset rows
 
@@ -151,6 +152,7 @@ class InferenceModel(ABC):
             views (list[str]): Dataset views
             uri_prefix (str): URI prefix for media files
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
+            prompt (str, optional): Annotation text prompt. Defaults to "".
 
         Returns:
             list[dict]: Annotation rows
@@ -181,6 +183,7 @@ class InferenceModel(ABC):
         splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
+        prompt: str = "",
     ) -> Dataset:
         """Process dataset for annotations or embeddings
 
@@ -195,6 +198,7 @@ class InferenceModel(ABC):
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per process batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
+            prompt (str, optional): Annotation text prompt. Defaults to "".
 
         Returns:
             Dataset: Dataset
@@ -252,7 +256,7 @@ class InferenceModel(ABC):
                         self.precompute_embeddings(process_batch, views, uri_prefix)
                         if "emb" in process_type
                         else self.preannotate(
-                            process_batch, views, uri_prefix, threshold
+                            process_batch, views, uri_prefix, threshold, prompt
                         )
                     )
                     progress.update(batch_size)
@@ -304,29 +308,26 @@ class InferenceModel(ABC):
         # Main table
         # pylint: disable=unused-variable
         pyarrow_table = ds_tables["main"]["db"].to_lance()
-        pyarrow_batch = duckdb.query(
-            f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
-        ).to_arrow_table()
+        if splits:
+            pyarrow_batch = duckdb.query(
+                f"SELECT * FROM pyarrow_table WHERE split IN {tuple(splits)} ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            ).to_arrow_table()
+        else:
+            pyarrow_batch = duckdb.query(
+                f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+            ).to_arrow_table()
+        id_list = tuple(pyarrow_batch.to_pydict()["id"])
 
         # Media tables
         for media_table in ds_tables["media"].values():
             # pylint: disable=unused-variable
-            pyarrow_media_table = media_table.to_lance().to_table(
-                limit=limit, offset=offset
-            )
+            pyarrow_media_table = media_table.to_lance()
             # pylint: disable=unused-variable
             pyarrow_media_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_media_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                f"SELECT * FROM pyarrow_media_table WHERE id in {id_list}"
             ).to_arrow_table()
             pyarrow_batch = duckdb.query(
                 "SELECT * FROM pyarrow_batch LEFT JOIN pyarrow_media_batch USING (id) ORDER BY len(id), id"
-            ).to_arrow_table()
-
-        # Filter splits
-        if splits:
-            split_ids = "'" + "', '".join(splits) + "'"
-            pyarrow_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_batch WHERE split in ({split_ids})"
             ).to_arrow_table()
 
         # Convert to RecordBatch
