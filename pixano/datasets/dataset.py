@@ -297,6 +297,10 @@ class Dataset:
 
         data_dict = self._read_items_data(ids, select_schemas)
 
+        if select_schemas is not None and _SchemaGroup.ITEM.value not in select_schemas:
+            for id in ids:
+                data_dict[id].update({"id": id})
+
         if select_schemas is not None:
             custom_dataset_item = create_sub_dataset_item(
                 self._CustomDatasetItem, select_schemas
