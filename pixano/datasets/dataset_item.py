@@ -38,12 +38,14 @@ def create_custom_dataset_item_class_from_dataset_schema(
     fields = {}
 
     for schema, is_collection in dataset_schema.item_to_schema_collection.items():
+        # Add default value in case an item does not have a specific view or object.
         if is_collection:
-            fields[schema] = (list[dataset_schema.schemas[schema]], ...)
+            fields[schema] = (list[dataset_schema.schemas[schema]], [])
         else:
-            fields[schema] = (dataset_schema.schemas[schema], ...)
+            fields[schema] = (dataset_schema.schemas[schema], None)
 
     for field_name, field in item_type.model_fields.items():
+        # No default value as all items metadata should be retrieved.
         fields[field_name] = (field.annotation, ...)
 
     CustomDatasetItem = create_model(
@@ -71,7 +73,7 @@ def create_sub_dataset_item(
     kept_fields = {}
     for field_name, field in dataset_item.model_fields.items():
         if field_name in selected_fields or field_name == "id":
-            kept_fields[field_name] = (field.annotation, ...)
+            kept_fields[field_name] = (field.annotation, field.default)
 
     CustomDatasetItem = create_model(
         "CustomDatasetItem",

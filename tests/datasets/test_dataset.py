@@ -16,6 +16,7 @@ import unittest
 from pathlib import Path
 
 import lancedb
+import pytest
 
 from pixano.datasets import Dataset, DatasetInfo, DatasetItem
 from pixano.datasets.features.schemas.group import _SchemaGroup
@@ -148,6 +149,8 @@ class DatasetTestCase(unittest.TestCase):
             self.assertIsInstance(item, DatasetItem)
             self.assertIsInstance(item.id, str)
             self.assertIsInstance(item.image, Image)
+            with pytest.raises(AttributeError):
+                item.split
 
     def test_get_view(self):
         """Test Dataset get_view method"""
@@ -158,6 +161,8 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(item, DatasetItem)
         self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
         self.assertIsInstance(item.image, Image)
+        with pytest.raises(AttributeError):
+            item.split
 
     def test_find(self):
         """Test Dataset find method"""
