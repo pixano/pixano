@@ -16,60 +16,49 @@
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { DatasetItem, Shape } from "@pixano/core";
+  import type { ImageDatasetItem } from "@pixano/core";
 
   import {
-    newShape as newShapeStore,
-    itemObjects,
-    canSave,
+    newShape,
     itemBboxes,
     itemMasks,
-    preAnnotationIsActive,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { updateExistingObject } from "../../lib/api/objectsApi";
 
-  export let selectedItem: DatasetItem;
+  export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let colorRange: string[];
 
-  let newShape: Shape;
-  let allIds: string[] = [];
+  let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
   $: {
-    newShapeStore.set(newShape);
-    if (newShape?.status === "editing" && !$preAnnotationIsActive) {
-      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, newShape));
-      canSave.update((old) => {
-        if (old) return old;
-        if (newShape?.status === "editing" && newShape.type !== "none") {
-          return true;
-        }
-        return false;
-      });
+    if (selectedItem.views) {
+      imagesPerView = Object.entries(selectedItem.views).reduce(
+        (acc, [key, value]) => {
+          const image = new Image();
+          image.src = `/${value.uri}`;
+          acc[key] = [image];
+          return acc;
+        },
+        {} as Record<string, HTMLImageElement[]>,
+      );
     }
   }
 
-  $: newShapeStore.subscribe((value) => {
-    newShape = value;
-  });
-
   $: selectedTool.set($selectedTool);
-
-  itemObjects.subscribe((value) => {
-    allIds = value.map((item) => item.id);
-  });
 </script>
 
 {#key selectedItem.id}
   <Canvas2D
-    {selectedItem}
-    colorRange={allIds}
+    {imagesPerView}
+    selectedItemId={selectedItem.id}
+    {colorRange}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
     bind:selectedTool={$selectedTool}
     bind:currentAnn
-    bind:newShape
+    bind:newShape={$newShape}
   />
 {/key}

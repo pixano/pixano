@@ -21,16 +21,17 @@ import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/li
 
 import { MockInteractiveImageSegmenter } from "./mocks";
 import {
-  mockedImageItem,
+  mockedImageDatasetItem,
   mockedCurrentDataset,
   mockHandleSaveItem,
+  mockedVideoDatasetItem,
 } from "./datasetItemWorkspaceMocks";
 
 type Story = StoryObj<typeof meta>;
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/svelte/writing-stories/introduction
 const meta = {
-  title: "Components/DatasetItemWorkspace/DatasetItemWorkspace",
+  title: "Components/Dataset Item",
   component: DatasetItemWorkspace,
   tags: ["autodocs"],
 } satisfies Meta<DatasetItemWorkspace>;
@@ -51,6 +52,18 @@ export const BasicImageWorkspace: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     currentDataset: mockedCurrentDataset,
-    selectedItem: mockedImageItem,
+    selectedItem: mockedImageDatasetItem,
+  },
+};
+
+export const SimpleVideo: Story = {
+  args: {
+    canSaveCurrentItem: false,
+    isLoading: false,
+    shouldSaveCurrentItem: false,
+    models: [],
+    handleSaveItem: mockHandleSaveItem,
+    currentDataset: mockedCurrentDataset,
+    selectedItem: mockedVideoDatasetItem,
   },
 };

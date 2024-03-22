@@ -80,21 +80,27 @@ export function parse(buffer: ArrayBufferLike | Array<number>) {
   const headerLength = buf[8] + buf[9] * 256;
   const offsetBytes = 10 + headerLength;
 
-  const header: unknown = JSON.parse(
+  interface Header {
+    fortan_order: boolean;
+    descr: string;
+    shape: number[];
+  }
+
+  const header = JSON.parse(
     new TextDecoder("utf-8")
       .decode(buf.slice(10, 10 + headerLength))
       .replace(/'/g, '"')
       .replace("False", "false")
       .replace("(", "[")
       .replace(/,*\),*/g, "]"),
-  );
+  ) as Header;
 
   if (header["fortan_order"]) throw "Fortran-contiguous array data are not supported";
   const dtype = dtypes[header["descr"] as keyof typeof dtypes];
 
   return {
     data: new dtype["arrayConstructor"](buf.slice(offsetBytes).buffer),
-    shape: header["shape"] as Array<number>,
+    shape: header["shape"],
     dtype: dtype.name,
   };
 }

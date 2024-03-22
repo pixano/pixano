@@ -23,6 +23,7 @@
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
+  import { itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
   import { panTool } from "../../lib/settings/selectionTools";
 
   export let itemObject: ItemObject;
@@ -33,6 +34,10 @@
   let showIcons: boolean = false;
 
   $: features = createFeature(itemObject.features);
+  $: isEditing = itemObject.displayControl?.editing || false;
+  $: isVisible = !itemObject.displayControl?.hidden;
+  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
+  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
   $: {
     color = colorScale(itemObject.id);
@@ -43,9 +48,11 @@
     value: boolean,
     properties: ("bbox" | "mask")[] = ["bbox", "mask"],
   ) => {
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((object) => {
+    itemObjects.update((objects) =>
+      objects.map((object) => {
         if (displayControlProperty === "editing") {
+          object.highlighted = object.id === itemObject.id ? "self" : "none";
+          object.highlighted = value ? object.highlighted : "all";
           object.displayControl = {
             ...object.displayControl,
             editing: false,
@@ -53,9 +60,13 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-        }
-        if (value && itemObject.highlighted === "self") {
-          object.highlighted = "all";
+          itemBoxBeingEdited.update(() => {
+            const startingBox = object.datasetItemType === "video" && object.track[0]?.keyBoxes[0];
+            if (value && startingBox) {
+              return { ...startingBox, objectId: object.id };
+            }
+            return null;
+          });
         }
         return object;
       }),
@@ -66,11 +77,6 @@
     itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
     canSave.set(true);
   };
-
-  $: isEditing = itemObject.displayControl?.editing || false;
-  $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
-  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     itemObjects.update((oldObjects) =>

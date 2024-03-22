@@ -73,12 +73,20 @@
           <td class="py-1 border-b border-slate-300">
             <TableCell itemFeature={{ name: "split", dtype: "str", value: item.split }} />
           </td>
-
-          {#if item.views}
+          {#if item.views && item.type === "image"}
             {#each Object.values(item.views) as view}
               <td class="py-1 border-b border-slate-300">
                 <TableCell
                   itemFeature={{ name: view.id, dtype: view.type, value: view.thumbnail }}
+                />
+              </td>
+            {/each}
+          {/if}
+          {#if item.views && item.type === "video"}
+            {#each Object.values(item.views) as view}
+              <td class="py-1 border-b border-slate-300">
+                <TableCell
+                  itemFeature={{ name: view[0].id, dtype: view[0].type, value: view[0].thumbnail }}
                 />
               </td>
             {/each}
