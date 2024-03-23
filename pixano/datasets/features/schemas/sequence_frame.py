@@ -23,3 +23,8 @@ class SequenceFrame(Image):
     sequence_id: str
     timestamp: float
     frame_index: int
+
+
+def is_sequence_frame(cls: type) -> bool:
+    """Check if the given class is a subclass of Sequence."""
+    return cls is SequenceFrame

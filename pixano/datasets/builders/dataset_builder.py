@@ -1,80 +1,81 @@
 import abc
 import concurrent
-
-# import json
 import os
 import pathlib
-from typing import Any, Dict, Iterator, Type
+from typing import Any, Dict, Iterator, List, Type, _GenericAlias
 
 import duckdb
 import lancedb
+import lancedb.pydantic
+import pydantic
+import pydantic_core
 import shortuuid
-
-# import pydantic
-# import pydantic_core
 import tqdm
 
 from .. import dataset
 from ..dataset_info import DatasetInfo
-
-# from ..features.schemas import image as image_schema
-# from ..features.schemas import item as item_schema
-# from ..features.schemas import object as object_schema
-from ..dataset_schema import (
-    DatasetSchema,
-    _generate_dataset_schema_dict_from_dataset_features_schema,
-)
+from ..features.schemas import image as image_schema
+from ..features.schemas import item as item_schema
+from ..features.schemas import object as object_schema
+from ..features.schemas import sequence_frame as sequence_frame_schema
+from ..utils import video as video_utils
 
 
-# def _generate_schema_mapping(cls):
-#     # extra item fields infered from the cls
-#     item_fields = {}
+# from ..dataset_schema import (
+#     DatasetSchema,
+#     _generate_dataset_schema_dict_from_dataset_features_schema,
+# )
 
-#     # table schemas
-#     schemas = {}
 
-#     for field_name, field in cls.model_fields.items():
-#         print("AA", field_name, field)
-#         if isinstance(field.annotation, _GenericAlias):
-#             origin = field.annotation.__origin__
-#             args = field.annotation.__args__
+def _table_name_to_schema(cls):
+    # extra item fields infered from the cls
+    item_fields = {}
 
-#             if origin == list or origin == List:
-#                 if object_schema.is_object(args[0]):
-#                     # Categorizing List of Object as objects
-#                     schemas[field_name] = args[0]
-#                 else:
-#                     # Handling list of simple types (e.g., List[float])
-#                     default_value = (
-#                         ...
-#                         if isinstance(
-#                             field.default, pydantic_core.PydanticUndefinedType
-#                         )
-#                         else field.default
-#                     )
-#                     item_fields[field_name] = (list[args[0]], default_value)
-#             else:
-#                 # Default case: categorize as item attribute
-#                 item_fields[field_name] = (args[0], default_value)
-#         elif image_schema.is_image(field.annotation):
-#             # Categorizing Image as a view
-#             schemas[field_name] = field.annotation
-#         else:
-#             default_value = (
-#                 ...
-#                 if isinstance(field.default, pydantic_core.PydanticUndefinedType)
-#                 else field.default
-#             )
-#             # Default case: categorize as item attribute
-#             item_fields[field_name] = (field.annotation, default_value)
+    # table schemas
+    schemas = {}
 
-#     DatasetItem = pydantic.create_model(
-#         cls.__name__, **item_fields, __base__=item_schema.Item
-#     )
+    for field_name, field in cls.model_fields.items():
+        if isinstance(field.annotation, _GenericAlias):
+            origin = field.annotation.__origin__
+            args = field.annotation.__args__
 
-#     schemas["item"] = DatasetItem
+            if origin == list or origin == List:
+                if object_schema.is_object(args[0]):
+                    # Categorizing List of Object as objects
+                    schemas[field_name] = args[0]
+                else:
+                    # Handling list of simple types (e.g., List[float])
+                    default_value = (
+                        ...
+                        if isinstance(
+                            field.default, pydantic_core.PydanticUndefinedType
+                        )
+                        else field.default
+                    )
+                    item_fields[field_name] = (list[args[0]], default_value)
+            else:
+                # Default case: categorize as item attribute
+                item_fields[field_name] = (args[0], default_value)
+        # any subclass of LanceModel is considered as a table schema on its own
+        elif issubclass(field.annotation, lancedb.pydantic.LanceModel):
+            # Categorizing Image as a view
+            schemas[field_name] = field.annotation
+        else:
+            default_value = (
+                ...
+                if isinstance(field.default, pydantic_core.PydanticUndefinedType)
+                else field.default
+            )
+            # Default case: categorize as item attribute
+            item_fields[field_name] = (field.annotation, default_value)
 
-#     return schemas
+    DatasetItem = pydantic.create_model(
+        cls.__name__, **item_fields, __base__=item_schema.Item
+    )
+
+    schemas["item"] = DatasetItem
+
+    return schemas
 
 
 class DatasetBuilder(abc.ABC):
@@ -114,16 +115,10 @@ class DatasetBuilder(abc.ABC):
         self._info = info
         self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
-        self._schemas = _generate_dataset_schema_dict_from_dataset_features_schema(
-            schemas
-        )
+        self._schemas = _table_name_to_schema(schemas)
 
-        # save schema.json
-        DatasetSchema.from_dataset_features(schemas, self._target_dir).save()
-
-    @property
-    def schemas(self):
-        return self._schemas["schemas"]
+        # # save schema.json
+        # DatasetSchema.from_dataset_features(schemas, self._target_dir).save()
 
     def build(self) -> dataset.Dataset:
         """Build the dataset.
@@ -132,9 +127,7 @@ class DatasetBuilder(abc.ABC):
             Dataset: The built dataset.
 
         """
-        self._create_tables(self.schemas)
-
-        tables = {k: self._db.open_table(k) for k in self.schemas.keys()}
+        tables = self._create_tables()
 
         for count, items in enumerate(
             tqdm.tqdm(self._generate_items(), desc="Import items")
@@ -151,57 +144,9 @@ class DatasetBuilder(abc.ABC):
                 table.add(items[table_name])
 
         # save info.json
-        # TODO compute estimated_size
-        self._info.model_copy(
-            update={
-                "id": shortuuid.uuid(),
-                "num_elements": count,
-                # "estimated_size": "??",
-                "_path": self._target_dir,
-            }
-        ).save()
-
-    def generate_rgb_sequence_preview(self, fps: int = 25, scale: float = 0.5):
-        """Generate RGB sequence previews for the dataset.
-
-        Args:
-            fps (int, optional): The frames per second for the preview.
-            scale (float, optional): The scale factor for the preview.
-
-        """
-        items_table = self._db.open_table(TableType.ITEM).to_lance()
-        ids_and_views = duckdb.query("SELECT id, views FROM items_table").to_df()
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            sequences_table = self._db.open_table(TableType.RGB_SEQUENCE).to_lance()
-
-            futures = []
-            for _, row in ids_and_views.iterrows():
-                for n, view_id in enumerate(row["views"]["ids"]):
-                    im_urls = duckdb.query(
-                        f"SELECT url FROM sequences_table WHERE item_id LIKE '{row['id']}' AND view_id LIKE '{view_id}' ORDER BY timestamp "
-                    ).to_df()
-                    im_urls = im_urls["url"].tolist()
-                    previews_path = self._previews_path / f"{row['views']['names'][n]}"
-                    if not previews_path.exists():
-                        previews_path.mkdir(parents=True)
-                    output_path = previews_path / f"{row['id']}.mp4"
-                    futures.append(
-                        executor.submit(
-                            sequence_utils.create_video_preview,
-                            output_path,
-                            im_urls,
-                            fps=fps,
-                            scale=scale,
-                        )
-                    )
-
-            for _ in tqdm.tqdm(
-                concurrent.futures.as_completed(futures),
-                total=len(futures),
-                desc="Generate previews",
-            ):
-                pass
+        self._info.id = shortuuid.uuid()
+        self._info.num_elements = count + 1
+        self._info.to_json(self._target_dir / dataset.Dataset.INFO_FILE)
 
     @abc.abstractmethod
     def _generate_items(self) -> Iterator[Dict[str, Any]]:
@@ -213,12 +158,79 @@ class DatasetBuilder(abc.ABC):
         """
         raise NotImplementedError
 
-    def _create_tables(self, schemas: dict[str, Any] = None):
+    def generate_media_previews(self, **kwargs):
+        """Generate media previews for the dataset."""
+        for table_name, schema in self._schemas.items():
+            print(f"Will generate previews for {table_name}")
+            if image_schema.is_image(schema):
+                self._generate_image_previews(table_name)
+            elif sequence_frame_schema.is_sequence_frame(schema):
+                fps = kwargs.get("fps", 25)
+                scale = kwargs.get("scale", 0.5)
+                self._generate_sequence_frame_previews(table_name, fps, scale)
+            else:
+                continue
+
+    def _create_tables(self):
         """Create tables in the database.
 
         Args:
             schemas (dict[str, Any], optional): The schemas for the tables.
 
         """
-        for key, schema in schemas.items():
+        tables = {}
+        for key, schema in self._schemas.items():
             self._db.create_table(key, schema=schema, mode=self._mode)
+
+            tables[key] = self._db.open_table(key)
+
+        return tables
+
+    def _generate_image_previews(self):
+        """Generate image previews for the dataset."""
+        pass
+
+    def _generate_sequence_frame_previews(
+        self, table_name: str, fps: int, scale: float
+    ):
+        """Generate video (sequence frames) previews for the dataset."""
+        sequence_table = self._db.open_table(table_name).to_lance()  # noqa: F841
+
+        frames = (
+            duckdb.query(
+                """SELECT sequence_id, LIST(url) as url, LIST(timestamp) as timestamp
+                   FROM sequence_table GROUP BY sequence_id"""
+            )
+            .to_df()
+            .to_dict(orient="records")
+        )
+
+        # store previews in the previews directory {previews_path}/{table_name}/{item_id}.mp4
+        previews_path = self._previews_path / table_name
+        if not previews_path.exists():
+            previews_path.mkdir(parents=True)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            for seq in frames:
+                sorted_frames = sorted(
+                    zip(seq["url"], seq["timestamp"]), key=lambda x: x[1]
+                )
+                im_urls = [self._source_dir / url for url, _ in sorted_frames]
+                output_path = previews_path / f"{seq['sequence_id']}.mp4"
+                futures.append(
+                    executor.submit(
+                        video_utils.create_video_preview,
+                        output_path,
+                        im_urls,
+                        fps=fps,
+                        scale=scale,
+                    )
+                )
+
+            for _ in tqdm.tqdm(
+                concurrent.futures.as_completed(futures),
+                total=len(futures),
+                desc=f"Generate previews for {table_name}",
+            ):
+                pass

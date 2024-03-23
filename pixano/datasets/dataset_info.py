@@ -13,12 +13,9 @@
 
 import json
 from pathlib import Path
-from typing import Optional
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 from s3path import S3Path
-
-from .utils.thumbnail import Thumbnail
 
 
 class DatasetInfo(BaseModel):
@@ -30,48 +27,31 @@ class DatasetInfo(BaseModel):
         description (str): Dataset description
         estimated_size (str): Dataset estimated size
         num_elements (int): Number of elements in dataset
-        splits (list[str]): Dataset splits
-        thumbnail (str, optional): Dataset thumbnail
-        _path (Path | S3Path): Dataset path
     """
 
     id: str = None
     name: str
     description: str
-    estimated_size: str = "Unknown"
+    size: str = "Unknown"
     num_elements: int = 0
-    splits: list[str] = ["dataset"]
-    thumbnail: Optional[str] = None
-    _path: Path | S3Path = PrivateAttr()
 
-    def save(self):
-        """Save DatasetInfo to json file.
+    def to_json(self, path: Path | S3Path):
+        """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            save_dir (Path | S3Path): Save directory
+            path (Path | S3Path): The path to the file where the DatasetInfo object will be written.
         """
-        with open(self._path / "info.json", "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self.model_dump(), f)
-
-    def load(self):
-        """Load DatasetInfo from json file."""
-        with open(self._path / "info.json", "r", encoding="utf-8") as f:
-            info_json = json.load(f)
-
-        info = DatasetInfo.model_validate(info_json)
-
-        return info
 
     @staticmethod
     def from_json(
         json_fp: Path | S3Path,
-        load_thumbnail: bool = False,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file.
 
         Args:
             json_fp (Path | S3Path): JSON file path
-            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
 
         Returns:
             DatasetInfo: DatasetInfo
@@ -83,46 +63,6 @@ class DatasetInfo(BaseModel):
             with open(json_fp, encoding="utf-8") as json_file:
                 info_json = json.load(json_file)
 
-        info_json["_path"] = json_fp.parent
         info = DatasetInfo.model_validate(info_json)
 
-        # Load thumbnail
-        if load_thumbnail:
-            thumb_fp = json_fp.parent / "thumbnail.png"
-            if thumb_fp.is_file():
-                if isinstance(json_fp, S3Path):
-                    info.thumbnail = thumb_fp.get_presigned_url()
-                else:
-                    im = Thumbnail(uri=thumb_fp.absolute().as_uri())
-                    info.thumbnail = im.url
-
         return info
-
-    @staticmethod
-    def load_directory(
-        directory: Path | S3Path,
-        load_thumbnail: bool = False,
-    ) -> list["DatasetInfo"]:
-        """Load list of DatasetInfo from directory.
-
-        Args:
-            directory (Path | S3Path): Directory to load
-            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
-            load_stats (bool, optional): Load dataset stats. Defaults to False.
-
-        Returns:
-            list[DatasetInfo]: List of DatasetInfo
-        """
-        infos = []
-
-        # Browse directory
-        for json_fp in sorted(directory.glob("*/info.json")):
-            # Add dataset info to list
-            infos.append(
-                DatasetInfo.from_json(
-                    json_fp,
-                    load_thumbnail=load_thumbnail,
-                )
-            )
-
-        return infos

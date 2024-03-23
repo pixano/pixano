@@ -25,7 +25,7 @@ from .schemas.object import (
 )
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
-from .schemas.sequence_frame import SequenceFrame
+from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
 from .schemas.video import Video
 from .schemas.view import View
 from .types.bbox import BBox, is_bbox
@@ -53,5 +53,6 @@ __all__ = [
     "is_bbox",
     "is_image",
     "is_object",
+    "is_sequence_frame",
     "register_schema",
 ]
