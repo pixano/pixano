@@ -18,7 +18,7 @@
   import type { KeyVideoFrame, Tracklet, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
+  import { addKeyFrame, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
   export let zoomLevel: number[];
@@ -53,7 +53,7 @@
     $keyFrameBeingEdited?.objectId === object.id &&
     frame.frameIndex === $keyFrameBeingEdited?.frameIndex;
 
-  const onEditKeyBoxClick = (frame: KeyVideoFrame) => {
+  const onEditKeyFrameClick = (frame: KeyVideoFrame) => {
     const isBeingEdited = isKeyFrameBeingEdited(frame);
     keyFrameBeingEdited.set(isBeingEdited ? null : { ...frame, objectId: object.id });
     onTimeTrackClick(frame.frameIndex > $lastFrameIndex ? $lastFrameIndex : frame.frameIndex);
@@ -70,12 +70,12 @@
     );
   };
 
-  const onAddKeyBoxClick = () => {
+  const onAddKeyFrameClick = () => {
     const frame = { ...object.displayedFrame, frameIndex: rightClickFrameIndex };
     itemObjects.update((objects) =>
-      addKeyBox(objects, frame, object.id, rightClickFrameIndex, $lastFrameIndex),
+      addKeyFrame(objects, frame, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
-    onEditKeyBoxClick(frame);
+    onEditKeyFrameClick(frame);
   };
 
   const onSplitTrackletClick = (trackletIndex: number) => {
@@ -101,7 +101,7 @@
     );
   };
 
-  const findNeighborKeyBoxes = (
+  const findNeighborKeyFrames = (
     tracklet: Tracklet,
     frameIndex: KeyVideoFrame["frameIndex"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
@@ -121,7 +121,7 @@
       <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
     </ContextMenu.Trigger>
     <ContextMenu.Content>
-      <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
+      <ContextMenu.Item inset on:click={onAddKeyFrameClick}>Add a point</ContextMenu.Item>
     </ContextMenu.Content>
   </ContextMenu.Root>
   {#each object.track as tracklet, i}
@@ -129,12 +129,12 @@
       {tracklet}
       {object}
       color={colorScale(object.id)}
-      {onAddKeyBoxClick}
+      {onAddKeyFrameClick}
       {onContextMenu}
-      {onEditKeyBoxClick}
+      {onEditKeyFrameClick}
+      {findNeighborKeyFrames}
       onSplitTrackletClick={() => onSplitTrackletClick(i)}
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-      {findNeighborKeyBoxes}
     />
   {/each}
 </div>

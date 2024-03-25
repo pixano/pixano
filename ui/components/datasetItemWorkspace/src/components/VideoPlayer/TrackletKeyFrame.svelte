@@ -18,7 +18,7 @@
   import type { ItemObject, KeyVideoFrame } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
+  import { deleteKeyFrameFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
 
@@ -26,14 +26,14 @@
   export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
-  export let onEditKeyBoxClick: (keyFrame: KeyVideoFrame) => void;
+  export let onEditKeyFrameClick: (keyFrame: KeyVideoFrame) => void;
   export let updateTrackletWidth: (
     newIndex: KeyVideoFrame["frameIndex"],
     draggedIndex: KeyVideoFrame["frameIndex"],
   ) => void;
 
   const onDeleteKeyBoxClick = (frame: KeyVideoFrame) => {
-    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, frame, objectId));
+    itemObjects.update((objects) => deleteKeyFrameFromTracklet(objects, frame, objectId));
   };
 
   const getKeyBoxLeftPosition = (frame: KeyVideoFrame) => {
@@ -82,10 +82,10 @@
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyFrame)}
-      >Remove key box</ContextMenu.Item
+      >Remove key frame</ContextMenu.Item
     >
-    <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyFrame)}>
-      {isBeingEdited ? "Stop editing" : "Edit box"}
+    <ContextMenu.Item inset on:click={() => onEditKeyFrameClick(keyFrame)}>
+      {isBeingEdited ? "Stop editing" : "Edit frame"}
     </ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>

@@ -31,7 +31,7 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+  import { editKeyFrameInTracklet, linearInterpolation } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -90,7 +90,7 @@
     const keyFrame = $keyFrameBeingEdited;
     if (shape.status === "editing") {
       if (keyFrame) {
-        itemObjects.update((objects) => editKeyBoxInTracklet(objects, keyFrame, shape));
+        itemObjects.update((objects) => editKeyFrameInTracklet(objects, keyFrame, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }

@@ -46,7 +46,7 @@ export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
   return null;
 };
 
-export const deleteKeyBoxFromTracklet = (
+export const deleteKeyFrameFromTracklet = (
   objects: ItemObject[],
   frame: KeyVideoFrame,
   objectId: ItemObject["id"],
@@ -69,7 +69,7 @@ export const deleteKeyBoxFromTracklet = (
     return object;
   });
 
-export const editKeyBoxInTracklet = (
+export const editKeyFrameInTracklet = (
   objects: ItemObject[],
   keyFrameBeingEdited: KeyVideoFrame,
   shape: EditShape,
@@ -124,7 +124,7 @@ const createNewTracklet = (
   } as Tracklet;
 };
 
-const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyFrame: KeyVideoFrame) =>
+const addKeyFrameToTracklet = (track: Tracklet[], tracklet: Tracklet, keyFrame: KeyVideoFrame) =>
   track.map((trackItem) => {
     if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
       trackItem.keyFrames.push(keyFrame);
@@ -135,7 +135,7 @@ const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyFrame: Ke
     return trackItem;
   });
 
-export const addKeyBox = (
+export const addKeyFrame = (
   objects: ItemObject[],
   keyFrame: KeyVideoFrame,
   objectId: string,
@@ -152,7 +152,7 @@ export const addKeyBox = (
       const newTracklet = createNewTracklet(object.track, frameIndex, lastFrameIndex, keyFrame);
       object.track.push(newTracklet);
     } else {
-      object.track = addKeyBoxToTracklet(object.track, currentTracklet, keyFrame);
+      object.track = addKeyFrameToTracklet(object.track, currentTracklet, keyFrame);
     }
     object.track.sort((a, b) => a.start - b.start);
     return object;
