@@ -67,7 +67,7 @@ def _get_super_type_from_dict(
     return sup_type
 
 
-def __dataset_item_to_dict(
+def _dataset_item_to_dict(
     _dataset_item: type["DatasetItem"],
 ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
     # extra item fields infered from the cls
@@ -381,7 +381,7 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
-        dataset_schema_dict = __dataset_item_to_dict(model)
+        dataset_schema_dict = _dataset_item_to_dict(model)
         schema = DatasetSchema.validate_dict(dataset_schema_dict)
         schema._assign_table_groups()
 
@@ -399,11 +399,11 @@ class DatasetItem(BaseModel):
         self,
     ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
         """Convert DatasetItemValues to a dataset schema dict."""
-        return __dataset_item_to_dict(self)
+        return _dataset_item_to_dict(self)
 
     def serialize(self) -> dict[str, dict[str, Any]]:
         """Serialize DatasetItemValues."""
-        return _serialize_dataset_schema_dict(__dataset_item_to_dict(self))
+        return _serialize_dataset_schema_dict(_dataset_item_to_dict(self))
 
 
 def create_custom_dataset_item_class_from_dataset_schema(
