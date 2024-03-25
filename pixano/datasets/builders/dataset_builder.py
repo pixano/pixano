@@ -140,12 +140,14 @@ class DatasetBuilder(abc.ABC):
             tqdm.tqdm(self._generate_items(), desc="Import items")
         ):
             # Assert that items and tables have the same keys
-            assert set(items.keys()) == set(
-                tables.keys()
-            ), "Keys of 'items' and 'tables' do not match"
+            # assert set(items.keys()) == set(
+            #     tables.keys()
+            # ), "Keys of 'items' and 'tables' do not match"
 
             for table_name, table in tables.items():
                 if table_name == "objects" and len(items[table_name]) == 0:
+                    continue
+                if table_name not in items:
                     continue
 
                 table.add(items[table_name])
