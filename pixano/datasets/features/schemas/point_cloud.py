@@ -16,11 +16,9 @@ from .base_schema import BaseSchema
 from .registry import _register_schema_internal
 
 
+@_register_schema_internal
 class PointCloud(BaseSchema):
     """Point Cloud Lance Model."""
 
     item_id: str
     url: str
-
-
-_register_schema_internal(PointCloud)

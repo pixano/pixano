@@ -16,6 +16,7 @@ from .registry import _register_schema_internal
 from .view import View
 
 
+@_register_schema_internal
 class Video(View):
     """Video Lance Model."""
 
@@ -26,6 +27,3 @@ class Video(View):
     height: int
     format: str
     duration: float
-
-
-_register_schema_internal(Video)

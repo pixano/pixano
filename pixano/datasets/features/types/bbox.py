@@ -19,6 +19,7 @@ from ...utils import boxes as bbox_utils
 from .registry import _register_type_internal
 
 
+@_register_type_internal
 class BBox(pydantic.BaseModel):
     """Bounding box type using coordinates in xyxy or xywh format.
 
@@ -175,6 +176,3 @@ def is_bbox(cls: typing.Any) -> bool:
         bool: True if the class is a subclass of BBox, False otherwise.
     """
     return issubclass(cls, BBox)
-
-
-_register_type_internal(BBox)
