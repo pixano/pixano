@@ -13,7 +13,7 @@
 
 from pydantic import BaseModel, create_model
 
-from .dataset_schema import DatasetSchema
+from .dataset_schema import DatasetSchema, SchemaRelation
 from .features.schemas.group import _SchemaGroup
 
 
@@ -37,9 +37,9 @@ def create_custom_dataset_item_class_from_dataset_schema(
     item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
     fields = {}
 
-    for schema, is_collection in dataset_schema.item_to_schema_collection.items():
+    for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
         # Add default value in case an item does not have a specific view or object.
-        if is_collection:
+        if relation == SchemaRelation.ONE_TO_MANY:
             fields[schema] = (list[dataset_schema.schemas[schema]], [])
         else:
             fields[schema] = (dataset_schema.schemas[schema], None)

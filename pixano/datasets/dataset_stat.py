@@ -61,23 +61,13 @@ class DatasetStat(BaseModel):
             save_dir (Path | S3Path): Save directory
         """
         try:
-            if isinstance(save_dir, S3Path):
-                with (save_dir / "stats.json").open(encoding="utf-8") as json_file:
-                    json_stats = json.load(json_file)
-            else:
-                with open(save_dir / "stats.json", "r", encoding="utf-8") as json_file:
-                    json_stats = json.load(json_file)
+            stats_json = json.load(open(save_dir, "r", encoding="utf-8"))
         except FileNotFoundError:
-            json_stats = []
+            stats_json = []
         # keep all stats except the one with same name, we replace it if exist
-        json_stats = [stat for stat in json_stats if stat["name"] != self.name]
-        json_stats.append(
+        stats_json = [stat for stat in stats_json if stat["name"] != self.name]
+        stats_json.append(
             {"name": self.name, "type": self.type, "histogram": self.histogram}
         )
 
-        if isinstance(save_dir, S3Path):
-            with (save_dir / "stats.json").open("w", encoding="utf-8") as f:
-                json.dump(json_stats, f, indent="\t")
-        else:
-            with open(save_dir / "stats.json", "w", encoding="utf-8") as f:
-                json.dump(json_stats, f, indent="\t")
+        json.dump(stats_json, open(save_dir, "w", encoding="utf-8"), indent="\t")

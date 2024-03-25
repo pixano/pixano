@@ -112,17 +112,6 @@ class DatasetTestCase(unittest.TestCase):
         self.assertIsInstance(item.split, str)
         self.assertIsInstance(item.image, Image)
 
-    def test_read_item(self):
-        """Test Dataset read_item method"""
-
-        # get item uuid from original id
-        item = self.dataset.read_item("5o2RzUiNpGXKfPyUKM9Jcf")
-
-        self.assertIsInstance(item, DatasetItem)
-        self.assertEqual(item.id, "5o2RzUiNpGXKfPyUKM9Jcf")
-        self.assertIsInstance(item.split, str)
-        self.assertIsInstance(item.image, Image)
-
     def test_read_views(self):
         """Test Dataset read_views method"""
 

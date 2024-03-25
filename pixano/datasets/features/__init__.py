@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-from .dataset_features import DatasetFeatures
 from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
 from .schemas.image import Image, is_image
@@ -25,7 +24,7 @@ from .schemas.object import (
 )
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
-from .schemas.sequence_frame import SequenceFrame
+from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
 from .schemas.video import Video
 from .schemas.view import View
 from .types.bbox import BBox, is_bbox
@@ -37,7 +36,6 @@ __all__ = [
     "BaseSchema",
     "BBox",
     "CompressedRLE",
-    "DatasetFeatures",
     "Embedding",
     "Image",
     "Item",
@@ -53,5 +51,6 @@ __all__ = [
     "is_bbox",
     "is_image",
     "is_object",
+    "is_sequence_frame",
     "register_schema",
 ]

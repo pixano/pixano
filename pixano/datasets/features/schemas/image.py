@@ -30,4 +30,4 @@ def is_image(cls: typing.Any) -> bool:
     Returns:
         bool: True if the class is a subclass of Image, False otherwise.
     """
-    return issubclass(cls, Image)
+    return cls is Image
