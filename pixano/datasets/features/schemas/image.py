@@ -11,7 +11,6 @@ from .registry import _register_schema_internal
 from .view import View
 
 
-@_register_schema_internal()
 class Image(View):
     """Image Lance Model."""
 
@@ -31,3 +30,6 @@ def is_image(cls: typing.Any) -> bool:
         bool: True if the class is a subclass of Image, False otherwise.
     """
     return cls is Image
+
+
+_register_schema_internal(Image)

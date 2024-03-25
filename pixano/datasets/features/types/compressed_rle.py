@@ -19,7 +19,6 @@ from ...utils import image as image_utils
 from .registry import _register_type_internal
 
 
-@_register_type_internal()
 class CompressedRLE(pydantic.BaseModel):
     """Compressed RLE mask type.
 
@@ -115,3 +114,6 @@ class CompressedRLE(pydantic.BaseModel):
             CompressedRLE: Compressed RLE mask
         """
         return CompressedRLE.from_dict(image_utils.encode_rle(mask, height, width))
+
+
+_register_type_internal(CompressedRLE)

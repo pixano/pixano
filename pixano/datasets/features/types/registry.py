@@ -22,21 +22,18 @@ ATOMIC_PYTHON_TYPES = [int, float, complex, str, bool, bytes, bytearray, memoryv
 _TYPES_REGISTRY: Dict[str, Type[LanceModel]] = {}
 
 
-def _register_type_internal():
-    def decorator(type: type[object]):
-        if not (type in ATOMIC_PYTHON_TYPES or issubclass(type, BaseModel)):
-            raise ValueError(
-                f"Table type {type} must be a an atomic python type or "
-                "derive from BaseModel."
-            )
-        type_name = type.__name__.lower().replace(" ", "_")
-        if type_name in _TYPES_REGISTRY:
-            raise ValueError(f"Type {type_name} already registered")
-        _TYPES_REGISTRY[type_name] = type
-        return type
-
-    return decorator
+def _register_type_internal(type: type[object]):
+    if not (type in ATOMIC_PYTHON_TYPES or issubclass(type, BaseModel)):
+        raise ValueError(
+            f"Table type {type} must be a an atomic python type or "
+            "derive from BaseModel."
+        )
+    type_name = type.__name__.lower().replace(" ", "_")
+    if type_name in _TYPES_REGISTRY:
+        raise ValueError(f"Type {type_name} already registered")
+    _TYPES_REGISTRY[type_name] = type
+    return type
 
 
 for python_type in ATOMIC_PYTHON_TYPES:
-    _register_type_internal()(python_type)
+    _register_type_internal(python_type)

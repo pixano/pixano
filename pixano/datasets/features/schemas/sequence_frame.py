@@ -16,7 +16,6 @@ from .image import Image
 from .registry import _register_schema_internal
 
 
-@_register_schema_internal()
 class SequenceFrame(Image):
     """Sequence Frame Lance Model."""
 
@@ -28,3 +27,6 @@ class SequenceFrame(Image):
 def is_sequence_frame(cls: type) -> bool:
     """Check if the given class is a subclass of Sequence."""
     return cls is SequenceFrame
+
+
+_register_schema_internal(SequenceFrame)
