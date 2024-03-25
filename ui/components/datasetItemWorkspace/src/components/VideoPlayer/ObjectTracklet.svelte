@@ -15,15 +15,15 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import TrackletKeyBox from "./TrackletKeyBox.svelte";
+  import type { Tracklet, VideoObject, VideoItemBBox, KeyVideoFrame } from "@pixano/core";
+  import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import TrackletKeyBox from "./TrackletKeyFrame.svelte";
 
   export let object: VideoObject;
   export let color: string;
   export let tracklet: Tracklet;
   export let onContextMenu: (event: MouseEvent) => void;
-  export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
+  export let onEditKeyBoxClick: (keyFrame: KeyVideoFrame) => void;
   export let onAddKeyBoxClick: () => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
@@ -50,23 +50,23 @@
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
-    tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-      if (keyBox.frameIndex === draggedFrameIndex) {
-        keyBox.frameIndex = newFrameIndex;
-        itemBoxBeingEdited.set({
-          ...keyBox,
+    tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
+      if (keyFrame.frameIndex === draggedFrameIndex) {
+        keyFrame.frameIndex = newFrameIndex;
+        keyFrameBeingEdited.set({
+          ...keyFrame,
           objectId: object.id,
         });
       }
-      return keyBox;
+      return keyFrame;
     });
-    tracklet.start = tracklet.keyBoxes[0].frameIndex;
-    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frameIndex;
+    tracklet.start = tracklet.keyFrames[0].frameIndex;
+    tracklet.end = tracklet.keyFrames[tracklet.keyFrames.length - 1].frameIndex;
   };
 
-  const isKeyBoxBeingEdited = (keyBox: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
+  const isKeyBoxBeingEdited = (keyFrame: KeyVideoFrame) =>
+    $keyFrameBeingEdited?.objectId === object.id &&
+    keyFrame.frameIndex === $keyFrameBeingEdited?.frameIndex;
 </script>
 
 <ContextMenu.Root>
@@ -86,11 +86,11 @@
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.keyBoxes as keyBox}
+{#each tracklet.keyFrames as keyFrame}
   <TrackletKeyBox
-    {keyBox}
+    {keyFrame}
     {color}
-    isBeingEdited={isKeyBoxBeingEdited(keyBox)}
+    isBeingEdited={isKeyBoxBeingEdited(keyFrame)}
     {onEditKeyBoxClick}
     objectId={object.id}
     {updateTrackletWidth}

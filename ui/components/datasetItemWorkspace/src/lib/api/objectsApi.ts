@@ -39,9 +39,9 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
+  const box = obj.datasetItemType === "video" ? obj.displayedFrame.bbox : obj.bbox;
 
-  if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
+  if (!box || (obj.datasetItemType === "video" && obj.displayedFrame.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
@@ -67,14 +67,15 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
 };
 
 export const mapObjectToMasks = (obj: ItemObject) => {
+  const mask = obj.datasetItemType === "video" ? obj.displayedFrame.mask : obj.mask;
   if (
-    !obj.mask ||
+    !mask ||
     obj.review_state ||
     (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   )
     return;
-  const rle = obj.mask.counts;
-  const size = obj.mask.size;
+  const rle = mask.counts;
+  const size = mask.size;
   const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
   const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
@@ -84,7 +85,7 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     svg: masksSVG,
     rle: obj.mask,
     catId: (obj.features.category_id?.value || 1) as number,
-    visible: !obj.mask.displayControl?.hidden && !obj.displayControl?.hidden,
+    visible: !mask.displayControl?.hidden && !obj.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
@@ -250,13 +251,13 @@ export const defineCreatedObject = (
           {
             start: 0,
             end: lastFrameIndex,
-            keyBoxes: [
-              { ...bbox, frameIndex: 0 },
-              { ...bbox, frameIndex: lastFrameIndex },
+            keyFrames: [
+              { bbox, frameIndex: 0 },
+              { bbox, frameIndex: lastFrameIndex },
             ],
           },
         ],
-        displayedBox: { ...bbox, frameIndex: 0 },
+        displayedFrame: { bbox, frameIndex: 0 },
       };
     } else {
       newObject = {

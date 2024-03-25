@@ -120,9 +120,25 @@ export type ItemObjectBase = {
 export type VideoItemBBox = ItemBBox & {
   frameIndex: number;
   hidden?: boolean;
+  type: "bbox";
+};
+
+export type VideoItemMask = ItemRLE & {
+  frameIndex: number;
+  hidden?: boolean;
+  type: "mask";
+};
+
+export type VideoItem = VideoItemBBox | VideoItemMask;
+
+export type KeyVideoFrame = {
+  frameIndex: number;
+  hidden?: boolean;
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
 };
 export interface Tracklet {
-  keyBoxes: VideoItemBBox[];
+  keyFrames: KeyVideoFrame[];
   start: number;
   end: number;
 }
@@ -130,7 +146,7 @@ export interface Tracklet {
 export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
-  displayedBox: VideoItemBBox;
+  displayedFrame: KeyVideoFrame;
 };
 
 export type ImageObject = ItemObjectBase & {

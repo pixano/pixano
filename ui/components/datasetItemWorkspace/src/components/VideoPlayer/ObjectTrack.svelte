@@ -15,9 +15,9 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
+  import type { KeyVideoFrame, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
@@ -49,14 +49,14 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isKeyBoxBeingEdited = (box: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    box.frameIndex === $itemBoxBeingEdited?.frameIndex;
+  const isKeyFrameBeingEdited = (frame: KeyVideoFrame) =>
+    $keyFrameBeingEdited?.objectId === object.id &&
+    frame.frameIndex === $keyFrameBeingEdited?.frameIndex;
 
-  const onEditKeyBoxClick = (box: VideoItemBBox) => {
-    const isBeingEdited = isKeyBoxBeingEdited(box);
-    itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
-    onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
+  const onEditKeyBoxClick = (frame: KeyVideoFrame) => {
+    const isBeingEdited = isKeyFrameBeingEdited(frame);
+    keyFrameBeingEdited.set(isBeingEdited ? null : { ...frame, objectId: object.id });
+    onTimeTrackClick(frame.frameIndex > $lastFrameIndex ? $lastFrameIndex : frame.frameIndex);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
@@ -65,18 +65,17 @@
           ...obj.displayControl,
           editing: !isBeingEdited && obj.id === object.id,
         };
-
         return obj;
       }),
     );
   };
 
   const onAddKeyBoxClick = () => {
-    const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
+    const frame = { ...object.displayedFrame, frameIndex: rightClickFrameIndex };
     itemObjects.update((objects) =>
-      addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
+      addKeyBox(objects, frame, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
-    onEditKeyBoxClick(box);
+    onEditKeyBoxClick(frame);
   };
 
   const onSplitTrackletClick = (trackletIndex: number) => {

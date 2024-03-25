@@ -2,9 +2,12 @@ import type {
   DatasetInfo,
   DatasetItem,
   ImageDatasetItem,
+  ItemBBox,
+  ItemRLE,
   ItemView,
   Tracklet,
   VideoDatasetItem,
+  VideoObject,
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail } from "../../assets/base64image";
 import fleurs from "../../../assets/fleurs.jpg";
@@ -472,36 +475,140 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const displayedBox = {
+const displayedBox: ItemBBox = {
   coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
   format: "xywh",
   is_normalized: true,
   confidence: 1,
-  frameIndex: 1,
 };
 
-const track: Tracklet[] = [
+const mask: ItemRLE = {
+  size: [513, 770],
+  counts: [
+    33201, 5, 504, 9, 500, 14, 494, 20, 489, 24, 485, 29, 480, 33, 476, 38, 471, 43, 466, 47, 462,
+    52, 457, 56, 452, 62, 447, 67, 442, 71, 438, 76, 433, 80, 432, 82, 431, 82, 430, 84, 428, 86,
+    427, 86, 426, 88, 425, 88, 424, 90, 423, 91, 421, 92, 420, 94, 419, 94, 418, 96, 417, 96, 416,
+    98, 414, 100, 413, 100, 412, 102, 411, 102, 410, 104, 409, 105, 407, 106, 406, 108, 405, 108,
+    404, 110, 403, 111, 401, 112, 401, 113, 399, 114, 398, 116, 397, 116, 396, 118, 395, 119, 393,
+    120, 392, 122, 391, 122, 390, 124, 389, 125, 387, 126, 387, 127, 385, 128, 384, 130, 383, 131,
+    381, 132, 381, 133, 380, 133, 380, 134, 379, 134, 380, 134, 379, 135, 378, 135, 379, 135, 378,
+    135, 378, 136, 378, 136, 377, 136, 377, 137, 376, 137, 377, 137, 376, 138, 375, 138, 376, 138,
+    375, 138, 375, 138, 376, 134, 379, 131, 382, 127, 387, 123, 391, 119, 396, 114, 400, 109, 405,
+    105, 410, 100, 414, 96, 418, 92, 423, 86, 428, 82, 432, 78, 437, 73, 441, 68, 446, 64, 451, 59,
+    455, 55, 459, 51, 464, 45, 469, 41, 473, 37, 478, 32, 482, 27, 487, 23, 492, 18, 496, 14, 500,
+    10, 505, 4, 305425,
+  ],
+  displayControl: {
+    hidden: false,
+  },
+};
+
+const bboxTrack: Tracklet[] = [
   {
     start: 0,
     end: 73,
-    keyBoxes: [
+    keyFrames: [
       {
-        coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
-        format: "xywh",
-        is_normalized: true,
-        confidence: 1,
         frameIndex: 0,
+        bbox: {
+          coords: [
+            0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337,
+          ],
+          format: "xywh",
+          is_normalized: true,
+          confidence: 1,
+        },
       },
       {
-        coords: [0.5914342337390056, 0.2693339921343171, 0.09993766916635072, 0.18671048750633337],
-        format: "xywh",
-        is_normalized: true,
-        confidence: 1,
         frameIndex: 73,
+        bbox: {
+          coords: [
+            0.5914342337390056, 0.2693339921343171, 0.09993766916635072, 0.18671048750633337,
+          ],
+          format: "xywh",
+          is_normalized: true,
+          confidence: 1,
+        },
       },
     ],
   },
 ];
+
+const maskTrack: Tracklet[] = [
+  {
+    start: 0,
+    end: 73,
+    keyFrames: [
+      {
+        frameIndex: 0,
+        mask,
+      },
+      { frameIndex: 73, mask },
+    ],
+  },
+];
+
+const objectWithMask: VideoObject = {
+  id: "Izzd1DBrO4",
+  datasetItemType: "video",
+  item_id: "fleurs.jpg",
+  view_id: "image",
+  source_id: "Ground Truth",
+  review_state: undefined,
+  // displayedBox,
+  displayedFrame: {
+    frameIndex: 0,
+    hidden: false,
+    mask: mask,
+  },
+  track: maskTrack,
+  // bbox: {
+  //   coords: [0.08311688154935837, 0.539961040019989, 0.1441558450460434, 0.2787524461746216],
+  //   format: "xywh",
+  //   is_normalized: true,
+  //   confidence: 0,
+  //   displayControl: {
+  //     hidden: false,
+  //   },
+  // },
+  // mask: {
+  //   size: [513, 770],
+  //   counts: [
+  //     33201, 5, 504, 9, 500, 14, 494, 20, 489, 24, 485, 29, 480, 33, 476, 38, 471, 43, 466, 47, 462,
+  //     52, 457, 56, 452, 62, 447, 67, 442, 71, 438, 76, 433, 80, 432, 82, 431, 82, 430, 84, 428, 86,
+  //     427, 86, 426, 88, 425, 88, 424, 90, 423, 91, 421, 92, 420, 94, 419, 94, 418, 96, 417, 96, 416,
+  //     98, 414, 100, 413, 100, 412, 102, 411, 102, 410, 104, 409, 105, 407, 106, 406, 108, 405, 108,
+  //     404, 110, 403, 111, 401, 112, 401, 113, 399, 114, 398, 116, 397, 116, 396, 118, 395, 119, 393,
+  //     120, 392, 122, 391, 122, 390, 124, 389, 125, 387, 126, 387, 127, 385, 128, 384, 130, 383, 131,
+  //     381, 132, 381, 133, 380, 133, 380, 134, 379, 134, 380, 134, 379, 135, 378, 135, 379, 135, 378,
+  //     135, 378, 136, 378, 136, 377, 136, 377, 137, 376, 137, 377, 137, 376, 138, 375, 138, 376, 138,
+  //     375, 138, 375, 138, 376, 134, 379, 131, 382, 127, 387, 123, 391, 119, 396, 114, 400, 109, 405,
+  //     105, 410, 100, 414, 96, 418, 92, 423, 86, 428, 82, 432, 78, 437, 73, 441, 68, 446, 64, 451,
+  //     59, 455, 55, 459, 51, 464, 45, 469, 41, 473, 37, 478, 32, 482, 27, 487, 23, 492, 18, 496, 14,
+  //     500, 10, 505, 4, 305425,
+  //   ],
+  //   displayControl: {
+  //     hidden: false,
+  //   },
+  // },
+  features: {
+    category_name: {
+      name: "category_name",
+      dtype: "str",
+      value: "bar",
+    },
+    category: {
+      name: "category",
+      dtype: "str",
+      value: "foo",
+    },
+    category_id: {
+      name: "category_id",
+      dtype: "int",
+      value: 2,
+    },
+  },
+};
 
 export const mockedVideoDatasetItem: VideoDatasetItem = {
   id: "fleurs.jpg",
@@ -541,12 +648,16 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
     EZ4s6R0E_y: {
       id: "EZ4s6R0E_y",
       datasetItemType: "video",
-      track,
+      track: bboxTrack,
+      displayedFrame: {
+        frameIndex: 0,
+        hidden: false,
+        bbox: displayedBox,
+      },
       item_id: "fleurs.jpg",
       view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
-      displayedBox,
       features: {
         category_name: {
           name: "category_name",
@@ -569,6 +680,46 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
         hidden: false,
       },
     },
+  },
+  embeddings: {},
+};
+
+export const mockedVideoDatasetItemWithMask: VideoDatasetItem = {
+  id: "fleurs.jpg",
+  type: "video",
+  split: "demo",
+  features: {
+    label: {
+      name: "label",
+      dtype: "str",
+      value: "printemps",
+    },
+    category_name: {
+      name: "category_name",
+      dtype: "str",
+      value: "foo",
+    },
+  },
+  views: {
+    image: gallery.map((image) => ({
+      ...mockImage,
+      features: {
+        width: {
+          name: "width",
+          dtype: "int",
+          value: 600,
+        },
+        height: {
+          name: "height",
+          dtype: "int",
+          value: 338,
+        },
+      },
+      uri: image,
+    })),
+  },
+  objects: {
+    Izzd1DBrO4: objectWithMask,
   },
   embeddings: {},
 };

@@ -26,7 +26,7 @@
     newShape,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -65,26 +65,32 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        const { displayedBox } = object;
-        const newCoords = linearInterpolation(object.track, imageIndex);
-        if (newCoords) {
-          const [x, y, width, height] = newCoords;
-          displayedBox.coords = [x, y, width, height];
-          displayedBox.frameIndex = imageIndex;
+        const { displayedFrame } = object;
+        if (displayedFrame.bbox) {
+          const newCoords = linearInterpolation(object.track, imageIndex);
+          if (newCoords) {
+            const [x, y, width, height] = newCoords;
+            displayedFrame.bbox.coords = [x, y, width, height];
+            displayedFrame.frameIndex = imageIndex;
+          }
+          displayedFrame.bbox.displayControl = {
+            ...displayedFrame.bbox.displayControl,
+            hidden: !newCoords,
+          };
+          displayedFrame.hidden = !newCoords;
+          return { ...object, displayedFrame };
         }
-        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-        displayedBox.hidden = !newCoords;
-        return { ...object, displayedBox };
+        return object;
       }),
     );
   };
 
   $: {
     const shape = $newShape;
-    const box = $itemBoxBeingEdited;
+    const keyFrame = $keyFrameBeingEdited;
     if (shape.status === "editing") {
-      if (box) {
-        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
+      if (keyFrame) {
+        itemObjects.update((objects) => editKeyBoxInTracklet(objects, keyFrame, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }

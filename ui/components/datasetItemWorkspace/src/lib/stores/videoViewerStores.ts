@@ -15,8 +15,8 @@
 
 // Imports
 import { writable } from "svelte/store";
-import type { VideoItemBBox } from "@pixano/core";
+import type { KeyVideoFrame } from "@pixano/core";
 
 // Exports
-export const itemBoxBeingEdited = writable<(VideoItemBBox & { objectId: string }) | null>();
+export const keyFrameBeingEdited = writable<(KeyVideoFrame & { objectId: string }) | null>();
 export const lastFrameIndex = writable<number>();
