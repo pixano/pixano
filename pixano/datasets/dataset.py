@@ -59,7 +59,7 @@ class Dataset:
         path (Path | S3Path): Dataset path
         info (DatasetInfo, optional): Dataset info
         dataset_schema (DatasetSchema, optional): Dataset schema
-        features_values (DatasetItemValues, optional): Dataset features values
+        features_values (DatasetFeaturesValues, optional): Dataset features values
         stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
