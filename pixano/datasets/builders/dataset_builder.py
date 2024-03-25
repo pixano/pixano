@@ -2,80 +2,21 @@ import abc
 import concurrent
 import os
 import pathlib
-from typing import Any, Dict, Iterator, List, Type, _GenericAlias
+from typing import Any, Dict, Iterator, Type
 
 import duckdb
 import lancedb
 import lancedb.pydantic
-import pydantic
-import pydantic_core
 import shortuuid
 import tqdm
+
+from pixano.datasets.dataset_schema import DatasetFeatures, DatasetSchema
 
 from .. import dataset
 from ..dataset_info import DatasetInfo
 from ..features.schemas import image as image_schema
-from ..features.schemas import item as item_schema
-from ..features.schemas import object as object_schema
 from ..features.schemas import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
-
-
-# from ..dataset_schema import (
-#     DatasetSchema,
-#     _generate_dataset_schema_dict_from_dataset_features_schema,
-# )
-
-
-def _table_name_to_schema(cls):
-    # extra item fields infered from the cls
-    item_fields = {}
-
-    # table schemas
-    schemas = {}
-
-    for field_name, field in cls.model_fields.items():
-        if isinstance(field.annotation, _GenericAlias):
-            origin = field.annotation.__origin__
-            args = field.annotation.__args__
-
-            if origin == list or origin == List:
-                if object_schema.is_object(args[0]):
-                    # Categorizing List of Object as objects
-                    schemas[field_name] = args[0]
-                else:
-                    # Handling list of simple types (e.g., List[float])
-                    default_value = (
-                        ...
-                        if isinstance(
-                            field.default, pydantic_core.PydanticUndefinedType
-                        )
-                        else field.default
-                    )
-                    item_fields[field_name] = (list[args[0]], default_value)
-            else:
-                # Default case: categorize as item attribute
-                item_fields[field_name] = (args[0], default_value)
-        # any subclass of LanceModel is considered as a table schema on its own
-        elif issubclass(field.annotation, lancedb.pydantic.LanceModel):
-            # Categorizing Image as a view
-            schemas[field_name] = field.annotation
-        else:
-            default_value = (
-                ...
-                if isinstance(field.default, pydantic_core.PydanticUndefinedType)
-                else field.default
-            )
-            # Default case: categorize as item attribute
-            item_fields[field_name] = (field.annotation, default_value)
-
-    DatasetItem = pydantic.create_model(
-        cls.__name__, **item_fields, __base__=item_schema.Item
-    )
-
-    schemas["item"] = DatasetItem
-
-    return schemas
 
 
 class DatasetBuilder(abc.ABC):
@@ -94,7 +35,7 @@ class DatasetBuilder(abc.ABC):
         self,
         source_dir: os.PathLike,
         target_dir: os.PathLike,
-        schemas: Type[Any],
+        schemas: Type[DatasetFeatures],
         info: DatasetInfo,
         mode: str = "create",
     ):
@@ -104,7 +45,8 @@ class DatasetBuilder(abc.ABC):
             source_dir (os.PathLike): The source directory for the dataset.
             target_dir (os.PathLike): The target directory for the dataset.
             schemas (dict[str, Any]): The schemas for the dataset tables.
-            info (dict[str, Any]): User informations (name, description, splits) for the dataset.
+            info (dict[str, Any]): User informations (name, description, splits)
+            for the dataset.
             mode (str, optional): The mode for creating the dataset.
 
         """
@@ -115,10 +57,8 @@ class DatasetBuilder(abc.ABC):
         self._info = info
         self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
-        self._schemas = _table_name_to_schema(schemas)
-
-        # # save schema.json
-        # DatasetSchema.from_dataset_features(schemas, self._target_dir).save()
+        self._dataset_schema: DatasetSchema = schemas.to_dataset_schema()
+        self._schemas = self._dataset_schema.schemas
 
     def build(self) -> dataset.Dataset:
         """Build the dataset.
@@ -147,6 +87,9 @@ class DatasetBuilder(abc.ABC):
         self._info.id = shortuuid.uuid()
         self._info.num_elements = count + 1
         self._info.to_json(self._target_dir / dataset.Dataset.INFO_FILE)
+        # save schema.json
+
+        self._dataset_schema.to_json(self._target_dir / dataset.Dataset.SCHEMA_FILE)
 
     @abc.abstractmethod
     def _generate_items(self) -> Iterator[Dict[str, Any]]:
@@ -205,7 +148,8 @@ class DatasetBuilder(abc.ABC):
             .to_dict(orient="records")
         )
 
-        # store previews in the previews directory {previews_path}/{table_name}/{item_id}.mp4
+        # store previews in the previews directory
+        # {previews_path}/{table_name}/{item_id}.mp4
         previews_path = self._previews_path / table_name
         if not previews_path.exists():
             previews_path.mkdir(parents=True)

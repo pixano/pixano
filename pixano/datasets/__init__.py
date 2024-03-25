@@ -14,14 +14,17 @@
 from .dataset import Dataset
 from .dataset_info import DatasetInfo
 from .dataset_item import DatasetItem
+from .dataset_schema import DatasetFeatures, DatasetSchema
 from .dataset_stat import DatasetStat
 from .dataset_table import DatasetTable
 
 
 __all__ = [
     "Dataset",
+    "DatasetFeatures",
     "DatasetInfo",
     "DatasetItem",
+    "DatasetSchema",
     "DatasetStat",
     "DatasetTable",
 ]

@@ -12,6 +12,7 @@
 # http://www.cecill.info
 
 import json
+from enum import Enum
 from pathlib import Path
 from types import GenericAlias
 from typing import Any, List, Optional, Tuple
@@ -19,10 +20,19 @@ from typing import Any, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 from s3path import S3Path
 
-from .features import BaseSchema, DatasetFeatures, Embedding, Item, Object, View
+from .features import BaseSchema, Embedding, Item, Object, View
 from .features.schemas.group import _SchemaGroup
 from .features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
 from .features.types.registry import _TYPES_REGISTRY
+
+
+class SchemaRelation(Enum):
+    """Relation between tables."""
+
+    ONE_TO_MANY = "one_to_many"
+    MANY_TO_ONE = "many_to_one"
+    ONE_TO_ONE = "one_to_one"
+    MANY_TO_MANY = "many_to_many"
 
 
 def _get_super_type_from_dict(
@@ -57,15 +67,15 @@ def _get_super_type_from_dict(
     return sup_type
 
 
-def _generate_dataset_schema_dict_from_dataset_features_schema(
-    dataset_features: type[DatasetFeatures],
-) -> dict[str, BaseSchema]:
+def _dataset_features_to_dict(
+    dataset_features: type["DatasetFeatures"],
+) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
     # extra item fields infered from the cls
     item_fields = {}
 
     # table schemas
     dataset_schema_dict = {}
-    dataset_schema_dict["item_to_schema_collection"] = {}
+    dataset_schema_dict["relations"] = {_SchemaGroup.ITEM.value: {}}
     schemas = {}
 
     for field_name, field in dataset_features.model_fields.items():
@@ -77,7 +87,12 @@ def _generate_dataset_schema_dict_from_dataset_features_schema(
                 if issubclass(args[0], tuple(_SCHEMA_REGISTRY.values())):
                     # Categorizing List of Object as objects
                     schemas[field_name] = args[0]
-                    dataset_schema_dict["item_to_schema_collection"][field_name] = True
+                    dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][
+                        field_name
+                    ] = SchemaRelation.ONE_TO_MANY
+                    dataset_schema_dict["relations"][field_name] = {
+                        _SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
+                    }
                 else:
                     item_fields[field_name] = (list[args[0]], ...)
             else:
@@ -86,7 +101,12 @@ def _generate_dataset_schema_dict_from_dataset_features_schema(
         elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
             # Categorizing Image as a view
             schemas[field_name] = field.annotation
-            dataset_schema_dict["item_to_schema_collection"][field_name] = False
+            dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = (
+                SchemaRelation.ONE_TO_ONE
+            )
+            dataset_schema_dict["relations"][field_name] = {
+                _SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE
+            }
         else:
             # Default case: categorize as item attribute
             item_fields[field_name] = (field.annotation, ...)
@@ -98,7 +118,7 @@ def _generate_dataset_schema_dict_from_dataset_features_schema(
     return dataset_schema_dict
 
 
-def _generate_schema_json(schema: type[BaseSchema]) -> dict[str, dict[str, str]]:
+def _serialize_schema(schema: type[BaseSchema]) -> dict[str, dict[str, Any]]:
     json = {
         "schema": schema.__name__.lower().replace(" ", "_"),
         "base_schema": _get_super_type_from_dict(schema, _PIXANO_SCHEMA_REGISTRY)
@@ -139,19 +159,19 @@ def _generate_schema_json(schema: type[BaseSchema]) -> dict[str, dict[str, str]]
     return json
 
 
-def _generate_dataset_schema_json_from_dataset_schema_dict(
+def _serialize_dataset_schema_dict(
     dataset_schema_dict: dict[str, dict[str, BaseSchema] | dict[str, bool]],
 ) -> dict[str, dict[str, Any]]:
     dataset_schema_json = {
-        "item_to_schema_collection": dataset_schema_dict["item_to_schema_collection"],
+        "relations": dataset_schema_dict["relations"],
         "schemas": {},
     }
     for table_name, schema in dataset_schema_dict["schemas"].items():
-        dataset_schema_json["schemas"][table_name] = _generate_schema_json(schema)
+        dataset_schema_json["schemas"][table_name] = _serialize_schema(schema)
     return dataset_schema_json
 
 
-def _generate_schema_from_schema_json(json: dict[str, Any]):
+def _deserialize_schema(json: dict[str, Any]):
     fields = {}
     for key, value in json["fields"].items():
         if value["type"] in _TYPES_REGISTRY:
@@ -177,17 +197,15 @@ def _generate_schema_from_schema_json(json: dict[str, Any]):
     return model
 
 
-def _generate_dataset_schema_dict_from_dataset_schema_json(
+def _deserialize_dataset_schema_dict(
     json_schema: dict[str, dict[str, Any]],
 ):
     dataset_schema_dict = {
-        "item_to_schema_collection": json_schema["item_to_schema_collection"],
+        "relations": json_schema["relations"],
         "schemas": {},
     }
     for table_name, schema in json_schema["schemas"].items():
-        dataset_schema_dict["schemas"][table_name] = _generate_schema_from_schema_json(
-            schema
-        )
+        dataset_schema_dict["schemas"][table_name] = _deserialize_schema(schema)
     return dataset_schema_dict
 
 
@@ -196,12 +214,10 @@ class DatasetSchema(BaseModel):
 
     Attributes:
         schemas (dict[str, BaseSchema]): The tables.
-        _path (Path | S3Path): Dataset path
     """
 
     schemas: dict[str, type[BaseSchema]]
-    item_to_schema_collection: dict[str, bool]
-    _path: Path | S3Path = PrivateAttr()
+    relations: dict[str, dict[str, SchemaRelation]]
     _groups: dict[_SchemaGroup, list[str]] = PrivateAttr(
         {
             _SchemaGroup.ITEM: [],
@@ -225,18 +241,16 @@ class DatasetSchema(BaseModel):
                 raise ValueError(f"Invalid table type {schema}")
         return
 
-    def save(self):
+    def to_json(self, json_fp: Path | S3Path) -> None:
         """Save DatasetSchema to json file."""
-        json_path = self._path / "schema.json"
-
-        if json_path.exists():
-            old_json_content = json.loads(json_path.read_text(encoding="utf-8"))
+        if json_fp.exists():
+            old_json_content = json.loads(json_fp.read_text(encoding="utf-8"))
         else:
             old_json_content = None
 
-        json_content = _generate_dataset_schema_json_from_dataset_schema_dict(
+        json_content = _serialize_dataset_schema_dict(
             {
-                "item_to_schema_collection": self.item_to_schema_collection,
+                "relations": self.relations,
                 "schemas": self.schemas,
             }
         )
@@ -245,12 +259,11 @@ class DatasetSchema(BaseModel):
             for table, schema in json_content["schemas"].items():
                 schema["schema"] = old_json_content["schemas"][table]["schema"]
 
-        json_path.write_text(json.dumps(json_content), encoding="utf-8")
+        json_fp.write_text(json.dumps(json_content), encoding="utf-8")
 
-    def load_json(self):
+    def load_json(self, json_fp: Path | S3Path):
         """Load DatasetSchema from json file."""
-        with open(self._path / "schema.json", "r", encoding="utf-8") as f:
-            schema_json = json.load(f)
+        schema_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
         self.schemas = DatasetSchema.validate_json(schema_json)
         self._assign_table_groups()
@@ -296,16 +309,14 @@ class DatasetSchema(BaseModel):
         schema_json["schemas"] = DatasetSchema.format_table_names(
             schema_json["schemas"]
         )
-        schema_json["item_to_schema_collection"] = DatasetSchema.format_table_names(
-            schema_json["item_to_schema_collection"]
+        schema_json["relations"] = DatasetSchema.format_table_names(
+            schema_json["relations"]
         )
 
         if _SchemaGroup.ITEM.value not in schema_json["schemas"].keys():
             raise ValueError(f"Schema should contain a {_SchemaGroup.ITEM.value} key.")
 
-        dataset_schema_dict = _generate_dataset_schema_dict_from_dataset_schema_json(
-            schema_json
-        )
+        dataset_schema_dict = _deserialize_dataset_schema_dict(schema_json)
 
         return DatasetSchema.model_validate(dataset_schema_dict, *args, **kwargs)
 
@@ -324,8 +335,8 @@ class DatasetSchema(BaseModel):
         schema_dict["schemas"] = DatasetSchema.format_table_names(
             schema_dict["schemas"]
         )
-        schema_dict["item_to_schema_collection"] = DatasetSchema.format_table_names(
-            schema_dict["item_to_schema_collection"]
+        schema_dict["relations"] = DatasetSchema.format_table_names(
+            schema_dict["relations"]
         )
         return DatasetSchema.model_validate(schema_dict, *args, **kwargs)
 
@@ -341,23 +352,15 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
-        if isinstance(json_fp, S3Path):
-            with json_fp.open(encoding="utf-8") as json_file:
-                schema_json = json.load(json_file)
-        else:
-            with open(json_fp, encoding="utf-8") as json_file:
-                schema_json = json.load(json_file)
+        schema_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
         schema = DatasetSchema.validate_json(schema_json)
-        schema._path = json_fp.parent
         schema._assign_table_groups()
 
         return schema
 
     @staticmethod
-    def from_dataset_features(
-        model: type[DatasetFeatures], save_path: Path | S3Path
-    ) -> "DatasetSchema":
+    def from_dataset_features(model: type["DatasetFeatures"]) -> "DatasetSchema":
         """Create DatasetSchema from a DatasetFeatures.
 
         Args:
@@ -367,11 +370,26 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
-        dataset_schema_dict = (
-            _generate_dataset_schema_dict_from_dataset_features_schema(model)
-        )
+        dataset_schema_dict = _dataset_features_to_dict(model)
         schema = DatasetSchema.validate_dict(dataset_schema_dict)
-        schema._path = save_path
         schema._assign_table_groups()
 
         return schema
+
+
+class DatasetFeatures(BaseSchema):
+    """Dataset Features."""
+
+    def to_dataset_schema(self) -> DatasetSchema:
+        """Convert DatasetFeaturesValues to a DatasetSchema."""
+        return DatasetSchema.from_dataset_features(self)
+
+    def to_dataset_schema_dict(
+        self,
+    ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
+        """Convert DatasetFeaturesValues to a dataset schema dict."""
+        return _dataset_features_to_dict(self)
+
+    def serialize(self) -> dict[str, dict[str, Any]]:
+        """Serialize DatasetFeaturesValues."""
+        return _serialize_dataset_schema_dict(_dataset_features_to_dict(self))

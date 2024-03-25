@@ -11,7 +11,6 @@
 #
 # http://www.cecill.info
 
-from .dataset_features import DatasetFeatures
 from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
 from .schemas.image import Image, is_image
@@ -37,7 +36,6 @@ __all__ = [
     "BaseSchema",
     "BBox",
     "CompressedRLE",
-    "DatasetFeatures",
     "Embedding",
     "Image",
     "Item",

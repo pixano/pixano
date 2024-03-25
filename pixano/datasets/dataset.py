@@ -29,7 +29,7 @@ from .dataset_item import (
     create_custom_dataset_item_class_from_dataset_schema,
     create_sub_dataset_item,
 )
-from .dataset_schema import DatasetSchema
+from .dataset_schema import DatasetSchema, SchemaRelation
 from .dataset_stat import DatasetStat
 from .features.schemas.group import _SchemaGroup
 
@@ -98,11 +98,7 @@ class Dataset:
         self.dataset_schema = DatasetSchema.from_json(schema_file)
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
         self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else None
-        self.thumbnail = (
-            Thumbnail(uri=thumb_file.absolute().as_uri()).url
-            if thumb_file.is_file()
-            else None
-        )
+        self.thumbnail = thumb_file
 
         self._custom_dataset_item_class = (
             create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
@@ -235,9 +231,10 @@ class Dataset:
             is_item_table = table_name == _SchemaGroup.ITEM.value
             item_id_field = "id" if is_item_table else "item_id"
             if not is_item_table:
-                is_collection = self.dataset_schema.item_to_schema_collection[
-                    table_name
-                ]
+                is_collection = (
+                    self.dataset_schema.relations[_SchemaGroup.ITEM.value][table_name]
+                    == SchemaRelation.ONE_TO_MANY
+                )
             table_schema = self.dataset_schema.schemas[table_name]
 
             lance_query = self._search_values_by_field_in_table(
@@ -354,7 +351,6 @@ class Dataset:
                 if schema_group not in _SchemaGroup:
                     raise ValueError(f"Schema group {schema_group} not found")
                 else:
-                    print(self.dataset_schema._groups)
                     select_schemas.extend(self.dataset_schema._groups[schema_group])
         if select_schemas_per_group:
             for schema_group, schemas in select_schemas_per_group.items():

@@ -39,10 +39,10 @@ class DatasetInfo(BaseModel):
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            path (Path | S3Path): The path to the file where the DatasetInfo object will be written.
+            path (Path | S3Path): The path to the file where the DatasetInfo object
+                will be written.
         """
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.model_dump(), f)
+        json.dump(self.model_dump(), open(path, "w", encoding="utf-8"))
 
     @staticmethod
     def from_json(
@@ -56,13 +56,7 @@ class DatasetInfo(BaseModel):
         Returns:
             DatasetInfo: DatasetInfo
         """
-        if isinstance(json_fp, S3Path):
-            with json_fp.open(encoding="utf-8") as json_file:
-                info_json = json.load(json_file)
-        else:
-            with open(json_fp, encoding="utf-8") as json_file:
-                info_json = json.load(json_file)
-
+        info_json = json.load(open(json_fp, "r", encoding="utf-8"))
         info = DatasetInfo.model_validate(info_json)
 
         return info

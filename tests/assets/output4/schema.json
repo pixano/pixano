@@ -1,6 +1,7 @@
 {
-    "item_to_schema_collection": {
-        "image": false
+    "relations": {
+        "item": {"image": "one_to_one"},
+        "image": {"item": "one_to_one"}
     },
     "schemas": {
         "image": {
