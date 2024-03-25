@@ -57,7 +57,7 @@ class DatasetBuilder(abc.ABC):
         self._info = info
         self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
-        self._dataset_schema: DatasetSchema = schemas.to_dataset_schema()
+        self._dataset_schema: DatasetSchema = DatasetItem.to_dataset_schema(schemas)
         self._schemas = self._dataset_schema.schemas
 
     def build(self) -> dataset.Dataset:

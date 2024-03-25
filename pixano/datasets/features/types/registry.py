@@ -11,27 +11,41 @@
 #
 # http://www.cecill.info
 
-from typing import Dict, Type
+from typing import Type
 
-from lancedb.pydantic import LanceModel
 from pydantic import BaseModel
 
 
-ATOMIC_PYTHON_TYPES = [int, float, complex, str, bool, bytes, bytearray, memoryview]
+ATOMIC_PYTHON_TYPES: list[type] = [
+    int,
+    float,
+    complex,
+    str,
+    bool,
+    bytes,
+    bytearray,
+    memoryview,
+]
 
-_TYPES_REGISTRY: Dict[str, Type[LanceModel]] = {}
+_TYPES_REGISTRY: dict[str, Type[BaseModel]] = {}
 
 
-def _register_type_internal(cls):
+def _add_type_to_registry(cls, registry: dict[str, Type[BaseModel]]) -> None:
     if not (cls in ATOMIC_PYTHON_TYPES or issubclass(cls, BaseModel)):
         raise ValueError(
             f"Table type {type} must be a an atomic python type or "
             "derive from BaseModel."
         )
-    type_name = cls.__name__.lower().replace(" ", "_")
-    if type_name in _TYPES_REGISTRY:
-        raise ValueError(f"Type {type_name} already registered")
-    _TYPES_REGISTRY[type_name] = cls
+
+    cls_name = cls.__name__.lower().replace(" ", "_")
+    if cls_name in registry:
+        raise ValueError(f"Type {cls} already registered")
+    registry[cls_name] = cls
+    return None
+
+
+def _register_type_internal(cls):
+    _add_type_to_registry(cls, _TYPES_REGISTRY)
     return cls
 
 
