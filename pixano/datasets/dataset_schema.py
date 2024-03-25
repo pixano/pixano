@@ -163,7 +163,12 @@ def _serialize_dataset_schema_dict(
     dataset_schema_dict: dict[str, dict[str, BaseSchema] | dict[str, bool]],
 ) -> dict[str, dict[str, Any]]:
     dataset_schema_json = {
-        "relations": dataset_schema_dict["relations"],
+        "relations": {
+            schema1: {
+                schema2: relation.value for schema2, relation in relations.items()
+            }
+            for schema1, relations in dataset_schema_dict["relations"].items()
+        },
         "schemas": {},
     }
     for table_name, schema in dataset_schema_dict["schemas"].items():
@@ -201,7 +206,13 @@ def _deserialize_dataset_schema_dict(
     json_schema: dict[str, dict[str, Any]],
 ):
     dataset_schema_dict = {
-        "relations": json_schema["relations"],
+        "relations": {
+            schema1: {
+                schema2: SchemaRelation(relation)
+                for schema2, relation in relations.items()
+            }
+            for schema1, relations in json_schema["relations"].items()
+        },
         "schemas": {},
     }
     for table_name, schema in json_schema["schemas"].items():
