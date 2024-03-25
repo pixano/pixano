@@ -32,7 +32,6 @@ from .dataset_item import (
 from .dataset_schema import DatasetSchema
 from .dataset_stat import DatasetStat
 from .features.schemas.group import _SchemaGroup
-from .utils.thumbnail import Thumbnail
 
 
 def _lance_query_to_pydantic(
