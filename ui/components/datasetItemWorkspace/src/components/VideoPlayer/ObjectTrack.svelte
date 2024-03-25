@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { KeyVideoFrame, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
+  import type { KeyVideoFrame, Tracklet, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
@@ -103,7 +103,7 @@
 
   const findNeighborKeyBoxes = (
     tracklet: Tracklet,
-    frameIndex: VideoItemBBox["frameIndex"],
+    frameIndex: KeyVideoFrame["frameIndex"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
 </script>
 

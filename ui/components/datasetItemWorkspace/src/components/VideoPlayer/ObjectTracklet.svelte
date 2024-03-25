@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { Tracklet, VideoObject, VideoItemBBox, KeyVideoFrame } from "@pixano/core";
+  import type { Tracklet, VideoObject, KeyVideoFrame } from "@pixano/core";
   import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyFrame.svelte";
 
@@ -45,8 +45,8 @@
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
 
   const updateTrackletWidth = (
-    newFrameIndex: VideoItemBBox["frameIndex"],
-    draggedFrameIndex: VideoItemBBox["frameIndex"],
+    newFrameIndex: KeyVideoFrame["frameIndex"],
+    draggedFrameIndex: KeyVideoFrame["frameIndex"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;

@@ -117,20 +117,6 @@ export type ItemObjectBase = {
   review_state?: "accepted" | "rejected";
 };
 
-export type VideoItemBBox = ItemBBox & {
-  frameIndex: number;
-  hidden?: boolean;
-  type: "bbox";
-};
-
-export type VideoItemMask = ItemRLE & {
-  frameIndex: number;
-  hidden?: boolean;
-  type: "mask";
-};
-
-export type VideoItem = VideoItemBBox | VideoItemMask;
-
 export type KeyVideoFrame = {
   frameIndex: number;
   hidden?: boolean;

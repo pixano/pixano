@@ -1,11 +1,4 @@
-import type {
-  EditShape,
-  ItemObject,
-  KeyVideoFrame,
-  Tracklet,
-  VideoItemBBox,
-  VideoObject,
-} from "@pixano/core";
+import type { EditShape, ItemObject, KeyVideoFrame, Tracklet, VideoObject } from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -169,7 +162,7 @@ export const addKeyBox = (
 export const findNeighbors = (
   track: Tracklet[],
   currentTracklet: Tracklet,
-  frameIndex: VideoItemBBox["frameIndex"],
+  frameIndex: KeyVideoFrame["frameIndex"],
   lastFrameIndex: number,
 ): [number, number] => {
   const currentIntervalIndex = track.findIndex(

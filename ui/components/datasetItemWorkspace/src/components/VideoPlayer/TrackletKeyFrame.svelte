@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, KeyVideoFrame, VideoItemBBox } from "@pixano/core";
+  import type { ItemObject, KeyVideoFrame } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
   import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
@@ -28,8 +28,8 @@
   export let oneFrameInPixel: number;
   export let onEditKeyBoxClick: (keyFrame: KeyVideoFrame) => void;
   export let updateTrackletWidth: (
-    newIndex: VideoItemBBox["frameIndex"],
-    draggedIndex: VideoItemBBox["frameIndex"],
+    newIndex: KeyVideoFrame["frameIndex"],
+    draggedIndex: KeyVideoFrame["frameIndex"],
   ) => void;
 
   const onDeleteKeyBoxClick = (frame: KeyVideoFrame) => {
