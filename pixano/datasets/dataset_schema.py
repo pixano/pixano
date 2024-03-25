@@ -67,8 +67,8 @@ def _get_super_type_from_dict(
     return sup_type
 
 
-def _dataset_features_to_dict(
-    dataset_features: type["DatasetFeatures"],
+def __dataset_item_to_dict(
+    _dataset_item: type["DatasetItem"],
 ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
     # extra item fields infered from the cls
     item_fields = {}
@@ -78,7 +78,7 @@ def _dataset_features_to_dict(
     dataset_schema_dict["relations"] = {_SchemaGroup.ITEM.value: {}}
     schemas = {}
 
-    for field_name, field in dataset_features.model_fields.items():
+    for field_name, field in _dataset_item.model_fields.items():
         if isinstance(field.annotation, GenericAlias):
             origin = field.annotation.__origin__
             args = field.annotation.__args__
@@ -371,36 +371,97 @@ class DatasetSchema(BaseModel):
         return schema
 
     @staticmethod
-    def from_dataset_features(model: type["DatasetFeatures"]) -> "DatasetSchema":
-        """Create DatasetSchema from a DatasetFeatures.
+    def from__dataset_item(model: type["DatasetItem"]) -> "DatasetSchema":
+        """Create DatasetSchema from a DatasetItem.
 
         Args:
-            model (type[DatasetFeatures]): DatasetFeatures.
+            model (type[DatasetItem]): DatasetItem.
             save_path (Path | S3Path): Save path
 
         Returns:
             DatasetSchema: DatasetSchema
         """
-        dataset_schema_dict = _dataset_features_to_dict(model)
+        dataset_schema_dict = __dataset_item_to_dict(model)
         schema = DatasetSchema.validate_dict(dataset_schema_dict)
         schema._assign_table_groups()
 
         return schema
 
 
-class DatasetFeatures(BaseSchema):
-    """Dataset Features."""
+class DatasetItem(BaseModel):
+    """Dataset Item."""
 
     def to_dataset_schema(self) -> DatasetSchema:
-        """Convert DatasetFeaturesValues to a DatasetSchema."""
-        return DatasetSchema.from_dataset_features(self)
+        """Convert DatasetItemValues to a DatasetSchema."""
+        return DatasetSchema.from__dataset_item(self)
 
     def to_dataset_schema_dict(
         self,
     ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
-        """Convert DatasetFeaturesValues to a dataset schema dict."""
-        return _dataset_features_to_dict(self)
+        """Convert DatasetItemValues to a dataset schema dict."""
+        return __dataset_item_to_dict(self)
 
     def serialize(self) -> dict[str, dict[str, Any]]:
-        """Serialize DatasetFeaturesValues."""
-        return _serialize_dataset_schema_dict(_dataset_features_to_dict(self))
+        """Serialize DatasetItemValues."""
+        return _serialize_dataset_schema_dict(__dataset_item_to_dict(self))
+
+
+def create_custom_dataset_item_class_from_dataset_schema(
+    dataset_schema: DatasetSchema,
+) -> type[DatasetItem]:
+    """Create a custom dataset item class based on the schema.
+
+    Args:
+        dataset_schema (DatasetSchema): The dataset schema
+
+    Returns:
+        type[DatasetItem]: The custom dataset item class
+    """
+    item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
+    fields = {}
+
+    for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
+        # Add default value in case an item does not have a specific view or object.
+        if relation == SchemaRelation.ONE_TO_MANY:
+            fields[schema] = (list[dataset_schema.schemas[schema]], [])
+        else:
+            fields[schema] = (dataset_schema.schemas[schema], None)
+
+    for field_name, field in item_type.model_fields.items():
+        # No default value as all items metadata should be retrieved.
+        fields[field_name] = (field.annotation, ...)
+
+    CustomDatasetItem = create_model(
+        "CustomDatasetItem",
+        **fields,
+        __base__=DatasetItem,
+    )
+    CustomDatasetItem.__doc__ = "CustomDatasetItem"
+    return CustomDatasetItem
+
+
+def create_sub_dataset_item(
+    dataset_item: type[DatasetItem],
+    selected_fields: list[str],
+) -> type[DatasetItem]:
+    """Create a sub dataset item based on the selected fields.
+
+    Args:
+        dataset_item (DatasetItem): The dataset item
+        selected_fields (list[str]): The selected fields
+
+    Returns:
+        DatasetItem: The sub dataset item
+    """
+    kept_fields = {}
+    for field_name, field in dataset_item.model_fields.items():
+        if field_name in selected_fields or field_name == "id":
+            kept_fields[field_name] = (field.annotation, field.default)
+
+    CustomDatasetItem = create_model(
+        "CustomDatasetItem",
+        **kept_fields,
+        __base__=DatasetItem,
+    )
+
+    return CustomDatasetItem

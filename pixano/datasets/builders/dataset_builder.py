@@ -10,7 +10,7 @@ import lancedb.pydantic
 import shortuuid
 import tqdm
 
-from pixano.datasets.dataset_schema import DatasetFeatures, DatasetSchema
+from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
 from .. import dataset
 from ..dataset_info import DatasetInfo
@@ -35,7 +35,7 @@ class DatasetBuilder(abc.ABC):
         self,
         source_dir: os.PathLike,
         target_dir: os.PathLike,
-        schemas: Type[DatasetFeatures],
+        schemas: Type[DatasetItem],
         info: DatasetInfo,
         mode: str = "create",
     ):

@@ -24,12 +24,13 @@ from s3path import S3Path
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
-from .dataset_item import (
+from .dataset_schema import (
     DatasetItem,
+    DatasetSchema,
+    SchemaRelation,
     create_custom_dataset_item_class_from_dataset_schema,
     create_sub_dataset_item,
 )
-from .dataset_schema import DatasetSchema, SchemaRelation
 from .dataset_stat import DatasetStat
 from .features.schemas.group import _SchemaGroup
 
@@ -58,7 +59,7 @@ class Dataset:
         path (Path | S3Path): Dataset path
         info (DatasetInfo, optional): Dataset info
         dataset_schema (DatasetSchema, optional): Dataset schema
-        features_values (DatasetFeaturesValues, optional): Dataset features values
+        features_values (DatasetItemValues, optional): Dataset features values
         stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
     """
