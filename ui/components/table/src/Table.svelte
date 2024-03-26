@@ -183,10 +183,7 @@
           >
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs>
-                <th
-                  {...attrs}
-                  class="relative py-4 font-semibold"
-                >
+                <th {...attrs} class="relative py-4 font-semibold">
                   <Render of={cell.render()} />
                 </th>
               </Subscribe>
