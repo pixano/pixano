@@ -12,6 +12,10 @@ All notable changes to Pixano will be documented in this file.
 - Add new GroundingDINO model (pixano#184)
 - Support for list features (pixano#190)
 
+### Changed
+
+- Data table refactor and added fonts back (pixano#217)
+
 ### Fixed
 
 - FeaturesList bugs (pixano#208)
