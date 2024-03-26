@@ -47,7 +47,7 @@
   const handleFormSubmit = () => {
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     itemObjects.update((oldObjects) => {
-      if (shape.status !== "inProgress") return oldObjects;
+      if (shape.status !== "saving") return oldObjects;
       let newObject: ItemObject | null = null;
       const baseObject = {
         id: nanoid(10),
@@ -103,7 +103,7 @@
   }
 </script>
 
-{#if shape.status === "inProgress"}
+{#if shape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">

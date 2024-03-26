@@ -37,7 +37,7 @@
 </script>
 
 <div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
-  {#if shape?.status === "inProgress"}
+  {#if shape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
     <Tabs.Root bind:value={currentTab} class="h-full">
