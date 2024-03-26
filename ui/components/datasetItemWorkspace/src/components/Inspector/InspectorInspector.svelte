@@ -36,7 +36,7 @@
   });
 </script>
 
-<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100">
+<div class="h-full max-h-screen shadow-sm border-l border-slate-200 bg-slate-100 font-Montserrat">
   {#if shape?.status === "saving"}
     <SaveShapeForm bind:currentTab />
   {:else}
