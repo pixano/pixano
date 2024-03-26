@@ -2,12 +2,12 @@ import type { DatasetItem } from "@pixano/core";
 
 export const items: Array<DatasetItem> = [
   {
-    id: "139",
+    id: "1",
     original_id: null,
     split: "val",
     features: {
-      hist1: {
-        name: "hist1",
+      categories: {
+        name: "categories",
         dtype: "histogram",
         value: {
           name: "categories",
@@ -20,6 +20,11 @@ export const items: Array<DatasetItem> = [
             { categories: "cat", counts: 150000, split: "train" },
           ],
         },
+      },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
       },
     },
     views: {
@@ -38,12 +43,12 @@ export const items: Array<DatasetItem> = [
     embeddings: null,
   },
   {
-    id: "285",
+    id: "3",
     original_id: null,
     split: "val",
     features: {
-      hist1: {
-        name: "hist1",
+      categories: {
+        name: "categories",
         dtype: "histogram",
         value: {
           name: "categories",
@@ -56,6 +61,11 @@ export const items: Array<DatasetItem> = [
             { categories: "cat", counts: 150000, split: "train" },
           ],
         },
+      },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
       },
     },
     views: {
@@ -74,12 +84,12 @@ export const items: Array<DatasetItem> = [
     embeddings: null,
   },
   {
-    id: "632",
+    id: "2",
     original_id: null,
-    split: "val",
+    split: "train",
     features: {
-      hist1: {
-        name: "hist1",
+      categories: {
+        name: "categories",
         dtype: "histogram",
         value: {
           name: "categories",
@@ -92,6 +102,11 @@ export const items: Array<DatasetItem> = [
             { categories: "cat", counts: 150000, split: "train" },
           ],
         },
+      },
+      video: {
+        name: "video",
+        dtype: "video",
+        value: "https://www.w3schools.com/html/mov_bbb.mp4",
       },
     },
     views: {
