@@ -19,27 +19,30 @@ _PIXANO_SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
 _SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
 
 
-def _register_schema_internal(schema: type[BaseSchema]) -> type[BaseSchema]:
+def _add_schema_to_registry(
+    schema: Type[BaseSchema], registry: Dict[str, Type[BaseSchema]]
+) -> None:
     if not issubclass(schema, BaseSchema):
-        raise ValueError(f"Table type {type} must be a subclass of BaseSchema")
+        raise ValueError(f"Schema {schema} must be a subclass of BaseSchema")
+
     schema_name = schema.__name__.lower().replace(" ", "_")
-    if schema_name in _PIXANO_SCHEMA_REGISTRY:
-        raise ValueError(f"Table type {schema_name} already registered")
-    _PIXANO_SCHEMA_REGISTRY[schema_name] = schema
-    _SCHEMA_REGISTRY[schema_name] = schema
-    return schema
+    if schema_name in registry:
+        raise ValueError(f"Schema {schema} already registered")
+    registry[schema_name] = schema
+    return None
 
 
-def register_schema(schema: type[BaseSchema]) -> None:
-    """Register a schema.
+def register_schema(cls):
+    """Class decorator to register a schema.
 
     Args:
-        schema: The schema to register.
+        cls: The schema to register.
     """
-    if not issubclass(schema, BaseSchema):
-        raise ValueError(f"Table type {type} must be a subclass of BaseSchema")
-    schema_name = schema.__name__.lower().replace(" ", "_")
-    if schema_name in _SCHEMA_REGISTRY:
-        raise ValueError(f"Table type {schema_name} already registered")
-    _SCHEMA_REGISTRY[schema_name] = schema
-    return None
+    _add_schema_to_registry(cls, _SCHEMA_REGISTRY)
+    return cls
+
+
+def _register_schema_internal(cls):
+    _add_schema_to_registry(cls, _SCHEMA_REGISTRY)
+    _add_schema_to_registry(cls, _PIXANO_SCHEMA_REGISTRY)
+    return cls

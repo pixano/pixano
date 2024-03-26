@@ -4,6 +4,7 @@ import pydantic
 from .registry import _register_type_internal
 
 
+@_register_type_internal
 class NDArrayFloat(pydantic.BaseModel):
     """Represents an N-dimensional array of floating-point values.
 
@@ -27,6 +28,3 @@ class NDArrayFloat(pydantic.BaseModel):
                 the input array.
         """
         return cls(values=arr.reshape(-1).tolist(), shape=list(arr.shape))
-
-
-_register_type_internal(NDArrayFloat)

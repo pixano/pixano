@@ -19,6 +19,7 @@ from ..types.compressed_rle import CompressedRLE
 from .base_schema import BaseSchema
 
 
+@_register_schema_internal
 class Object(BaseSchema):
     """Object Lance Model."""
 
@@ -26,18 +27,21 @@ class Object(BaseSchema):
     view_id: str
 
 
+@_register_schema_internal
 class ObjectWithBBox(Object):
     """Object with Bounding Box Lance Model."""
 
     bbox: BBox
 
 
+@_register_schema_internal
 class ObjectWithMask(Object):
     """Object with Mask Lance Model."""
 
     mask: CompressedRLE
 
 
+@_register_schema_internal
 class ObjectWithBBoxAndMask(Object):
     """Object with Bounding Box and Mask Lance Model."""
 
@@ -55,9 +59,3 @@ def is_object(cls: typing.Any) -> bool:
         bool: True if the class is a subclass of Object, False otherwise.
     """
     return issubclass(cls, Object)
-
-
-_register_schema_internal(Object)
-_register_schema_internal(ObjectWithBBox)
-_register_schema_internal(ObjectWithMask)
-_register_schema_internal(ObjectWithBBoxAndMask)
