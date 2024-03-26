@@ -53,6 +53,7 @@
         value={feature.value}
         onTextInputChange={(value) => onTextInputChange(value, feature.name)}
         featureList={mapFeatureList($itemMetas.featuresList?.[featureClass][feature.name])}
+        isInputEnabled={!$itemMetas.featuresList?.[featureClass][feature.name]?.restricted}
       />
     {:else}
       <Input

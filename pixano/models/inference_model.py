@@ -143,6 +143,7 @@ class InferenceModel(ABC):
         views: list[str],
         uri_prefix: str,
         threshold: float = 0.0,
+        prompt: str = "",
     ) -> list[dict]:
         """Generate annotations for dataset rows
 
@@ -151,6 +152,7 @@ class InferenceModel(ABC):
             views (list[str]): Dataset views
             uri_prefix (str): URI prefix for media files
             threshold (float, optional): Confidence threshold. Defaults to 0.0.
+            prompt (str, optional): Annotation text prompt. Defaults to "".
 
         Returns:
             list[dict]: Annotation rows
@@ -181,6 +183,7 @@ class InferenceModel(ABC):
         splits: list[str] = None,
         batch_size: int = 1,
         threshold: float = 0.0,
+        prompt: str = "",
     ) -> Dataset:
         """Process dataset for annotations or embeddings
 
@@ -195,6 +198,7 @@ class InferenceModel(ABC):
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per process batch. Defaults to 1.
             threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
+            prompt (str, optional): Annotation text prompt. Defaults to "".
 
         Returns:
             Dataset: Dataset
@@ -252,7 +256,7 @@ class InferenceModel(ABC):
                         self.precompute_embeddings(process_batch, views, uri_prefix)
                         if "emb" in process_type
                         else self.preannotate(
-                            process_batch, views, uri_prefix, threshold
+                            process_batch, views, uri_prefix, threshold, prompt
                         )
                     )
                     progress.update(batch_size)

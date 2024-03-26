@@ -1187,6 +1187,6 @@
     { "supercategory": "indoor", "id": 88, "name": "teddy bear" },
     { "supercategory": "indoor", "id": 89, "name": "hair drier" },
     { "supercategory": "indoor", "id": 90, "name": "toothbrush" },
-    { "supercategory": "indoor", "id": 90, "name": "hair brush" }
+    { "supercategory": "indoor", "id": 91, "name": "hair brush" }
   ]
 }

@@ -20,8 +20,8 @@ from urllib.parse import urlparse
 import shortuuid
 
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data.dataset import DatasetCategory
 from pixano.data.importers.importer import Importer
+from pixano.data.item.item_feature import FeaturesValues, FeatureValues
 from pixano.utils import image_to_thumbnail, natural_key
 
 
@@ -51,30 +51,59 @@ class COCOImporter(Importer):
             media_fields (dict[str, str]): Dataset media fields, with field names as keys and field types as values. Default to None.
         """
 
-        # Create tables
-        tables = super().create_tables(
-            media_fields,
-            object_fields={
-                "original_id": "str",
-                "bbox": "bbox",
-                "mask": "compressedrle",
-                "category": "str",
-            },
-        )
+        # Object fields
+        object_fields = {
+            "original_id": "str",
+            "bbox": "bbox",
+            "mask": "compressedrle",
+            "category": "str",
+            "category_id": "int",
+            "supercategory": "str",
+        }
 
-        # Create categories
-        categories = []
+        # Create features_values
+        features_values = FeaturesValues(
+            objects={
+                "category": FeatureValues(restricted=False, values=[]),
+                "category_id": FeatureValues(restricted=False, values=[]),
+                "supercategory": FeatureValues(restricted=False, values=[]),
+            }
+        )
         for split in splits:
             with open(
                 input_dirs["objects"] / f"instances_{split}.json", "r", encoding="utf-8"
             ) as f:
                 coco_instances = json.load(f)
-                for category in coco_instances["categories"]:
-                    categories.append(DatasetCategory.model_validate(category))
+                if "categories" in coco_instances:
+                    for category in coco_instances["categories"]:
+                        features_values.objects["category"].values.append(
+                            category["name"]
+                        )
+                        features_values.objects["category_id"].values.append(
+                            category["id"]
+                        )
+                        if "supercategory" in category:
+                            features_values.objects["supercategory"].values.append(
+                                category["supercategory"]
+                            )
+        if len(features_values.objects["supercategory"].values) == 0:
+            features_values.objects.pop("supercategory")
+            object_fields.pop("supercategory")
+        else:
+            features_values.objects["supercategory"].values = list(
+                set(features_values.objects["supercategory"].values)
+            )
+        FeaturesValues.model_validate(features_values)
+
+        # Create tables
+        tables = super().create_tables(
+            media_fields,
+            object_fields,
+        )
 
         # Initialize Importer
         self.input_dirs = input_dirs
-        super().__init__(name, description, tables, splits, categories)
+        super().__init__(name, description, tables, splits, features_values)
 
     def import_rows(self) -> Iterator:
         """Process dataset rows for import
@@ -98,10 +127,14 @@ class COCOImporter(Importer):
             for ann in coco_instances["annotations"]:
                 annotations[ann["image_id"]].append(ann)
 
-            # Create a COCO category id to COCO category name dictionary
+            # Create a COCO category id to COCO category name and supercategory dictionary
             categories = {}
+            supercategories = {}
             for cat in coco_instances["categories"]:
                 categories[cat["id"]] = cat["name"]
+                supercategories[cat["id"]] = (
+                    cat["supercategory"] if "supercategory" in cat else None
+                )
 
             # Process rows
             for im in sorted(
@@ -167,10 +200,17 @@ class COCOImporter(Importer):
                                     else None
                                 ),
                                 "category": str(categories[ann["category_id"]]),
+                                "category_id": ann["category_id"],
+                                "supercategory": supercategories[ann["category_id"]],
                             }
                             for ann in im_anns
                         ]
                     },
                 }
+
+                # Remove supercategory if empty
+                for obj in rows["objects"]["objects"]:
+                    if obj["supercategory"] is None:
+                        obj.pop("supercategory")
 
                 yield rows

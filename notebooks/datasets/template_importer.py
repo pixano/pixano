@@ -16,7 +16,8 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from pixano.core import BBox, CompressedRLE, Image
-from pixano.data import DatasetCategory, Importer
+from pixano.data import Importer
+from pixano.data.item.item_feature import FeaturesValues, FeatureValues
 from pixano.utils import coco_names_91, image_to_thumbnail
 
 
@@ -88,8 +89,14 @@ class TemplateImporter(Importer):
             if not any(source_path.iterdir()):
                 raise FileNotFoundError(f"{source_path} is empty.")
 
-        ##### Retrieve your categories (or define them manually) #####
-        categories = [DatasetCategory(id=i, name=f"Category {i}") for i in range(1, 40)]
+        # #### Retrieve your categories (or define them manually) #####
+        features_values = FeaturesValues(
+            objects={
+                "category": FeatureValues(
+                    restricted=False, values=[f"Category {i}" for i in range(1, 40)]
+                )
+            }
+        )
 
         # Initialize Importer
         super().__init__(
@@ -97,7 +104,7 @@ class TemplateImporter(Importer):
             description=description,
             tables=tables,
             splits=splits,
-            categories=categories,
+            features_values=features_values,
         )
 
     def import_rows(self) -> Iterator:
@@ -108,10 +115,10 @@ class TemplateImporter(Importer):
         """
 
         for split in self.info.splits:
-            ##### Retrieve your annotations #####
+            # #### Retrieve your annotations #####
             annotations = self.input_dirs["objects"] / "......"
 
-            ##### Retrieve your images #####
+            # #### Retrieve your images #####
             image_paths = glob.glob(str(self.input_dirs["image"] / split / "......"))
 
             # Process rows
@@ -124,7 +131,7 @@ class TemplateImporter(Importer):
                 image = Image(im_uri, None, im_thumb)
                 w, h = image.size
 
-                ##### Load image annotation #####
+                # #### Load image annotation #####
                 im_anns = annotations[im_path]
 
                 # Return rows
