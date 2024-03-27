@@ -15,7 +15,7 @@ import json
 from enum import Enum
 from pathlib import Path
 from types import GenericAlias
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 from s3path import S3Path
@@ -37,7 +37,7 @@ class SchemaRelation(Enum):
 
 def _get_super_type_from_dict(
     sub_type: type, dict_types: dict[str, type]
-) -> Optional[type]:
+) -> type | None:
     """Get the first super type in a dictionary of types from type."""
     if sub_type in dict_types.values():
         return sub_type
@@ -83,7 +83,7 @@ def _dataset_item_to_dict(
             origin = field.annotation.__origin__
             args = field.annotation.__args__
 
-            if origin in [list, List, tuple, Tuple]:
+            if origin in [list, tuple]:
                 if issubclass(args[0], tuple(_SCHEMA_REGISTRY.values())):
                     # Categorizing List of Object as objects
                     schemas[field_name] = args[0]
@@ -131,7 +131,7 @@ def _serialize_schema(schema: type[BaseSchema]) -> dict[str, dict[str, Any]]:
             origin = field.annotation.__origin__
             args = field.annotation.__args__
 
-            if origin in [list, List, tuple, Tuple]:
+            if origin in [list, tuple]:
                 if issubclass(args[0], tuple(_TYPES_REGISTRY.values())):
                     fields[field_name] = {
                         "type": args[0].__name__.lower().replace(" ", "_"),
@@ -371,7 +371,7 @@ class DatasetSchema(BaseModel):
         return schema
 
     @staticmethod
-    def from__dataset_item(model: type["DatasetItem"]) -> "DatasetSchema":
+    def from_dataset_item(model: type["DatasetItem"]) -> "DatasetSchema":
         """Create DatasetSchema from a DatasetItem.
 
         Args:
