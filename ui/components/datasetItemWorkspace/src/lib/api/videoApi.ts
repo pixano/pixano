@@ -58,7 +58,7 @@ export const rectangleLinearInterpolation = (track: Tracklet[], imageIndex: numb
 
 export const updateFrameWithInterpolatedBox = (object: VideoObject, imageIndex: number) => {
   const { displayedFrame } = object;
-  if (!displayedFrame.bbox) return;
+  if (!displayedFrame?.bbox) return;
   const bbox = { ...displayedFrame.bbox };
   const newCoords = rectangleLinearInterpolation(object.track, imageIndex);
   console.log({ newCoords, imageIndex });
@@ -102,9 +102,7 @@ export const updateFrameWithInterpolatedMask = (
   object: VideoObject,
   imageIndex: number,
 ): ItemRLE | undefined => {
-  const {
-    displayedFrame: { mask },
-  } = object;
+  const { mask } = object.displayedFrame || {};
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
@@ -157,6 +155,7 @@ export const editKeyFrameInTracklet = (
   return objects.map((object) => {
     if (object.id === shape.shapeId && object.datasetItemType === "video") {
       let currentDisplayedKeyFrame = object.displayedFrame;
+      if (!object.displayedFrame) return object;
       const newTrack = object.track.map((tracklet) => {
         const isKeyFrameBeingEditedInTracklet =
           tracklet.start <= keyFrameBeingEdited.frameIndex &&
@@ -165,13 +164,19 @@ export const editKeyFrameInTracklet = (
           const newKeyFrames = tracklet.keyFrames.map((keyFrame) => {
             let newKeyFrame = keyFrame;
             if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-              if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
+              if (
+                shape.type === "rectangle" &&
+                newKeyFrame.bbox &&
+                object.displayedFrame &&
+                object.displayedFrame.bbox
+              ) {
                 newKeyFrame.bbox.coords = shape.coords;
                 object.displayedFrame.bbox.coords = shape.coords;
               }
               if (
                 shape.type === "mask" &&
                 newKeyFrame.mask &&
+                object.displayedFrame &&
                 object.displayedFrame.mask &&
                 keyFrame.frameIndex === keyFrameBeingEdited.frameIndex
               ) {

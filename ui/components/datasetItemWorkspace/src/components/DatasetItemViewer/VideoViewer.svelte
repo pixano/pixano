@@ -71,14 +71,14 @@
         if (object.datasetItemType !== "video") return object;
         const bbox = updateFrameWithInterpolatedBox(object, imageIndex);
         const mask = updateFrameWithInterpolatedMask(object, imageIndex);
-        const displayedFrame = {
-          ...object.displayedFrame,
+        let displayedFrame = object.displayedFrame || object.track[0].keyFrames[0] || {};
+        displayedFrame = {
+          ...displayedFrame,
           bbox,
           mask,
           frameIndex: imageIndex,
           hidden: !bbox && !mask,
         };
-
         return { ...object, displayedFrame };
       }),
     );

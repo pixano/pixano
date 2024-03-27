@@ -45,9 +45,9 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  const box = obj.datasetItemType === "video" ? obj.displayedFrame.bbox : obj.bbox;
+  const box = obj.datasetItemType === "video" ? obj.displayedFrame?.bbox : obj.bbox;
 
-  if (!box || (obj.datasetItemType === "video" && obj.displayedFrame.hidden)) return;
+  if (!box || (obj.datasetItemType === "video" && obj.displayedFrame?.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
@@ -82,7 +82,7 @@ export const convertMaskCountToPoints = (mask: ItemRLE): [MaskSVG, MaskPoints] =
 };
 
 export const mapObjectToMasks = (obj: ItemObject) => {
-  const mask = obj.datasetItemType === "video" ? obj.displayedFrame.mask : obj.mask;
+  const mask = obj.datasetItemType === "video" ? obj.displayedFrame?.mask : obj.mask;
   if (
     !mask ||
     obj.review_state ||

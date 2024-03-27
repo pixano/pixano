@@ -134,7 +134,7 @@ export interface Tracklet {
 export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
-  displayedFrame: KeyVideoFrame;
+  displayedFrame?: KeyVideoFrame;
 };
 
 export type ImageObject = ItemObjectBase & {
