@@ -12,6 +12,7 @@ import type {
   PolygonGroupPoint,
   MaskPoints,
   MaskSVG,
+  ItemBBox,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -226,9 +227,40 @@ export const mapObjectWithNewStatus = (
 
 export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
 
+const createObjectFromShape = (
+  baseObject: Pick<ItemObject, "item_id" | "source_id" | "view_id" | "features" | "id">,
+  isVideo: boolean,
+  trackItem: { bbox?: ItemBBox; mask?: ItemRLE },
+  lastFrameIndex: number,
+): ItemObject => {
+  if (isVideo) {
+    return {
+      ...baseObject,
+      datasetItemType: "video",
+      track: [
+        {
+          start: 0,
+          end: lastFrameIndex,
+          keyFrames: [
+            { ...trackItem, frameIndex: 0 },
+            { ...trackItem, frameIndex: lastFrameIndex },
+          ],
+        },
+      ],
+      displayedFrame: { ...trackItem, frameIndex: 0 },
+    };
+  } else {
+    return {
+      ...baseObject,
+      ...trackItem,
+      datasetItemType: "image",
+    };
+  }
+};
+
 export const defineCreatedObject = (
   shape: SaveShape,
-  videoType: DatasetItem["type"],
+  datasetItemType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   lastFrameIndex: number,
 ) => {
@@ -240,6 +272,7 @@ export const defineCreatedObject = (
     view_id: shape.viewId,
     features,
   };
+  const isVideo = datasetItemType === "video";
   if (shape.type === "rectangle") {
     const { x, y, width, height } = shape.attrs;
     const coords = [
@@ -254,40 +287,14 @@ export const defineCreatedObject = (
       is_normalized: true,
       confidence: 1,
     };
-    const isVideo = videoType === "video";
-    if (isVideo) {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "video",
-        track: [
-          {
-            start: 0,
-            end: lastFrameIndex,
-            keyFrames: [
-              { bbox, frameIndex: 0 },
-              { bbox, frameIndex: lastFrameIndex },
-            ],
-          },
-        ],
-        displayedFrame: { bbox, frameIndex: 0 },
-      };
-    } else {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "image",
-        bbox,
-      };
-    }
+    newObject = createObjectFromShape(baseObject, isVideo, { bbox }, lastFrameIndex);
   }
   if (shape.type === "mask") {
-    newObject = {
-      ...baseObject,
-      datasetItemType: "image",
-      mask: {
-        counts: shape.rle.counts,
-        size: shape.rle.size,
-      },
+    const mask = {
+      counts: shape.rle.counts,
+      size: shape.rle.size,
     };
+    newObject = createObjectFromShape(baseObject, isVideo, { mask }, lastFrameIndex);
   }
   return newObject;
 };
