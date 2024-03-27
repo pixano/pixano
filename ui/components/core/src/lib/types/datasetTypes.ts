@@ -13,6 +13,8 @@
  * http://www.cecill.info
  */
 
+import type { PolygonGroupPoint } from "./objectTypes";
+
 // Exports
 
 // DATASET
@@ -199,6 +201,7 @@ export interface Mask {
 }
 
 export type MaskSVG = string[];
+export type MaskPoints = PolygonGroupPoint[][];
 
 export interface BBox {
   id: string;

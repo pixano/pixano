@@ -19,8 +19,9 @@
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, SelectionTool, Shape } from "@pixano/core";
-  import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
+  import type { Mask, MaskPoints, SelectionTool, Shape } from "@pixano/core";
+  import type { PolygonShape } from "../lib/types/canvas2dTypes";
+
   import {
     sceneFunc,
     hexToRGBA,
@@ -43,10 +44,7 @@
   let canEdit = false;
   let polygonShape: PolygonShape = {
     simplifiedSvg: mask.svg,
-    simplifiedPoints: mask.svg.reduce(
-      (acc, val) => [...acc, parseSvgPath(val)],
-      [] as PolygonGroupPoint[][],
-    ),
+    simplifiedPoints: mask.svg.reduce((acc, val) => [...acc, parseSvgPath(val)], [] as MaskPoints),
   };
 
   $: canEdit = mask.editing;
@@ -54,7 +52,7 @@
   $: {
     polygonShape.simplifiedPoints = mask.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
-      [] as PolygonGroupPoint[][],
+      [] as MaskPoints,
     );
   }
 

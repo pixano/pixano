@@ -1,4 +1,14 @@
-import type { EditShape, ItemObject, KeyVideoFrame, Tracklet, VideoObject } from "@pixano/core";
+import type {
+  EditShape,
+  ItemObject,
+  ItemRLE,
+  KeyVideoFrame,
+  Tracklet,
+  VideoObject,
+} from "@pixano/core";
+
+import { convertMaskCountToPoints } from "./objectsApi";
+import { convertPointToSvg, runLengthEncode } from "@pixano/canvas2d/src/api/maskApi";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -21,7 +31,7 @@ export const getImageIndexFromMouseMove = (
   return index < 0 ? 0 : index;
 };
 
-export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
+export const rectangleLinearInterpolation = (track: Tracklet[], imageIndex: number) => {
   const currentTracklet = track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
@@ -44,6 +54,76 @@ export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
     return [x, y, width, height];
   }
   return null;
+};
+
+export const updateFrameWithInterpolatedBox = (object: VideoObject, imageIndex: number) => {
+  const { displayedFrame } = object;
+  if (!displayedFrame.bbox) return;
+  const bbox = { ...displayedFrame.bbox };
+  const newCoords = rectangleLinearInterpolation(object.track, imageIndex);
+  console.log({ newCoords, imageIndex });
+  if (newCoords) {
+    const [x, y, width, height] = newCoords;
+    bbox.coords = [x, y, width, height];
+  }
+  bbox.displayControl = {
+    ...bbox.displayControl,
+    hidden: !newCoords,
+  };
+  return bbox;
+};
+
+type KeyVideoFrameWithMask = Required<Pick<KeyVideoFrame, "mask" | "frameIndex">>;
+
+const polygonLinearInterpolation = (
+  previousFrame: KeyVideoFrameWithMask,
+  nextFrame: KeyVideoFrameWithMask,
+  imageIndex: number,
+) => {
+  const [, points] = convertMaskCountToPoints(previousFrame.mask);
+  const [, endingPoints] = convertMaskCountToPoints(nextFrame.mask);
+  return points.map((point, i) => {
+    return point.map((coord) => {
+      const startMask = points[i]?.find((p) => p.id === coord.id);
+      const endMask = endingPoints[i]?.find((p) => p.id === coord.id);
+      if (!startMask || !endMask) return coord;
+      const xInterpolation =
+        (endMask.x - startMask.x) / (nextFrame.frameIndex - previousFrame.frameIndex);
+      const yInterpolation =
+        (endMask.y - startMask.y) / (nextFrame.frameIndex - previousFrame.frameIndex);
+      const newX = coord.x + xInterpolation * (imageIndex - previousFrame.frameIndex);
+      const newY = coord.y + yInterpolation * (imageIndex - previousFrame.frameIndex);
+      return { ...coord, x: newX, y: newY };
+    });
+  });
+};
+
+export const updateFrameWithInterpolatedMask = (
+  object: VideoObject,
+  imageIndex: number,
+): ItemRLE | undefined => {
+  const {
+    displayedFrame: { mask },
+  } = object;
+  const currentTracklet = object.track.find(
+    (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
+  );
+
+  const previousFrame = currentTracklet?.keyFrames.find(
+    (keyFrame) => keyFrame.frameIndex <= imageIndex,
+  );
+  const nextFrame = currentTracklet?.keyFrames.find((keyFrame) => keyFrame.frameIndex > imageIndex);
+  if (!currentTracklet || !previousFrame?.mask || !nextFrame?.mask) return mask;
+  const newPoints = polygonLinearInterpolation(
+    { ...previousFrame, mask: previousFrame.mask },
+    { ...nextFrame, mask: nextFrame.mask },
+    imageIndex,
+  );
+
+  const newSvg = newPoints.map((point) => convertPointToSvg(point));
+  const newCounts = runLengthEncode(newSvg, 600, 338); // TODO : get image width and height
+
+  return { ...previousFrame.mask, counts: newCounts };
 };
 
 export const deleteKeyFrameFromTracklet = (
@@ -73,32 +153,144 @@ export const editKeyFrameInTracklet = (
   objects: ItemObject[],
   keyFrameBeingEdited: KeyVideoFrame,
   shape: EditShape,
-) =>
-  objects.map((object) => {
-    if (
-      shape.type === "rectangle" &&
-      object.id === shape.shapeId &&
-      object.datasetItemType === "video"
-    ) {
-      object.track = object.track.map((tracklet) => {
-        if (
+) => {
+  return objects.map((object) => {
+    if (object.id === shape.shapeId && object.datasetItemType === "video") {
+      let currentDisplayedKeyFrame = object.displayedFrame;
+      const newTrack = object.track.map((tracklet) => {
+        const isKeyFrameBeingEditedInTracklet =
           tracklet.start <= keyFrameBeingEdited.frameIndex &&
-          tracklet.end >= keyFrameBeingEdited.frameIndex
-        ) {
-          tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
+          tracklet.end >= keyFrameBeingEdited.frameIndex;
+        if (isKeyFrameBeingEditedInTracklet) {
+          const newKeyFrames = tracklet.keyFrames.map((keyFrame) => {
+            let newKeyFrame = keyFrame;
             if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-              // keyFrame.coords = shape.coords; TODO_MASK
-              // object.displayedBox.coords = shape.coords;
-              return keyFrame;
+              if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
+                newKeyFrame.bbox.coords = shape.coords;
+                object.displayedFrame.bbox.coords = shape.coords;
+              }
+              if (
+                shape.type === "mask" &&
+                newKeyFrame.mask &&
+                object.displayedFrame.mask &&
+                keyFrame.frameIndex === keyFrameBeingEdited.frameIndex
+              ) {
+                newKeyFrame = {
+                  ...newKeyFrame,
+                  mask: { ...newKeyFrame.mask, counts: shape.counts },
+                };
+
+                currentDisplayedKeyFrame = newKeyFrame;
+              }
+              return newKeyFrame;
             }
             return keyFrame;
           });
+          return { ...tracklet, keyFrames: newKeyFrames };
         }
         return tracklet;
       });
+      return { ...object, track: newTrack, displayedFrame: currentDisplayedKeyFrame };
     }
     return object;
   });
+};
+
+// export const editKeyFrameInTracklet = (
+//   objects: ItemObject[],
+//   keyFrameBeingEdited: KeyVideoFrame,
+//   shape: EditShape,
+// ) =>
+//   objects.map((object) => {
+//     console.log({ object });
+//     if (object.id === shape.shapeId && object.datasetItemType === "video") {
+//       const newTrack = object.track.map((tracklet) => {
+//         const isKeyFrameBeingEditedInTracklet =
+//           tracklet.start <= keyFrameBeingEdited.frameIndex &&
+//           tracklet.end >= keyFrameBeingEdited.frameIndex;
+//         if (isKeyFrameBeingEditedInTracklet) {
+//           console.log({ tracklet });
+//           const newKeyFrames = tracklet.keyFrames.map((keyFrame) => {
+//             console.log(1, { shape, keyFrameBeingEdited, keyFrame });
+//             if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
+//               const newKeyFrame = keyFrame;
+//               if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
+//                 newKeyFrame.bbox.coords = shape.coords;
+//                 object.displayedFrame.bbox.coords = shape.coords;
+//               }
+//               if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
+//                 console.log(2, { shape, keyFrameBeingEdited, keyFrame });
+//                 newKeyFrame.mask.counts = shape.counts;
+//                 newKeyFrame.mask.foo = "changed";
+//                 // object.displayedFrame.mask.counts = shape.counts;
+//               }
+//               console.log(2, { newKeyFrame });
+
+//               return newKeyFrame;
+//             }
+//             console.log(1, { keyFrame });
+//             return keyFrame;
+//           });
+//           return { ...tracklet, keyFrames: newKeyFrames };
+//           // tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
+//           //   console.log(1, { shape, keyFrameBeingEdited, keyFrame });
+//           //   if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
+//           //     const newKeyFrame = keyFrame;
+//           //     if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
+//           //       newKeyFrame.bbox.coords = shape.coords;
+//           //       object.displayedFrame.bbox.coords = shape.coords;
+//           //     }
+//           //     if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
+//           //       console.log(2, { shape, keyFrameBeingEdited, keyFrame });
+//           //       newKeyFrame.mask.counts = shape.counts;
+//           //       newKeyFrame.mask.foo = "changed";
+//           //       // object.displayedFrame.mask.counts = shape.counts;
+//           //     }
+//           //     console.log(2, { newKeyFrame });
+
+//           //     return newKeyFrame;
+//           //   }
+//           //   console.log(1, { keyFrame });
+//           //   return keyFrame;
+//           // });
+//         }
+//         return tracklet;
+//       });
+//       return { ...object, track: newTrack };
+//       // object.track = object.track.map((tracklet) => {
+//       //   console.log({ track: object.track });
+//       //   const isKeyFrameBeingEditedInTracklet =
+//       //     tracklet.start <= keyFrameBeingEdited.frameIndex &&
+//       //     tracklet.end >= keyFrameBeingEdited.frameIndex;
+//       //   if (isKeyFrameBeingEditedInTracklet) {
+//       //     console.log({ tracklet });
+//       //     tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
+//       //       console.log(1, { shape, keyFrameBeingEdited, keyFrame });
+//       //       if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
+//       //         const newKeyFrame = keyFrame;
+//       //         if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
+//       //           newKeyFrame.bbox.coords = shape.coords;
+//       //           object.displayedFrame.bbox.coords = shape.coords;
+//       //         }
+//       //         if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
+//       //           console.log(2, { shape, keyFrameBeingEdited, keyFrame });
+//       //           newKeyFrame.mask.counts = shape.counts;
+//       //           newKeyFrame.mask.foo = "changed";
+//       //           // object.displayedFrame.mask.counts = shape.counts;
+//       //         }
+//       //         console.log(2, { newKeyFrame });
+
+//       //         return newKeyFrame;
+//       //       }
+//       //       console.log(1, { keyFrame });
+//       //       return keyFrame;
+//       //     });
+//       //   }
+//       //   return tracklet;
+//       // });
+//     }
+//     return object;
+//   });
 
 const createNewTracklet = (
   track: Tracklet[],

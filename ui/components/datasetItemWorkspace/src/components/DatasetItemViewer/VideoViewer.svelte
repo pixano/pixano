@@ -31,7 +31,11 @@
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editKeyFrameInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+  import {
+    editKeyFrameInTracklet,
+    updateFrameWithInterpolatedBox,
+    updateFrameWithInterpolatedMask,
+  } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -65,22 +69,17 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        const { displayedFrame } = object;
-        if (displayedFrame.bbox) {
-          const newCoords = linearInterpolation(object.track, imageIndex);
-          if (newCoords) {
-            const [x, y, width, height] = newCoords;
-            displayedFrame.bbox.coords = [x, y, width, height];
-            displayedFrame.frameIndex = imageIndex;
-          }
-          displayedFrame.bbox.displayControl = {
-            ...displayedFrame.bbox.displayControl,
-            hidden: !newCoords,
-          };
-          displayedFrame.hidden = !newCoords;
-          return { ...object, displayedFrame };
-        }
-        return object;
+        const bbox = updateFrameWithInterpolatedBox(object, imageIndex);
+        const mask = updateFrameWithInterpolatedMask(object, imageIndex);
+        const displayedFrame = {
+          ...object.displayedFrame,
+          bbox,
+          mask,
+          frameIndex: imageIndex,
+          hidden: !bbox && !mask,
+        };
+
+        return { ...object, displayedFrame };
       }),
     );
   };

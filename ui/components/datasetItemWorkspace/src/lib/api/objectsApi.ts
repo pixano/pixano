@@ -8,6 +8,10 @@ import type {
   ItemView,
   SaveShape,
   ItemObjectBase,
+  ItemRLE,
+  PolygonGroupPoint,
+  MaskPoints,
+  MaskSVG,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -24,6 +28,7 @@ import type {
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
+import { parseSvgPath } from "@pixano/canvas2d/src/api/maskApi";
 
 const defineTooltip = (object: ItemObject) => {
   if (!object.bbox) return null;
@@ -66,6 +71,15 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   } as BBox;
 };
 
+export const convertMaskCountToPoints = (mask: ItemRLE): [MaskSVG, MaskPoints] => {
+  const rle = mask.counts;
+  const size = mask.size;
+  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+  const svg = mask_utils.convertSegmentsToSVG(maskPoly);
+  const points = svg.reduce((acc, val) => [...acc, parseSvgPath(val)], [] as PolygonGroupPoint[][]);
+  return [svg, points];
+};
+
 export const mapObjectToMasks = (obj: ItemObject) => {
   const mask = obj.datasetItemType === "video" ? obj.displayedFrame.mask : obj.mask;
   if (
@@ -74,15 +88,13 @@ export const mapObjectToMasks = (obj: ItemObject) => {
     (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   )
     return;
-  const rle = mask.counts;
-  const size = mask.size;
-  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+  const [svg] = convertMaskCountToPoints(mask);
 
   return {
     id: obj.id,
     viewId: obj.view_id,
-    svg: masksSVG,
+    svg,
     rle: obj.mask,
     catId: (obj.features.category_id?.value || 1) as number,
     visible: !mask.displayControl?.hidden && !obj.displayControl?.hidden,
