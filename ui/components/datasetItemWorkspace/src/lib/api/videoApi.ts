@@ -62,7 +62,6 @@ export const updateFrameWithInterpolatedBox = (object: VideoObject, imageIndex: 
   if (!displayedFrame?.bbox) return;
   const bbox = { ...displayedFrame.bbox };
   const newCoords = rectangleLinearInterpolation(object.track, imageIndex);
-  console.log({ newCoords, imageIndex });
   if (newCoords) {
     const [x, y, width, height] = newCoords;
     bbox.coords = [x, y, width, height];
@@ -108,20 +107,21 @@ export const updateFrameWithInterpolatedMask = (
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
-
-  const previousFrame = currentTracklet?.keyFrames.find(
-    (keyFrame) => keyFrame.frameIndex <= imageIndex,
+  if (!mask || !currentTracklet) return mask;
+  let endIndex = currentTracklet.keyFrames.findIndex(
+    (keyFrame) => keyFrame.frameIndex > imageIndex,
   );
-  const nextFrame = currentTracklet?.keyFrames.find((keyFrame) => keyFrame.frameIndex > imageIndex);
+  endIndex = endIndex < 0 ? currentTracklet.keyFrames.length - 1 : endIndex;
+  const previousFrame = currentTracklet?.keyFrames[endIndex - 1];
+  const nextFrame = currentTracklet?.keyFrames[endIndex];
+
   if (!currentTracklet || !previousFrame?.mask || !nextFrame?.mask) return mask;
   const newPoints = polygonLinearInterpolation(
     { ...previousFrame, mask: previousFrame.mask },
     { ...nextFrame, mask: nextFrame.mask },
     imageIndex,
   );
-
   const newSvg = newPoints.map((point) => convertPointToSvg(point));
-
   const newCounts = runLengthEncode(newSvg, imageDimensions[0], imageDimensions[1]);
 
   return { ...previousFrame.mask, counts: newCounts };
