@@ -13,8 +13,8 @@ import tqdm
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
 from .. import dataset
-from ..dataset_info import DatasetInfo
 from ..dataset_features_values import DatasetFeaturesValues
+from ..dataset_info import DatasetInfo
 from ..features.schemas import image as image_schema
 from ..features.schemas import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
@@ -71,7 +71,9 @@ class DatasetBuilder(abc.ABC):
         tables = self._create_tables()
 
         for count, items in enumerate(
-            tqdm.tqdm(self._generate_items(), desc="Import items")
+            tqdm.tqdm(
+                self._generate_items(), total=self._count_items(), desc="Import items"
+            )
         ):
             # Assert that items and tables have the same keys
             # assert set(items.keys()) == set(
@@ -93,7 +95,9 @@ class DatasetBuilder(abc.ABC):
 
         # save features_values.json
         # TMP: empty now
-        DatasetFeaturesValues().to_json(self._target_dir / dataset.Dataset.FEATURES_VALUES_FILE)
+        DatasetFeaturesValues().to_json(
+            self._target_dir / dataset.Dataset.FEATURES_VALUES_FILE
+        )
 
         # save schema.json
         self._dataset_schema.to_json(self._target_dir / dataset.Dataset.SCHEMA_FILE)
@@ -107,6 +111,14 @@ class DatasetBuilder(abc.ABC):
 
         """
         raise NotImplementedError
+
+    def _count_items(self):
+        """Implements this function to return the numbers of item in dataset (not required)
+
+        Returns:
+            int: number of items in dataset
+        """
+        return None
 
     def generate_media_previews(self, **kwargs):
         """Generate media previews for the dataset."""
