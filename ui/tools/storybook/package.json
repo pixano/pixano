@@ -18,6 +18,7 @@
     "@storybook/svelte-vite": "^8.0.1",
     "@sveltejs/vite-plugin-svelte": "^2.5.3",
     "@tsconfig/svelte": "^5.0.2",
+    "daisyui": "^4.9.0",
     "less": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

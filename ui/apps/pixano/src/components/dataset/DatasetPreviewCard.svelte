@@ -21,7 +21,8 @@
   import { svg_right_arrow } from "@pixano/core/src/icons";
 
   // Exports
-  export let dataset: DatasetInfo;
+  export let dataset: DatasetInfo; 
+  console.log(dataset);
 
   const dispatch = createEventDispatcher();
 
@@ -41,7 +42,7 @@
     </p>
   </div>
   <figure>
-    <img src={dataset.preview} alt="{dataset.name} thumbnail" />
+    <img src={dataset.preview} alt="{dataset.name} thumbnail" class="w-64 h-32" />
   </figure>
 </button> -->
 
@@ -68,7 +69,7 @@
     </p>
   </div>
   <figure>
-    <img src={dataset.preview} alt="{dataset.name} thumbnail" />
+    <img src={dataset.preview} alt="{dataset.name} thumbnail" class="w-64 h-32" />
   </figure>
 </button> -->
 
