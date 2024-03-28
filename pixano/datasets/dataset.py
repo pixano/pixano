@@ -68,7 +68,7 @@ class Dataset:
     PREVIEWS_PATH: str = "previews"
     INFO_FILE: str = "info.json"
     SCHEMA_FILE: str = "schema.json"
-    FEATURES_VALUES: str = "features_values.json"
+    FEATURES_VALUES_FILE: str = "features_values.json"
     STAT_FILE: str = "stats.json"
     THUMB_FILE: str = "preview.png"
 
@@ -90,7 +90,7 @@ class Dataset:
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE
-        features_values_file = path / self.FEATURES_VALUES
+        features_values_file = path / self.FEATURES_VALUES_FILE
         stats_file = path / self.STAT_FILE
         thumb_file = path / self.THUMB_FILE
 

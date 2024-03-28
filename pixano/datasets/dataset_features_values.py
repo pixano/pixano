@@ -14,8 +14,7 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseModel, PrivateAttr
-from s3path import S3Path
+from pydantic import BaseModel
 
 
 class DatasetFeaturesValues(BaseModel):
@@ -25,48 +24,20 @@ class DatasetFeaturesValues(BaseModel):
         items (dict[str, list]): Dataset tables
         views (dict[str, list]): Dataset views
         objects (dict[str, list]): Dataset objects
-        _path (Path | S3Path): Dataset path
     """
 
-    items: dict[str, list]
-    views: dict[str, list]
-    objects: dict[str, list]
-    _path: Path | S3Path = PrivateAttr()
+    items: dict[str, list] = {}
+    views: dict[str, list] = {}
+    objects: dict[str, list] = {}
 
-    def save(self):
+    def to_json(self, json_fp: Path):
         """Save DatasetFeaturesValues to json file."""
-        with open(self._path / "features_values.json", "w", encoding="utf-8") as f:
-            json.dump(self.model_dump(), f)
-
-    def load(self):
-        """Load DatasetFeaturesValues from json file."""
-        with open(self._path / "schema.json", "r", encoding="utf-8") as f:
-            schema_json = json.load(f)
-
-        schema = DatasetFeaturesValues.model_validate(schema_json)
-
-        return schema
+        json_fp.write_text(json.dumps(self.model_dump()), encoding="utf-8")
 
     @staticmethod
-    def from_json(
-        json_fp: Path | S3Path,
-    ) -> "DatasetFeaturesValues":
-        """Read DatasetFeaturesValues from JSON file.
+    def from_json(json_fp: Path):
+        """Load DatasetFeaturesValues from json file."""
+        fv_json = json.loads(json_fp.read_text(encoding="utf-8"))
+        fv = DatasetFeaturesValues.model_validate(fv_json)
 
-        Args:
-            json_fp (Path | S3Path): JSON file path
-
-        Returns:
-            DatasetFeaturesValues: DatasetFeaturesValues
-        """
-        if isinstance(json_fp, S3Path):
-            with json_fp.open(encoding="utf-8") as json_file:
-                features_values_json = json.load(json_file)
-        else:
-            with open(json_fp, encoding="utf-8") as json_file:
-                features_values_json = json.load(json_file)
-
-        features_values_json["_path"] = json_fp.parent
-        features_values = DatasetFeaturesValues.model_validate(features_values_json)
-
-        return features_values
+        return fv

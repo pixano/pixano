@@ -18,7 +18,6 @@ from types import GenericAlias
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
-from s3path import S3Path
 
 from .features import BaseSchema, Embedding, Item, Object, View
 from .features.schemas.group import _SchemaGroup
@@ -252,7 +251,7 @@ class DatasetSchema(BaseModel):
                 raise ValueError(f"Invalid table type {schema}")
         return
 
-    def to_json(self, json_fp: Path | S3Path) -> None:
+    def to_json(self, json_fp: Path) -> None:
         """Save DatasetSchema to json file."""
         if json_fp.exists():
             old_json_content = json.loads(json_fp.read_text(encoding="utf-8"))
@@ -272,15 +271,6 @@ class DatasetSchema(BaseModel):
 
         json_fp.write_text(json.dumps(json_content), encoding="utf-8")
 
-    def load_json(self, json_fp: Path | S3Path):
-        """Load DatasetSchema from json file."""
-        schema_json = json.loads(json_fp.read_text(encoding="utf-8"))
-
-        self.schemas = DatasetSchema.validate_json(schema_json)
-        self._assign_table_groups()
-
-        return self
-
     def _get_dataset_item_schema(self) -> type[BaseSchema]:
         return self.schemas[_SchemaGroup.ITEM.value]
 
@@ -297,7 +287,7 @@ class DatasetSchema(BaseModel):
         return table_name.lower().replace(" ", "_")
 
     @staticmethod
-    def format_table_names(schema_json: dict[str : dict[str, str]]):
+    def format_table_names(schema_json: dict[str, dict[str, str]]):
         """Format table names."""
         keys = list(schema_json.keys())
         for table in keys:
@@ -353,12 +343,12 @@ class DatasetSchema(BaseModel):
 
     @staticmethod
     def from_json(
-        json_fp: Path | S3Path,
+        json_fp: Path,
     ) -> "DatasetSchema":
         """Read DatasetSchema from JSON file.
 
         Args:
-            json_fp (Path | S3Path): JSON file path
+            json_fp (Path): JSON file path
 
         Returns:
             DatasetSchema: DatasetSchema
@@ -376,7 +366,6 @@ class DatasetSchema(BaseModel):
 
         Args:
             model (type[DatasetItem]): DatasetItem.
-            save_path (Path | S3Path): Save path
 
         Returns:
             DatasetSchema: DatasetSchema
@@ -393,7 +382,7 @@ class DatasetItem(BaseModel):
 
     def to_dataset_schema(self) -> DatasetSchema:
         """Convert DatasetItem to a DatasetSchema."""
-        return DatasetSchema.from__dataset_item(self)
+        return DatasetSchema.from_dataset_item(self)
 
     def to_dataset_schema_dict(
         self,

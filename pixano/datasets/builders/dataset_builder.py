@@ -14,6 +14,7 @@ from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
 from .. import dataset
 from ..dataset_info import DatasetInfo
+from ..dataset_features_values import DatasetFeaturesValues
 from ..features.schemas import image as image_schema
 from ..features.schemas import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
@@ -89,8 +90,12 @@ class DatasetBuilder(abc.ABC):
         self._info.id = shortuuid.uuid()
         self._info.num_elements = count + 1
         self._info.to_json(self._target_dir / dataset.Dataset.INFO_FILE)
-        # save schema.json
 
+        # save features_values.json
+        # TMP: empty now
+        DatasetFeaturesValues().to_json(self._target_dir / dataset.Dataset.FEATURES_VALUES_FILE)
+
+        # save schema.json
         self._dataset_schema.to_json(self._target_dir / dataset.Dataset.SCHEMA_FILE)
 
     @abc.abstractmethod

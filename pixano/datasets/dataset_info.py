@@ -15,7 +15,6 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel
-from s3path import S3Path
 
 
 class DatasetInfo(BaseModel):
@@ -35,28 +34,28 @@ class DatasetInfo(BaseModel):
     size: str = "Unknown"
     num_elements: int = 0
 
-    def to_json(self, path: Path | S3Path):
+    def to_json(self, json_fp: Path):
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            path (Path | S3Path): The path to the file where the DatasetInfo object
+            json_fp (Path): The path to the file where the DatasetInfo object
                 will be written.
         """
-        json.dump(self.model_dump(), open(path, "w", encoding="utf-8"))
+        json_fp.write_text(json.dumps(self.model_dump()), encoding="utf-8")
 
     @staticmethod
     def from_json(
-        json_fp: Path | S3Path,
+        json_fp: Path,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file.
 
         Args:
-            json_fp (Path | S3Path): JSON file path
+            json_fp (Path): JSON file path
 
         Returns:
             DatasetInfo: DatasetInfo
         """
-        info_json = json.load(open(json_fp, "r", encoding="utf-8"))
+        info_json = json.loads(json_fp.read_text(encoding="utf-8"))
         info = DatasetInfo.model_validate(info_json)
 
         return info
