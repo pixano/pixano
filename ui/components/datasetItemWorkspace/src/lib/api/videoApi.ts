@@ -127,6 +127,9 @@ export const updateFrameWithInterpolatedMask = (
   return { ...previousFrame.mask, counts: newCounts };
 };
 
+const isFrameInTracklet = (tracklet: Tracklet, frameIndex: number) =>
+  tracklet.start <= frameIndex && tracklet.end >= frameIndex;
+
 export const deleteKeyFrameFromTracklet = (
   objects: ItemObject[],
   frame: KeyVideoFrame,
@@ -136,9 +139,9 @@ export const deleteKeyFrameFromTracklet = (
     if (objectId === object.id && object.datasetItemType === "video") {
       object.track = object.track
         .map((tracklet) => {
-          if (tracklet.start <= frame.frameIndex && tracklet.end >= frame.frameIndex) {
+          if (isFrameInTracklet(tracklet, frame.frameIndex)) {
             tracklet.keyFrames = tracklet.keyFrames.filter(
-              (keyFrame) => keyFrame.frameIndex !== keyFrame.frameIndex,
+              (keyFrame) => keyFrame.frameIndex !== frame.frameIndex,
             );
             tracklet.start = tracklet.keyFrames[0]?.frameIndex;
             tracklet.end = tracklet.keyFrames[tracklet.keyFrames.length - 1]?.frameIndex;
@@ -168,8 +171,7 @@ const updateTrack = (
 ): [VideoObject["track"], VideoObject["displayedFrame"]] => {
   let currentDisplayedKeyFrame = object.displayedFrame;
   const track = object.track.map((tracklet) => {
-    const isCurrentTracklet = tracklet.start <= frameIndex && tracklet.end >= frameIndex;
-    if (isCurrentTracklet) {
+    if (isFrameInTracklet(tracklet, frameIndex)) {
       tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
         if (keyFrame.frameIndex === frameIndex) {
           const mask = keyFrame.mask ? { ...keyFrame.mask } : undefined;
