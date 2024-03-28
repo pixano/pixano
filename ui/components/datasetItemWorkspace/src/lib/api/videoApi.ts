@@ -102,6 +102,7 @@ const polygonLinearInterpolation = (
 export const updateFrameWithInterpolatedMask = (
   object: VideoObject,
   imageIndex: number,
+  imageDimensions: readonly [number, number],
 ): ItemRLE | undefined => {
   const { mask } = object.displayedFrame || {};
   const currentTracklet = object.track.find(
@@ -120,7 +121,8 @@ export const updateFrameWithInterpolatedMask = (
   );
 
   const newSvg = newPoints.map((point) => convertPointToSvg(point));
-  const newCounts = runLengthEncode(newSvg, 600, 338); // TODO : get image width and height
+
+  const newCounts = runLengthEncode(newSvg, imageDimensions[0], imageDimensions[1]);
 
   return { ...previousFrame.mask, counts: newCounts };
 };

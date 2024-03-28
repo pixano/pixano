@@ -44,6 +44,10 @@
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
+  const imageDimensions = [
+    selectedItem.views.image[0].features.width.value as number,
+    selectedItem.views.image[0].features.height.value as number,
+  ] as const;
 
   let isLoaded = false;
   let colorScale = utils.ordinalColorScale(colorRange);
@@ -70,7 +74,7 @@
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         const bbox = updateFrameWithInterpolatedBox(object, imageIndex);
-        const mask = updateFrameWithInterpolatedMask(object, imageIndex);
+        const mask = updateFrameWithInterpolatedMask(object, imageIndex, imageDimensions);
         let displayedFrame = object.displayedFrame || object.track[0].keyFrames[0] || {};
         displayedFrame = {
           ...displayedFrame,
