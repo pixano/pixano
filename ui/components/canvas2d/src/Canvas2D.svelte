@@ -356,11 +356,11 @@
           input_box: box,
           validated: false,
         };
-        const currentMask = <Mask>{
+        const currentMask = {
           id: currentAnn.id,
           viewId: viewId,
           svg: currentAnn.output.masksImageSVG,
-          rle: currentAnn.output.rle,
+          editing: false,
           catId: currentAnn.catId,
           visible: true,
           opacity: 1.0,

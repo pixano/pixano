@@ -23,7 +23,7 @@
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import { itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { keyFrameBeingEdited } from "../../lib/stores/videoViewerStores";
   import { panTool } from "../../lib/settings/selectionTools";
 
   export let itemObject: ItemObject;
@@ -60,10 +60,11 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-          itemBoxBeingEdited.update(() => {
-            const startingBox = object.datasetItemType === "video" && object.track[0]?.keyBoxes[0];
-            if (value && startingBox) {
-              return { ...startingBox, objectId: object.id };
+          keyFrameBeingEdited.update(() => {
+            const startingFrame =
+              object.datasetItemType === "video" && object.track[0]?.keyFrames[0];
+            if (value && startingFrame) {
+              return { ...startingFrame, objectId: object.id };
             }
             return null;
           });

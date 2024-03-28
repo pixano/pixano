@@ -13,6 +13,8 @@
  * http://www.cecill.info
  */
 
+import type { PolygonGroupPoint } from "./objectTypes";
+
 // Exports
 
 // DATASET
@@ -117,12 +119,14 @@ export type ItemObjectBase = {
   review_state?: "accepted" | "rejected";
 };
 
-export type VideoItemBBox = ItemBBox & {
+export type KeyVideoFrame = {
   frameIndex: number;
   hidden?: boolean;
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
 };
 export interface Tracklet {
-  keyBoxes: VideoItemBBox[];
+  keyFrames: KeyVideoFrame[];
   start: number;
   end: number;
 }
@@ -130,7 +134,7 @@ export interface Tracklet {
 export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
-  displayedBox: VideoItemBBox;
+  displayedFrame?: KeyVideoFrame;
 };
 
 export type ImageObject = ItemObjectBase & {
@@ -197,6 +201,7 @@ export interface Mask {
 }
 
 export type MaskSVG = string[];
+export type MaskPoints = PolygonGroupPoint[][];
 
 export interface BBox {
   id: string;
