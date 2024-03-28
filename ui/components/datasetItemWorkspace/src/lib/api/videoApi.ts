@@ -32,10 +32,11 @@ export const getImageIndexFromMouseMove = (
   return index < 0 ? 0 : index;
 };
 
+const isFrameInTracklet = (tracklet: Tracklet, frameIndex: number) =>
+  tracklet.start <= frameIndex && tracklet.end >= frameIndex;
+
 export const rectangleLinearInterpolation = (track: Tracklet[], imageIndex: number) => {
-  const currentTracklet = track.find(
-    (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
-  );
+  const currentTracklet = track.find((tracklet) => isFrameInTracklet(tracklet, imageIndex));
   if (!currentTracklet) return null;
   let endIndex = currentTracklet.keyFrames.findIndex((frame) => frame.frameIndex > imageIndex);
   endIndex = endIndex < 0 ? currentTracklet.keyFrames.length - 1 : endIndex;
@@ -104,18 +105,19 @@ export const updateFrameWithInterpolatedMask = (
   imageDimensions: readonly [number, number],
 ): ItemRLE | undefined => {
   const { mask } = object.displayedFrame || {};
-  const currentTracklet = object.track.find(
-    (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
-  );
-  if (!mask || !currentTracklet) return mask;
+  if (!mask) return;
+
+  const currentTracklet = object.track.find((tracklet) => isFrameInTracklet(tracklet, imageIndex));
+  if (!currentTracklet) return { ...mask, displayControl: { hidden: true } };
+
   let endIndex = currentTracklet.keyFrames.findIndex(
     (keyFrame) => keyFrame.frameIndex > imageIndex,
   );
   endIndex = endIndex < 0 ? currentTracklet.keyFrames.length - 1 : endIndex;
   const previousFrame = currentTracklet?.keyFrames[endIndex - 1];
   const nextFrame = currentTracklet?.keyFrames[endIndex];
-
   if (!currentTracklet || !previousFrame?.mask || !nextFrame?.mask) return mask;
+
   const newPoints = polygonLinearInterpolation(
     { ...previousFrame, mask: previousFrame.mask },
     { ...nextFrame, mask: nextFrame.mask },
@@ -124,11 +126,8 @@ export const updateFrameWithInterpolatedMask = (
   const newSvg = newPoints.map((point) => convertPointToSvg(point));
   const newCounts = runLengthEncode(newSvg, imageDimensions[0], imageDimensions[1]);
 
-  return { ...previousFrame.mask, counts: newCounts };
+  return { ...previousFrame.mask, counts: newCounts, displayControl: { hidden: false } };
 };
-
-const isFrameInTracklet = (tracklet: Tracklet, frameIndex: number) =>
-  tracklet.start <= frameIndex && tracklet.end >= frameIndex;
 
 export const deleteKeyFrameFromTracklet = (
   objects: ItemObject[],
