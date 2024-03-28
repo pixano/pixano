@@ -1,5 +1,6 @@
 import type {
   EditShape,
+  ItemBBox,
   ItemObject,
   ItemRLE,
   KeyVideoFrame,
@@ -147,6 +148,42 @@ export const deleteKeyFrameFromTracklet = (
     return object;
   });
 
+const updateBBox = (shape: EditShape, bbox: ItemBBox | undefined) => {
+  if (shape.type !== "rectangle" || !bbox) return undefined;
+  bbox.coords = shape.coords;
+  return bbox;
+};
+const updateMask = (shape: EditShape, mask: ItemRLE | undefined) => {
+  if (shape.type !== "mask" || !mask) return undefined;
+  mask.counts = shape.counts;
+  return mask;
+};
+
+const updateTrack = (
+  object: VideoObject,
+  frameIndex: KeyVideoFrame["frameIndex"],
+  shape: EditShape,
+): [VideoObject["track"], VideoObject["displayedFrame"]] => {
+  let currentDisplayedKeyFrame = object.displayedFrame;
+  const track = object.track.map((tracklet) => {
+    const isCurrentTracklet = tracklet.start <= frameIndex && tracklet.end >= frameIndex;
+    if (isCurrentTracklet) {
+      tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
+        if (keyFrame.frameIndex === frameIndex) {
+          const mask = keyFrame.mask ? { ...keyFrame.mask } : undefined;
+          const bbox = keyFrame.bbox ? { ...keyFrame.bbox } : undefined;
+          keyFrame.mask = updateMask(shape, mask);
+          keyFrame.bbox = updateBBox(shape, bbox);
+          currentDisplayedKeyFrame = keyFrame;
+        }
+        return keyFrame;
+      });
+    }
+    return tracklet;
+  });
+  return [track, currentDisplayedKeyFrame];
+};
+
 export const editKeyFrameInTracklet = (
   objects: ItemObject[],
   keyFrameBeingEdited: KeyVideoFrame,
@@ -154,148 +191,13 @@ export const editKeyFrameInTracklet = (
 ) => {
   return objects.map((object) => {
     if (object.id === shape.shapeId && object.datasetItemType === "video") {
-      let currentDisplayedKeyFrame = object.displayedFrame;
       if (!object.displayedFrame) return object;
-      const newTrack = object.track.map((tracklet) => {
-        const isKeyFrameBeingEditedInTracklet =
-          tracklet.start <= keyFrameBeingEdited.frameIndex &&
-          tracklet.end >= keyFrameBeingEdited.frameIndex;
-        if (isKeyFrameBeingEditedInTracklet) {
-          const newKeyFrames = tracklet.keyFrames.map((keyFrame) => {
-            let newKeyFrame = keyFrame;
-            if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-              if (
-                shape.type === "rectangle" &&
-                newKeyFrame.bbox &&
-                object.displayedFrame &&
-                object.displayedFrame.bbox
-              ) {
-                newKeyFrame.bbox.coords = shape.coords;
-                object.displayedFrame.bbox.coords = shape.coords;
-              }
-              if (
-                shape.type === "mask" &&
-                newKeyFrame.mask &&
-                object.displayedFrame &&
-                object.displayedFrame.mask &&
-                keyFrame.frameIndex === keyFrameBeingEdited.frameIndex
-              ) {
-                newKeyFrame = {
-                  ...newKeyFrame,
-                  mask: { ...newKeyFrame.mask, counts: shape.counts },
-                };
-
-                currentDisplayedKeyFrame = newKeyFrame;
-              }
-              return newKeyFrame;
-            }
-            return keyFrame;
-          });
-          return { ...tracklet, keyFrames: newKeyFrames };
-        }
-        return tracklet;
-      });
-      return { ...object, track: newTrack, displayedFrame: currentDisplayedKeyFrame };
+      const [track, displayedFrame] = updateTrack(object, keyFrameBeingEdited.frameIndex, shape);
+      return { ...object, track, displayedFrame };
     }
     return object;
   });
 };
-
-// export const editKeyFrameInTracklet = (
-//   objects: ItemObject[],
-//   keyFrameBeingEdited: KeyVideoFrame,
-//   shape: EditShape,
-// ) =>
-//   objects.map((object) => {
-//     console.log({ object });
-//     if (object.id === shape.shapeId && object.datasetItemType === "video") {
-//       const newTrack = object.track.map((tracklet) => {
-//         const isKeyFrameBeingEditedInTracklet =
-//           tracklet.start <= keyFrameBeingEdited.frameIndex &&
-//           tracklet.end >= keyFrameBeingEdited.frameIndex;
-//         if (isKeyFrameBeingEditedInTracklet) {
-//           console.log({ tracklet });
-//           const newKeyFrames = tracklet.keyFrames.map((keyFrame) => {
-//             console.log(1, { shape, keyFrameBeingEdited, keyFrame });
-//             if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-//               const newKeyFrame = keyFrame;
-//               if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
-//                 newKeyFrame.bbox.coords = shape.coords;
-//                 object.displayedFrame.bbox.coords = shape.coords;
-//               }
-//               if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
-//                 console.log(2, { shape, keyFrameBeingEdited, keyFrame });
-//                 newKeyFrame.mask.counts = shape.counts;
-//                 newKeyFrame.mask.foo = "changed";
-//                 // object.displayedFrame.mask.counts = shape.counts;
-//               }
-//               console.log(2, { newKeyFrame });
-
-//               return newKeyFrame;
-//             }
-//             console.log(1, { keyFrame });
-//             return keyFrame;
-//           });
-//           return { ...tracklet, keyFrames: newKeyFrames };
-//           // tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
-//           //   console.log(1, { shape, keyFrameBeingEdited, keyFrame });
-//           //   if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-//           //     const newKeyFrame = keyFrame;
-//           //     if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
-//           //       newKeyFrame.bbox.coords = shape.coords;
-//           //       object.displayedFrame.bbox.coords = shape.coords;
-//           //     }
-//           //     if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
-//           //       console.log(2, { shape, keyFrameBeingEdited, keyFrame });
-//           //       newKeyFrame.mask.counts = shape.counts;
-//           //       newKeyFrame.mask.foo = "changed";
-//           //       // object.displayedFrame.mask.counts = shape.counts;
-//           //     }
-//           //     console.log(2, { newKeyFrame });
-
-//           //     return newKeyFrame;
-//           //   }
-//           //   console.log(1, { keyFrame });
-//           //   return keyFrame;
-//           // });
-//         }
-//         return tracklet;
-//       });
-//       return { ...object, track: newTrack };
-//       // object.track = object.track.map((tracklet) => {
-//       //   console.log({ track: object.track });
-//       //   const isKeyFrameBeingEditedInTracklet =
-//       //     tracklet.start <= keyFrameBeingEdited.frameIndex &&
-//       //     tracklet.end >= keyFrameBeingEdited.frameIndex;
-//       //   if (isKeyFrameBeingEditedInTracklet) {
-//       //     console.log({ tracklet });
-//       //     tracklet.keyFrames = tracklet.keyFrames.map((keyFrame) => {
-//       //       console.log(1, { shape, keyFrameBeingEdited, keyFrame });
-//       //       if (keyFrame.frameIndex === keyFrameBeingEdited.frameIndex) {
-//       //         const newKeyFrame = keyFrame;
-//       //         if (shape.type === "rectangle" && newKeyFrame.bbox && object.displayedFrame.bbox) {
-//       //           newKeyFrame.bbox.coords = shape.coords;
-//       //           object.displayedFrame.bbox.coords = shape.coords;
-//       //         }
-//       //         if (shape.type === "mask" && newKeyFrame.mask && object.displayedFrame.mask) {
-//       //           console.log(2, { shape, keyFrameBeingEdited, keyFrame });
-//       //           newKeyFrame.mask.counts = shape.counts;
-//       //           newKeyFrame.mask.foo = "changed";
-//       //           // object.displayedFrame.mask.counts = shape.counts;
-//       //         }
-//       //         console.log(2, { newKeyFrame });
-
-//       //         return newKeyFrame;
-//       //       }
-//       //       console.log(1, { keyFrame });
-//       //       return keyFrame;
-//       //     });
-//       //   }
-//       //   return tracklet;
-//       // });
-//     }
-//     return object;
-//   });
 
 const createNewTracklet = (
   track: Tracklet[],
