@@ -116,7 +116,8 @@ export const updateFrameWithInterpolatedMask = (
   endIndex = endIndex < 0 ? currentTracklet.keyFrames.length - 1 : endIndex;
   const previousFrame = currentTracklet?.keyFrames[endIndex - 1];
   const nextFrame = currentTracklet?.keyFrames[endIndex];
-  if (!currentTracklet || !previousFrame?.mask || !nextFrame?.mask) return mask;
+  if (!currentTracklet || !previousFrame?.mask || !nextFrame?.mask)
+    return { ...mask, displayControl: { hidden: false } };
 
   const newPoints = polygonLinearInterpolation(
     { ...previousFrame, mask: previousFrame.mask },
@@ -175,6 +176,7 @@ const updateTrack = (
         if (keyFrame.frameIndex === frameIndex) {
           const mask = keyFrame.mask ? { ...keyFrame.mask } : undefined;
           const bbox = keyFrame.bbox ? { ...keyFrame.bbox } : undefined;
+          console.log({ mask, new: updateMask(shape, mask) });
           keyFrame.mask = updateMask(shape, mask);
           keyFrame.bbox = updateBBox(shape, bbox);
           currentDisplayedKeyFrame = keyFrame;
@@ -195,7 +197,9 @@ export const editKeyFrameInTracklet = (
   return objects.map((object) => {
     if (object.id === shape.shapeId && object.datasetItemType === "video") {
       if (!object.displayedFrame) return object;
+      console.log({ object });
       const [track, displayedFrame] = updateTrack(object, keyFrameBeingEdited.frameIndex, shape);
+      console.log({ track, displayedFrame });
       return { ...object, track, displayedFrame };
     }
     return object;

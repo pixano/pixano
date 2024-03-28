@@ -71,7 +71,13 @@
   };
 
   const onAddKeyFrameClick = () => {
-    const frame = { ...object.displayedFrame, frameIndex: rightClickFrameIndex };
+    const mask = object.displayedFrame?.mask
+      ? { ...object.displayedFrame?.mask, displayControl: { hidden: false } }
+      : undefined;
+    const bbox = object.displayedFrame?.bbox
+      ? { ...object.displayedFrame?.bbox, displayControl: { hidden: false } }
+      : undefined;
+    const frame = { ...object.displayedFrame, frameIndex: rightClickFrameIndex, mask, bbox };
     itemObjects.update((objects) =>
       addKeyFrame(objects, frame, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
