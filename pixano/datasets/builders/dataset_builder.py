@@ -39,6 +39,7 @@ class DatasetBuilder(abc.ABC):
         schemas: Type[DatasetItem],
         info: DatasetInfo,
         mode: str = "create",
+        batch_size: int = 1000,
     ):
         """Initialize the BaseDatasetBuilder instance.
 
@@ -49,12 +50,14 @@ class DatasetBuilder(abc.ABC):
             info (dict[str, Any]): User informations (name, description, splits)
             for the dataset.
             mode (str, optional): The mode for creating the dataset.
-
+            batch_size (int, optional): The batch size to insert data.
         """
         self._target_dir = pathlib.Path(target_dir)
         self._source_dir = pathlib.Path(source_dir)
         self._previews_path = self._target_dir / dataset.Dataset.PREVIEWS_PATH
         self._mode = mode
+        self._batch_size = batch_size
+
         self._info = info
         self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
 
@@ -70,6 +73,7 @@ class DatasetBuilder(abc.ABC):
         """
         tables = self._create_tables()
 
+        accumulate = 0
         for count, items in enumerate(
             tqdm.tqdm(
                 self._generate_items(), total=self._count_items(), desc="Import items"
@@ -80,13 +84,26 @@ class DatasetBuilder(abc.ABC):
             #     tables.keys()
             # ), "Keys of 'items' and 'tables' do not match"
 
+            if accumulate == 0:
+                accumulate_tables = {table_name: [] for table_name in tables.keys()}
+
             for table_name, table in tables.items():
                 if table_name == "objects" and len(items[table_name]) == 0:
                     continue
                 if table_name not in items:
                     continue
+                accumulate_tables[table_name].extend(items[table_name])
 
-                table.add(items[table_name])
+            accumulate += 1
+
+            if accumulate % self._batch_size == 0:
+                for table_name, table in tables.items():
+                    table.add(accumulate_tables[table_name])
+                accumulate = 0
+
+        if accumulate > 0:
+            for table_name, table in tables.items():
+                table.add(accumulate_tables[table_name])
 
         # save info.json
         self._info.id = shortuuid.uuid()
@@ -113,7 +130,8 @@ class DatasetBuilder(abc.ABC):
         raise NotImplementedError
 
     def _count_items(self):
-        """Implements this function to return the numbers of item in dataset (not required)
+        """Implements this function to return the numbers of item
+        in dataset (not required).
 
         Returns:
             int: number of items in dataset

@@ -20,18 +20,6 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
     METADATA_FILENAME = "metadata.jsonl"
     EXTENSIONS: list[str]
 
-    def __init__(self, source_dir, target_dir, schemas, info, mode="create"):
-        """Initializes the FolderBasedBuilder with the given parameters.
-
-        Args:
-            source_dir: The source directory.
-            target_dir: The target directory.
-            schemas: The schemas for the data.
-            info: Additional information.
-            mode: The mode of operation, default is "create".
-        """
-        super().__init__(source_dir, target_dir, schemas, info, mode=mode)
-
     def _generate_items(
         self,
     ) -> dataset_builder.Iterator[dataset_builder.Dict[str, typing.Any]]:
