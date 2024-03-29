@@ -77,18 +77,6 @@
       colOrder.push(id);
     });
   }
-  // if (items[0]?.views) {
-  //   Object.values(items[0].views).forEach(({ id }) => {
-  //     itemColumns.push(
-  //       table.column({
-  //         header: id,
-  //         cell: ImgCell,
-  //         accessor: (item) => JSON.stringify(item.views[id]),
-  //       }),
-  //     );
-  //     colOrder.push(id);
-  //   });
-  // }
 
   // Add id and split to column order
   colOrder.push("id");
