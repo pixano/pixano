@@ -74,7 +74,7 @@
 </button> -->
 
 <!-- Daisy UI - Version proche de l'originale-->
-<!-- <button
+<button
   class="card card-compact card-bordered w-96 h-72 bg-base-100 rounded-sm shadow-md hover:shadow-xl"
   on:click={handleSelectDataset}
 >
@@ -98,10 +98,10 @@
       <img src={dataset.preview} alt="{dataset.name} thumbnail" class="w-full h-full object-cover rounded-sm" />
     </figure>
   </div>
-</button> -->
+</button>
 
 <!-- Version Originale -->
-<button
+<!-- <button
   class="w-96 h-72 flex flex-col text-left font-Montserrat
   bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
   on:click={handleSelectDataset}
@@ -141,4 +141,4 @@
       />
     {/if}
   </div>
-</button>
+</button> -->
