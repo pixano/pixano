@@ -31,15 +31,15 @@
 </script>
 
 <button
-  class="w-96 h-72 flex flex-col text-left
-  bg-white border rounded-sm border-slate-300 shadow shadow-slate-300 transition-shadow hover:shadow-xl"
+  class="w-96 h-72 flex flex-col text-left font-Montserrat
+  bg-white rounded-sm shadow shadow-slate-300 transition-shadow hover:shadow-xl"
   on:click={handleSelectDataset}
 >
   <!-- Dataset Infos -->
   <div class="w-full h-1/4 pt-4 px-4 flex flex-col justify-center relative">
     <div>
       <h3
-        class="text-lg font-semibold truncate text-main"
+        class="text-lg font-semibold truncate text-primary"
         title="{dataset.name}&#10;&#13;{dataset.description}"
       >
         {dataset.name}

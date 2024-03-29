@@ -105,7 +105,7 @@
   };
 </script>
 
-<header class="w-full fixed z-40">
+<header class="w-full fixed z-40 font-Montserrat">
   <div
     class="h-20 p-5 flex justify-between items-center shrink-0
       bg-white border-b border-slate-200 shadow-sm text-slate-800"

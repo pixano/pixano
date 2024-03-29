@@ -23,6 +23,6 @@
   export let value: DatasetStat;
 </script>
 
-<div class="h-40 w-40 mx-auto object-cover rounded">
-  <Histogram hist={value} />
+<div class="mx-8 h-24">
+  <Histogram hist={value} minimal={true} />
 </div>

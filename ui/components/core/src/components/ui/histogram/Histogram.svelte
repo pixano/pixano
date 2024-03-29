@@ -29,9 +29,11 @@
   import zoomPlugin from "chartjs-plugin-zoom";
   import type { DatasetStat } from "../../..";
   import { colors } from "./colors";
+  import { min } from "d3";
 
   // Define props
   export let hist: DatasetStat;
+  export let minimal: boolean = false; // Hides title, y-axis label, legend, and other elements
 
   // Separate splits
   let splits: string[] = [...new Set(hist.histogram.map((item) => String(item.split)))];
@@ -59,9 +61,10 @@
     maintainAspectRatio: false,
     plugins: {
       title: {
-        display: true,
+        display: !minimal,
         text: hist.name,
       },
+      legend: { display: !minimal },
       zoom: {
         zoom: {
           wheel: {
@@ -76,10 +79,19 @@
         },
       },
     },
+
     responsive: true,
     scales: {
-      x: { stacked: true },
-      y: { stacked: true },
+      x: {
+        stacked: true,
+        grid: { display: !minimal },
+        ticks: { font: { size: minimal ? 10 : 12 } },
+      },
+      y: {
+        stacked: true,
+        grid: { display: !minimal },
+        ticks: { font: { size: minimal ? 10 : 12 } },
+      },
     },
   };
 

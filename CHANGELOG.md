@@ -4,6 +4,23 @@ All notable changes to Pixano will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2024-03-21
+
+### Added
+
+- Add box dimension when creating a bbox (pixano#205)
+- Add new GroundingDINO model (pixano#184)
+- Support for list features (pixano#190)
+
+### Changed
+
+- Data table refactor and added fonts back (pixano#217)
+
+### Fixed
+
+- FeaturesList bugs (pixano#208)
+- Check viewId in rectangle creation to avoid multiview box duplication (pixano#210)
+
 ## [0.5.0] - 2024-02-29
 
 ### Added
