@@ -19,7 +19,7 @@
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { DatasetItem, ItemFeature } from "@pixano/core";
+  import type { ItemFeature } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -32,24 +32,6 @@
 
   // Exports
   export let items: Array<Array<ItemFeature>>;
-
-  // // Flatten item
-  // function flattenItem(item: DatasetItem) {
-  //   console.log(item);
-  //   return item;
-  // }
-
-  // function flattenTable(table: Array<DatasetItem>) {
-  //   let flatTable: Array<DatasetItem> = [];
-
-  //   for (let item of table) {
-  //     item = flattenItem(item);
-  //     flatTable.push(item);
-  //   }
-
-  //   console.log(flatTable);
-  // }
-  // flattenTable(items);
 
   // Add data into a readable store and create table object
   const data = readable(items);
@@ -124,8 +106,7 @@
     {popupOpened ? 'block' : 'hidden'}"
 >
   <div
-    class="px-12 pt-10 flex flex-col
-    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+    class="px-12 pt-10 flex flex-col bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
   >
     <span class="text-3xl font-bold mb-4"> Column settings </span>
     <span class="text-sm italic text-gray-500 font-medium mb-3">
