@@ -92,6 +92,11 @@ class DatasetBuilder(abc.ABC):
                     continue
                 if table_name not in items:
                     continue
+                # checks for id format: must not contains whitespace (else we have bugs later...)
+                for elem in items[table_name]:
+                    if " " in elem.id:
+                        raise Exception(f"ids must not contains whitespace (table: {table_name}, id:{elem.id})")
+
                 accumulate_tables[table_name].extend(items[table_name])
 
             accumulate += 1
