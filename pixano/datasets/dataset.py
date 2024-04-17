@@ -490,6 +490,16 @@ class Dataset:
         """
         return self.get_items(idx, 1)[0]
 
+    def get_all_ids(self, table_name: Optional[str] = _SchemaGroup.ITEM.value):
+        query = (
+            self.open_table(table_name)
+            .search()
+            .select(["id"])
+            .limit(None)
+            .to_arrow()
+        )
+        return sorted(row.as_py() for row in query["id"])
+
     def read_views(
         self, ids: list[str], select: Optional[list[str]] = None
     ) -> list[DatasetItem]:  # type: ignore
