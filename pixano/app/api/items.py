@@ -17,8 +17,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 
-from pixano.core.types.group import TableGroup
-from pixano.datasets import Dataset, DatasetItem, Settings, get_settings
+from pixano.datasets.features.schemas.group import _SchemaGroup
+from pixano.datasets import Dataset, DatasetItem
+from pixano.app.settings import Settings, get_settings
 
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
@@ -147,7 +148,7 @@ async def get_dataset_item(  # noqa: D417
         # Load dataset item
         item = dataset.get_item(
             item_id,
-            select_table_groups=[TableGroup.VIEW, TableGroup.OBJECT],
+            select_table_groups=[_SchemaGroup.VIEW, _SchemaGroup.OBJECT],
         )
 
         # Return dataset item
@@ -213,7 +214,7 @@ async def get_item_embeddings(  # noqa: D417
     if dataset:
         item = dataset.get_item(
             item_id,
-            select_tables_per_group={TableGroup.EMBEDDING: [model_id]},
+            select_tables_per_group={_SchemaGroup.EMBEDDING: [model_id]},
         )
 
         # Return dataset item embeddings

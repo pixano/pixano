@@ -15,7 +15,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from pixano.datasets import Settings, get_settings
+from pixano.app.settings import Settings, get_settings
 
 
 router = APIRouter(tags=["models"])
