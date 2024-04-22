@@ -513,7 +513,7 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
     const firstPoint = point;
     const path = [splitPointKey(firstPoint)];
     // Repeatedly pick the next adjacent vertex and add it to the path until the path is closed
-    let nextPoint: string = null;
+    let nextPoint: string = "";
     while (nextPoint !== firstPoint) {
       nextPoint = targets.values().next().value;
       path.push(splitPointKey(nextPoint));
@@ -522,14 +522,14 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
       if (targets.size === 0) polySegments.delete(point);
       // Do the same for the bidirectional edge
       const nextPointTargets = polySegments.get(nextPoint);
-      nextPointTargets.delete(point);
+      nextPointTargets?.delete(point);
       // Move to the next set of edges, unless it is empty in which case break since we've completed a loop
-      if (nextPointTargets.size === 0) {
+      if (nextPointTargets?.size === 0) {
         polySegments.delete(nextPoint);
         break;
       } else {
         point = nextPoint;
-        targets = nextPointTargets;
+        if (nextPointTargets) targets = nextPointTargets;
       }
     }
     paths.push(path);
@@ -549,7 +549,7 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
     let shouldBeClockwise = false;
     const [sampleX, sampleY]: Array<number> = path[0];
     for (const otherPath of renderedPaths) {
-      if (ctx.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
+      if (ctx?.isPointInPath(otherPath, sampleX + 0.5, sampleY + 0.5))
         shouldBeClockwise = !shouldBeClockwise;
     }
     // All paths are default counter-clockwise based on how the segments were generated,
@@ -566,7 +566,7 @@ export function convertSegmentsToSVG(polySegments: Map<string, Set<string>>): Ar
 
     // Add a new Path2D to the canvas to be able to call isPointInPath for the remaining paths
     const pathObj = new Path2D(svgStr);
-    ctx.fill(pathObj);
+    ctx?.fill(pathObj);
     renderedPaths.push(pathObj);
   }
 

@@ -16,7 +16,7 @@
 
   import { Pencil } from "lucide-svelte";
 
-  import { IconButton } from "@pixano/core/src";
+  import { IconButton, type ItemView } from "@pixano/core/src";
 
   import { canSave, itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -38,17 +38,20 @@
   let isEditing: boolean = false;
 
   itemMetas.subscribe((metas) => {
-    imageMeta = Object.values(metas.views || {}).map((view) => ({
-      fileName: view.uri.split("/").at(-1) as string,
-      width: view.features.width.value as number,
-      height: view.features.height.value as number,
-      format: view.uri.split(".").at(-1)?.toUpperCase() as string,
-      id: view.id,
-    }));
-    const sceneFeatures = Object.values(metas.sceneFeatures).length
-      ? metas.sceneFeatures
+    imageMeta = Object.values(metas.views).map((view: ItemView | ItemView[]) => {
+      const image: ItemView = Array.isArray(view) ? view[0] : view;
+      return {
+        fileName: image.uri.split("/").at(-1) as string,
+        width: image.features.width.value as number,
+        height: image.features.height.value as number,
+        format: image.uri.split(".").at(-1)?.toUpperCase() as string,
+        id: image.id,
+      };
+    });
+    const mainFeatures = Object.values(metas.mainFeatures).length
+      ? metas.mainFeatures
       : defaultSceneFeatures;
-    features = createFeature(sceneFeatures);
+    features = createFeature(mainFeatures);
   });
 
   const handleEditIconClick = () => {
@@ -58,10 +61,10 @@
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas = { ...oldMetas };
-      newMetas.sceneFeatures = {
-        ...newMetas.sceneFeatures,
+      newMetas.mainFeatures = {
+        ...newMetas.mainFeatures,
         [propertyName]: {
-          ...(newMetas.sceneFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
+          ...(newMetas.mainFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
           value,
         },
       };
@@ -84,7 +87,7 @@
   </h3>
   <div class="mx-4">
     <UpdateFeatureInputs
-      featureClass="scene"
+      featureClass="main"
       {features}
       {isEditing}
       saveInputChange={handleTextInputChange}

@@ -15,9 +15,8 @@
    */
 
   import { Button } from "@pixano/core/src";
-  import { nanoid } from "nanoid";
 
-  import type { ItemObject, Shape } from "@pixano/core";
+  import type { Shape } from "@pixano/core";
 
   import {
     newShape,
@@ -25,13 +24,15 @@
     itemMetas,
     canSave,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { GROUND_TRUTH } from "../../lib/constants";
+
   import type {
     CreateObjectInputs,
     ObjectProperties,
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
+  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { defineCreatedObject } from "../../lib/api/objectsApi";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -47,40 +48,8 @@
   const handleFormSubmit = () => {
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     itemObjects.update((oldObjects) => {
-      if (shape.status !== "inProgress") return oldObjects;
-      let newObject: ItemObject | null = null;
-      const baseObject = {
-        id: nanoid(10),
-        item_id: shape.itemId,
-        source_id: GROUND_TRUTH,
-        view_id: shape.viewId,
-        features,
-      };
-      if (shape.type === "rectangle") {
-        newObject = {
-          ...baseObject,
-          bbox: {
-            coords: [
-              shape.attrs.x / shape.imageWidth,
-              shape.attrs.y / shape.imageHeight,
-              shape.attrs.width / shape.imageWidth,
-              shape.attrs.height / shape.imageHeight,
-            ],
-            format: "xywh",
-            is_normalized: true,
-            confidence: 1,
-          },
-        };
-      }
-      if (shape.type === "mask") {
-        newObject = {
-          ...baseObject,
-          mask: {
-            counts: shape.rle.counts,
-            size: shape.rle.size,
-          },
-        };
-      }
+      if (shape.status !== "saving") return oldObjects;
+      const newObject = defineCreatedObject(shape, $itemMetas.type, features, $lastFrameIndex);
 
       return [...oldObjects, ...(newObject ? [newObject] : [])];
     });
@@ -103,7 +72,7 @@
   }
 </script>
 
-{#if shape.status === "inProgress"}
+{#if shape.status === "saving"}
   <form class="flex flex-col gap-4 p-4" on:submit|preventDefault={handleFormSubmit}>
     <p>Save {shape.type}</p>
     <div class="max-h-[calc(100vh-250px)] overflow-y-auto flex flex-col gap-4">

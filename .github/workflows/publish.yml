@@ -44,10 +44,10 @@ jobs:
         with:
           node-version: 18
 
-      - name: Setup pnpm 8
+      - name: Setup pnpm 9
         uses: pnpm/action-setup@v3
         with:
-          version: 8
+          version: 9
 
       - name: Install dependencies
         run: |

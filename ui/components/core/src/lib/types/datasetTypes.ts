@@ -26,7 +26,6 @@ export interface DatasetInfo {
   preview: string;
   splits: Array<string>;
   tables: Record<string, Array<DatasetTable>>;
-  categories: Array<DatasetCategory>;
   features_values?: FeaturesValues;
   stats: Array<DatasetStat>;
   page?: DatasetItems;
@@ -54,15 +53,32 @@ export interface DatasetStat {
 }
 
 // DATASET ITEM
-
-export interface DatasetItem {
+interface BaseDatasetItem {
   id: string;
   split: string;
-  views: Record<string, ItemView>;
   objects: Record<string, ItemObject>;
   features: Record<string, ItemFeature>;
   embeddings: Record<string, ItemEmbedding>;
 }
+
+export type ImageDatasetItem = BaseDatasetItem & {
+  type: "image";
+  objects: Record<string, ImageObject>;
+  views: Record<string, ItemView>;
+};
+
+export type VideoDatasetItem = BaseDatasetItem & {
+  type: "video";
+  objects: Record<string, VideoObject>;
+  views: Record<string, ItemView[]>;
+};
+
+export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
+  type: "3d";
+  views: Record<string, ItemView>;
+};
+
+export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
 
 export interface DatasetItems {
   items: Array<DatasetItem>;
@@ -88,26 +104,42 @@ export interface DisplayControl {
   editing?: boolean;
 }
 
-export interface BBoxObject {
-  bbox: ItemBBox;
-  mask?: ItemRLE;
-}
-
-export interface MaskObject {
-  bbox?: ItemBBox;
-  mask: ItemRLE;
-}
-
-export type ItemObject = (BBoxObject | MaskObject) & {
+export type ItemObjectBase = {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
 };
+
+export type VideoItemBBox = ItemBBox & {
+  frameIndex: number;
+  hidden?: boolean;
+};
+export interface Tracklet {
+  keyBoxes: VideoItemBBox[];
+  start: number;
+  end: number;
+}
+
+export type VideoObject = ItemObjectBase & {
+  datasetItemType: "video";
+  track: Tracklet[];
+  displayedBox: VideoItemBBox;
+};
+
+export type ImageObject = ItemObjectBase & {
+  datasetItemType: "image";
+  bbox?: ItemBBox;
+  mask?: ItemRLE;
+};
+
+export type ItemObject = ImageObject | VideoObject;
 
 export interface ItemRLE {
   counts: Array<number>;
@@ -124,7 +156,6 @@ export interface ItemBBox {
 }
 
 // ITEM EMBEDDING
-
 export interface ItemEmbedding {
   view_id: string;
   data: string;
@@ -139,10 +170,13 @@ export interface ItemFeature {
   required?: boolean;
 }
 
-export type FeatureList = Array<string>;
+export interface FeatureList {
+  restricted: boolean;
+  values: Array<string>;
+}
 
 export interface FeaturesValues {
-  scene: Record<string, Array<string>>;
+  main: Record<string, FeatureList>;
   objects: Record<string, FeatureList>;
 }
 
@@ -167,7 +201,7 @@ export type MaskSVG = string[];
 export interface BBox {
   id: string;
   viewId: string;
-  bbox: Array<number>;
+  bbox: Array<number>; // should be rename - current coordinate
   tooltip: string;
   catId: number;
   visible: boolean;

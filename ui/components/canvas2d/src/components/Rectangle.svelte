@@ -15,9 +15,9 @@
    */
 
   // Imports
-  import { onDestroy } from "svelte";
+  import { afterUpdate, onDestroy, tick } from "svelte";
   import Konva from "konva";
-  import { Rect, Label, Tag, Text, Group } from "svelte-konva";
+  import { Rect, Group } from "svelte-konva";
   import type { BBox, SelectionTool, Shape } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
@@ -27,6 +27,7 @@
     stickLabelsToRectangle,
     toggleIsEditingBBox,
   } from "../api/rectangleApi";
+  import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;
   export let bbox: BBox;
@@ -38,11 +39,7 @@
 
   let currentRect: Konva.Rect = stage.findOne(`#rect${bbox.id}`);
 
-  $: {
-    toggleIsEditingBBox(bbox.editing ? "on" : "off", stage, bbox.id);
-  }
-
-  function updateDimensions(rect: Konva.Rect) {
+  const updateDimensions = (rect: Konva.Rect) => {
     const coords = getNewRectangleDimensions(rect, stage, viewId);
     newShape = {
       status: "editing",
@@ -50,7 +47,7 @@
       shapeId: bbox.id,
       coords,
     };
-  }
+  };
 
   const resizeStroke = () => {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
@@ -72,18 +69,6 @@
     const tooltip: Konva.Label = stage.findOne(`#tooltip${bbox.id}`);
     stickLabelsToRectangle(tooltip, currentRect);
   };
-
-  $: {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    currentRect = viewLayer.findOne(`#rect${bbox.id}`);
-    if (currentRect) {
-      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewId, currentRect, bbox.id));
-      currentRect.on("transform", () => resizeStroke());
-      currentRect.on("transformend dragend", () => {
-        updateDimensions(currentRect);
-      });
-    }
-  }
 
   const onDoubleClick = () => {
     newShape = {
@@ -111,12 +96,26 @@
       transformer.nodes([]);
     }
   });
+
+  afterUpdate(async () => {
+    await tick();
+    toggleIsEditingBBox(bbox.editing ? "on" : "off", stage, bbox.id);
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    currentRect = viewLayer.findOne(`#rect${bbox.id}`);
+    if (currentRect) {
+      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewId, currentRect, bbox.id));
+      currentRect.on("transform", () => resizeStroke());
+      currentRect.on("transformend dragend", () => {
+        updateDimensions(currentRect);
+      });
+    }
+  });
 </script>
 
 <Group
   on:dblclick={onDoubleClick}
   on:click={onClick}
-  config={{ listening: selectedTool?.type === "PAN" }}
+  config={{ listening: selectedTool?.type === "PAN", zIndex: 2 }}
 >
   <Rect
     config={{
@@ -132,37 +131,14 @@
       draggable: bbox.editing,
     }}
   />
-  <Label
-    config={{
-      id: `tooltip${bbox.id}`,
-      x: bbox.bbox[0],
-      y: bbox.bbox[1],
-      width: 500,
-      height: 50,
-      offsetY: 12,
-      visible: bbox.visible,
-      scale: {
-        x: 1 / zoomFactor,
-        y: 1 / zoomFactor,
-      },
-      opacity: bbox.opacity,
-    }}
-  >
-    <Tag
-      config={{
-        fill: colorScale(bbox.id),
-        stroke: bbox.tooltip ? colorScale(bbox.id) : "transparent",
-      }}
-    />
-    <Text
-      config={{
-        id: `text${bbox.id}`,
-        x: 0,
-        y: 0,
-        text: bbox.tooltip,
-        fontSize: 12,
-        fontStyle: "100",
-      }}
-    />
-  </Label>
+  <LabelTag
+    id={bbox.id}
+    x={bbox.bbox[0]}
+    y={bbox.bbox[1]}
+    visible={bbox.visible}
+    {zoomFactor}
+    opacity={bbox.opacity}
+    tooltip={bbox.tooltip}
+    color={colorScale(bbox.id)}
+  />
 </Group>

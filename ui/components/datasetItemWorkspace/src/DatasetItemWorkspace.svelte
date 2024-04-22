@@ -55,11 +55,12 @@
   });
 
   $: itemMetas.set({
-    sceneFeatures: selectedItem.features,
+    mainFeatures: selectedItem.features,
     objectFeatures: Object.values(selectedItem.objects || {})[0]?.features,
-    featuresList: currentDataset.features_values || { scene: {}, objects: {} },
+    featuresList: currentDataset.features_values || { main: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
+    type: selectedItem.type,
   });
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
@@ -85,7 +86,7 @@
       );
     });
     itemMetas.subscribe((value) => {
-      savedItem.features = value.sceneFeatures;
+      savedItem.features = value.mainFeatures;
     });
     await handleSaveItem(savedItem);
     canSave.set(false);

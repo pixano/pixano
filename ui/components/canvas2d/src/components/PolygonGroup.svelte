@@ -34,7 +34,7 @@
   export let viewId: string;
   export let newShape: Shape;
   export let stage: Konva.Stage;
-  export let images: Record<string, HTMLImageElement> = {};
+  export let currentImage: HTMLImageElement;
   export let mask: Mask;
   export let color: string;
   export let zoomFactor: Record<string, number>;
@@ -75,8 +75,8 @@
   const handlePolygonPointsDragEnd = (svg?: string[]) => {
     const counts = runLengthEncode(
       svg || polygonShape.simplifiedSvg,
-      images[viewId].width,
-      images[viewId].height,
+      currentImage.width,
+      currentImage.height,
     );
 
     if (mask.editing) {

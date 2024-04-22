@@ -18,8 +18,4 @@
   export let value: boolean;
 </script>
 
-{#if value}
-  <input type="checkbox" disabled={true} class="pointer-events: none;" checked />
-{:else}
-  <input type="checkbox" disabled={true} class="pointer-events: none;" />
-{/if}
+<input type="checkbox" disabled={true} class="px-4 pointer-events: none;" bind:checked={value} />
