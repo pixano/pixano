@@ -26,12 +26,16 @@
     newShape,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { keyFrameBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+  import {
+    editKeyFrameInTracklet,
+    updateFrameWithInterpolatedBox,
+    updateFrameWithInterpolatedMask,
+  } from "../../lib/api/videoApi";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -40,6 +44,10 @@
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
+  const imageDimensions = [
+    selectedItem.views.image[0].features.width.value as number,
+    selectedItem.views.image[0].features.height.value as number,
+  ] as const;
 
   let isLoaded = false;
   let colorScale = utils.ordinalColorScale(colorRange);
@@ -65,26 +73,27 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        const { displayedBox } = object;
-        const newCoords = linearInterpolation(object.track, imageIndex);
-        if (newCoords) {
-          const [x, y, width, height] = newCoords;
-          displayedBox.coords = [x, y, width, height];
-          displayedBox.frameIndex = imageIndex;
-        }
-        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-        displayedBox.hidden = !newCoords;
-        return { ...object, displayedBox };
+        const bbox = updateFrameWithInterpolatedBox(object, imageIndex);
+        const mask = updateFrameWithInterpolatedMask(object, imageIndex, imageDimensions);
+        let displayedFrame = object.displayedFrame || object.track[0].keyFrames[0] || {};
+        displayedFrame = {
+          ...displayedFrame,
+          bbox,
+          mask,
+          frameIndex: imageIndex,
+          hidden: !bbox && !mask,
+        };
+        return { ...object, displayedFrame };
       }),
     );
   };
 
   $: {
     const shape = $newShape;
-    const box = $itemBoxBeingEdited;
+    const keyFrame = $keyFrameBeingEdited;
     if (shape.status === "editing") {
-      if (box) {
-        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
+      if (keyFrame) {
+        itemObjects.update((objects) => editKeyFrameInTracklet(objects, keyFrame, shape));
       } else {
         itemObjects.update((objects) => updateExistingObject(objects, $newShape));
       }

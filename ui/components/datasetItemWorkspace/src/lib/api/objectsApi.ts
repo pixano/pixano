@@ -8,6 +8,11 @@ import type {
   ItemView,
   SaveShape,
   ItemObjectBase,
+  ItemRLE,
+  PolygonGroupPoint,
+  MaskPoints,
+  MaskSVG,
+  ItemBBox,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -24,6 +29,7 @@ import type {
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
+import { parseSvgPath } from "@pixano/canvas2d/src/api/maskApi";
 
 const defineTooltip = (object: ItemObject) => {
   if (!object.bbox) return null;
@@ -39,9 +45,9 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
+  const box = obj.datasetItemType === "video" ? obj.displayedFrame?.bbox : obj.bbox;
 
-  if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
+  if (!box || (obj.datasetItemType === "video" && obj.displayedFrame?.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
@@ -66,25 +72,33 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   } as BBox;
 };
 
+export const convertMaskCountToPoints = (mask: ItemRLE): [MaskSVG, MaskPoints] => {
+  const rle = mask.counts;
+  const size = mask.size;
+  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+  const svg = mask_utils.convertSegmentsToSVG(maskPoly);
+  const points = svg.reduce((acc, val) => [...acc, parseSvgPath(val)], [] as PolygonGroupPoint[][]);
+  return [svg, points];
+};
+
 export const mapObjectToMasks = (obj: ItemObject) => {
+  const mask = obj.datasetItemType === "video" ? obj.displayedFrame?.mask : obj.mask;
   if (
-    !obj.mask ||
+    !mask ||
     obj.review_state ||
     (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   )
     return;
-  const rle = obj.mask.counts;
-  const size = obj.mask.size;
-  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+
+  const [svg] = convertMaskCountToPoints(mask);
 
   return {
     id: obj.id,
     viewId: obj.view_id,
-    svg: masksSVG,
+    svg,
     rle: obj.mask,
     catId: (obj.features.category_id?.value || 1) as number,
-    visible: !obj.mask.displayControl?.hidden && !obj.displayControl?.hidden,
+    visible: !mask.displayControl?.hidden && !obj.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
@@ -213,9 +227,40 @@ export const mapObjectWithNewStatus = (
 
 export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
 
+const createObjectFromShape = (
+  baseObject: Pick<ItemObject, "item_id" | "source_id" | "view_id" | "features" | "id">,
+  isVideo: boolean,
+  trackItem: { bbox?: ItemBBox; mask?: ItemRLE },
+  lastFrameIndex: number,
+): ItemObject => {
+  if (isVideo) {
+    return {
+      ...baseObject,
+      datasetItemType: "video",
+      track: [
+        {
+          start: 0,
+          end: lastFrameIndex,
+          keyFrames: [
+            { ...trackItem, frameIndex: 0 },
+            { ...trackItem, frameIndex: lastFrameIndex },
+          ],
+        },
+      ],
+      displayedFrame: { ...trackItem, frameIndex: 0 },
+    };
+  } else {
+    return {
+      ...baseObject,
+      ...trackItem,
+      datasetItemType: "image",
+    };
+  }
+};
+
 export const defineCreatedObject = (
   shape: SaveShape,
-  videoType: DatasetItem["type"],
+  datasetItemType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   lastFrameIndex: number,
 ) => {
@@ -227,6 +272,7 @@ export const defineCreatedObject = (
     view_id: shape.viewId,
     features,
   };
+  const isVideo = datasetItemType === "video";
   if (shape.type === "rectangle") {
     const { x, y, width, height } = shape.attrs;
     const coords = [
@@ -241,40 +287,14 @@ export const defineCreatedObject = (
       is_normalized: true,
       confidence: 1,
     };
-    const isVideo = videoType === "video";
-    if (isVideo) {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "video",
-        track: [
-          {
-            start: 0,
-            end: lastFrameIndex,
-            keyBoxes: [
-              { ...bbox, frameIndex: 0 },
-              { ...bbox, frameIndex: lastFrameIndex },
-            ],
-          },
-        ],
-        displayedBox: { ...bbox, frameIndex: 0 },
-      };
-    } else {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "image",
-        bbox,
-      };
-    }
+    newObject = createObjectFromShape(baseObject, isVideo, { bbox }, lastFrameIndex);
   }
   if (shape.type === "mask") {
-    newObject = {
-      ...baseObject,
-      datasetItemType: "image",
-      mask: {
-        counts: shape.rle.counts,
-        size: shape.rle.size,
-      },
+    const mask = {
+      counts: shape.rle.counts,
+      size: shape.rle.size,
     };
+    newObject = createObjectFromShape(baseObject, isVideo, { mask }, lastFrameIndex);
   }
   return newObject;
 };
