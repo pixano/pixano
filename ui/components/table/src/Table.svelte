@@ -15,11 +15,11 @@
    */
 
   // Local Imports
-  import { DefaultCell, FeatureCell, ImgCell } from "./cells";
+  import TableCell from "./TableCell.svelte";
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { DatasetItem, ImageDatasetItem } from "@pixano/core";
+  import type { ItemFeature } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -27,97 +27,73 @@
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render } from "svelte-headless-table";
+  import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
-  export let items: Array<DatasetItem>;
+  export let items: Array<Array<ItemFeature>>;
+
+  // Add data into a readable store and create table object
+  const data = readable(items);
+  const table = createTable(data, {
+    colOrder: addColumnOrder(),
+    hideCols: addHiddenColumns(),
+  });
+
+  // Initialise columns by parsing the first row and order them based on their type
+  let itemColumns = [];
+  let highPriorityColumns: string[] = [];
+  let lowPriorityColumns: string[] = [];
+
+  // Parse a feature into a table cell
+  export const FeatureCell = (feature: ItemFeature) =>
+    createRender(TableCell, {
+      itemFeature: feature.value,
+    });
+
+  Object.values(items[0]).forEach((field) => {
+    // Add field to column list
+    itemColumns.push(
+      table.column({
+        header: field.name,
+        cell: FeatureCell,
+        accessor: (item: Array<ItemFeature>) => item.find((item) => item.name === field.name),
+      }),
+    );
+
+    // Insert images and videos to the beginning of the column list
+    if (field.dtype === "image" || field.dtype === "video") {
+      highPriorityColumns.push(field.name);
+    } else {
+      lowPriorityColumns.push(field.name);
+    }
+  });
+  let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];
+
+  // Create columns object and view model
+  const columns = table.createColumns(itemColumns);
+  const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
+    table.createViewModel(columns);
+
+  // Initialise plugin to order and re-order columns
+  const { columnIdOrder } = pluginStates.colOrder;
+  $columnIdOrder = [...columnOrder];
+  const sortList = (ev: { detail: string[] }) => {
+    $columnIdOrder = ev.detail;
+  };
+
+  // Initialise plugin to change column visibility
+  const { hiddenColumnIds } = pluginStates.hideCols;
+  let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
+  $: $hiddenColumnIds = Object.entries(shownColumnsById)
+    .filter(([, hide]) => !hide)
+    .map(([id]) => id);
 
   // Handler to select an item
   const dispatch = createEventDispatcher();
   function handleSelectItem(id: string) {
     dispatch("selectItem", id);
   }
-
-  // Add data into a readable store
-  const data = readable(items);
-
-  // Create table object
-  const table = createTable(data, {
-    colOrder: addColumnOrder(),
-    hideCols: addHiddenColumns(),
-  });
-
-  // Initialise columns
-  let itemColumns = [
-    table.column({
-      header: "ID",
-      cell: DefaultCell,
-      accessor: "id",
-    }),
-    table.column({
-      header: "Split",
-      cell: DefaultCell,
-      accessor: "split",
-    }),
-  ];
-  let colOrder: string[] = [];
-
-  // // Parse views and add them to the columns
-  const imageItem = items.find((item) => item.type === "image") as ImageDatasetItem;
-  if (imageItem.views) {
-    Object.values(imageItem.views).forEach(({ id }) => {
-      itemColumns.push(
-        table.column({
-          header: id,
-          cell: ImgCell,
-          accessor: (item) => JSON.stringify(item.views[id]),
-        }),
-      );
-      colOrder.push(id);
-    });
-  }
-
-  // Add id and split to column order
-  colOrder.push("id");
-  colOrder.push("split");
-
-  // Parse features and add them to the columns
-  if (items[0]?.features) {
-    Object.values(items[0].features).forEach(({ name }) => {
-      itemColumns.push(
-        table.column({
-          header: name,
-          cell: FeatureCell,
-          accessor: (item) => JSON.stringify(item.features[name]),
-        }),
-      );
-      colOrder.push(name);
-    });
-  }
-
-  // Create columns
-  const columns = table.createColumns(itemColumns);
-
-  // Create view model
-  const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
-    table.createViewModel(columns);
-
-  // Order columns
-  const { columnIdOrder } = pluginStates.colOrder;
-  $columnIdOrder = [...colOrder];
-
-  // Handle column re-order
-  const sortList = (ev: { detail: string[] }) => {
-    $columnIdOrder = ev.detail;
-  };
-
-  // Column visibility
-  const { hiddenColumnIds } = pluginStates.hideCols;
-  let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
-  $: $hiddenColumnIds = Object.entries(shownColumnsById)
-    .filter(([, hide]) => !hide)
-    .map(([id]) => id);
 
   // Settings popup status
   let popupOpened = false;
@@ -130,8 +106,7 @@
     {popupOpened ? 'block' : 'hidden'}"
 >
   <div
-    class="px-12 pt-10 flex flex-col
-    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+    class="px-12 pt-10 flex flex-col bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
   >
     <span class="text-3xl font-bold mb-4"> Column settings </span>
     <span class="text-sm italic text-gray-500 font-medium mb-3">
