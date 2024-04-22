@@ -679,21 +679,17 @@
     //get box as Box
     let box: Box = null;
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    for (const rect of inputGroup.children) {
-      if (rect instanceof Konva.Rect) {
-        //need to convert rect pos / size to topleft/bottomright
-        const size = rect.size();
-        const pos = rect.position();
-        box = {
-          x: pos.x,
-          y: pos.y,
-          width: size.width,
-          height: size.height,
-        };
-        //we should have only one Box
-        break;
-      }
+    const rect: Konva.Rect = viewLayer.findOne("#drag-rect");
+    if (rect) {
+      //need to convert rect pos / size to topleft/bottomright
+      const size = rect.size();
+      const pos = rect.position();
+      box = {
+        x: pos.x,
+        y: pos.y,
+        width: size.width,
+        height: size.height,
+      };
     }
     return box;
   }
