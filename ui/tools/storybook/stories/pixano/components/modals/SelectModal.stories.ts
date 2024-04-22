@@ -15,25 +15,28 @@
 
 // Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { ConfirmModal } from "@pixano/core";
+import { SelectModal } from "@pixano/core";
 
 const meta = {
-  title: "Components/Core/Modals/ConfirmModal",
-  component: ConfirmModal,
+  title: "Pixano/Components/Modals/SelectModal",
+  component: SelectModal,
   tags: ["autodocs"],
-} satisfies Meta<ConfirmModal>;
+} satisfies Meta<SelectModal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BasicConfirmModal: Story = {
-  args: { message: "Some message" },
+export const BasicSelectModal: Story = {
+  args: {
+    message: "Some message",
+    choices: ["First choice", "Second choice", "Third choice"],
+    selected: "Second choice",
+  },
 };
 
-export const ConfirmModalWithDetails: Story = {
-  args: { message: "Some message", details: "Some details" },
-};
-
-export const ConfirmModalWithAlternativeAction: Story = {
-  args: { message: "Some message", alternativeAction: "Some alternative action" },
+export const NoChoicesSelectModal: Story = {
+  args: {
+    message: "Some message",
+    ifNoChoices: "No choices",
+  },
 };

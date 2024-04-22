@@ -15,26 +15,15 @@
 
 // Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Checkbox } from "@pixano/core";
+import { LoadingModal } from "@pixano/core";
 
 const meta = {
-  title: "Components/Core/UI/Checkbox",
-  component: Checkbox,
+  title: "Pixano/Components/Modals/LoadingModal",
+  component: LoadingModal,
   tags: ["autodocs"],
-} satisfies Meta<Checkbox>;
+} satisfies Meta<LoadingModal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BasicCheckbox: Story = {
-  args: {
-    title: "Some title",
-  },
-};
-
-export const DisabledCheckbox: Story = {
-  args: {
-    title: "test",
-    disabled: "true",
-  },
-};
+export const BasicLoadingModal: Story = {};

@@ -15,28 +15,23 @@
 
 // Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { SelectModal } from "@pixano/core";
+import { Combobox } from "@pixano/core";
 
 const meta = {
-  title: "Components/Core/Modals/SelectModal",
-  component: SelectModal,
+  title: "Pixano/Components/UI/Combobox",
+  component: Combobox,
   tags: ["autodocs"],
-} satisfies Meta<SelectModal>;
+} satisfies Meta<Combobox>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BasicSelectModal: Story = {
+export const BasicCombobox: Story = {
   args: {
-    message: "Some message",
-    choices: ["First choice", "Second choice", "Third choice"],
-    selected: "Second choice",
-  },
-};
-
-export const NoChoicesSelectModal: Story = {
-  args: {
-    message: "Some message",
-    ifNoChoices: "No choices",
+    listItems: [
+      { value: "value 1", label: "Some value" },
+      { value: "value 2", label: "Another value" },
+    ],
+    placeholder: "Some placeholder",
   },
 };

@@ -15,23 +15,21 @@
 
 // Imports
 import type { Meta, StoryObj } from "@storybook/svelte";
-import { Combobox } from "@pixano/core";
+import { WarningModal } from "@pixano/core";
 
 const meta = {
-  title: "Components/Core/UI/Combobox",
-  component: Combobox,
+  title: "Pixano/Components/Modals/WarningModal",
+  component: WarningModal,
   tags: ["autodocs"],
-} satisfies Meta<Combobox>;
+} satisfies Meta<WarningModal>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const BasicCombobox: Story = {
+export const BasicWarningModal: Story = {
   args: {
-    listItems: [
-      { value: "value 1", label: "Some value" },
-      { value: "value 2", label: "Another value" },
-    ],
-    placeholder: "Some placeholder",
+    message: "Some warning message",
+    details: "Some details",
+    moreDetails: "Some more details",
   },
 };

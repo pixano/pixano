@@ -18,7 +18,7 @@ import type { Meta, StoryObj } from "@storybook/svelte";
 import { PromptModal } from "@pixano/core";
 
 const meta = {
-  title: "Components/Core/Modals/PromptModal",
+  title: "Pixano/Components/Modals/PromptModal",
   component: PromptModal,
   tags: ["autodocs"],
 } satisfies Meta<PromptModal>;
