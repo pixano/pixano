@@ -421,11 +421,10 @@ def create_custom_dataset_item_class_from_dataset_schema(
         fields[field_name] = (field.annotation, ...)
 
     CustomDatasetItem = create_model(
-        "CustomDatasetItem",
+        "DatasetItem",
         **fields,
         __base__=DatasetItem,
     )
-    CustomDatasetItem.__doc__ = "CustomDatasetItem"
     return CustomDatasetItem
 
 
@@ -433,7 +432,15 @@ def create_sub_dataset_item(
     dataset_item: type[DatasetItem],
     selected_fields: list[str],
 ) -> type[DatasetItem]:
-    """Create a sub dataset item based on the selected fields.
+    """Create a new dataset item based on the selected fields of the original dataset
+    item.
+
+    .. note::
+        The id field is always included in the sub dataset item.
+
+    .. note::
+        The sub dataset item does not have the methods and config of the original
+        dataset item.
 
     Args:
         dataset_item (DatasetItem): The dataset item
@@ -442,15 +449,15 @@ def create_sub_dataset_item(
     Returns:
         DatasetItem: The sub dataset item
     """
-    kept_fields = {}
+    fields = {}
     for field_name, field in dataset_item.model_fields.items():
         if field_name in selected_fields or field_name == "id":
-            kept_fields[field_name] = (field.annotation, field.default)
+            fields[field_name] = (field.annotation, field.default)
 
-    CustomDatasetItem = create_model(
-        "CustomDatasetItem",
-        **kept_fields,
+    SubDatasetItem: type[DatasetItem] = create_model(
+        dataset_item.__name__,
+        **fields,
         __base__=DatasetItem,
     )
 
-    return CustomDatasetItem
+    return SubDatasetItem

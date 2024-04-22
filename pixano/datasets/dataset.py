@@ -104,6 +104,7 @@ class Dataset:
         self._custom_dataset_item_class = (
             create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
         )
+        self._db_connection = self._connect()
 
     @property
     def num_rows(self) -> int:
@@ -175,13 +176,11 @@ class Dataset:
         Returns:
             dict[str, lancedb.db.LanceTable]: Dataset tables
         """
-        ds = self._connect()
-
         ds_tables: dict[str, lancedb.db.LanceTable] = defaultdict(dict)
 
         for table_name in self.dataset_schema.schemas.keys():
             if names is None or table_name in names:
-                ds_tables[table_name] = ds.open_table(table_name)
+                ds_tables[table_name] = self._db_connection.open_table(table_name)
 
         return ds_tables
 
@@ -191,11 +190,9 @@ class Dataset:
         Returns:
             lancedb.db.LanceTable: Dataset table
         """
-        ds = self._connect()
-
         for table_name in self.dataset_schema.schemas.keys():
             if table_name == name:
-                return ds.open_table(table_name)
+                return self._db_connection.open_table(table_name)
 
         raise ValueError(f"Table {name} not found in dataset")
 
