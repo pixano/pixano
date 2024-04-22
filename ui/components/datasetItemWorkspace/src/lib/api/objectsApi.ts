@@ -1,4 +1,14 @@
-import type { ItemObject, BBox, DisplayControl, Mask, DatasetItem, Shape } from "@pixano/core";
+import type {
+  ItemObject,
+  BBox,
+  DisplayControl,
+  Mask,
+  DatasetItem,
+  Shape,
+  ItemView,
+  SaveShape,
+  ItemObjectBase,
+} from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
 import {
@@ -13,6 +23,7 @@ import type {
   ObjectsSortedByModelType,
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
+import { nanoid } from "nanoid";
 
 const defineTooltip = (object: ItemObject) => {
   if (!object.bbox) return null;
@@ -28,23 +39,27 @@ const defineTooltip = (object: ItemObject) => {
 };
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
-  if (!obj.bbox) return;
+  const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
+
+  if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
-  const imageHeight = (views?.[obj.view_id]?.features.height.value as number) || 1;
-  const imageWidth = (views?.[obj.view_id]?.features.width.value as number) || 1;
-  const x = obj.bbox.coords[0] * imageWidth;
-  const y = obj.bbox.coords[1] * imageHeight;
-  const w = obj.bbox.coords[2] * imageWidth;
-  const h = obj.bbox.coords[3] * imageHeight;
+  const view = views?.[obj.view_id];
+  const image: ItemView = Array.isArray(view) ? view[0] : view;
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
+  const [x, y, width, height] = box.coords;
+  const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
+
   const tooltip = defineTooltip(obj);
+
   return {
     id: obj.id,
     viewId: obj.view_id,
     catId: (obj.features.category_id?.value || 1) as number,
-    bbox: [x, y, w, h],
+    bbox,
     tooltip,
     opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    visible: !obj.bbox.displayControl?.hidden && !obj.displayControl?.hidden,
+    visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
     editing: obj.displayControl?.editing,
     strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
     highlighted: obj.highlighted,
@@ -197,3 +212,69 @@ export const mapObjectWithNewStatus = (
 };
 
 export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
+
+export const defineCreatedObject = (
+  shape: SaveShape,
+  videoType: DatasetItem["type"],
+  features: ItemObjectBase["features"],
+  lastFrameIndex: number,
+) => {
+  let newObject: ItemObject | null = null;
+  const baseObject = {
+    id: nanoid(10),
+    item_id: shape.itemId,
+    source_id: GROUND_TRUTH,
+    view_id: shape.viewId,
+    features,
+  };
+  if (shape.type === "rectangle") {
+    const { x, y, width, height } = shape.attrs;
+    const coords = [
+      x / shape.imageWidth,
+      y / shape.imageHeight,
+      width / shape.imageWidth,
+      height / shape.imageHeight,
+    ];
+    const bbox = {
+      coords,
+      format: "xywh",
+      is_normalized: true,
+      confidence: 1,
+    };
+    const isVideo = videoType === "video";
+    if (isVideo) {
+      newObject = {
+        ...baseObject,
+        datasetItemType: "video",
+        track: [
+          {
+            start: 0,
+            end: lastFrameIndex,
+            keyBoxes: [
+              { ...bbox, frameIndex: 0 },
+              { ...bbox, frameIndex: lastFrameIndex },
+            ],
+          },
+        ],
+        displayedBox: { ...bbox, frameIndex: 0 },
+      };
+    } else {
+      newObject = {
+        ...baseObject,
+        datasetItemType: "image",
+        bbox,
+      };
+    }
+  }
+  if (shape.type === "mask") {
+    newObject = {
+      ...baseObject,
+      datasetItemType: "image",
+      mask: {
+        counts: shape.rle.counts,
+        size: shape.rle.size,
+      },
+    };
+  }
+  return newObject;
+};
