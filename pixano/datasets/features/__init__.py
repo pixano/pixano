@@ -25,6 +25,12 @@ from .schemas.object import (
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
 from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
+from .schemas.tracklet import (
+    Tracklet,
+    TrackletWithTimestamp,
+    TrackletWithTimestep,
+    TrackletWithTimestepAndTimestamp,
+)
 from .schemas.video import Video
 from .schemas.view import View
 from .types.bbox import BBox, is_bbox
@@ -46,6 +52,10 @@ __all__ = [
     "NDArrayFloat",
     "PointCloud",
     "SequenceFrame",
+    "Tracklet",
+    "TrackletWithTimestamp",
+    "TrackletWithTimestep",
+    "TrackletWithTimestepAndTimestamp",
     "Video",
     "View",
     "is_bbox",
