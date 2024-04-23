@@ -490,10 +490,11 @@ class Dataset:
     def get_all_ids(
         self, table_name: Optional[str] = _SchemaGroup.ITEM.value
     ) -> list[str]:
-        """Get all ids from a table
+        """Get all ids from a table.
 
         Args:
-            table_name (Optional[str], optional): table to look for ids. Defaults to _SchemaGroup.ITEM.value.
+            table_name (Optional[str], optional): table to look for ids.
+                Defaults to _SchemaGroup.ITEM.value.
 
         Returns:
             list[str]: list of ids

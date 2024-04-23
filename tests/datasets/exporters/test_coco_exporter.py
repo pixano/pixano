@@ -152,8 +152,10 @@ class COCOExporterTestCase(unittest.TestCase):
                             imported_ann["categories"][i]["name"],
                             exported_ann["categories"][i]["name"],
                         )
-                        # While https://github.com/pixano/pixano-project-manager/issues/53 not resolved
-                        # mapping with supercategory is kept only for categories contained in the dataset objects
+                        # While
+                        # https://github.com/pixano/pixano-project-manager/issues/53
+                        # not resolved # mapping with supercategory is kept only for
+                        # categories contained in the dataset objects
                         if exported_ann["categories"][i]["supercategory"] != "":
                             self.assertEqual(
                                 imported_ann["categories"][i]["supercategory"],

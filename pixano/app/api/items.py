@@ -17,9 +17,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 
-from pixano.datasets.features.schemas.group import _SchemaGroup
-from pixano.datasets import Dataset, DatasetItem
 from pixano.app.settings import Settings, get_settings
+from pixano.datasets import Dataset, DatasetItem
+from pixano.datasets.features.schemas.group import _SchemaGroup
 
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
