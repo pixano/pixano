@@ -125,6 +125,9 @@ class DatasetBuilder(abc.ABC):
             self._target_dir / dataset.Dataset.FEATURES_VALUES_FILE
         )
 
+        # remove previous schema.json if any
+        if (self._target_dir / dataset.Dataset.SCHEMA_FILE).exists():
+            (self._target_dir / dataset.Dataset.SCHEMA_FILE).unlink()
         # save schema.json
         self._dataset_schema.to_json(self._target_dir / dataset.Dataset.SCHEMA_FILE)
 
