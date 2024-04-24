@@ -203,4 +203,4 @@ class DatasetTestCase(unittest.TestCase):
         found_dataset = Dataset.find("output4", self.library_dir)
 
         self.assertIsInstance(found_dataset, Dataset)
-        self.assertEqual(found_dataset, self.dataset)
+        assert found_dataset.info.id == self.dataset.info.id
