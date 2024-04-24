@@ -23,6 +23,7 @@ class Tracklet(BaseSchema):
     track_id: str
 
 
+@_register_schema_internal
 class TrackletWithTimestep(Tracklet):
     """Tracklet with Timestep Lance Model."""
 
@@ -30,6 +31,7 @@ class TrackletWithTimestep(Tracklet):
     end_timestep: int
 
 
+@_register_schema_internal
 class TrackletWithTimestamp(Tracklet):
     """Tracklet with Timestamp Lance Model."""
 
@@ -37,6 +39,7 @@ class TrackletWithTimestamp(Tracklet):
     end_timestamp: int
 
 
+@_register_schema_internal
 class TrackletWithTimestepAndTimestamp(Tracklet):
     """Tracklet with Timestep and Timestamp Lance Model."""
 
