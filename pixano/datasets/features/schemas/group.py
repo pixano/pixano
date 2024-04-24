@@ -17,16 +17,18 @@ from enum import Enum
 from .embedding import Embedding
 from .item import Item
 from .object import Object
+from .tracklet import Tracklet
 from .view import View
 
 
 class _SchemaGroup(Enum):
     """Schema group."""
 
-    ITEM = "item"
-    VIEW = "views"
-    OBJECT = "objects"
     EMBEDDING = "embeddings"
+    ITEM = "item"
+    OBJECT = "objects"
+    TRACKLET = "tracklets"
+    VIEW = "views"
 
     @classmethod
     def _missing_(cls, name):
@@ -36,8 +38,9 @@ class _SchemaGroup(Enum):
 
 
 _SCHEMA_GROUP_TO_SCHEMA_DICT = {
-    _SchemaGroup.ITEM: Item,
-    _SchemaGroup.VIEW: View,
-    _SchemaGroup.OBJECT: Object,
     _SchemaGroup.EMBEDDING: Embedding,
+    _SchemaGroup.ITEM: Item,
+    _SchemaGroup.OBJECT: Object,
+    _SchemaGroup.TRACKLET: Tracklet,
+    _SchemaGroup.VIEW: View,
 }
