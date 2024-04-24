@@ -19,8 +19,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 
-from .features import BaseSchema, Embedding, Item, Object, View
-from .features.schemas.group import _SchemaGroup
+from .features import BaseSchema, Item
+from .features.schemas.group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
 from .features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
 from .features.types.registry import _TYPES_REGISTRY
 
@@ -229,25 +229,18 @@ class DatasetSchema(BaseModel):
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
     _groups: dict[_SchemaGroup, list[str]] = PrivateAttr(
-        {
-            _SchemaGroup.ITEM: [],
-            _SchemaGroup.VIEW: [],
-            _SchemaGroup.OBJECT: [],
-            _SchemaGroup.EMBEDDING: [],
-        }
+        {key: [] for key in _SchemaGroup}
     )
 
     def _assign_table_groups(self) -> None:
         for table, schema in self.schemas.items():
-            if issubclass(schema, View):
-                self._groups[_SchemaGroup.VIEW].append(table)
-            elif issubclass(schema, Object):
-                self._groups[_SchemaGroup.OBJECT].append(table)
-            elif issubclass(schema, Embedding):
-                self._groups[_SchemaGroup.EMBEDDING].append(table)
-            elif issubclass(schema, Item):
-                self._groups[_SchemaGroup.ITEM].append(table)
-            else:
+            found_group = False
+            for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
+                if issubclass(schema, group_type):
+                    self._groups[group].append(table)
+                    found_group = True
+                    break
+            if not found_group:
                 raise ValueError(f"Invalid table type {schema}")
         return
 
