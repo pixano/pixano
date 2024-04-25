@@ -16,16 +16,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets import Dataset, DatasetInfo
+from pixano.datasets import Dataset, DatasetLibrary, DatasetExplorer
 
 
 router = APIRouter(tags=["datasets"])
 
 
-@router.get("/datasets", response_model=list[DatasetInfo])
+@router.get("/datasets", response_model=list[DatasetLibrary])
 async def get_datasets(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> list[DatasetInfo]:
+) -> list[DatasetLibrary]:
     """Load dataset list.
 
     Args:
@@ -35,7 +35,7 @@ async def get_datasets(
         list[DatasetInfo]: List of dataset infos
     """
     # Load datasets
-    infos = DatasetInfo.load_directory(directory=settings.data_dir, load_thumbnail=True)
+    infos = DatasetLibrary.load_directory(directory=settings.data_dir, load_thumbnail=True)
 
     # Return datasets
     if infos:
@@ -46,11 +46,12 @@ async def get_datasets(
     )
 
 
-@router.get("/datasets/{ds_id}", response_model=DatasetInfo)
+####### why do we need this one ?? should be removed ? ################
+@router.get("/datasets/{ds_id}", response_model=DatasetLibrary)
 async def get_dataset(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetInfo:
+) -> DatasetLibrary:
     """Load dataset.
 
     Args:
@@ -58,7 +59,7 @@ async def get_dataset(
         settings (Settings): App settings
 
     Returns:
-        DatasetInfo: Dataset info
+        DatasetLibrary: Dataset library info
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -67,14 +68,14 @@ async def get_dataset(
     if dataset:
         # return dataset.load_info(load_stats=True, load_features_values=True)
         ### TMP missing stats and features_values
-        tables = DatasetInfo.tables_from_schema(dataset.dataset_schema)
+        tables = DatasetLibrary.tables_from_schema(dataset.dataset_schema)
         legacy_info = {
             "id": dataset.info.id,
             "name": dataset.info.name,
             "description": dataset.info.description,
             "estimated_size": dataset.info.size,
             "num_elements": dataset.info.num_elements,
-            "preview": None,
+            "preview": "",
             "tables": tables,
         }
         return legacy_info

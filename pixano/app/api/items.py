@@ -19,6 +19,7 @@ from fastapi_pagination.api import create_page, resolve_params
 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
+import pixano.datasets.dataset_explorer as de
 from pixano.datasets.features import Image, SequenceFrame
 from pixano.datasets.features.schemas.group import _SchemaGroup
 
@@ -52,11 +53,10 @@ async def get_dataset_items(  # noqa: D417
 
     Args:
         ds_id (str): Dataset ID
-        params (Params, optional): Pagination parameters (offset and limit).
-            Defaults to Depends().
+        params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
 
     Returns:
-        Page[DatasetItem]: Dataset items page
+        Page[DatasetExplorer]: Dataset explorer page
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -77,7 +77,10 @@ async def get_dataset_items(  # noqa: D417
             )
 
         # Load dataset items
-        items = dataset.get_items(raw_params.offset, raw_params.limit)
+        #items = dataset.get_items(raw_params.offset, raw_params.limit)
+        all_ids = dataset.get_all_ids()
+        ids = sorted(all_ids)[raw_params.offset:raw_params.offset+raw_params.limit]
+        items = dataset.read_items(ids)
         if items:
             # TODO --> convert CustomDatasetItem (from new API) to legacy DatasetItem
             print("BR - items", len(items), items[0].__dict__.keys())
@@ -108,7 +111,7 @@ async def get_dataset_items(  # noqa: D417
                 features = {
                     val: {
                         "name": val,
-                        "dtype": type(val).__name__,
+                        "dtype": type(item.__dict__[val]).__name__,
                         "value": item.__dict__[val],
                     }
                     for val in groups[_SchemaGroup.ITEM]
@@ -156,6 +159,116 @@ async def get_dataset_items(  # noqa: D417
             # print("BR output page", outpage)
             # print("BR output page0", outpage.items[0])
             return outpage
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No items found with page parameters (start {start}, "
+                f"stop {stop}) in dataset",
+            ),
+        )
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
+    )
+
+
+@router.get("/explorer", response_model=de.DatasetExplorer)
+async def get_dataset_explorer(  # noqa: D417
+    ds_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    params: Params = Depends(),
+) -> de.DatasetExplorer:  # type: ignore
+    """## Load dataset items.
+
+    Args:
+
+        ds_id (str): Dataset ID
+
+        params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
+
+    Returns:
+        Page[DatasetExplorer]: Dataset explorer page
+    """
+    # Load dataset
+    dataset = Dataset.find(ds_id, settings.data_dir)
+
+    if dataset:
+        # Get page parameters
+        params = resolve_params(params)
+        raw_params = params.to_raw_params()
+        total = dataset.num_rows
+
+        # Check page parameters
+        start = raw_params.offset
+        stop = min(raw_params.offset + raw_params.limit, total)
+        if start >= stop:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Invalid page parameters (start {start}, stop {stop})",
+            )
+
+        # Load dataset items
+        all_ids = dataset.get_all_ids()
+        ids = sorted(all_ids)[raw_params.offset:raw_params.offset+raw_params.limit]
+        items = dataset.read_items(ids)  #future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
+        if items:
+            # convert CustomDatasetItem (from new API) to TableData
+            # build ColDesc
+            groups = defaultdict(list)
+            for tname in vars(items[0]).keys():
+                found_group = _SchemaGroup.ITEM  # if no matching group (-> it's not a table name), it is in ITEM
+                for group, tnames in dataset.dataset_schema._groups.items():
+                    if tname in tnames:
+                        found_group = group
+                        break
+                groups[found_group].append(tname)
+            cols = []
+            for feat in groups[_SchemaGroup.VIEW]:
+                view_item = getattr(items[0], feat)
+                if isinstance(view_item, Image):
+                    view_type = "image"
+                elif (
+                    isinstance(view_item, list)
+                    and len(view_item) > 0
+                    and isinstance(view_item[0], SequenceFrame)
+                ):
+                    view_type = "video"  # or "sequenceframe" ?
+                else:
+                    print("ERROR: unknown view type", type(view_item), view_item)
+                    view_type = type(view_item).__name__
+                cols.append(de.ColDesc(name=feat, type=view_type))
+            for feat in groups[_SchemaGroup.ITEM]:
+                cols.append(de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__))
+
+            # build rows
+            rows = []
+            for item in items:
+                row = {}
+                # VIEWS -> thumbnails previews
+                for feat in groups[_SchemaGroup.VIEW]:
+                    view_item = getattr(item, feat)
+                    if isinstance(view_item, Image):
+                        row[feat] = view_item.open(dataset.path / "media")
+                    elif (
+                        isinstance(view_item, list)
+                        and len(view_item) > 0
+                        and isinstance(view_item[0], SequenceFrame)
+                    ):
+                        row[feat] = view_item[0].open(dataset.path / "media")
+                # ITEM features
+                for feat in groups[_SchemaGroup.ITEM]:
+                    row[feat] = getattr(item, feat)
+
+                rows.append(row)
+
+            # Return dataset items
+            return de.DatasetExplorer(
+                id=ds_id,
+                name=dataset.info.name,
+                table_data=de.TableData(cols=cols, rows=rows),
+                pagination=de.PaginationInfo(current=start, size=raw_params.limit, total=total),
+                sem_search=[]
+            )
         raise HTTPException(
             status_code=404,
             detail=(
