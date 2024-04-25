@@ -32,7 +32,7 @@ class DatasetFeaturesValues(BaseModel):
 
     def to_json(self, json_fp: Path):
         """Save DatasetFeaturesValues to json file."""
-        json_fp.write_text(json.dumps(self.model_dump()), encoding="utf-8")
+        json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
 
     @staticmethod
     def from_json(json_fp: Path):

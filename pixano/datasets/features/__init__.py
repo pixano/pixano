@@ -34,14 +34,18 @@ from .schemas.tracklet import (
 from .schemas.video import Video
 from .schemas.view import View
 from .types.bbox import BBox, is_bbox
+from .types.bbox3d import BBox3D
 from .types.compressed_rle import CompressedRLE
+from .types.keypoints import KeyPoints
 from .types.nd_array_float import NDArrayFloat
 
 
 __all__ = [
     "BaseSchema",
     "BBox",
+    "BBox3D",
     "CompressedRLE",
+    "KeyPoints",
     "Embedding",
     "Image",
     "Item",

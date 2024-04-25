@@ -262,7 +262,7 @@ class DatasetSchema(BaseModel):
             for table, schema in json_content["schemas"].items():
                 schema["schema"] = old_json_content["schemas"][table]["schema"]
 
-        json_fp.write_text(json.dumps(json_content), encoding="utf-8")
+        json_fp.write_text(json.dumps(json_content, indent=4), encoding="utf-8")
 
     def _get_dataset_item_schema(self) -> type[BaseSchema]:
         return self.schemas[_SchemaGroup.ITEM.value]

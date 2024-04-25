@@ -150,7 +150,7 @@
     tableItem.push({ name: "split", dtype: "str", value: item.split });
 
     Object.values(item.views).forEach((view: ItemView) => {
-      tableItem.push({ name: view.id, dtype: "image", value: view.thumbnail });
+      tableItem.push({ name: view.id, dtype: "image", value: view.thumbnail ? view.thumbnail : "" });
     });
 
     Object.values(item.features).forEach((feature) => {

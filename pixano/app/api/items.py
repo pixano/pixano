@@ -19,18 +19,35 @@ from fastapi_pagination.api import create_page, resolve_params
 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
+from pixano.datasets.features import Image, SequenceFrame
 from pixano.datasets.features.schemas.group import _SchemaGroup
+
+
+# TMP legacy
+from typing import Optional
+from pydantic import BaseModel
+from collections import defaultdict
+
+
+class LegacyDatasetItem(BaseModel):
+    id: str
+    original_id: Optional[str] = None
+    split: str
+    features: Optional[dict] = None
+    views: Optional[dict] = None
+    objects: Optional[dict] = None
+    embeddings: Optional[dict] = None
 
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
 
 
-@router.get("/items", response_model=Page[DatasetItem])
+@router.get("/items", response_model=Page[LegacyDatasetItem])
 async def get_dataset_items(  # noqa: D417
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> Page[DatasetItem]:  # type: ignore
+) -> Page[LegacyDatasetItem]:  # type: ignore
     """Load dataset items.
 
     Args:
@@ -61,10 +78,84 @@ async def get_dataset_items(  # noqa: D417
 
         # Load dataset items
         items = dataset.get_items(raw_params.offset, raw_params.limit)
-
-        # Return dataset items
         if items:
-            return create_page(items, total=total, params=params)
+            # TODO --> convert CustomDatasetItem (from new API) to legacy DatasetItem
+            print("BR - items", len(items), items[0].__dict__.keys())
+            # print("BR - item", item[0])
+            ## item ex: dict_keys(['rgb_sequence', 'objects', 'id', 'split', 'sequence_name'])
+            ## need to find which parts belongs to item (here ((id, split)-->always in item), sequence_name)
+            ## (here sequence_name must be put in features)
+            ## and in which groups are others (here: objects -> objects, rgb_sequence -> views (aka media))
+            legacy_items = []
+            for item in items:
+                # note: we could do it on item[0] only in fact
+                groups = defaultdict(list)
+                for tname in item.__dict__.keys():
+                    found_group = (
+                        _SchemaGroup.ITEM
+                    )  # if no matching group (-> it's not a table name), it is in ITEM
+                    for group, tnames in dataset.dataset_schema._groups.items():
+                        if tname in tnames:
+                            found_group = group
+                            break
+                    if tname not in [
+                        "id",
+                        "split",
+                    ]:  # id and split are always present, and in ITEM group
+                        groups[found_group].append(tname)
+
+                # features
+                features = {
+                    val: {
+                        "name": val,
+                        "dtype": type(val).__name__,
+                        "value": item.__dict__[val],
+                    }
+                    for val in groups[_SchemaGroup.ITEM]
+                }
+
+                # views : {"table_name": ItemView}
+                # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
+                views = {}
+                for val in groups[_SchemaGroup.VIEW]:
+                    if isinstance(item.__dict__[val], Image):
+                        view = {
+                            "id": val,
+                            "type": "image",
+                            "uri": item.__dict__[val].url,
+                            "thumbnail": item.__dict__[val].open(dataset.path / "media"),
+                        }
+                    elif (
+                        isinstance(item.__dict__[val], list)
+                        and len(item.__dict__[val]) > 0
+                        and isinstance(item.__dict__[val][0], SequenceFrame)
+                    ):
+                        view = {
+                            "id": val,
+                            "type": "video",  # in fact sequence frames
+                            "uri": "",
+                            "thumbnail": item.__dict__[val][0].open(dataset.path / "media")
+                        }
+
+                    views[val] = view
+
+                legacy_item = LegacyDatasetItem(
+                    id=item.id,
+                    split=item.split,
+                    views=views,
+                    objects={},  # should not need objects here
+                    features=features,
+                    embeddings={},  # should not need embeddings here
+                )
+                legacy_items.append(legacy_item)
+
+            print("BR - leg_items", len(legacy_items), legacy_items[0].__dict__.keys())
+            # print("BR - leg_items0", legacy_items[0])
+            # Return dataset items
+            outpage = create_page(legacy_items, total=total, params=params)
+            # print("BR output page", outpage)
+            # print("BR output page0", outpage.items[0])
+            return outpage
         raise HTTPException(
             status_code=404,
             detail=(

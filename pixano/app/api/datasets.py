@@ -65,7 +65,19 @@ async def get_dataset(
 
     # Return dataset info
     if dataset:
-        return dataset.load_info(load_stats=True, load_features_values=True)
+        # return dataset.load_info(load_stats=True, load_features_values=True)
+        ### TMP missing stats and features_values
+        tables = DatasetInfo.tables_from_schema(dataset.dataset_schema)
+        legacy_info = {
+            "id": dataset.info.id,
+            "name": dataset.info.name,
+            "description": dataset.info.description,
+            "estimated_size": dataset.info.size,
+            "num_elements": dataset.info.num_elements,
+            "preview": None,
+            "tables": tables,
+        }
+        return legacy_info
     raise HTTPException(
         status_code=404,
         detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
