@@ -19,6 +19,7 @@
 
   import type { DatasetInfo } from "@pixano/core/src";
   import { svg_right_arrow } from "@pixano/core/src/icons";
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
   // Exports
   export let dataset: DatasetInfo;
@@ -64,12 +65,10 @@
 
   <!-- Dataset Thumbnail -->
   <div class="m-4 bg-slate-50">
-    {#if dataset.preview}
       <img
-        src={dataset.preview}
+        src={dataset.preview ?? pixanoLogo}
         alt="{dataset.name} thumbnail"
         class="w-[350px] h-[176px] rounded-sm object-contain object-center"
       />
-    {/if}
   </div>
 </button>
