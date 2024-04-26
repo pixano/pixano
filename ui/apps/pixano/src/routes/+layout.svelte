@@ -94,7 +94,7 @@
 
   $: {
     currentDatasetStore.subscribe((currentDataset) => {
-      if (currentDataset.id) {
+      if (currentDataset) {
         datasetTableStore.set(defaultDatasetTableValues);
       }
     });
