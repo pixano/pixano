@@ -15,7 +15,7 @@
    */
 
   // Local Imports
-  import TableCell from "./TableCell.svelte";
+  import { TableCell } from "./TableCell";
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
@@ -29,14 +29,6 @@
   import SortableList from "svelte-sortable-list";
   import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
-
-  // Cell types
-  import ImageCell from "./TableCells/ImageCell.svelte";
-  import NumberCell from "./TableCells/NumberCell.svelte";
-  import BooleanCell from "./TableCells/BooleanCell.svelte";
-  import TextCell from "./TableCells/TextCell.svelte";
-  import VideoCell from "./TableCells/VideoCell.svelte";
-  import HistogramCell from "./TableCells/HistogramCell.svelte";
 
   // Exports
   export let items: TableData;
@@ -54,50 +46,13 @@
   let lowPriorityColumns: string[] = [];
 
   // Parse a feature into a table cell
-  const FeatureCell = {
-    image: (value) => {
-      return createRender(ImageCell, {
-        value: value.value,
-      });
-    },
-    int: (value) => {
-      return createRender(NumberCell, {
-        value: value.value,
-      });
-    },
-    float: (value) => {
-      return createRender(NumberCell, {
-        value: value.value,
-      });
-    },
-    bool: (value) => {
-      return createRender(BooleanCell, {
-        value: value.value,
-      });
-    },
-    str: (value) => {
-      return createRender(TextCell, {
-        value: value.value,
-      });
-    },
-    video: (value) => {
-      return createRender(VideoCell, {
-        value: value.value,
-      });
-    },
-    histogram: (value) => {
-      return createRender(HistogramCell, {
-        value: value.value,
-      });
-    },
-  };
 
   Object.values(items.cols).forEach((col) => {
     // Add field to column list
     itemColumns.push(
       table.column({
         header: col.name,
-        cell: FeatureCell[col.type],
+        cell: TableCell[col.type],
         accessor: col.name,
       }),
     );
