@@ -23,7 +23,7 @@
   let datasetWithFeats: DatasetInfo;
   let models: Array<string>;
   let pageId: string | null;
-  let currentDatasetName: string;
+  let currentDatasetId: string;
 
   async function handleGetModels() {
     models = await api.getModels();
@@ -89,7 +89,15 @@
 
   $: page.subscribe((value) => {
     pageId = value.route.id;
-    currentDatasetName = value.params.dataset;
+    currentDatasetId = value.params.dataset;
+    // is currentDatasetStore is not set yet (happens from a refresh), set it now
+    // we could probably do better than that, or remove the other currentDatasetStore set ?
+    if (currentDatasetId && $currentDatasetStore == null) {
+      const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
+      if (currentDataset) {
+        currentDatasetStore.set(currentDataset);
+      }
+    }
   });
 
   $: {
@@ -100,14 +108,22 @@
     });
   }
 
-  datasetTableStore.subscribe((value) => {
-    const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId && value) {
-      getDatasetItems(currentDatasetId, value.currentPage, value.pageSize, value.query).catch(
-        (err) => console.error(err),
-      );
-    }
-  });
+  // NOTE: this doesn't really seems usefull, or redundant. For now it works without this...
+
+  // datasetTableStore.subscribe((value) => {
+  //   if (datasets && currentDatasetId) {
+  //     const currentDataset = datasets?.find((dataset) => dataset.id === currentDatasetId);
+  //     if (currentDataset && value) {
+  //       console.log("found!");
+  //       currentDatasetStore.set(currentDataset);
+  //       getDatasetItems(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
+  //         (err) => console.error(err),
+  //       );
+  //     } else {
+  //       console.log("REFRESH?");
+  //     }
+  //   }
+  // });
 </script>
 
 <svelte:head>

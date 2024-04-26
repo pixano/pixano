@@ -23,7 +23,7 @@
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     currentDatasetStore.set(dataset);
-    await goto(`${dataset.name}/dataset`);
+    await goto(`${dataset.id}/dataset`);
   };
 </script>
 

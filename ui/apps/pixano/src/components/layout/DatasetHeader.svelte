@@ -111,6 +111,7 @@
     class="h-20 p-5 flex justify-between items-center shrink-0
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
   >
+    {#if currentDataset}
     <div class="h-10 flex items-center font-semibold text-2xl">
       <div class="flex gap-4 items-center font-light">
         <button on:click={() => navigateTo("/")} class="h-10 w-10">
@@ -125,6 +126,7 @@
         {currentDataset.name}
       </div>
     </div>
+    {/if}
     {#if currentItemId}
       {#if isLoading}
         <Loader2Icon class="animate-spin" />
