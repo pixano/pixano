@@ -12,6 +12,7 @@
     modelsStore,
     datasetTableStore,
     defaultDatasetTableValues,
+    currentDatasetStore,
   } from "../lib/stores/datasetStores";
   import pixanoFavicon from "../assets/favicon.ico";
 
@@ -50,7 +51,13 @@
     size?: number,
     query?: DatasetTableStore["query"],
   ) => {
-    let datasetItems: ExplorerData = { id: "", name: "", table_data: {cols: [], rows: []}, pagination: {total: 0, current: 0, size: 0}, sem_search: [] };
+    let datasetItems: ExplorerData = {
+      id: "",
+      name: "",
+      table_data: { cols: [], rows: [] },
+      pagination: { total: 0, current: 0, size: 0 },
+      sem_search: [],
+    };
     let isErrored = false;
     if (query?.search) {
       // try {
@@ -86,10 +93,11 @@
   });
 
   $: {
-    const currentDatasetId = datasets?.find((dataset) => dataset.name === currentDatasetName)?.id;
-    if (currentDatasetId) {
-      datasetTableStore.set(defaultDatasetTableValues);
-    }
+    currentDatasetStore.subscribe((currentDataset) => {
+      if (currentDataset.id) {
+        datasetTableStore.set(defaultDatasetTableValues);
+      }
+    });
   }
 
   datasetTableStore.subscribe((value) => {

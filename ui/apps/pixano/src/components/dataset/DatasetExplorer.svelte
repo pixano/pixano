@@ -20,7 +20,7 @@
 
   import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
   import { Table } from "@pixano/table";
-  import type { ExplorerData, ItemFeature, ItemView } from "@pixano/core/src";
+  import type { ExplorerData } from "@pixano/core/src";
 
   import {
     svg_clear,
