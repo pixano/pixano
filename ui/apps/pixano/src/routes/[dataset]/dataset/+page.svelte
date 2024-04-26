@@ -6,13 +6,18 @@
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { getDatasetItems } from "@pixano/core/src/api";
+  import { datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDataset: ExplorerData;
   let currentDatasetId: string;
 
   $: {
-    page.subscribe((value) => (currentDatasetId = value.params.dataset));
-    getDatasetItems(currentDatasetId, 1, 20).then((value) => (selectedDataset = value));
+    datasetTableStore.subscribe((pagination) => {
+      page.subscribe((value) => (currentDatasetId = value.params.dataset));
+      getDatasetItems(currentDatasetId, pagination.currentPage, pagination.pageSize).then(
+        (value) => (selectedDataset = value),
+      );
+    });
   }
 
   $: {
