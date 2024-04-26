@@ -18,7 +18,7 @@
   import type { DatasetInfo } from "@pixano/core/src";
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
 
-  export let datasets: DatasetInfo[];
+  export let datasets: Array<DatasetInfo>;
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
     await goto(`${dataset.name}/dataset`);

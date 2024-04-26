@@ -14,14 +14,14 @@
    * http://www.cecill.info
    */
 
-   // Imports
+  // Imports
   import DatasetsLibrary from "../components/library/DatasetsLibrary.svelte";
   import type { DatasetInfo } from "@pixano/core/src";
-  import { datasetsStore as datasetsStore } from "../lib/stores/datasetStores";
+  import { datasetsStore } from "../lib/stores/datasetStores";
 
-  let datasets: DatasetInfo[];
+  let datasets: Array<DatasetInfo>;
 
-  datasetsStore.subscribe((value) => {
+    datasetsStore.subscribe((value) => {
     if (value) {
       datasets = value;
     }

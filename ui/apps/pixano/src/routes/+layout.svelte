@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
 
-  import type { DatasetInfo, DatasetItems } from "@pixano/core/src";
+  import type { DatasetItems, DatasetInfo } from "@pixano/core/src";
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";
@@ -18,7 +18,7 @@
   import "./styles.css";
   import type { DatasetTableStore } from "$lib/types/pixanoTypes";
 
-  let datasets: DatasetInfo[];
+  let datasets: Array<DatasetInfo>;
   let datasetWithFeats: DatasetInfo;
   let models: Array<string>;
   let pageId: string | null;

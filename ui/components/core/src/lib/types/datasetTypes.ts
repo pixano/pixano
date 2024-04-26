@@ -21,17 +21,29 @@ export interface DatasetInfo {
   id: string;
   name: string;
   description: string;
-  estimated_size: string;
   num_elements: number;
+  size: string;
   preview: string;
-  splits: Array<string>;
-  tables: Record<string, Array<DatasetTable>>;
-  features_values?: FeaturesValues;
-  stats: Array<DatasetStat>;
-  page?: DatasetItems;
   isFiltered?: boolean;
-  isErrored?: boolean;
 }
+
+// OLD
+
+// export interface DatasetInfo {
+//   id: string;
+//   name: string;
+//   description: string;
+//   estimated_size: string;
+//   num_elements: number;
+//   preview: string;
+//   splits: Array<string>;
+//   tables: Record<string, Array<DatasetTable>>;
+//   features_values?: FeaturesValues;
+//   stats: Array<DatasetStat>;
+//   page?: DatasetItems;
+//   isFiltered?: boolean;
+//   isErrored?: boolean;
+// }
 
 export interface DatasetTable {
   name: string;
