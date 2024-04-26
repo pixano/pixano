@@ -26,15 +26,17 @@
 
   import { findSelectedItem } from "$lib/api/navigationApi";
   import {
+    currentDatasetStore,
     datasetsStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
   import { navItems } from "$lib/constants/headerConstants";
 
-  export let datasetName: string;
   export let pageId: string | null;
-  export let currentDatasetName: string;
+
+  let currentDataset: DatasetInfo;
+  $: currentDatasetStore.subscribe((value) => (currentDataset = value));
 
   let datasets: DatasetInfo[];
   let currentItemId: string;
@@ -58,11 +60,10 @@
   });
 
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
     const datasetItems = Object.values(currentDataset?.page?.items || {});
     const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
     if (selectedId) {
-      const route = `/${currentDatasetName}/dataset/${selectedId}`;
+      const route = `/${currentDataset.id}/dataset/${selectedId}`;
       if (canSaveCurrentItem) {
         newItemId = selectedId;
         return (showConfirmModal = route);
@@ -116,12 +117,12 @@
           <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
         </button>
         <IconButton
-          on:click={() => navigateTo(currentItemId ? `/${datasetName}/dataset` : "/")}
+          on:click={() => navigateTo(currentItemId ? `/${currentDataset.id}/dataset` : "/")}
           tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
         >
           <ArrowLeftCircleIcon />
         </IconButton>
-        {datasetName}
+        {currentDataset.name}
       </div>
     </div>
     {#if currentItemId}
@@ -143,7 +144,7 @@
       {#each navItems as { name, Icon }}
         <PrimaryButton
           isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-          on:click={() => navigateTo(`/${datasetName}/${name.toLocaleLowerCase()}`)}
+          on:click={() => navigateTo(`/${currentDataset.id}/${name.toLocaleLowerCase()}`)}
         >
           <Icon strokeWidth={1} />
           {name}

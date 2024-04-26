@@ -1,22 +1,21 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
 
   import type { ExplorerData } from "@pixano/core/src";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { getDatasetItems } from "@pixano/core/src/api";
-  import { datasetTableStore } from "$lib/stores/datasetStores";
+  import { currentDatasetStore, datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDataset: ExplorerData;
-  let currentDatasetId: string;
 
   $: {
     datasetTableStore.subscribe((pagination) => {
-      page.subscribe((value) => (currentDatasetId = value.params.dataset));
-      getDatasetItems(currentDatasetId, pagination.currentPage, pagination.pageSize).then(
-        (value) => (selectedDataset = value),
-      );
+      currentDatasetStore.subscribe((currentDataset) => {
+        getDatasetItems(currentDataset.id, pagination.currentPage, pagination.pageSize).then(
+          (datasetItems) => (selectedDataset = datasetItems),
+        );
+      });
     });
   }
 

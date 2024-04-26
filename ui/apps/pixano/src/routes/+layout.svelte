@@ -110,7 +110,7 @@
   {#if pageId === "/"}
     <MainHeader {datasets} />
   {:else}
-    <DatasetHeader datasetName={currentDatasetName} {pageId} {currentDatasetName} />
+    <DatasetHeader {pageId} />
   {/if}
   <main class="h-1 min-h-screen bg-slate-50">
     <slot />

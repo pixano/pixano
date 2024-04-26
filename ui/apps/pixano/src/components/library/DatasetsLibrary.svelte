@@ -17,11 +17,13 @@
   import { goto } from "$app/navigation";
   import type { DatasetInfo } from "@pixano/core/src";
   import DatasetPreviewCard from "../../components/dataset/DatasetPreviewCard.svelte";
+  import { currentDatasetStore } from "$lib/stores/datasetStores";
 
   export let datasets: Array<DatasetInfo>;
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
-    await goto(`${dataset.id}/dataset`);
+    currentDatasetStore.set(dataset);
+    await goto(`${dataset.name}/dataset`);
   };
 </script>
 
