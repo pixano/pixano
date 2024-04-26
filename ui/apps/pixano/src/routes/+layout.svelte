@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
 
-  import type { DatasetItems, DatasetInfo } from "@pixano/core/src";
+  import type { DatasetItems, DatasetInfo, ExplorerData } from "@pixano/core/src";
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";
@@ -50,18 +50,18 @@
     size?: number,
     query?: DatasetTableStore["query"],
   ) => {
-    let datasetItems: DatasetItems = { items: [], total: 0 };
+    let datasetItems: ExplorerData = { id: "", name: "", table_data: {cols: [], rows: []}, pagination: {total: 0, current: 0, size: 0}, sem_search: [] };
     let isErrored = false;
     if (query?.search) {
-      try {
-        datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
-      } catch (err) {
-        isErrored = true;
-      }
+      // try {
+      //   datasetItems = await api.searchDatasetItems(datasetId, query, page, size);
+      // } catch (err) {
+      //   isErrored = true;
+      // }
     } else {
       try {
         datasetItems = await api.getDatasetItems(datasetId, page, size);
-        datasetWithFeats = await api.getDataset(datasetId);
+        //datasetWithFeats = await api.getDataset(datasetId);
       } catch (err) {
         isErrored = true;
       }
@@ -70,9 +70,9 @@
       value.map((dataset) =>
         dataset.id === datasetId
           ? {
-              ...dataset,
-              features_values: datasetWithFeats.features_values,
-              page: datasetItems,
+              ...datasetItems,
+              //features_values: datasetWithFeats.features_values,
+              //page: datasetItems,
               isErrored,
             }
           : dataset,

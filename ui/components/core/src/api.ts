@@ -14,7 +14,7 @@
  */
 
 // Imports
-import type { DatasetInfo, DatasetItems, DatasetItem } from "./lib/types/datasetTypes";
+import type { DatasetInfo, DatasetItems, DatasetItem, ExplorerData } from "./lib/types/datasetTypes";
 
 // Exports
 export async function getDatasets(): Promise<Array<DatasetInfo>> {
@@ -59,15 +59,15 @@ export async function getDatasetItems(
   datasetId: string,
   page: number = 1,
   size: number = 100,
-): Promise<DatasetItems> {
-  let datasetItems: DatasetItems;
+): Promise<ExplorerData> {
+  let datasetItems: ExplorerData;
 
   try {
-    const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
+    const response = await fetch(`/datasets/${datasetId}/explorer?page=${page}&size=${size}`);
     if (response.ok) {
-      datasetItems = (await response.json()) as DatasetItems;
+      datasetItems = (await response.json()) as ExplorerData;
     } else {
-      datasetItems = {} as DatasetItems;
+      datasetItems = {} as ExplorerData;
       console.log(
         "api.getDatasetItems -",
         response.status,
@@ -76,7 +76,7 @@ export async function getDatasetItems(
       );
     }
   } catch (e) {
-    datasetItems = {} as DatasetItems;
+    datasetItems = {} as ExplorerData;
     console.log("api.getDatasetItems -", e);
   }
 

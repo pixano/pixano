@@ -22,10 +22,14 @@
   import BooleanCell from "./TableCells/BooleanCell.svelte";
   import TextCell from "./TableCells/TextCell.svelte";
 
-  import type { ItemFeature } from "@pixano/core";
+  import type { ItemFeature, TableRow } from "@pixano/core";
+
+  // Supprimer ?
 
   // Exports
-  export let itemFeature: ItemFeature;
+  export let type: string;
+  export let value;
+  //export let itemFeature: TableRow;
 
   // Map types to cell components
   const componentsMap = {
@@ -39,4 +43,4 @@
   };
 </script>
 
-<svelte:component this={componentsMap[itemFeature.dtype]} value={itemFeature.value} />
+<svelte:component this={componentsMap[type]} value={value} />

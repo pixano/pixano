@@ -19,7 +19,7 @@
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { ItemFeature } from "@pixano/core";
+  import type { ItemFeature, TableData } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -30,11 +30,19 @@
   import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
+  // Cell types
+  import ImageCell from "./TableCells/ImageCell.svelte";
+  import NumberCell from "./TableCells/NumberCell.svelte";
+  import BooleanCell from "./TableCells/BooleanCell.svelte";
+  import TextCell from "./TableCells/TextCell.svelte";
+  import VideoCell from "./TableCells/VideoCell.svelte";
+  import HistogramCell from "./TableCells/HistogramCell.svelte";
+
   // Exports
-  export let items: Array<Array<ItemFeature>>;
+  export let items: TableData;
 
   // Add data into a readable store and create table object
-  const data = readable(items);
+  const data = readable(items.rows);
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
@@ -46,26 +54,59 @@
   let lowPriorityColumns: string[] = [];
 
   // Parse a feature into a table cell
-  export const FeatureCell = (feature: ItemFeature) =>
-    createRender(TableCell, {
-      itemFeature: feature.value,
-    });
+  const FeatureCell = {
+    image: (value) => {
+      return createRender(ImageCell, {
+        value: value.value,
+      });
+    },
+    int: (value) => {
+      return createRender(NumberCell, {
+        value: value.value,
+      });
+    },
+    float: (value) => {
+      return createRender(NumberCell, {
+        value: value.value,
+      });
+    },
+    bool: (value) => {
+      return createRender(BooleanCell, {
+        value: value.value,
+      });
+    },
+    str: (value) => {
+      return createRender(TextCell, {
+        value: value.value,
+      });
+    },
+    video: (value) => {
+      return createRender(VideoCell, {
+        value: value.value,
+      });
+    },
+    histogram: (value) => {
+      return createRender(HistogramCell, {
+        value: value.value,
+      });
+    },
+  };
 
-  Object.values(items[0]).forEach((field) => {
+  Object.values(items.cols).forEach((col) => {
     // Add field to column list
     itemColumns.push(
       table.column({
-        header: field.name,
-        cell: FeatureCell,
-        accessor: (item: Array<ItemFeature>) => item.find((item) => item.name === field.name),
+        header: col.name,
+        cell: FeatureCell[col.type],
+        accessor: col.name,
       }),
     );
 
     // Insert images and videos to the beginning of the column list
-    if (field.dtype === "image" || field.dtype === "video") {
-      highPriorityColumns.push(field.name);
+    if (col.type === "image" || col.type === "video") {
+      highPriorityColumns.push(col.name);
     } else {
-      lowPriorityColumns.push(field.name);
+      lowPriorityColumns.push(col.name);
     }
   });
   let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];

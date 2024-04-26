@@ -21,7 +21,7 @@
   export let datasets: Array<DatasetInfo>;
 
   const handleSelectDataset = async (dataset: DatasetInfo) => {
-    await goto(`${dataset.name}/dataset`);
+    await goto(`${dataset.id}/dataset`);
   };
 </script>
 

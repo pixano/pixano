@@ -27,6 +27,33 @@ export interface DatasetInfo {
   isFiltered?: boolean;
 }
 
+export interface ExplorerData {
+  id: string;
+  name: string;
+  table_data: TableData;
+  pagination: PaginationInfo;
+  sem_search: Array<string>;
+  isErrored?: boolean;
+}
+
+export interface TableData {
+  cols: Array<TableColumn>;
+  rows: Array<TableRow>;
+}
+
+export interface TableColumn {
+  name: string;
+  type: string;
+}
+
+export type TableRow = Record<string, string | number | boolean | DatasetStat>;
+
+export interface PaginationInfo {
+  current: number;
+  size: number;
+  total: number;
+}
+
 // OLD
 
 // export interface DatasetInfo {

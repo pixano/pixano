@@ -2,23 +2,26 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
 
-  import type { DatasetInfo } from "@pixano/core/src";
+  import type { ExplorerData } from "@pixano/core/src";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
+  import { getDatasetItems } from "@pixano/core/src/api";
 
-  import { datasetsStore } from "../../../lib/stores/datasetStores";
-
-  let selectedDataset: DatasetInfo;
+  let selectedDataset: ExplorerData;
+  let currentDatasetId: string;
 
   $: {
-    let currentDatasetName: string;
-    page.subscribe((value) => (currentDatasetName = value.params.dataset));
-    datasetsStore.subscribe((value) => {
-      const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
-      if (foundDataset) {
-        selectedDataset = foundDataset;
-      }
-    });
+    page.subscribe((value) => (currentDatasetId = value.params.dataset));
+    getDatasetItems(currentDatasetId, 1, 20).then((value) => (selectedDataset = value));
+  }
+
+  $: {
+    // datasetsStore.subscribe((value) => {
+    //   const foundDataset = value?.find((dataset) => dataset.name === currentDatasetId);
+    //   if (foundDataset) {
+    //     selectedDataset = foundDataset;
+    //   }
+    // });
   }
 
   const handleSelectItem = async (event: CustomEvent) => {
@@ -26,7 +29,7 @@
   };
 </script>
 
-{#if selectedDataset?.page}
+{#if selectedDataset?.table_data}
   <div class="pt-20 h-1 min-h-screen">
     <DatasetExplorer {selectedDataset} on:selectItem={(event) => handleSelectItem(event)} />
   </div>
