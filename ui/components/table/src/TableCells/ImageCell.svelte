@@ -16,7 +16,6 @@
 
   // Exports
   export let value: string;
-  console.log(value)
 </script>
 
 <div class="mx-8 h-20 aspect-square">

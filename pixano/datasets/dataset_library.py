@@ -17,6 +17,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from .dataset_schema import DatasetSchema
+from pixano.datasets.features import Image
 
 
 class DatasetLibrary(BaseModel):
@@ -93,8 +94,9 @@ class DatasetLibrary(BaseModel):
                     "description": info.description,
                     "estimated_size": info.size,
                     "num_elements": info.num_elements,
-                    "preview": str(
-                        json_fp.parent / "previews" / (info.id + ".jpg")
+                    "preview": Image.open_url(
+                        str(json_fp.parent / "previews/dataset_preview.jpg"),
+                        json_fp.parent / "media",
                     ),  # TODO choose correct preview name / path / extension
                 }
             )

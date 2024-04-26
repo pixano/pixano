@@ -25,8 +25,12 @@ class Image(View):
     format: str
 
     def open(self, media_dir: Path) -> typing.IO:
+        return Image.open_url(self.url, media_dir)
+
+    @staticmethod
+    def open_url(url, media_dir: Path) -> typing.IO:
         # URI is incomplete
-        if urlparse(self.url).scheme == "":
+        if urlparse(url).scheme == "":
             uri_prefix = media_dir.absolute().as_uri()
             # URI prefix exists
             if uri_prefix is not None:
@@ -36,7 +40,7 @@ class Image(View):
                     raise ValueError(
                         "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
                     )
-                combined_path = Path(parsed_uri.path) / self.url
+                combined_path = Path(parsed_uri.path) / url
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
                 api_url = parsed_uri.geturl()
             else:
@@ -44,7 +48,7 @@ class Image(View):
                 raise ValueError("URI is incomplete, need URI prefix")
         # URI is already complete
         else:
-            api_url = self.url
+            api_url = url
 
         try:
             with urlopen(api_url) as f:

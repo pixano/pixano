@@ -63,7 +63,6 @@
   let searchInput: string = "";
   let selectedSearchModel: string | undefined;
   const searchModels: string[] = [];
-  console.log(selectedDataset)
   if (selectedDataset.sem_search.length > 0) {
     for (const model of selectedDataset.sem_search) {
       // Initialize selected search model
