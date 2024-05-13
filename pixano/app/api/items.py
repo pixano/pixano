@@ -353,7 +353,7 @@ async def get_dataset_item(  # noqa: D417
         item = dataset.read_item(item_id)
 
         groups = defaultdict(list)
-        for tname in item.__dict__.keys():
+        for tname in vars(item).keys():
             found_group = (
                 _SchemaGroup.ITEM
             )  # if no matching group (-> it's not a table name), it is in ITEM
@@ -369,42 +369,44 @@ async def get_dataset_item(  # noqa: D417
 
         # features
         features = {
-            val: {
-                "name": val,
-                "dtype": type(item.__dict__[val]).__name__,
-                "value": item.__dict__[val],
+            feat: {
+                "name": feat,
+                "dtype": type(getattr(item, feat)).__name__,
+                "value": getattr(item, feat),
             }
-            for val in groups[_SchemaGroup.ITEM]
+            for feat in groups[_SchemaGroup.ITEM]
         }
 
         # views : {"table_name": ItemView}
         # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
         views = {}
         for val in groups[_SchemaGroup.VIEW]:
-            if isinstance(item.__dict__[val], Image):
+            view_item = getattr(item, val)
+            if isinstance(view_item, Image):
                 view = {
                     "id": val,
                     "type": "image",
-                    "uri": item.__dict__[val].url,
-                    "thumbnail": item.__dict__[val].open(dataset.path / "media"),
+                    "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
+                    "thumbnail": view_item.open(dataset.path / "media"),
                     "features": {
-                        "width": item.__dict__[val].width,
-                        "height": item.__dict__[val].height,
+                        "width": view_item.width,
+                        "height": view_item.height,
                     },
                 }
             elif (
-                isinstance(item.__dict__[val], list)
-                and len(item.__dict__[val]) > 0
-                and isinstance(item.__dict__[val][0], SequenceFrame)
+                isinstance(view_item, list)
+                and len(view_item) > 0
+                and isinstance(view_item[0], SequenceFrame)
             ):
                 view = {
                     "id": val,
                     "type": "video",  # in fact sequence frames
-                    "uri": "",
-                    "thumbnail": item.__dict__[val][0].open(dataset.path / "media"),
+                    "uri": "data/" + dataset.path.name + "/media/" + view_item[0].url,
+                    # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
+                    "thumbnail": view_item[0].open(dataset.path / "media"),
                     "features": {
-                        "width": item.__dict__[val][0].width,
-                        "height": item.__dict__[val][0].height,
+                        "width": view_item[0].width,
+                        "height": view_item[0].height,
                     },
                 }
 
