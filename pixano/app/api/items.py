@@ -330,12 +330,12 @@ async def search_dataset_items(  # noqa: D417
     )
 
 
-@router.get("/items/{item_id}", response_model=DatasetItem)
+@router.get("/items/{item_id}", response_model=LegacyDatasetItem)
 async def get_dataset_item(  # noqa: D417
     ds_id: str,
     item_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetItem:  # type: ignore
+) -> LegacyDatasetItem:  # type: ignore
     """Load dataset item.
 
     Args:
@@ -350,15 +350,78 @@ async def get_dataset_item(  # noqa: D417
 
     if dataset:
         # Load dataset item
-        item = dataset.get_item(
-            item_id
-            # select_table_groups=[_SchemaGroup.VIEW, _SchemaGroup.OBJECT],
+        item = dataset.read_item(item_id)
+
+        groups = defaultdict(list)
+        for tname in item.__dict__.keys():
+            found_group = (
+                _SchemaGroup.ITEM
+            )  # if no matching group (-> it's not a table name), it is in ITEM
+            for group, tnames in dataset.dataset_schema._groups.items():
+                if tname in tnames:
+                    found_group = group
+                    break
+            if tname not in [
+                "id",
+                "split",
+            ]:  # id and split are always present, and in ITEM group
+                groups[found_group].append(tname)
+
+        # features
+        features = {
+            val: {
+                "name": val,
+                "dtype": type(item.__dict__[val]).__name__,
+                "value": item.__dict__[val],
+            }
+            for val in groups[_SchemaGroup.ITEM]
+        }
+
+        # views : {"table_name": ItemView}
+        # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
+        views = {}
+        for val in groups[_SchemaGroup.VIEW]:
+            if isinstance(item.__dict__[val], Image):
+                view = {
+                    "id": val,
+                    "type": "image",
+                    "uri": item.__dict__[val].url,
+                    "thumbnail": item.__dict__[val].open(dataset.path / "media"),
+                    "features": {
+                        "width": item.__dict__[val].width,
+                        "height": item.__dict__[val].height,
+                    },
+                }
+            elif (
+                isinstance(item.__dict__[val], list)
+                and len(item.__dict__[val]) > 0
+                and isinstance(item.__dict__[val][0], SequenceFrame)
+            ):
+                view = {
+                    "id": val,
+                    "type": "video",  # in fact sequence frames
+                    "uri": "",
+                    "thumbnail": item.__dict__[val][0].open(dataset.path / "media"),
+                    "features": {
+                        "width": item.__dict__[val].width,
+                        "height": item.__dict__[val].height,
+                    },
+                }
+
+            views[val] = view
+
+        legacy_item = LegacyDatasetItem(
+            id=item.id,
+            split=item.split,
+            views=views,
+            objects={},  #need objects here
+            features=features,
+            embeddings={},  # should not need embeddings here
         )
 
-        print("HAHA", item)
         # Return dataset item
-        if item:
-            return item
+        if legacy_item:
+            return legacy_item
         raise HTTPException(
             status_code=404,
             detail=f"Item '{item_id}' not found in dataset",
