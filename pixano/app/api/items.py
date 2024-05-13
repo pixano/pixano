@@ -403,8 +403,8 @@ async def get_dataset_item(  # noqa: D417
                     "uri": "",
                     "thumbnail": item.__dict__[val][0].open(dataset.path / "media"),
                     "features": {
-                        "width": item.__dict__[val].width,
-                        "height": item.__dict__[val].height,
+                        "width": item.__dict__[val][0].width,
+                        "height": item.__dict__[val][0].height,
                     },
                 }
 
