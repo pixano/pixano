@@ -94,10 +94,11 @@ export interface DatasetStat {
 // DATASET ITEM
 interface BaseDatasetItem {
   id: string;
+  datasetId: string;
   split: string;
-  objects: Record<string, ItemObject>;
-  features: Record<string, ItemFeature>;
-  embeddings: Record<string, ItemEmbedding>;
+  objects: Record<string, ItemObject>; //remplacer par? Array<ItemObject>
+  features: Record<string, ItemFeature>; //remplacer par? Array<ItemFeature>
+  embeddings: Record<string, ItemEmbedding>; //remplacer par? Array<ItemEmbedding>
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
@@ -148,8 +149,8 @@ export type ItemObjectBase = {
   item_id: string;
   source_id: string;
   view_id: string;
-  bbox?: ItemBBox;
-  mask?: ItemRLE;
+  //bbox?: ItemBBox;
+  //mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";

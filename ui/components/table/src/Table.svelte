@@ -193,12 +193,7 @@
             {...rowAttrs}
             class="h-24 cursor-pointer hover:bg-slate-100"
             on:click={() => {
-              for (const feature of items[row.id]) {
-                if (feature.name === "id") {
-                  handleSelectItem(feature.value);
-                  return;
-                }
-              }
+              handleSelectItem(items.rows[row.id].id);
             }}
           >
             {#each row.cells as cell (cell.id)}

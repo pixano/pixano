@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import type { DatasetItem, DatasetInfo, ItemObject } from "@pixano/core";
+  import type { DatasetItem, ItemObject, FeaturesValues } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -30,7 +30,8 @@
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
 
-  export let currentDataset: DatasetInfo;
+  //export let currentDataset: DatasetInfo;
+  export let featureValues: FeaturesValues; // <-- new (?) remplace currentDatset.features_values
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
@@ -57,7 +58,7 @@
   $: itemMetas.set({
     mainFeatures: selectedItem.features,
     objectFeatures: Object.values(selectedItem.objects || {})[0]?.features,
-    featuresList: currentDataset.features_values || { main: {}, objects: {} },
+    featuresList: featureValues || { main: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
     type: selectedItem.type,
@@ -113,7 +114,7 @@
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
-    currentDatasetId={currentDataset.id}
+    currentDatasetId={selectedItem.datasetId}
     selectedItemId={selectedItem.id}
     bind:embeddings
   />

@@ -84,7 +84,7 @@
     <DatasetItemWorkspace
       {selectedItem}
       {models}
-      currentDataset={selectedDataset}
+      featureValues={{main: {}, objects: {}}}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
