@@ -36,7 +36,7 @@ class LegacyDatasetItem(BaseModel):
     split: str
     features: Optional[dict] = None
     views: Optional[dict] = None
-    objects: Optional[dict] = None
+    objects: Optional[list] = None
     embeddings: Optional[dict] = None
 
 
@@ -209,14 +209,18 @@ async def get_dataset_explorer(  # noqa: D417
 
         # Load dataset items
         all_ids = dataset.get_all_ids()
-        ids = sorted(all_ids)[raw_params.offset:raw_params.offset+raw_params.limit]
-        items = dataset.read_items(ids)  #future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
+        ids = sorted(all_ids)[raw_params.offset : raw_params.offset + raw_params.limit]
+        items = dataset.read_items(
+            ids
+        )  # future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
         if items:
             # convert CustomDatasetItem (from new API) to TableData
             # build ColDesc
             groups = defaultdict(list)
             for tname in vars(items[0]).keys():
-                found_group = _SchemaGroup.ITEM  # if no matching group (-> it's not a table name), it is in ITEM
+                found_group = (
+                    _SchemaGroup.ITEM
+                )  # if no matching group (-> it's not a table name), it is in ITEM
                 for group, tnames in dataset.dataset_schema._groups.items():
                     if tname in tnames:
                         found_group = group
@@ -232,13 +236,15 @@ async def get_dataset_explorer(  # noqa: D417
                     and len(view_item) > 0
                     and isinstance(view_item[0], SequenceFrame)
                 ):
-                    view_type = "image"  #TMP (previews video pas encore générés, alors on met une image pour l'instant)  "video"  # or "sequenceframe" ?
+                    view_type = "image"  # TMP (previews video pas encore générés, alors on met une image pour l'instant)  "video"  # or "sequenceframe" ?
                 else:
                     print("ERROR: unknown view type", type(view_item), view_item)
                     view_type = type(view_item).__name__
                 cols.append(de.ColDesc(name=feat, type=view_type))
             for feat in groups[_SchemaGroup.ITEM]:
-                cols.append(de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__))
+                cols.append(
+                    de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__)
+                )
 
             # build rows
             rows = []
@@ -266,8 +272,10 @@ async def get_dataset_explorer(  # noqa: D417
                 id=ds_id,
                 name=dataset.info.name,
                 table_data=de.TableData(cols=cols, rows=rows),
-                pagination=de.PaginationInfo(current=start, size=raw_params.limit, total=total),
-                sem_search=[]
+                pagination=de.PaginationInfo(
+                    current=start, size=raw_params.limit, total=total
+                ),
+                sem_search=[],
             )
         raise HTTPException(
             status_code=404,
@@ -380,11 +388,11 @@ async def get_dataset_item(  # noqa: D417
         # views : {"table_name": ItemView}
         # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
         views = {}
-        for val in groups[_SchemaGroup.VIEW]:
-            view_item = getattr(item, val)
+        for view_name in groups[_SchemaGroup.VIEW]:
+            view_item = getattr(item, view_name)
             if isinstance(view_item, Image):
                 view = {
-                    "id": val,
+                    "id": view_name,
                     "type": "image",
                     "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
                     "thumbnail": view_item.open(dataset.path / "media"),
@@ -399,7 +407,7 @@ async def get_dataset_item(  # noqa: D417
                 and isinstance(view_item[0], SequenceFrame)
             ):
                 view = {
-                    "id": val,
+                    "id": view_name,
                     "type": "video",  # in fact sequence frames
                     "uri": "data/" + dataset.path.name + "/media/" + view_item[0].url,
                     # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
@@ -410,13 +418,47 @@ async def get_dataset_item(  # noqa: D417
                     },
                 }
 
-            views[val] = view
+            views[view_name] = view
+
+        # objects
+        objects = []
+        for obj_group in groups[_SchemaGroup.OBJECT]:
+            objects.extend(
+                [
+                    {
+                        "id": obj.id,
+                        "item_id": obj.item_id,
+                        "source_id": "Ground Truth",  # ??
+                        "view_id": obj.view_id,
+                        "features": {
+                            fname: {
+                                "name": fname,
+                                "dtype": type(getattr(obj, fname)).__name__,
+                                "value": getattr(obj, fname),
+                            }
+                            for fname in vars(obj).keys()
+                            if fname
+                            not in [
+                                "id",
+                                "item_id",
+                                "source_id",
+                                "view_id",
+                                "bbox",
+                                "mask",
+                            ]
+                        },  # ????
+                        # bbox/mask/whatelse?
+                        "bbox": obj.bbox,
+                    }
+                    for obj in getattr(item, obj_group)
+                ]
+            )
 
         legacy_item = LegacyDatasetItem(
             id=item.id,
             split=item.split,
             views=views,
-            objects={},  #need objects here
+            objects=objects,
             features=features,
             embeddings={},  # should not need embeddings here
         )
