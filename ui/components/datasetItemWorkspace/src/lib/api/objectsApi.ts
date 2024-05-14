@@ -245,6 +245,10 @@ export const defineCreatedObject = (
     if (isVideo) {
       newObject = {
         ...baseObject,
+        highlighted: "self",
+        displayControl: {
+          editing: true,
+        },
         datasetItemType: "video",
         track: [
           {

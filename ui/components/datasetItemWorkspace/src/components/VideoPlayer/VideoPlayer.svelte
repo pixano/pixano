@@ -71,7 +71,6 @@
       playVideo();
     }
   };
-  // $: console.log($itemObjects);
 </script>
 
 {#if isLoaded}

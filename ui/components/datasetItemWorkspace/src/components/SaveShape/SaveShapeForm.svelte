@@ -16,7 +16,7 @@
 
   import { Button } from "@pixano/core/src";
 
-  import type { Shape } from "@pixano/core";
+  import type { ItemObject, Shape } from "@pixano/core";
 
   import {
     newShape,
@@ -31,7 +31,7 @@
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
   import { defineCreatedObject } from "../../lib/api/objectsApi";
 
   export let currentTab: "scene" | "objects";
@@ -47,11 +47,16 @@
 
   const handleFormSubmit = () => {
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
+    let newObject: ItemObject | null = null;
     itemObjects.update((oldObjects) => {
       if (shape.status !== "saving") return oldObjects;
-      const newObject = defineCreatedObject(shape, $itemMetas.type, features, $lastFrameIndex);
-
-      return [...oldObjects, ...(newObject ? [newObject] : [])];
+      newObject = defineCreatedObject(shape, $itemMetas.type, features, $lastFrameIndex);
+      const objectsWithoutHighlighted: ItemObject[] = oldObjects.map((object) => ({
+        ...object,
+        highlighted: "none",
+        displayControl: { ...object.displayControl, editing: false },
+      }));
+      return [...objectsWithoutHighlighted, ...(newObject ? [newObject] : [])];
     });
 
     for (let feat in objectProperties) {
@@ -62,6 +67,16 @@
 
     newShape.set({ status: "none", shouldReset: true });
     canSave.set(true);
+    itemBoxBeingEdited.update(() => {
+      if (!newObject) return null;
+      console.log({ newObject });
+      const startingBox =
+        newObject.datasetItemType === "video" && newObject.track[0]?.keyBoxes.at(-1);
+      if (startingBox) {
+        return { ...startingBox, objectId: newObject.id };
+      }
+      return null;
+    });
     currentTab = "objects";
   };
 
