@@ -21,3 +21,9 @@ class KeyPoints(pydantic.BaseModel):
     coords: list[float]
     edges: list[list[int]]
     visibles: list[bool]
+
+# class KeyPoints(pydantic.BaseModel):
+#     vertices: list[float]
+#     vertices_visibily: list[bool]
+#     # edges: list[list[int]]  # inclus dans type/template (?)
+#     type: str  # <-- refere à un pattern

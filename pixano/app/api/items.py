@@ -448,7 +448,8 @@ async def get_dataset_item(  # noqa: D417
                             ]
                         },  # ????
                         # bbox/mask/whatelse?
-                        "bbox": obj.bbox,
+                        "bbox": obj.bbox if hasattr(obj, "bbox") else None,
+                        "mask": obj.mask if hasattr(obj, "mask") else None,
                     }
                     for obj in getattr(item, obj_group)
                 ]

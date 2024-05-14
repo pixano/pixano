@@ -38,6 +38,7 @@ from .types.bbox3d import BBox3D
 from .types.compressed_rle import CompressedRLE
 from .types.keypoints import KeyPoints
 from .types.nd_array_float import NDArrayFloat
+from .types.camcalibration import CamCalibration
 
 
 __all__ = [
@@ -54,6 +55,7 @@ __all__ = [
     "ObjectWithBBoxAndMask",
     "ObjectWithMask",
     "NDArrayFloat",
+    "CamCalibration",
     "PointCloud",
     "SequenceFrame",
     "Tracklet",

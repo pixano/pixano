@@ -12,9 +12,8 @@ import tqdm
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
-from .. import dataset
+from .. import dataset, DatasetLibrary
 from ..dataset_features_values import DatasetFeaturesValues
-from ..dataset_info import DatasetInfo
 from ..features.schemas import image as image_schema
 from ..features.schemas import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
@@ -37,7 +36,7 @@ class DatasetBuilder(abc.ABC):
         source_dir: os.PathLike,
         target_dir: os.PathLike,
         schemas: Type[DatasetItem],
-        info: DatasetInfo,
+        info: DatasetLibrary,
         mode: str = "create",
         batch_size: int = 1000,
     ):
