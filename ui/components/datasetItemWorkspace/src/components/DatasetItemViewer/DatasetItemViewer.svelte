@@ -37,6 +37,8 @@
 
   let allIds: string[] = [];
 
+  $: console.log("TMPLOG: DatasetItemViewer- selectedItem", selectedItem);
+
   $: {
     newShape.set($newShape);
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {

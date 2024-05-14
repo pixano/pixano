@@ -32,6 +32,7 @@ from collections import defaultdict
 
 class LegacyDatasetItem(BaseModel):
     id: str
+    type: str
     original_id: Optional[str] = None
     split: str
     features: Optional[dict] = None
@@ -209,7 +210,7 @@ async def get_dataset_explorer(  # noqa: D417
 
         # Load dataset items
         all_ids = dataset.get_all_ids()
-        ids = sorted(all_ids)[raw_params.offset : raw_params.offset + raw_params.limit]
+        ids = sorted(all_ids)[raw_params.offset: raw_params.offset + raw_params.limit]
         items = dataset.read_items(
             ids
         )  # future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
@@ -388,14 +389,15 @@ async def get_dataset_item(  # noqa: D417
         # views : {"table_name": ItemView}
         # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
         views = {}
+        view_type = "image"
         for view_name in groups[_SchemaGroup.VIEW]:
             view_item = getattr(item, view_name)
             if isinstance(view_item, Image):
-                view = {
+                views[view_name] = {
                     "id": view_name,
-                    "type": "image",
+                    # "type": "image",
                     "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
-                    "thumbnail": view_item.open(dataset.path / "media"),
+                    "thumbnail": None,  # view_item.open(dataset.path / "media"),
                     "features": {
                         "width": view_item.width,
                         "height": view_item.height,
@@ -406,19 +408,18 @@ async def get_dataset_item(  # noqa: D417
                 and len(view_item) > 0
                 and isinstance(view_item[0], SequenceFrame)
             ):
-                view = {
+                views[view_name] = [{
                     "id": view_name,
-                    "type": "video",  # in fact sequence frames
-                    "uri": "data/" + dataset.path.name + "/media/" + view_item[0].url,
+                    # "type": "video",
+                    "uri": "data/" + dataset.path.name + "/media/" + frame.url,
                     # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
-                    "thumbnail": view_item[0].open(dataset.path / "media"),
+                    "thumbnail": None,  # frame.open(dataset.path / "media"),
                     "features": {
-                        "width": view_item[0].width,
-                        "height": view_item[0].height,
+                        "width": frame.width,
+                        "height": frame.height,
                     },
-                }
-
-            views[view_name] = view
+                } for frame in view_item]
+                view_type = "video"
 
         # objects
         objects = []
@@ -457,6 +458,7 @@ async def get_dataset_item(  # noqa: D417
 
         legacy_item = LegacyDatasetItem(
             id=item.id,
+            type=view_type,
             split=item.split,
             views=views,
             objects=objects,
