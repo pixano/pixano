@@ -46,7 +46,7 @@
 
   onMount(() => {
     const image = new Image();
-    image.src = imagesFilesUrl[0];
+    image.src = `/${imagesFilesUrl[0]}`;
 
     imagesPerView = {
       ...imagesPerView,
@@ -58,7 +58,7 @@
 
   const updateView = (imageIndex: number) => {
     const image = new Image();
-    const src = imagesFilesUrl[imageIndex];
+    const src = `/${imagesFilesUrl[imageIndex]}`;
     if (!src) return;
     image.src = src;
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);

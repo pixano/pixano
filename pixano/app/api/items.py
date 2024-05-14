@@ -394,13 +394,21 @@ async def get_dataset_item(  # noqa: D417
             view_item = getattr(item, view_name)
             if isinstance(view_item, Image):
                 views[view_name] = {
-                    "id": view_name,
-                    # "type": "image",
+                    "id": view_item.id,
+                    "type": "image",
                     "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
                     "thumbnail": None,  # view_item.open(dataset.path / "media"),
                     "features": {
-                        "width": view_item.width,
-                        "height": view_item.height,
+                        "width": {
+                            "name": "width",
+                            "dtype": "int",
+                            "value": view_item.width,
+                        },
+                        "height": {
+                            "name": "height",
+                            "dtype": "int",
+                            "value": view_item.height,
+                        },
                     },
                 }
             elif (
@@ -409,14 +417,22 @@ async def get_dataset_item(  # noqa: D417
                 and isinstance(view_item[0], SequenceFrame)
             ):
                 views[view_name] = [{
-                    "id": view_name,
-                    # "type": "video",
+                    "id": frame.id,
+                    "type": "image",  # note: it's an image frame from a video
                     "uri": "data/" + dataset.path.name + "/media/" + frame.url,
                     # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
-                    "thumbnail": None,  # frame.open(dataset.path / "media"),
+                    "thumbnail": frame.open(dataset.path / "media"),
                     "features": {
-                        "width": frame.width,
-                        "height": frame.height,
+                        "width": {
+                            "name": "width",
+                            "dtype": "int",
+                            "value": frame.width,
+                        },
+                        "height": {
+                            "name": "height",
+                            "dtype": "int",
+                            "value": frame.height,
+                        },
                     },
                 } for frame in view_item]
                 view_type = "video"
@@ -463,7 +479,7 @@ async def get_dataset_item(  # noqa: D417
             views=views,
             objects=objects,
             features=features,
-            embeddings={},  # should not need embeddings here
+            embeddings={},  # TODO
         )
 
         # Return dataset item
