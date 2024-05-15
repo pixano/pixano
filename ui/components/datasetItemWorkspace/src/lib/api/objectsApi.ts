@@ -1,5 +1,22 @@
+/**
+ * @copyright CEA
+ * @author CEA
+ * @license CECILL
+ *
+ * This software is a collaborative computer program whose purpose is to
+ * generate and explore labeled data for computer vision applications.
+ * This software is governed by the CeCILL-C license under French law and
+ * abiding by the rules of distribution of free software. You can use,
+ * modify and/ or redistribute the software under the terms of the CeCILL-C
+ * license as circulated by CEA, CNRS and INRIA at the following URL
+ *
+ * http://www.cecill.info
+ */
+
+// Imports
 import type {
   ItemObject,
+  ItemBBox,
   BBox,
   DisplayControl,
   Mask,
@@ -25,20 +42,27 @@ import type {
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
 
-const defineTooltip = (object: ItemObject) => {
-  if (!object.bbox) return null;
+const defineTooltip = (object: ItemObject): string | null => {
+  let bbox: ItemBBox | undefined;
+
+  // Check object type to extract the bbox object
+  if (object.datasetItemType === "image" && object.bbox) bbox = object.bbox;
+  else if (object.datasetItemType === "video" && object.displayedBox) bbox = object.displayedBox;
+
+  if (!bbox) return null;
+
   const confidence =
-    object.bbox.confidence != 0.0 && object.source_id !== GROUND_TRUTH
-      ? " " + object.bbox.confidence.toFixed(2)
+    bbox.confidence !== 0.0 && object.source_id !== GROUND_TRUTH
+      ? " " + bbox.confidence.toFixed(2)
       : "";
   const tooltip =
-    typeof object.features[DEFAULT_FEATURE]?.value == "string"
+    typeof object.features[DEFAULT_FEATURE]?.value === "string"
       ? object.features[DEFAULT_FEATURE]?.value + confidence
       : null;
   return tooltip;
 };
 
-export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) => {
+export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox | undefined => {
   const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
 
   if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
@@ -66,30 +90,33 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]) =>
   } as BBox;
 };
 
-export const mapObjectToMasks = (obj: ItemObject) => {
+export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   if (
-    !obj.mask ||
-    obj.review_state ||
-    (obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
-  )
-    return;
-  const rle = obj.mask.counts;
-  const size = obj.mask.size;
-  const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
-  const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
+    obj.datasetItemType === "image" && // Only images use masks ?
+    obj.mask &&
+    !obj.review_state &&
+    !(obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
+  ) {
+    const rle = obj.mask.counts;
+    const size = obj.mask.size;
+    const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
+    const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
-  return {
-    id: obj.id,
-    viewId: obj.view_id,
-    svg: masksSVG,
-    rle: obj.mask,
-    catId: (obj.features.category_id?.value || 1) as number,
-    visible: !obj.mask.displayControl?.hidden && !obj.displayControl?.hidden,
-    editing: obj.displayControl?.editing,
-    opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
-    highlighted: obj.highlighted,
-  } as Mask;
+    return {
+      id: obj.id,
+      viewId: obj.view_id,
+      svg: masksSVG,
+      rle: obj.mask,
+      catId: (obj.features.category_id?.value || 1) as number,
+      visible: !obj.mask.displayControl?.hidden && !obj.displayControl?.hidden,
+      editing: obj.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
+      opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+      highlighted: obj.highlighted,
+    };
+  }
+
+  return undefined;
 };
 
 export const toggleObjectDisplayControl = (
@@ -97,29 +124,33 @@ export const toggleObjectDisplayControl = (
   displayControlProperty: keyof DisplayControl,
   properties: ("bbox" | "mask")[],
   value: boolean,
-) => {
-  if (properties.includes("bbox")) {
-    if (object.bbox) {
+): ItemObject => {
+  // Check if the object is an ImageObject
+  if (object.datasetItemType === "image") {
+    if (properties.includes("bbox") && object.bbox) {
       object.bbox.displayControl = {
         ...object.bbox.displayControl,
         [displayControlProperty]: value,
       };
     }
-  }
-  if (properties.includes("mask")) {
-    if (object.mask) {
+    if (properties.includes("mask") && object.mask) {
       object.mask.displayControl = {
         ...object.mask.displayControl,
         [displayControlProperty]: value,
       };
     }
   }
-  if (properties.includes("bbox") && properties.includes("mask")) {
-    object.displayControl = {
-      ...object.displayControl,
-      [displayControlProperty]: value,
-    };
+
+  // Check if the object is a VideoObject
+  if (object.datasetItemType === "video") {
+    if (properties.includes("bbox") && object.displayControl) {
+      object.displayControl = {
+        ...object.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
   }
+
   return object;
 };
 
@@ -136,7 +167,7 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateExistingObject = (old: ItemObject[], newShape: Shape) => {
+export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemObject[] => {
   return old.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
@@ -146,52 +177,89 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape) => {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
     }
     if (newShape.shapeId !== object.id) return object;
-    if (newShape.type === "mask" && object.mask) {
-      return {
-        ...object,
-        mask: {
-          ...object.mask,
-          counts: newShape.counts,
-        },
-      };
+
+    // Check if the object is an ImageObject
+    if (object.datasetItemType === "image") {
+      if (newShape.type === "mask" && object.mask) {
+        return {
+          ...object,
+          mask: {
+            ...object.mask,
+            counts: newShape.counts,
+          },
+        };
+      }
+      if (newShape.type === "rectangle" && object.bbox) {
+        return {
+          ...object,
+          bbox: {
+            ...object.bbox,
+            coords: newShape.coords,
+          },
+        };
+      }
     }
-    if (newShape.type === "rectangle" && object.bbox) {
-      return {
-        ...object,
-        bbox: {
-          ...object.bbox,
-          coords: newShape.coords,
-        },
-      };
+
+    // Check if the object is a VideoObject
+    if (object.datasetItemType === "video") {
+      if (newShape.type === "rectangle" && object.displayedBox) {
+        return {
+          ...object,
+          displayedBox: {
+            ...object.displayedBox,
+            coords: newShape.coords,
+          },
+        };
+      }
     }
+
     return object;
   });
 };
 
-export const getObjectsToPreAnnotate = (objects: ItemObject[]) =>
+export const getObjectsToPreAnnotate = (objects: ItemObject[]): ItemObject[] =>
   objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.review_state);
 
 export const sortAndFilterObjectsToAnnotate = (
   objects: ItemObject[],
   confidenceFilterValue: number[],
-) =>
-  objects
+): ItemObject[] => {
+  return objects
     .filter((object) => {
-      const confidence = object.bbox?.confidence || 0;
-      return confidence >= confidenceFilterValue[0];
+      if (object.datasetItemType === "image" && object.bbox) {
+        const confidence = object.bbox.confidence || 0;
+        return confidence >= confidenceFilterValue[0];
+      }
+      if (object.datasetItemType === "video" && object.displayedBox) {
+        const confidence = object.displayedBox.confidence || 0;
+        return confidence >= confidenceFilterValue[0];
+      }
+      return false; // Ignore objects without bboxes
     })
     .sort((a, b) => {
-      const firstBoxXPosition = a.bbox?.coords[0] || 0;
-      const secondBoxXPosition = b.bbox?.coords[0] || 0;
+      let firstBoxXPosition = 0;
+      let secondBoxXPosition = 0;
+
+      // Get first bbox position
+      if (a.datasetItemType === "image" && a.bbox) firstBoxXPosition = a.bbox.coords[0] || 0;
+      if (a.datasetItemType === "video" && a.displayedBox)
+        firstBoxXPosition = a.displayedBox.coords[0] || 0;
+
+      // Get second bbox position
+      if (b.datasetItemType === "image" && b.bbox) secondBoxXPosition = b.bbox.coords[0] || 0;
+      if (b.datasetItemType === "video" && b.displayedBox)
+        secondBoxXPosition = b.displayedBox.coords[0] || 0;
+
       return firstBoxXPosition - secondBoxXPosition;
     });
+};
 
 export const mapObjectWithNewStatus = (
   allObjects: ItemObject[],
   objectsToAnnotate: ItemObject[],
   status: "accepted" | "rejected",
   features: ObjectProperties = {},
-) => {
+): ItemObject[] => {
   const nextObjectId = objectsToAnnotate[1]?.id;
   return allObjects.map((object) => {
     if (object.id === nextObjectId) {
@@ -211,14 +279,14 @@ export const mapObjectWithNewStatus = (
   });
 };
 
-export const createObjectCardId = (object: ItemObject) => `object-${object.id}`;
+export const createObjectCardId = (object: ItemObject): string => `object-${object.id}`;
 
 export const defineCreatedObject = (
   shape: SaveShape,
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   lastFrameIndex: number,
-) => {
+): ItemObject | null => {
   let newObject: ItemObject | null = null;
   const baseObject = {
     id: nanoid(10),
