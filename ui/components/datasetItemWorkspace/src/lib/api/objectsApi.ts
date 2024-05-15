@@ -217,7 +217,7 @@ export const defineCreatedObject = (
   shape: SaveShape,
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
-  lastFrameIndex: number,
+  currentFrameIndex: number,
 ) => {
   let newObject: ItemObject | null = null;
   const baseObject = {
@@ -252,11 +252,11 @@ export const defineCreatedObject = (
         datasetItemType: "video",
         track: [
           {
-            start: 0,
-            end: lastFrameIndex,
+            start: currentFrameIndex,
+            end: currentFrameIndex + 5,
             keyBoxes: [
-              { ...bbox, frameIndex: 0 },
-              { ...bbox, frameIndex: lastFrameIndex },
+              { ...bbox, frameIndex: currentFrameIndex },
+              { ...bbox, frameIndex: currentFrameIndex + 5 },
             ],
           },
         ],

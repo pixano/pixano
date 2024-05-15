@@ -17,7 +17,11 @@
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, VideoItemBBox } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    currentFrameIndex,
+    itemBoxBeingEdited,
+    lastFrameIndex,
+  } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
@@ -62,6 +66,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
+        // currentFrameIndex.set(Math.round(newFrameIndex));
         updateTrackletWidth(Math.round(newFrameIndex), keyBox.frameIndex);
       }
     });
