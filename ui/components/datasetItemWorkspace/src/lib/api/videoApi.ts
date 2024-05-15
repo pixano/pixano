@@ -1,4 +1,11 @@
-import type { EditShape, ItemObject, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
+import type {
+  EditRectangleShape,
+  EditShape,
+  ItemObject,
+  Tracklet,
+  VideoItemBBox,
+  VideoObject,
+} from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -67,10 +74,33 @@ export const deleteKeyBoxFromTracklet = (
     return object;
   });
 
+const editKeyBoxesInTracklet = (
+  keyBoxes: VideoItemBBox[],
+  currentFrame: number,
+  shape: EditRectangleShape,
+) =>
+  keyBoxes.map((keyBox) => {
+    if (keyBox.frameIndex === currentFrame) {
+      keyBox.coords = shape.coords;
+    }
+    return keyBox;
+  });
+
+const addKeyBoxToTrackletBoxes = (tracklet: Tracklet, currentFrame: number, box: VideoItemBBox) => {
+  if (!tracklet.keyBoxes.some((keyBox) => keyBox.frameIndex === currentFrame)) {
+    tracklet.keyBoxes.push(box);
+    tracklet.keyBoxes.sort((a, b) => a.frameIndex - b.frameIndex);
+    tracklet.start = tracklet.keyBoxes[0].frameIndex;
+    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frameIndex;
+  }
+  return tracklet;
+};
+
 export const editKeyBoxInTracklet = (
   objects: ItemObject[],
   boxBeingEdited: VideoItemBBox,
   shape: EditShape,
+  currentFrame: number,
 ) =>
   objects.map((object) => {
     if (
@@ -79,18 +109,14 @@ export const editKeyBoxInTracklet = (
       object.datasetItemType === "video"
     ) {
       object.track = object.track.map((tracklet) => {
-        if (
-          tracklet.start <= boxBeingEdited.frameIndex &&
-          tracklet.end >= boxBeingEdited.frameIndex
-        ) {
-          tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-            if (keyBox.frameIndex === boxBeingEdited.frameIndex) {
-              keyBox.coords = shape.coords;
-              object.displayedBox.coords = shape.coords;
-              return keyBox;
-            }
-            return keyBox;
+        if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
+          tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
+          tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
+            ...boxBeingEdited,
+            coords: shape.coords,
+            frameIndex: currentFrame,
           });
+          object.displayedBox.coords = shape.coords;
         }
         return tracklet;
       });

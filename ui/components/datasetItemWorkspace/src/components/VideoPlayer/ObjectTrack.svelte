@@ -17,12 +17,15 @@
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    itemBoxBeingEdited,
+    lastFrameIndex,
+    currentFrameIndex,
+  } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
   export let zoomLevel: number[];
-  export let currentImageIndex: number;
   export let object: VideoObject;
   export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
@@ -65,7 +68,6 @@
           ...obj.displayControl,
           editing: !isBeingEdited && obj.id === object.id,
         };
-
         return obj;
       }),
     );
@@ -115,7 +117,7 @@
 >
   <span
     class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
-    style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
+    style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
   />
   <ContextMenu.Root>
     <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>

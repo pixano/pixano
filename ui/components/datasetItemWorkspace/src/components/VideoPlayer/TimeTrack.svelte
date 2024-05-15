@@ -15,18 +15,25 @@
    */
 
   import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
-  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (imageIndex: number) => void;
   export let intervalId: number;
   export let videoSpeed: number;
-  export let currentImageIndex: number;
   export let cursorElement: HTMLButtonElement;
   export let zoomLevel: number[];
 
   let imageFilesLength = $lastFrameIndex + 1;
   const videoTotalLengthInMs = imageFilesLength * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
+
+  const changeSelectedTool = () => {
+    if ($selectedTool.name !== panTool.name) {
+      selectedTool.set(panTool);
+    }
+  };
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
@@ -38,8 +45,9 @@
 
     window.addEventListener("mousemove", (event) => {
       if (moving) {
-        currentImageIndex = getImageIndexFromMouseMove(event, node, imageFilesLength);
-        updateView(currentImageIndex);
+        currentFrameIndex.set(getImageIndexFromMouseMove(event, node, imageFilesLength));
+        updateView($currentFrameIndex);
+        changeSelectedTool();
       }
     });
 
@@ -52,8 +60,11 @@
     let targetElement = event.target as HTMLElement;
     if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
     clearInterval(intervalId);
-    currentImageIndex = Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength);
-    updateView(currentImageIndex);
+    currentFrameIndex.set(
+      Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
+    );
+    updateView($currentFrameIndex);
+    changeSelectedTool();
   };
 </script>
 
@@ -64,13 +75,13 @@
   tabindex="0"
   on:click={onPlayerClick}
   on:keydown={onPlayerClick}
-  aria-valuenow={currentImageIndex}
+  aria-valuenow={$currentFrameIndex}
 >
   <span class="bg-slate-200 w-full h-[1px] absolute top-2/3" />
   <button
     use:dragMe
     class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
-    style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+    style={`left: ${(($currentFrameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
     bind:this={cursorElement}
   >
     <span class="block h-[60%] bg-primary w-2 rounded-t" />

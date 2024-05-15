@@ -71,7 +71,10 @@
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
+    class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2", {
+      "opacity-100": object.highlighted === "self",
+      "opacity-30": object.highlighted === "none",
+    })}
     style={`left: ${left}%; width: ${width}%; background-color: ${color}`}
   >
     <button

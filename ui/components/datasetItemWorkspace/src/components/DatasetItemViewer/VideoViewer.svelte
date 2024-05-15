@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { utils, type VideoDatasetItem } from "@pixano/core";
+  import { utils, type EditShape, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -26,7 +26,11 @@
     newShape,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    itemBoxBeingEdited,
+    lastFrameIndex,
+    currentFrameIndex,
+  } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -79,15 +83,22 @@
     );
   };
 
+  const updateOrCreateBox = (shape: EditShape) => {
+    const boxBeingEdited = $itemBoxBeingEdited;
+    const currentFrame = $currentFrameIndex;
+    if (boxBeingEdited) {
+      itemObjects.update((objects) =>
+        editKeyBoxInTracklet(objects, boxBeingEdited, shape, currentFrame),
+      );
+    } else {
+      itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+    }
+  };
+
   $: {
     const shape = $newShape;
-    const box = $itemBoxBeingEdited;
     if (shape.status === "editing") {
-      if (box) {
-        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
-      } else {
-        itemObjects.update((objects) => updateExistingObject(objects, $newShape));
-      }
+      updateOrCreateBox(shape);
     }
   }
 
