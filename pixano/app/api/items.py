@@ -399,7 +399,7 @@ async def get_dataset_item(  # noqa: D417
                         ]
                     )
 
-        legacy_item = FrontDatasetItem(
+        front_item = FrontDatasetItem(
             id=item.id,
             type=view_type,
             datasetId=ds_id,
@@ -411,8 +411,8 @@ async def get_dataset_item(  # noqa: D417
         )
 
         # Return dataset item
-        if legacy_item:
-            return legacy_item
+        if front_item:
+            return front_item
         raise HTTPException(
             status_code=404,
             detail=f"Item '{item_id}' not found in dataset",
