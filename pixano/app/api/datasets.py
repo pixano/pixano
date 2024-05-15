@@ -16,7 +16,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets import Dataset, DatasetLibrary, DatasetExplorer
+from pixano.datasets import Dataset, DatasetLibrary
 
 
 router = APIRouter(tags=["datasets"])
@@ -52,7 +52,9 @@ async def get_dataset(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetLibrary:
-    """Load dataset.
+    """Load dataset. 
+    
+    **!!! UNUSED ? !!!**
 
     Args:
         ds_id (str): Dataset ID
