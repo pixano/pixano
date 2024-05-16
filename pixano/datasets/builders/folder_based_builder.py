@@ -109,7 +109,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                     obj[attr] = bbox_type.BBox(
                         coords=obj_data[attr][i],
                         format="xywh",
-                        is_normalized=False,
+                        is_normalized=True,
                         confidence=1.0,
                     )
                 else:
