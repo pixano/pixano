@@ -14,7 +14,13 @@
  */
 
 // Imports
-import type { DatasetInfo, DatasetItems, DatasetItem, ExplorerData } from "./lib/types/datasetTypes";
+import type {
+  DatasetInfo,
+  DatasetItems,
+  DatasetItem,
+  ExplorerData,
+  VideoObject,
+} from "./lib/types/datasetTypes";
 
 // Exports
 export async function getDatasets(): Promise<Array<DatasetInfo>> {
@@ -116,6 +122,19 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
+      // TODO : remove this when the backend is fixed
+      if (item.type === "video") {
+        const objects: Array<VideoObject> = item.objects.map((obj) => {
+          obj.track = obj.track.map((tracklet) => {
+            tracklet.start = tracklet.keyBoxes[0].frame_index;
+            tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+            return tracklet;
+          });
+          obj.displayedBox = undefined;
+          return obj;
+        });
+        item.objects = objects;
+      }
     } else {
       item = {} as DatasetItem;
       console.log(

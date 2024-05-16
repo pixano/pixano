@@ -109,7 +109,7 @@ export type ImageDatasetItem = BaseDatasetItem & {
 
 export type VideoDatasetItem = BaseDatasetItem & {
   type: "video";
-  objects: Record<string, VideoObject>;
+  objects: Array<VideoObject>;
   views: Record<string, ItemView[]>;
 };
 
@@ -158,7 +158,7 @@ export type ItemObjectBase = {
 };
 
 export type VideoItemBBox = ItemBBox & {
-  frameIndex: number;
+  frame_index: number;
   hidden?: boolean;
 };
 export interface Tracklet {

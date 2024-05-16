@@ -319,12 +319,12 @@ export const defineCreatedObject = (
             start: 0,
             end: lastFrameIndex,
             keyBoxes: [
-              { ...bbox, frameIndex: 0 },
-              { ...bbox, frameIndex: lastFrameIndex },
+              { ...bbox, frame_index: 0 },
+              { ...bbox, frame_index: lastFrameIndex },
             ],
           },
         ],
-        displayedBox: { ...bbox, frameIndex: 0 },
+        displayedBox: { ...bbox, frame_index: 0 },
       };
     } else {
       newObject = {

@@ -38,6 +38,12 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
+        if (selectedItem.type === "video") {
+          selectedItem.objects.map((obj) => {
+            obj.displayedBox = obj.track[0].keyBoxes[0];
+            return obj;
+          });
+        }
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {
@@ -84,7 +90,7 @@
     <DatasetItemWorkspace
       {selectedItem}
       {models}
-      featureValues={{main: {}, objects: {}}}
+      featureValues={{ main: {}, objects: {} }}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
