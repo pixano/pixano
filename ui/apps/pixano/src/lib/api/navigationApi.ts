@@ -19,7 +19,6 @@ export const findNeighborItemId = (
   direction: "previous" | "next",
   currentItemId: string,
 ): string | undefined => {
-  console.log(currentItemId)
   // Find the position of the current item in the dataset
   const currentIndex: number = itemsIds.findIndex((item) => item === currentItemId);
 
