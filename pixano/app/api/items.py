@@ -46,6 +46,32 @@ class FrontDatasetItem(BaseModel):
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
 
 
+@router.get("/item_ids", response_model=list[str])
+async def get_dataset_item_ids(
+    ds_id: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[str]:
+    """## Get all dataset items ids
+
+    Args:
+        ds_id (str): dataset id
+
+    Returns:
+        list[str]: all items id
+    """
+
+    # Load dataset
+    dataset = Dataset.find(ds_id, settings.data_dir)
+
+    if dataset:
+        all_ids = sorted(dataset.get_all_ids())
+        return all_ids
+    raise HTTPException(
+        status_code=404,
+        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
+    )
+
+
 @router.get("/explorer", response_model=de.DatasetExplorer)
 async def get_dataset_explorer(  # noqa: D417
     ds_id: str,
@@ -357,17 +383,18 @@ async def get_dataset_item(  # noqa: D417
             else:  # video
                 # TODO - WIP
                 if 1:
-                    # TMP for test with VOT dataset -- normally we should loop on tracklet table
-                    tmp_obj0 = getattr(item, obj_group)[0]
+                    #TMP for test with VOT dataset -- normally we should loop on tracklet table
+                    # need to rethink Track(let) python class(es), & change VOT dataset accordingly, to have track(let)s
+                    tmp_obj0 = getattr(item, obj_group)[0]  # TODO get this from tracklet, not individual objects
                     objects.extend(
                         [
                             {
                                 "id": tmp_obj0.id,
                                 "datasetItemType": view_type,
-                                "displayedBox": {},  # TMP
+                                "displayedBox": {},  # TMP should not be required, as it's front only
                                 "item_id": item_id,
                                 "source_id": "Ground Truth",  # ?? must ensure source
-                                "view_id": tmp_obj0.view_id,  # !?!? for video ??
+                                "view_id": tmp_obj0.view_id,
                                 "features": {
                                     fname: {
                                         "name": fname,
@@ -386,8 +413,8 @@ async def get_dataset_item(  # noqa: D417
                                     ]
                                 },
                                 "track": [{
-                                    "start": 0,  # BAD
-                                    "end": 160,  # BAD
+                                    "start": 0,  # BAD -> get it from tracklet
+                                    "end": 160,  # BAD -> get it from tracklet
                                     "keyBoxes": [
                                         {
                                             **vars(obj.bbox),
