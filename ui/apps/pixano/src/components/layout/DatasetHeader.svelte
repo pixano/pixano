@@ -24,9 +24,10 @@
 
   import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
 
-  import { findNeighborItemId } from "$lib/api/navigationApi";
+  import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
   import {
     currentDatasetStore,
+    datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
@@ -100,6 +101,18 @@
     saveCurrentItemStore.set({ canSave: false, shouldSave: false });
   };
 
+  // Return to the previous page
+  const handleReturnToPreviousPage = async () => {
+    if (currentItemId) {
+      // Update the current page to ensure that we follow the selected item
+      datasetTableStore.update((pagination) => {
+        pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
+        return pagination;
+      });
+      navigateTo(`/${currentDataset.id}/dataset`);
+    } else navigateTo("/");
+  };
+
   const navigateTo = async (route: string) => {
     if (canSaveCurrentItem) {
       return (showConfirmModal = route);
@@ -114,20 +127,20 @@
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
   >
     {#if currentDataset}
-    <div class="h-10 flex items-center font-semibold text-2xl">
-      <div class="flex gap-4 items-center font-light">
-        <button on:click={() => navigateTo("/")} class="h-10 w-10">
-          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-        </button>
-        <IconButton
-          on:click={() => navigateTo(currentItemId ? `/${currentDataset.id}/dataset` : "/")}
-          tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-        >
-          <ArrowLeftCircleIcon />
-        </IconButton>
-        {currentDataset.name}
+      <div class="h-10 flex items-center font-semibold text-2xl">
+        <div class="flex gap-4 items-center font-light">
+          <button on:click={() => navigateTo("/")} class="h-10 w-10">
+            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+          </button>
+          <IconButton
+            on:click={handleReturnToPreviousPage}
+            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
+          >
+            <ArrowLeftCircleIcon />
+          </IconButton>
+          {currentDataset.name}
+        </div>
       </div>
-    </div>
     {/if}
     {#if currentItemId}
       {#if isLoading}

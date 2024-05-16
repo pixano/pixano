@@ -49,6 +49,7 @@
   // Get all the ids of the items of the selected dataset
   $: getCurrentDatasetItemsIds(currentDatasetId);
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
+    if (datasetId === undefined) return;
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
   };
 

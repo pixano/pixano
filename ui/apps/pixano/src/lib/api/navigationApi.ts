@@ -13,6 +13,9 @@
  * http://www.cecill.info
  */
 
+// Imports
+import { DEFAULT_DATASET_TABLE_SIZE } from "$lib/constants/pixanoConstants";
+
 // Find the id of the neighbor item
 export const findNeighborItemId = (
   itemsIds: string[],
@@ -36,4 +39,12 @@ export const findNeighborItemId = (
     // Else return the item id
     return itemsIds[nextIndex];
   }
+};
+
+export const getPageFromItemId = (itemsIds: string[], currentItemId: string): number => {
+  // Find the position of the current item in the dataset
+  const currentIndex: number = itemsIds.findIndex((item) => item === currentItemId);
+
+  // Calculate the page number of that item (starts from 1)
+  return Math.floor(currentIndex / DEFAULT_DATASET_TABLE_SIZE) + 1;
 };
