@@ -42,7 +42,7 @@
   // }
 
   const handleSelectItem = async (event: CustomEvent) => {
-    await goto(`/${selectedDataset.name}/dataset/${event.detail}`);
+    await goto(`/${selectedDataset.id}/dataset/${event.detail}`);
   };
 </script>
 

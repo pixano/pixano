@@ -24,21 +24,20 @@
 
   import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
 
-  import { findSelectedItem } from "$lib/api/navigationApi";
+  import { findNeighborItemId } from "$lib/api/navigationApi";
   import {
     currentDatasetStore,
-    datasetsStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
   import { navItems } from "$lib/constants/headerConstants";
 
   export let pageId: string | null;
+  export let datasetItemsIds: string[];
 
   let currentDataset: DatasetInfo;
   $: currentDatasetStore.subscribe((value) => (currentDataset = value));
 
-  let datasets: DatasetInfo[];
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
@@ -51,24 +50,27 @@
     isLoading = value;
   });
 
-  datasetsStore.subscribe((value) => {
-    datasets = value;
-  });
-
   $: page.subscribe((value) => {
     currentItemId = value.params.itemId;
   });
 
+  // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    const datasetItems = Object.values(currentDataset?.page?.items || {});
-    const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
-    if (selectedId) {
-      const route = `/${currentDataset.id}/dataset/${selectedId}`;
+    // Find the neighbor item id
+    const neighborId = findNeighborItemId(datasetItemsIds, direction, currentItemId);
+
+    // If a neighbor item has been found
+    if (neighborId) {
+      const route = `/${currentDataset.id}/dataset/${neighborId}`;
+
+      // Ask for confirmation if modifications have been made to the item
       if (canSaveCurrentItem) {
-        newItemId = selectedId;
+        newItemId = neighborId;
         return (showConfirmModal = route);
       }
-      currentItemId = selectedId;
+
+      // Go to next/previous item
+      currentItemId = neighborId;
       await goto(route);
     }
   };

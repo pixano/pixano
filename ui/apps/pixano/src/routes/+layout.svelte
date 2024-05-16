@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
 
-  import type { DatasetItems, DatasetInfo, ExplorerData } from "@pixano/core/src";
+  import type { DatasetInfo, ExplorerData } from "@pixano/core/src";
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";
@@ -24,6 +24,7 @@
   let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
+  let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
     models = await api.getModels();
@@ -44,6 +45,12 @@
     await handleGetDatasets();
     await handleGetModels();
   });
+
+  // Get all the ids of the items of the selected dataset
+  $: getCurrentDatasetItemsIds(currentDatasetId);
+  const getCurrentDatasetItemsIds = async (datasetId: string) => {
+    currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);
+  };
 
   const getDatasetItems = async (
     datasetId: string,
@@ -134,7 +141,7 @@
   {#if pageId === "/"}
     <MainHeader {datasets} />
   {:else}
-    <DatasetHeader {pageId} />
+    <DatasetHeader {pageId} datasetItemsIds={currentDatasetItemsIds} />
   {/if}
   <main class="h-1 min-h-screen bg-slate-50">
     <slot />
