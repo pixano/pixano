@@ -14,7 +14,7 @@
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
   let models: Array<string>;
-  let currentDatasetName: string;
+  let currentDatasetId: string;
   let currentItemId: string;
   let isLoadingNewItem: boolean = false;
   let canSaveCurrentItem: boolean = false;
@@ -55,12 +55,12 @@
   };
 
   page.subscribe((value) => {
-    currentDatasetName = value.params.dataset;
+    currentDatasetId = value.params.dataset;
     currentItemId = value.params.itemId;
   });
 
   datasetsStore.subscribe((value) => {
-    const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
+    const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     console.log({ value });
     if (foundDataset) {
       selectedDataset = foundDataset;
@@ -101,8 +101,8 @@
 {#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
-    <PrimaryButton on:click={() => goto(`/${currentDatasetName}/dataset`)}
-      >Back to dataset</PrimaryButton
-    >
+    <PrimaryButton on:click={() => goto(`/${currentDatasetId}/dataset`)}>
+      Back to dataset
+    </PrimaryButton>
   </div>
 {/if}
