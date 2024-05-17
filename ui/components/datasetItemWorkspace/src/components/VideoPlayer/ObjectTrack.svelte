@@ -54,12 +54,12 @@
 
   const isKeyBoxBeingEdited = (box: VideoItemBBox) =>
     $itemBoxBeingEdited?.objectId === object.id &&
-    box.frameIndex === $itemBoxBeingEdited?.frameIndex;
+    box.frame_index === $itemBoxBeingEdited?.frame_index;
 
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
     const isBeingEdited = isKeyBoxBeingEdited(box);
     itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
-    onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
+    onTimeTrackClick(box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
@@ -106,7 +106,7 @@
 
   const findNeighborKeyBoxes = (
     tracklet: Tracklet,
-    frameIndex: VideoItemBBox["frameIndex"],
+    frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
 </script>
 

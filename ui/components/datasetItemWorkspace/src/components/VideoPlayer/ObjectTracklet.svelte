@@ -45,14 +45,14 @@
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
 
   const updateTrackletWidth = (
-    newFrameIndex: VideoItemBBox["frameIndex"],
-    draggedFrameIndex: VideoItemBBox["frameIndex"],
+    newFrameIndex: VideoItemBBox["frame_index"],
+    draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-      if (keyBox.frameIndex === draggedFrameIndex) {
-        keyBox.frameIndex = newFrameIndex;
+      if (keyBox.frame_index === draggedFrameIndex) {
+        keyBox.frame_index = newFrameIndex;
         itemBoxBeingEdited.set({
           ...keyBox,
           objectId: object.id,
@@ -60,13 +60,13 @@
       }
       return keyBox;
     });
-    tracklet.start = tracklet.keyBoxes[0].frameIndex;
-    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frameIndex;
+    tracklet.start = tracklet.keyBoxes[0].frame_index;
+    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
   };
 
   const isKeyBoxBeingEdited = (keyBox: VideoItemBBox) =>
     $itemBoxBeingEdited?.objectId === object.id &&
-    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
+    keyBox.frame_index === $itemBoxBeingEdited?.frame_index;
 </script>
 
 <ContextMenu.Root>

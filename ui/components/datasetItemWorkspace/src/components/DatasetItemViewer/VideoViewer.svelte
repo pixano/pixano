@@ -74,7 +74,7 @@
         if (newCoords) {
           const [x, y, width, height] = newCoords;
           displayedBox.coords = [x, y, width, height];
-          displayedBox.frameIndex = imageIndex;
+          displayedBox.frame_index = imageIndex;
         }
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         displayedBox.hidden = !newCoords;

@@ -33,7 +33,7 @@
   let isLoaded = false;
   let currentTime: string;
   let cursorElement: HTMLButtonElement;
-  let zoomLevel: number[] = [0];
+  let zoomLevel: number[] = [100];
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -83,7 +83,7 @@
         <p>
           {currentTime}
         </p>
-        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
+        <SliderRoot bind:value={zoomLevel} min={100} max={800} />
         <button on:click={onPlayClick} class="text-primary">
           {#if intervalId}
             <PauseIcon />

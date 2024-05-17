@@ -19,6 +19,7 @@ import type {
   DatasetItems,
   DatasetItem,
   ExplorerData,
+  VideoObject,
 } from "./lib/types/datasetTypes";
 
 // Exports
@@ -88,13 +89,14 @@ export async function getDatasetItems(
   return datasetItems;
 }
 
-// Request API to get all the items ids for a given dataset 
+// Request API to get all the items ids for a given dataset
 export async function getDatasetItemsIds(datasetId: string): Promise<Array<string>> {
   let datasetItemsIds: string[] = [];
 
   try {
     const response = await fetch(`/datasets/${datasetId}/item_ids`);
-    if (response.ok) datasetItemsIds = (await response.json()) as string[]; // Parse API response if valid
+    if (response.ok)
+      datasetItemsIds = (await response.json()) as string[]; // Parse API response if valid
     else
       console.log("api.getDataset -", response.status, response.statusText, await response.text()); // Handle API errors
   } catch (e) {
@@ -137,6 +139,19 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
+      // TODO : remove this when the backend is fixed
+      if (item.type === "video") {
+        const objects: Array<VideoObject> = item.objects.map((obj) => {
+          obj.track = obj.track.map((tracklet) => {
+            tracklet.start = tracklet.keyBoxes[0].frame_index;
+            tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+            return tracklet;
+          });
+          obj.displayedBox = undefined;
+          return obj;
+        });
+        item.objects = objects;
+      }
     } else {
       item = {} as DatasetItem;
       console.log(
@@ -150,40 +165,6 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     item = {} as DatasetItem;
     console.log("api.getDatasetItem -", e);
   }
-
-  // if (IS_DEV) {
-  //   item.objects = Object.values(item.objects).reduce(
-  //     (acc, obj) => {
-  //       obj.datasetItemType = "video";
-  //       if (obj.datasetItemType === "video" && obj.bbox) {
-  //         const [x, y, w, h] = obj.bbox.coords;
-  //         const box = obj.bbox;
-  //         obj.displayedBox = obj.bbox; // TODO IS_DEV should be done on the frontend not api
-  //         obj.track = [
-  //           {
-  //             start: 0,
-  //             end: 10,
-  //             keyBoxes: [
-  //               { ...box, frameIndex: 0, coords: [x, y, w, h] },
-  //               { ...box, frameIndex: 10, coords: [x + 0.1, y + 0.5, w, h] },
-  //             ],
-  //           },
-  //           {
-  //             start: 52,
-  //             end: 91,
-  //             keyBoxes: [
-  //               { ...box, frameIndex: 52, coords: [x + 0.1, y + 0.5, w, h] },
-  //               { ...box, frameIndex: 91, coords: [x, y, w, h] },
-  //             ],
-  //           },
-  //         ];
-  //       }
-  //       acc[obj.id] = obj;
-  //       return acc;
-  //     },
-  //     {} as DatasetItem["objects"],
-  //   );
-  // }
 
   return item;
 }
