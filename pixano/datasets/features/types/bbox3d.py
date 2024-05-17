@@ -27,4 +27,4 @@ class BBox3D(pydantic.BaseModel):
     """
     position: list[float]
     size: list[float]
-    heading: list[float]
+    heading: float  # TODO : use list[float] instead (need to adapt VDP dataset)

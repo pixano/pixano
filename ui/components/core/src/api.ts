@@ -14,7 +14,12 @@
  */
 
 // Imports
-import type { DatasetInfo, DatasetItems, DatasetItem, ExplorerData } from "./lib/types/datasetTypes";
+import type {
+  DatasetInfo,
+  DatasetItems,
+  DatasetItem,
+  ExplorerData,
+} from "./lib/types/datasetTypes";
 
 // Exports
 export async function getDatasets(): Promise<Array<DatasetInfo>> {
@@ -81,6 +86,22 @@ export async function getDatasetItems(
   }
 
   return datasetItems;
+}
+
+// Request API to get all the items ids for a given dataset 
+export async function getDatasetItemsIds(datasetId: string): Promise<Array<string>> {
+  let datasetItemsIds: string[] = [];
+
+  try {
+    const response = await fetch(`/datasets/${datasetId}/item_ids`);
+    if (response.ok) datasetItemsIds = (await response.json()) as string[]; // Parse API response if valid
+    else
+      console.log("api.getDataset -", response.status, response.statusText, await response.text()); // Handle API errors
+  } catch (e) {
+    console.log("api.getDataset -", e); // Handle other errors
+  }
+
+  return datasetItemsIds;
 }
 
 export async function searchDatasetItems(

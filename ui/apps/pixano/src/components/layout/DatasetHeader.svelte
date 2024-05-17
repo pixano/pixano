@@ -24,21 +24,21 @@
 
   import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
 
-  import { findSelectedItem } from "$lib/api/navigationApi";
+  import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
   import {
     currentDatasetStore,
-    datasetsStore,
+    datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
   import { navItems } from "$lib/constants/headerConstants";
 
   export let pageId: string | null;
+  export let datasetItemsIds: string[];
 
   let currentDataset: DatasetInfo;
   $: currentDatasetStore.subscribe((value) => (currentDataset = value));
 
-  let datasets: DatasetInfo[];
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
@@ -51,24 +51,27 @@
     isLoading = value;
   });
 
-  datasetsStore.subscribe((value) => {
-    datasets = value;
-  });
-
   $: page.subscribe((value) => {
     currentItemId = value.params.itemId;
   });
 
+  // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    const datasetItems = Object.values(currentDataset?.page?.items || {});
-    const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
-    if (selectedId) {
-      const route = `/${currentDataset.id}/dataset/${selectedId}`;
+    // Find the neighbor item id
+    const neighborId = findNeighborItemId(datasetItemsIds, direction, currentItemId);
+
+    // If a neighbor item has been found
+    if (neighborId) {
+      const route = `/${currentDataset.id}/dataset/${neighborId}`;
+
+      // Ask for confirmation if modifications have been made to the item
       if (canSaveCurrentItem) {
-        newItemId = selectedId;
+        newItemId = neighborId;
         return (showConfirmModal = route);
       }
-      currentItemId = selectedId;
+
+      // Go to next/previous item
+      currentItemId = neighborId;
       await goto(route);
     }
   };
@@ -98,6 +101,18 @@
     saveCurrentItemStore.set({ canSave: false, shouldSave: false });
   };
 
+  // Return to the previous page
+  const handleReturnToPreviousPage = async () => {
+    if (currentItemId) {
+      // Update the current page to ensure that we follow the selected item
+      datasetTableStore.update((pagination) => {
+        pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
+        return pagination;
+      });
+      navigateTo(`/${currentDataset.id}/dataset`);
+    } else navigateTo("/");
+  };
+
   const navigateTo = async (route: string) => {
     if (canSaveCurrentItem) {
       return (showConfirmModal = route);
@@ -112,20 +127,20 @@
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
   >
     {#if currentDataset}
-    <div class="h-10 flex items-center font-semibold text-2xl">
-      <div class="flex gap-4 items-center font-light">
-        <button on:click={() => navigateTo("/")} class="h-10 w-10">
-          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-        </button>
-        <IconButton
-          on:click={() => navigateTo(currentItemId ? `/${currentDataset.id}/dataset` : "/")}
-          tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-        >
-          <ArrowLeftCircleIcon />
-        </IconButton>
-        {currentDataset.name}
+      <div class="h-10 flex items-center font-semibold text-2xl">
+        <div class="flex gap-4 items-center font-light">
+          <button on:click={() => navigateTo("/")} class="h-10 w-10">
+            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+          </button>
+          <IconButton
+            on:click={handleReturnToPreviousPage}
+            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
+          >
+            <ArrowLeftCircleIcon />
+          </IconButton>
+          {currentDataset.name}
+        </div>
       </div>
-    </div>
     {/if}
     {#if currentItemId}
       {#if isLoading}
