@@ -159,6 +159,7 @@ export type ItemObjectBase = {
 
 export type VideoItemBBox = ItemBBox & {
   frame_index: number;
+  is_key?: boolean;
   hidden?: boolean;
 };
 export interface Tracklet {

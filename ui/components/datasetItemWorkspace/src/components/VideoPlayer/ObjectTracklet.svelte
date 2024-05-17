@@ -90,13 +90,15 @@
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#each tracklet.keyBoxes as keyBox}
-  <TrackletKeyBox
-    {keyBox}
-    {color}
-    isBeingEdited={isKeyBoxBeingEdited(keyBox)}
-    {onEditKeyBoxClick}
-    objectId={object.id}
-    {updateTrackletWidth}
-    {oneFrameInPixel}
-  />
+  {#if keyBox.is_key}
+    <TrackletKeyBox
+      {keyBox}
+      {color}
+      isBeingEdited={isKeyBoxBeingEdited(keyBox)}
+      {onEditKeyBoxClick}
+      objectId={object.id}
+      {updateTrackletWidth}
+      {oneFrameInPixel}
+    />
+  {/if}
 {/each}

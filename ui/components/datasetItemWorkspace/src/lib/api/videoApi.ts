@@ -82,6 +82,7 @@ const editKeyBoxesInTracklet = (
   keyBoxes.map((keyBox) => {
     if (keyBox.frame_index === currentFrame) {
       keyBox.coords = shape.coords;
+      keyBox.is_key = true;
     }
     return keyBox;
   });
@@ -110,11 +111,13 @@ export const editKeyBoxInTracklet = (
     ) {
       object.track = object.track.map((tracklet) => {
         if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
+          console.log({ tracklet, currentFrame, shape });
           tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
           tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
             ...boxBeingEdited,
             coords: shape.coords,
             frame_index: currentFrame,
+            is_key: true,
           });
           object.displayedBox.coords = shape.coords;
         }
