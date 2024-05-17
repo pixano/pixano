@@ -19,7 +19,7 @@
       if (selectedDatasetId) {
         // NOTE: WEIRD BUG(?) HERE, this got called more and more often, each time we go back to library
         // number of call increases (when going to a page > 1)
-        console.log("Once????");
+        console.log("BUGLOG 'not once' - datasetTableStore subscribe");
         getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
           (datasetItems) => (selectedDataset = datasetItems),
         );
