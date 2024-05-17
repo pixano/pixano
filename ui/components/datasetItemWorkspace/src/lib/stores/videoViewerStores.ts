@@ -20,3 +20,4 @@ import { writable } from "svelte/store";
 
 export const lastFrameIndex = writable<number>();
 export const currentFrameIndex = writable<number>(0);
+export const objectIdBeingEdited = writable<string | null>(null);

@@ -101,12 +101,14 @@ export const editKeyBoxInTracklet = (
   objects: ItemObject[],
   shape: EditShape,
   currentFrame: number,
+  objectIdBeingEdited: string | null,
 ) =>
   objects.map((object) => {
     if (
       shape.type === "rectangle" &&
       object.id === shape.shapeId &&
-      object.datasetItemType === "video"
+      object.datasetItemType === "video" &&
+      objectIdBeingEdited === object.id
     ) {
       object.track = object.track.map((tracklet) => {
         if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
@@ -140,10 +142,12 @@ const createNewTracklet = (
       {
         ...keyBox,
         frame_index: frameIndex,
+        is_key: true,
       },
       {
         ...keyBox,
-        frameIndex: nextIntervalStart,
+        frame_index: nextIntervalStart,
+        is_key: true,
       },
     ],
   } as Tracklet;

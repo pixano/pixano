@@ -24,6 +24,7 @@
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
   export let itemObject: ItemObject;
   export let colorScale: (id: string) => string;
@@ -59,6 +60,7 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
+          objectIdBeingEdited.set(value ? object.id : null);
         }
         return object;
       }),

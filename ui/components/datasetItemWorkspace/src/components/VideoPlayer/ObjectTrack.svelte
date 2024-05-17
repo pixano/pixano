@@ -17,7 +17,11 @@
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    lastFrameIndex,
+    currentFrameIndex,
+    objectIdBeingEdited,
+  } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
@@ -50,6 +54,7 @@
 
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
     onTimeTrackClick(box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index);
+    objectIdBeingEdited.set(object.id);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
@@ -65,7 +70,7 @@
   };
 
   const onAddKeyBoxClick = () => {
-    const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
+    const box = { ...object.displayedBox, frame_index: rightClickFrameIndex, is_key: true };
     itemObjects.update((objects) =>
       addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );

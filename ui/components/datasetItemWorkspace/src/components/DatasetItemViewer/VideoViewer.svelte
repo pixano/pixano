@@ -26,7 +26,11 @@
     newShape,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    lastFrameIndex,
+    currentFrameIndex,
+    objectIdBeingEdited,
+  } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -79,12 +83,15 @@
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
-    const isEditingAnObject = $itemObjects.some((object) => object.displayControl?.editing);
+    const objectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
     const currentFrame = $currentFrameIndex;
-    if (isEditingAnObject) {
-      itemObjects.update((objects) => editKeyBoxInTracklet(objects, shape, currentFrame));
+    if (objectBeingEdited?.id === $objectIdBeingEdited) {
+      console.log({ shape, currentFrame, $itemObjects });
+      itemObjects.update((objects) =>
+        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+      );
     } else {
-      itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+      itemObjects.update((objects) => updateExistingObject(objects, shape));
     }
   };
 
@@ -94,6 +101,8 @@
       updateOrCreateBox(shape);
     }
   }
+
+  // $: console.log({ $itemObjects });
 
   $: selectedTool.set($selectedTool);
 </script>
