@@ -55,6 +55,7 @@ export const videoDatasetItemPayload = {
               is_normalized: true, // boolean
               confidence: 1, // number
               frameIndex: 0, // number
+              isKey: true,
             },
           ],
         },

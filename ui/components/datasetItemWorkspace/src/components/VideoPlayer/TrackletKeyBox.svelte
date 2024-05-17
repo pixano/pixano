@@ -82,7 +82,7 @@
     class={cn(
       "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
       "hover:scale-150",
-      { "bg-primary !border-primary": isBeingEdited },
+      { "bg-primary !border-primary": keyBox.frame_index === $currentFrameIndex },
     )}
     style={`left: ${getKeyBoxLeftPosition(keyBox)}%; border-color: ${color}`}
   >

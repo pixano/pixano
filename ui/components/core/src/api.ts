@@ -140,6 +140,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
       // TODO : remove this when the backend is fixed
+      // TODO : API changes | keyBoxes should be renamed `boxes` since is_key is now a params
       if (item.type === "video") {
         const objects: Array<VideoObject> = item.objects.map((obj) => {
           obj.track = obj.track.map((tracklet) => {
