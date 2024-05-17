@@ -31,13 +31,12 @@
     draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
 
-  let isBoxBeingEdited: boolean = false;
+  let isBoxBeingEdited = false;
 
   $: {
     const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
-    if (currentObjectBeingEdited?.id === objectId) {
-      isBoxBeingEdited = keyBox.frame_index === $currentFrameIndex;
-    }
+    isBoxBeingEdited =
+      keyBox.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
   const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
@@ -93,7 +92,7 @@
     <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyBox)}
       >Remove key box</ContextMenu.Item
     >
-    {#if isBoxBeingEdited}
+    {#if !isBoxBeingEdited}
       <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>Edit box</ContextMenu.Item>
     {/if}
   </ContextMenu.Content>

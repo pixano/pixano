@@ -110,7 +110,6 @@ export const editKeyBoxInTracklet = (
     ) {
       object.track = object.track.map((tracklet) => {
         if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
-          console.log({ tracklet, currentFrame, shape });
           tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
           tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
             ...tracklet.keyBoxes[0],
