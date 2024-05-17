@@ -28,19 +28,19 @@
   export let oneFrameInPixel: number;
   export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
   export let updateTrackletWidth: (
-    newIndex: VideoItemBBox["frameIndex"],
-    draggedIndex: VideoItemBBox["frameIndex"],
+    newIndex: VideoItemBBox["frame_index"],
+    draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
 
   $itemBoxBeingEdited?.objectId === objectId &&
-    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
+    keyBox.frame_index === $itemBoxBeingEdited?.frame_index;
 
   const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
   const getKeyBoxLeftPosition = (box: VideoItemBBox) => {
-    const boxFrameIndex = box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex;
+    const boxFrameIndex = box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
 
@@ -53,7 +53,7 @@
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = keyBox.frameIndex;
+      startFrameIndex = keyBox.frame_index;
       startOneFrameInPixel = oneFrameInPixel;
     });
 
@@ -62,7 +62,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frameIndex);
+        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frame_index);
       }
     });
 
