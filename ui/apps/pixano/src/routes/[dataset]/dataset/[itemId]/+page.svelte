@@ -61,7 +61,6 @@
 
   datasetsStore.subscribe((value) => {
     const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
-    console.log({ value });
     if (foundDataset) {
       selectedDataset = foundDataset;
     }
