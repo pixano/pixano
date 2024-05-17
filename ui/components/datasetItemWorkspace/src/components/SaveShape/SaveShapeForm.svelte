@@ -31,7 +31,7 @@
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { itemBoxBeingEdited, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { defineCreatedObject } from "../../lib/api/objectsApi";
 
   export let currentTab: "scene" | "objects";
@@ -67,16 +67,6 @@
 
     newShape.set({ status: "none", shouldReset: true });
     canSave.set(true);
-    itemBoxBeingEdited.update(() => {
-      if (!newObject) return null;
-      console.log({ newObject });
-      const startingBox =
-        newObject.datasetItemType === "video" && newObject.track[0]?.keyBoxes.at(-1);
-      if (startingBox) {
-        return { ...startingBox, objectId: newObject.id };
-      }
-      return null;
-    });
     currentTab = "objects";
   };
 

@@ -17,11 +17,7 @@
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import {
-    itemBoxBeingEdited,
-    lastFrameIndex,
-    currentFrameIndex,
-  } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
@@ -52,21 +48,16 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isKeyBoxBeingEdited = (box: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    box.frame_index === $itemBoxBeingEdited?.frame_index;
-
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
-    const isBeingEdited = isKeyBoxBeingEdited(box);
-    itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
     onTimeTrackClick(box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.highlighted = isBeingEdited ? "all" : obj.highlighted;
+        // obj.highlighted = isBeingEdited ? "all" : obj.highlighted;
         obj.displayControl = {
           ...obj.displayControl,
-          editing: !isBeingEdited && obj.id === object.id,
+          editing: obj.id === object.id,
+          // editing: !isBeingEdited && obj.id === object.id,
         };
         return obj;
       }),

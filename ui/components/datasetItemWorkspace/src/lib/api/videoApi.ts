@@ -99,7 +99,6 @@ const addKeyBoxToTrackletBoxes = (tracklet: Tracklet, currentFrame: number, box:
 
 export const editKeyBoxInTracklet = (
   objects: ItemObject[],
-  boxBeingEdited: VideoItemBBox,
   shape: EditShape,
   currentFrame: number,
 ) =>
@@ -114,7 +113,7 @@ export const editKeyBoxInTracklet = (
           console.log({ tracklet, currentFrame, shape });
           tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
           tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
-            ...boxBeingEdited,
+            ...tracklet.keyBoxes[0],
             coords: shape.coords,
             frame_index: currentFrame,
             is_key: true,

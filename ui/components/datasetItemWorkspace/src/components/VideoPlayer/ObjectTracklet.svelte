@@ -16,7 +16,7 @@
 
   import { ContextMenu, cn } from "@pixano/core";
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
 
   export let object: VideoObject;
@@ -53,20 +53,12 @@
     tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
       if (keyBox.frame_index === draggedFrameIndex) {
         keyBox.frame_index = newFrameIndex;
-        itemBoxBeingEdited.set({
-          ...keyBox,
-          objectId: object.id,
-        });
       }
       return keyBox;
     });
     tracklet.start = tracklet.keyBoxes[0].frame_index;
     tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
   };
-
-  const isKeyBoxBeingEdited = (keyBox: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    keyBox.frame_index === $itemBoxBeingEdited?.frame_index;
 </script>
 
 <ContextMenu.Root>
@@ -94,7 +86,6 @@
     <TrackletKeyBox
       {keyBox}
       {color}
-      isBeingEdited={isKeyBoxBeingEdited(keyBox)}
       {onEditKeyBoxClick}
       objectId={object.id}
       {updateTrackletWidth}

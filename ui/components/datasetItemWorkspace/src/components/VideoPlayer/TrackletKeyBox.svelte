@@ -17,17 +17,12 @@
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, VideoItemBBox } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import {
-    currentFrameIndex,
-    itemBoxBeingEdited,
-    lastFrameIndex,
-  } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
 
   export let keyBox: VideoItemBBox;
-  export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
   export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
@@ -36,8 +31,14 @@
     draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
 
-  $itemBoxBeingEdited?.objectId === objectId &&
-    keyBox.frame_index === $itemBoxBeingEdited?.frame_index;
+  let isBoxBeingEdited: boolean = false;
+
+  $: {
+    const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
+    if (currentObjectBeingEdited?.id === objectId) {
+      isBoxBeingEdited = keyBox.frame_index === $currentFrameIndex;
+    }
+  }
 
   const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
@@ -62,7 +63,7 @@
     });
 
     window.addEventListener("mousemove", (event) => {
-      if (moving && isBeingEdited) {
+      if (moving) {
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
@@ -82,7 +83,7 @@
     class={cn(
       "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
       "hover:scale-150",
-      { "bg-primary !border-primary": keyBox.frame_index === $currentFrameIndex },
+      { "bg-primary !border-primary": isBoxBeingEdited },
     )}
     style={`left: ${getKeyBoxLeftPosition(keyBox)}%; border-color: ${color}`}
   >
@@ -92,8 +93,8 @@
     <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyBox)}
       >Remove key box</ContextMenu.Item
     >
-    <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>
-      {isBeingEdited ? "Stop editing" : "Edit box"}
-    </ContextMenu.Item>
+    {#if isBoxBeingEdited}
+      <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>Edit box</ContextMenu.Item>
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

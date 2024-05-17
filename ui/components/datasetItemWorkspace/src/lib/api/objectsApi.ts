@@ -323,8 +323,8 @@ export const defineCreatedObject = (
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
             keyBoxes: [
-              { ...bbox, frame_index: currentFrameIndex },
-              { ...bbox, frame_index: currentFrameIndex + 5 },
+              { ...bbox, frame_index: currentFrameIndex, is_key: true },
+              { ...bbox, frame_index: currentFrameIndex + 5, is_key: true },
             ],
           },
         ],

@@ -26,11 +26,7 @@
     newShape,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import {
-    itemBoxBeingEdited,
-    lastFrameIndex,
-    currentFrameIndex,
-  } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -83,12 +79,10 @@
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
-    const boxBeingEdited = $itemBoxBeingEdited;
+    const isEditingAnObject = $itemObjects.some((object) => object.displayControl?.editing);
     const currentFrame = $currentFrameIndex;
-    if (boxBeingEdited) {
-      itemObjects.update((objects) =>
-        editKeyBoxInTracklet(objects, boxBeingEdited, shape, currentFrame),
-      );
+    if (isEditingAnObject) {
+      itemObjects.update((objects) => editKeyBoxInTracklet(objects, shape, currentFrame));
     } else {
       itemObjects.update((objects) => updateExistingObject(objects, $newShape));
     }
