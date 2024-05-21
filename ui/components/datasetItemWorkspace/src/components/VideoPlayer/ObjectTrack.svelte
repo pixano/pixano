@@ -28,6 +28,7 @@
   export let zoomLevel: number[];
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
+  export let updateView: (frameIndex: number) => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
@@ -132,6 +133,7 @@
       onSplitTrackletClick={() => onSplitTrackletClick(i)}
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
       {findNeighborKeyBoxes}
+      {updateView}
     />
   {/each}
 </div>

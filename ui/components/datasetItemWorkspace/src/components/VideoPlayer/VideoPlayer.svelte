@@ -108,7 +108,7 @@
             <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
               {object.id}
             </p>
-            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} />
+            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} {updateView} />
           </VideoPlayerRow>
         {/if}
       {/each}

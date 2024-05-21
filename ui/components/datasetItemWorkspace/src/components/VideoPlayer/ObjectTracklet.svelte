@@ -16,7 +16,7 @@
 
   import { ContextMenu, cn } from "@pixano/core";
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
-  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
   import { colorScale } from "../../lib/stores/datasetItemWorkspaceStores";
 
@@ -28,6 +28,7 @@
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
+  export let updateView: (frameIndex: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
@@ -58,6 +59,8 @@
     });
     tracklet.start = tracklet.keyBoxes[0].frame_index;
     tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+    updateView(newFrameIndex);
+    currentFrameIndex.set(newFrameIndex);
   };
 
   $: color = $colorScale[1](object.id);
@@ -88,10 +91,10 @@
     <TrackletKeyBox
       {keyBox}
       {color}
+      {oneFrameInPixel}
       {onEditKeyBoxClick}
       objectId={object.id}
       {updateTrackletWidth}
-      {oneFrameInPixel}
     />
   {/if}
 {/each}

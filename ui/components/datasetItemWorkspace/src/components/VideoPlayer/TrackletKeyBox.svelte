@@ -66,7 +66,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        // currentFrameIndex.set(Math.round(newFrameIndex));
+
         updateTrackletWidth(Math.round(newFrameIndex), keyBox.frame_index);
       }
     });
