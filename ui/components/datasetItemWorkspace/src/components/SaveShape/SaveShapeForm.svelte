@@ -31,7 +31,7 @@
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
   import { defineCreatedObject } from "../../lib/api/objectsApi";
 
   export let currentTab: "scene" | "objects";
@@ -51,6 +51,7 @@
     itemObjects.update((oldObjects) => {
       if (shape.status !== "saving") return oldObjects;
       newObject = defineCreatedObject(shape, $itemMetas.type, features, $currentFrameIndex);
+      objectIdBeingEdited.set(newObject?.id || null);
       const objectsWithoutHighlighted: ItemObject[] = oldObjects.map((object) => ({
         ...object,
         highlighted: "none",

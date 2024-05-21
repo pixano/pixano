@@ -89,6 +89,7 @@
       itemObjects.update((objects) =>
         editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
+      newShape.set({ status: "none" });
     } else {
       itemObjects.update((objects) => updateExistingObject(objects, shape));
     }
