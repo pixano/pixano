@@ -26,7 +26,6 @@
   import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
   export let updateView: (frameIndex: number) => void;
-  export let colorScale: (id: string) => string;
 
   let intervalId: number;
   let videoSpeed = 100;
@@ -109,7 +108,7 @@
             <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
               {object.id}
             </p>
-            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} {colorScale} />
+            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} />
           </VideoPlayerRow>
         {/if}
       {/each}

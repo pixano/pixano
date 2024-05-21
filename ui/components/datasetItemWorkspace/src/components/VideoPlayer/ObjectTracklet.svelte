@@ -18,9 +18,9 @@
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
   import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
+  import { colorScale } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let object: VideoObject;
-  export let color: string;
   export let tracklet: Tracklet;
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
@@ -59,6 +59,8 @@
     tracklet.start = tracklet.keyBoxes[0].frame_index;
     tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
   };
+
+  $: color = $colorScale[1](object.id);
 </script>
 
 <ContextMenu.Root>

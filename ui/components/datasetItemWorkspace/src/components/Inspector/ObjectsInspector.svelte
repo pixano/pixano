@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import { utils, Combobox, cn } from "@pixano/core";
+  import { Combobox, cn } from "@pixano/core";
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
@@ -28,10 +28,8 @@
     [GROUND_TRUTH]: [],
     [PRE_ANNOTATION]: [],
   };
-  let allIds: string[] = [];
 
   itemObjects.subscribe((value) => {
-    allIds = value.map((item) => item.id);
     allItemsSortedByModel = sortObjectsByModel(value);
     const highlightedObject = value.find((item) => item.highlighted === "self");
     if (!highlightedObject) return;
@@ -40,8 +38,6 @@
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
-
-  let colorScale = utils.ordinalColorScale(allIds);
 
   let allModels = Object.keys(allItemsSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
@@ -53,7 +49,7 @@
 </script>
 
 <div class="p-2 flex flex-col h-[calc(100vh-200px)]">
-  <PreAnnotation {colorScale} />
+  <PreAnnotation />
   {#if !$preAnnotationIsActive}
     <div
       class={cn("gap-4 grow grid grid-cols-1 grid-rows-2 h-full", {
@@ -66,7 +62,7 @@
         numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
       >
         {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-          <ObjectCard bind:itemObject {colorScale} />
+          <ObjectCard bind:itemObject />
         {/each}
       </ObjectsModelSection>
       {#if selectedModel}
@@ -85,7 +81,7 @@
             }))}
           />
           {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-            <ObjectCard bind:itemObject {colorScale} />
+            <ObjectCard bind:itemObject />
           {/each}
         </ObjectsModelSection>
       {/if}

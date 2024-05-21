@@ -24,6 +24,7 @@
     canSave,
     itemObjects,
     preAnnotationIsActive,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import {
@@ -34,8 +35,6 @@
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  export let colorScale: (id: string) => string;
-
   let objectsToAnnotate: ItemObject[] = [];
   let filteredObjectsToAnnotate: ItemObject[] = [];
   let isFormValid: boolean = false;
@@ -44,7 +43,7 @@
   let objectProperties: ObjectProperties = {};
 
   $: objectToAnnotate = filteredObjectsToAnnotate[0];
-  $: color = colorScale(objectToAnnotate?.id || "");
+  $: color = $colorScale[1](objectToAnnotate?.id || "");
 
   itemObjects.subscribe((objects) => {
     objectsToAnnotate = getObjectsToPreAnnotate(objects);

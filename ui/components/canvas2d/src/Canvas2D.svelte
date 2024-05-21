@@ -62,7 +62,7 @@
 
   let isReady = false;
 
-  let colorScale: (id: string) => string;
+  let colorScale = utils.ordinalColorScale(colorRange);
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
@@ -81,10 +81,6 @@
     if (newShape.status === "none" && newShape.shouldReset) {
       clearAnnotationAndInputs();
     }
-  }
-
-  $: {
-    colorScale = utils.ordinalColorScale(colorRange);
   }
 
   $: {

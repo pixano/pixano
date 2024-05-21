@@ -27,7 +27,6 @@
 
   export let zoomLevel: number[];
   export let object: VideoObject;
-  export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
 
   let rightClickFrameIndex: number;
@@ -127,7 +126,6 @@
     <ObjectTracklet
       {tracklet}
       {object}
-      color={colorScale(object.id)}
       {onAddKeyBoxClick}
       {onContextMenu}
       {onEditKeyBoxClick}

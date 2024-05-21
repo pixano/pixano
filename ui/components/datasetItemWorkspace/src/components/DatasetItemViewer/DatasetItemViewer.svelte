@@ -35,9 +35,9 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
 
-  let allIds: string[] = [];
-
   $: console.log("TMPLOG: DatasetItemViewer- selectedItem", selectedItem);
+
+  let colorRange = $itemObjects.map((obj) => obj.id);
 
   $: {
     newShape.set($newShape);
@@ -52,10 +52,6 @@
       });
     }
   }
-
-  itemObjects.subscribe((value) => {
-    allIds = value.map((item) => item.id);
-  });
 </script>
 
 <div class="max-w-[100%] bg-slate-800">
@@ -64,9 +60,9 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn />
+    <VideoViewer {selectedItem} {embeddings} bind:currentAnn {colorRange} />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn {colorRange} />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

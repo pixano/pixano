@@ -18,7 +18,12 @@
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
-  import { canSave, itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    canSave,
+    itemObjects,
+    selectedTool,
+    colorScale,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
@@ -27,9 +32,7 @@
   import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
   export let itemObject: ItemObject;
-  export let colorScale: (id: string) => string;
 
-  let color: string;
   let open: boolean = false;
   let showIcons: boolean = false;
 
@@ -39,9 +42,7 @@
   $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
 
-  $: {
-    color = colorScale(itemObject.id);
-  }
+  $: color = $colorScale[1](itemObject.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,

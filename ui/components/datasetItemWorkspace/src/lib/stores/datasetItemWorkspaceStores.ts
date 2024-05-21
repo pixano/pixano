@@ -15,16 +15,17 @@
 
 // Imports
 import { writable, derived } from "svelte/store";
-import type {
-  Shape,
-  InteractiveImageSegmenter,
-  ItemObject,
-  DatasetItem,
-  Mask,
-  BBox,
-  ItemFeature,
-  FeaturesValues,
-  SelectionTool,
+import {
+  type Shape,
+  type InteractiveImageSegmenter,
+  type ItemObject,
+  type DatasetItem,
+  type Mask,
+  type BBox,
+  type ItemFeature,
+  type FeaturesValues,
+  type SelectionTool,
+  utils,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
@@ -49,6 +50,25 @@ export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
+
+type ColorScale = [Array<string>, (id: string) => string];
+
+const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
+
+export const colorScale = derived(
+  itemObjects,
+  ($itemObjects, _, update) => {
+    update((old) => {
+      let allIds = $itemObjects.map((obj) => obj.id);
+      if (old) {
+        allIds = [...old[0], ...allIds];
+        allIds = [...new Set(allIds)];
+      }
+      return [allIds, utils.ordinalColorScale(allIds)] as ColorScale;
+    });
+  },
+  initialColorScale,
+);
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {

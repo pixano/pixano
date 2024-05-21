@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { utils, type EditShape, type VideoDatasetItem } from "@pixano/core";
+  import { type EditShape, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -46,7 +46,6 @@
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
 
   let isLoaded = false;
-  let colorScale = utils.ordinalColorScale(colorRange);
 
   onMount(() => {
     const image = new Image();
@@ -102,8 +101,6 @@
     }
   }
 
-  // $: console.log({ $itemObjects });
-
   $: selectedTool.set($selectedTool);
 </script>
 
@@ -123,7 +120,7 @@
       />
     </div>
     <div class="h-full grow max-h-[25%]">
-      <VideoPlayer {updateView} {colorScale} />
+      <VideoPlayer {updateView} />
     </div>
   {/if}
 </section>
