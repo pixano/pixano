@@ -39,8 +39,10 @@
   $: features = createFeature(itemObject.features);
   $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
-  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
+  $: boxIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
+  $: maskIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
 
   $: color = $colorScale[1](itemObject.id);
 
@@ -165,33 +167,35 @@
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          <div>
-            <p class="font-medium first-letter:uppercase">display</p>
-            <div class="flex gap-4">
-              {#if itemObject.bbox}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Box</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-                    bind:checked={boxIsVisible}
-                    title={boxIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
-              {#if itemObject.mask}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Mask</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-                    bind:checked={maskIsVisible}
-                    title={maskIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
+          {#if itemObject.datasetItemType === "image"}
+            <div>
+              <p class="font-medium first-letter:uppercase">display</p>
+              <div class="flex gap-4">
+                {#if itemObject.bbox}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Box</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                      bind:checked={boxIsVisible}
+                      title={boxIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+                {#if itemObject.mask}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Mask</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                      bind:checked={maskIsVisible}
+                      title={maskIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+              </div>
             </div>
-          </div>
+          {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
         </div>
       </div>

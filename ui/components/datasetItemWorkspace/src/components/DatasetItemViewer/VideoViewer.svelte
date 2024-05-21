@@ -85,7 +85,6 @@
     const objectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
     const currentFrame = $currentFrameIndex;
     if (objectBeingEdited?.id === $objectIdBeingEdited) {
-      console.log({ shape, currentFrame, $itemObjects });
       itemObjects.update((objects) =>
         editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
