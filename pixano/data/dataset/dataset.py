@@ -695,51 +695,95 @@ class Dataset(BaseModel):
         # Update item
         item.update(main_table)
 
-        # Add or update item objects
+        # dispatch objects by table name
+        if "objects" in self.info.tables:
+            table_source_name_map = {
+                table.source: table.name for table in self.info.tables["objects"]
+            }
+        else:
+            table_source_name_map = {}
+        objects_by_table = defaultdict(list)
+        non_existing_table_objects = []
         for obj in item.objects.values():
-            table_found = False
-            if "objects" in self.info.tables:
-                for table in self.info.tables["objects"]:
-                    if table.source == obj.source_id:
-                        # Load object table
-                        table_found = True
-                        obj_table = ds_tables["objects"][table.name]
+            if obj.source_id in table_source_name_map:
+                objects_by_table[table_source_name_map[obj.source_id]].append(obj)
+            else:
+                non_existing_table_objects.append(obj)
 
-                        # Add new object columns
-                        self.update_table(obj, obj_table, "objects", table.name)
+        for table_name, objs in objects_by_table.items():
+            obj_table = ds_tables["objects"][table_name]
+            str_obj_ids = [f"'{obj.id}'" for obj in objs]
+            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+            scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
+            existing_objs = scanner.to_table()
+            update_ids = existing_objs.to_pydict()["id"]
+            new_objs_ids = [obj.id for obj in objs if obj.id not in update_ids]
 
-                        # Reload dataset tables
-                        ds_tables = self.open_tables()
-                        main_table = ds_tables["objects"][table.name]
+            # ADD
+            if new_objs_ids:
+                new_objs = [obj for obj in objs if obj.id in new_objs_ids]
 
-                        # Add or update object
-                        obj.add_or_update(obj_table)
-            # If first object
-            if not table_found and obj.source_id == "Ground Truth":
-                # Create table
-                table = DatasetTable(
-                    name="objects",
-                    source="Ground Truth",
-                    fields={
-                        "id": "str",
-                        "item_id": "str",
-                        "view_id": "str",
-                        "bbox": "bbox",
-                        "mask": "compressedrle",
-                    },
+                # Convert object to PyArrow
+                pyarrow_new_objs = [new_obj.to_pyarrow() for new_obj in new_objs]
+                table_new_objs = pa.Table.from_pylist(
+                    pyarrow_new_objs,
+                    schema=obj_table.schema,
                 )
+                obj_table.add(table_new_objs)
+
+            # UPDATE
+            if update_ids:
+                update_objs = [obj for obj in objs if obj.id in update_ids]
+                # Convert object to PyArrow
+                pyarrow_update_objs = [
+                    update_obj.to_pyarrow() for update_obj in update_objs
+                ]
+                table_update_objs = pa.Table.from_pylist(
+                    pyarrow_update_objs,
+                    schema=obj_table.schema,
+                )
+
+                str_update_ids = [f"'{id}'" for id in update_ids]
+                str_update_ids = "(" + ", ".join(str_update_ids) + ")"
+                obj_table.delete(f"id in {str_update_ids}")
+                obj_table.add(table_update_objs)
+                obj_table._reset_dataset()
+
+            # Clear change history to prevent dataset from becoming too large
+            obj_table.to_lance().cleanup_old_versions()
+
+        if non_existing_table_objects:
+            # Create table
+            new_table = DatasetTable(
+                name="objects",
+                source="Ground Truth",
+                fields={
+                    "id": "str",
+                    "item_id": "str",
+                    "view_id": "str",
+                    "bbox": "bbox",
+                    "mask": "compressedrle",
+                },
+            )
+            for objs in non_existing_table_objects:
                 for feat in obj.features.values():
-                    table.fields[feat.name] = feat.dtype
-                self.create_table(table, "objects")
+                    new_table.fields[feat.name] = feat.dtype
 
-                # Reload dataset tables
-                ds_tables = self.open_tables()
-                obj_table = ds_tables["objects"][table.name]
+            self.create_table(new_table, "objects")
 
-                # Add object
-                obj.add_or_update(obj_table)
+            # Reload dataset tables
+            ds_tables = self.open_tables()
+            new_obj_table = ds_tables["objects"][new_table.name]
 
-        # Delete removed item objects
+            # Convert object to PyArrow
+            pyarrow_notable_objs = [obj.to_pyarrow() for obj in non_existing_table_objects]
+            table_notable_objs = pa.Table.from_pylist(
+                pyarrow_notable_objs,
+                schema=new_obj_table.schema,
+            )
+            new_obj_table.add(table_notable_objs)
+
+        # Objects to delete
         item.delete_objects(ds_tables)
 
     def get_features_values(self, config_values: FeaturesValues) -> FeaturesValues:
