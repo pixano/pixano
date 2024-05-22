@@ -747,7 +747,6 @@ class Dataset(BaseModel):
                 str_update_ids = "(" + ", ".join(str_update_ids) + ")"
                 obj_table.delete(f"id in {str_update_ids}")
                 obj_table.add(table_update_objs)
-                obj_table._reset_dataset()
 
             # Clear change history to prevent dataset from becoming too large
             obj_table.to_lance().cleanup_old_versions()
@@ -765,7 +764,7 @@ class Dataset(BaseModel):
                     "mask": "compressedrle",
                 },
             )
-            for objs in non_existing_table_objects:
+            for obj in non_existing_table_objects:
                 for feat in obj.features.values():
                     new_table.fields[feat.name] = feat.dtype
 
@@ -776,7 +775,9 @@ class Dataset(BaseModel):
             new_obj_table = ds_tables["objects"][new_table.name]
 
             # Convert object to PyArrow
-            pyarrow_notable_objs = [obj.to_pyarrow() for obj in non_existing_table_objects]
+            pyarrow_notable_objs = [
+                obj.to_pyarrow() for obj in non_existing_table_objects
+            ]
             table_notable_objs = pa.Table.from_pylist(
                 pyarrow_notable_objs,
                 schema=new_obj_table.schema,
