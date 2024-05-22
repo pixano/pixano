@@ -1,7 +1,9 @@
+import SliderWithValue from "./SliderWithValue.svelte";
 import Root from "./SliderRoot.svelte";
 
 export {
   Root,
   //
-  Root as Slider,
+  SliderWithValue,
+  Root as SliderRoot,
 };

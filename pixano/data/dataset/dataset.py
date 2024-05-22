@@ -329,7 +329,8 @@ class Dataset(BaseModel):
                         info_table.fields[col.name] = col.dtype
 
             # Merge with main table
-            table.to_lance().merge(new_columns_table, "id")
+            if len(new_columns_table) > 0:
+                table.to_lance().merge(new_columns_table, "id")
             self.save_info()
 
     def load_items(

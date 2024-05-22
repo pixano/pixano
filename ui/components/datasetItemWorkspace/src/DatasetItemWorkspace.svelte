@@ -60,6 +60,7 @@
     featuresList: currentDataset.features_values || { main: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
+    type: selectedItem.type,
   });
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
