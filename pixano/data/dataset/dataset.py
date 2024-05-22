@@ -679,6 +679,15 @@ class Dataset(BaseModel):
             item (DatasetItem): Item to save
         """
 
+        # Local utility function to convert objects to pyarrow format
+        def convert_to_pyarrow(obj_table, objs):
+            # Convert objects to PyArrow
+            pyarrow_objs = [obj.to_pyarrow() for obj in objs]
+            return pa.Table.from_pylist(
+                pyarrow_objs,
+                schema=obj_table.schema,
+            )
+
         # Update info in case of change
         self.info = self.load_info()
 
@@ -722,32 +731,16 @@ class Dataset(BaseModel):
 
             # ADD
             if new_objs_ids:
-                new_objs = [obj for obj in objs if obj.id in new_objs_ids]
-
-                # Convert object to PyArrow
-                pyarrow_new_objs = [new_obj.to_pyarrow() for new_obj in new_objs]
-                table_new_objs = pa.Table.from_pylist(
-                    pyarrow_new_objs,
-                    schema=obj_table.schema,
-                )
-                obj_table.add(table_new_objs)
+                objs = [obj for obj in objs if obj.id in new_objs_ids]
+                obj_table.add(convert_to_pyarrow(obj_table, objs))
 
             # UPDATE
             if update_ids:
-                update_objs = [obj for obj in objs if obj.id in update_ids]
-                # Convert object to PyArrow
-                pyarrow_update_objs = [
-                    update_obj.to_pyarrow() for update_obj in update_objs
-                ]
-                table_update_objs = pa.Table.from_pylist(
-                    pyarrow_update_objs,
-                    schema=obj_table.schema,
-                )
-
-                str_update_ids = [f"'{id}'" for id in update_ids]
-                str_update_ids = "(" + ", ".join(str_update_ids) + ")"
-                obj_table.delete(f"id in {str_update_ids}")
-                obj_table.add(table_update_objs)
+                objs = [obj for obj in objs if obj.id in update_ids]
+                str_obj_ids = [f"'{id}'" for id in update_ids]
+                str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+                obj_table.delete(f"id in {str_obj_ids}")
+                obj_table.add(convert_to_pyarrow(obj_table, objs))
 
             # Clear change history to prevent dataset from becoming too large
             obj_table.to_lance().cleanup_old_versions()
@@ -775,15 +768,7 @@ class Dataset(BaseModel):
             ds_tables = self.open_tables()
             new_obj_table = ds_tables["objects"][new_table.name]
 
-            # Convert object to PyArrow
-            pyarrow_notable_objs = [
-                obj.to_pyarrow() for obj in non_existing_table_objects
-            ]
-            table_notable_objs = pa.Table.from_pylist(
-                pyarrow_notable_objs,
-                schema=new_obj_table.schema,
-            )
-            new_obj_table.add(table_notable_objs)
+            new_obj_table.add(convert_to_pyarrow(new_obj_table, non_existing_table_objects))
 
         # Objects to delete
         item.delete_objects(ds_tables)
