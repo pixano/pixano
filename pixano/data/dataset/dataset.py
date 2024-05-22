@@ -768,7 +768,9 @@ class Dataset(BaseModel):
             ds_tables = self.open_tables()
             new_obj_table = ds_tables["objects"][new_table.name]
 
-            new_obj_table.add(convert_to_pyarrow(new_obj_table, non_existing_table_objects))
+            new_obj_table.add(
+                convert_to_pyarrow(new_obj_table, non_existing_table_objects)
+            )
 
         # Objects to delete
         item.delete_objects(ds_tables)
