@@ -127,18 +127,6 @@
     cols: 0,
   };
 
-  $: {
-    if (stage) {
-      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
-
-      images.forEach((image) => {
-        image.cache();
-        image.brightness(brightness);
-        image.contrast(contrast);
-      });
-    }
-  }
-
   let currentId: string;
 
   // Dynamically set the canvas stage size
@@ -195,6 +183,9 @@
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
     }
+
+    // Re-apply filters
+    applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -310,6 +301,18 @@
       }
     }
   }
+
+  const applyFilters = () => {
+    if (stage) {
+      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+
+      images.forEach((image) => {
+        image.cache();
+        image.brightness(brightness);
+        image.contrast(contrast);
+      });
+    }
+  };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
