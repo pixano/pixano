@@ -32,10 +32,11 @@ from collections import defaultdict
 
 class FrontDatasetItem(BaseModel):
     """Front format DatasetItem"""
+
     id: str
     datasetId: str
     type: str
-    original_id: Optional[str] = None
+    # original_id: Optional[str] = None
     split: str
     features: Optional[dict] = None
     views: Optional[dict] = None
@@ -286,7 +287,6 @@ async def get_dataset_item(  # noqa: D417
         }
 
         # views : {"table_name": ItemView}
-        # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
         views = {}
         view_type = "image"
         for view_name in groups[_SchemaGroup.VIEW]:
@@ -323,7 +323,7 @@ async def get_dataset_item(  # noqa: D417
                             "frame_index": frame.frame_index,
                             "uri": "data/" + dataset.path.name + "/media/" + frame.url,
                             # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
-                            "thumbnail": frame.open(dataset.path / "media"),
+                            "thumbnail": None,  # frame.open(dataset.path / "media"),
                             "features": {
                                 "width": {
                                     "name": "width",
@@ -344,7 +344,7 @@ async def get_dataset_item(  # noqa: D417
                 view_type = "video"
 
         # objects
-        #TMP NOTE : the objects contents may still be subject to change -- WIP
+        # TMP NOTE : the objects contents may still be subject to change -- WIP
         objects = []
         for obj_group in groups[_SchemaGroup.OBJECT]:
             if view_type == "image":
@@ -381,27 +381,68 @@ async def get_dataset_item(  # noqa: D417
                     ]
                 )
             else:  # video
-                # TODO - WIP
-                if 1:
-                    #TMP for test with VOT dataset -- normally we should loop on tracklet table
-                    # need to rethink Track(let) python class(es), & change VOT dataset accordingly, to have track(let)s
-                    tmp_obj0 = getattr(item, obj_group)[0]  # TODO get this from tracklet, not individual objects
-                    objects.extend(
-                        [
+                # Create a dict to organize objects in tracks/tracklet per view
+                tracks_dict = defaultdict(
+                    lambda: defaultdict(lambda: defaultdict(list))
+                )
+                for obj in getattr(item, obj_group):
+                    tracks_dict[obj.view_id][obj.track_id][obj.tracklet_id].append(obj)
+
+                # Sort tracklets by frame_idx
+                for view_id, tracks in tracks_dict.items():
+                    for track_id, tracklets in tracks.items():
+                        for tracklet_id, tracklet_objs in tracklets.items():
+                            tracklet_objs.sort(key=lambda x: x.frame_idx)
+
+                all_tracks = []
+                for view_id, tracks in tracks_dict.items():
+                    view_tracks = []
+                    for track_id, tracklets in tracks.items():
+                        track = {"track_id": track_id, "tracklets": []}
+                        for tracklet_id, tracklet_objs in tracklets.items():
+                            tracklet = {
+                                "tracklet_id": tracklet_id,
+                                "tracklet_objs": [
+                                    {
+                                        "keyBoxes": {
+                                            **vars(obj.bbox),
+                                            "frame_index": obj.frame_idx,
+                                            "is_keypoint": i % (len(tracklet_objs) - 1)
+                                            == 0,
+                                        },
+                                        "obj_features": obj,  # we put the whole obj to get features from it below
+                                    }
+                                    for i, obj in enumerate(tracklet_objs)
+                                ],
+                            }
+                            track["tracklets"].append(tracklet)
+                        view_tracks.append(track)
+                    all_tracks.append({"view_id": view_id, "tracks": view_tracks})
+
+                for view_tracks in all_tracks:
+                    for track in view_tracks["tracks"]:
+                        # --NOTE we assume features are per track.
+                        # --It's not totally realistic, should need future brainstorm
+                        # we take features from the first object of first tracklet
+                        feature_obj_ref = track["tracklets"][0]["tracklet_objs"][0][
+                            "obj_features"
+                        ]
+                        objects.append(
                             {
-                                "id": tmp_obj0.id,
+                                "id": track["track_id"],
                                 "datasetItemType": view_type,
-                                "displayedBox": {},  # TMP should not be required, as it's front only
                                 "item_id": item_id,
                                 "source_id": "Ground Truth",  # ?? must ensure source
-                                "view_id": tmp_obj0.view_id,
+                                "view_id": view_tracks["view_id"],
                                 "features": {
                                     fname: {
                                         "name": fname,
-                                        "dtype": type(getattr(tmp_obj0, fname)).__name__,
-                                        "value": getattr(tmp_obj0, fname),
+                                        "dtype": type(
+                                            getattr(feature_obj_ref, fname)
+                                        ).__name__,
+                                        "value": getattr(feature_obj_ref, fname),
                                     }
-                                    for fname in vars(tmp_obj0).keys()
+                                    for fname in vars(feature_obj_ref).keys()
                                     if fname
                                     not in [
                                         "id",
@@ -410,22 +451,30 @@ async def get_dataset_item(  # noqa: D417
                                         "view_id",
                                         "bbox",
                                         "mask",
-                                    ]
+                                        # "track_id",  #TMP let this one to have at least a feature
+                                        "tracklet_id",
+                                        "timestamp",
+                                        "frame_idx",
+                                    ]  # TODO: define list of unwanted features
                                 },
-                                "track": [{
-                                    "start": 0,  # BAD -> get it from tracklet
-                                    "end": 160,  # BAD -> get it from tracklet
-                                    "keyBoxes": [
-                                        {
-                                            **vars(obj.bbox),
-                                            "frame_index": obj.frame_idx
-                                        } for obj in getattr(item, obj_group)
-                                    ],
-                                }]
+                                "track": [
+                                    {
+                                        "id": tracklet["tracklet_id"],
+                                        "start": tracklet["tracklet_objs"][0][
+                                            "keyBoxes"
+                                        ]["frame_index"],
+                                        "end": tracklet["tracklet_objs"][-1][
+                                            "keyBoxes"
+                                        ]["frame_index"],
+                                        "keyBoxes": [
+                                            obj["keyBoxes"]
+                                            for obj in tracklet["tracklet_objs"]
+                                        ],
+                                    }
+                                    for tracklet in track["tracklets"]
+                                ],
                             }
-                        ]
-                    )
-
+                        )
         front_item = FrontDatasetItem(
             id=item.id,
             type=view_type,

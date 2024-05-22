@@ -23,6 +23,9 @@
   import { canSave, newShape } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let isLoading: boolean;
+  export let brightness: number;
+  export let contrast: number;
+
   let shape: Shape;
   let currentTab: "scene" | "objects" = "objects";
   let isButtonEnabled = false;
@@ -65,7 +68,7 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <SceneInspector />
+            <SceneInspector bind:brightness bind:contrast />
           {/if}
         </Tabs.Content>
         <button

@@ -25,6 +25,8 @@
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
+  export let brightness: number;
+  export let contrast: number;
   type ImageMeta = {
     fileName: string;
     width: number;
@@ -94,7 +96,7 @@
     />
   </div>
 </div>
-<div class="p-4 text-slate-800">
+<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
   {#each imageMeta as meta}
     <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
     <div class="mx-4 mb-4">
@@ -116,4 +118,15 @@
       </div>
     </div>
   {/each}
+</div>
+
+<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
+  <h3 class="uppercase font-medium h-10">FILTERS</h3>
+  <div class="mx-4 mb-4">
+    <label for="brightness">Brightness : {Math.round(brightness * 100 + 50)}%</label>
+    <input type="range" id="brightness" min="-0.5" max="0.5" step="0.01" class="w-full pt-2 cursor-pointer" bind:value={brightness} />
+
+    <label for="contrast">Contrast : {Math.round(contrast + 50)}%</label>
+    <input type="range" id="contrast" min="-50" max="50" step="1" class="w-full pt-2 cursor-pointer" bind:value={contrast} />
+  </div>
 </div>

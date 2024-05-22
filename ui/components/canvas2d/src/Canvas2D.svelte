@@ -59,6 +59,8 @@
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
+  export let brightness: number;
+  export let contrast: number;
 
   let isReady = false;
 
@@ -175,6 +177,9 @@
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
     }
+
+    // Re-apply filters
+    applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -290,6 +295,20 @@
       }
     }
   }
+
+  const applyFilters = () => {
+    if (stage) {
+      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+
+      images.forEach((image) => {
+        if (image.width() === 0 || image.height() === 0) return;
+        
+        image.cache();
+        image.brightness(brightness);
+        image.contrast(contrast);
+      });
+    }
+  };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
@@ -1006,7 +1025,12 @@
       >
         {#each images as image}
           <KonvaImage
-            config={{ image, id: `image-${viewId}`, zIndex: 1 }}
+            config={{
+              image,
+              id: `image-${viewId}`,
+              zIndex: 1,
+              filters: [Konva.Filters.Brighten, Konva.Filters.Contrast],
+            }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
             on:pointerup={() => handlePointerUpOnImage(viewId)}
             on:dblclick={() => handleDoubleClickOnImage(viewId)}
