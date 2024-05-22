@@ -20,8 +20,8 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { WarningModal } from "@pixano/core";
 
-  import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
@@ -51,7 +51,6 @@
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
-  export let colorRange: string[] = ["0", "10"];
   export let masks: Mask[];
   export let bboxes: BBox[];
   export let embeddings: Record<string, ort.Tensor> = {};
@@ -59,10 +58,9 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let colorScale: (value: string) => string;
 
   let isReady = false;
-
-  let colorScale = utils.ordinalColorScale(colorRange);
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";

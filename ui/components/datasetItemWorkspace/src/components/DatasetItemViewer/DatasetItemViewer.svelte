@@ -21,7 +21,6 @@
 
   import {
     newShape,
-    itemObjects,
     canSave,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -33,10 +32,6 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
-
-  $: console.log("TMPLOG: DatasetItemViewer- selectedItem", selectedItem);
-
-  let colorRange = $itemObjects.map((obj) => obj.id);
 
   $: {
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
@@ -57,9 +52,9 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} bind:currentAnn {colorRange} />
+    <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn {colorRange} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

@@ -25,13 +25,13 @@
     selectedTool,
     itemObjects,
     preAnnotationIsActive,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let colorRange: string[];
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -62,7 +62,7 @@
   <Canvas2D
     {imagesPerView}
     selectedItemId={selectedItem.id}
-    {colorRange}
+    colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}

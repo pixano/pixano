@@ -25,6 +25,7 @@
     itemObjects,
     newShape,
     selectedTool,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -40,7 +41,6 @@
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let colorRange: string[];
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
@@ -112,7 +112,7 @@
       <Canvas2D
         selectedItemId={selectedItem.id}
         {imagesPerView}
-        {colorRange}
+        colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
         {embeddings}
