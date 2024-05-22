@@ -307,6 +307,8 @@
       let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
       images.forEach((image) => {
+        if (image.width() === 0 || image.height() === 0) return;
+        
         image.cache();
         image.brightness(brightness);
         image.contrast(contrast);

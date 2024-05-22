@@ -64,7 +64,7 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn />
+    <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn {brightness} {contrast} />
   {:else if selectedItem.type === "image" || !selectedItem.type}
     <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} {brightness} {contrast} />
   {:else if selectedItem.type === "3d"}
