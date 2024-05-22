@@ -23,7 +23,10 @@
     itemBboxes,
     itemMasks,
     selectedTool,
+    itemObjects,
+    preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -43,6 +46,12 @@
         },
         {} as Record<string, HTMLImageElement[]>,
       );
+    }
+  }
+
+  $: {
+    if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
+      itemObjects.update((objects) => updateExistingObject(objects, $newShape));
     }
   }
 

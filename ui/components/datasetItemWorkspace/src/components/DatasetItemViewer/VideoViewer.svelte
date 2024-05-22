@@ -82,15 +82,17 @@
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
-    const objectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
     const currentFrame = $currentFrameIndex;
-    if (objectBeingEdited?.id === $objectIdBeingEdited) {
+    if (shape.type === "rectangle") {
       itemObjects.update((objects) =>
         editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
       newShape.set({ status: "none" });
     } else {
       itemObjects.update((objects) => updateExistingObject(objects, shape));
+      if (shape.highlighted === "self") {
+        objectIdBeingEdited.set(shape.shapeId);
+      }
     }
   };
 

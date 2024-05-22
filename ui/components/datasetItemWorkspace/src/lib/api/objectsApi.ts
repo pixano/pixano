@@ -139,6 +139,12 @@ export const toggleObjectDisplayControl = (
         [displayControlProperty]: value,
       };
     }
+    if (properties.includes("bbox") && properties.includes("mask")) {
+      object.displayControl = {
+        ...object.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
   }
 
   // Check if the object is a VideoObject
@@ -175,6 +181,10 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
     }
     if (newShape.highlighted === "self") {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
+      object.displayControl = {
+        ...object.displayControl,
+        editing: newShape.shapeId === object.id,
+      };
     }
     if (newShape.shapeId !== object.id) return object;
 
@@ -194,19 +204,6 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           ...object,
           bbox: {
             ...object.bbox,
-            coords: newShape.coords,
-          },
-        };
-      }
-    }
-
-    // Check if the object is a VideoObject
-    if (object.datasetItemType === "video") {
-      if (newShape.type === "rectangle" && object.displayedBox) {
-        return {
-          ...object,
-          displayedBox: {
-            ...object.displayedBox,
             coords: newShape.coords,
           },
         };

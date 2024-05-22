@@ -25,7 +25,6 @@
     canSave,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { updateExistingObject } from "../../lib/api/objectsApi";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
@@ -40,9 +39,7 @@
   let colorRange = $itemObjects.map((obj) => obj.id);
 
   $: {
-    newShape.set($newShape);
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
       canSave.update((old) => {
         if (old) return old;
         if ($newShape?.status === "editing" && $newShape.type !== "none") {
