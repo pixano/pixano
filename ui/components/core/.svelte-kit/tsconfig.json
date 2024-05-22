@@ -2,7 +2,7 @@
   "compilerOptions": {
     "paths": {
       "$lib": ["../src/lib"],
-      "$lib/*": ["../src/lib/*"]
+      "$lib/*": ["../src/lib/*"],
     },
     "rootDirs": ["..", "./types"],
     "importsNotUsedAsValues": "error",
@@ -13,7 +13,7 @@
     "module": "esnext",
     "noEmit": true,
     "target": "esnext",
-    "ignoreDeprecations": "5.0"
+    "ignoreDeprecations": "5.0",
   },
   "include": [
     "ambient.d.ts",
@@ -25,13 +25,13 @@
     "../src/**/*.svelte",
     "../tests/**/*.js",
     "../tests/**/*.ts",
-    "../tests/**/*.svelte"
+    "../tests/**/*.svelte",
   ],
   "exclude": [
     "../node_modules/**",
     "./[!ambient.d.ts]**",
     "../src/service-worker.js",
     "../src/service-worker.ts",
-    "../src/service-worker.d.ts"
-  ]
+    "../src/service-worker.d.ts",
+  ],
 }

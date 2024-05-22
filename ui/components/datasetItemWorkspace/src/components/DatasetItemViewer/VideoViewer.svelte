@@ -13,6 +13,104 @@
    *
    * http://www.cecill.info
    */
+
+  import * as ort from "onnxruntime-web";
+
+  import { utils, type VideoDatasetItem } from "@pixano/core";
+  import type { InteractiveImageSegmenterOutput } from "@pixano/models";
+  import { Canvas2D } from "@pixano/canvas2d";
+  import {
+    itemBboxes,
+    itemMasks,
+    itemObjects,
+    newShape,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+
+  import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
+  import { onMount } from "svelte";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+
+  export let selectedItem: VideoDatasetItem;
+  export let embeddings: Record<string, ort.Tensor>;
+  export let currentAnn: InteractiveImageSegmenterOutput | null = null;
+  export let colorRange: string[];
+
+  let imagesPerView: Record<string, HTMLImageElement[]> = {};
+  let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
+
+  let isLoaded = false;
+  let colorScale = utils.ordinalColorScale(colorRange);
+
+  onMount(() => {
+    const image = new Image();
+    image.src = imagesFilesUrl[0];
+
+    imagesPerView = {
+      ...imagesPerView,
+      image: [image],
+    };
+    isLoaded = true;
+    lastFrameIndex.set(imagesFilesUrl.length - 1);
+  });
+
+  const updateView = (imageIndex: number) => {
+    const image = new Image();
+    const src = imagesFilesUrl[imageIndex];
+    if (!src) return;
+    image.src = src;
+    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
+    itemObjects.update((objects) =>
+      objects.map((object) => {
+        if (object.datasetItemType !== "video") return object;
+        const { displayedBox } = object;
+        const newCoords = linearInterpolation(object.track, imageIndex);
+        if (newCoords) {
+          const [x, y, width, height] = newCoords;
+          displayedBox.coords = [x, y, width, height];
+          displayedBox.frameIndex = imageIndex;
+        }
+        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+        displayedBox.hidden = !newCoords;
+        return { ...object, displayedBox };
+      }),
+    );
+  };
+
+  $: {
+    const shape = $newShape;
+    const box = $itemBoxBeingEdited;
+    if (shape.status === "editing") {
+      if (box) {
+        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
+      } else {
+        itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+      }
+    }
+  }
+
+  $: selectedTool.set($selectedTool);
 </script>
 
-<div>Video player should be displayed here</div>
+<section class="pl-4 h-full w-full flex flex-col">
+  {#if isLoaded}
+    <div class="overflow-hidden grow">
+      <Canvas2D
+        selectedItemId={selectedItem.id}
+        {imagesPerView}
+        {colorRange}
+        bboxes={$itemBboxes}
+        masks={$itemMasks}
+        {embeddings}
+        bind:selectedTool={$selectedTool}
+        bind:currentAnn
+        bind:newShape={$newShape}
+      />
+    </div>
+    <div class="h-full grow max-h-[25%]">
+      <VideoPlayer {updateView} {colorScale} />
+    </div>
+  {/if}
+</section>
