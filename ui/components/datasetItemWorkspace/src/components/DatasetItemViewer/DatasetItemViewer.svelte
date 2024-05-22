@@ -34,6 +34,8 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
+  export let brightness: number;
+  export let contrast: number;
 
   let allIds: string[] = [];
 
@@ -64,7 +66,7 @@
   {:else if selectedItem.type === "video"}
     <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} {brightness} {contrast} />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

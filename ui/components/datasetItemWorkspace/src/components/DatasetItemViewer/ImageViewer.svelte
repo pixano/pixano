@@ -29,6 +29,8 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let colorRange: string[];
+  export let brightness: number;
+  export let contrast: number;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -57,6 +59,8 @@
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
+    {brightness}
+    {contrast}
     bind:selectedTool={$selectedTool}
     bind:currentAnn
     bind:newShape={$newShape}
