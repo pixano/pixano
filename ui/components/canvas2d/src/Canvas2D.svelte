@@ -179,7 +179,7 @@
     }
 
     // Re-apply filters
-    applyFilters();
+    // applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -302,7 +302,7 @@
 
       images.forEach((image) => {
         if (image.width() === 0 || image.height() === 0) return;
-        
+
         image.cache();
         image.brightness(brightness);
         image.contrast(contrast);
