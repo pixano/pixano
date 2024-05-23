@@ -40,11 +40,11 @@ class DatasetLibrary(BaseModel):
     num_elements: int = 0
     preview: str = ""
 
-    def to_json(self, json_fp: Path | S3Path) -> None:
+    def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            json_fp (Path | S3Path): The path to the file where the DatasetInfo object
+            json_fp (Path): The path to the file where the DatasetInfo object
                 will be written.
         """
         json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
@@ -68,14 +68,14 @@ class DatasetLibrary(BaseModel):
 
     @staticmethod
     def load_directory(
-        directory: Path | S3Path,
+        directory: Path,
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetLibrary"]:
         """Load list of DatasetLibrary from directory
 
         Args:
-            directory (Path | S3Path): Directory to load
+            directory (Path): Directory to load
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
             load_stats (bool, optional): Load dataset stats. Defaults to False.
 

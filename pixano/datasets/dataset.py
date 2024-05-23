@@ -72,15 +72,15 @@ class Dataset:
     THUMB_FILE: str = "preview.png"
 
     path: Path | S3Path
-    info: Optional[DatasetLibrary] = None
-    dataset_schema: Optional[DatasetSchema] = None
-    features_values: Optional[DatasetFeaturesValues] = None
-    stats: Optional[list[DatasetStat]] = None
-    thumbnail: Optional[str] = None
+    info: DatasetLibrary | None = None
+    dataset_schema: DatasetSchema | None = None
+    features_values: DatasetFeaturesValues | None = None
+    stats: list[DatasetStat] | None = None
+    thumbnail: str | None = None
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, path: Path | S3Path, info: Optional[DatasetLibrary] = None):
+    def __init__(self, path: Path | S3Path, info: DatasetLibrary | None = None):
         """Initialize dataset.
 
         Args:

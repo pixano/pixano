@@ -13,8 +13,6 @@ from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
-from s3path import S3Path
-
 from .registry import _register_schema_internal
 from .view import View
 
@@ -28,11 +26,11 @@ class Image(View):
     height: int
     format: str
 
-    def open(self, media_dir: Path) -> typing.IO:
+    def open(self, media_dir: Path) -> IO:
         return Image.open_url(self.url, media_dir)
 
     @staticmethod
-    def open_url(url, media_dir: Path) -> typing.IO:
+    def open_url(url, media_dir: Path) -> IO:
         # URI is incomplete
         if urlparse(url).scheme == "":
             uri_prefix = media_dir.absolute().as_uri()
