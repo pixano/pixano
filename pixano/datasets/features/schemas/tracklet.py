@@ -47,3 +47,8 @@ class TrackletWithTimestepAndTimestamp(Tracklet):
     end_timestep: int
     start_timestamp: int
     end_timestamp: int
+
+
+def is_tracklet(cls: type) -> bool:
+    """Check if the given class is a subclass of Tracklet."""
+    return issubclass(cls, Tracklet)

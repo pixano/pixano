@@ -17,7 +17,7 @@ class NDArrayFloat(pydantic.BaseModel):
     shape: list[int]
 
     @classmethod
-    def from_numpy(cls, arr: np.ndarray):
+    def from_numpy(cls, arr: np.ndarray) -> "NDArrayFloat":
         """Create an instance of the class from a NumPy array.
 
         Args:

@@ -10,17 +10,16 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-from typing import Dict, Type
 
 from .base_schema import BaseSchema
 
 
-_PIXANO_SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
-_SCHEMA_REGISTRY: Dict[str, Type[BaseSchema]] = {}
+_PIXANO_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
+_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
 
 
 def _add_schema_to_registry(
-    schema: Type[BaseSchema], registry: Dict[str, Type[BaseSchema]]
+    schema: type[BaseSchema], registry: dict[str, type[BaseSchema]]
 ) -> None:
     if not issubclass(schema, BaseSchema):
         raise ValueError(f"Schema {schema} must be a subclass of BaseSchema")

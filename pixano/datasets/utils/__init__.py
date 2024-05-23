@@ -41,7 +41,7 @@ from .labels import (
     dota_ids,
     voc_names,
 )
-from .python import estimate_size, natural_key
+from .python import estimate_folder_size, natural_key
 
 
 __all__ = [
@@ -69,6 +69,6 @@ __all__ = [
     "coco_names_91",
     "dota_ids",
     "voc_names",
-    "estimate_size",
+    "estimate_folder_size",
     "natural_key",
 ]

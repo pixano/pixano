@@ -11,23 +11,21 @@
 #
 # http://www.cecill.info
 
-from typing import Annotated
+from collections import defaultdict
+
+# TMP legacy
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
+from pydantic import BaseModel
 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
 import pixano.datasets.dataset_explorer as de
 from pixano.datasets.features import Image, SequenceFrame
 from pixano.datasets.features.schemas.group import _SchemaGroup
-
-
-# TMP legacy
-from typing import Optional
-from pydantic import BaseModel
-from collections import defaultdict
 
 
 class FrontDatasetItem(BaseModel):

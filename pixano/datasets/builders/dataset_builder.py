@@ -1,14 +1,14 @@
-import abc
-import concurrent
-import os
-import pathlib
-from typing import Any, Dict, Iterator, Type
+from abc import ABC, abstractmethod
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+from typing import Any, Iterator
 
 import duckdb
 import lancedb
-import lancedb.pydantic
 import shortuuid
 import tqdm
+from lancedb.table import Table
+from s3path import S3Path
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
@@ -19,15 +19,15 @@ from ..features.schemas import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
 
 
-class DatasetBuilder(abc.ABC):
+class DatasetBuilder(ABC):
     """Abstract base class for dataset builders.
 
     Attributes:
         _schemas (dict[str, Any]): The schemas for the dataset tables.
-        _target_dir (pathlib.Path): The target directory for the dataset.
-        _source_dir (pathlib.Path): The source directory for the dataset.
+        _target_dir (Path | S3Path): The target directory for the dataset.
+        _source_dir (Path | S3Path): The source directory for the dataset.
         _db (lancedb.Database): The lancedb.Database instance for the dataset.
-        _previews_path (pathlib.Path): The path to the previews directory.
+        _previews_path (Path | S3Path): The path to the previews directory.
         _mode (str): The mode for creating the dataset.
     """
 
@@ -43,27 +43,27 @@ class DatasetBuilder(abc.ABC):
         """Initialize the BaseDatasetBuilder instance.
 
         Args:
-            source_dir (os.PathLike): The source directory for the dataset.
-            target_dir (os.PathLike): The target directory for the dataset.
+            source_dir (Path | S3Path): The source directory for the dataset.
+            target_dir (Path | S3Path): The target directory for the dataset.
             schemas (dict[str, Any]): The schemas for the dataset tables.
             info (dict[str, Any]): User informations (name, description, splits)
             for the dataset.
             mode (str, optional): The mode for creating the dataset.
             batch_size (int, optional): The batch size to insert data.
         """
-        self._target_dir = pathlib.Path(target_dir)
-        self._source_dir = pathlib.Path(source_dir)
-        self._previews_path = self._target_dir / dataset.Dataset.PREVIEWS_PATH
+        self._target_dir = Path(target_dir)
+        self._source_dir = Path(source_dir)
+        self._previews_path = self._target_dir / Dataset.PREVIEWS_PATH
         self._mode = mode
         self._batch_size = batch_size
 
         self._info = info
-        self._db = lancedb.connect(self._target_dir / dataset.Dataset.DB_PATH)
+        self._db = lancedb.connect(self._target_dir / Dataset.DB_PATH)
 
         self._dataset_schema: DatasetSchema = DatasetItem.to_dataset_schema(schemas)
         self._schemas = self._dataset_schema.schemas
 
-    def build(self) -> dataset.Dataset:
+    def build(self) -> Dataset:
         """Build the dataset.
 
         Returns:
@@ -116,31 +116,29 @@ class DatasetBuilder(abc.ABC):
         # save info.json
         self._info.id = shortuuid.uuid()
         self._info.num_elements = count + 1
-        self._info.to_json(self._target_dir / dataset.Dataset.INFO_FILE)
+        self._info.to_json(self._target_dir / Dataset.INFO_FILE)
 
         # save features_values.json
         # TMP: empty now
-        DatasetFeaturesValues().to_json(
-            self._target_dir / dataset.Dataset.FEATURES_VALUES_FILE
-        )
+        DatasetFeaturesValues().to_json(self._target_dir / Dataset.FEATURES_VALUES_FILE)
 
         # remove previous schema.json if any
-        if (self._target_dir / dataset.Dataset.SCHEMA_FILE).exists():
-            (self._target_dir / dataset.Dataset.SCHEMA_FILE).unlink()
+        if (self._target_dir / Dataset.SCHEMA_FILE).exists():
+            (self._target_dir / Dataset.SCHEMA_FILE).unlink()
         # save schema.json
-        self._dataset_schema.to_json(self._target_dir / dataset.Dataset.SCHEMA_FILE)
+        self._dataset_schema.to_json(self._target_dir / Dataset.SCHEMA_FILE)
 
-    @abc.abstractmethod
-    def _generate_items(self) -> Iterator[Dict[str, Any]]:
+    @abstractmethod
+    def _generate_items(self) -> Iterator[dict[str, Any]]:
         """Read items from the source directory.
 
         Returns:
-            Iterator[Dict[str, Any]]: An iterator over the items following data schema.
+            Iterator[dict[str, Any]]: An iterator over the items following data schema.
 
         """
         raise NotImplementedError
 
-    def _count_items(self):
+    def _count_items(self) -> int | None:
         """Implements this function to return the numbers of item
         in dataset (not required).
 
@@ -149,7 +147,7 @@ class DatasetBuilder(abc.ABC):
         """
         return None
 
-    def generate_media_previews(self, **kwargs):
+    def generate_media_previews(self, **kwargs) -> None:
         """Generate media previews for the dataset."""
         for table_name, schema in self._schemas.items():
             print(f"Will generate previews for {table_name}")
@@ -162,11 +160,11 @@ class DatasetBuilder(abc.ABC):
             else:
                 continue
 
-    def _create_tables(self):
+    def _create_tables(self) -> dict[str, Table]:
         """Create tables in the database.
 
-        Args:
-            schemas (dict[str, Any], optional): The schemas for the tables.
+        Returns:
+            dict[str, Table]: The tables in the database.
 
         """
         tables = {}
@@ -177,7 +175,7 @@ class DatasetBuilder(abc.ABC):
 
         return tables
 
-    def _generate_image_previews(self):
+    def _generate_image_previews(self) -> None:
         """Generate image previews for the dataset."""
         pass
 
@@ -189,8 +187,8 @@ class DatasetBuilder(abc.ABC):
 
         frames = (
             duckdb.query(
-                """SELECT sequence_id, LIST(url) as url, LIST(timestamp) as timestamp
-                   FROM sequence_table GROUP BY sequence_id"""
+                "SELECT sequence_id, LIST(url) as url, LIST(timestamp) as timestamp "
+                "FROM sequence_table GROUP BY sequence_id"
             )
             .to_df()
             .to_dict(orient="records")
@@ -202,7 +200,7 @@ class DatasetBuilder(abc.ABC):
         if not previews_path.exists():
             previews_path.mkdir(parents=True)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
             for seq in frames:
                 sorted_frames = sorted(
@@ -221,7 +219,7 @@ class DatasetBuilder(abc.ABC):
                 )
 
             for _ in tqdm.tqdm(
-                concurrent.futures.as_completed(futures),
+                as_completed(futures),
                 total=len(futures),
                 desc=f"Generate previews for {table_name}",
             ):

@@ -27,3 +27,8 @@ class Video(View):
     height: int
     format: str
     duration: float
+
+
+def is_video(cls: type) -> bool:
+    """Check if the given class is a subclass of Video."""
+    return issubclass(cls, Video)

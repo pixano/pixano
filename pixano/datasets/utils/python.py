@@ -28,7 +28,7 @@ def natural_key(string: str) -> list:
     return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]
 
 
-def estimate_size(folder_path: Path) -> str:
+def estimate_folder_size(folder_path: Path) -> str:
     """Estimate folder size and return it as a human-readable string.
 
     Args:

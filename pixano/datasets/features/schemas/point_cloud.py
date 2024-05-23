@@ -22,3 +22,8 @@ class PointCloud(BaseSchema):
 
     item_id: str
     url: str
+
+
+def is_point_cloud(cls: type) -> bool:
+    """Check if the given class is a subclass of PointCloud."""
+    return issubclass(cls, PointCloud)

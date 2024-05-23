@@ -14,7 +14,6 @@
 
 import json
 from pathlib import Path
-from typing import Optional
 
 from pydantic import BaseModel
 from s3path import S3Path
@@ -32,7 +31,7 @@ class DatasetStat(BaseModel):
     name: str
     type: str
     histogram: list[dict[str, float | int | str]]
-    range: Optional[list[int | float]] = None
+    range: list[int | float] | None = None
 
     @staticmethod
     def from_json(json_fp: Path | S3Path) -> list["DatasetStat"]:
@@ -54,8 +53,9 @@ class DatasetStat(BaseModel):
         return [DatasetStat.model_validate(stat) for stat in stats_json]
 
     def save(self, save_dir: Path | S3Path):
-        """Save DatasetInfo to json file
-           replace existing histogram with same name in json_fp.
+        """Save DatasetInfo to json file.
+
+        Replace existing histogram with same name in json_fp.
 
         Args:
             save_dir (Path | S3Path): Save directory

@@ -5,11 +5,15 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-import typing
-from urllib.request import urlopen, URLError
-from urllib.parse import urlparse
-from pathlib import Path
+
 import base64
+from pathlib import Path
+from typing import IO
+from urllib.error import URLError
+from urllib.parse import urlparse
+from urllib.request import urlopen
+
+from s3path import S3Path
 
 from .registry import _register_schema_internal
 from .view import View
@@ -38,7 +42,8 @@ class Image(View):
                 # URI prefix is incomplete
                 if parsed_uri.scheme == "":
                     raise ValueError(
-                        "URI prefix is incomplete, no scheme provided (http://, file://, ...)"
+                        "URI prefix is incomplete, "
+                        "no scheme provided (http://, file://, ...)"
                     )
                 combined_path = Path(parsed_uri.path) / url
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
@@ -63,13 +68,13 @@ class Image(View):
         return ""
 
 
-def is_image(cls: typing.Any) -> bool:
+def is_image(cls: type) -> bool:
     """Check if the given class is a subclass of Image.
 
     Args:
-        cls (typing.Any): The class to check.
+        cls (type): The class to check.
 
     Returns:
         bool: True if the class is a subclass of Image, False otherwise.
     """
-    return cls is Image
+    return issubclass(cls, Image)
