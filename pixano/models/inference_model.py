@@ -79,6 +79,8 @@ class InferenceModel(ABC):
         Returns:
             DatasetTable: Inference table
         """
+        table = None
+        table_group = None
 
         # Inference table filename
         table_filename = (
