@@ -1,4 +1,11 @@
-import type { EditShape, ItemObject, Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
+import type {
+  EditRectangleShape,
+  EditShape,
+  ItemObject,
+  Tracklet,
+  VideoItemBBox,
+  VideoObject,
+} from "@pixano/core";
 
 export const getCurrentImageTime = (imageIndex: number, videoSpeed: number) => {
   const currentTimestamp = imageIndex * videoSpeed;
@@ -67,30 +74,52 @@ export const deleteKeyBoxFromTracklet = (
     return object;
   });
 
+const editKeyBoxesInTracklet = (
+  keyBoxes: VideoItemBBox[],
+  currentFrame: number,
+  shape: EditRectangleShape,
+) =>
+  keyBoxes.map((keyBox) => {
+    if (keyBox.frame_index === currentFrame) {
+      keyBox.coords = shape.coords;
+      keyBox.is_key = true;
+    }
+    return keyBox;
+  });
+
+const addKeyBoxToTrackletBoxes = (tracklet: Tracklet, currentFrame: number, box: VideoItemBBox) => {
+  if (!tracklet.keyBoxes.some((keyBox) => keyBox.frame_index === currentFrame)) {
+    tracklet.keyBoxes.push(box);
+    tracklet.keyBoxes.sort((a, b) => a.frame_index - b.frame_index);
+    tracklet.start = tracklet.keyBoxes[0].frame_index;
+    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+  }
+  return tracklet;
+};
+
 export const editKeyBoxInTracklet = (
   objects: ItemObject[],
-  boxBeingEdited: VideoItemBBox,
   shape: EditShape,
+  currentFrame: number,
+  objectIdBeingEdited: string | null,
 ) =>
   objects.map((object) => {
     if (
       shape.type === "rectangle" &&
       object.id === shape.shapeId &&
-      object.datasetItemType === "video"
+      object.datasetItemType === "video" &&
+      objectIdBeingEdited === object.id
     ) {
       object.track = object.track.map((tracklet) => {
-        if (
-          tracklet.start <= boxBeingEdited.frame_index &&
-          tracklet.end >= boxBeingEdited.frame_index
-        ) {
-          tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-            if (keyBox.frame_index === boxBeingEdited.frame_index) {
-              keyBox.coords = shape.coords;
-              object.displayedBox.coords = shape.coords;
-              return keyBox;
-            }
-            return keyBox;
+        if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
+          tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
+          tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
+            ...tracklet.keyBoxes[0],
+            coords: shape.coords,
+            frame_index: currentFrame,
+            is_key: true,
           });
+          object.displayedBox.coords = shape.coords;
         }
         return tracklet;
       });
@@ -113,10 +142,12 @@ const createNewTracklet = (
       {
         ...keyBox,
         frame_index: frameIndex,
+        is_key: true,
       },
       {
         ...keyBox,
-        frameIndex: nextIntervalStart,
+        frame_index: nextIntervalStart,
+        is_key: true,
       },
     ],
   } as Tracklet;

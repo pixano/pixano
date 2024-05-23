@@ -21,11 +21,9 @@
 
   import {
     newShape,
-    itemObjects,
     canSave,
     preAnnotationIsActive,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { updateExistingObject } from "../../lib/api/objectsApi";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
@@ -37,12 +35,8 @@
   export let brightness: number;
   export let contrast: number;
 
-  let allIds: string[] = [];
-
   $: {
-    newShape.set($newShape);
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-      itemObjects.update((oldObjects) => updateExistingObject(oldObjects, $newShape));
       canSave.update((old) => {
         if (old) return old;
         if ($newShape?.status === "editing" && $newShape.type !== "none") {
@@ -52,10 +46,6 @@
       });
     }
   }
-
-  itemObjects.subscribe((value) => {
-    allIds = value.map((item) => item.id);
-  });
 </script>
 
 <div class="max-w-[100%] bg-slate-800">
@@ -64,9 +54,9 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} colorRange={allIds} bind:currentAnn {brightness} {contrast} />
+    <VideoViewer {selectedItem} {embeddings} bind:currentAnn {brightness} {contrast} />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn colorRange={allIds} {brightness} {contrast} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn {brightness} {contrast} />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

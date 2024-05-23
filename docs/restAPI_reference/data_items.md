@@ -59,7 +59,8 @@ type videoDatasetItemPayload = {
               format: string;
               is_normalized: boolean;
               confidence: number;
-              frameIndex: number;
+              frame_index: number;
+              is_key: boolean;
             },
           ],
         },

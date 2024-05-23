@@ -140,11 +140,21 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
       // TODO : remove this when the backend is fixed
+      // TODO : API changes | keyBoxes should be renamed `boxes` since is_key is now a params
       if (item.type === "video") {
         const objects: Array<VideoObject> = item.objects.map((obj) => {
           obj.track = obj.track.map((tracklet) => {
             tracklet.start = tracklet.keyBoxes[0].frame_index;
             tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+            tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
+              if (
+                keyBox.frame_index === tracklet.keyBoxes[0].frame_index ||
+                keyBox.frame_index === tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index
+              ) {
+                keyBox.is_key = true;
+              }
+              return keyBox;
+            });
             return tracklet;
           });
           obj.displayedBox = undefined;

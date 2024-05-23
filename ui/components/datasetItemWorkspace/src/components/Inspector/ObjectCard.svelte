@@ -18,30 +18,33 @@
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
-  import { canSave, itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    canSave,
+    itemObjects,
+    selectedTool,
+    colorScale,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import { itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
   export let itemObject: ItemObject;
-  export let colorScale: (id: string) => string;
 
-  let color: string;
   let open: boolean = false;
   let showIcons: boolean = false;
 
   $: features = createFeature(itemObject.features);
   $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
-  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
+  $: boxIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
+  $: maskIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
 
-  $: {
-    color = colorScale(itemObject.id);
-  }
+  $: color = $colorScale[1](itemObject.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
@@ -60,13 +63,7 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-          itemBoxBeingEdited.update(() => {
-            const startingBox = object.datasetItemType === "video" && object.track[0]?.keyBoxes[0];
-            if (value && startingBox) {
-              return { ...startingBox, objectId: object.id };
-            }
-            return null;
-          });
+          objectIdBeingEdited.set(value ? object.id : null);
         }
         return object;
       }),
@@ -170,33 +167,35 @@
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          <div>
-            <p class="font-medium first-letter:uppercase">display</p>
-            <div class="flex gap-4">
-              {#if itemObject.bbox}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Box</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-                    bind:checked={boxIsVisible}
-                    title={boxIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
-              {#if itemObject.mask}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Mask</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-                    bind:checked={maskIsVisible}
-                    title={maskIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
+          {#if itemObject.datasetItemType === "image"}
+            <div>
+              <p class="font-medium first-letter:uppercase">display</p>
+              <div class="flex gap-4">
+                {#if itemObject.bbox}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Box</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                      bind:checked={boxIsVisible}
+                      title={boxIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+                {#if itemObject.mask}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Mask</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                      bind:checked={maskIsVisible}
+                      title={maskIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+              </div>
             </div>
-          </div>
+          {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
         </div>
       </div>

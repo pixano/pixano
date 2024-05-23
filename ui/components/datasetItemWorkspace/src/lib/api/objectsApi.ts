@@ -139,6 +139,12 @@ export const toggleObjectDisplayControl = (
         [displayControlProperty]: value,
       };
     }
+    if (properties.includes("bbox") && properties.includes("mask")) {
+      object.displayControl = {
+        ...object.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
   }
 
   // Check if the object is a VideoObject
@@ -175,6 +181,10 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
     }
     if (newShape.highlighted === "self") {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
+      object.displayControl = {
+        ...object.displayControl,
+        editing: newShape.shapeId === object.id,
+      };
     }
     if (newShape.shapeId !== object.id) return object;
 
@@ -194,19 +204,6 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           ...object,
           bbox: {
             ...object.bbox,
-            coords: newShape.coords,
-          },
-        };
-      }
-    }
-
-    // Check if the object is a VideoObject
-    if (object.datasetItemType === "video") {
-      if (newShape.type === "rectangle" && object.displayedBox) {
-        return {
-          ...object,
-          displayedBox: {
-            ...object.displayedBox,
             coords: newShape.coords,
           },
         };
@@ -285,8 +282,8 @@ export const defineCreatedObject = (
   shape: SaveShape,
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
-  lastFrameIndex: number,
-): ItemObject | null => {
+  currentFrameIndex: number,
+) => {
   let newObject: ItemObject | null = null;
   const baseObject = {
     id: nanoid(10),
@@ -313,14 +310,18 @@ export const defineCreatedObject = (
     if (isVideo) {
       newObject = {
         ...baseObject,
+        highlighted: "self",
+        displayControl: {
+          editing: true,
+        },
         datasetItemType: "video",
         track: [
           {
-            start: 0,
-            end: lastFrameIndex,
+            start: currentFrameIndex,
+            end: currentFrameIndex + 5,
             keyBoxes: [
-              { ...bbox, frame_index: 0 },
-              { ...bbox, frame_index: lastFrameIndex },
+              { ...bbox, frame_index: currentFrameIndex, is_key: true },
+              { ...bbox, frame_index: currentFrameIndex + 5, is_key: true },
             ],
           },
         ],
