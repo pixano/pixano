@@ -731,16 +731,16 @@ class Dataset(BaseModel):
 
             # ADD
             if new_objs_ids:
-                objs = [obj for obj in objs if obj.id in new_objs_ids]
-                obj_table.add(convert_to_pyarrow(obj_table, objs))
+                new_objs = [obj for obj in objs if obj.id in new_objs_ids]
+                obj_table.add(convert_to_pyarrow(obj_table, new_objs))
 
             # UPDATE
             if update_ids:
-                objs = [obj for obj in objs if obj.id in update_ids]
+                upd_objs = [obj for obj in objs if obj.id in update_ids]
                 str_obj_ids = [f"'{id}'" for id in update_ids]
                 str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
                 obj_table.delete(f"id in {str_obj_ids}")
-                obj_table.add(convert_to_pyarrow(obj_table, objs))
+                obj_table.add(convert_to_pyarrow(obj_table, upd_objs))
 
             # Clear change history to prevent dataset from becoming too large
             obj_table.to_lance().cleanup_old_versions()
