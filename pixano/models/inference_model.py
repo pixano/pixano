@@ -133,7 +133,8 @@ class InferenceModel(ABC):
             )
 
         # Create table
-        dataset.create_table(table, table_group)
+        if table and table_group:
+            dataset.create_table(table, table_group)
 
         return table
 

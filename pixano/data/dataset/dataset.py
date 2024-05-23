@@ -457,6 +457,11 @@ class Dataset(BaseModel):
         # Create PyArrow items
         pyarrow_items: dict[str, dict[str, pa.Table]] = defaultdict(dict)
 
+        # to prevent pylint errors. Here we know we have a model
+        model = None
+        sem_search_table = None
+        sem_search_views = []
+
         # Find CLIP embeddings
         if "embeddings" not in self.info.tables:
             return None
