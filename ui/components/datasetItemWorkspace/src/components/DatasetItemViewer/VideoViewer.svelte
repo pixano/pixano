@@ -46,6 +46,7 @@
 
   let height = 250;
   let expanding = false;
+  let currentFrame: number;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -103,6 +104,8 @@
         return { ...object, displayedBox };
       }),
     );
+
+    currentFrame = imageIndex;
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
@@ -154,7 +157,7 @@
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id}
+        selectedItemId={selectedItem.id + currentFrame}
         {imagesPerView}
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
