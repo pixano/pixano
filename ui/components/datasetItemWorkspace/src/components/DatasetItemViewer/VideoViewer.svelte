@@ -44,6 +44,11 @@
   export let brightness: number;
   export let contrast: number;
 
+  let imageDimension = {
+    width: selectedItem.views.image[0].features.width.value as number,
+    height: selectedItem.views.image[0].features.height.value as number,
+  };
+
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
 
@@ -126,7 +131,7 @@
       />
     </div>
     <div class="h-full grow max-h-[25%]">
-      <VideoPlayer {updateView} />
+      <VideoPlayer {updateView} {imagesFilesUrl} {imageDimension} />
     </div>
   {/if}
 </section>

@@ -24,8 +24,11 @@
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
   import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { Thumbnail } from "@pixano/canvas2d";
 
   export let updateView: (frameIndex: number) => void;
+  export let imageDimension: { width: number; height: number };
+  export let imagesFilesUrl: Array<string>;
 
   let intervalId: number;
   let videoSpeed = 100;
@@ -33,6 +36,8 @@
   let currentTime: string;
   let cursorElement: HTMLButtonElement;
   let zoomLevel: number[] = [100];
+
+  let imageUrl = `/${imagesFilesUrl[0]}`;
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -105,9 +110,9 @@
       {#each Object.values($itemObjects) as object}
         {#if object.datasetItemType === "video"}
           <VideoPlayerRow>
-            <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
-              {object.id}
-            </p>
+            <div slot="name" class=" sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
+              <Thumbnail {imageDimension} coords={object.displayedBox.coords} {imageUrl} />
+            </div>
             <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} {updateView} />
           </VideoPlayerRow>
         {/if}
