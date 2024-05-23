@@ -18,6 +18,14 @@ from .registry import _register_type_internal
 
 @_register_type_internal
 class KeyPoints(pydantic.BaseModel):
+    """A set of keypoints.
+
+    Attributes:
+        coords (list[float]): List of 2D coordinates of the keypoints.
+        edges (list[list[int]]): List of edges between keypoints.
+        visibles (list[bool]): List of visibility status for each keypoint.
+    """
+
     coords: list[float]
     edges: list[list[int]]
     visibles: list[bool]

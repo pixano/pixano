@@ -11,9 +11,6 @@
 #
 # http://www.cecill.info
 
-
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -29,5 +26,5 @@ class DatasetTable(BaseModel):
 
     name: str
     fields: dict[str, str]
-    source: Optional[str] = None
-    type: Optional[str] = None
+    source: str | None = None
+    type: str | None = None

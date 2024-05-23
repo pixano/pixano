@@ -13,7 +13,6 @@
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional, Union
 
 import duckdb
 import lancedb
@@ -73,15 +72,15 @@ class Dataset:
     THUMB_FILE: str = "preview.png"
 
     path: Path | S3Path
-    info: Optional[DatasetInfo] = None
-    dataset_schema: Optional[DatasetSchema] = None
-    features_values: Optional[DatasetFeaturesValues] = None
-    stats: Optional[list[DatasetStat]] = None
-    thumbnail: Optional[str] = None
+    info: DatasetInfo | None = None
+    dataset_schema: DatasetSchema | None = None
+    features_values: DatasetFeaturesValues | None = None
+    stats: list[DatasetStat] | None = None
+    thumbnail: str | None = None
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, path: Path | S3Path, info: Optional[DatasetInfo] = None):
+    def __init__(self, path: Path | S3Path, info: DatasetInfo | None = None):
         """Initialize dataset.
 
         Args:
@@ -166,12 +165,12 @@ class Dataset:
         return lancedb.connect(self._db_path)
 
     def open_tables(
-        self, names: Optional[list[str]] = None
+        self, names: list[str] | None = None
     ) -> dict[str, lancedb.db.LanceTable]:
         """Open dataset tables with LanceDB.
 
         Args:
-            names (list[str], optional): Table names to open. Default is None.
+            names (list[str] | None, optional): Table names to open. Default is None.
 
         Returns:
             dict[str, lancedb.db.LanceTable]: Dataset tables
@@ -201,7 +200,7 @@ class Dataset:
         table: lancedb.db.LanceTable,
         field: str,
         values: str,
-        limit: Optional[int] = None,
+        limit: int | None = None,
     ) -> LanceQueryBuilder:
         return (
             table.search()
@@ -214,7 +213,7 @@ class Dataset:
     def _read_items_data(
         self,
         ids: list[str],
-        select_schemas: Optional[list[str]] = None,
+        select_schemas: list[str] | None = None,
     ) -> dict[str, dict[str, dict[str, LanceModel]]]:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
 
@@ -222,7 +221,7 @@ class Dataset:
         ds_tables = self.open_tables(select_schemas)
 
         # Load items data from the tables
-        data_dict: dict[str, dict[str, Union[LanceModel, list[LanceModel]]]] = {
+        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {
             id: {} for id in ids
         }
         for table_name, table in ds_tables.items():
@@ -263,8 +262,8 @@ class Dataset:
     def _read_data(
         self,
         ids: list[str],
-        select_schema_groups: Optional[list[_SchemaGroup]] = None,
-        select_schemas_per_group: Optional[dict[_SchemaGroup, list[str]]] = None,
+        select_schema_groups: list[_SchemaGroup] | None = None,
+        select_schemas_per_group: dict[_SchemaGroup, list[str]] | None = None,
     ) -> list[DatasetItem]:  # type: ignore
         if select_schema_groups or select_schemas_per_group:
             select_schemas = []
@@ -310,7 +309,7 @@ class Dataset:
         self,
         ids: list[str],
         group: _SchemaGroup,
-        select_schemas: Optional[list[str]] = None,
+        select_schemas: list[str] | None = None,
     ) -> list[DatasetItem]:
         if select_schemas:
             select_schemas_per_group = {
@@ -325,16 +324,18 @@ class Dataset:
         self,
         offset: int,
         limit: int,
-        select_schema_groups: Optional[list[_SchemaGroup]] = None,
-        select_schemas_per_group: Optional[dict[_SchemaGroup, list[str]]] = None,
+        select_schema_groups: list[_SchemaGroup] | None = None,
+        select_schemas_per_group: dict[_SchemaGroup, list[str]] | None = None,
     ) -> list[DatasetItem]:
         """Get items from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select_schema_groups (list[str], optional): Schema groups to read
-            select_schemas_per_group (list[str], optional): Tables to read per group
+            select_schema_groups (list[_SchemaGroup] | None, optional): Schema groups
+                to read. Default is None.
+            select_schemas_per_group (dict[_SchemaGroup, list[str]] | None, optional):
+                Tables to read per group. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
@@ -421,7 +422,7 @@ class Dataset:
         offset: int,
         limit: int,
         group: _SchemaGroup,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> list[DatasetItem]:
         if select:
             select_schemas_per_group = {
@@ -438,8 +439,7 @@ class Dataset:
 
         Args:
             ids (list[str]): Item ids
-            select_schema_groups (list[str], optional): Schema groups to read
-            select_schemas_per_group (list[str], optional): Tables to read per group
+
         Returns:
             list[DatasetItem]: Dataset items
         """
@@ -453,6 +453,7 @@ class Dataset:
 
         Args:
             id (str): Item id
+
         Returns:
             DatasetItem: Dataset item
         """
@@ -468,6 +469,7 @@ class Dataset:
         Args:
             offset (int): Offset
             limit (int): Limit
+
         Returns:
             list[DatasetItem]: Dataset items
         """
@@ -488,16 +490,16 @@ class Dataset:
         return self.get_items(idx, 1)[0]
 
     def get_all_ids(
-        self, table_name: Optional[str] = _SchemaGroup.ITEM.value
+        self, table_name: str | None = _SchemaGroup.ITEM.value
     ) -> list[str]:
         """Get all ids from a table.
 
         Args:
-            table_name (Optional[str], optional): table to look for ids.
+            table_name (str | None, optional): table to look for ids.
                 Defaults to _SchemaGroup.ITEM.value.
 
         Returns:
-            list[str]: list of ids
+            list[str]: list of ids.
         """
         query = (
             self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
@@ -505,25 +507,25 @@ class Dataset:
         return sorted(row.as_py() for row in query["id"])
 
     def read_views(
-        self, ids: list[str], select: Optional[list[str]] = None
+        self, ids: list[str], select: list[str] | None = None
     ) -> list[DatasetItem]:  # type: ignore
         """Read views from dataset.
 
         Args:
             ids (list[str]): Item ids.
-            select (list[str], optional): Views to read. Default is None.
+            select (list[str] | None, optional): Views to read. Default is None.
 
         Returns:
-            list[DatasetItem]: Dataset items
+            list[DatasetItem]: Dataset items.
         """
         return self._read_schema_group_data(ids, _SchemaGroup.VIEW, select)
 
-    def read_view(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
+    def read_view(self, id: str, select: list[str] | None = None) -> DatasetItem:
         """Read view from dataset.
 
         Args:
             id (str): Item id.
-            select (list[str], optional): Views to read. Default is None.
+            select (list[str] | None, optional): Views to read. Default is None.
 
         Returns:
             DatasetItem: Dataset item
@@ -534,14 +536,14 @@ class Dataset:
         self,
         offset: int,
         limit: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> list[DatasetItem]:
         """Get views from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select (list[str], optional): Views to read. Default is None.
+            select (list[str] | None, optional): Views to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
@@ -551,13 +553,13 @@ class Dataset:
     def get_view(
         self,
         idx: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> DatasetItem:
         """Get view from dataset.
 
         Args:
             idx (int): Index.
-            select (list[str], optional): Views to read. Default is None.
+            select (list[str] | None, optional): Views to read. Default is None.
 
         Returns:
             DatasetItem: Dataset items
@@ -565,25 +567,25 @@ class Dataset:
         return self.get_views(idx, 1, select)[0]
 
     def read_objects(
-        self, ids: list[str], select: Optional[list[str]] = None
+        self, ids: list[str], select: list[str] | None = None
     ) -> list[DatasetItem]:  # type: ignore
         """Read objects from dataset.
 
         Args:
             ids (list[str]): Item ids.
-            select (list[str], optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Objects to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
         """
         return self._read_schema_group_data(ids, _SchemaGroup.OBJECT, select)
 
-    def read_object(self, id: str, select: Optional[list[str]] = None) -> DatasetItem:
+    def read_object(self, id: str, select: list[str] | None = None) -> DatasetItem:
         """Read object from dataset.
 
         Args:
             id (str): Item id.
-            select (list[str], optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Objects to read. Default is None.
 
         Returns:
             DatasetItem: Dataset item
@@ -594,14 +596,14 @@ class Dataset:
         self,
         offset: int,
         limit: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> list[DatasetItem]:
         """Get objects from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select (list[str], optional): Objects to read. Default is None.
+            select (list[str]  | None, optional): Objects to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
@@ -611,13 +613,13 @@ class Dataset:
     def get_object(
         self,
         idx: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> DatasetItem:
         """Get object from dataset.
 
         Args:
             idx (int): Index.
-            select (list[str], optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Objects to read. Default is None.
 
         Returns:
             DatasetItem: Dataset items
@@ -625,27 +627,25 @@ class Dataset:
         return self.get_objects(idx, 1, select)[0]
 
     def read_embeddings(
-        self, ids: list[str], select: Optional[list[str]] = None
+        self, ids: list[str], select: list[str] | None = None
     ) -> list[DatasetItem]:  # type: ignore
         """Read embeddings from dataset.
 
         Args:
             ids (list[str]): Item ids.
-            select (list[str], optional): Embeddings to read. Default is None.
+            select (list[str] | None, optional): Embeddings to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
         """
         return self._read_schema_group_data(ids, _SchemaGroup.EMBEDDING, select)
 
-    def read_embedding(
-        self, id: str, select: Optional[list[str]] = None
-    ) -> DatasetItem:
+    def read_embedding(self, id: str, select: list[str] | None = None) -> DatasetItem:
         """Read embedding from dataset.
 
         Args:
             id (str): Item id.
-            select (list[str], optional): Embeddings to read. Default is None.
+            select (list[str] | None, optional): Embeddings to read. Default is None.
 
         Returns:
             DatasetItem: Dataset item
@@ -656,14 +656,14 @@ class Dataset:
         self,
         offset: int,
         limit: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> list[DatasetItem]:
         """Get embeddings from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select (list[str], optional): Embeddings to read. Default is None.
+            select (list[str] | None, optional): Embeddings to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
@@ -675,13 +675,13 @@ class Dataset:
     def get_embedding(
         self,
         idx: int,
-        select: Optional[list[str]] = None,
+        select: list[str] | None = None,
     ) -> DatasetItem:
         """Get embedding from dataset.
 
         Args:
             idx (int): Index.
-            select (list[str], optional): Embeddings to read. Default is None.
+            select (list[str] | None, optional): Embeddings to read. Default is None.
 
         Returns:
             DatasetItem: Dataset items
@@ -696,11 +696,11 @@ class Dataset:
         """Find Dataset in directory.
 
         Args:
-            dataset_id (str): Dataset ID
-            directory (Path): Directory to search in
+            dataset_id (str): Dataset ID.
+            directory (Path | S3Path): Directory to search in.
 
         Returns:
-            Dataset: Dataset
+            Dataset: The found dataset.
         """
         # Browse directory
         for json_fp in directory.glob("*/info.json"):

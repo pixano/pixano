@@ -11,11 +11,15 @@
 #
 # http://www.cecill.info
 
-from typing import Annotated
+from collections import defaultdict
+
+# TMP legacy
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
+from pydantic import BaseModel
 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
@@ -23,13 +27,9 @@ from pixano.datasets.features import Image, SequenceFrame
 from pixano.datasets.features.schemas.group import _SchemaGroup
 
 
-# TMP legacy
-from typing import Optional
-from pydantic import BaseModel
-from collections import defaultdict
-
-
 class LegacyDatasetItem(BaseModel):
+    """Legacy Dataset Item."""
+
     id: str
     original_id: Optional[str] = None
     split: str
@@ -82,10 +82,13 @@ async def get_dataset_items(  # noqa: D417
             # TODO --> convert CustomDatasetItem (from new API) to legacy DatasetItem
             print("BR - items", len(items), items[0].__dict__.keys())
             # print("BR - item", item[0])
-            ## item ex: dict_keys(['rgb_sequence', 'objects', 'id', 'split', 'sequence_name'])
-            ## need to find which parts belongs to item (here ((id, split)-->always in item), sequence_name)
+            ## item ex:
+            ## dict_keys(['rgb_sequence', 'objects', 'id', 'split', 'sequence_name'])
+            ## need to find which parts belongs to item
+            ## (here ((id, split)-->always in item), sequence_name)
             ## (here sequence_name must be put in features)
-            ## and in which groups are others (here: objects -> objects, rgb_sequence -> views (aka media))
+            ## and in which groups are others
+            ## (here: objects -> objects, rgb_sequence -> views (aka media))
             legacy_items = []
             for item in items:
                 # note: we could do it on item[0] only in fact
@@ -115,7 +118,8 @@ async def get_dataset_items(  # noqa: D417
                 }
 
                 # views : {"table_name": ItemView}
-                # "https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg",  # TMP fake thumbnail
+                # https://upload.wikimedia.org/wikipedia/en/f/f0/Information_orange.svg
+                # TMP fake thumbnail
                 views = {}
                 for val in groups[_SchemaGroup.VIEW]:
                     if isinstance(item.__dict__[val], Image):
@@ -123,7 +127,9 @@ async def get_dataset_items(  # noqa: D417
                             "id": val,
                             "type": "image",
                             "uri": item.__dict__[val].url,
-                            "thumbnail": item.__dict__[val].open(dataset.path / "media"),
+                            "thumbnail": item.__dict__[val].open(
+                                dataset.path / "media"
+                            ),
                         }
                     elif (
                         isinstance(item.__dict__[val], list)
@@ -134,7 +140,9 @@ async def get_dataset_items(  # noqa: D417
                             "id": val,
                             "type": "video",  # in fact sequence frames
                             "uri": "",
-                            "thumbnail": item.__dict__[val][0].open(dataset.path / "media")
+                            "thumbnail": item.__dict__[val][0].open(
+                                dataset.path / "media"
+                            ),
                         }
 
                     views[val] = view

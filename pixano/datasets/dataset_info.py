@@ -13,8 +13,11 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
+from s3path import S3Path
+
 from .dataset_schema import DatasetSchema
 
 
@@ -36,23 +39,23 @@ class DatasetInfo(BaseModel):
     num_elements: int = 0
     tables: dict = {}
 
-    def to_json(self, json_fp: Path):
+    def to_json(self, json_fp: Path | S3Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            json_fp (Path): The path to the file where the DatasetInfo object
+            json_fp (Path | S3Path): The path to the file where the DatasetInfo object
                 will be written.
         """
         json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
 
     @staticmethod
     def from_json(
-        json_fp: Path,
+        json_fp: Path | S3Path,
     ) -> "DatasetInfo":
         """Read DatasetInfo from JSON file.
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp (Path | S3Path): JSON file path
 
         Returns:
             DatasetInfo: DatasetInfo
@@ -64,21 +67,20 @@ class DatasetInfo(BaseModel):
 
     @staticmethod
     def load_directory(
-        directory: Path,
+        directory: Path | S3Path,
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetInfo"]:
-        """Load list of DatasetInfo from directory
+        """Load list of DatasetInfo from directory.
 
         Args:
-            directory (Path): Directory to load
+            directory (Path | S3Path): Directory to load
             load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
             load_stats (bool, optional): Load dataset stats. Defaults to False.
 
         Returns:
             list[DatasetInfo]: List of DatasetInfo
         """
-
         legacy_infos = []
 
         # Browse directory
@@ -107,15 +109,30 @@ class DatasetInfo(BaseModel):
         return legacy_infos
 
     @staticmethod
-    def tables_from_schema(schema: DatasetSchema):
+    def tables_from_schema(schema: DatasetSchema) -> dict[str, Any]:
+        """Get tables information from schema.
+
+        Args:
+            schema (DatasetSchema): Dataset schema.
+
+        Returns:
+            dict[str, Any]: Tables information.
+        """
         tables = {}
         legacy_mapping = {"item": "main", "views": "media"}
         for group in schema._groups:
-            gr = legacy_mapping[group.value] if group.value in legacy_mapping else group.value
-            tables[gr] = [{
-                "name": tname,
-                "fields": {},
-                "source": None,
-                "type": None,
-            } for tname in schema._groups[group]]
+            gr = (
+                legacy_mapping[group.value]
+                if group.value in legacy_mapping
+                else group.value
+            )
+            tables[gr] = [
+                {
+                    "name": tname,
+                    "fields": {},
+                    "source": None,
+                    "type": None,
+                }
+                for tname in schema._groups[group]
+            ]
         return tables

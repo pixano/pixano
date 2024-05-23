@@ -18,13 +18,14 @@ from .registry import _register_type_internal
 
 @_register_type_internal
 class BBox3D(pydantic.BaseModel):
-    """A 3D bounding Box
+    """A 3D bounding Box.
 
     Attributes:
         position (list[float]): List of 3d position coordinates (TODO: give format?)
         size (list[float]): List of 3d box size (TODO: give meaning of each elem)
         heading (float): orientation (TODO: more explanations?)
     """
+
     position: list[float]
     size: list[float]
     heading: float
