@@ -27,4 +27,4 @@ class SequenceFrame(Image):
 
 def is_sequence_frame(cls: type) -> bool:
     """Check if the given class is a subclass of Sequence."""
-    return cls is SequenceFrame
+    return issubclass(cls, SequenceFrame)

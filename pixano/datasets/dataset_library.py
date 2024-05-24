@@ -13,6 +13,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -39,7 +40,7 @@ class DatasetLibrary(BaseModel):
     num_elements: int = 0
     preview: str = ""
 
-    def to_json(self, json_fp: Path):
+    def to_json(self, json_fp: Path) -> None:
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
@@ -55,7 +56,7 @@ class DatasetLibrary(BaseModel):
         """Read DatasetLibrary from JSON file.
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp (Path | S3Path): JSON file path
 
         Returns:
             DatasetLibrary: DatasetInfo
@@ -104,10 +105,32 @@ class DatasetLibrary(BaseModel):
         return library
 
     @staticmethod
-    def tables_from_schema(schema: DatasetSchema):
+    def tables_from_schema(schema: DatasetSchema) -> dict[str, Any]:
+        """Get tables information from schema.
+
+        Args:
+            schema (DatasetSchema): Dataset schema.
+
+        Returns:
+            dict[str, Any]: Tables information.
+        """
         tables = {}
         legacy_mapping = {"item": "main", "views": "media"}
         for group in schema._groups:
+            gr = (
+                legacy_mapping[group.value]
+                if group.value in legacy_mapping
+                else group.value
+            )
+            tables[gr] = [
+                {
+                    "name": tname,
+                    "fields": {},
+                    "source": None,
+                    "type": None,
+                }
+                for tname in schema._groups[group]
+            ]
             gr = (
                 legacy_mapping[group.value]
                 if group.value in legacy_mapping

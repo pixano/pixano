@@ -1,16 +1,19 @@
-import os
-import typing
+from pathlib import Path
+from typing import Any, Iterator
 
 import PIL
 import pyarrow.json as pa_json
 import shortuuid
+from s3path import S3Path
 
-from ..features.schemas import image as image_schema
-from ..features.types import bbox as bbox_type
-from . import dataset_builder
+from pixano.datasets.features.schemas.base_schema import BaseSchema
+
+from ..features.schemas.image import Image, is_image
+from ..features.types.bbox import BBox, is_bbox
+from .dataset_builder import DatasetBuilder
 
 
-class FolderBasedBuilder(dataset_builder.DatasetBuilder):
+class FolderBasedBuilder(DatasetBuilder):
     """This is a class for building datasets based on folder structure."""
 
     # build data from folder follwing a specific structure
@@ -22,7 +25,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
 
     def _generate_items(
         self,
-    ) -> dataset_builder.Iterator[dataset_builder.Dict[str, typing.Any]]:
+    ) -> Iterator[dict[str, Any]]:
         for split in self._source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):
                 metadata = self._read_metadata(split / self.METADATA_FILENAME)
@@ -32,7 +35,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                 # For a single view expect only 1 schema to be an Image
                 # TODO: handle other view types
                 for k, s in self._schemas.items():
-                    if image_schema.is_image(s):
+                    if is_image(s):
                         view_name = k
                         break
 
@@ -59,7 +62,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
                             "objects": objects,
                         }
 
-    def _create_item(self, split, item_metadata):
+    def _create_item(self, split, item_metadata) -> BaseSchema:
         # find in metadata if view_file.name is present in the unique views
 
         return self._schemas["item"](
@@ -68,10 +71,10 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
             **item_metadata,
         )
 
-    def _create_view(self, item, view_file, view_name):
-        if image_schema.is_image(self._schemas[view_name]):
+    def _create_view(self, item, view_file, view_name) -> Image:
+        if is_image(self._schemas[view_name]):
             img = PIL.Image.open(view_file)
-            view = image_schema.Image(
+            view = Image(
                 id=shortuuid.uuid(),
                 item_id=item.id,
                 url=view_file.relative_to(self._source_dir).as_posix(),
@@ -103,10 +106,10 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
         for i in range(num_objects):
             obj = {}
             for attr in obj_attrs:
-                if bbox_type.is_bbox(
+                if is_bbox(
                     self._schemas["objects"].model_fields[attr].annotation,
                 ):
-                    obj[attr] = bbox_type.BBox(
+                    obj[attr] = BBox(
                         coords=obj_data[attr][i],
                         format="xywh",
                         is_normalized=True,
@@ -126,7 +129,7 @@ class FolderBasedBuilder(dataset_builder.DatasetBuilder):
 
         return objects
 
-    def _read_metadata(self, metadata_file: os.PathLike) -> list[dict]:
+    def _read_metadata(self, metadata_file: Path | S3Path) -> list[dict]:
         if metadata_file.exists():
             return pa_json.read_json(metadata_file).to_pylist()
         else:

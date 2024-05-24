@@ -1,4 +1,4 @@
-from . import folder_based_builder
+from .folder_based_builder import FolderBasedBuilder
 
 
 # Image extensions supported by Pillow
@@ -69,7 +69,7 @@ IMAGE_EXTENSIONS = [
 ]
 
 
-class ImageFolderBuilder(folder_based_builder.FolderBasedBuilder):
+class ImageFolderBuilder(FolderBasedBuilder):
     """Builder for image datasets stored in a folder."""
 
     EXTENSIONS = IMAGE_EXTENSIONS

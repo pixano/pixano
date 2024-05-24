@@ -10,7 +10,6 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-import typing
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
 
@@ -49,11 +48,11 @@ class ObjectWithBBoxAndMask(Object):
     mask: CompressedRLE
 
 
-def is_object(cls: typing.Any) -> bool:
+def is_object(cls: type) -> bool:
     """Check if a class is a subclass of Object.
 
     Args:
-        cls (typing.Any): The class to check.
+        cls (type): The class to check.
 
     Returns:
         bool: True if the class is a subclass of Object, False otherwise.
