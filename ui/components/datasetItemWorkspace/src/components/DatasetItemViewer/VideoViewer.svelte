@@ -34,6 +34,7 @@
   } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
+  import VideoControls from "../VideoPlayer/VideoControls.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
@@ -113,7 +114,7 @@
   $: selectedTool.set($selectedTool);
 </script>
 
-<section class="pl-4 h-full w-full flex flex-col">
+<section class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]">
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
@@ -128,9 +129,11 @@
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
-      />
+      >
+        <VideoControls {updateView} />
+      </Canvas2D>
     </div>
-    <div class="h-full grow max-h-[25%]">
+    <div class="h-full grow max-h-[25%] overflow-hidden">
       <VideoPlayer {updateView} {imagesFilesUrl} {imageDimension} />
     </div>
   {/if}

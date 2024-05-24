@@ -13,110 +13,50 @@
    *
    * http://www.cecill.info
    */
-  import { onDestroy, onMount } from "svelte";
-  import { PlayIcon, PauseIcon } from "lucide-svelte";
 
-  import { SliderRoot } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { getCurrentImageTime } from "../../lib/api/videoApi";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, videoControls } from "../../lib/stores/videoViewerStores";
   import { Thumbnail } from "@pixano/canvas2d";
+  import { SliderRoot } from "@pixano/core";
 
   export let updateView: (frameIndex: number) => void;
   export let imageDimension: { width: number; height: number };
   export let imagesFilesUrl: Array<string>;
 
-  let intervalId: number;
-  let videoSpeed = 100;
-  let isLoaded = false;
-  let currentTime: string;
-  let cursorElement: HTMLButtonElement;
-  let zoomLevel: number[] = [100];
-
-  let imageUrl = `/${imagesFilesUrl[0]}`;
-
-  onMount(() => {
-    updateView($currentFrameIndex);
-    isLoaded = true;
-  });
-
-  onDestroy(() => {
-    clearInterval(intervalId);
-  });
-
-  const playVideo = () => {
-    if (!isLoaded) return;
-    clearInterval(intervalId);
-    const interval = setInterval(() => {
-      currentFrameIndex.update((index) => (index + 1) % ($lastFrameIndex + 1));
-      cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
-      updateView($currentFrameIndex);
-    }, videoSpeed);
-    intervalId = Number(interval);
-  };
-
-  $: currentTime = getCurrentImageTime($currentFrameIndex, videoSpeed);
-
   const onTimeTrackClick = (index: number) => {
     currentFrameIndex.set(index);
     updateView($currentFrameIndex);
   };
-
-  const onPlayClick = () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = 0;
-    } else {
-      playVideo();
-    }
-  };
 </script>
 
-{#if isLoaded}
-  <div class="h-full bg-white overflow-x-auto">
-    <!-- top section -->
-    <VideoPlayerRow class="sticky top-0 bg-white z-20" isTopRow>
-      <div
-        slot="name"
-        class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200"
-      >
-        <p>
-          {currentTime}
-        </p>
-        <SliderRoot bind:value={zoomLevel} min={100} max={800} />
-        <button on:click={onPlayClick} class="text-primary">
-          {#if intervalId}
-            <PauseIcon />
-          {:else}
-            <PlayIcon />
-          {/if}
-        </button>
-      </div>
-      <TimeTrack
-        slot="timeTrack"
-        {updateView}
-        {videoSpeed}
-        {intervalId}
-        {zoomLevel}
-        bind:cursorElement
-      />
-    </VideoPlayerRow>
-    <!-- bottom section -->
-    <div class="flex flex-col max-h-[150px] z-10 relative">
+{#if $videoControls.isLoaded}
+  <div class="h-full bg-white overflow-x-auto relative flex flex-col">
+    <div class="sticky top-0 bg-white">
+      <VideoPlayerRow class="sticky top-0 bg-white z-20">
+        <TimeTrack slot="timeTrack" {updateView} />
+      </VideoPlayerRow>
+    </div>
+    <div class="flex flex-col max-h-[200px] z-10 relative grow">
       {#each Object.values($itemObjects) as object}
         {#if object.datasetItemType === "video"}
           <VideoPlayerRow>
-            <div slot="name" class=" sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
-              <Thumbnail {imageDimension} coords={object.displayedBox.coords} {imageUrl} />
-            </div>
-            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} {updateView} />
+            <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView}>
+              <Thumbnail
+                {imageDimension}
+                coords={object.track[0].keyBoxes[0].coords}
+                imageUrl={`/${imagesFilesUrl[object.track[0].start]}`}
+              />
+            </ObjectTrack>
           </VideoPlayerRow>
         {/if}
       {/each}
     </div>
+  </div>
+  <div class="max-w-[200px] p-4 sticky bottom-0 left-0 z-20 bg-white shadow">
+    <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={800} />
   </div>
 {/if}

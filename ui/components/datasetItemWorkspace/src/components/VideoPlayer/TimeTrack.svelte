@@ -16,20 +16,21 @@
    */
 
   import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
-  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    lastFrameIndex,
+    currentFrameIndex,
+    videoControls,
+  } from "../../lib/stores/videoViewerStores";
   import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (imageIndex: number) => void;
-  export let intervalId: number;
-  export let videoSpeed: number;
-  export let cursorElement: HTMLButtonElement;
-  export let zoomLevel: number[];
 
+  let cursorElement: HTMLButtonElement;
   let timeTrackElement: HTMLElement;
 
   let imageFilesLength = $lastFrameIndex + 1;
-  const videoTotalLengthInMs = imageFilesLength * videoSpeed;
+  const videoTotalLengthInMs = imageFilesLength * $videoControls.videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
   let timeTrackDensity = 1;
 
@@ -44,7 +45,7 @@
 
     node.addEventListener("mousedown", () => {
       moving = true;
-      clearInterval(intervalId);
+      clearInterval($videoControls.intervalId);
     });
 
     window.addEventListener("mousemove", (event) => {
@@ -74,7 +75,8 @@
   const onPlayerClick = (event: MouseEvent | KeyboardEvent) => {
     let targetElement = event.target as HTMLElement;
     if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
-    clearInterval(intervalId);
+    clearInterval($videoControls.intervalId);
+    $videoControls.intervalId = 0;
     currentFrameIndex.set(
       Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
     );
@@ -99,8 +101,8 @@
 </script>
 
 <div
-  class="py-2 flex w-full h-full justify-between relative cursor-pointer bg-white border-b border-slate-200"
-  style={`width: ${zoomLevel[0]}%`}
+  class="py-2 flex w-full h-16 justify-between relative cursor-pointer bg-white border-b border-slate-200"
+  style={`width: ${$videoControls.zoomLevel[0]}%`}
   role="slider"
   tabindex="0"
   on:click={onPlayerClick}
@@ -112,7 +114,7 @@
   <button
     use:dragMe
     class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
-    style={`left: ${(($currentFrameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+    style={`left: ${(($currentFrameIndex * $videoControls.videoSpeed) / videoTotalLengthInMs) * 100}%`}
     bind:this={cursorElement}
   >
     <span class="block h-[60%] bg-primary w-2 rounded-t" />

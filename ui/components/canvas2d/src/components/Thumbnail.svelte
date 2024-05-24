@@ -32,8 +32,6 @@
   let stageWidth = width * imageDimension.width;
   let stageHeight = height * imageDimension.height;
 
-  console.log({ stageWidth, stageHeight });
-
   $: {
     if (Math.max(stageWidth, stageHeight) > maxSize) {
       const ratio = Math.max(stageWidth, stageHeight) / maxSize;
@@ -43,7 +41,7 @@
   }
 </script>
 
-<div class="w-fit">
+<div class="w-fit z-40">
   <Stage
     bind:handle={stage}
     config={{
@@ -71,26 +69,5 @@
         }}
       />
     </Layer>
-    <!-- <Layer>
-    <Group>
-      <KonvaImage
-        config={{
-          x: 0,
-          y: 0,
-          width: imageDimension.width,
-          height: imageDimension.height,
-          image: imageUrl,
-          clipFunc: (ctx) => {
-            ctx.beginPath();
-            ctx.moveTo(topLeft.x, topLeft.y);
-            ctx.lineTo(topRight.x, topRight.y);
-            ctx.lineTo(bottomRight.x, bottomRight.y);
-            ctx.lineTo(bottomLeft.x, bottomLeft.y);
-            ctx.closePath();
-          },
-        }}
-      />
-    </Group>
-  </Layer> -->
   </Stage>
 </div>

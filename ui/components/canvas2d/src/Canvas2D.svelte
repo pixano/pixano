@@ -1006,11 +1006,12 @@
 </script>
 
 <div
-  class={cn("flex h-full bg-slate-800 transition-opacity duration-300 delay-100", {
+  class={cn("flex flex-col-reverse h-full bg-slate-800 transition-opacity duration-300 delay-100", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
 >
+  <slot />
   <Stage
     bind:config={stageConfig}
     bind:handle={stage}

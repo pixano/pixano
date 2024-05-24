@@ -21,11 +21,11 @@
     lastFrameIndex,
     currentFrameIndex,
     objectIdBeingEdited,
+    videoControls,
   } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
-  export let zoomLevel: number[];
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let updateView: (frameIndex: number) => void;
@@ -102,13 +102,30 @@
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
+
+  let showThumbnail = false;
+  let thumbnailPosition = 0;
+
+  const changeThumbnailPosition = (mouseClientX: number) => {
+    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
+    thumbnailPosition = mouseClientX - timeTrackPosition.x + 10;
+  };
 </script>
 
 <div
-  class="flex gap-5 relative h-full my-auto"
-  style={`width: ${zoomLevel[0]}%`}
+  class="flex gap-5 relative h-12 my-auto z-20"
+  style={`width: ${$videoControls.zoomLevel[0]}%`}
   bind:this={objectTimeTrack}
+  on:mouseenter={() => (showThumbnail = true)}
+  on:mouseleave={() => (showThumbnail = false)}
+  on:mousemove={(e) => changeThumbnailPosition(e.clientX)}
+  role="complementary"
 >
+  {#if showThumbnail}
+    <div class="absolute top-[-50%] z-40" style={`left: ${thumbnailPosition}px`}>
+      <slot />
+    </div>
+  {/if}
   <span
     class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
     style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
