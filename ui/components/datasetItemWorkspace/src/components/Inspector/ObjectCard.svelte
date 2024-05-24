@@ -24,7 +24,11 @@
     selectedTool,
     colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import {
+    createObjectCardId,
+    toggleObjectDisplayControl,
+    highlightCurrentObject,
+  } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -93,21 +97,8 @@
     canSave.set(true);
   };
 
-  const onColoredDotClick = () => {
-    const isObjectHighlighted = itemObject.highlighted === "self";
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((object) => {
-        if (isObjectHighlighted) {
-          object.highlighted = "all";
-        } else if (object.id === itemObject.id) {
-          object.highlighted = "self";
-        } else {
-          object.highlighted = "none";
-        }
-        return object;
-      }),
-    );
-  };
+  const onColoredDotClick = () =>
+    itemObjects.update((objects) => highlightCurrentObject(objects, itemObject));
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);

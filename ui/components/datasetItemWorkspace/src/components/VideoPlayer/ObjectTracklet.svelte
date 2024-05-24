@@ -18,7 +18,8 @@
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
-  import { colorScale } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { colorScale, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { highlightCurrentObject } from "../../lib/api/objectsApi";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -44,6 +45,7 @@
   $: left = getLeft(tracklet);
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
+  $: color = $colorScale[1](object.id);
 
   const updateTrackletWidth = (
     newFrameIndex: VideoItemBBox["frame_index"],
@@ -63,7 +65,12 @@
     currentFrameIndex.set(newFrameIndex);
   };
 
-  $: color = $colorScale[1](object.id);
+  const onClick = () =>
+    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+
+  const onDoubleClick = () => {
+    console.log("double click");
+  };
 </script>
 
 <ContextMenu.Root>
@@ -78,6 +85,8 @@
       on:contextmenu|preventDefault={(e) => onContextMenu(e)}
       class="h-full w-full"
       bind:this={trackletElement}
+      on:click={onClick}
+      on:dblclick={onDoubleClick}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>

@@ -347,3 +347,18 @@ export const defineCreatedObject = (
   }
   return newObject;
 };
+
+export const highlightCurrentObject = (objects: ItemObject[], currentObject: ItemObject) => {
+  const isObjectHighlighted = currentObject.highlighted === "self";
+
+  return objects.map((object) => {
+    if (isObjectHighlighted) {
+      object.highlighted = "all";
+    } else if (object.id === currentObject.id) {
+      object.highlighted = "self";
+    } else {
+      object.highlighted = "none";
+    }
+    return object;
+  });
+};
