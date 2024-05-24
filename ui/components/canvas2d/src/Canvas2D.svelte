@@ -18,7 +18,7 @@
   import * as ort from "onnxruntime-web";
   import Konva from "konva";
   import { nanoid } from "nanoid";
-  import { afterUpdate, onMount, onDestroy, beforeUpdate } from "svelte";
+  import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { WarningModal } from "@pixano/core";
 
@@ -160,20 +160,8 @@
     clearAnnotationAndInputs();
   });
 
-  beforeUpdate(() => {
-    if (stage) {
-      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
-
-      images.forEach((image) => {
-        //image.clearCache();
-      });
-    }
-  });
-
   afterUpdate(() => {
-    if (currentId !== selectedItemId) {
-      loadItem();
-    }
+    if (currentId !== selectedItemId) loadItem();
 
     if (selectedTool) {
       handleChangeTool();
@@ -190,7 +178,8 @@
       if (viewLayer) viewLayer.add(transformer);
     }
 
-    applyFilters();
+    // Re-apply filters
+    // applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -312,9 +301,7 @@
       let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
       images.forEach((image) => {
-        if (image.width() === 0 || image.height() === 0) 
-          return;
-        
+        if (image.width() === 0 || image.height() === 0) return;
 
         image.cache();
         image.brightness(brightness);

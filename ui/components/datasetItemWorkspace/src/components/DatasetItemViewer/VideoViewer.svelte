@@ -44,8 +44,6 @@
   export let brightness: number;
   export let contrast: number;
 
-  let currentFrame: number;
-
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
 
@@ -83,8 +81,6 @@
         return { ...object, displayedBox };
       }),
     );
-
-    currentFrame = imageIndex;
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
@@ -116,7 +112,7 @@
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id + currentFrame}
+        selectedItemId={selectedItem.id}
         {imagesPerView}
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
