@@ -33,7 +33,7 @@
     objectIdBeingEdited,
   } from "../../lib/stores/videoViewerStores";
 
-  import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
+  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import VideoControls from "../VideoPlayer/VideoControls.svelte";
   import { onMount } from "svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
@@ -134,7 +134,7 @@
       </Canvas2D>
     </div>
     <div class="h-full grow max-h-[25%] overflow-hidden">
-      <VideoPlayer {updateView} {imagesFilesUrl} {imageDimension} />
+      <VideoInspector {updateView} {imagesFilesUrl} {imageDimension} />
     </div>
   {/if}
 </section>
