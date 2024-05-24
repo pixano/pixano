@@ -19,7 +19,11 @@
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import { currentFrameIndex, videoControls } from "../../lib/stores/videoViewerStores";
+  import {
+    currentFrameIndex,
+    lastFrameIndex,
+    videoControls,
+  } from "../../lib/stores/videoViewerStores";
   import { Thumbnail } from "@pixano/canvas2d";
   import { SliderRoot } from "@pixano/core";
 
@@ -57,6 +61,6 @@
     </div>
   </div>
   <div class="max-w-[200px] p-4 sticky bottom-0 left-0 z-20 bg-white shadow">
-    <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={800} />
+    <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={$lastFrameIndex * 3} />
   </div>
 {/if}
