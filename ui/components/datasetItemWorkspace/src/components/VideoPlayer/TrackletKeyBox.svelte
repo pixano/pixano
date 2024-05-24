@@ -16,9 +16,10 @@
 
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, VideoItemBBox } from "@pixano/core";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let objectId: ItemObject["id"];
 
@@ -59,6 +60,7 @@
       startPosition = event.clientX;
       startFrameIndex = keyBox.frame_index;
       startOneFrameInPixel = oneFrameInPixel;
+      selectedTool.set(panTool);
     });
 
     window.addEventListener("mousemove", (event) => {

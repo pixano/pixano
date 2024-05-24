@@ -21,6 +21,8 @@
     currentFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
+  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (frameIndex: number) => void;
 
@@ -48,6 +50,7 @@
   $: currentTime = getCurrentImageTime($currentFrameIndex, $videoControls.videoSpeed);
 
   const onPlayClick = () => {
+    selectedTool.set(panTool);
     if ($videoControls.intervalId) {
       clearInterval($videoControls.intervalId);
       videoControls.update((old) => ({ ...old, intervalId: 0 }));

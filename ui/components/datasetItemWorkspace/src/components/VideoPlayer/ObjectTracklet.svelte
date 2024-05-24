@@ -18,8 +18,13 @@
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
-  import { colorScale, itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    colorScale,
+    itemObjects,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -65,10 +70,13 @@
     currentFrameIndex.set(newFrameIndex);
   };
 
-  const onClick = () =>
+  const onClick = () => {
+    selectedTool.set(panTool);
     itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+  };
 
   const onDoubleClick = () => {
+    selectedTool.set(panTool);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";

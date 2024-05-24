@@ -16,7 +16,7 @@
 
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
@@ -25,6 +25,7 @@
   } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
@@ -50,6 +51,7 @@
     const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
     onTimeTrackClick(rightClickFrameIndex);
+    selectedTool.set(panTool);
   };
 
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
