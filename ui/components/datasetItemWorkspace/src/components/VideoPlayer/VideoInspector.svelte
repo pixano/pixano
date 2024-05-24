@@ -35,12 +35,12 @@
 
 {#if $videoControls.isLoaded}
   <div class="h-full bg-white overflow-x-auto relative flex flex-col">
-    <div class="sticky top-0 bg-white">
-      <VideoPlayerRow class="sticky top-0 bg-white z-20">
+    <div class="sticky top-0 bg-white z-20">
+      <VideoPlayerRow class="bg-white">
         <TimeTrack slot="timeTrack" {updateView} />
       </VideoPlayerRow>
     </div>
-    <div class="flex flex-col max-h-[200px] z-10 relative grow">
+    <div class="flex flex-col max-h-[200px] grow z-10 mb-12">
       {#each Object.values($itemObjects) as object}
         {#if object.datasetItemType === "video"}
           <VideoPlayerRow>

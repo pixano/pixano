@@ -108,7 +108,7 @@
 
   const changeThumbnailPosition = (mouseClientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    thumbnailPosition = mouseClientX - timeTrackPosition.x + 10;
+    thumbnailPosition = mouseClientX - timeTrackPosition.x + 20;
   };
 </script>
 
@@ -122,7 +122,7 @@
   role="complementary"
 >
   {#if showThumbnail}
-    <div class="absolute top-[-50%] z-40" style={`left: ${thumbnailPosition}px`}>
+    <div class="absolute top-[30%] z-40" style={`left: ${thumbnailPosition}px`}>
       <slot />
     </div>
   {/if}
