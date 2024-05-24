@@ -26,6 +26,7 @@
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { highlightCurrentObject } from "../../lib/api/objectsApi";
 
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
@@ -36,21 +37,20 @@
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 
-  const onContextMenu = (event: MouseEvent) => {
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: false,
-        };
-        return obj;
-      }),
-    );
+  const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
+    const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
     onTimeTrackClick(rightClickFrameIndex);
+  };
+
+  const onContextMenu = (event: MouseEvent) => {
+    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+    // const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
+    // const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
+    // rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
+    // onTimeTrackClick(rightClickFrameIndex);
+    moveCursorToPosition(event.clientX);
     selectedTool.set(panTool);
   };
 
@@ -151,6 +151,7 @@
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
       {findNeighborKeyBoxes}
       {updateView}
+      {moveCursorToPosition}
     />
   {/each}
 </div>

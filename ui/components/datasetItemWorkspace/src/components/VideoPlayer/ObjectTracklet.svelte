@@ -35,6 +35,7 @@
   export let onDeleteTrackletClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let updateView: (frameIndex: number) => void;
+  export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
@@ -70,9 +71,10 @@
     currentFrameIndex.set(newFrameIndex);
   };
 
-  const onClick = () => {
+  const onClick = (clientX: number) => {
+    moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
   };
 
   const onDoubleClick = () => {
@@ -102,7 +104,7 @@
       on:contextmenu|preventDefault={(e) => onContextMenu(e)}
       class="h-full w-full"
       bind:this={trackletElement}
-      on:click={onClick}
+      on:click={(e) => onClick(e.clientX)}
       on:dblclick={onDoubleClick}
     />
   </ContextMenu.Trigger>
