@@ -69,7 +69,16 @@
     itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
 
   const onDoubleClick = () => {
-    console.log("double click");
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.displayControl = {
+          ...obj.displayControl,
+          editing: obj.id === object.id,
+        };
+        return obj;
+      }),
+    );
   };
 </script>
 

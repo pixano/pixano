@@ -352,6 +352,10 @@ export const highlightCurrentObject = (objects: ItemObject[], currentObject: Ite
   const isObjectHighlighted = currentObject.highlighted === "self";
 
   return objects.map((object) => {
+    object.displayControl = {
+      ...object.displayControl,
+      editing: false,
+    };
     if (isObjectHighlighted) {
       object.highlighted = "all";
     } else if (object.id === currentObject.id) {
