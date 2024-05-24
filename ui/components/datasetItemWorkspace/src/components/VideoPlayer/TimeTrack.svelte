@@ -92,6 +92,13 @@
     return false;
   };
 
+  $: {
+    if ($videoControls.zoomLevel[0]) {
+      console.log({ zoomLevel: $videoControls.zoomLevel[0] });
+      updateTimeTrack();
+    }
+  }
+
   const shouldDisplayMarker = (ms: number, density: number) => {
     if (density > 200) return false;
     if (density > 25 && ms % 10 === 0) return true;
