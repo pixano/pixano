@@ -8,11 +8,10 @@ import lancedb
 import shortuuid
 import tqdm
 from lancedb.table import Table
-from s3path import S3Path
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
-from .. import dataset, DatasetLibrary
+from .. import Dataset, DatasetLibrary
 from ..dataset_features_values import DatasetFeaturesValues
 from ..features.schemas import image as image_schema
 from ..features.schemas import sequence_frame as sequence_frame_schema
@@ -33,9 +32,9 @@ class DatasetBuilder(ABC):
 
     def __init__(
         self,
-        source_dir: os.PathLike,
-        target_dir: os.PathLike,
-        schemas: Type[DatasetItem],
+        source_dir: Path,
+        target_dir: Path,
+        schemas: type[DatasetItem],
         info: DatasetLibrary,
         mode: str = "create",
         batch_size: int = 1000,
@@ -106,7 +105,8 @@ class DatasetBuilder(ABC):
 
             if accumulate % self._batch_size == 0:
                 for table_name, table in tables.items():
-                    table.add(accumulate_tables[table_name])
+                    if accumulate_tables[table_name]:
+                        table.add(accumulate_tables[table_name])
                 accumulate = 0
 
         if accumulate > 0:

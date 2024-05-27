@@ -12,12 +12,12 @@
 # http://www.cecill.info
 
 
-from .base_schema import BaseSchema
+from .view import View
 from .registry import _register_schema_internal
 
 
 @_register_schema_internal
-class PointCloud(BaseSchema):
+class PointCloud(View):
     """Point Cloud Lance Model."""
 
     item_id: str
