@@ -68,7 +68,7 @@
     const src = `/${imagesFilesUrl[imageIndex]}`;
     if (!src) return;
     image.src = src;
-    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
+    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-1);
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;

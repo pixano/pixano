@@ -27,6 +27,11 @@
 
   export let brightness: number;
   export let contrast: number;
+  export let RGB = {
+    r: 0,
+    g: 0,
+    b: 0,
+  };
   type ImageMeta = {
     fileName: string;
     width: number;
@@ -124,9 +129,72 @@
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
   <div class="mx-4 mb-4">
     <label for="brightness">Brightness : {Math.round(brightness * 100 + 50)}%</label>
-    <input type="range" id="brightness" min="-0.5" max="0.5" step="0.01" class="w-full pt-2 cursor-pointer" bind:value={brightness} />
+    <input
+      type="range"
+      id="brightness"
+      min="-0.5"
+      max="0.5"
+      step="0.01"
+      class="w-full pt-2 cursor-pointer"
+      bind:value={brightness}
+    />
 
     <label for="contrast">Contrast : {Math.round(contrast + 50)}%</label>
-    <input type="range" id="contrast" min="-50" max="50" step="1" class="w-full pt-2 cursor-pointer" bind:value={contrast} />
+    <input
+      type="range"
+      id="contrast"
+      min="-50"
+      max="50"
+      step="1"
+      class="w-full pt-2 cursor-pointer"
+      bind:value={contrast}
+    />
+
+    <!-- WIP -->
+    <div class="pt-2 flex items-center space-x-2">
+      <input type="checkbox" id="equalizer" class="cursor-pointer w-4 h-4" />
+      <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
+    </div>
+
+    <div class="pt-4">Color thresholds</div>
+    <div class="flex items-center space-x-2">
+      <label for="red" class="text-red-500"> R </label>
+      <input
+        type="range"
+        id="red"
+        min="0"
+        max="255"
+        step="1"
+        class="w-full pt-2 cursor-pointer accent-red-500"
+        bind:value={RGB.r}
+      />
+      <span class="w-8 text-sm text-center text-red-500">{RGB.r}</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <label for="green" class="text-green-500"> G </label>
+      <input
+        type="range"
+        id="green"
+        min="0"
+        max="255"
+        step="1"
+        class="w-full pt-2 cursor-pointer accent-green-500"
+        bind:value={RGB.g}
+      />
+      <span class="w-8 text-sm text-center text-green-500">{RGB.g}</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <label for="blue" class="text-blue-500"> B </label>
+      <input
+        type="range"
+        id="blue"
+        min="0"
+        max="255"
+        step="1"
+        class="w-full pt-2 cursor-pointer accent-blue-500"
+        bind:value={RGB.b}
+      />
+      <span class="w-8 text-sm text-center text-blue-500">{RGB.b}</span>
+    </div>
   </div>
 </div>
