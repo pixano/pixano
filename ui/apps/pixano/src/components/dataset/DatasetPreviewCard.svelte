@@ -19,6 +19,7 @@
 
   import type { DatasetInfo } from "@pixano/core/src";
   import { svg_right_arrow } from "@pixano/core/src/icons";
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
   // Exports
   export let dataset: DatasetInfo;
@@ -47,8 +48,8 @@
     </div>
 
     <p class="text-sm text-slate-500 font-medium">
-      {dataset.num_elements} items {dataset.estimated_size && dataset.estimated_size != "N/A"
-        ? " - " + dataset.estimated_size
+      {dataset.num_elements} items {dataset.size && dataset.size != "N/A"
+        ? " - " + dataset.size
         : ""}
     </p>
     <svg
@@ -64,12 +65,10 @@
 
   <!-- Dataset Thumbnail -->
   <div class="m-4 bg-slate-50">
-    {#if dataset.preview}
-      <img
-        src={dataset.preview}
-        alt="{dataset.name} thumbnail"
-        class="w-[350px] h-[176px] rounded-sm object-contain object-center"
-      />
-    {/if}
+    <img
+      src={dataset.preview ?? pixanoLogo}
+      alt="{dataset.name} thumbnail"
+      class="w-[350px] h-[176px] rounded-sm object-contain object-center"
+    />
   </div>
 </button>

@@ -17,30 +17,34 @@
   import { ContextMenu, cn } from "@pixano/core";
   import type { ItemObject, VideoItemBBox } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
 
   export let objectId: ItemObject["id"];
 
   export let keyBox: VideoItemBBox;
-  export let isBeingEdited: boolean;
   export let color: string;
   export let oneFrameInPixel: number;
   export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
   export let updateTrackletWidth: (
-    newIndex: VideoItemBBox["frameIndex"],
-    draggedIndex: VideoItemBBox["frameIndex"],
+    newIndex: VideoItemBBox["frame_index"],
+    draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
 
-  $itemBoxBeingEdited?.objectId === objectId &&
-    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
+  let isBoxBeingEdited = false;
+
+  $: {
+    const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
+    isBoxBeingEdited =
+      keyBox.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
+  }
 
   const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
   const getKeyBoxLeftPosition = (box: VideoItemBBox) => {
-    const boxFrameIndex = box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex;
+    const boxFrameIndex = box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
 
@@ -53,16 +57,16 @@
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = keyBox.frameIndex;
+      startFrameIndex = keyBox.frame_index;
       startOneFrameInPixel = oneFrameInPixel;
     });
 
     window.addEventListener("mousemove", (event) => {
-      if (moving && isBeingEdited) {
+      if (moving) {
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frameIndex);
+        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frame_index);
       }
     });
 
@@ -77,7 +81,7 @@
     class={cn(
       "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
       "hover:scale-150",
-      { "bg-primary !border-primary": isBeingEdited },
+      { "bg-primary !border-primary": isBoxBeingEdited },
     )}
     style={`left: ${getKeyBoxLeftPosition(keyBox)}%; border-color: ${color}`}
   >
@@ -87,8 +91,8 @@
     <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyBox)}
       >Remove key box</ContextMenu.Item
     >
-    <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>
-      {isBeingEdited ? "Stop editing" : "Edit box"}
-    </ContextMenu.Item>
+    {#if !isBoxBeingEdited}
+      <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>Edit box</ContextMenu.Item>
+    {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

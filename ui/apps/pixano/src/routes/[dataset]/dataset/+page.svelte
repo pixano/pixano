@@ -1,32 +1,52 @@
 <script lang="ts">
-  import { page } from "$app/stores";
   import { goto } from "$app/navigation";
+  import { page } from "$app/stores";
 
-  import type { DatasetInfo } from "@pixano/core/src";
+  import type { ExplorerData } from "@pixano/core/src";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
+  import { getDatasetItems } from "@pixano/core/src/api";
+  import { currentDatasetStore, datasetTableStore } from "$lib/stores/datasetStores";
 
-  import { datasetsStore } from "../../../lib/stores/datasetStores";
+  let selectedDatasetId: string;
+  let selectedDataset: ExplorerData;
 
-  let selectedDataset: DatasetInfo;
+  $: page.subscribe((value) => (selectedDatasetId = value.params.dataset));
 
   $: {
-    let currentDatasetName: string;
-    page.subscribe((value) => (currentDatasetName = value.params.dataset));
-    datasetsStore.subscribe((value) => {
-      const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
-      if (foundDataset) {
-        selectedDataset = foundDataset;
+    datasetTableStore.subscribe((pagination) => {
+      //prevent api call before selectedId is set.  NOTE: some weird async ordering logic with $ / stores...
+      if (selectedDatasetId) {
+        // NOTE: WEIRD BUG(?) HERE, this got called more and more often, each time we go back to library
+        // number of call increases (when going to a page > 1)
+        console.log("BUGLOG 'not once' - datasetTableStore subscribe");
+        getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
+          (datasetItems) => (selectedDataset = datasetItems),
+        );
       }
+      // currentDatasetStore.subscribe((currentDataset) => {
+      //   getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
+      //     (datasetItems) => (selectedDataset = datasetItems),
+      //   );
+      // });
     });
   }
 
+  // $: {
+  //   datasetsStore.subscribe((value) => {
+  //     const foundDataset = value?.find((dataset) => dataset.name === currentDatasetId);
+  //     if (foundDataset) {
+  //       selectedDataset = foundDataset;
+  //     }
+  //   });
+  // }
+
   const handleSelectItem = async (event: CustomEvent) => {
-    await goto(`/${selectedDataset.name}/dataset/${event.detail}`);
+    await goto(`/${selectedDataset.id}/dataset/${event.detail}`);
   };
 </script>
 
-{#if selectedDataset?.page}
+{#if selectedDataset?.table_data}
   <div class="pt-20 h-1 min-h-screen">
     <DatasetExplorer {selectedDataset} on:selectItem={(event) => handleSelectItem(event)} />
   </div>

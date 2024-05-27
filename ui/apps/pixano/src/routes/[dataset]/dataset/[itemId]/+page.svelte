@@ -14,7 +14,7 @@
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
   let models: Array<string>;
-  let currentDatasetName: string;
+  let currentDatasetId: string;
   let currentItemId: string;
   let isLoadingNewItem: boolean = false;
   let canSaveCurrentItem: boolean = false;
@@ -38,6 +38,12 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
+        if (selectedItem.type === "video") {
+          selectedItem.objects.map((obj) => {
+            obj.displayedBox = obj.track[0].keyBoxes[0];
+            return obj;
+          });
+        }
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {
@@ -49,13 +55,12 @@
   };
 
   page.subscribe((value) => {
-    currentDatasetName = value.params.dataset;
+    currentDatasetId = value.params.dataset;
     currentItemId = value.params.itemId;
   });
 
   datasetsStore.subscribe((value) => {
-    const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
-    console.log({ value });
+    const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     if (foundDataset) {
       selectedDataset = foundDataset;
     }
@@ -84,7 +89,7 @@
     <DatasetItemWorkspace
       {selectedItem}
       {models}
-      currentDataset={selectedDataset}
+      featureValues={{ main: {}, objects: {} }}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
@@ -95,8 +100,8 @@
 {#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
-    <PrimaryButton on:click={() => goto(`/${currentDatasetName}/dataset`)}
-      >Back to dataset</PrimaryButton
-    >
+    <PrimaryButton on:click={() => goto(`/${currentDatasetId}/dataset`)}>
+      Back to dataset
+    </PrimaryButton>
   </div>
 {/if}

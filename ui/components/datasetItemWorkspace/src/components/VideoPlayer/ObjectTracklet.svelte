@@ -16,11 +16,11 @@
 
   import { ContextMenu, cn } from "@pixano/core";
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
+  import { colorScale } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let object: VideoObject;
-  export let color: string;
   export let tracklet: Tracklet;
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
@@ -28,6 +28,7 @@
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
+  export let updateView: (frameIndex: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
@@ -45,33 +46,32 @@
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
 
   const updateTrackletWidth = (
-    newFrameIndex: VideoItemBBox["frameIndex"],
-    draggedFrameIndex: VideoItemBBox["frameIndex"],
+    newFrameIndex: VideoItemBBox["frame_index"],
+    draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-      if (keyBox.frameIndex === draggedFrameIndex) {
-        keyBox.frameIndex = newFrameIndex;
-        itemBoxBeingEdited.set({
-          ...keyBox,
-          objectId: object.id,
-        });
+      if (keyBox.frame_index === draggedFrameIndex) {
+        keyBox.frame_index = newFrameIndex;
       }
       return keyBox;
     });
-    tracklet.start = tracklet.keyBoxes[0].frameIndex;
-    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frameIndex;
+    tracklet.start = tracklet.keyBoxes[0].frame_index;
+    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+    updateView(newFrameIndex);
+    currentFrameIndex.set(newFrameIndex);
   };
 
-  const isKeyBoxBeingEdited = (keyBox: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    keyBox.frameIndex === $itemBoxBeingEdited?.frameIndex;
+  $: color = $colorScale[1](object.id);
 </script>
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2")}
+    class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2", {
+      "opacity-100": object.highlighted === "self",
+      "opacity-30": object.highlighted === "none",
+    })}
     style={`left: ${left}%; width: ${width}%; background-color: ${color}`}
   >
     <button
@@ -87,13 +87,14 @@
   </ContextMenu.Content>
 </ContextMenu.Root>
 {#each tracklet.keyBoxes as keyBox}
-  <TrackletKeyBox
-    {keyBox}
-    {color}
-    isBeingEdited={isKeyBoxBeingEdited(keyBox)}
-    {onEditKeyBoxClick}
-    objectId={object.id}
-    {updateTrackletWidth}
-    {oneFrameInPixel}
-  />
+  {#if keyBox.is_key}
+    <TrackletKeyBox
+      {keyBox}
+      {color}
+      {oneFrameInPixel}
+      {onEditKeyBoxClick}
+      objectId={object.id}
+      {updateTrackletWidth}
+    />
+  {/if}
 {/each}

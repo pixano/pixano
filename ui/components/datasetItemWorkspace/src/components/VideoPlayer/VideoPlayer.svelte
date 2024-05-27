@@ -23,21 +23,19 @@
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
-  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
 
-  export let updateView: (imageIndex: number) => void;
-  export let colorScale: (id: string) => string;
+  export let updateView: (frameIndex: number) => void;
 
-  let currentImageIndex = 0;
   let intervalId: number;
   let videoSpeed = 100;
   let isLoaded = false;
   let currentTime: string;
   let cursorElement: HTMLButtonElement;
-  let zoomLevel: number[] = [0];
+  let zoomLevel: number[] = [100];
 
   onMount(() => {
-    updateView(currentImageIndex);
+    updateView($currentFrameIndex);
     isLoaded = true;
   });
 
@@ -49,18 +47,18 @@
     if (!isLoaded) return;
     clearInterval(intervalId);
     const interval = setInterval(() => {
-      currentImageIndex = (currentImageIndex + 1) % ($lastFrameIndex + 1);
+      currentFrameIndex.update((index) => (index + 1) % ($lastFrameIndex + 1));
       cursorElement.scrollIntoView({ block: "nearest", inline: "center" });
-      updateView(currentImageIndex);
+      updateView($currentFrameIndex);
     }, videoSpeed);
     intervalId = Number(interval);
   };
 
-  $: currentTime = getCurrentImageTime(currentImageIndex, videoSpeed);
+  $: currentTime = getCurrentImageTime($currentFrameIndex, videoSpeed);
 
   const onTimeTrackClick = (index: number) => {
-    currentImageIndex = index;
-    updateView(currentImageIndex);
+    currentFrameIndex.set(index);
+    updateView($currentFrameIndex);
   };
 
   const onPlayClick = () => {
@@ -71,7 +69,6 @@
       playVideo();
     }
   };
-  // $: console.log($itemObjects);
 </script>
 
 {#if isLoaded}
@@ -85,7 +82,7 @@
         <p>
           {currentTime}
         </p>
-        <SliderRoot bind:value={zoomLevel} min={100} max={200} />
+        <SliderRoot bind:value={zoomLevel} min={100} max={800} />
         <button on:click={onPlayClick} class="text-primary">
           {#if intervalId}
             <PauseIcon />
@@ -101,7 +98,6 @@
         {intervalId}
         {zoomLevel}
         bind:cursorElement
-        bind:currentImageIndex
       />
     </VideoPlayerRow>
     <!-- bottom section -->
@@ -112,14 +108,7 @@
             <p slot="name" class="py-4 sticky left-0 bg-white text-ellipsis overflow-hidden p-2">
               {object.id}
             </p>
-            <ObjectTrack
-              slot="timeTrack"
-              {zoomLevel}
-              {object}
-              {onTimeTrackClick}
-              {colorScale}
-              {currentImageIndex}
-            />
+            <ObjectTrack slot="timeTrack" {zoomLevel} {object} {onTimeTrackClick} {updateView} />
           </VideoPlayerRow>
         {/if}
       {/each}

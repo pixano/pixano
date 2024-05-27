@@ -29,6 +29,7 @@ export const defaultDatasetTableValues: DatasetTableStore = {
 };
 
 // Exports
+export const currentDatasetStore = writable<DatasetInfo>();
 export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(false);

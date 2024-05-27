@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { utils, type VideoDatasetItem } from "@pixano/core";
+  import { type EditShape, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -25,8 +25,13 @@
     itemObjects,
     newShape,
     selectedTool,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    lastFrameIndex,
+    currentFrameIndex,
+    objectIdBeingEdited,
+  } from "../../lib/stores/videoViewerStores";
 
   import VideoPlayer from "../VideoPlayer/VideoPlayer.svelte";
   import { onMount } from "svelte";
@@ -36,17 +41,17 @@
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let colorRange: string[];
+  export let brightness: number;
+  export let contrast: number;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
 
   let isLoaded = false;
-  let colorScale = utils.ordinalColorScale(colorRange);
 
   onMount(() => {
     const image = new Image();
-    image.src = imagesFilesUrl[0];
+    image.src = `/${imagesFilesUrl[0]}`;
 
     imagesPerView = {
       ...imagesPerView,
@@ -58,7 +63,7 @@
 
   const updateView = (imageIndex: number) => {
     const image = new Image();
-    const src = imagesFilesUrl[imageIndex];
+    const src = `/${imagesFilesUrl[imageIndex]}`;
     if (!src) return;
     image.src = src;
     imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
@@ -70,7 +75,6 @@
         if (newCoords) {
           const [x, y, width, height] = newCoords;
           displayedBox.coords = [x, y, width, height];
-          displayedBox.frameIndex = imageIndex;
         }
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         displayedBox.hidden = !newCoords;
@@ -79,15 +83,25 @@
     );
   };
 
+  const updateOrCreateBox = (shape: EditShape) => {
+    const currentFrame = $currentFrameIndex;
+    if (shape.type === "rectangle") {
+      itemObjects.update((objects) =>
+        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+      );
+      newShape.set({ status: "none" });
+    } else {
+      itemObjects.update((objects) => updateExistingObject(objects, shape));
+      if (shape.highlighted === "self") {
+        objectIdBeingEdited.set(shape.shapeId);
+      }
+    }
+  };
+
   $: {
     const shape = $newShape;
-    const box = $itemBoxBeingEdited;
     if (shape.status === "editing") {
-      if (box) {
-        itemObjects.update((objects) => editKeyBoxInTracklet(objects, box, shape));
-      } else {
-        itemObjects.update((objects) => updateExistingObject(objects, $newShape));
-      }
+      updateOrCreateBox(shape);
     }
   }
 
@@ -100,17 +114,19 @@
       <Canvas2D
         selectedItemId={selectedItem.id}
         {imagesPerView}
-        {colorRange}
+        colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
         {embeddings}
+        {brightness}
+        {contrast}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
       />
     </div>
     <div class="h-full grow max-h-[25%]">
-      <VideoPlayer {updateView} {colorScale} />
+      <VideoPlayer {updateView} />
     </div>
   {/if}
 </section>

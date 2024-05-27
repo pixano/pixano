@@ -21,17 +21,56 @@ export interface DatasetInfo {
   id: string;
   name: string;
   description: string;
-  estimated_size: string;
   num_elements: number;
+  size: string;
   preview: string;
-  splits: Array<string>;
-  tables: Record<string, Array<DatasetTable>>;
-  features_values?: FeaturesValues;
-  stats: Array<DatasetStat>;
-  page?: DatasetItems;
   isFiltered?: boolean;
+}
+
+export interface ExplorerData {
+  id: string;
+  name: string;
+  table_data: TableData;
+  pagination: PaginationInfo;
+  sem_search: Array<string>;
   isErrored?: boolean;
 }
+
+export interface TableData {
+  cols: Array<TableColumn>;
+  rows: Array<TableRow>;
+}
+
+export interface TableColumn {
+  name: string;
+  type: string;
+}
+
+export type TableRow = Record<string, string | number | boolean | DatasetStat>;
+
+export interface PaginationInfo {
+  current: number;
+  size: number;
+  total: number;
+}
+
+// OLD
+
+// export interface DatasetInfo {
+//   id: string;
+//   name: string;
+//   description: string;
+//   estimated_size: string;
+//   num_elements: number;
+//   preview: string;
+//   splits: Array<string>;
+//   tables: Record<string, Array<DatasetTable>>;
+//   features_values?: FeaturesValues;
+//   stats: Array<DatasetStat>;
+//   page?: DatasetItems;
+//   isFiltered?: boolean;
+//   isErrored?: boolean;
+// }
 
 export interface DatasetTable {
   name: string;
@@ -55,10 +94,11 @@ export interface DatasetStat {
 // DATASET ITEM
 interface BaseDatasetItem {
   id: string;
+  datasetId: string;
   split: string;
-  objects: Record<string, ItemObject>;
-  features: Record<string, ItemFeature>;
-  embeddings: Record<string, ItemEmbedding>;
+  objects: Record<string, ItemObject>; //remplacer par? Array<ItemObject>
+  features: Record<string, ItemFeature>; //remplacer par? Array<ItemFeature>
+  embeddings: Record<string, ItemEmbedding>; //remplacer par? Array<ItemEmbedding>
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
@@ -69,7 +109,7 @@ export type ImageDatasetItem = BaseDatasetItem & {
 
 export type VideoDatasetItem = BaseDatasetItem & {
   type: "video";
-  objects: Record<string, VideoObject>;
+  objects: Array<VideoObject>;
   views: Record<string, ItemView[]>;
 };
 
@@ -109,8 +149,8 @@ export type ItemObjectBase = {
   item_id: string;
   source_id: string;
   view_id: string;
-  bbox?: ItemBBox;
-  mask?: ItemRLE;
+  //bbox?: ItemBBox;
+  //mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
@@ -118,7 +158,8 @@ export type ItemObjectBase = {
 };
 
 export type VideoItemBBox = ItemBBox & {
-  frameIndex: number;
+  frame_index: number;
+  is_key?: boolean;
   hidden?: boolean;
 };
 export interface Tracklet {

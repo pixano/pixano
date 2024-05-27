@@ -15,11 +15,11 @@
    */
 
   // Local Imports
-  import TableCell from "./TableCell.svelte";
+  import { TableCell } from "./TableCell";
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { ItemFeature } from "@pixano/core";
+  import type { ItemFeature, TableData } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -31,10 +31,10 @@
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
-  export let items: Array<Array<ItemFeature>>;
+  export let items: TableData;
 
   // Add data into a readable store and create table object
-  const data = readable(items);
+  const data = readable(items.rows);
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
@@ -46,26 +46,22 @@
   let lowPriorityColumns: string[] = [];
 
   // Parse a feature into a table cell
-  export const FeatureCell = (feature: ItemFeature) =>
-    createRender(TableCell, {
-      itemFeature: feature.value,
-    });
 
-  Object.values(items[0]).forEach((field) => {
+  Object.values(items.cols).forEach((col) => {
     // Add field to column list
     itemColumns.push(
       table.column({
-        header: field.name,
-        cell: FeatureCell,
-        accessor: (item: Array<ItemFeature>) => item.find((item) => item.name === field.name),
+        header: col.name,
+        cell: TableCell[col.type],
+        accessor: col.name,
       }),
     );
 
     // Insert images and videos to the beginning of the column list
-    if (field.dtype === "image" || field.dtype === "video") {
-      highPriorityColumns.push(field.name);
+    if (col.type === "image" || col.type === "video") {
+      highPriorityColumns.push(col.name);
     } else {
-      lowPriorityColumns.push(field.name);
+      lowPriorityColumns.push(col.name);
     }
   });
   let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];
@@ -197,12 +193,7 @@
             {...rowAttrs}
             class="h-24 cursor-pointer hover:bg-slate-100"
             on:click={() => {
-              for (const feature of items[row.id]) {
-                if (feature.name === "id") {
-                  handleSelectItem(feature.value);
-                  return;
-                }
-              }
+              handleSelectItem(items.rows[row.id].id);
             }}
           >
             {#each row.cells as cell (cell.id)}

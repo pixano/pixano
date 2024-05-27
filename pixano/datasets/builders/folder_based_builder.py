@@ -54,7 +54,7 @@ class FolderBasedBuilder(DatasetBuilder):
                         view = self._create_view(item, view_file, view_name)
 
                         # creat objects
-                        objects = self._create_objects(item.id, view.id, item_metadata)
+                        objects = self._create_objects(item.id, view_name, item_metadata)
 
                         yield {
                             "item": [item],
@@ -89,7 +89,7 @@ class FolderBasedBuilder(DatasetBuilder):
 
         return view
 
-    def _create_objects(self, item_id, view_id, item_metadata):
+    def _create_objects(self, item_id, view_name, item_metadata):
         # if item has objects annotated in the metadata return it
         # else return an empty list
         if "objects" not in item_metadata or item_metadata["objects"] is None:
@@ -112,7 +112,7 @@ class FolderBasedBuilder(DatasetBuilder):
                     obj[attr] = BBox(
                         coords=obj_data[attr][i],
                         format="xywh",
-                        is_normalized=False,
+                        is_normalized=True,
                         confidence=1.0,
                     )
                 else:
@@ -122,7 +122,7 @@ class FolderBasedBuilder(DatasetBuilder):
                 self._schemas["objects"](
                     id=shortuuid.uuid(),
                     item_id=item_id,
-                    view_id=view_id,
+                    view_id=view_name,
                     **obj,
                 )
             )

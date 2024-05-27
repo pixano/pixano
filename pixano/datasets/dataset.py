@@ -22,7 +22,7 @@ from pydantic import ConfigDict
 from s3path import S3Path
 
 from .dataset_features_values import DatasetFeaturesValues
-from .dataset_info import DatasetInfo
+from .dataset_library import DatasetLibrary
 from .dataset_schema import (
     DatasetItem,
     DatasetSchema,
@@ -72,7 +72,7 @@ class Dataset:
     THUMB_FILE: str = "preview.png"
 
     path: Path | S3Path
-    info: DatasetInfo | None = None
+    info: DatasetLibrary | None = None
     dataset_schema: DatasetSchema | None = None
     features_values: DatasetFeaturesValues | None = None
     stats: list[DatasetStat] | None = None
@@ -80,7 +80,7 @@ class Dataset:
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, path: Path | S3Path, info: DatasetInfo | None = None):
+    def __init__(self, path: Path | S3Path, info: DatasetLibrary | None = None):
         """Initialize dataset.
 
         Args:
@@ -94,7 +94,7 @@ class Dataset:
         thumb_file = path / self.THUMB_FILE
 
         self.path = path
-        self.info = DatasetInfo.from_json(info_file)
+        self.info = DatasetLibrary.from_json(info_file)
         self.dataset_schema = DatasetSchema.from_json(schema_file)
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
         self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else None
@@ -704,7 +704,7 @@ class Dataset:
         """
         # Browse directory
         for json_fp in directory.glob("*/info.json"):
-            info = DatasetInfo.from_json(json_fp)
+            info = DatasetLibrary.from_json(json_fp)
             if info.id == dataset_id:
                 # Return dataset
                 return Dataset(json_fp.parent)

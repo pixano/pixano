@@ -20,8 +20,8 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { WarningModal } from "@pixano/core";
 
-  import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
@@ -51,7 +51,6 @@
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
-  export let colorRange: string[] = ["0", "10"];
   export let masks: Mask[];
   export let bboxes: BBox[];
   export let embeddings: Record<string, ort.Tensor> = {};
@@ -59,10 +58,11 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let colorScale: (value: string) => string;
+  export let brightness: number;
+  export let contrast: number;
 
   let isReady = false;
-
-  let colorScale: (id: string) => string;
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
@@ -81,10 +81,6 @@
     if (newShape.status === "none" && newShape.shouldReset) {
       clearAnnotationAndInputs();
     }
-  }
-
-  $: {
-    colorScale = utils.ordinalColorScale(colorRange);
   }
 
   $: {
@@ -181,6 +177,9 @@
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
     }
+
+    // Re-apply filters
+    // applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -296,6 +295,20 @@
       }
     }
   }
+
+  const applyFilters = () => {
+    if (stage) {
+      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+
+      images.forEach((image) => {
+        if (image.width() === 0 || image.height() === 0) return;
+
+        image.cache();
+        image.brightness(brightness);
+        image.contrast(contrast);
+      });
+    }
+  };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
@@ -1012,7 +1025,12 @@
       >
         {#each images as image}
           <KonvaImage
-            config={{ image, id: `image-${viewId}`, zIndex: 1 }}
+            config={{
+              image,
+              id: `image-${viewId}`,
+              zIndex: 1,
+              filters: [Konva.Filters.Brighten, Konva.Filters.Contrast],
+            }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
             on:pointerup={() => handlePointerUpOnImage(viewId)}
             on:dblclick={() => handleDoubleClickOnImage(viewId)}

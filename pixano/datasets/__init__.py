@@ -12,7 +12,8 @@
 # http://www.cecill.info
 
 from .dataset import Dataset
-from .dataset_info import DatasetInfo
+from .dataset_library import DatasetLibrary
+from .dataset_explorer import DatasetExplorer
 from .dataset_schema import DatasetItem, DatasetSchema
 from .dataset_stat import DatasetStat
 from .dataset_table import DatasetTable
@@ -20,8 +21,8 @@ from .dataset_table import DatasetTable
 
 __all__ = [
     "Dataset",
-    "DatasetItem",
-    "DatasetInfo",
+    "DatasetLibrary",
+    "DatasetExplorer",
     "DatasetItem",
     "DatasetSchema",
     "DatasetStat",

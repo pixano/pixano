@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   /**
    * @copyright CEA
    * @author CEA
@@ -15,18 +16,28 @@
    */
 
   import { getImageIndexFromMouseMove } from "../../lib/api/videoApi";
-  import { lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let updateView: (imageIndex: number) => void;
   export let intervalId: number;
   export let videoSpeed: number;
-  export let currentImageIndex: number;
   export let cursorElement: HTMLButtonElement;
   export let zoomLevel: number[];
+
+  let timeTrackElement: HTMLElement;
 
   let imageFilesLength = $lastFrameIndex + 1;
   const videoTotalLengthInMs = imageFilesLength * videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];
+  let timeTrackDensity = 1;
+
+  const changeSelectedTool = () => {
+    if ($selectedTool.name !== panTool.name) {
+      selectedTool.set(panTool);
+    }
+  };
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
@@ -38,8 +49,9 @@
 
     window.addEventListener("mousemove", (event) => {
       if (moving) {
-        currentImageIndex = getImageIndexFromMouseMove(event, node, imageFilesLength);
-        updateView(currentImageIndex);
+        currentFrameIndex.set(getImageIndexFromMouseMove(event, node, imageFilesLength));
+        updateView($currentFrameIndex);
+        changeSelectedTool();
       }
     });
 
@@ -48,12 +60,41 @@
     });
   };
 
+  const updateTimeTrack = () => {
+    if (!timeTrackElement) return;
+    const boundRect = timeTrackElement.getBoundingClientRect();
+    const width = boundRect.width;
+    timeTrackDensity = videoTotalLengthInMs / width;
+  };
+
+  onMount(() => {
+    updateTimeTrack();
+  });
+
   const onPlayerClick = (event: MouseEvent | KeyboardEvent) => {
     let targetElement = event.target as HTMLElement;
     if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
     clearInterval(intervalId);
-    currentImageIndex = Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength);
-    updateView(currentImageIndex);
+    currentFrameIndex.set(
+      Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
+    );
+    updateView($currentFrameIndex);
+    changeSelectedTool();
+  };
+
+  const shouldDisplayTime = (ms: number, density: number) => {
+    if (ms % 10 !== 0) return false;
+    if (50 < density && ms % 50 === 0) return true;
+    if (25 < density && density < 50 && ms % 20 === 0) return true;
+    if (density < 25) return true;
+    return false;
+  };
+
+  const shouldDisplayMarker = (ms: number, density: number) => {
+    if (density > 200) return false;
+    if (density > 25 && ms % 10 === 0) return true;
+    if (density < 25) return true;
+    return false;
   };
 </script>
 
@@ -64,13 +105,14 @@
   tabindex="0"
   on:click={onPlayerClick}
   on:keydown={onPlayerClick}
-  aria-valuenow={currentImageIndex}
+  aria-valuenow={$currentFrameIndex}
+  bind:this={timeTrackElement}
 >
   <span class="bg-slate-200 w-full h-[1px] absolute top-2/3" />
   <button
     use:dragMe
     class="h-8 w-1 absolute bottom-1/3 flex flex-col translate-x-[-4px]"
-    style={`left: ${((currentImageIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
+    style={`left: ${(($currentFrameIndex * videoSpeed) / videoTotalLengthInMs) * 100}%`}
     bind:this={cursorElement}
   >
     <span class="block h-[60%] bg-primary w-2 rounded-t" />
@@ -82,7 +124,7 @@
     <span class="w-[1px] bg-primary h-5 absolute top-full ml-1" />
   </button>
   {#each timeScaleInMs as ms}
-    {#if ms % 10 === 0}
+    {#if shouldDisplayTime(ms, timeTrackDensity)}
       <span
         class="absolute text-slate-300 w-[1px] h-1 bg-slate-500 bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}
@@ -93,7 +135,7 @@
           style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}>{ms / 10}s</span
         >
       {/if}
-    {:else}
+    {:else if shouldDisplayMarker(ms, timeTrackDensity)}
       <span
         class="absolute text-slate-300 w-[1px] h-1 bg-slate-300 bottom-1/3 pointer-events-none"
         style={`left: ${((ms * 100) / videoTotalLengthInMs) * 100}%`}

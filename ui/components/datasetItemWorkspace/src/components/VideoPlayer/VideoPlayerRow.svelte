@@ -22,7 +22,7 @@
 
 <div class={cn("flex", className)}>
   <div
-    class={cn("grow w-1/3 max-w-[25%] sticky top-0 left-0 bg-white border-r border-slate-200 z-40")}
+    class={cn("grow w-1/3 max-w-[24%] sticky top-0 left-0 bg-white border-r border-slate-200 z-40")}
   >
     <slot name="name" />
   </div>

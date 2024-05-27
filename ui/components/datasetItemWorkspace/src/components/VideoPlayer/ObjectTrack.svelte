@@ -17,15 +17,18 @@
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
   import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { itemBoxBeingEdited, lastFrameIndex } from "../../lib/stores/videoViewerStores";
+  import {
+    lastFrameIndex,
+    currentFrameIndex,
+    objectIdBeingEdited,
+  } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
 
   export let zoomLevel: number[];
-  export let currentImageIndex: number;
   export let object: VideoObject;
-  export let colorScale: (id: string) => string;
   export let onTimeTrackClick: (imageIndex: number) => void;
+  export let updateView: (frameIndex: number) => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
@@ -49,30 +52,23 @@
     onTimeTrackClick(rightClickFrameIndex);
   };
 
-  const isKeyBoxBeingEdited = (box: VideoItemBBox) =>
-    $itemBoxBeingEdited?.objectId === object.id &&
-    box.frameIndex === $itemBoxBeingEdited?.frameIndex;
-
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
-    const isBeingEdited = isKeyBoxBeingEdited(box);
-    itemBoxBeingEdited.set(isBeingEdited ? null : { ...box, objectId: object.id });
-    onTimeTrackClick(box.frameIndex > $lastFrameIndex ? $lastFrameIndex : box.frameIndex);
+    onTimeTrackClick(box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index);
+    objectIdBeingEdited.set(object.id);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.highlighted = isBeingEdited ? "all" : obj.highlighted;
         obj.displayControl = {
           ...obj.displayControl,
-          editing: !isBeingEdited && obj.id === object.id,
+          editing: obj.id === object.id,
         };
-
         return obj;
       }),
     );
   };
 
   const onAddKeyBoxClick = () => {
-    const box = { ...object.displayedBox, frameIndex: rightClickFrameIndex };
+    const box = { ...object.displayedBox, frame_index: rightClickFrameIndex, is_key: true };
     itemObjects.update((objects) =>
       addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
     );
@@ -104,7 +100,7 @@
 
   const findNeighborKeyBoxes = (
     tracklet: Tracklet,
-    frameIndex: VideoItemBBox["frameIndex"],
+    frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
 </script>
 
@@ -115,7 +111,7 @@
 >
   <span
     class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
-    style={`left: ${(currentImageIndex / ($lastFrameIndex + 1)) * 100}%`}
+    style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
   />
   <ContextMenu.Root>
     <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
@@ -129,13 +125,13 @@
     <ObjectTracklet
       {tracklet}
       {object}
-      color={colorScale(object.id)}
       {onAddKeyBoxClick}
       {onContextMenu}
       {onEditKeyBoxClick}
       onSplitTrackletClick={() => onSplitTrackletClick(i)}
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
       {findNeighborKeyBoxes}
+      {updateView}
     />
   {/each}
 </div>

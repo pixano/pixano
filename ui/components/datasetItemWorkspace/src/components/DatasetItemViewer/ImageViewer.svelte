@@ -23,12 +23,17 @@
     itemBboxes,
     itemMasks,
     selectedTool,
+    itemObjects,
+    preAnnotationIsActive,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { updateExistingObject } from "../../lib/api/objectsApi";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let colorRange: string[];
+  export let brightness: number;
+  export let contrast: number;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -46,6 +51,12 @@
     }
   }
 
+  $: {
+    if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
+      itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+    }
+  }
+
   $: selectedTool.set($selectedTool);
 </script>
 
@@ -53,10 +64,12 @@
   <Canvas2D
     {imagesPerView}
     selectedItemId={selectedItem.id}
-    {colorRange}
+    colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
+    {brightness}
+    {contrast}
     bind:selectedTool={$selectedTool}
     bind:currentAnn
     bind:newShape={$newShape}

@@ -23,9 +23,9 @@ class BBox3D(pydantic.BaseModel):
     Attributes:
         position (list[float]): List of 3d position coordinates (TODO: give format?)
         size (list[float]): List of 3d box size (TODO: give meaning of each elem)
-        heading (float): orientation (TODO: more explanations?)
+        heading (list[float]): orientation (TODO: more explanations?)
     """
 
     position: list[float]
     size: list[float]
-    heading: float
+    heading: float  # TODO : use list[float] instead (need to adapt VDP dataset)
