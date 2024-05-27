@@ -35,32 +35,43 @@
     currentFrameIndex.set(index);
     updateView($currentFrameIndex);
   };
+
+  itemObjects.subscribe((value) => {
+    const highlightedObject = value.find((item) => item.highlighted === "self");
+    if (!highlightedObject) return;
+    const element = document.querySelector(`#video-object-${highlightedObject.id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
 </script>
 
 {#if $videoControls.isLoaded}
   <div class="h-full bg-white overflow-x-auto relative flex flex-col">
     <div class="sticky top-0 bg-white z-20">
-      <VideoPlayerRow class="bg-white">
+      <VideoPlayerRow class="bg-white ">
         <TimeTrack slot="timeTrack" {updateView} />
       </VideoPlayerRow>
     </div>
-    <div class="flex flex-col max-h-[200px] grow z-10 mb-12">
-      {#each Object.values($itemObjects) as object}
-        {#if object.datasetItemType === "video"}
-          <VideoPlayerRow>
-            <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView}>
-              <Thumbnail
-                {imageDimension}
-                coords={object.track[0].keyBoxes[0].coords}
-                imageUrl={`/${imagesFilesUrl[object.track[0].start]}`}
-              />
-            </ObjectTrack>
-          </VideoPlayerRow>
-        {/if}
-      {/each}
+    <div class="flex flex-col grow z-10">
+      <div class="grow">
+        {#each Object.values($itemObjects) as object}
+          {#if object.datasetItemType === "video"}
+            <VideoPlayerRow>
+              <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView}>
+                <Thumbnail
+                  {imageDimension}
+                  coords={object.track[0].keyBoxes[0].coords}
+                  imageUrl={`/${imagesFilesUrl[object.track[0].start]}`}
+                />
+              </ObjectTrack>
+            </VideoPlayerRow>
+          {/if}
+        {/each}
+      </div>
+      <div class="max-w-[200px] p-4 sticky bottom-0 left-0 z-20 bg-white shadow">
+        <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={$lastFrameIndex * 3} />
+      </div>
     </div>
-  </div>
-  <div class="max-w-[200px] p-4 sticky bottom-0 left-0 z-20 bg-white shadow">
-    <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={$lastFrameIndex * 3} />
   </div>
 {/if}

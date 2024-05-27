@@ -46,10 +46,6 @@
 
   const onContextMenu = (event: MouseEvent) => {
     itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
-    // const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    // const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
-    // rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
-    // onTimeTrackClick(rightClickFrameIndex);
     moveCursorToPosition(event.clientX);
     selectedTool.set(panTool);
   };
@@ -116,6 +112,7 @@
 
 <div
   class="flex gap-5 relative h-12 my-auto z-20"
+  id={`video-object-${object.id}`}
   style={`width: ${$videoControls.zoomLevel[0]}%`}
   bind:this={objectTimeTrack}
   on:mouseenter={() => (showThumbnail = true)}
