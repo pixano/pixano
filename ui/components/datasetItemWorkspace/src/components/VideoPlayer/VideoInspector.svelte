@@ -28,8 +28,8 @@
   import { SliderRoot } from "@pixano/core";
 
   export let updateView: (frameIndex: number) => void;
-  export let imageDimension: { width: number; height: number };
-  export let imagesFilesUrl: Array<string>;
+  export let imagesDimensions: Record<string, { width: number; height: number }>;
+  export let imagesFilesUrls: Record<string, string[]>;
 
   const onTimeTrackClick = (index: number) => {
     currentFrameIndex.set(index);
@@ -60,9 +60,9 @@
             <VideoPlayerRow>
               <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView}>
                 <Thumbnail
-                  {imageDimension}
+                  imageDimension={imagesDimensions[object.view_id]}
                   coords={object.track[0].keyBoxes[0].coords}
-                  imageUrl={`/${imagesFilesUrl[object.track[0].start]}`}
+                  imageUrl={`/${imagesFilesUrls[object.view_id][object.track[0].start]}`}
                 />
               </ObjectTrack>
             </VideoPlayerRow>

@@ -94,7 +94,6 @@
 
   $: {
     if ($videoControls.zoomLevel[0]) {
-      console.log({ zoomLevel: $videoControls.zoomLevel[0] });
       updateTimeTrack();
     }
   }
