@@ -45,34 +45,59 @@
   export let brightness: number;
   export let contrast: number;
 
-  let imageDimension = {
-    width: selectedItem.views.image[0].features.width.value as number,
-    height: selectedItem.views.image[0].features.height.value as number,
-  };
+  const imagesDimensions = Object.entries(selectedItem.views).reduce(
+    (acc, [key, value]) => {
+      acc[key] = {
+        width: value[0].features.width.value as number,
+        height: value[0].features.height.value as number,
+      };
+      return acc;
+    },
+    {} as Record<string, { width: number; height: number }>,
+  );
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
-  let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
+
+  let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
+    (acc, [key, value]) => {
+      acc[key] = value.map((view) => view.uri);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
 
   let isLoaded = false;
 
   onMount(() => {
-    const image = new Image();
-    image.src = `/${imagesFilesUrl[0]}`;
+    Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
+      const image = new Image();
+      image.src = `/${urls[0]}`;
+      imagesPerView = {
+        ...imagesPerView,
+        [key]: [image],
+      };
+    });
 
-    imagesPerView = {
-      ...imagesPerView,
-      image: [image],
-    };
     isLoaded = true;
-    lastFrameIndex.set(imagesFilesUrl.length - 1);
+    const longerView = Object.values(imagesFilesUrls).reduce(
+      (acc, urls) => (urls.length > acc ? urls.length : acc),
+      0,
+    );
+    lastFrameIndex.set(longerView - 1);
   });
 
   const updateView = (imageIndex: number) => {
-    const image = new Image();
-    const src = `/${imagesFilesUrl[imageIndex]}`;
-    if (!src) return;
-    image.src = src;
-    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-2);
+    Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
+      const image = new Image();
+      const src = `/${urls[imageIndex]}`;
+      if (!src) return;
+      image.src = src;
+      imagesPerView = {
+        ...imagesPerView,
+        [key]: [...(imagesPerView[key] || []), image].slice(-2),
+      };
+    });
+
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
@@ -134,7 +159,7 @@
       </Canvas2D>
     </div>
     <div class="h-full grow max-h-[25%] overflow-hidden">
-      <VideoInspector {updateView} {imagesFilesUrl} {imageDimension} />
+      <VideoInspector {updateView} {imagesFilesUrls} {imagesDimensions} />
     </div>
   {/if}
 </section>
