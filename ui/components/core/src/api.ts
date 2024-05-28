@@ -20,6 +20,7 @@ import type {
   DatasetItem,
   ExplorerData,
   VideoObject,
+  ObjectThumbnail,
 } from "./lib/types/datasetTypes";
 
 // Exports
@@ -158,6 +159,26 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
             return tracklet;
           });
           obj.displayedBox = undefined;
+          obj.thumbnails =
+            item?.type === "video"
+              ? Object.entries(item.views).reduce(
+                  (acc, [viewId, views]) => {
+                    if (obj.datasetItemType === "video") {
+                      acc[viewId] = {
+                        uri: views[0].uri,
+                        baseImageDimensions: {
+                          width: views[0].features.width.value as number,
+                          height: views[0].features.height.value as number,
+                        },
+                        frameIndex: 0,
+                        coords: obj.track[0].keyBoxes[0].coords,
+                      };
+                    }
+                    return acc;
+                  },
+                  {} as Record<string, ObjectThumbnail>,
+                )
+              : undefined;
           return obj;
         });
         item.objects = objects;
