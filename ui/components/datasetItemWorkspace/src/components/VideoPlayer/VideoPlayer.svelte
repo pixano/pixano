@@ -24,13 +24,13 @@
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
   import { lastFrameIndex, currentFrameIndex } from "../../lib/stores/videoViewerStores";
+  import { derived } from "svelte/store";
 
   export let updateView: (frameIndex: number) => void;
 
   let intervalId: number;
   let videoSpeed = 100;
   let isLoaded = false;
-  let currentTime: string;
   let cursorElement: HTMLButtonElement;
   let zoomLevel: number[] = [100];
 
@@ -54,11 +54,13 @@
     intervalId = Number(interval);
   };
 
-  $: currentTime = getCurrentImageTime($currentFrameIndex, videoSpeed);
+  const currentTime = derived([currentFrameIndex], ([$currentFrameIndex]) =>
+    getCurrentImageTime($currentFrameIndex, videoSpeed),
+  );
 
   const onTimeTrackClick = (index: number) => {
     currentFrameIndex.set(index);
-    updateView($currentFrameIndex);
+    updateView(index);
   };
 
   const onPlayClick = () => {
@@ -79,9 +81,7 @@
         slot="name"
         class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200"
       >
-        <p>
-          {currentTime}
-        </p>
+        <p>{$currentTime}</p>
         <SliderRoot bind:value={zoomLevel} min={100} max={800} />
         <button on:click={onPlayClick} class="text-primary">
           {#if intervalId}

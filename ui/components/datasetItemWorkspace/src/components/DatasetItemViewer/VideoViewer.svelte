@@ -48,27 +48,27 @@
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
   let imagesFilesUrl: string[] = selectedItem.views.image?.map((view) => view.uri) || [];
-
   let isLoaded = false;
 
   onMount(() => {
-    const image = new Image();
-    image.src = `/${imagesFilesUrl[0]}`;
-
-    imagesPerView = {
-      ...imagesPerView,
-      image: [image],
-    };
-    isLoaded = true;
+    loadInitialImage();
     lastFrameIndex.set(imagesFilesUrl.length - 1);
   });
 
-  const updateView = (imageIndex: number) => {
+  const loadInitialImage = () => {
     const image = new Image();
-    const src = `/${imagesFilesUrl[imageIndex]}`;
-    if (!src) return;
-    image.src = src;
-    imagesPerView.image = [...(imagesPerView.image || []), image].slice(-1);
+    image.src = `/${imagesFilesUrl[0]}`;
+    imagesPerView = { image: [image] };
+    isLoaded = true;
+  };
+
+  const updateView = (imageIndex: number) => {
+    if (!imagesFilesUrl[imageIndex]) return;
+
+    const image = new Image();
+    image.src = `/${imagesFilesUrl[imageIndex]}`;
+    imagesPerView.image = [image];
+
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
@@ -81,7 +81,7 @@
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         displayedBox.hidden = !newCoords;
         return { ...object, displayedBox };
-      }),
+      })
     );
 
     currentFrame = imageIndex;
@@ -91,7 +91,7 @@
     const currentFrame = $currentFrameIndex;
     if (shape.type === "rectangle") {
       itemObjects.update((objects) =>
-        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited)
       );
       newShape.set({ status: "none" });
     } else {
@@ -108,8 +108,6 @@
       updateOrCreateBox(shape);
     }
   }
-
-  $: selectedTool.set($selectedTool);
 </script>
 
 <section class="pl-4 h-full w-full flex flex-col">
