@@ -61,4 +61,4 @@ app.display()
 
 ## Using the Pixano app
 
-Please refer to our [user guide](https://pixano.github.io/user/app/) on our documentation website for more information on how to use it.
+Please refer to our [user guide](https://pixano.github.io) on our documentation website for more information on how to use it.
