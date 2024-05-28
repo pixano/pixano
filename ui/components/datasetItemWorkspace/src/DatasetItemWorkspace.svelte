@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import type { DatasetItem, ItemObject, FeaturesValues } from "@pixano/core";
+  import type { DatasetItem, FeaturesValues } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -44,17 +44,15 @@
 
   let embeddings: Embeddings = {};
 
-  $: itemObjects.update((old) => {
-    return Object.values(selectedItem.objects || {})
-      .flat()
-      .map((object) => {
-        const oldObject = old.find((o) => o.id === object.id);
-        if (oldObject) {
-          return { ...oldObject, ...object };
-        }
-        return object;
-      });
-  });
+  $: itemObjects.update((oldObjects) =>
+    selectedItem.objects.map((object) => {
+      const oldObject = oldObjects.find((o) => o.id === object.id);
+      if (oldObject) {
+        return { ...oldObject, ...object };
+      }
+      return object;
+    }),
+  );
 
   $: itemMetas.set({
     mainFeatures: selectedItem.features,
@@ -78,15 +76,6 @@
     isSaving = true;
     let savedItem = { ...selectedItem };
 
-    itemObjects.subscribe((value) => {
-      savedItem.objects = value.reduce(
-        (acc, obj) => {
-          acc[obj.id] = obj;
-          return acc;
-        },
-        {} as Record<string, ItemObject>,
-      );
-    });
     itemMetas.subscribe((value) => {
       savedItem.features = value.mainFeatures;
     });
