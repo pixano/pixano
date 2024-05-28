@@ -18,7 +18,13 @@
   import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyBox from "./TrackletKeyBox.svelte";
-  import { colorScale } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    colorScale,
+    itemObjects,
+    selectedTool,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { highlightCurrentObject } from "../../lib/api/objectsApi";
+  import { panTool } from "../../lib/settings/selectionTools";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -29,6 +35,7 @@
   export let onDeleteTrackletClick: () => void;
   export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let updateView: (frameIndex: number) => void;
+  export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
@@ -44,6 +51,7 @@
   $: left = getLeft(tracklet);
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
+  $: color = $colorScale[1](object.id);
 
   const updateTrackletWidth = (
     newFrameIndex: VideoItemBBox["frame_index"],
@@ -63,7 +71,25 @@
     currentFrameIndex.set(newFrameIndex);
   };
 
-  $: color = $colorScale[1](object.id);
+  const onClick = (clientX: number) => {
+    moveCursorToPosition(clientX);
+    selectedTool.set(panTool);
+    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
+  };
+
+  const onDoubleClick = () => {
+    selectedTool.set(panTool);
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.displayControl = {
+          ...obj.displayControl,
+          editing: obj.id === object.id,
+        };
+        return obj;
+      }),
+    );
+  };
 </script>
 
 <ContextMenu.Root>
@@ -78,6 +104,8 @@
       on:contextmenu|preventDefault={(e) => onContextMenu(e)}
       class="h-full w-full"
       bind:this={trackletElement}
+      on:click={(e) => onClick(e.clientX)}
+      on:dblclick={onDoubleClick}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>

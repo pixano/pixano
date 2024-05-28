@@ -16,16 +16,18 @@
 
   import { ContextMenu } from "@pixano/core";
   import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
     objectIdBeingEdited,
+    videoControls,
   } from "../../lib/stores/videoViewerStores";
   import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
+  import { panTool } from "../../lib/settings/selectionTools";
+  import { highlightCurrentObject } from "../../lib/api/objectsApi";
 
-  export let zoomLevel: number[];
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let updateView: (frameIndex: number) => void;
@@ -35,21 +37,17 @@
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 
-  const onContextMenu = (event: MouseEvent) => {
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.id === object.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: false,
-        };
-        return obj;
-      }),
-    );
+  const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    const rightClickFrame = (event.clientX - timeTrackPosition.left) / timeTrackPosition.width;
+    const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
     rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
     onTimeTrackClick(rightClickFrameIndex);
+  };
+
+  const onContextMenu = (event: MouseEvent) => {
+    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+    moveCursorToPosition(event.clientX);
+    selectedTool.set(panTool);
   };
 
   const onEditKeyBoxClick = (box: VideoItemBBox) => {
@@ -102,13 +100,31 @@
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
+
+  let showThumbnail = false;
+  let thumbnailPosition = 0;
+
+  const changeThumbnailPosition = (mouseClientX: number) => {
+    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
+    thumbnailPosition = mouseClientX - timeTrackPosition.x + 20;
+  };
 </script>
 
 <div
-  class="flex gap-5 relative h-full my-auto"
-  style={`width: ${zoomLevel[0]}%`}
+  class="flex gap-5 relative h-12 my-auto z-20"
+  id={`video-object-${object.id}`}
+  style={`width: ${$videoControls.zoomLevel[0]}%`}
   bind:this={objectTimeTrack}
+  on:mouseenter={() => (showThumbnail = true)}
+  on:mouseleave={() => (showThumbnail = false)}
+  on:mousemove={(e) => changeThumbnailPosition(e.clientX)}
+  role="complementary"
 >
+  {#if showThumbnail}
+    <div class="absolute top-[30%] z-40" style={`left: ${thumbnailPosition}px`}>
+      <slot />
+    </div>
+  {/if}
   <span
     class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
     style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
@@ -132,6 +148,7 @@
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
       {findNeighborKeyBoxes}
       {updateView}
+      {moveCursorToPosition}
     />
   {/each}
 </div>
