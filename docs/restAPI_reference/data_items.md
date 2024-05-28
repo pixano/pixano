@@ -65,6 +65,17 @@ type videoDatasetItemPayload = {
           ],
         },
       ],
+      thumbnails: {
+        [viewId]: {
+          uri: string;
+          coords: [x, y, width, height];
+          imageDimensions: {
+            width: number;
+            height: number
+          }
+
+        }
+      }
     },
   },
 ```
