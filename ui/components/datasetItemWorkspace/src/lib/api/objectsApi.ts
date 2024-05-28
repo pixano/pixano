@@ -36,6 +36,7 @@ import {
   HIGHLIGHTED_MASK_STROKE_FACTOR,
 } from "../constants";
 import type {
+  ItemsMeta,
   ObjectProperties,
   ObjectsSortedByModelType,
 } from "../types/datasetItemWorkspaceTypes";
@@ -283,6 +284,7 @@ export const defineCreatedObject = (
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   currentFrameIndex: number,
+  views: ItemsMeta["views"],
 ) => {
   let newObject: ItemObject | null = null;
   const baseObject = {
@@ -326,6 +328,17 @@ export const defineCreatedObject = (
           },
         ],
         displayedBox: { ...bbox, frame_index: 0 },
+        thumbnails: {
+          [shape.viewId]: {
+            uri: (views[shape.viewId] as ItemView[])[0].uri,
+            coords,
+            baseImageDimensions: {
+              width: shape.imageWidth,
+              height: shape.imageHeight,
+            },
+            frameIndex: currentFrameIndex,
+          },
+        },
       };
     } else {
       newObject = {

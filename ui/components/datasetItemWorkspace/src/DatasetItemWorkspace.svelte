@@ -30,8 +30,7 @@
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
 
-  //export let currentDataset: DatasetInfo;
-  export let featureValues: FeaturesValues; // <-- new (?) remplace currentDatset.features_values
+  export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
