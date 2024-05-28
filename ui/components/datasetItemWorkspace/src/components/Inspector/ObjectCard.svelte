@@ -16,6 +16,7 @@
   import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
+  import { Thumbnail } from "@pixano/canvas2d";
   import type { DisplayControl, ItemObject } from "@pixano/core";
 
   import {
@@ -49,6 +50,12 @@
     itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
 
   $: color = $colorScale[1](itemObject.id);
+
+  $: {
+    if (itemObject.highlighted === "self") {
+      open = true;
+    }
+  }
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
@@ -188,6 +195,16 @@
             </div>
           {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
+          {#if itemObject.thumbnails}
+            {#each Object.values(itemObject.thumbnails) as thumbnail}
+              <Thumbnail
+                imageDimension={thumbnail.baseImageDimensions}
+                coords={thumbnail.coords}
+                imageUrl={`/${thumbnail.uri}`}
+                minSize={150}
+              />
+            {/each}
+          {/if}
         </div>
       </div>
     </div>
