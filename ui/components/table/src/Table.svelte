@@ -68,7 +68,7 @@
     Object.values(items[0].views).forEach(({ id }) => {
       itemColumns.push(
         table.column({
-          header: id,
+          header: id as string,
           cell: ImgCell,
           accessor: (item) => JSON.stringify(item.views[id]),
         }),
