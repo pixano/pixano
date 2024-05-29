@@ -20,7 +20,7 @@
 
   import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
   import { Table } from "@pixano/table";
-  import type { DatasetInfo, ItemFeature, ItemView } from "@pixano/core/src";
+  import type { DatasetInfo } from "@pixano/core/src";
 
   import {
     svg_clear,
@@ -140,25 +140,6 @@
       query,
     }));
   }
-
-  // HACK TO CONVERT PREVIOUS TABLE INPUT TO NEW FORMAT
-  // WILL NEED TO BE CHANGED/REMOVED ONCE THE NEW FORMAT IS SENT
-  let tableItems: Array<Array<ItemFeature>> = [];
-  selectedDataset.page?.items.forEach((item) => {
-    let tableItem: Array<ItemFeature> = [];
-    tableItem.push({ name: "id", dtype: "int", value: item.id });
-    tableItem.push({ name: "split", dtype: "str", value: item.split });
-
-    Object.values(item.views).forEach((view: ItemView) => {
-      tableItem.push({ name: view.id, dtype: "image", value: view.thumbnail });
-    });
-
-    Object.values(item.features).forEach((feature) => {
-      tableItem.push({ name: feature.name, dtype: feature.dtype, value: feature.value });
-    });
-
-    tableItems.push(tableItem);
-  });
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
@@ -219,7 +200,10 @@
           <Loader2Icon class="animate-spin" />
         </div>
       {:else if !selectedDataset.isErrored}
-        <Table items={tableItems} on:selectItem={(event) => handleSelectItem(event.detail)} />
+        <Table
+          items={selectedDataset.page.items}
+          on:selectItem={(event) => handleSelectItem(event.detail)}
+        />
       {:else}
         <div
           class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"
