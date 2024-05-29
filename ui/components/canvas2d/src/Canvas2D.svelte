@@ -49,7 +49,6 @@
   import CreateRectangle from "./components/CreateRectangle.svelte";
 
   // Exports
-
   export let selectedItemId: DatasetItem["id"];
   export let masks: Mask[];
   export let bboxes: BBox[];
@@ -59,8 +58,15 @@
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
+
+  // Image settings
   export let brightness: number;
   export let contrast: number;
+
+  let previousImageSettings = {
+    brightness: 0,
+    contrast: 0,
+  };
 
   let isReady = false;
 
@@ -183,7 +189,11 @@
       if (viewLayer) viewLayer.add(transformer);
     });
 
-    applyFilters();
+    if (
+      previousImageSettings.brightness != brightness ||
+      previousImageSettings.contrast != contrast
+    )
+      applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -211,6 +221,8 @@
         // Refresh view (display masks/bboxes) if needed
         masks = [...masks];
         bboxes = [...bboxes];
+
+        cacheImage();
       };
     });
 
@@ -321,18 +333,28 @@
     }
   }
 
+  const cacheImage = () => {
+    if (!stage) return;
+
+    let image = stage.findOne((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+
+    if (!image || image.width() === 0 || image.height() === 0) return;
+
+    image.cache();
+  };
+
   const applyFilters = () => {
     if (!stage) return;
 
-    let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+    let image = stage.findOne((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-    images.forEach((image) => {
-      if (image.width() === 0 || image.height() === 0) return;
+    if (!image) return;
 
-      image.cache();
-      image.brightness(brightness);
-      image.contrast(contrast);
-    });
+    image.brightness(brightness);
+    image.contrast(contrast);
+
+    previousImageSettings.brightness = brightness;
+    previousImageSettings.contrast = contrast;
   };
 
   function findViewId(shape: Konva.Shape): string {
