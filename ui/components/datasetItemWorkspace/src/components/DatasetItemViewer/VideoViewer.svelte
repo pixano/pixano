@@ -45,6 +45,9 @@
   export let brightness: number;
   export let contrast: number;
 
+  let height = 250;
+  let expanding = false;
+
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
   let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
@@ -126,9 +129,29 @@
   }
 
   $: selectedTool.set($selectedTool);
+
+  const startExpand = () => {
+    expanding = true;
+  };
+
+  const stopExpand = () => {
+    expanding = false;
+  };
+
+  const expand = (e: MouseEvent) => {
+    if (expanding) {
+      height = document.body.scrollHeight - e.pageY;
+    }
+  };
 </script>
 
-<section class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]">
+<section
+  class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]"
+  on:mouseup={stopExpand}
+  on:mousemove={expand}
+  role="tab"
+  tabindex="0"
+>
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
@@ -143,11 +166,10 @@
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
-      >
-        <VideoControls {updateView} />
-      </Canvas2D>
+      />
     </div>
-    <div class="h-full grow max-h-[25%] overflow-hidden">
+    <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />
+    <div class="h-full grow max-h-[25%] overflow-hidden" style={`max-height: ${height}px`}>
       <VideoInspector {updateView} />
     </div>
   {/if}
