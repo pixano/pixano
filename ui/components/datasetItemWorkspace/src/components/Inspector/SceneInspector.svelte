@@ -32,6 +32,7 @@
     g: 0,
     b: 0,
   };
+
   type ImageMeta = {
     fileName: string;
     width: number;
@@ -125,6 +126,7 @@
   {/each}
 </div>
 
+<!-- FILTERS -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
   <div class="mx-4 mb-4">
@@ -135,7 +137,7 @@
       min="-0.5"
       max="0.5"
       step="0.01"
-      class="w-full pt-2 cursor-pointer"
+      class="w-full mt-1 cursor-pointer accent-primary"
       bind:value={brightness}
     />
 
@@ -146,7 +148,7 @@
       min="-50"
       max="50"
       step="1"
-      class="w-full pt-2 cursor-pointer"
+      class="w-full mt-1 cursor-pointer accent-primary"
       bind:value={contrast}
     />
 
@@ -165,7 +167,7 @@
         min="0"
         max="255"
         step="1"
-        class="w-full pt-2 cursor-pointer accent-red-500"
+        class="w-full mt-1 cursor-pointer accent-red-500"
         bind:value={RGB.r}
       />
       <span class="w-8 text-sm text-center text-red-500">{RGB.r}</span>
@@ -178,7 +180,7 @@
         min="0"
         max="255"
         step="1"
-        class="w-full pt-2 cursor-pointer accent-green-500"
+        class="w-full mt-1 cursor-pointer accent-green-500"
         bind:value={RGB.g}
       />
       <span class="w-8 text-sm text-center text-green-500">{RGB.g}</span>
@@ -191,7 +193,7 @@
         min="0"
         max="255"
         step="1"
-        class="w-full pt-2 cursor-pointer accent-blue-500"
+        class="w-full mt-1 cursor-pointer accent-blue-500"
         bind:value={RGB.b}
       />
       <span class="w-8 text-sm text-center text-blue-500">{RGB.b}</span>
