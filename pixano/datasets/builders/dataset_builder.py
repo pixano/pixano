@@ -111,7 +111,8 @@ class DatasetBuilder(ABC):
 
         if accumulate > 0:
             for table_name, table in tables.items():
-                table.add(accumulate_tables[table_name])
+                if accumulate_tables[table_name]:
+                    table.add(accumulate_tables[table_name])
 
         # save info.json
         self._info.id = shortuuid.uuid()
