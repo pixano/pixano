@@ -45,17 +45,6 @@
   export let brightness: number;
   export let contrast: number;
 
-  const imagesDimensions = Object.entries(selectedItem.views).reduce(
-    (acc, [key, value]) => {
-      acc[key] = {
-        width: value[0].features.width.value as number,
-        height: value[0].features.height.value as number,
-      };
-      return acc;
-    },
-    {} as Record<string, { width: number; height: number }>,
-  );
-
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
   let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
@@ -79,11 +68,11 @@
     });
 
     isLoaded = true;
-    const longerView = Object.values(imagesFilesUrls).reduce(
+    const longestView = Object.values(imagesFilesUrls).reduce(
       (acc, urls) => (urls.length > acc ? urls.length : acc),
       0,
     );
-    lastFrameIndex.set(longerView - 1);
+    lastFrameIndex.set(longestView - 1);
   });
 
   const updateView = (imageIndex: number) => {
@@ -159,7 +148,7 @@
       </Canvas2D>
     </div>
     <div class="h-full grow max-h-[25%] overflow-hidden">
-      <VideoInspector {updateView} {imagesFilesUrls} {imagesDimensions} />
+      <VideoInspector {updateView} />
     </div>
   {/if}
 </section>

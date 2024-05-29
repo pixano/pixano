@@ -16,18 +16,21 @@
   import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
-  import type { DisplayControl, ItemObject } from "@pixano/core";
+  import { Thumbnail } from "@pixano/canvas2d";
+  import type { DisplayControl, ItemObject, ObjectThumbnail } from "@pixano/core";
 
   import {
     canSave,
     itemObjects,
     selectedTool,
     colorScale,
+    itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     createObjectCardId,
     toggleObjectDisplayControl,
     highlightCurrentObject,
+    defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
@@ -49,6 +52,12 @@
     itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
 
   $: color = $colorScale[1](itemObject.id);
+
+  $: {
+    if (itemObject.highlighted === "self") {
+      open = true;
+    }
+  }
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
@@ -104,6 +113,8 @@
     handleIconClick("editing", !isEditing), (open = true);
     !isEditing && selectedTool.set(panTool);
   };
+
+  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, itemObject);
 </script>
 
 <article
@@ -188,6 +199,14 @@
             </div>
           {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
+          {#if thumbnail}
+            <Thumbnail
+              imageDimension={thumbnail.baseImageDimensions}
+              coords={thumbnail.coords}
+              imageUrl={`/${thumbnail.uri}`}
+              minSize={150}
+            />
+          {/if}
         </div>
       </div>
     </div>

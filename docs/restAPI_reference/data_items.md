@@ -61,6 +61,7 @@ type videoDatasetItemPayload = {
               confidence: number;
               frame_index: number;
               is_key: boolean;
+              is_thumbnail: boolean
             },
           ],
         },

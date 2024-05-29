@@ -19,31 +19,21 @@ import {
   type Shape,
   type InteractiveImageSegmenter,
   type ItemObject,
-  type DatasetItem,
   type Mask,
   type BBox,
-  type ItemFeature,
-  type FeaturesValues,
   type SelectionTool,
   utils,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
-import type { ModelSelection } from "../types/datasetItemWorkspaceTypes";
+import type { ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
 export const itemObjects = writable<ItemObject[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
-export const itemMetas = writable<{
-  mainFeatures: DatasetItem["features"]; // features
-  objectFeatures: Record<string, ItemFeature>; // itemFeatures
-  featuresList: FeaturesValues; // featuresValues
-  views: DatasetItem["views"];
-  id: DatasetItem["id"];
-  type: DatasetItem["type"];
-}>();
+export const itemMetas = writable<ItemsMeta>();
 export const canSave = writable<boolean>(false);
 export const preAnnotationIsActive = writable<boolean>(false);
 export const modelsStore = writable<ModelSelection>({
