@@ -25,6 +25,8 @@ import type {
   ItemView,
   SaveShape,
   ItemObjectBase,
+  Tracklet,
+  VideoItemBBox,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -284,7 +286,6 @@ export const defineCreatedObject = (
   videoType: DatasetItem["type"],
   features: ItemObjectBase["features"],
   currentFrameIndex: number,
-  views: ItemsMeta["views"],
 ) => {
   let newObject: ItemObject | null = null;
   const baseObject = {
@@ -322,23 +323,12 @@ export const defineCreatedObject = (
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
             keyBoxes: [
-              { ...bbox, frame_index: currentFrameIndex, is_key: true },
+              { ...bbox, frame_index: currentFrameIndex, is_key: true, is_thumbnail: true },
               { ...bbox, frame_index: currentFrameIndex + 5, is_key: true },
             ],
           },
         ],
         displayedBox: { ...bbox, frame_index: 0 },
-        thumbnails: {
-          [shape.viewId]: {
-            uri: (views[shape.viewId] as ItemView[])[0].uri,
-            coords,
-            baseImageDimensions: {
-              width: shape.imageWidth,
-              height: shape.imageHeight,
-            },
-            frameIndex: currentFrameIndex,
-          },
-        },
       };
     } else {
       newObject = {
@@ -382,4 +372,30 @@ export const highlightCurrentObject = (
     }
     return object;
   });
+};
+
+const findThumbnailBox = (track: Tracklet[]) => {
+  const trackletWithThumbnail = track.find((tracklet) =>
+    tracklet.keyBoxes.some((box) => box.is_thumbnail),
+  );
+  const box = trackletWithThumbnail?.keyBoxes.find((box) => box.is_thumbnail);
+  return box;
+};
+
+export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
+  const box = object.datasetItemType === "video" ? findThumbnailBox(object.track) : object.bbox;
+  if (!box) return null;
+  const view =
+    metas.type === "video"
+      ? (metas.views[object.view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
+      : (metas.views[object.view_id] as ItemView);
+  const coords = box.coords;
+  return {
+    baseImageDimensions: {
+      width: view.features.width.value as number,
+      height: view.features.height.value as number,
+    },
+    coords,
+    uri: view.uri,
+  };
 };

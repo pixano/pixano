@@ -50,13 +50,7 @@
     let newObject: ItemObject | null = null;
     itemObjects.update((oldObjects) => {
       if (shape.status !== "saving") return oldObjects;
-      newObject = defineCreatedObject(
-        shape,
-        $itemMetas.type,
-        features,
-        $currentFrameIndex,
-        $itemMetas.views,
-      );
+      newObject = defineCreatedObject(shape, $itemMetas.type, features, $currentFrameIndex);
       objectIdBeingEdited.set(newObject?.id || null);
       const objectsWithoutHighlighted: ItemObject[] = oldObjects.map((object) => ({
         ...object,

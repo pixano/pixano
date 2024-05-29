@@ -17,18 +17,20 @@
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
-  import type { DisplayControl, ItemObject } from "@pixano/core";
+  import type { DisplayControl, ItemObject, ObjectThumbnail } from "@pixano/core";
 
   import {
     canSave,
     itemObjects,
     selectedTool,
     colorScale,
+    itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     createObjectCardId,
     toggleObjectDisplayControl,
     highlightCurrentObject,
+    defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
@@ -111,6 +113,8 @@
     handleIconClick("editing", !isEditing), (open = true);
     !isEditing && selectedTool.set(panTool);
   };
+
+  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, itemObject);
 </script>
 
 <article
@@ -195,15 +199,13 @@
             </div>
           {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
-          {#if itemObject.thumbnails}
-            {#each Object.values(itemObject.thumbnails) as thumbnail}
-              <Thumbnail
-                imageDimension={thumbnail.baseImageDimensions}
-                coords={thumbnail.coords}
-                imageUrl={`/${thumbnail.uri}`}
-                minSize={150}
-              />
-            {/each}
+          {#if thumbnail}
+            <Thumbnail
+              imageDimension={thumbnail.baseImageDimensions}
+              coords={thumbnail.coords}
+              imageUrl={`/${thumbnail.uri}`}
+              minSize={150}
+            />
           {/if}
         </div>
       </div>

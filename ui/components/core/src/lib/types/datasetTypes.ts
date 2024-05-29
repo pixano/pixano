@@ -150,7 +150,6 @@ export interface ObjectThumbnail {
     width: number;
     height: number;
   };
-  frameIndex: number;
   coords: Array<number>;
 }
 
@@ -163,12 +162,12 @@ export type ItemObjectBase = {
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
-  thumbnails?: Record<string, ObjectThumbnail>;
 };
 
 export type VideoItemBBox = ItemBBox & {
   frame_index: number;
   is_key?: boolean;
+  is_thumbnail?: boolean;
   hidden?: boolean;
 };
 export interface Tracklet {

@@ -61,21 +61,11 @@ type videoDatasetItemPayload = {
               confidence: number;
               frame_index: number;
               is_key: boolean;
+              is_thumbnail: boolean
             },
           ],
         },
       ],
-      thumbnails: {
-        [viewId]: {
-          uri: string;
-          coords: [x, y, width, height];
-          imageDimensions: {
-            width: number;
-            height: number
-          }
-
-        }
-      }
     },
   },
 ```
