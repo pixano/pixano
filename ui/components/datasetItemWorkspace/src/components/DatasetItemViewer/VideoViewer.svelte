@@ -33,9 +33,8 @@
     objectIdBeingEdited,
   } from "../../lib/stores/videoViewerStores";
 
-  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import VideoControls from "../VideoPlayer/VideoControls.svelte";
   import { onMount } from "svelte";
+  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
 

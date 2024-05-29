@@ -57,7 +57,7 @@
     newFrameIndex: VideoItemBBox["frame_index"],
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, draggedFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, newFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
       if (keyBox.frame_index === draggedFrameIndex) {
