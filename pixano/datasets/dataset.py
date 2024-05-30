@@ -693,7 +693,7 @@ class Dataset:
 
     def save_item(
         self,
-        item: DatasetItem  #TODO in fact it's a FrontDatasetItem
+        item  #TODO it's a FrontDatasetItem, but we don't really need the class here
     ):
         """Save dataset item features and objects
 
@@ -703,20 +703,18 @@ class Dataset:
         Args:
             item (DatasetItem): Item to save
         """
-        #print("SAVE ITEM:", item)
-        #TODO convert FrontDatasetItem to DatasetItem (??? really needed ?)
+        #TODO convert FrontDatasetItem to DatasetItem (??? really needed ? -> no, or maybe if we use CRUD API finally)
+        # we could already use read_objects fct, but here we use scanner directly, which I presume avoid some 
+        # ---things that may come handy if we need to alter table schema:
         # print(self._custom_dataset_item_class)
         # print(item)
         # print("------------------------")
         # print(self._read_items_data([item.id]))  # <-- stored item in tables
-
         # print(self.dataset_schema)
 
-        #test
-        #self.update_objects(item.objects)
-
         # Local utility function to convert objects to pyarrow format
-        def convert_to_pyarrow(table, objs):
+        # also adapt features to table format
+        def convert_objects_to_pyarrow(table, objs):
             # Convert objects to PyArrow
             # adapt features
             for obj in objs:
@@ -731,37 +729,75 @@ class Dataset:
                 schema=table.schema,
             )
 
-        #TODO items features
+        def convert_item_to_pyarrow(table, item):
+            # Convert item to PyArrow
+            pyarrow_item = {}
+
+            # ID
+            pyarrow_item["id"] = item.id
+            pyarrow_item["split"] = item.split
+
+            # Features
+            if item.features is not None:
+                for feat in item.features.values():
+                    # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
+                    pyarrow_item[feat['name']] = feat['value']
+
+            return pa.Table.from_pylist(
+                [pyarrow_item],
+                schema=table.schema,
+            )
+
+        # UPDATE items features
+        item_table = self.open_table("item")
+        item_table.delete(f"id in ('{item.id}')")
+        item_table.add(convert_item_to_pyarrow(item_table, item))
 
         # Objects
-        if 1:
-            #obj_table = ds_tables["objects"][table_name]
-            #TMP: use table "objects"
-            obj_table = self.open_table("objects")
+        new_objs_ids = []
+        update_ids = []
 
-            str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
+        # TMP: use table "objects"  # TODO : what if not "objects" ?
+        obj_table = self.open_table("objects")
+
+        str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
+        if str_obj_ids:
             str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
             scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
             existing_objs = scanner.to_table()
             update_ids = existing_objs.to_pydict()["id"]
             new_objs_ids = [obj['id'] for obj in item.objects if obj['id'] not in update_ids]
-            #TODO find to_delete objs
+            scanner = obj_table.to_lance().scanner(filter=f"id not in {str_obj_ids}")
+            delete_objs = scanner.to_table()
+            delete_ids = delete_objs.to_pydict()["id"]
+        else:
+            # no objects in item.objects, it means we may have to delete existing objs
+            delete_objs = obj_table.to_lance().scanner().to_table()
+            delete_ids = delete_objs.to_pydict()["id"]
 
-            # ADD
-            if new_objs_ids:
-                new_objs = [obj for obj in item.objects if obj.id in new_objs_ids]
-                obj_table.add(convert_to_pyarrow(obj_table, new_objs))
+        # ADD
+        if new_objs_ids:
+            new_objs = [obj for obj in item.objects if obj.id in new_objs_ids]
+            obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
 
-            # UPDATE
-            if update_ids:
-                upd_objs = [obj for obj in item.objects if obj['id'] in update_ids]
-                str_obj_ids = [f"'{id}'" for id in update_ids]
-                str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-                obj_table.delete(f"id in {str_obj_ids}")
-                obj_table.add(convert_to_pyarrow(obj_table, upd_objs))
+        # UPDATE
+        if update_ids:
+            upd_objs = [obj for obj in item.objects if obj['id'] in update_ids]
+            str_obj_ids = [f"'{id}'" for id in update_ids]
+            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+            obj_table.delete(f"id in {str_obj_ids}")
+            obj_table.add(convert_objects_to_pyarrow(obj_table, upd_objs))
 
-            # Clear change history to prevent dataset from becoming too large
-            obj_table.to_lance().cleanup_old_versions()
+        # DELETE
+        if delete_ids:
+            str_obj_ids = [f"'{id}'" for id in delete_ids]
+            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+            obj_table.delete(f"id in {str_obj_ids}")
+
+        # Clear change history to prevent dataset from becoming too large
+        obj_table.to_lance().cleanup_old_versions()
+        # TODO: ther is a lancedb utility to "reshape" table after updates, to keep it "clean"
+        # Maybe we should use it ?
 
     @staticmethod
     def find(
