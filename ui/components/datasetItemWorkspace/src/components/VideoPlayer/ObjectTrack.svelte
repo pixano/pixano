@@ -100,14 +100,6 @@
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
-
-  let showThumbnail = false;
-  let thumbnailPosition = 0;
-
-  const changeThumbnailPosition = (mouseClientX: number) => {
-    const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
-    thumbnailPosition = mouseClientX - timeTrackPosition.x + 20;
-  };
 </script>
 
 <div
@@ -115,16 +107,8 @@
   id={`video-object-${object.id}`}
   style={`width: ${$videoControls.zoomLevel[0]}%`}
   bind:this={objectTimeTrack}
-  on:mouseenter={() => (showThumbnail = true)}
-  on:mouseleave={() => (showThumbnail = false)}
-  on:mousemove={(e) => changeThumbnailPosition(e.clientX)}
   role="complementary"
 >
-  {#if showThumbnail}
-    <div class="absolute top-[30%] z-40" style={`left: ${thumbnailPosition}px`}>
-      <slot />
-    </div>
-  {/if}
   <span
     class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
     style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}

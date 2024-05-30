@@ -19,17 +19,22 @@
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
   import VideoPlayerRow from "./VideoPlayerRow.svelte";
+  import VideoControls from "./VideoControls.svelte";
+
   import {
     currentFrameIndex,
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { Thumbnail } from "@pixano/canvas2d";
   import { SliderRoot } from "@pixano/core";
+  import { onMount } from "svelte";
 
   export let updateView: (frameIndex: number) => void;
-  export let imagesDimensions: Record<string, { width: number; height: number }>;
-  export let imagesFilesUrls: Record<string, string[]>;
+
+  onMount(() => {
+    updateView($currentFrameIndex);
+    videoControls.update((old) => ({ ...old, isLoaded: true }));
+  });
 
   const onTimeTrackClick = (index: number) => {
     currentFrameIndex.set(index);
@@ -54,24 +59,22 @@
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      <div class="grow">
-        {#each Object.values($itemObjects) as object}
-          {#if object.datasetItemType === "video"}
-            <VideoPlayerRow>
-              <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView}>
-                <Thumbnail
-                  imageDimension={imagesDimensions[object.view_id]}
-                  coords={object.track[0].keyBoxes[0].coords}
-                  imageUrl={`/${imagesFilesUrls[object.view_id][object.track[0].start]}`}
-                />
-              </ObjectTrack>
-            </VideoPlayerRow>
-          {/if}
-        {/each}
-      </div>
-      <div class="max-w-[200px] p-4 sticky bottom-0 left-0 z-20 bg-white shadow">
-        <SliderRoot bind:value={$videoControls.zoomLevel} min={100} max={$lastFrameIndex * 3} />
-      </div>
+      {#each Object.values($itemObjects) as object}
+        {#if object.datasetItemType === "video"}
+          <VideoPlayerRow>
+            <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView} />
+          </VideoPlayerRow>
+        {/if}
+      {/each}
+    </div>
+    <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">
+      <VideoControls {updateView} />
+      <SliderRoot
+        class="max-w-[200px]"
+        bind:value={$videoControls.zoomLevel}
+        min={100}
+        max={$lastFrameIndex * 3}
+      />
     </div>
   </div>
 {/if}

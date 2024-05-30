@@ -96,14 +96,14 @@ interface BaseDatasetItem {
   id: string;
   datasetId: string;
   split: string;
-  objects: Record<string, ItemObject>; //remplacer par? Array<ItemObject>
+  objects: Array<ItemObject>;
   features: Record<string, ItemFeature>; //remplacer par? Array<ItemFeature>
   embeddings: Record<string, ItemEmbedding>; //remplacer par? Array<ItemEmbedding>
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
   type: "image";
-  objects: Record<string, ImageObject>;
+  objects: Array<ImageObject>;
   views: Record<string, ItemView>;
 };
 
@@ -144,13 +144,20 @@ export interface DisplayControl {
   editing?: boolean;
 }
 
+export interface ObjectThumbnail {
+  uri: string;
+  baseImageDimensions: {
+    width: number;
+    height: number;
+  };
+  coords: Array<number>;
+}
+
 export type ItemObjectBase = {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  //bbox?: ItemBBox;
-  //mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
@@ -160,6 +167,7 @@ export type ItemObjectBase = {
 export type VideoItemBBox = ItemBBox & {
   frame_index: number;
   is_key?: boolean;
+  is_thumbnail?: boolean;
   hidden?: boolean;
 };
 export interface Tracklet {

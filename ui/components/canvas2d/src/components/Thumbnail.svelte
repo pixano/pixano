@@ -20,7 +20,8 @@
   export let imageDimension: { width: number; height: number };
   export let coords: number[];
   export let imageUrl: string;
-  export let maxSize: number = 48;
+  export let maxSize: number | undefined = undefined;
+  export let minSize: number | undefined = undefined;
 
   let [x, y, width, height] = coords;
 
@@ -33,8 +34,16 @@
   let stageHeight = height * imageDimension.height;
 
   $: {
-    if (Math.max(stageWidth, stageHeight) > maxSize) {
+    if (maxSize && Math.max(stageWidth, stageHeight) > maxSize) {
       const ratio = Math.max(stageWidth, stageHeight) / maxSize;
+      stageWidth /= ratio;
+      stageHeight /= ratio;
+    }
+  }
+
+  $: {
+    if (minSize && Math.max(stageWidth, stageHeight) < minSize) {
+      const ratio = Math.max(stageWidth, stageHeight) / minSize;
       stageWidth /= ratio;
       stageHeight /= ratio;
     }
@@ -61,10 +70,10 @@
           image: img,
           id: "thumbnail-image",
           crop: {
-            x: x * imageDimension.width,
-            y: y * imageDimension.height,
-            width: width * imageDimension.width,
-            height: height * imageDimension.height,
+            x: x * imageDimension.width - (width * imageDimension.width) / 2,
+            y: y * imageDimension.height - (height * imageDimension.height) / 2,
+            width: width * imageDimension.width * 2,
+            height: height * imageDimension.height * 2,
           },
         }}
       />

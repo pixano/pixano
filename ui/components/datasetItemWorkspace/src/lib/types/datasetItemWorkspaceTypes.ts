@@ -1,7 +1,13 @@
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type { FeatureValues, ItemObject } from "@pixano/core";
+import type {
+  DatasetItem,
+  FeaturesValues,
+  FeatureValues,
+  ItemFeature,
+  ItemObject,
+} from "@pixano/core";
 
 import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";
 import type {
@@ -60,4 +66,13 @@ export type Embeddings = Record<string, ort.Tensor>;
 export type ModelSelection = {
   currentModalOpen: "selectModel" | "noModel" | "noEmbeddings" | "none";
   selectedModelName: string;
+};
+
+export type ItemsMeta = {
+  mainFeatures: DatasetItem["features"]; // feature;
+  objectFeatures: Record<string, ItemFeature>; // itemFeatures
+  featuresList: FeaturesValues;
+  views: DatasetItem["views"];
+  id: DatasetItem["id"];
+  type: DatasetItem["type"];
 };

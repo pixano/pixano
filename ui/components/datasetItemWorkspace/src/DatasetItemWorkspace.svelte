@@ -14,7 +14,7 @@
    * http://www.cecill.info
    */
 
-  import type { DatasetItem, ItemObject, FeaturesValues } from "@pixano/core";
+  import type { DatasetItem, FeaturesValues } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -30,8 +30,7 @@
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
 
-  //export let currentDataset: DatasetInfo;
-  export let featureValues: FeaturesValues; // <-- new (?) remplace currentDatset.features_values
+  export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
@@ -45,17 +44,15 @@
 
   let embeddings: Embeddings = {};
 
-  $: itemObjects.update((old) => {
-    return Object.values(selectedItem.objects || {})
-      .flat()
-      .map((object) => {
-        const oldObject = old.find((o) => o.id === object.id);
-        if (oldObject) {
-          return { ...oldObject, ...object };
-        }
-        return object;
-      });
-  });
+  $: itemObjects.update((oldObjects) =>
+    selectedItem.objects.map((object) => {
+      const oldObject = oldObjects.find((o) => o.id === object.id);
+      if (oldObject) {
+        return { ...oldObject, ...object };
+      }
+      return object;
+    }),
+  );
 
   $: itemMetas.set({
     mainFeatures: selectedItem.features,
@@ -79,15 +76,6 @@
     isSaving = true;
     let savedItem = { ...selectedItem };
 
-    itemObjects.subscribe((value) => {
-      savedItem.objects = value.reduce(
-        (acc, obj) => {
-          acc[obj.id] = obj;
-          return acc;
-        },
-        {} as Record<string, ItemObject>,
-      );
-    });
     itemMetas.subscribe((value) => {
       savedItem.features = value.mainFeatures;
     });
