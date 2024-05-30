@@ -754,7 +754,7 @@ class Dataset:
         item_table.add(convert_item_to_pyarrow(item_table, item))
 
         # Objects
-        new_objs_ids = []
+        add_ids = []
         update_ids = []
 
         # TMP: use table "objects"  # TODO : what if not "objects" ?
@@ -764,9 +764,9 @@ class Dataset:
         if str_obj_ids:
             str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
             scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
-            existing_objs = scanner.to_table()
-            update_ids = existing_objs.to_pydict()["id"]
-            new_objs_ids = [obj['id'] for obj in item.objects if obj['id'] not in update_ids]
+            update_objs = scanner.to_table()
+            update_ids = update_objs.to_pydict()["id"]
+            add_ids = [obj['id'] for obj in item.objects if obj['id'] not in update_ids]
             scanner = obj_table.to_lance().scanner(filter=f"id not in {str_obj_ids}")
             delete_objs = scanner.to_table()
             delete_ids = delete_objs.to_pydict()["id"]
@@ -775,20 +775,17 @@ class Dataset:
             delete_objs = obj_table.to_lance().scanner().to_table()
             delete_ids = delete_objs.to_pydict()["id"]
 
-        # ADD
-        if new_objs_ids:
-            new_objs = [obj for obj in item.objects if obj.id in new_objs_ids]
+        if add_ids:
+            new_objs = [obj for obj in item.objects if obj.id in add_ids]
             obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
 
-        # UPDATE
         if update_ids:
-            upd_objs = [obj for obj in item.objects if obj['id'] in update_ids]
+            update_objs = [obj for obj in item.objects if obj['id'] in update_ids]
             str_obj_ids = [f"'{id}'" for id in update_ids]
             str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
             obj_table.delete(f"id in {str_obj_ids}")
-            obj_table.add(convert_objects_to_pyarrow(obj_table, upd_objs))
+            obj_table.add(convert_objects_to_pyarrow(obj_table, update_objs))
 
-        # DELETE
         if delete_ids:
             str_obj_ids = [f"'{id}'" for id in delete_ids]
             str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
