@@ -58,12 +58,13 @@
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
+  export let isVideo: boolean = false;
 
   // Image settings
   export let brightness: number;
   export let contrast: number;
 
-  let previousImageSettings = {
+  let prevFilters = {
     brightness: 0,
     contrast: 0,
   };
@@ -189,11 +190,11 @@
       if (viewLayer) viewLayer.add(transformer);
     });
 
-    if (
-      previousImageSettings.brightness != brightness ||
-      previousImageSettings.contrast != contrast
-    )
+    if (isVideo) return; // Only apply filters to images, because of performance issues
+
+    if (prevFilters.brightness != brightness || prevFilters.contrast != contrast) {
       applyFilters();
+    }
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -222,7 +223,7 @@
         masks = [...masks];
         bboxes = [...bboxes];
 
-        cacheImage();
+        if (!isVideo) cacheImage();
       };
     });
 
@@ -336,25 +337,30 @@
   const cacheImage = () => {
     if (!stage) return;
 
-    let image = stage.findOne((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+    let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-    if (!image || image.width() === 0 || image.height() === 0) return;
+    if (!images) return;
 
-    image.cache();
+    images.forEach((image) => {
+      if (image.width() === 0 || image.height() === 0) return; 
+      image.cache();
+    });
   };
 
   const applyFilters = () => {
     if (!stage) return;
 
-    let image = stage.findOne((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+    let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-    if (!image) return;
+    if (!images) return;
 
-    image.brightness(brightness);
-    image.contrast(contrast);
+    images.forEach((image) => {
+      image.brightness(brightness);
+      image.contrast(contrast);
+    });
 
-    previousImageSettings.brightness = brightness;
-    previousImageSettings.contrast = contrast;
+    prevFilters.brightness = brightness;
+    prevFilters.contrast = contrast;
   };
 
   function findViewId(shape: Konva.Shape): string {
