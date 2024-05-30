@@ -96,7 +96,7 @@
     );
   };
 
-  const findNeighborKeyBoxes = (
+  const findNeighborBoxes = (
     tracklet: Tracklet,
     frameIndex: VideoItemBBox["frame_index"],
   ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
@@ -130,7 +130,7 @@
       {onEditKeyBoxClick}
       onSplitTrackletClick={() => onSplitTrackletClick(i)}
       onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-      {findNeighborKeyBoxes}
+      {findNeighborBoxes}
       {updateView}
       {moveCursorToPosition}
     />

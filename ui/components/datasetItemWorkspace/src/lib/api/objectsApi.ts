@@ -322,7 +322,7 @@ export const defineCreatedObject = (
           {
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
-            keyBoxes: [
+            boxes: [
               { ...bbox, frame_index: currentFrameIndex, is_key: true, is_thumbnail: true },
               { ...bbox, frame_index: currentFrameIndex + 5, is_key: true },
             ],
@@ -376,9 +376,9 @@ export const highlightCurrentObject = (
 
 const findThumbnailBox = (track: Tracklet[]) => {
   const trackletWithThumbnail = track.find((tracklet) =>
-    tracklet.keyBoxes.some((box) => box.is_thumbnail),
+    tracklet.boxes.some((box) => box.is_thumbnail),
   );
-  const box = trackletWithThumbnail?.keyBoxes.find((box) => box.is_thumbnail);
+  const box = trackletWithThumbnail?.boxes.find((b) => b.is_thumbnail);
   return box;
 };
 

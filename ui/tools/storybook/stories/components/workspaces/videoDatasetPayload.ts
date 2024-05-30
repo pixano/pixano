@@ -48,7 +48,7 @@ export const videoDatasetItemPayload = {
         {
           start: 0, // number
           end: 10, // number
-          keyBoxes: [
+          boxes: [
             {
               coords: [0, 0, 100, 100], // [number, number, number, number]
               format: "xywh",

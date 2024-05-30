@@ -23,7 +23,7 @@
 
   export let objectId: ItemObject["id"];
 
-  export let keyBox: VideoItemBBox;
+  export let box: VideoItemBBox;
   export let color: string;
   export let oneFrameInPixel: number;
   export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
@@ -37,7 +37,7 @@
   $: {
     const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
     isBoxBeingEdited =
-      keyBox.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
+      box.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
   const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
@@ -58,7 +58,7 @@
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = keyBox.frame_index;
+      startFrameIndex = box.frame_index;
       startOneFrameInPixel = oneFrameInPixel;
       selectedTool.set(panTool);
     });
@@ -68,7 +68,7 @@
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
         const newFrameIndex = startFrameIndex + raise;
-        updateTrackletWidth(Math.round(newFrameIndex), keyBox.frame_index);
+        updateTrackletWidth(Math.round(newFrameIndex), box.frame_index);
       }
     });
 
@@ -85,16 +85,16 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBoxBeingEdited },
     )}
-    style={`left: ${getKeyBoxLeftPosition(keyBox)}%; border-color: ${color}`}
+    style={`left: ${getKeyBoxLeftPosition(box)}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(keyBox)}
+    <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(box)}
       >Remove key box</ContextMenu.Item
     >
     {#if !isBoxBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(keyBox)}>Edit box</ContextMenu.Item>
+      <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(box)}>Edit box</ContextMenu.Item>
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

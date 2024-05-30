@@ -40,7 +40,9 @@
         selectedItem = item;
         if (selectedItem.type === "video") {
           selectedItem.objects.map((obj) => {
-            obj.displayedBox = obj.track[0].keyBoxes[0];
+            if (obj.datasetItemType === "video") {
+              obj.displayedBox = obj.track[0].boxes[0];
+            }
             return obj;
           });
         }
