@@ -102,7 +102,7 @@
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         displayedBox.hidden = !newCoords;
         return { ...object, displayedBox };
-      })
+      }),
     );
 
     currentFrame = imageIndex;
@@ -112,7 +112,7 @@
     const currentFrame = $currentFrameIndex;
     if (shape.type === "rectangle") {
       itemObjects.update((objects) =>
-        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited)
+        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
       newShape.set({ status: "none" });
     } else {
@@ -165,6 +165,7 @@
         {embeddings}
         {brightness}
         {contrast}
+        isVideo={true}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
