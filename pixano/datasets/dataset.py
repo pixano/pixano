@@ -18,11 +18,13 @@ import duckdb
 import lancedb
 from lancedb.pydantic import LanceModel
 from lancedb.query import LanceQueryBuilder
+import pyarrow as pa
 from pydantic import ConfigDict
 from s3path import S3Path
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_library import DatasetLibrary
+from .dataset_table import DatasetTable
 from .dataset_schema import (
     DatasetItem,
     DatasetSchema,
@@ -650,7 +652,8 @@ class Dataset:
         Returns:
             DatasetItem: Dataset item
         """
-        return self.read_embeddings([id], select)[0]
+        ##TMP no embeddings now
+        return None  # self.read_embeddings([id], select)[0]
 
     def get_embeddings(
         self,
@@ -687,6 +690,78 @@ class Dataset:
             DatasetItem: Dataset items
         """
         return self.get_embedding(idx, 1, select)[0]
+
+    def save_item(
+        self,
+        item: DatasetItem  #TODO in fact it's a FrontDatasetItem
+    ):
+        """Save dataset item features and objects
+
+        #TODO Note: for now, we don't manage alteration of table schema
+        (anyway front doesn't allow such modification right now)
+
+        Args:
+            item (DatasetItem): Item to save
+        """
+        #print("SAVE ITEM:", item)
+        #TODO convert FrontDatasetItem to DatasetItem (??? really needed ?)
+        # print(self._custom_dataset_item_class)
+        # print(item)
+        # print("------------------------")
+        # print(self._read_items_data([item.id]))  # <-- stored item in tables
+
+        # print(self.dataset_schema)
+
+        #test
+        #self.update_objects(item.objects)
+
+        # Local utility function to convert objects to pyarrow format
+        def convert_to_pyarrow(table, objs):
+            # Convert objects to PyArrow
+            # adapt features
+            for obj in objs:
+                if "features" in obj:
+                    for feat in obj['features'].values():
+                        # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
+                        obj[feat['name']] = feat['value']
+
+            return pa.Table.from_pylist(
+                # [obj.to_pyarrow() for obj in objs],
+                objs,
+                schema=table.schema,
+            )
+
+        #TODO items features
+
+        # Objects
+        if 1:
+            #obj_table = ds_tables["objects"][table_name]
+            #TMP: use table "objects"
+            obj_table = self.open_table("objects")
+
+            str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
+            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+            scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
+            existing_objs = scanner.to_table()
+            update_ids = existing_objs.to_pydict()["id"]
+            new_objs_ids = [obj['id'] for obj in item.objects if obj['id'] not in update_ids]
+            #TODO find to_delete objs
+
+            # ADD
+            if new_objs_ids:
+                new_objs = [obj for obj in item.objects if obj.id in new_objs_ids]
+                obj_table.add(convert_to_pyarrow(obj_table, new_objs))
+
+            # UPDATE
+            if update_ids:
+                upd_objs = [obj for obj in item.objects if obj['id'] in update_ids]
+                str_obj_ids = [f"'{id}'" for id in update_ids]
+                str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+                obj_table.delete(f"id in {str_obj_ids}")
+                obj_table.add(convert_to_pyarrow(obj_table, upd_objs))
+
+            # Clear change history to prevent dataset from becoming too large
+            obj_table.to_lance().cleanup_old_versions()
 
     @staticmethod
     def find(

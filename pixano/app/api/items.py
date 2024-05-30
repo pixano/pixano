@@ -34,7 +34,6 @@ class FrontDatasetItem(BaseModel):
     id: str
     datasetId: str
     type: str
-    # original_id: Optional[str] = None
     split: str
     features: Optional[dict] = None
     views: Optional[dict] = None
@@ -453,6 +452,7 @@ async def get_dataset_item(  # noqa: D417
                                         "tracklet_id",
                                         "timestamp",
                                         "frame_idx",
+                                        "is_key",
                                     ]  # TODO: define list of unwanted features
                                 },
                                 "track": [
@@ -497,17 +497,17 @@ async def get_dataset_item(  # noqa: D417
     )
 
 
-@router.post("/items/{item_id}", response_model=DatasetItem)
+@router.post("/items/{item_id}", response_model=FrontDatasetItem)
 async def post_dataset_item(  # noqa: D417
     ds_id: str,
-    item: DatasetItem,  # type: ignore
+    item: FrontDatasetItem,  # type: ignore
     settings: Annotated[Settings, Depends(get_settings)],
 ):
     """Save dataset item.
 
     Args:
         ds_id (str): Dataset ID
-        item (DatasetItem): Item to save
+        item (FrontDatasetItem): Item to save
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
