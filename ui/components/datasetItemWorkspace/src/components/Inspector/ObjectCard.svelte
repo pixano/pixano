@@ -53,12 +53,6 @@
 
   $: color = $colorScale[1](itemObject.id);
 
-  $: {
-    if (itemObject.highlighted === "self") {
-      open = true;
-    }
-  }
-
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
     value: boolean,

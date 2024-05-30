@@ -92,11 +92,11 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        const { displayedBox } = object;
+        let { displayedBox } = object;
         const newCoords = linearInterpolation(object.track, imageIndex);
         if (newCoords) {
           const [x, y, width, height] = newCoords;
-          displayedBox.coords = [x, y, width, height];
+          displayedBox = { ...displayedBox, coords: [x, y, width, height] };
         }
         displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
         displayedBox.hidden = !newCoords;
