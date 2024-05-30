@@ -5,6 +5,7 @@ import type {
   ItemView,
   Tracklet,
   VideoDatasetItem,
+  VideoItemBBox,
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail } from "../../assets/base64image";
 import fleurs from "../../../assets/fleurs.jpg";
@@ -44,6 +45,7 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
   type: "image",
   id: "fleurs.jpg",
   split: "demo",
+  datasetId: "foo",
   features: {
     label: {
       name: "label",
@@ -59,8 +61,8 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
   views: {
     image: mockImage,
   },
-  objects: {
-    EZ4s6R0E_y: {
+  objects: [
+    {
       datasetItemType: "image",
       id: "EZ4s6R0E_y",
       item_id: "fleurs.jpg",
@@ -101,7 +103,7 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
         hidden: false,
       },
     },
-    QfNTSmYHmg: {
+    {
       datasetItemType: "image",
       id: "QfNTSmYHmg",
       item_id: "fleurs.jpg",
@@ -171,7 +173,7 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
         hidden: false,
       },
     },
-    tJA83zBeSh: {
+    {
       datasetItemType: "image",
       id: "tJA83zBeSh",
       item_id: "fleurs.jpg",
@@ -238,233 +240,234 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
         hidden: false,
       },
     },
-  },
+  ],
   embeddings: {},
 };
 
 export const mockedCurrentDataset: DatasetInfo = {
+  size: "25",
   id: "QSctnfM7Ek68M7w6tyNhHf",
   name: "demo_agriculture",
   description: "LIST Days - agriculture",
-  estimated_size: "681.31 KB",
+
   num_elements: 25,
-  splits: ["demo"],
-  tables: {
-    main: [
-      {
-        name: "db",
-        fields: {
-          id: "str",
-          views: "[str]",
-          split: "str",
-          label: "str",
-          category_name: "str",
-        },
-        source: "Pre-annotation",
-        type: undefined,
-      },
-    ],
-    media: [
-      {
-        name: "image",
-        fields: {
-          id: "str",
-          image: "image",
-        },
-        source: undefined,
-        type: undefined,
-      },
-    ],
-    embeddings: [
-      {
-        name: "emb_230602_141614_SAM_ViT_H",
-        fields: {
-          id: "str",
-          image: "bytes",
-        },
-        source: "SAM_ViT_H",
-        type: "segment",
-      },
-      {
-        name: "emb_231110_110736_CLIP",
-        fields: {
-          id: "str",
-          image: "vector(512)",
-        },
-        source: "CLIP",
-        type: "search",
-      },
-      {
-        name: "emb_231208_153758_SAM_ViT_B",
-        fields: {
-          id: "str",
-          image: "bytes",
-        },
-        source: "SAM_ViT_B",
-        type: "segment",
-      },
-    ],
-    objects: [
-      {
-        name: "obj_231208_163253_YOLOv5s",
-        fields: {
-          id: "str",
-          item_id: "str",
-          view_id: "str",
-          bbox: "bbox",
-          mask: "compressedrle",
-          category_id: "int",
-          category_name: "str",
-          review_state: "str",
-        },
-        source: "Pre-annotation",
-        type: undefined,
-      },
-      {
-        name: "obj_231208_163619_FasterRCNN_R50",
-        fields: {
-          id: "str",
-          item_id: "str",
-          view_id: "str",
-          bbox: "bbox",
-          mask: "compressedrle",
-          category_id: "int",
-          category_name: "str",
-          review_state: "str",
-        },
-        source: "Pre-annotation",
-        type: undefined,
-      },
-      {
-        name: "obj_231208_163854_FasterRCNN_R50",
-        fields: {
-          id: "str",
-          item_id: "str",
-          view_id: "str",
-          bbox: "bbox",
-          mask: "compressedrle",
-          category_id: "int",
-          category_name: "str",
-        },
-        source: "FasterRCNN_R50",
-        type: undefined,
-      },
-      {
-        name: "obj_annotator",
-        fields: {
-          id: "str",
-          item_id: "str",
-          view_id: "str",
-          bbox: "bbox",
-          mask: "compressedrle",
-          category_id: "int",
-          category_name: "str",
-        },
-        source: "Pixano Annotator",
-        type: undefined,
-      },
-      {
-        name: "objects",
-        fields: {
-          id: "str",
-          item_id: "str",
-          view_id: "str",
-          bbox: "bbox",
-          mask: "compressedrle",
-          category_name: "str",
-          category: "str",
-          review_state: "str",
-          category_id: "int",
-        },
-        source: "Ground Truth",
-        type: undefined,
-      },
-    ],
-  },
-  features_values: {
-    main: {
-      label: {
-        restricted: false,
-        values: ["arbre", "oranges", "poire", "None", "abeille", "printemps"],
-      },
-      category_name: { restricted: false, values: ["foo", "None"] },
-    },
-    objects: {
-      category_id: { restricted: false, values: [] },
-      category_name: {
-        restricted: false,
-        values: [
-          "toilet",
-          "chair",
-          "oranges",
-          "donut",
-          "bar",
-          "apple",
-          "dining table",
-          "pizza",
-          "refrigerator",
-          "None",
-          "potted plant",
-          "orange",
-          "bird",
-          "cake",
-          "sheep",
-          "salade",
-          "broccoli",
-          "olive",
-          "sandwich",
-          "oooo",
-          "banano",
-          "carrot",
-          "bowl",
-          "banana",
-          "carrotes",
-          "foo",
-          "choubidou",
-          "bottle",
-        ],
-      },
-      category: { restricted: false, values: ["vzfe", "front", "None", "seed", "foo", "bar"] },
-    },
-  },
+  // splits: ["demo"],
+  // tables: {
+  //   main: [
+  //     {
+  //       name: "db",
+  //       fields: {
+  //         id: "str",
+  //         views: "[str]",
+  //         split: "str",
+  //         label: "str",
+  //         category_name: "str",
+  //       },
+  //       source: "Pre-annotation",
+  //       type: undefined,
+  //     },
+  //   ],
+  //   media: [
+  //     {
+  //       name: "image",
+  //       fields: {
+  //         id: "str",
+  //         image: "image",
+  //       },
+  //       source: undefined,
+  //       type: undefined,
+  //     },
+  //   ],
+  //   embeddings: [
+  //     {
+  //       name: "emb_230602_141614_SAM_ViT_H",
+  //       fields: {
+  //         id: "str",
+  //         image: "bytes",
+  //       },
+  //       source: "SAM_ViT_H",
+  //       type: "segment",
+  //     },
+  //     {
+  //       name: "emb_231110_110736_CLIP",
+  //       fields: {
+  //         id: "str",
+  //         image: "vector(512)",
+  //       },
+  //       source: "CLIP",
+  //       type: "search",
+  //     },
+  //     {
+  //       name: "emb_231208_153758_SAM_ViT_B",
+  //       fields: {
+  //         id: "str",
+  //         image: "bytes",
+  //       },
+  //       source: "SAM_ViT_B",
+  //       type: "segment",
+  //     },
+  //   ],
+  //   objects: [
+  //     {
+  //       name: "obj_231208_163253_YOLOv5s",
+  //       fields: {
+  //         id: "str",
+  //         item_id: "str",
+  //         view_id: "str",
+  //         bbox: "bbox",
+  //         mask: "compressedrle",
+  //         category_id: "int",
+  //         category_name: "str",
+  //         review_state: "str",
+  //       },
+  //       source: "Pre-annotation",
+  //       type: undefined,
+  //     },
+  //     {
+  //       name: "obj_231208_163619_FasterRCNN_R50",
+  //       fields: {
+  //         id: "str",
+  //         item_id: "str",
+  //         view_id: "str",
+  //         bbox: "bbox",
+  //         mask: "compressedrle",
+  //         category_id: "int",
+  //         category_name: "str",
+  //         review_state: "str",
+  //       },
+  //       source: "Pre-annotation",
+  //       type: undefined,
+  //     },
+  //     {
+  //       name: "obj_231208_163854_FasterRCNN_R50",
+  //       fields: {
+  //         id: "str",
+  //         item_id: "str",
+  //         view_id: "str",
+  //         bbox: "bbox",
+  //         mask: "compressedrle",
+  //         category_id: "int",
+  //         category_name: "str",
+  //       },
+  //       source: "FasterRCNN_R50",
+  //       type: undefined,
+  //     },
+  //     {
+  //       name: "obj_annotator",
+  //       fields: {
+  //         id: "str",
+  //         item_id: "str",
+  //         view_id: "str",
+  //         bbox: "bbox",
+  //         mask: "compressedrle",
+  //         category_id: "int",
+  //         category_name: "str",
+  //       },
+  //       source: "Pixano Annotator",
+  //       type: undefined,
+  //     },
+  //     {
+  //       name: "objects",
+  //       fields: {
+  //         id: "str",
+  //         item_id: "str",
+  //         view_id: "str",
+  //         bbox: "bbox",
+  //         mask: "compressedrle",
+  //         category_name: "str",
+  //         category: "str",
+  //         review_state: "str",
+  //         category_id: "int",
+  //       },
+  //       source: "Ground Truth",
+  //       type: undefined,
+  //     },
+  //   ],
+  // },
+  // features_values: {
+  //   main: {
+  //     label: {
+  //       restricted: false,
+  //       values: ["arbre", "oranges", "poire", "None", "abeille", "printemps"],
+  //     },
+  //     category_name: { restricted: false, values: ["foo", "None"] },
+  //   },
+  //   objects: {
+  //     category_id: { restricted: false, values: [] },
+  //     category_name: {
+  //       restricted: false,
+  //       values: [
+  //         "toilet",
+  //         "chair",
+  //         "oranges",
+  //         "donut",
+  //         "bar",
+  //         "apple",
+  //         "dining table",
+  //         "pizza",
+  //         "refrigerator",
+  //         "None",
+  //         "potted plant",
+  //         "orange",
+  //         "bird",
+  //         "cake",
+  //         "sheep",
+  //         "salade",
+  //         "broccoli",
+  //         "olive",
+  //         "sandwich",
+  //         "oooo",
+  //         "banano",
+  //         "carrot",
+  //         "bowl",
+  //         "banana",
+  //         "carrotes",
+  //         "foo",
+  //         "choubidou",
+  //         "bottle",
+  //       ],
+  //     },
+  //     category: { restricted: false, values: ["vzfe", "front", "None", "seed", "foo", "bar"] },
+  //   },
+  // },
   preview: datasetPreview,
-  stats: [],
-  page: {
-    items: [
-      {
-        id: "fleurs.jpg",
-        type: "image",
-        split: "demo",
-        features: {
-          label: {
-            name: "label",
-            dtype: "str",
-            value: "printemps",
-          },
-          category_name: {
-            name: "category_name",
-            dtype: "str",
-            value: "foo",
-          },
-        },
-        views: {
-          image: {
-            id: "image",
-            type: "image",
-            uri: "data/demo_agriculture_broken/media/image/demo/fleurs.jpg",
-            thumbnail: imgThumbnail,
-            frame_number: undefined,
-            total_frames: undefined,
-            features: {},
-          },
-        },
-        objects: {},
-        embeddings: {},
-      },
-    ],
-    total: 25,
-  },
-  isErrored: false,
+  // stats: [],
+  // page: {
+  //   items: [
+  //     {
+  //       id: "fleurs.jpg",
+  //       type: "image",
+  //       split: "demo",
+  //       features: {
+  //         label: {
+  //           name: "label",
+  //           dtype: "str",
+  //           value: "printemps",
+  //         },
+  //         category_name: {
+  //           name: "category_name",
+  //           dtype: "str",
+  //           value: "foo",
+  //         },
+  //       },
+  //       views: {
+  //         image: {
+  //           id: "image",
+  //           type: "image",
+  //           uri: "data/demo_agriculture_broken/media/image/demo/fleurs.jpg",
+  //           thumbnail: imgThumbnail,
+  //           frame_number: undefined,
+  //           total_frames: undefined,
+  //           features: {},
+  //         },
+  //       },
+  //       objects: {},
+  //       embeddings: {},
+  //     },
+  //   ],
+  //   total: 25,
+  // },
+  // isErrored: false,
 };
 
 export const mockHandleSaveItem = (item: DatasetItem) => {
@@ -472,32 +475,32 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const displayedBox = {
+const displayedBox: VideoItemBBox = {
   coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
   format: "xywh",
   is_normalized: true,
   confidence: 1,
-  frameIndex: 1,
+  frame_index: 1,
 };
 
 const track: Tracklet[] = [
   {
     start: 0,
     end: 73,
-    keyBoxes: [
+    boxes: [
       {
         coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
         format: "xywh",
         is_normalized: true,
         confidence: 1,
-        frameIndex: 0,
+        frame_index: 0,
       },
       {
         coords: [0.5914342337390056, 0.2693339921343171, 0.09993766916635072, 0.18671048750633337],
         format: "xywh",
         is_normalized: true,
         confidence: 1,
-        frameIndex: 73,
+        frame_index: 73,
       },
     ],
   },
@@ -507,6 +510,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
   id: "fleurs.jpg",
   type: "video",
   split: "demo",
+  datasetId: "",
   features: {
     label: {
       name: "label",
@@ -537,8 +541,8 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
       uri: image,
     })),
   },
-  objects: {
-    EZ4s6R0E_y: {
+  objects: [
+    {
       id: "EZ4s6R0E_y",
       datasetItemType: "video",
       track,
@@ -569,6 +573,6 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
         hidden: false,
       },
     },
-  },
+  ],
   embeddings: {},
 };

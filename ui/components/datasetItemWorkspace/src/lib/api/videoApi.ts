@@ -33,10 +33,10 @@ export const linearInterpolation = (track: Tracklet[], imageIndex: number) => {
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
   if (!currentTracklet) return null;
-  let endIndex = currentTracklet.keyBoxes.findIndex((box) => box.frame_index > imageIndex);
-  endIndex = endIndex < 0 ? currentTracklet.keyBoxes.length - 1 : endIndex;
-  const start = currentTracklet.keyBoxes[endIndex - 1] || currentTracklet.keyBoxes[0];
-  const end = currentTracklet.keyBoxes[endIndex];
+  let endIndex = currentTracklet.boxes.findIndex((box) => box.frame_index > imageIndex);
+  endIndex = endIndex < 0 ? currentTracklet.boxes.length - 1 : endIndex;
+  const start = currentTracklet.boxes[endIndex - 1] || currentTracklet.boxes[0];
+  const end = currentTracklet.boxes[endIndex];
   const [startX, startY, startWidth, startHeight] = start.coords;
   const [endX, endY, endWidth, endHeight] = end.coords;
 
@@ -61,38 +61,38 @@ export const deleteKeyBoxFromTracklet = (
       object.track = object.track
         .map((tracklet) => {
           if (tracklet.start <= box.frame_index && tracklet.end >= box.frame_index) {
-            tracklet.keyBoxes = tracklet.keyBoxes.filter(
+            tracklet.boxes = tracklet.boxes.filter(
               (keyBox) => keyBox.frame_index !== box.frame_index,
             );
-            tracklet.start = tracklet.keyBoxes[0].frame_index;
-            tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+            tracklet.start = tracklet.boxes[0].frame_index;
+            tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
           }
           return tracklet;
         })
-        .filter((tracklet) => tracklet.keyBoxes.length > 1);
+        .filter((tracklet) => tracklet.boxes.length > 1);
     }
     return object;
   });
 
-const editKeyBoxesInTracklet = (
-  keyBoxes: VideoItemBBox[],
+const editBoxesInTracklet = (
+  boxes: VideoItemBBox[],
   currentFrame: number,
   shape: EditRectangleShape,
 ) =>
-  keyBoxes.map((keyBox) => {
-    if (keyBox.frame_index === currentFrame) {
-      keyBox.coords = shape.coords;
-      keyBox.is_key = true;
+  boxes.map((box) => {
+    if (box.frame_index === currentFrame) {
+      box.coords = shape.coords;
+      box.is_key = true;
     }
-    return keyBox;
+    return box;
   });
 
-const addKeyBoxToTrackletBoxes = (tracklet: Tracklet, currentFrame: number, box: VideoItemBBox) => {
-  if (!tracklet.keyBoxes.some((keyBox) => keyBox.frame_index === currentFrame)) {
-    tracklet.keyBoxes.push(box);
-    tracklet.keyBoxes.sort((a, b) => a.frame_index - b.frame_index);
-    tracklet.start = tracklet.keyBoxes[0].frame_index;
-    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+const addBoxToTrackletBoxes = (tracklet: Tracklet, currentFrame: number, box: VideoItemBBox) => {
+  if (!tracklet.boxes.some((b) => b.frame_index === currentFrame)) {
+    tracklet.boxes.push(box);
+    tracklet.boxes.sort((a, b) => a.frame_index - b.frame_index);
+    tracklet.start = tracklet.boxes[0].frame_index;
+    tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
   }
   return tracklet;
 };
@@ -112,9 +112,9 @@ export const editKeyBoxInTracklet = (
     ) {
       object.track = object.track.map((tracklet) => {
         if (tracklet.start <= currentFrame && tracklet.end >= currentFrame) {
-          tracklet.keyBoxes = editKeyBoxesInTracklet(tracklet.keyBoxes, currentFrame, shape);
-          tracklet = addKeyBoxToTrackletBoxes(tracklet, currentFrame, {
-            ...tracklet.keyBoxes[0],
+          tracklet.boxes = editBoxesInTracklet(tracklet.boxes, currentFrame, shape);
+          tracklet = addBoxToTrackletBoxes(tracklet, currentFrame, {
+            ...tracklet.boxes[0],
             coords: shape.coords,
             frame_index: currentFrame,
             is_key: true,
@@ -131,21 +131,21 @@ const createNewTracklet = (
   track: Tracklet[],
   frameIndex: number,
   lastFrameIndex: number,
-  keyBox: VideoItemBBox,
+  box: VideoItemBBox,
 ) => {
   let nextIntervalStart = track.find((t) => t.start > frameIndex)?.start;
   nextIntervalStart = nextIntervalStart ? nextIntervalStart - 1 : lastFrameIndex;
   return {
     start: frameIndex,
     end: nextIntervalStart,
-    keyBoxes: [
+    boxes: [
       {
-        ...keyBox,
+        ...box,
         frame_index: frameIndex,
         is_key: true,
       },
       {
-        ...keyBox,
+        ...box,
         frame_index: nextIntervalStart,
         is_key: true,
       },
@@ -153,13 +153,13 @@ const createNewTracklet = (
   } as Tracklet;
 };
 
-const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, keyBox: VideoItemBBox) =>
+const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, box: VideoItemBBox) =>
   track.map((trackItem) => {
     if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
-      trackItem.keyBoxes.push(keyBox);
-      trackItem.keyBoxes.sort((a, b) => a.frame_index - b.frame_index);
-      trackItem.start = trackItem.keyBoxes[0].frame_index;
-      trackItem.end = trackItem.keyBoxes[trackItem.keyBoxes.length - 1].frame_index;
+      trackItem.boxes.push(box);
+      trackItem.boxes.sort((a, b) => a.frame_index - b.frame_index);
+      trackItem.start = trackItem.boxes[0].frame_index;
+      trackItem.end = trackItem.boxes[trackItem.boxes.length - 1].frame_index;
     }
     return trackItem;
   });
@@ -197,32 +197,28 @@ export const findNeighbors = (
   );
   if (currentIntervalIndex < 0) return [0, 0];
   const prevTracklet = track[currentIntervalIndex - 1];
-  let prevNeighbor = currentTracklet.keyBoxes.find(
-    (box) => box.frame_index < frameIndex,
-  )?.frame_index;
+  let prevNeighbor = currentTracklet.boxes.find((box) => box.frame_index < frameIndex)?.frame_index;
   if (!prevNeighbor && prevTracklet) {
-    prevNeighbor = prevTracklet.keyBoxes[prevTracklet.keyBoxes.length - 1]?.frame_index;
+    prevNeighbor = prevTracklet.boxes[prevTracklet.boxes.length - 1]?.frame_index;
   }
   prevNeighbor = prevNeighbor || 0;
 
-  let nextNeighbor = currentTracklet.keyBoxes.find(
-    (box) => box.frame_index > frameIndex,
-  )?.frame_index;
+  let nextNeighbor = currentTracklet.boxes.find((box) => box.frame_index > frameIndex)?.frame_index;
   const nextTracklet = track[currentIntervalIndex + 1];
   if (!nextNeighbor && nextTracklet) {
-    nextNeighbor = nextTracklet.keyBoxes[0]?.frame_index;
+    nextNeighbor = nextTracklet.boxes[0]?.frame_index;
   }
   nextNeighbor = nextNeighbor || lastFrameIndex + 1;
 
   return [prevNeighbor, nextNeighbor];
 };
 
-const filterKeyBoxes = (
-  keyBoxes: Tracklet["keyBoxes"],
+const filterBoxes = (
+  boxes: Tracklet["boxes"],
   newBox: VideoItemBBox,
   shouldBeFiltered: (index: VideoItemBBox["frame_index"]) => boolean,
 ) =>
-  keyBoxes.reduce(
+  boxes.reduce(
     (acc, box, i) => {
       if (i === 0) {
         acc.push(newBox);
@@ -232,7 +228,7 @@ const filterKeyBoxes = (
       }
       return acc.sort((a, b) => a.frame_index - b.frame_index);
     },
-    [] as Tracklet["keyBoxes"],
+    [] as Tracklet["boxes"],
   );
 
 export const splitTrackletInTwo = (
@@ -244,8 +240,8 @@ export const splitTrackletInTwo = (
   const startTracklet: Tracklet = {
     start: tracklet.start,
     end: rightClickFrameIndex,
-    keyBoxes: filterKeyBoxes(
-      tracklet.keyBoxes,
+    boxes: filterBoxes(
+      tracklet.boxes,
       { ...object.displayedBox, frame_index: rightClickFrameIndex },
       (index) => index < rightClickFrameIndex,
     ),
@@ -253,8 +249,8 @@ export const splitTrackletInTwo = (
   const endTracklet: Tracklet = {
     start: rightClickFrameIndex + 1,
     end: tracklet.end,
-    keyBoxes: filterKeyBoxes(
-      tracklet.keyBoxes,
+    boxes: filterBoxes(
+      tracklet.boxes,
       { ...object.displayedBox, frame_index: rightClickFrameIndex + 1 },
       (index) => index > rightClickFrameIndex + 1,
     ),

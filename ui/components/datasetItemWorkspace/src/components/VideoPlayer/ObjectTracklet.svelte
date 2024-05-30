@@ -33,7 +33,7 @@
   export let onAddKeyBoxClick: () => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
-  export let findNeighborKeyBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
+  export let findNeighborBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
   export let updateView: (frameIndex: number) => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
@@ -57,16 +57,16 @@
     newFrameIndex: VideoItemBBox["frame_index"],
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborKeyBoxes(tracklet, newFrameIndex);
+    const [prevFrameIndex, nextFrameIndex] = findNeighborBoxes(tracklet, newFrameIndex);
     if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
-    tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox) => {
-      if (keyBox.frame_index === draggedFrameIndex) {
-        keyBox.frame_index = newFrameIndex;
+    tracklet.boxes = tracklet.boxes.map((box) => {
+      if (box.frame_index === draggedFrameIndex) {
+        box.frame_index = newFrameIndex;
       }
-      return keyBox;
+      return box;
     });
-    tracklet.start = tracklet.keyBoxes[0].frame_index;
-    tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+    tracklet.start = tracklet.boxes[0].frame_index;
+    tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
     updateView(newFrameIndex);
     currentFrameIndex.set(newFrameIndex);
   };
@@ -114,10 +114,10 @@
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.keyBoxes as keyBox}
-  {#if keyBox.is_key}
+{#each tracklet.boxes as box}
+  {#if box.is_key}
     <TrackletKeyBox
-      {keyBox}
+      {box}
       {color}
       {oneFrameInPixel}
       {onEditKeyBoxClick}

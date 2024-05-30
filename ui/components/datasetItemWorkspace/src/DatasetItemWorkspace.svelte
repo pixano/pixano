@@ -45,7 +45,7 @@
   let embeddings: Embeddings = {};
 
   $: itemObjects.update((oldObjects) =>
-    selectedItem.objects.map((object) => {
+    selectedItem?.objects.map((object) => {
       const oldObject = oldObjects.find((o) => o.id === object.id);
       if (oldObject) {
         return { ...oldObject, ...object };

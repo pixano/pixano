@@ -19,8 +19,6 @@ import type {
   DatasetItems,
   DatasetItem,
   ExplorerData,
-  VideoObject,
-  ObjectThumbnail,
 } from "./lib/types/datasetTypes";
 
 // Exports
@@ -140,50 +138,51 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
+
       // TODO : remove this when the backend is fixed
       // TODO : API changes | keyBoxes should be renamed `boxes` since is_key is now a params
-      if (item.type === "video") {
-        const objects: Array<VideoObject> = item.objects.map((obj) => {
-          obj.track = obj.track.map((tracklet) => {
-            tracklet.start = tracklet.keyBoxes[0].frame_index;
-            tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
-            tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox, i) => {
-              if (
-                keyBox.frame_index === tracklet.keyBoxes[0].frame_index ||
-                keyBox.frame_index === tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index
-              ) {
-                keyBox.is_key = true;
-                keyBox.is_thumbnail = i === 0;
-              }
-              return keyBox;
-            });
-            return tracklet;
-          });
-          obj.displayedBox = undefined;
-          // obj.thumbnails =
-          //   item?.type === "video"
-          //     ? Object.entries(item.views).reduce(
-          //         (acc, [viewId, views]) => {
-          //           if (obj.datasetItemType === "video") {
-          //             acc[viewId] = {
-          //               uri: views[0].uri,
-          //               baseImageDimensions: {
-          //                 width: views[0].features.width.value as number,
-          //                 height: views[0].features.height.value as number,
-          //               },
-          //               frameIndex: 0,
-          //               coords: obj.track[0].keyBoxes[0].coords,
-          //             };
-          //           }
-          //           return acc;
-          //         },
-          //         {} as Record<string, ObjectThumbnail>,
-          //       )
-          //     : undefined;
-          return obj;
-        });
-        item.objects = objects;
-      }
+      // if (item.type === "video") {
+      //   const objects: Array<VideoObject> = item.objects.map((obj) => {
+      //     obj.track = obj.track.map((tracklet) => {
+      //       tracklet.start = tracklet.keyBoxes[0].frame_index;
+      //       tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+      //       tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox, i) => {
+      //         if (
+      //           keyBox.frame_index === tracklet.keyBoxes[0].frame_index ||
+      //           keyBox.frame_index === tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index
+      //         ) {
+      //           keyBox.is_key = true;
+      //           keyBox.is_thumbnail = i === 0;
+      //         }
+      //         return keyBox;
+      //       });
+      //       return tracklet;
+      //     });
+      //     obj.displayedBox = undefined;
+      //     // obj.thumbnails =
+      //     //   item?.type === "video"
+      //     //     ? Object.entries(item.views).reduce(
+      //     //         (acc, [viewId, views]) => {
+      //     //           if (obj.datasetItemType === "video") {
+      //     //             acc[viewId] = {
+      //     //               uri: views[0].uri,
+      //     //               baseImageDimensions: {
+      //     //                 width: views[0].features.width.value as number,
+      //     //                 height: views[0].features.height.value as number,
+      //     //               },
+      //     //               frameIndex: 0,
+      //     //               coords: obj.track[0].keyBoxes[0].coords,
+      //     //             };
+      //     //           }
+      //     //           return acc;
+      //     //         },
+      //     //         {} as Record<string, ObjectThumbnail>,
+      //     //       )
+      //     //     : undefined;
+      //     return obj;
+      //   });
+      //   item.objects = objects;
+      // }
     } else {
       item = {} as DatasetItem;
       console.log(

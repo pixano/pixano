@@ -171,7 +171,7 @@ export type VideoItemBBox = ItemBBox & {
   hidden?: boolean;
 };
 export interface Tracklet {
-  keyBoxes: VideoItemBBox[];
+  boxes: VideoItemBBox[];
   start: number;
   end: number;
 }

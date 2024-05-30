@@ -402,11 +402,11 @@ async def get_dataset_item(  # noqa: D417
                                 "tracklet_id": tracklet_id,
                                 "tracklet_objs": [
                                     {
-                                        "keyBoxes": {
+                                        "boxes": {
                                             **vars(obj.bbox),
                                             "frame_index": obj.frame_idx,
-                                            "is_keypoint": i % (len(tracklet_objs) - 1)
-                                            == 0,
+                                            "is_key": obj.is_key,
+                                            "is_thumbnail": i == 0,
                                         },
                                         "obj_features": obj,  # we put the whole obj to get features from it below
                                     }
@@ -458,14 +458,14 @@ async def get_dataset_item(  # noqa: D417
                                 "track": [
                                     {
                                         "id": tracklet["tracklet_id"],
-                                        "start": tracklet["tracklet_objs"][0][
-                                            "keyBoxes"
-                                        ]["frame_index"],
-                                        "end": tracklet["tracklet_objs"][-1][
-                                            "keyBoxes"
-                                        ]["frame_index"],
-                                        "keyBoxes": [
-                                            obj["keyBoxes"]
+                                        "start": tracklet["tracklet_objs"][0]["boxes"][
+                                            "frame_index"
+                                        ],
+                                        "end": tracklet["tracklet_objs"][-1]["boxes"][
+                                            "frame_index"
+                                        ],
+                                        "boxes": [
+                                            obj["boxes"]
                                             for obj in tracklet["tracklet_objs"]
                                         ],
                                     }
