@@ -13,7 +13,7 @@
    *
    * http://www.cecill.info
    */
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy } from "svelte";
   import { PlayIcon, PauseIcon } from "lucide-svelte";
   import { getCurrentImageTime } from "../../lib/api/videoApi";
   import {
@@ -27,11 +27,6 @@
   export let updateView: (frameIndex: number) => void;
 
   let currentTime: string;
-
-  onMount(() => {
-    updateView($currentFrameIndex);
-    videoControls.update((old) => ({ ...old, isLoaded: true }));
-  });
 
   onDestroy(() => {
     clearInterval($videoControls.intervalId);

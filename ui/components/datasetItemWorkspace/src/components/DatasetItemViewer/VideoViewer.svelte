@@ -33,9 +33,8 @@
     objectIdBeingEdited,
   } from "../../lib/stores/videoViewerStores";
 
-  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import VideoControls from "../VideoPlayer/VideoControls.svelte";
   import { onMount } from "svelte";
+  import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
 
@@ -44,6 +43,9 @@
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let brightness: number;
   export let contrast: number;
+
+  let height = 250;
+  let expanding = false;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -126,9 +128,29 @@
   }
 
   $: selectedTool.set($selectedTool);
+
+  const startExpand = () => {
+    expanding = true;
+  };
+
+  const stopExpand = () => {
+    expanding = false;
+  };
+
+  const expand = (e: MouseEvent) => {
+    if (expanding) {
+      height = document.body.scrollHeight - e.pageY;
+    }
+  };
 </script>
 
-<section class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]">
+<section
+  class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]"
+  on:mouseup={stopExpand}
+  on:mousemove={expand}
+  role="tab"
+  tabindex="0"
+>
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
@@ -143,11 +165,10 @@
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
-      >
-        <VideoControls {updateView} />
-      </Canvas2D>
+      />
     </div>
-    <div class="h-full grow max-h-[25%] overflow-hidden">
+    <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />
+    <div class="h-full grow max-h-[25%] overflow-hidden" style={`max-height: ${height}px`}>
       <VideoInspector {updateView} />
     </div>
   {/if}
