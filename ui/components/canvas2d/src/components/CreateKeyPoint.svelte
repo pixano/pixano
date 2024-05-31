@@ -60,6 +60,20 @@
     newShape = { ...newShape, points };
   };
 
+  const onGroupDragEnd = (target: Konva.Group) => {
+    console.log({ target });
+    if (!target || target.id() !== polygonId) return;
+    const moveX = target.x();
+    const moveY = target.y();
+    const points = newShape.points.map((point) => {
+      return { ...point, x: point.x + moveX, y: point.y + moveY };
+    });
+    target.position({ x: 0, y: 0 });
+    newShape = { ...newShape, points };
+  };
+
+  console.log({ newShape });
+
   const deletePoint = (pointId: number) => {
     let referencePointId = newShape.referencePointId;
     const garbage = [pointId];
@@ -79,10 +93,22 @@
     }
     newShape = { ...newShape, points, referencePointId };
   };
+
+  const scaleCircleRadius = (id: number, scale: number) => {
+    const point: Konva.Circle = stage.findOne(`#keyPoint-${polygonId}-${id}`);
+
+    point.scaleX(scale);
+    point.scaleY(scale);
+  };
 </script>
 
 {#if newShape.viewId === viewId}
-  <Group config={{ id: "keyPointStructure" }}>
+  <Group
+    config={{ id: polygonId, draggable: true }}
+    on:mouseleave={() => (document.body.style.cursor = "default")}
+    on:mouseover={() => (document.body.style.cursor = "pointer")}
+    on:dragend={(e) => onGroupDragEnd(e.detail.target)}
+  >
     {#each newShape.points as point}
       {#if point.origin_points.length > 0}
         {#each point.origin_points as originPoint}
@@ -90,7 +116,7 @@
             config={{
               points: [point.x, point.y, ...findPoint(originPoint)],
               stroke: "#781e60",
-              strokeWidth: 1 / zoomFactor[viewId],
+              strokeWidth: 2 / zoomFactor[viewId],
             }}
           />
         {/each}
@@ -109,20 +135,12 @@
         }}
         on:dragmove={() => onPointDragMove(point.id)}
         on:dblclick={() => deletePoint(point.id)}
+        on:mouseover={(e) => {
+          e.detail.target?.attrs?.id === `keyPoint-${polygonId}-${point.id}` &&
+            scaleCircleRadius(point.id, 2);
+        }}
+        on:mouseleave={() => scaleCircleRadius(point.id, 1)}
       />
     {/each}
   </Group>
 {/if}
-
-<!-- on:mouseover={(e) => {
-        e.detail.target?.attrs?.id === `dot-${polygonId}-${i}-${point.id}` &&
-          scaleCircleRadius(point.id, i, 2);
-      }} -->
-
-<!-- on:click={() => console.log("click")}
-        on:dragmove={() => console.log("dragmove")}
-        on:dragend={() => console.log("dragend")}
-        on:mouseover={() => {
-          console.log("mouseover");
-        }}
-        on:mouseleave={() => console.log("mouseleave")} -->
