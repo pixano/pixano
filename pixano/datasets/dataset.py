@@ -18,13 +18,11 @@ import duckdb
 import lancedb
 from lancedb.pydantic import LanceModel
 from lancedb.query import LanceQueryBuilder
-import pyarrow as pa
 from pydantic import ConfigDict
 from s3path import S3Path
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_library import DatasetLibrary
-from .dataset_table import DatasetTable
 from .dataset_schema import (
     DatasetItem,
     DatasetSchema,
@@ -690,111 +688,6 @@ class Dataset:
             DatasetItem: Dataset items
         """
         return self.get_embedding(idx, 1, select)[0]
-
-    def save_item(
-        self,
-        item  #TODO it's a FrontDatasetItem, but we don't really need the class here
-    ):
-        """Save dataset item features and objects
-
-        #TODO Note: for now, we don't manage alteration of table schema
-        (anyway front doesn't allow such modification right now)
-
-        Args:
-            item (DatasetItem): Item to save
-        """
-        #TODO convert FrontDatasetItem to DatasetItem (??? really needed ? -> no, or maybe if we use CRUD API finally)
-        # we could already use read_objects fct, but here we use scanner directly, which I presume avoid some 
-        # ---things that may come handy if we need to alter table schema:
-        # print(self._custom_dataset_item_class)
-        # print(item)
-        # print("------------------------")
-        # print(self._read_items_data([item.id]))  # <-- stored item in tables
-        # print(self.dataset_schema)
-
-        # Local utility function to convert objects to pyarrow format
-        # also adapt features to table format
-        def convert_objects_to_pyarrow(table, objs):
-            # Convert objects to PyArrow
-            # adapt features
-            for obj in objs:
-                if "features" in obj:
-                    for feat in obj['features'].values():
-                        # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
-                        obj[feat['name']] = feat['value']
-
-            return pa.Table.from_pylist(
-                # [obj.to_pyarrow() for obj in objs],
-                objs,
-                schema=table.schema,
-            )
-
-        def convert_item_to_pyarrow(table, item):
-            # Convert item to PyArrow
-            pyarrow_item = {}
-
-            # ID
-            pyarrow_item["id"] = item.id
-            pyarrow_item["split"] = item.split
-
-            # Features
-            if item.features is not None:
-                for feat in item.features.values():
-                    # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
-                    pyarrow_item[feat['name']] = feat['value']
-
-            return pa.Table.from_pylist(
-                [pyarrow_item],
-                schema=table.schema,
-            )
-
-        # UPDATE items features
-        item_table = self.open_table("item")
-        item_table.delete(f"id in ('{item.id}')")
-        item_table.add(convert_item_to_pyarrow(item_table, item))
-
-        # Objects
-        add_ids = []
-        update_ids = []
-
-        # TMP: use table "objects"  # TODO : what if not "objects" ?
-        obj_table = self.open_table("objects")
-
-        str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
-        if str_obj_ids:
-            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-            scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
-            update_objs = scanner.to_table()
-            update_ids = update_objs.to_pydict()["id"]
-            add_ids = [obj['id'] for obj in item.objects if obj['id'] not in update_ids]
-            scanner = obj_table.to_lance().scanner(filter=f"id not in {str_obj_ids}")
-            delete_objs = scanner.to_table()
-            delete_ids = delete_objs.to_pydict()["id"]
-        else:
-            # no objects in item.objects, it means we may have to delete existing objs
-            delete_objs = obj_table.to_lance().scanner().to_table()
-            delete_ids = delete_objs.to_pydict()["id"]
-
-        if add_ids:
-            new_objs = [obj for obj in item.objects if obj['id'] in add_ids]
-            obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
-
-        if update_ids:
-            update_objs = [obj for obj in item.objects if obj['id'] in update_ids]
-            str_obj_ids = [f"'{id}'" for id in update_ids]
-            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-            obj_table.delete(f"id in {str_obj_ids}")
-            obj_table.add(convert_objects_to_pyarrow(obj_table, update_objs))
-
-        if delete_ids:
-            str_obj_ids = [f"'{id}'" for id in delete_ids]
-            str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-            obj_table.delete(f"id in {str_obj_ids}")
-
-        # Clear change history to prevent dataset from becoming too large
-        obj_table.to_lance().cleanup_old_versions()
-        # TODO: ther is a lancedb utility to "reshape" table after updates, to keep it "clean"
-        # Maybe we should use it ?
 
     @staticmethod
     def find(

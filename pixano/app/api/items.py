@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 from pydantic import BaseModel
+import pyarrow as pa
 
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
@@ -254,246 +255,227 @@ async def get_dataset_item(  # noqa: D417
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
-    if dataset:
-        # Load dataset item
-        item = dataset.read_item(item_id)
-
-        groups = defaultdict(list)
-        for tname in vars(item).keys():
-            found_group = (
-                _SchemaGroup.ITEM
-            )  # if no matching group (-> it's not a table name), it is in ITEM
-            for group, tnames in dataset.dataset_schema._groups.items():
-                if tname in tnames:
-                    found_group = group
-                    break
-            if tname not in [
-                "id",
-                "split",
-            ]:  # id and split are always present, and in ITEM group
-                groups[found_group].append(tname)
-
-        # features
-        features = {
-            feat: {
-                "name": feat,
-                "dtype": type(getattr(item, feat)).__name__,
-                "value": getattr(item, feat),
-            }
-            for feat in groups[_SchemaGroup.ITEM]
-        }
-
-        # views : {"table_name": ItemView}
-        views = {}
-        view_type = "image"
-        for view_name in groups[_SchemaGroup.VIEW]:
-            view_item = getattr(item, view_name)
-            if isinstance(view_item, Image):
-                views[view_name] = {
-                    "id": view_item.id,
-                    "type": "image",
-                    "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
-                    "thumbnail": None,  # view_item.open(dataset.path / "media"),
-                    "features": {
-                        "width": {
-                            "name": "width",
-                            "dtype": "int",
-                            "value": view_item.width,
-                        },
-                        "height": {
-                            "name": "height",
-                            "dtype": "int",
-                            "value": view_item.height,
-                        },
-                    },
-                }
-            elif (
-                isinstance(view_item, list)
-                and len(view_item) > 0
-                and isinstance(view_item[0], SequenceFrame)
-            ):
-                views[view_name] = sorted(
-                    [
-                        {
-                            "id": frame.id,
-                            "type": "image",  # note: it's an image frame from a video
-                            "frame_index": frame.frame_index,
-                            "uri": "data/" + dataset.path.name + "/media/" + frame.url,
-                            # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
-                            "thumbnail": None,  # frame.open(dataset.path / "media"),
-                            "features": {
-                                "width": {
-                                    "name": "width",
-                                    "dtype": "int",
-                                    "value": frame.width,
-                                },
-                                "height": {
-                                    "name": "height",
-                                    "dtype": "int",
-                                    "value": frame.height,
-                                },
-                            },
-                        }
-                        for frame in view_item
-                    ],
-                    key=lambda x: x["frame_index"],
-                )
-                view_type = "video"
-
-        # objects
-        # TMP NOTE : the objects contents may still be subject to change -- WIP
-        objects = []
-        for obj_group in groups[_SchemaGroup.OBJECT]:
-            if view_type == "image":
-                objects.extend(
-                    [
-                        {
-                            "id": obj.id,
-                            "datasetItemType": view_type,
-                            "item_id": item_id,
-                            "source_id": "Ground Truth",  # ??
-                            "view_id": obj.view_id,
-                            "features": {
-                                fname: {
-                                    "name": fname,
-                                    "dtype": type(getattr(obj, fname)).__name__,
-                                    "value": getattr(obj, fname),
-                                }
-                                for fname in vars(obj).keys()
-                                if fname
-                                not in [
-                                    "id",
-                                    "item_id",
-                                    "source_id",
-                                    "view_id",
-                                    "bbox",
-                                    "mask",
-                                ]
-                            },  # ????
-                            # bbox/mask/whatelse?
-                            "bbox": obj.bbox if hasattr(obj, "bbox") else None,
-                            "mask": obj.mask if hasattr(obj, "mask") else None,
-                        }
-                        for obj in getattr(item, obj_group)
-                    ]
-                )
-            else:  # video
-                # Create a dict to organize objects in tracks/tracklet per view
-                tracks_dict = defaultdict(
-                    lambda: defaultdict(lambda: defaultdict(list))
-                )
-                for obj in getattr(item, obj_group):
-                    tracks_dict[obj.view_id][obj.track_id][obj.tracklet_id].append(obj)
-
-                # Sort tracklets by frame_idx
-                for view_id, tracks in tracks_dict.items():
-                    for track_id, tracklets in tracks.items():
-                        for tracklet_id, tracklet_objs in tracklets.items():
-                            tracklet_objs.sort(key=lambda x: x.frame_idx)
-
-                all_tracks = []
-                for view_id, tracks in tracks_dict.items():
-                    view_tracks = []
-                    for track_id, tracklets in tracks.items():
-                        track = {"track_id": track_id, "tracklets": []}
-                        for tracklet_id, tracklet_objs in tracklets.items():
-                            tracklet = {
-                                "tracklet_id": tracklet_id,
-                                "tracklet_objs": [
-                                    {
-                                        "boxes": {
-                                            **vars(obj.bbox),
-                                            "frame_index": obj.frame_idx,
-                                            "is_key": obj.is_key,
-                                            "is_thumbnail": i == 0,
-                                        },
-                                        "obj_features": obj,  # we put the whole obj to get features from it below
-                                    }
-                                    for i, obj in enumerate(tracklet_objs)
-                                ],
-                            }
-                            track["tracklets"].append(tracklet)
-                        view_tracks.append(track)
-                    all_tracks.append({"view_id": view_id, "tracks": view_tracks})
-
-                for view_tracks in all_tracks:
-                    for track in view_tracks["tracks"]:
-                        # --NOTE we assume features are per track.
-                        # --It's not totally realistic, should need future brainstorm
-                        # we take features from the first object of first tracklet
-                        feature_obj_ref = track["tracklets"][0]["tracklet_objs"][0][
-                            "obj_features"
-                        ]
-                        objects.append(
-                            {
-                                "id": track["track_id"],
-                                "datasetItemType": view_type,
-                                "item_id": item_id,
-                                "source_id": "Ground Truth",  # ?? must ensure source
-                                "view_id": view_tracks["view_id"],
-                                "features": {
-                                    fname: {
-                                        "name": fname,
-                                        "dtype": type(
-                                            getattr(feature_obj_ref, fname)
-                                        ).__name__,
-                                        "value": getattr(feature_obj_ref, fname),
-                                    }
-                                    for fname in vars(feature_obj_ref).keys()
-                                    if fname
-                                    not in [
-                                        "id",
-                                        "item_id",
-                                        "source_id",
-                                        "view_id",
-                                        "bbox",
-                                        "mask",
-                                        # "track_id",  #TMP let this one to have at least a feature
-                                        "tracklet_id",
-                                        "timestamp",
-                                        "frame_idx",
-                                        "is_key",
-                                    ]  # TODO: define list of unwanted features
-                                },
-                                "track": [
-                                    {
-                                        "id": tracklet["tracklet_id"],
-                                        "start": tracklet["tracklet_objs"][0]["boxes"][
-                                            "frame_index"
-                                        ],
-                                        "end": tracklet["tracklet_objs"][-1]["boxes"][
-                                            "frame_index"
-                                        ],
-                                        "boxes": [
-                                            obj["boxes"]
-                                            for obj in tracklet["tracklet_objs"]
-                                        ],
-                                    }
-                                    for tracklet in track["tracklets"]
-                                ],
-                            }
-                        )
-        front_item = FrontDatasetItem(
-            id=item.id,
-            type=view_type,
-            datasetId=ds_id,
-            split=item.split,
-            views=views,
-            objects=objects,
-            features=features,
-            embeddings={},  # TODO
-        )
-
-        # Return dataset item
-        if front_item:
-            return front_item
+    if not dataset:
         raise HTTPException(
             status_code=404,
-            detail=f"Item '{item_id}' not found in dataset",
+            detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
         )
+
+    # Load dataset item
+    item = dataset.read_item(item_id)
+
+    groups = defaultdict(list)
+    for tname in vars(item).keys():
+        found_group = (
+            _SchemaGroup.ITEM
+        )  # if no matching group (-> it's not a table name), it is in ITEM
+        for group, tnames in dataset.dataset_schema._groups.items():
+            if tname in tnames:
+                found_group = group
+                break
+        if tname not in [
+            "id",
+            "split",
+        ]:  # id and split are always present, and in ITEM group
+            groups[found_group].append(tname)
+
+    # features
+    features = {
+        feat: {
+            "name": feat,
+            "dtype": type(getattr(item, feat)).__name__,
+            "value": getattr(item, feat),
+        }
+        for feat in groups[_SchemaGroup.ITEM]
+    }
+
+    # views : {"table_name": ItemView}
+    views = {}
+    view_type = "image"
+    for view_name in groups[_SchemaGroup.VIEW]:
+        view_item = getattr(item, view_name)
+        if isinstance(view_item, Image):
+            views[view_name] = {
+                "id": view_item.id,
+                "type": "image",
+                "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
+                "thumbnail": None,  # view_item.open(dataset.path / "media"),
+                "features": {
+                    "width": {
+                        "name": "width",
+                        "dtype": "int",
+                        "value": view_item.width,
+                    },
+                    "height": {
+                        "name": "height",
+                        "dtype": "int",
+                        "value": view_item.height,
+                    },
+                },
+            }
+        elif (
+            isinstance(view_item, list)
+            and len(view_item) > 0
+            and isinstance(view_item[0], SequenceFrame)
+        ):
+            views[view_name] = sorted(
+                [
+                    {
+                        "id": frame.id,
+                        "type": "image",  # note: it's an image frame from a video
+                        "frame_index": frame.frame_index,
+                        "uri": "data/" + dataset.path.name + "/media/" + frame.url,
+                        # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
+                        "thumbnail": None,  # frame.open(dataset.path / "media"),
+                        "features": {
+                            "width": {
+                                "name": "width",
+                                "dtype": "int",
+                                "value": frame.width,
+                            },
+                            "height": {
+                                "name": "height",
+                                "dtype": "int",
+                                "value": frame.height,
+                            },
+                        },
+                    }
+                    for frame in view_item
+                ],
+                key=lambda x: x["frame_index"],
+            )
+            view_type = "video"
+
+    # objects
+    # TMP NOTE : the objects contents may still be subject to change -- WIP
+    objects = []
+    if view_type == "image":
+        for obj_group in groups[_SchemaGroup.OBJECT]:
+            objects.extend(
+                [
+                    {
+                        "id": obj.id,
+                        "datasetItemType": view_type,
+                        "item_id": item_id,
+                        "source_id": "Ground Truth",  # ??
+                        "view_id": obj.view_id,
+                        "features": {
+                            fname: {
+                                "name": fname,
+                                "dtype": type(getattr(obj, fname)).__name__,
+                                "value": getattr(obj, fname),
+                            }
+                            for fname in vars(obj).keys()
+                            if fname
+                            not in [
+                                "id",
+                                "item_id",
+                                "source_id",
+                                "view_id",
+                                "bbox",
+                                "mask",
+                            ]
+                        },  # ????
+                        # bbox/mask/whatelse?
+                        "bbox": obj.bbox if hasattr(obj, "bbox") else None,
+                        "mask": obj.mask if hasattr(obj, "mask") else None,
+                    }
+                    for obj in getattr(item, obj_group)
+                ]
+            )
+    else:  # video
+        # organize tracklets by tracks
+        tracks = defaultdict(list)
+        for tracklet_group in groups[_SchemaGroup.TRACKLET]:
+            for tracklet in getattr(item, tracklet_group):
+                tracks[tracklet.track_id].append(tracklet)
+
+        for track_id, tracklets in tracks.items():
+            # Sort tracklets by timestep or timestamp
+            tracklets.sort(key=lambda x: x.start_timestep)  # TODO or timestamp
+            # TODO check if tracklets in a track overlaps: --> create "error_overlap#N_{track_id}" if so
+
+            # gather objects by tracklets (for boxes) #TODO ?? from different OBJECT groups ??
+            tracklet_objs = {}
+            for tracklet in tracklets:
+                tracklet_objs[tracklet.id] = [
+                    obj
+                    for obj_group in groups[_SchemaGroup.OBJECT]
+                    for obj in getattr(item, obj_group)
+                    if obj.tracklet_id == tracklet.id
+                ]
+
+            # features are taken from first tracklet of each track
+            track_feats = tracklets[0]
+
+            # view_id is taken from first object in the first tracklet
+            view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+
+            objects.append(
+                {
+                    "id": track_id,
+                    "datasetItemType": view_type,
+                    "item_id": item_id,
+                    "source_id": "Ground Truth",  # ?? must ensure source
+                    "view_id": view_id,
+                    "features": {
+                        fname: {
+                            "name": fname,
+                            "dtype": type(getattr(track_feats, fname)).__name__,
+                            "value": getattr(track_feats, fname),
+                        }
+                        for fname in vars(track_feats).keys()
+                        if fname
+                        not in [
+                            "id",
+                            "item_id",
+                            "track_id",
+                            "start_timestamp",
+                            "end_timestamp",
+                            "start_timestep",
+                            "end_timestep",
+                            "is_key",  # ??
+                        ]  # TODO: define list of unwanted tracklet features
+                    },
+                    "track": [
+                        {
+                            "id": tracklet.id,
+                            "start": tracklet.start_timestep,
+                            "end": tracklet.end_timestep,
+                            "boxes": [
+                                {
+                                    **vars(obj.bbox),
+                                    "frame_index": obj.frame_idx,
+                                    "is_key": obj.is_key,
+                                    "is_thumbnail": i == 0,
+                                }
+                                for i, obj in enumerate(tracklet_objs[tracklet.id])
+                            ],
+                        }
+                        for tracklet in tracklets
+                    ],
+                }
+            )
+
+    front_item = FrontDatasetItem(
+        id=item.id,
+        type=view_type,
+        datasetId=ds_id,
+        split=item.split,
+        views=views,
+        objects=objects,
+        features=features,
+        embeddings={},  # TODO
+    )
+
+    print(front_item)
+
+    # Return dataset item
+    if front_item:
+        return front_item
     raise HTTPException(
         status_code=404,
-        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
+        detail=f"Item '{item_id}' not found in dataset",
     )
 
 
@@ -514,7 +496,7 @@ async def post_dataset_item(  # noqa: D417
 
     if dataset:
         # Save dataset item
-        dataset.save_item(item)
+        save_item(dataset, item)
 
         # Return response
         return Response()
@@ -522,6 +504,131 @@ async def post_dataset_item(  # noqa: D417
         status_code=404,
         detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
     )
+
+
+def save_item(dataset: Dataset, item: FrontDatasetItem):
+    """Save dataset item features and objects
+
+    #TODO Note: for now, we don't manage alteration of table schema
+    (anyway front doesn't allow such modification right now)
+
+    Args:
+        item (DatasetItem): Item to save
+    """
+    # TODO convert FrontDatasetItem to DatasetItem (??? really needed ? -> no, or maybe if we use CRUD API finally)
+    # we could already use read_objects fct, but here we use scanner directly, which I presume avoid some
+    # ---things that may come handy if we need to alter table schema:
+    # print(self._custom_dataset_item_class)
+    print(item)
+    # [{'id': 'rabbit2',
+    # 'datasetItemType': 'video',
+    # 'item_id': '242r2npDPzopBGP6tnFpVT',
+    # 'source_id': 'Ground Truth',
+    # 'view_id': 'image',
+    # 'features': {'track_id': {'name': 'track_id', 'dtype': 'str', 'value': 'rabbit2'}},
+    # VIDEO
+    # 'track': [
+    #     {'id': 'object',
+    #     'start': 0,
+    #     'end': 99,
+    #     'boxes': [
+    #         {'coords': [0.403125, 0.362962962962963, 0.10729166666666662, 0.2518518518518518], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 0, 'is_key': True, 'is_thumbnail': True, 'displayControl': {'hidden': False}, 'hidden': False},
+    #         {'coords': [0.4010416666666667, 0.3685185185185185, 0.10833333333333334, 0.24814814814814817], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 1, 'is_key': False, 'is_thumbnail': False},
+    #         {'coords': [0.40208333333333335, 0.37777777777777777, 0.10624999999999996, 0.24629629629629635], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 2, 'is_key': False, 'is_thumbnail': False},
+    #         {'coords': ...
+    # IMAGE
+    # 'bbox': {'coords': [0.35964912280701755, 0.16618654624727497, 0.19230769230769235, 0.2797674660022838], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'displayControl': {'hidden': False, 'editing': True}},
+    # 'mask': None,
+    # 'displayControl': {'hidden': False, 'editing': True},
+    # 'highlighted': 'self'}]
+
+    # print("------------------------")
+    # print(self._read_items_data([item.id]))  # <-- stored item in tables
+    # print(self.dataset_schema)
+
+    # Local utility function to convert objects to pyarrow format
+    # also adapt features to table format
+    def convert_objects_to_pyarrow(table, objs):
+        # Convert objects to PyArrow
+        # adapt features
+        for obj in objs:
+            if "features" in obj:
+                for feat in obj["features"].values():
+                    # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
+                    obj[feat["name"]] = feat["value"]
+
+        return pa.Table.from_pylist(
+            # [obj.to_pyarrow() for obj in objs],
+            objs,
+            schema=table.schema,
+        )
+
+    def convert_item_to_pyarrow(table, item):
+        # Convert item to PyArrow
+        pyarrow_item = {}
+
+        # ID
+        pyarrow_item["id"] = item.id
+        pyarrow_item["split"] = item.split
+
+        # Features
+        if item.features is not None:
+            for feat in item.features.values():
+                # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
+                pyarrow_item[feat["name"]] = feat["value"]
+
+        return pa.Table.from_pylist(
+            [pyarrow_item],
+            schema=table.schema,
+        )
+
+    # UPDATE items features
+    item_table = dataset.open_table("item")
+    item_table.delete(f"id in ('{item.id}')")
+    item_table.add(convert_item_to_pyarrow(item_table, item))
+
+    # Objects
+    add_ids = []
+    update_ids = []
+
+    # TMP: use table "objects"  # TODO : what if not "objects" ?
+    obj_table = dataset.open_table("objects")
+
+    str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
+    if str_obj_ids:
+        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+        scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
+        update_objs = scanner.to_table()
+        update_ids = update_objs.to_pydict()["id"]
+        add_ids = [obj["id"] for obj in item.objects if obj["id"] not in update_ids]
+        scanner = obj_table.to_lance().scanner(filter=f"id not in {str_obj_ids}")
+        delete_objs = scanner.to_table()
+        delete_ids = delete_objs.to_pydict()["id"]
+    else:
+        # no objects in item.objects, it means we may have to delete existing objs
+        delete_objs = obj_table.to_lance().scanner().to_table()
+        delete_ids = delete_objs.to_pydict()["id"]
+
+    if add_ids:
+        new_objs = [obj for obj in item.objects if obj["id"] in add_ids]
+        obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
+
+    if update_ids:
+        update_objs = [obj for obj in item.objects if obj["id"] in update_ids]
+        str_obj_ids = [f"'{id}'" for id in update_ids]
+        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+        obj_table.delete(f"id in {str_obj_ids}")
+        obj_table.add(convert_objects_to_pyarrow(obj_table, update_objs))
+
+    if delete_ids:
+        str_obj_ids = [f"'{id}'" for id in delete_ids]
+        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
+        obj_table.delete(f"id in {str_obj_ids}")
+
+    # Clear change history to prevent dataset from becoming too large
+    obj_table.to_lance().cleanup_old_versions()
+    # TODO: ther is a lancedb utility to "reshape" table after updates, to keep it "clean"
+    # Maybe we should use it ?
 
 
 @router.get(
