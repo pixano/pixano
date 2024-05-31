@@ -29,8 +29,6 @@
   let cursorElement: HTMLButtonElement;
   let timeTrackElement: HTMLElement;
 
-  let timeTrackElement: HTMLElement;
-
   let imageFilesLength = $lastFrameIndex + 1;
   const videoTotalLengthInMs = imageFilesLength * $videoControls.videoSpeed;
   let timeScaleInMs = [...Array(Math.floor(videoTotalLengthInMs / 100)).keys()];

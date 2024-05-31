@@ -50,7 +50,6 @@
     itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible =
     itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
-<<<<<<< HEAD
 
   $: color = $colorScale[1](itemObject.id);
 
@@ -59,10 +58,6 @@
       open = true;
     }
   }
-=======
-
-  $: color = $colorScale[1](itemObject.id);
->>>>>>> f7ef643eb84267348183a58d363cb3df4e6e6425
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,

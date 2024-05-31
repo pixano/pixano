@@ -14,11 +14,7 @@
    * http://www.cecill.info
    */
 
-<<<<<<< HEAD
   import type { DatasetItem, FeaturesValues } from "@pixano/core";
-=======
-  import type { DatasetItem, ItemObject, FeaturesValues } from "@pixano/core";
->>>>>>> f7ef643eb84267348183a58d363cb3df4e6e6425
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
