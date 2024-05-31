@@ -19,7 +19,7 @@
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { ItemFeature, TableData } from "@pixano/core";
+  import type { TableData } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -32,6 +32,7 @@
 
   // Exports
   export let items: TableData;
+  console.log(items);
 
   // Add data into a readable store and create table object
   const data = readable(items.rows);
