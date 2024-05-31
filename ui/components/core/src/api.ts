@@ -19,10 +19,6 @@ import type {
   DatasetItems,
   DatasetItem,
   ExplorerData,
-<<<<<<< HEAD
-=======
-  VideoObject,
->>>>>>> f7ef643eb84267348183a58d363cb3df4e6e6425
 } from "./lib/types/datasetTypes";
 
 // Exports
