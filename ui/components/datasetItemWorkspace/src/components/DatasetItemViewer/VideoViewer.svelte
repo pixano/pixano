@@ -129,6 +129,7 @@
       updateOrCreateBox(shape);
     }
   }
+<<<<<<< HEAD
 
   $: selectedTool.set($selectedTool);
 
@@ -145,6 +146,8 @@
       height = document.body.scrollHeight - e.pageY;
     }
   };
+=======
+>>>>>>> f7ef643eb84267348183a58d363cb3df4e6e6425
 </script>
 
 <section
