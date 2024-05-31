@@ -27,6 +27,8 @@
   export let stage: Konva.Stage;
   export let viewId: string;
 
+  let polygonId = "keyPoints";
+
   // le dernier point est le noeud de référence
   // en cliquant sur un point, il devient le noeud de reference
   // un point peut avoir zero, un ou plusieurs noeud d'origine. On trace toutes ses lignes
@@ -37,34 +39,57 @@
     }
   }
 
-  $: console.log({ newShape });
   const findPoint = (id: number) => {
     const point = newShape.points.find((point) => point.id === id);
+    if (!point) return [0, 0];
     return [point.x, point.y];
   };
 
   const setNewShape = (pointId: number) => {
     newShape = { ...newShape, referencePointId: pointId };
   };
+
+  const onPointDragMove = (pointId: number) => {
+    const pointPosition = stage.findOne(`#keyPoint-${polygonId}-${pointId}`).position();
+    const points = newShape.points.map((point) => {
+      if (point.id === pointId) {
+        return { ...point, x: pointPosition.x, y: pointPosition.y };
+      }
+      return point;
+    });
+    newShape = { ...newShape, points };
+  };
+
+  const deletePoint = (pointId: number) => {
+    let referencePointId = newShape.referencePointId;
+    const garbage = [pointId];
+    const points = newShape.points.filter((point) => {
+      if (garbage.includes(point.id)) {
+        garbage.push(pointId);
+        return false;
+      }
+      if (point.origin_points.some((p) => garbage.includes(p))) {
+        garbage.push(point.id);
+        return false;
+      }
+      return true;
+    });
+    if (!points.map((p) => p.id).includes(referencePointId)) {
+      referencePointId = points[points.length - 1].id;
+    }
+    newShape = { ...newShape, points, referencePointId };
+  };
 </script>
 
 {#if newShape.viewId === viewId}
-  <Group config={{ id: "drag-rect-group" }}>
-    <Line
-      config={{
-        points: [10, 20, 40, 50],
-        stroke: "red",
-        strokeWidth: 2,
-        closed: true,
-      }}
-    />
-    {#each newShape.points as point, i}
+  <Group config={{ id: "keyPointStructure" }}>
+    {#each newShape.points as point}
       {#if point.origin_points.length > 0}
         {#each point.origin_points as originPoint}
           <Line
             config={{
               points: [point.x, point.y, ...findPoint(originPoint)],
-              stroke: "blue",
+              stroke: "#781e60",
               strokeWidth: 1 / zoomFactor[viewId],
             }}
           />
@@ -75,17 +100,24 @@
         config={{
           x: point.x,
           y: point.y,
-          radius: 4 / zoomFactor[viewId],
-          fill: "rgb(0,128,0)",
+          radius: (point.id === newShape.referencePointId ? 6 : 4) / zoomFactor[viewId],
+          fill: point.id === newShape.referencePointId ? "#781e60" : "rgb(0,128,0)",
           stroke: "white",
           strokeWidth: 1 / zoomFactor[viewId],
-          id: `dot-${"polygonId"}-${i}-${point.id}`,
+          id: `keyPoint-${polygonId}-${point.id}`,
           draggable: true,
         }}
+        on:dragmove={() => onPointDragMove(point.id)}
+        on:dblclick={() => deletePoint(point.id)}
       />
     {/each}
   </Group>
 {/if}
+
+<!-- on:mouseover={(e) => {
+        e.detail.target?.attrs?.id === `dot-${polygonId}-${i}-${point.id}` &&
+          scaleCircleRadius(point.id, i, 2);
+      }} -->
 
 <!-- on:click={() => console.log("click")}
         on:dragmove={() => console.log("dragmove")}

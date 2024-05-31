@@ -408,11 +408,9 @@
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
       case "POINT_SELECTION":
-        console.log("points");
         displayInputPointTool(selectedTool);
         break;
       case "RECTANGLE":
-        console.log("RECTANGLE");
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
@@ -420,17 +418,14 @@
         // Enable key point creation or change cursor style
         break;
       case "DELETE":
-        console.log("DELETE");
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
         break;
       case "PAN":
-        console.log("pan");
         displayPanTool(selectedTool);
         // Enable box creation or change cursor style
         break;
       case "CLASSIFICATION":
-        console.log("CLASSIFICATION");
         displayClassificationTool(selectedTool);
         break;
 
@@ -468,6 +463,7 @@
   }
 
   // ********** KEY_POINT TOOL ********** //
+  let pointIdCounter = 0;
 
   function drawKeyPoints(viewId: string) {
     if (newShape?.status === "saving") return;
@@ -478,18 +474,18 @@
 
     let oldPoints: KeyPoint[] = [];
     let originPoints: number[] = [];
+    let id = pointIdCounter++;
 
     if (newShape.status === "creating" && newShape.type === "keyPoint") {
       oldPoints = newShape.points;
-      console.log(newShape.referencePointId);
       originPoints = [newShape.referencePointId].filter((id) => id >= 0);
     }
 
     newShape = {
       status: "creating",
       type: "keyPoint",
-      points: [...oldPoints, { x, y, id: oldPoints.length || 0, origin_points: originPoints }],
-      referencePointId: oldPoints.length,
+      points: [...oldPoints, { x, y, id, origin_points: originPoints }],
+      referencePointId: id,
       viewId,
     };
   }
