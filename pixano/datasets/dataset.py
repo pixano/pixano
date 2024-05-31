@@ -776,7 +776,7 @@ class Dataset:
             delete_ids = delete_objs.to_pydict()["id"]
 
         if add_ids:
-            new_objs = [obj for obj in item.objects if obj.id in add_ids]
+            new_objs = [obj for obj in item.objects if obj['id'] in add_ids]
             obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
 
         if update_ids:
