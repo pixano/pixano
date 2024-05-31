@@ -32,6 +32,7 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
+    KeyPoint,
   } from "@pixano/core";
 
   import {
@@ -47,6 +48,7 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
 
   // Exports
 
@@ -59,8 +61,8 @@
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
-  export let brightness: number;
-  export let contrast: number;
+  // export let brightness: number;
+  // export let contrast: number;
 
   let isReady = false;
 
@@ -296,19 +298,19 @@
     }
   }
 
-  const applyFilters = () => {
-    if (stage) {
-      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+  // const applyFilters = () => {
+  //   if (stage) {
+  //     let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-      images.forEach((image) => {
-        if (image.width() === 0 || image.height() === 0) return;
+  //     images.forEach((image) => {
+  //       if (image.width() === 0 || image.height() === 0) return;
 
-        image.cache();
-        image.brightness(brightness);
-        image.contrast(contrast);
-      });
-    }
-  };
+  //       image.cache();
+  //       image.brightness(brightness);
+  //       image.contrast(contrast);
+  //     });
+  //   }
+  // };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
@@ -406,21 +408,29 @@
     // You can add more cases for different tools as needed
     switch (selectedTool.type) {
       case "POINT_SELECTION":
+        console.log("points");
         displayInputPointTool(selectedTool);
         break;
       case "RECTANGLE":
+        console.log("RECTANGLE");
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
+      case "KEY_POINT":
+        // Enable key point creation or change cursor style
+        break;
       case "DELETE":
+        console.log("DELETE");
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
         break;
       case "PAN":
+        console.log("pan");
         displayPanTool(selectedTool);
         // Enable box creation or change cursor style
         break;
       case "CLASSIFICATION":
+        console.log("CLASSIFICATION");
         displayClassificationTool(selectedTool);
         break;
 
@@ -453,6 +463,33 @@
       status: "creating",
       type: "mask",
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
+      viewId,
+    };
+  }
+
+  // ********** KEY_POINT TOOL ********** //
+
+  function drawKeyPoints(viewId: string) {
+    if (newShape?.status === "saving") return;
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
+    const x = Math.round(cursorPositionOnImage.x);
+    const y = Math.round(cursorPositionOnImage.y);
+
+    let oldPoints: KeyPoint[] = [];
+    let originPoints: number[] = [];
+
+    if (newShape.status === "creating" && newShape.type === "keyPoint") {
+      oldPoints = newShape.points;
+      console.log(newShape.referencePointId);
+      originPoints = [newShape.referencePointId].filter((id) => id >= 0);
+    }
+
+    newShape = {
+      status: "creating",
+      type: "keyPoint",
+      points: [...oldPoints, { x, y, id: oldPoints.length || 0, origin_points: originPoints }],
+      referencePointId: oldPoints.length,
       viewId,
     };
   }
@@ -841,6 +878,9 @@
     if (selectedTool?.type === "POLYGON") {
       drawPolygonPoints(viewId);
     }
+    if (selectedTool?.type === "KEY_POINT") {
+      drawKeyPoints(viewId);
+    }
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -1040,6 +1080,9 @@
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
+        {#if (newShape.status === "creating" && newShape.type === "keyPoint") || (newShape.status === "saving" && newShape.type === "keyPoint")}
+          <CreateKeyPoint {zoomFactor} bind:newShape {stage} {viewId} />
+        {/if}
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}

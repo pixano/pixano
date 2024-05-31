@@ -16,6 +16,11 @@ export type SaveShapeBase = {
   status: "saving";
 };
 
+export type SaveKeyBoxShape = SaveShapeBase & {
+  type: "keyPoint";
+  points: PolygonGroupPoint[];
+};
+
 export type SaveRectangleShape = SaveShapeBase & {
   type: "rectangle";
   attrs: {
@@ -31,7 +36,7 @@ type SaveMaskShape = SegmentationResult &
     type: "mask";
   };
 
-export type SaveShape = SaveRectangleShape | SaveMaskShape;
+export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape;
 
 export type noShape = {
   status: "none";
@@ -42,6 +47,21 @@ export type PolygonGroupPoint = {
   x: number;
   y: number;
   id: number;
+};
+
+export type KeyPoint = {
+  x: number;
+  y: number;
+  id: number;
+  origin_points: number[];
+};
+
+export type CreateKeyPointShape = {
+  status: "creating";
+  type: "keyPoint";
+  points: KeyPoint[];
+  viewId: string;
+  referencePointId: number;
 };
 
 export type CreateMaskShape = {
@@ -61,7 +81,7 @@ export type CreateRectangleShape = {
   viewId: string;
 };
 
-export type CreateShape = CreateMaskShape | CreateRectangleShape;
+export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeyPointShape;
 
 export type EditMaskShape = {
   type: "mask";

@@ -33,6 +33,7 @@
     addSmartPointTool,
     removeSmartPointTool,
     polygonTool,
+    keyPointTool,
   } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -100,10 +101,13 @@
     >
       <Share2 />
     </IconButton>
-    <!-- <IconButton tooltipContent="TODO">
-      uncomment when ready
+    <IconButton
+      tooltipContent="Skeleton - TO CHANGE"
+      on:click={() => selectTool(keyPointTool)}
+      selected={$selectedTool?.type === "KEY_POINT"}
+    >
       <BrushIcon />
-    </IconButton> -->
+    </IconButton>
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {
