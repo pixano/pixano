@@ -28,9 +28,4 @@
   });
 </script>
 
-<svelte:head>
-  <title>Pixano</title>
-  <meta name="description" content="Pixano app" />
-</svelte:head>
-
 <DatasetsLibrary {datasets} />
