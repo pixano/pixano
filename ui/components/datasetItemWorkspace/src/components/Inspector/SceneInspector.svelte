@@ -24,9 +24,9 @@
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
+  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
-  export let brightness: number;
-  export let contrast: number;
+  export let filters: Filters;
   export let RGB = {
     r: 0,
     g: 0,
@@ -130,7 +130,7 @@
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
   <div class="mx-4 mb-4">
-    <label for="brightness">Brightness : {Math.round(brightness * 100 + 50)}%</label>
+    <label for="brightness">Brightness : {Math.round(filters.brightness * 100 + 50)}%</label>
     <input
       type="range"
       id="brightness"
@@ -138,10 +138,10 @@
       max="0.5"
       step="0.01"
       class="w-full mt-1 cursor-pointer accent-primary"
-      bind:value={brightness}
+      bind:value={filters.brightness}
     />
 
-    <label for="contrast">Contrast : {Math.round(contrast + 50)}%</label>
+    <label for="contrast">Contrast : {Math.round(filters.contrast + 50)}%</label>
     <input
       type="range"
       id="contrast"
@@ -149,12 +149,17 @@
       max="50"
       step="1"
       class="w-full mt-1 cursor-pointer accent-primary"
-      bind:value={contrast}
+      bind:value={filters.contrast}
     />
 
     <!-- WIP -->
     <div class="pt-2 flex items-center space-x-2">
-      <input type="checkbox" id="equalizer" class="cursor-pointer w-4 h-4" />
+      <input
+        type="checkbox"
+        id="equalizer"
+        class="cursor-pointer w-4 h-4"
+        bind:checked={filters.equalizeHistogram}
+      />
       <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
     </div>
 

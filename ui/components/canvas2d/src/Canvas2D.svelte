@@ -47,6 +47,7 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import type { Filters } from "./lib/types/canvas2dTypes";
 
   // Exports
   export let selectedItemId: DatasetItem["id"];
@@ -61,12 +62,11 @@
   export let isVideo: boolean = false;
 
   // Image settings
-  export let brightness: number;
-  export let contrast: number;
-
-  let prevFilters = {
+  export let filters: Filters;
+  let prevFilters: Filters = {
     brightness: 0,
     contrast: 0,
+    equalizeHistogram: false,
   };
 
   let isReady = false;
@@ -192,7 +192,7 @@
 
     if (isVideo) return; // Only apply filters to images, because of performance issues
 
-    if (prevFilters.brightness != brightness || prevFilters.contrast != contrast) {
+    if (prevFilters !== filters) {
       applyFilters();
     }
   });
@@ -342,9 +342,49 @@
     if (!images) return;
 
     images.forEach((image) => {
-      if (image.width() === 0 || image.height() === 0) return; 
+      if (image.width() === 0 || image.height() === 0) return;
       image.cache();
     });
+  };
+
+  export const EqualizeHistogram16Bit = (imageData: ImageData) => {
+    const nPixels = imageData.data.length / 4;
+    const histogram: number[] = new Array<number>(65536).fill(0);
+    const cdf: number[] = new Array<number>(65536).fill(0);
+
+    // Step 1: Calculate the histogram
+    for (let i = 0; i < nPixels; i++) {
+      const r = imageData.data[i * 4];
+      const g = imageData.data[i * 4 + 1];
+      const b = imageData.data[i * 4 + 2];
+      const intensity = Math.floor((r + g + b) / 3);
+      histogram[intensity]++;
+    }
+
+    // Step 2: Compute the cumulative distribution function (CDF)
+    cdf[0] = histogram[0];
+    for (let i = 1; i < 65536; i++) {
+      cdf[i] = cdf[i - 1] + histogram[i];
+    }
+
+    // Step 3: Normalize the CDF
+    const cdfMin = cdf.find((value) => value > 0);
+    const totalPixels = nPixels;
+    for (let i = 0; i < 65536; i++) {
+      cdf[i] = Math.round(((cdf[i] - cdfMin) / (totalPixels - cdfMin)) * 65535);
+    }
+
+    // Step 4: Apply the normalized CDF to transform the pixel values
+    for (let i = 0; i < nPixels; i++) {
+      const r = imageData.data[i * 4];
+      const g = imageData.data[i * 4 + 1];
+      const b = imageData.data[i * 4 + 2];
+      const intensity = Math.floor((r + g + b) / 3);
+      const newValue = cdf[intensity];
+      imageData.data[i * 4] = newValue >> 8;
+      imageData.data[i * 4 + 1] = newValue >> 8;
+      imageData.data[i * 4 + 2] = newValue >> 8;
+    }
   };
 
   const applyFilters = () => {
@@ -355,12 +395,19 @@
     if (!images) return;
 
     images.forEach((image) => {
-      image.brightness(brightness);
-      image.contrast(contrast);
+      if (image.width() === 0 || image.height() === 0) return;
+      image.clearCache();
+
+      if (filters.equalizeHistogram)
+        image.filters([Konva.Filters.Brighten, Konva.Filters.Contrast, EqualizeHistogram16Bit]);
+      else image.filters([Konva.Filters.Brighten, Konva.Filters.Contrast]);
+
+      image.brightness(filters.brightness);
+      image.contrast(filters.contrast);
+      image.cache();
     });
 
-    prevFilters.brightness = brightness;
-    prevFilters.contrast = contrast;
+    prevFilters = { ...filters };
   };
 
   function findViewId(shape: Konva.Shape): string {
@@ -1082,12 +1129,13 @@
               image,
               id: `image-${viewId}`,
               zIndex: 1,
-              filters: [Konva.Filters.Brighten, Konva.Filters.Contrast],
             }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
             on:pointerup={() => handlePointerUpOnImage(viewId)}
             on:dblclick={() => handleDoubleClickOnImage(viewId)}
           />
+
+          <!-- filters: [Konva.Filters.Brighten, Konva.Filters.Contrast, EqualizeHistogram16Bit], -->
         {/each}
         <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "masks" }} />

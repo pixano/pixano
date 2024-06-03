@@ -28,12 +28,12 @@
     colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
+  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let brightness: number;
-  export let contrast: number;
+  export let filters: Filters;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -68,8 +68,7 @@
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
-    {brightness}
-    {contrast}
+    {filters}
     bind:selectedTool={$selectedTool}
     bind:currentAnn
     bind:newShape={$newShape}

@@ -8,3 +8,9 @@ export type PolygonShape = {
   simplifiedSvg: string[];
   simplifiedPoints: PolygonGroupPoint[][];
 };
+
+export type Filters = {
+  brightness: number;
+  contrast: number;
+  equalizeHistogram: boolean;
+};

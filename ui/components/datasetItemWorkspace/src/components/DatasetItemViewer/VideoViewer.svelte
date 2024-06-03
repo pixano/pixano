@@ -41,8 +41,6 @@
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let brightness: number;
-  export let contrast: number;
 
   let height = 250;
   let expanding = false;
@@ -163,8 +161,6 @@
         bboxes={$itemBboxes}
         masks={$itemMasks}
         {embeddings}
-        {brightness}
-        {contrast}
         isVideo={true}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
