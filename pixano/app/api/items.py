@@ -10,22 +10,21 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-import json
 from collections import defaultdict
-import shortuuid
 
 # TMP legacy
 from typing import Annotated, Optional
 
+import pyarrow as pa
+import shortuuid
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 from pydantic import BaseModel
-import pyarrow as pa
 
+import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
-import pixano.datasets.dataset_explorer as de
 from pixano.datasets.features import Image, SequenceFrame
 from pixano.datasets.features.schemas.group import _SchemaGroup
 
@@ -559,38 +558,52 @@ async def post_dataset_item(  # noqa: D417
 
             for obj in item.objects:
                 for tracklet in obj["track"]:
-                    tracklet_id = tracklet["id"] if "id" in tracklet else shortuuid.uuid()
-                    tracklet_add.append({
-                        "id": tracklet_id,
-                        "item_id": item.id,
-                        "track_id": obj["id"],
-                        "start_timestep": tracklet["start"],  # TODO timestamp/timestep, front keep only one... ?
-                        "start_timestamp": tracklet["start"],
-                        "end_timestep": tracklet["end"],
-                        "end_timestamp": tracklet["end"],
-                    })
-                    for box in tracklet["boxes"]:
-                        obj_add.append({
-                            "id": box["id"] if "id" in box else shortuuid.uuid(),
+                    tracklet_id = (
+                        tracklet["id"] if "id" in tracklet else shortuuid.uuid()
+                    )
+                    tracklet_add.append(
+                        {
+                            "id": tracklet_id,
                             "item_id": item.id,
-                            "view_id": obj["view_id"],
-                            "tracklet_id": tracklet_id,
-                            "frame_idx": box["frame_index"],
-                            "is_key": box["is_key"],
-                            "is_thumbnail": box["is_thumbnail"] if "is_thumbnail" in box else False,
-                            "bbox": {
-                                "coords": box["coords"],
-                                "format": box["format"],
-                                "is_normalized": box["is_normalized"],
-                                "confidence": box["confidence"]
-                            },
-                        })
+                            "track_id": obj["id"],
+                            "start_timestep": tracklet[
+                                "start"
+                            ],  # TODO timestamp/timestep, front keep only one... ?
+                            "start_timestamp": tracklet["start"],
+                            "end_timestep": tracklet["end"],
+                            "end_timestamp": tracklet["end"],
+                        }
+                    )
+                    for box in tracklet["boxes"]:
+                        obj_add.append(
+                            {
+                                "id": box["id"] if "id" in box else shortuuid.uuid(),
+                                "item_id": item.id,
+                                "view_id": obj["view_id"],
+                                "tracklet_id": tracklet_id,
+                                "frame_idx": box["frame_index"],
+                                "is_key": box["is_key"],
+                                "is_thumbnail": (
+                                    box["is_thumbnail"]
+                                    if "is_thumbnail" in box
+                                    else False
+                                ),
+                                "bbox": {
+                                    "coords": box["coords"],
+                                    "format": box["format"],
+                                    "is_normalized": box["is_normalized"],
+                                    "confidence": box["confidence"],
+                                },
+                            }
+                        )
 
             if tracklet_add:
-                tracklet_table.add(convert_objects_to_pyarrow(tracklet_table, tracklet_add))
+                tracklet_table.add(
+                    convert_objects_to_pyarrow(tracklet_table, tracklet_add)
+                )
             if obj_add:
                 obj_table.add(convert_objects_to_pyarrow(obj_table, obj_add))
-            
+
             # tracklet_table.to_lance().cleanup_old_versions()
 
     # Clear change history to prevent dataset from becoming too large
