@@ -650,7 +650,8 @@ class Dataset:
         Returns:
             DatasetItem: Dataset item
         """
-        return self.read_embeddings([id], select)[0]
+        ##TMP no embeddings now
+        return None  # self.read_embeddings([id], select)[0]
 
     def get_embeddings(
         self,
