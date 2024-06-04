@@ -10,8 +10,9 @@
 # license as circulated by CEA, CNRS and INRIA at the following URL
 #
 # http://www.cecill.info
-
+import json
 from collections import defaultdict
+import shortuuid
 
 # TMP legacy
 from typing import Annotated, Optional
@@ -468,7 +469,7 @@ async def get_dataset_item(  # noqa: D417
         embeddings={},  # TODO
     )
 
-    print(front_item)
+    # print(front_item)
 
     # Return dataset item
     if front_item:
@@ -494,57 +495,11 @@ async def post_dataset_item(  # noqa: D417
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
-    if dataset:
-        # Save dataset item
-        save_item(dataset, item)
-
-        # Return response
-        return Response()
-    raise HTTPException(
-        status_code=404,
-        detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
-    )
-
-
-def save_item(dataset: Dataset, item: FrontDatasetItem):
-    """Save dataset item features and objects
-
-    #TODO Note: for now, we don't manage alteration of table schema
-    (anyway front doesn't allow such modification right now)
-
-    Args:
-        item (DatasetItem): Item to save
-    """
-    # TODO convert FrontDatasetItem to DatasetItem (??? really needed ? -> no, or maybe if we use CRUD API finally)
-    # we could already use read_objects fct, but here we use scanner directly, which I presume avoid some
-    # ---things that may come handy if we need to alter table schema:
-    # print(self._custom_dataset_item_class)
-    print(item)
-    # [{'id': 'rabbit2',
-    # 'datasetItemType': 'video',
-    # 'item_id': '242r2npDPzopBGP6tnFpVT',
-    # 'source_id': 'Ground Truth',
-    # 'view_id': 'image',
-    # 'features': {'track_id': {'name': 'track_id', 'dtype': 'str', 'value': 'rabbit2'}},
-    # VIDEO
-    # 'track': [
-    #     {'id': 'object',
-    #     'start': 0,
-    #     'end': 99,
-    #     'boxes': [
-    #         {'coords': [0.403125, 0.362962962962963, 0.10729166666666662, 0.2518518518518518], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 0, 'is_key': True, 'is_thumbnail': True, 'displayControl': {'hidden': False}, 'hidden': False},
-    #         {'coords': [0.4010416666666667, 0.3685185185185185, 0.10833333333333334, 0.24814814814814817], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 1, 'is_key': False, 'is_thumbnail': False},
-    #         {'coords': [0.40208333333333335, 0.37777777777777777, 0.10624999999999996, 0.24629629629629635], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'frame_index': 2, 'is_key': False, 'is_thumbnail': False},
-    #         {'coords': ...
-    # IMAGE
-    # 'bbox': {'coords': [0.35964912280701755, 0.16618654624727497, 0.19230769230769235, 0.2797674660022838], 'format': 'xywh', 'is_normalized': True, 'confidence': 1, 'displayControl': {'hidden': False, 'editing': True}},
-    # 'mask': None,
-    # 'displayControl': {'hidden': False, 'editing': True},
-    # 'highlighted': 'self'}]
-
-    # print("------------------------")
-    # print(self._read_items_data([item.id]))  # <-- stored item in tables
-    # print(self.dataset_schema)
+    if not dataset:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
+        )
 
     # Local utility function to convert objects to pyarrow format
     # also adapt features to table format
@@ -558,7 +513,6 @@ def save_item(dataset: Dataset, item: FrontDatasetItem):
                     obj[feat["name"]] = feat["value"]
 
         return pa.Table.from_pylist(
-            # [obj.to_pyarrow() for obj in objs],
             objs,
             schema=table.schema,
         )
@@ -582,53 +536,70 @@ def save_item(dataset: Dataset, item: FrontDatasetItem):
             schema=table.schema,
         )
 
-    # UPDATE items features
+    # items features
     item_table = dataset.open_table("item")
     item_table.delete(f"id in ('{item.id}')")
     item_table.add(convert_item_to_pyarrow(item_table, item))
 
-    # Objects
-    add_ids = []
-    update_ids = []
-
-    # TMP: use table "objects"  # TODO : what if not "objects" ?
+    # TODO : how to select the correct OBJECT table name ? store it in front ?
     obj_table = dataset.open_table("objects")
+    obj_table.delete(f"item_id in ('{item.id}')")
 
-    str_obj_ids = [f"'{obj['id']}'" for obj in item.objects]
-    if str_obj_ids:
-        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-        scanner = obj_table.to_lance().scanner(filter=f"id in {str_obj_ids}")
-        update_objs = scanner.to_table()
-        update_ids = update_objs.to_pydict()["id"]
-        add_ids = [obj["id"] for obj in item.objects if obj["id"] not in update_ids]
-        scanner = obj_table.to_lance().scanner(filter=f"id not in {str_obj_ids}")
-        delete_objs = scanner.to_table()
-        delete_ids = delete_objs.to_pydict()["id"]
-    else:
-        # no objects in item.objects, it means we may have to delete existing objs
-        delete_objs = obj_table.to_lance().scanner().to_table()
-        delete_ids = delete_objs.to_pydict()["id"]
+    # items objects (and tracklets for video)
+    if item.objects:
+        if item.type == "image":
+            obj_table.add(convert_objects_to_pyarrow(obj_table, item.objects))
+        elif item.type == "video":
+            obj_add = []
+            tracklet_add = []
 
-    if add_ids:
-        new_objs = [obj for obj in item.objects if obj["id"] in add_ids]
-        obj_table.add(convert_objects_to_pyarrow(obj_table, new_objs))
+            # TODO : how to select the correct TRACKLET table name ? store it in front ?
+            tracklet_table = dataset.open_table("tracklets")
+            tracklet_table.delete(f"item_id in ('{item.id}')")
 
-    if update_ids:
-        update_objs = [obj for obj in item.objects if obj["id"] in update_ids]
-        str_obj_ids = [f"'{id}'" for id in update_ids]
-        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-        obj_table.delete(f"id in {str_obj_ids}")
-        obj_table.add(convert_objects_to_pyarrow(obj_table, update_objs))
+            for obj in item.objects:
+                for tracklet in obj["track"]:
+                    tracklet_id = tracklet["id"] if "id" in tracklet else shortuuid.uuid()
+                    tracklet_add.append({
+                        "id": tracklet_id,
+                        "item_id": item.id,
+                        "track_id": obj["id"],
+                        "start_timestep": tracklet["start"],  # TODO timestamp/timestep, front keep only one... ?
+                        "start_timestamp": tracklet["start"],
+                        "end_timestep": tracklet["end"],
+                        "end_timestamp": tracklet["end"],
+                    })
+                    for box in tracklet["boxes"]:
+                        obj_add.append({
+                            "id": box["id"] if "id" in box else shortuuid.uuid(),
+                            "item_id": item.id,
+                            "view_id": obj["view_id"],
+                            "tracklet_id": tracklet_id,
+                            "frame_idx": box["frame_index"],
+                            "is_key": box["is_key"],
+                            "is_thumbnail": box["is_thumbnail"] if "is_thumbnail" in box else False,
+                            "bbox": {
+                                "coords": box["coords"],
+                                "format": box["format"],
+                                "is_normalized": box["is_normalized"],
+                                "confidence": box["confidence"]
+                            },
+                        })
 
-    if delete_ids:
-        str_obj_ids = [f"'{id}'" for id in delete_ids]
-        str_obj_ids = "(" + ", ".join(str_obj_ids) + ")"
-        obj_table.delete(f"id in {str_obj_ids}")
+            if tracklet_add:
+                tracklet_table.add(convert_objects_to_pyarrow(tracklet_table, tracklet_add))
+            if obj_add:
+                obj_table.add(convert_objects_to_pyarrow(obj_table, obj_add))
+            
+            # tracklet_table.to_lance().cleanup_old_versions()
 
     # Clear change history to prevent dataset from becoming too large
-    obj_table.to_lance().cleanup_old_versions()
+    # obj_table.to_lance().cleanup_old_versions()
     # TODO: ther is a lancedb utility to "reshape" table after updates, to keep it "clean"
     # Maybe we should use it ?
+
+    # Return response
+    return Response()
 
 
 @router.get(
