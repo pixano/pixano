@@ -32,7 +32,7 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
-    KeyPoint,
+    BasePoint,
   } from "@pixano/core";
 
   import {
@@ -49,6 +49,7 @@
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
   import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
+  import { template } from "./api/keyPointsApi";
 
   // Exports
 
@@ -463,31 +464,56 @@
   }
 
   // ********** KEY_POINT TOOL ********** //
-  let pointIdCounter = 0;
 
-  function drawKeyPoints(viewId: string) {
-    if (newShape?.status === "saving") return;
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
-    const x = Math.round(cursorPositionOnImage.x);
-    const y = Math.round(cursorPositionOnImage.y);
+  function dragInputKeyPointRectMove(viewId: string) {
+    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
-    let oldPoints: KeyPoint[] = [];
-    let originPoints: number[] = [];
-    let id = pointIdCounter++;
-
-    if (newShape.status === "creating" && newShape.type === "keyPoint") {
-      oldPoints = newShape.points;
-      originPoints = [newShape.referencePointId].filter((id) => id >= 0);
+      const pos = viewLayer.getRelativePointerPosition();
+      const x = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.y : pos.y;
+      const width = pos.x - x;
+      const height = pos.y - y;
+      newShape = {
+        status: "creating",
+        type: "keyPoint",
+        x,
+        y,
+        width,
+        height,
+        viewId,
+        keyPoints: template,
+      };
     }
+  }
 
-    newShape = {
-      status: "creating",
-      type: "keyPoint",
-      points: [...oldPoints, { x, y, id, origin_points: originPoints }],
-      referencePointId: id,
-      viewId,
-    };
+  function dragKeyPointInputRectEnd(viewId: string) {
+    if (selectedTool?.type == "KEY_POINT") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
+      if (rect && newShape.status === "creating" && newShape.type === "keyPoint") {
+        const vertices = newShape.keyPoints.vertices.map((vertex) => {
+          if (newShape.status === "creating" && newShape.type === "keyPoint")
+            return {
+              ...vertex,
+              x: newShape.x + vertex.x * newShape.width,
+              y: newShape.y + vertex.y * newShape.height,
+            } as BasePoint;
+        });
+        newShape = {
+          status: "saving",
+          type: "keyPoint",
+          viewId,
+          itemId: selectedItemId,
+          imageWidth: getCurrentImage(viewId).width,
+          imageHeight: getCurrentImage(viewId).height,
+          keyPoints: { ...newShape.keyPoints, vertices },
+        };
+        rect.destroy();
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      }
+    }
   }
 
   // ********** PAN TOOL ********** //
@@ -874,9 +900,7 @@
     if (selectedTool?.type === "POLYGON") {
       drawPolygonPoints(viewId);
     }
-    if (selectedTool?.type === "KEY_POINT") {
-      drawKeyPoints(viewId);
-    }
+
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -943,11 +967,13 @@
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewId);
-
       await updateCurrentMask(viewId);
     } else if (selectedTool?.type == "RECTANGLE") {
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
+    } else if (selectedTool?.type === "KEY_POINT") {
+      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewId));
+      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewId));
     }
   }
 

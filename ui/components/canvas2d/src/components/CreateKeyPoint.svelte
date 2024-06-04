@@ -16,130 +16,79 @@
 
   // Imports
 
-  import { Group, Line, Circle } from "svelte-konva";
+  import Konva from "konva";
+  import { Group, Line, Rect } from "svelte-konva";
 
-  import type { CreateKeyPointShape } from "@pixano/core";
-  //   import type { CreateKeyPointShape, SaveKeyBoxShape } from "@pixano/core";
-  import type Konva from "konva";
+  import type { CreateKeyPointShape, SaveKeyBoxShape } from "@pixano/core";
+
+  import KeyPointCircle from "./KeyPointCircle.svelte";
 
   export let zoomFactor: Record<string, number>;
-  export let newShape: CreateKeyPointShape;
+  export let newShape: CreateKeyPointShape | SaveKeyBoxShape;
   export let stage: Konva.Stage;
   export let viewId: string;
 
   let polygonId = "keyPoints";
 
-  // le dernier point est le noeud de référence
-  // en cliquant sur un point, il devient le noeud de reference
-  // un point peut avoir zero, un ou plusieurs noeud d'origine. On trace toutes ses lignes
-
-  $: {
-    if (zoomFactor.foo === 10000) {
-      console.log({ zoomFactor, stage });
-    }
-  }
-
-  const findPoint = (id: number) => {
-    const point = newShape.points.find((point) => point.id === id);
-    if (!point) return [0, 0];
-    return [point.x, point.y];
+  const onPointDragMove = (pointIndex: number) => {
+    const pointPosition = stage.findOne(`#keyPoint-${polygonId}-${pointIndex}`).position();
+    newShape = {
+      ...newShape,
+      keyPoints: {
+        ...newShape.keyPoints,
+        vertices: newShape.keyPoints.vertices.map((point, i) => {
+          if (i === pointIndex) {
+            return { ...point, x: pointPosition.x, y: pointPosition.y };
+          }
+          return point;
+        }),
+      },
+    };
   };
 
-  const setNewShape = (pointId: number) => {
-    newShape = { ...newShape, referencePointId: pointId };
-  };
+  const findVertex = (index: number) => {
+    const vertex = newShape.keyPoints.vertices[index];
+    const vertexX =
+      newShape.status === "creating" ? newShape.x + vertex.x * newShape.width : vertex.x;
+    const vertexY =
+      newShape.status === "creating" ? newShape.y + vertex.y * newShape.height : vertex.y;
 
-  const onPointDragMove = (pointId: number) => {
-    const pointPosition = stage.findOne(`#keyPoint-${polygonId}-${pointId}`).position();
-    const points = newShape.points.map((point) => {
-      if (point.id === pointId) {
-        return { ...point, x: pointPosition.x, y: pointPosition.y };
-      }
-      return point;
-    });
-    newShape = { ...newShape, points };
-  };
-
-  const onGroupDragEnd = (target: Konva.Group) => {
-    console.log({ target });
-    if (!target || target.id() !== polygonId) return;
-    const moveX = target.x();
-    const moveY = target.y();
-    const points = newShape.points.map((point) => {
-      return { ...point, x: point.x + moveX, y: point.y + moveY };
-    });
-    target.position({ x: 0, y: 0 });
-    newShape = { ...newShape, points };
-  };
-
-  console.log({ newShape });
-
-  const deletePoint = (pointId: number) => {
-    let referencePointId = newShape.referencePointId;
-    const garbage = [pointId];
-    const points = newShape.points.filter((point) => {
-      if (garbage.includes(point.id)) {
-        garbage.push(pointId);
-        return false;
-      }
-      if (point.origin_points.some((p) => garbage.includes(p))) {
-        garbage.push(point.id);
-        return false;
-      }
-      return true;
-    });
-    if (!points.map((p) => p.id).includes(referencePointId)) {
-      referencePointId = points[points.length - 1].id;
-    }
-    newShape = { ...newShape, points, referencePointId };
-  };
-
-  const scaleCircleRadius = (id: number, scale: number) => {
-    const point: Konva.Circle = stage.findOne(`#keyPoint-${polygonId}-${id}`);
-
-    point.scaleX(scale);
-    point.scaleY(scale);
+    return [vertexX, vertexY];
   };
 </script>
 
 {#if newShape.viewId === viewId}
-  <Group
-    config={{ id: polygonId, draggable: true }}
-    on:mouseleave={() => (document.body.style.cursor = "default")}
-    on:mouseover={() => (document.body.style.cursor = "pointer")}
-    on:dragend={(e) => onGroupDragEnd(e.detail.target)}
-  >
-    {#each newShape.points as point}
-      {#if point.origin_points.length > 0}
-        {#each point.origin_points as originPoint}
-          <Line
-            config={{
-              points: [point.x, point.y, ...findPoint(originPoint)],
-              stroke: "#781e60",
-              strokeWidth: 2 / zoomFactor[viewId],
-            }}
-          />
-        {/each}
-      {/if}
-      <Circle
-        on:click={() => setNewShape(point.id)}
+  <Group config={{ id: polygonId, x: 0, y: 0 }}>
+    {#if newShape.status === "creating"}
+      <Rect
         config={{
-          x: point.x,
-          y: point.y,
-          radius: (point.id === newShape.referencePointId ? 6 : 4) / zoomFactor[viewId],
-          fill: point.id === newShape.referencePointId ? "#781e60" : "rgb(0,128,0)",
-          stroke: "white",
-          strokeWidth: 1 / zoomFactor[viewId],
-          id: `keyPoint-${polygonId}-${point.id}`,
-          draggable: true,
+          x: newShape.x,
+          y: newShape.y,
+          width: newShape.width,
+          height: newShape.height,
+          fill: "rgba(255, 0, 0, 0.4)",
+          id: "move-keyPoints-group",
         }}
-        on:dragmove={() => onPointDragMove(point.id)}
-        on:dblclick={() => deletePoint(point.id)}
-        on:mouseover={(e) => {
-          e.detail.target?.attrs?.id === `keyPoint-${polygonId}-${point.id}` &&
-            scaleCircleRadius(point.id, 2);
+      />
+    {/if}
+    {#each newShape.keyPoints.edges as line}
+      <Line
+        config={{
+          points: [...findVertex(line[0]), ...findVertex(line[1])],
+          stroke: "#781e60",
+          strokeWidth: 2 / zoomFactor[viewId],
         }}
-        on:mouseleave={() => scaleCircleRadius(point.id, 1)}
+      />
+    {/each}
+    {#each newShape.keyPoints.vertices as vertex, i}
+      <KeyPointCircle
+        vertexIndex={i}
+        {stage}
+        currentZoomFactor={zoomFactor[viewId]}
+        {vertex}
+        {polygonId}
+        {onPointDragMove}
+        {newShape}
       />
     {/each}
   </Group>
