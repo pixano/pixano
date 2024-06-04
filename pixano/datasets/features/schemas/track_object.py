@@ -24,21 +24,15 @@ class TrackObject(Object):
 
 
 @_register_schema_internal
-class TrackObjectWithBBox(ObjectWithBBox):
-    tracklet_id: str
-    is_key: bool
-    frame_idx: int
+class TrackObjectWithBBox(TrackObject, ObjectWithBBox):
+    pass
 
 
 @_register_schema_internal
-class TrackObjectWithMask(ObjectWithMask):
-    tracklet_id: str
-    is_key: bool
-    frame_idx: int
+class TrackObjectWithMask(TrackObject, ObjectWithMask):
+    pass
 
 
 @_register_schema_internal
-class TrackObjectWithBBoxAndMask(ObjectWithBBoxAndMask):
-    tracklet_id: str
-    is_key: bool
-    frame_idx: int
+class TrackObjectWithBBoxAndMask(TrackObject, ObjectWithBBoxAndMask):
+    pass
