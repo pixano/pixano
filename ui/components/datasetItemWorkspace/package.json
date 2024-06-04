@@ -33,6 +33,7 @@
     "lucide-svelte": "^0.292.0",
     "nanoid": "^5.0.5",
     "onnxruntime-web": "~1.16.3",
+    "svelte-range-slider-pips": "^2.3.1",
     "tailwind-merge": "^2.2.1",
     "tailwind-variants": "^0.1.20",
     "zod": "^3.22.4"

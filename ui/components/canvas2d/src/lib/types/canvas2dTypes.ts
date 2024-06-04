@@ -13,4 +13,7 @@ export type Filters = {
   brightness: number;
   contrast: number;
   equalizeHistogram: boolean;
+  redRange: number[];
+  greenRange: number[];
+  blueRange: number[];
 };

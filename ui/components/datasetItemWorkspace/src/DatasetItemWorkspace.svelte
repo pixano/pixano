@@ -43,8 +43,11 @@
   let filters: Filters = {
     brightness: 0,
     contrast: 0,
-    equalizeHistogram: false
-  }
+    equalizeHistogram: false,
+    redRange: [0, 255],
+    greenRange: [0, 255],
+    blueRange: [0, 255],
+  };
 
   let embeddings: Embeddings = {};
 

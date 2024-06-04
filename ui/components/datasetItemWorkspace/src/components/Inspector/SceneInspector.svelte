@@ -15,6 +15,7 @@
    */
 
   import { Pencil } from "lucide-svelte";
+  import RangeSlider from "svelte-range-slider-pips";
 
   import { IconButton, type ItemView } from "@pixano/core/src";
 
@@ -27,11 +28,6 @@
   import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
   export let filters: Filters;
-  export let RGB = {
-    r: 0,
-    g: 0,
-    b: 0,
-  };
 
   type ImageMeta = {
     fileName: string;
@@ -129,7 +125,7 @@
 <!-- FILTERS -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
-  <div class="mx-4 mb-4">
+  <div class="mb-4">
     <label for="brightness">Brightness : {Math.round(filters.brightness * 100 + 50)}%</label>
     <input
       type="range"
@@ -163,45 +159,36 @@
       <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
     </div>
 
-    <div class="pt-4">Color thresholds</div>
-    <div class="flex items-center space-x-2">
-      <label for="red" class="text-red-500"> R </label>
-      <input
-        type="range"
-        id="red"
-        min="0"
-        max="255"
-        step="1"
-        class="w-full mt-1 cursor-pointer accent-red-500"
-        bind:value={RGB.r}
-      />
-      <span class="w-8 text-sm text-center text-red-500">{RGB.r}</span>
+    <!-- Color ranges -->
+    <div class="pt-4"> Color ranges : </div>
+    <!-- Red -->
+    <div class="flex items-center text-sm text-center text-red-500">
+      <span class="text-left w-6"> R : </span>
+      <span class="w-8"> {filters.redRange[0]} </span>
+      <div class="grow">
+        <RangeSlider min={0} max={255} step={1} bind:values={filters.redRange} />
+      </div>
+      <span class="w-8"> {filters.redRange[1]} </span>
     </div>
-    <div class="flex items-center space-x-2">
-      <label for="green" class="text-green-500"> G </label>
-      <input
-        type="range"
-        id="green"
-        min="0"
-        max="255"
-        step="1"
-        class="w-full mt-1 cursor-pointer accent-green-500"
-        bind:value={RGB.g}
-      />
-      <span class="w-8 text-sm text-center text-green-500">{RGB.g}</span>
+
+    <!-- Green -->
+    <div class="flex items-center text-sm text-center text-green-500">
+      <span class="text-left w-6"> G : </span>
+      <span class="w-8"> {filters.greenRange[0]} </span>
+      <div class="grow">
+        <RangeSlider min={0} max={255} step={1} bind:values={filters.greenRange} />
+      </div>
+      <span class="w-8"> {filters.greenRange[1]} </span>
     </div>
-    <div class="flex items-center space-x-2">
-      <label for="blue" class="text-blue-500"> B </label>
-      <input
-        type="range"
-        id="blue"
-        min="0"
-        max="255"
-        step="1"
-        class="w-full mt-1 cursor-pointer accent-blue-500"
-        bind:value={RGB.b}
-      />
-      <span class="w-8 text-sm text-center text-blue-500">{RGB.b}</span>
+
+    <!-- Blue -->
+    <div class="flex items-center text-sm text-center text-blue-500">
+      <span class="text-left w-6"> B : </span>
+      <span class="w-8"> {filters.blueRange[0]} </span>
+      <div class="grow">
+        <RangeSlider min={0} max={255} step={1} bind:values={filters.blueRange} />
+      </div>
+      <span class="w-8"> {filters.blueRange[1]} </span>
     </div>
   </div>
 </div>

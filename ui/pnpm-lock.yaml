@@ -303,6 +303,9 @@ importers:
       onnxruntime-web:
         specifier: ~1.16.3
         version: 1.16.3
+      svelte-range-slider-pips:
+        specifier: ^2.3.1
+        version: 2.3.1
       tailwind-merge:
         specifier: ^2.2.1
         version: 2.2.1
@@ -5713,6 +5716,9 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  svelte-range-slider-pips@2.3.1:
+    resolution: {integrity: sha512-P29PNqHld+SiaDuHzf98rLvhSYWXb3TVL9p7U5RG9UX8emUgypZgp9zuIIwpmIXysGQC6JG8duMc5FuaPnSVdg==}
 
   svelte-render@2.0.1:
     resolution: {integrity: sha512-RpB0SurwXm4xhjvHHtjeqMmvd645FURb79GFOotScOSqnKK5vpqBgoBPGC0pp+E/eZgDSQ9rRAdn/+N4ys1mXQ==}
@@ -12626,6 +12632,8 @@ snapshots:
       postcss: 8.4.36
       postcss-load-config: 4.0.2(postcss@8.4.36)
       typescript: 5.4.2
+
+  svelte-range-slider-pips@2.3.1: {}
 
   svelte-render@2.0.1(svelte@4.2.11):
     dependencies:

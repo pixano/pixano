@@ -63,11 +63,6 @@
 
   // Image settings
   export let filters: Filters;
-  let prevFilters: Filters = {
-    brightness: 0,
-    contrast: 0,
-    equalizeHistogram: false,
-  };
 
   let isReady = false;
 
@@ -192,9 +187,7 @@
 
     if (isVideo) return; // Only apply filters to images, because of performance issues
 
-    if (prevFilters !== filters) {
-      applyFilters();
-    }
+    applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -347,43 +340,74 @@
     });
   };
 
-  export const EqualizeHistogram16Bit = (imageData: ImageData) => {
-    const nPixels = imageData.data.length / 4;
-    const histogram: number[] = new Array<number>(65536).fill(0);
-    const cdf: number[] = new Array<number>(65536).fill(0);
+  const EqualizeHistogram = (imageData) => {
+    const { width, height, data } = imageData;
+    const nPixels = width * height;
 
-    // Step 1: Calculate the histogram
-    for (let i = 0; i < nPixels; i++) {
-      const r = imageData.data[i * 4];
-      const g = imageData.data[i * 4 + 1];
-      const b = imageData.data[i * 4 + 2];
-      const intensity = Math.floor((r + g + b) / 3);
-      histogram[intensity]++;
+    // Create histograms for each channel
+    const histR = new Array(256).fill(0);
+    const histG = new Array(256).fill(0);
+    const histB = new Array(256).fill(0);
+
+    // Calculate histograms
+    for (let i = 0; i < nPixels * 4; i += 4) {
+      histR[data[i]]++;
+      histG[data[i + 1]]++;
+      histB[data[i + 2]]++;
     }
 
-    // Step 2: Compute the cumulative distribution function (CDF)
-    cdf[0] = histogram[0];
-    for (let i = 1; i < 65536; i++) {
-      cdf[i] = cdf[i - 1] + histogram[i];
+    // Calculate cumulative distribution function (CDF) for each channel
+    const cdfR = new Array(256).fill(0);
+    const cdfG = new Array(256).fill(0);
+    const cdfB = new Array(256).fill(0);
+
+    cdfR[0] = histR[0];
+    cdfG[0] = histG[0];
+    cdfB[0] = histB[0];
+
+    for (let i = 1; i < 256; i++) {
+      cdfR[i] = cdfR[i - 1] + histR[i];
+      cdfG[i] = cdfG[i - 1] + histG[i];
+      cdfB[i] = cdfB[i - 1] + histB[i];
     }
 
-    // Step 3: Normalize the CDF
-    const cdfMin = cdf.find((value) => value > 0);
-    const totalPixels = nPixels;
-    for (let i = 0; i < 65536; i++) {
-      cdf[i] = Math.round(((cdf[i] - cdfMin) / (totalPixels - cdfMin)) * 65535);
+    // Normalize the CDF
+    const cdfRMin = cdfR.find((value) => value > 0);
+    const cdfGMin = cdfG.find((value) => value > 0);
+    const cdfBMin = cdfB.find((value) => value > 0);
+
+    for (let i = 0; i < 256; i++) {
+      cdfR[i] = ((cdfR[i] - cdfRMin) / (nPixels - cdfRMin)) * 255;
+      cdfG[i] = ((cdfG[i] - cdfGMin) / (nPixels - cdfGMin)) * 255;
+      cdfB[i] = ((cdfB[i] - cdfBMin) / (nPixels - cdfBMin)) * 255;
     }
 
-    // Step 4: Apply the normalized CDF to transform the pixel values
-    for (let i = 0; i < nPixels; i++) {
-      const r = imageData.data[i * 4];
-      const g = imageData.data[i * 4 + 1];
-      const b = imageData.data[i * 4 + 2];
-      const intensity = Math.floor((r + g + b) / 3);
-      const newValue = cdf[intensity];
-      imageData.data[i * 4] = newValue >> 8;
-      imageData.data[i * 4 + 1] = newValue >> 8;
-      imageData.data[i * 4 + 2] = newValue >> 8;
+    // Apply equalization to the image data
+    for (let i = 0; i < nPixels * 4; i += 4) {
+      data[i] = Math.round(cdfR[data[i]]);
+      data[i + 1] = Math.round(cdfG[data[i + 1]]);
+      data[i + 2] = Math.round(cdfB[data[i + 2]]);
+    }
+  };
+
+  const adjustChannel = (value, range) => {
+    if (value < range[0]) {
+      return 0;
+    } else if (value > range[1]) {
+      return 255;
+    } else {
+      return Math.round(((value - range[0]) / (range[1] - range[0])) * 255);
+    }
+  };
+
+  const AdjustChannels = (imageData) => {
+    const { data } = imageData;
+    const nPixels = data.length / 4;
+
+    for (let i = 0; i < nPixels * 4; i += 4) {
+      data[i] = adjustChannel(data[i], filters.redRange);
+      data[i + 1] = adjustChannel(data[i + 1], filters.greenRange);
+      data[i + 2] = adjustChannel(data[i + 2], filters.blueRange);
     }
   };
 
@@ -395,19 +419,13 @@
     if (!images) return;
 
     images.forEach((image) => {
-      if (image.width() === 0 || image.height() === 0) return;
-      image.clearCache();
+      let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
+      if (filters.equalizeHistogram) filtersList.push(EqualizeHistogram);
 
-      if (filters.equalizeHistogram)
-        image.filters([Konva.Filters.Brighten, Konva.Filters.Contrast, EqualizeHistogram16Bit]);
-      else image.filters([Konva.Filters.Brighten, Konva.Filters.Contrast]);
-
+      image.filters(filtersList);
       image.brightness(filters.brightness);
       image.contrast(filters.contrast);
-      image.cache();
     });
-
-    prevFilters = { ...filters };
   };
 
   function findViewId(shape: Konva.Shape): string {
@@ -1134,8 +1152,6 @@
             on:pointerup={() => handlePointerUpOnImage(viewId)}
             on:dblclick={() => handleDoubleClickOnImage(viewId)}
           />
-
-          <!-- filters: [Konva.Filters.Brighten, Konva.Filters.Contrast, EqualizeHistogram16Bit], -->
         {/each}
         <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "masks" }} />
