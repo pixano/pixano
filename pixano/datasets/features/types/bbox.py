@@ -33,6 +33,12 @@ class BBox(pydantic.BaseModel):
     is_normalized: bool
     confidence: float
 
+    @staticmethod
+    def none():
+        return BBox(
+            coords=[0, 0, 0, 0], format="xywh", is_normalized=True, confidence=0
+        )
+
     @property
     def xyxy_coords(self) -> list[float]:
         """Return bounding box xyxy coordinates.

@@ -49,7 +49,35 @@ class CamCalibration(pydantic.BaseModel):
         extrinsics (Extrinsics): extrinsics
         intrinsics (Intrinsics): intrinsics
     """
+
     type: str
     base_intrinsics: BaseIntrinsics
     extrinsics: Extrinsics
     intrinsics: Intrinsics
+
+    @staticmethod
+    def none():
+        return CamCalibration(
+            type="N/A",
+            base_intrinsics=BaseIntrinsics(
+                cx_offset_px=0.0,
+                cy_offset_px=0.0,
+                img_height_px=0,
+                img_width_px=0,
+            ),
+            extrinsics=Extrinsics(
+                pos_x_m=0.0,
+                pos_y_m=0.0,
+                pos_z_m=0.0,
+                rot_x_deg=0.0,
+                rot_z1_deg=0.0,
+                rot_z2_deg=0.0,
+            ),
+            intrinsics=Intrinsics(
+                c1=0.0,
+                c2=0.0,
+                c3=0.0,
+                c4=0.0,
+                pixel_aspect_ratio=0.0,
+            ),
+        )
