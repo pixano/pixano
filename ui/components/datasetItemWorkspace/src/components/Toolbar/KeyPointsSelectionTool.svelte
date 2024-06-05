@@ -35,6 +35,14 @@
     selectedKeyPointsTemplate.set(templateId);
     newShape.set({ status: "none" });
   };
+
+  selectedTool.subscribe((tool) => {
+    if (tool?.type !== "KEY_POINT") {
+      selectedKeyPointsTemplate.set(null);
+    } else {
+      selectedKeyPointsTemplate.set(templates[0].id);
+    }
+  });
 </script>
 
 <div

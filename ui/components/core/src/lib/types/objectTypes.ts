@@ -49,11 +49,13 @@ export type PolygonGroupPoint = {
   id: number;
 };
 
+export type VertexStates = "hidden" | "visible" | "invisible";
+
 export type Vertex = {
   x: number;
   y: number;
   features?: {
-    state?: "hidden" | "visible" | "invisible";
+    state?: VertexStates;
     label?: string;
     color?: string;
   };

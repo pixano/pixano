@@ -19,7 +19,7 @@
   import Konva from "konva";
   import { Line } from "svelte-konva";
 
-  import type { KeyPointsTemplate } from "@pixano/core";
+  import type { KeyPointsTemplate, VertexStates } from "@pixano/core";
 
   import KeyPointCircle from "./KeyPointCircle.svelte";
 
@@ -40,6 +40,16 @@
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
         return { ...point, x: pointPosition.x, y: pointPosition.y };
+      }
+      return point;
+    });
+    onPointChange(vertices);
+  };
+
+  const onPointStateChange = (pointIndex: number, value: VertexStates) => {
+    vertices = vertices.map((point, i) => {
+      if (i === pointIndex) {
+        return { ...point, features: { ...point.features, state: value } };
       }
       return point;
     });
@@ -74,5 +84,6 @@
     {onPointDragMove}
     {findPointCoordinate}
     draggable={keyPointStructure.editing}
+    {onPointStateChange}
   />
 {/each}

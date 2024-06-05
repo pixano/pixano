@@ -51,6 +51,7 @@ const car: KeyPointsTemplate = {
       y: 0.1,
       features: {
         label: "head",
+        state: "visible",
       },
     },
     {
@@ -58,6 +59,7 @@ const car: KeyPointsTemplate = {
       y: 0.4,
       features: {
         label: "middle",
+        state: "visible",
       },
     },
     {
@@ -65,6 +67,7 @@ const car: KeyPointsTemplate = {
       y: 0.4,
       features: {
         label: "left arm",
+        state: "visible",
       },
     },
     {
@@ -72,6 +75,7 @@ const car: KeyPointsTemplate = {
       y: 0.4,
       features: {
         label: "right arm",
+        state: "visible",
       },
     },
     {
@@ -79,6 +83,7 @@ const car: KeyPointsTemplate = {
       y: 0.7,
       features: {
         label: "belly",
+        state: "visible",
       },
     },
     {
@@ -86,6 +91,7 @@ const car: KeyPointsTemplate = {
       y: 0.9,
       features: {
         label: "left foot",
+        state: "visible",
       },
     },
     {
@@ -93,6 +99,7 @@ const car: KeyPointsTemplate = {
       y: 0.9,
       features: {
         label: "right foot",
+        state: "visible",
       },
     },
   ],

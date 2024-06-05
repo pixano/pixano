@@ -86,7 +86,10 @@ export const itemKeyPoints = derived(itemObjects, ($itemObjects) => {
     if (!template) return acc;
     const vertices = object.keyPoints.vertices.map((vertex, i) => ({
       ...vertex,
-      features: template?.vertices[i].features,
+      features: {
+        ...(template.vertices[i].features || {}),
+        ...(vertex.features || {}),
+      },
     }));
     acc.push({
       id: object.id,
