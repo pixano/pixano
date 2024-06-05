@@ -28,7 +28,7 @@
   export let stage: Konva.Stage;
   export let viewId: string;
 
-  let polygonId = "keyPoints";
+  let keyPointsId = "keyPoints";
 
   const findPointCoordinate = (point: number, type: "x" | "y") => {
     if (newShape.status === "creating") {
@@ -49,7 +49,7 @@
 </script>
 
 {#if newShape.viewId === viewId}
-  <Group config={{ id: polygonId, x: 0, y: 0 }}>
+  <Group config={{ id: keyPointsId, x: 0, y: 0 }}>
     {#if newShape.status === "creating"}
       <Rect
         config={{
@@ -69,6 +69,7 @@
       currentZoomFactor={zoomFactor[viewId]}
       {findPointCoordinate}
       {onPointChange}
+      {keyPointsId}
     />
   </Group>
 {/if}

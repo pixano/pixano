@@ -30,11 +30,10 @@
   export let onPointChange: (vertices: KeyPointsTemplate["vertices"]) => void = () => {};
   export let currentZoomFactor: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
-
-  let polygonId = "keyPoints";
+  export let keyPointsId: string;
 
   const onPointDragMove = (pointIndex: number) => {
-    const pointPosition = stage.findOne(`#keyPoint-${polygonId}-${pointIndex}`).position();
+    const pointPosition = stage.findOne(`#keyPoint-${keyPointsId}-${pointIndex}`).position();
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
         return { ...point, x: pointPosition.x, y: pointPosition.y };
@@ -67,7 +66,7 @@
     {stage}
     {currentZoomFactor}
     {vertex}
-    {polygonId}
+    {keyPointsId}
     {onPointDragMove}
     {findPointCoordinate}
   />

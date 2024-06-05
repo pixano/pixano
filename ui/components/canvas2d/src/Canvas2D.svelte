@@ -1115,6 +1115,7 @@
           {#each keyPoints as keyPointStructure}
             <KeyPoints
               {stage}
+              keyPointsId={keyPointStructure.id}
               edges={keyPointStructure.edges}
               vertices={keyPointStructure.vertices}
               currentZoomFactor={zoomFactor[viewId]}

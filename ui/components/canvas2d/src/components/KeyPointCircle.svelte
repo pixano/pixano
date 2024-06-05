@@ -26,7 +26,7 @@
   export let stage: Konva.Stage;
   export let currentZoomFactor: number;
   export let vertex: Vertex;
-  export let polygonId: string;
+  export let keyPointsId: string;
   export let onPointDragMove: (pointId: number) => void;
   export let vertexIndex: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
@@ -34,7 +34,7 @@
   let showLabel = false;
 
   const scaleCircleRadius = (id: number, scale: number) => {
-    const point: Konva.Circle = stage.findOne(`#keyPoint-${polygonId}-${id}`);
+    const point: Konva.Circle = stage.findOne(`#keyPoint-${keyPointsId}-${id}`);
 
     point.scaleX(scale);
     point.scaleY(scale);
@@ -62,7 +62,7 @@
     fill: "rgb(0,128,0)",
     stroke: "white",
     strokeWidth: 1 / currentZoomFactor,
-    id: `keyPoint-${polygonId}-${vertexIndex}`,
+    id: `keyPoint-${keyPointsId}-${vertexIndex}`,
     draggable: true,
   }}
   on:dragmove={() => onPointDragMove(vertexIndex)}
