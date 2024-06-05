@@ -348,6 +348,13 @@ export const defineCreatedObject = (
       },
     };
   }
+  if (shape.type === "keyPoint") {
+    newObject = {
+      ...baseObject,
+      datasetItemType: "image",
+      keyPoints: shape.keyPoints,
+    };
+  }
   return newObject;
 };
 

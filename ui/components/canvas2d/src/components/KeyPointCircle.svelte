@@ -18,18 +18,18 @@
 
   import { Circle } from "svelte-konva";
 
-  import type { BasePoint, CreateKeyPointShape, SaveKeyBoxShape } from "@pixano/core";
+  import type { Vertex } from "@pixano/core";
 
   import type Konva from "konva";
   import LabelTag from "./LabelTag.svelte";
 
   export let stage: Konva.Stage;
   export let currentZoomFactor: number;
-  export let vertex: BasePoint;
+  export let vertex: Vertex;
   export let polygonId: string;
   export let onPointDragMove: (pointId: number) => void;
   export let vertexIndex: number;
-  export let newShape: CreateKeyPointShape | SaveKeyBoxShape;
+  export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
 
   let showLabel = false;
 
@@ -50,10 +50,8 @@
     showLabel = false;
   };
 
-  $: x = newShape.status === "creating" ? newShape.x + vertex.x * newShape.width : vertex.x;
-  $: y = newShape.status === "creating" ? newShape.y + vertex.y * newShape.height : vertex.y;
-
-  $: console.log({ x, y, vertex });
+  $: x = findPointCoordinate(vertex.x, "x");
+  $: y = findPointCoordinate(vertex.y, "y");
 </script>
 
 <Circle
@@ -71,12 +69,14 @@
   on:mouseover={onMouseOver}
   on:mouseleave={onMouseLeave}
 />
-<LabelTag
-  x={x + 16 / currentZoomFactor}
-  {y}
-  id={`${vertexIndex}`}
-  visible={showLabel}
-  zoomFactor={currentZoomFactor}
-  color="rgb(0,128,0)"
-  tooltip={vertex.features?.join(", ")}
-/>
+{#if vertex.features}
+  <LabelTag
+    x={x + 16 / currentZoomFactor}
+    {y}
+    id={`${vertexIndex}`}
+    visible={showLabel}
+    zoomFactor={currentZoomFactor}
+    color="rgb(0,128,0)"
+    tooltip={vertex.features.join(", ")}
+  />
+{/if}

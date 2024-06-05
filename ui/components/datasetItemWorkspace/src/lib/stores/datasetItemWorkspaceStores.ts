@@ -23,10 +23,12 @@ import {
   type BBox,
   type SelectionTool,
   utils,
+  type KeyPointsTemplate,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
 import type { ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
+import { templates } from "../settings/keyPointsTemplates";
 
 // Exports
 export const newShape = writable<Shape>();
@@ -75,3 +77,21 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
     return acc;
   }, [] as Mask[]),
 );
+
+export const itemKeyPoints = derived(itemObjects, ($itemObjects) => {
+  return $itemObjects.reduce((acc, object) => {
+    if (object.datasetItemType === "video" || !object.keyPoints) return acc;
+    const template = templates.find((t) => t.id === object.keyPoints?.id);
+    if (!template) return acc;
+    const vertices = object.keyPoints.vertices.map((vertex, i) => ({
+      ...vertex,
+      features: template?.vertices[i].features,
+    }));
+    acc.push({
+      id: object.id,
+      vertices,
+      edges: template.edges,
+    });
+    return acc;
+  }, [] as KeyPointsTemplate[]);
+});

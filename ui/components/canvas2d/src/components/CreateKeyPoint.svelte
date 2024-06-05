@@ -17,11 +17,11 @@
   // Imports
 
   import Konva from "konva";
-  import { Group, Line, Rect } from "svelte-konva";
+  import { Group, Rect } from "svelte-konva";
 
-  import type { CreateKeyPointShape, SaveKeyBoxShape } from "@pixano/core";
+  import type { CreateKeyPointShape, KeyPointsTemplate, SaveKeyBoxShape } from "@pixano/core";
 
-  import KeyPointCircle from "./KeyPointCircle.svelte";
+  import KeyPoints from "./KeyPoints.svelte";
 
   export let zoomFactor: Record<string, number>;
   export let newShape: CreateKeyPointShape | SaveKeyBoxShape;
@@ -30,30 +30,21 @@
 
   let polygonId = "keyPoints";
 
-  const onPointDragMove = (pointIndex: number) => {
-    const pointPosition = stage.findOne(`#keyPoint-${polygonId}-${pointIndex}`).position();
+  const findPointCoordinate = (point: number, type: "x" | "y") => {
+    if (newShape.status === "creating") {
+      return newShape[type] + point * (type === "x" ? newShape.width : newShape.height);
+    }
+    return point;
+  };
+
+  const onPointChange = (vertices: KeyPointsTemplate["vertices"]) => {
     newShape = {
       ...newShape,
       keyPoints: {
         ...newShape.keyPoints,
-        vertices: newShape.keyPoints.vertices.map((point, i) => {
-          if (i === pointIndex) {
-            return { ...point, x: pointPosition.x, y: pointPosition.y };
-          }
-          return point;
-        }),
+        vertices,
       },
     };
-  };
-
-  const findVertex = (index: number) => {
-    const vertex = newShape.keyPoints.vertices[index];
-    const vertexX =
-      newShape.status === "creating" ? newShape.x + vertex.x * newShape.width : vertex.x;
-    const vertexY =
-      newShape.status === "creating" ? newShape.y + vertex.y * newShape.height : vertex.y;
-
-    return [vertexX, vertexY];
   };
 </script>
 
@@ -66,30 +57,18 @@
           y: newShape.y,
           width: newShape.width,
           height: newShape.height,
-          fill: "rgba(255, 0, 0, 0.4)",
+          fill: "rgba(135, 47, 100, 0.4)",
           id: "move-keyPoints-group",
         }}
       />
     {/if}
-    {#each newShape.keyPoints.edges as line}
-      <Line
-        config={{
-          points: [...findVertex(line[0]), ...findVertex(line[1])],
-          stroke: "#781e60",
-          strokeWidth: 2 / zoomFactor[viewId],
-        }}
-      />
-    {/each}
-    {#each newShape.keyPoints.vertices as vertex, i}
-      <KeyPointCircle
-        vertexIndex={i}
-        {stage}
-        currentZoomFactor={zoomFactor[viewId]}
-        {vertex}
-        {polygonId}
-        {onPointDragMove}
-        {newShape}
-      />
-    {/each}
+    <KeyPoints
+      {stage}
+      edges={newShape.keyPoints.edges}
+      vertices={newShape.keyPoints.vertices}
+      currentZoomFactor={zoomFactor[viewId]}
+      {findPointCoordinate}
+      {onPointChange}
+    />
   </Group>
 {/if}

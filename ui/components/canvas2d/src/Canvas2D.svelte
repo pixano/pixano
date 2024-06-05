@@ -32,7 +32,8 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
-    BasePoint,
+    KeyPointsTemplate,
+    Vertex,
   } from "@pixano/core";
 
   import {
@@ -49,13 +50,15 @@
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
   import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
-  import { template } from "./api/keyPointsApi";
+  import KeyPoints from "./components/KeyPoints.svelte";
 
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
   export let masks: Mask[];
   export let bboxes: BBox[];
+  export let keyPoints: KeyPointsTemplate[] = [];
+  export let selectedKeyPointTemplate: KeyPointsTemplate | null = null;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
@@ -482,7 +485,7 @@
         width,
         height,
         viewId,
-        keyPoints: template,
+        keyPoints: selectedKeyPointTemplate,
       };
     }
   }
@@ -498,7 +501,7 @@
               ...vertex,
               x: newShape.x + vertex.x * newShape.width,
               y: newShape.y + vertex.y * newShape.height,
-            } as BasePoint;
+            } as Required<Vertex>;
         });
         newShape = {
           status: "saving",
@@ -1107,6 +1110,16 @@
         {/if}
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
+        {/if}
+        {#if keyPoints}
+          {#each keyPoints as keyPointStructure}
+            <KeyPoints
+              {stage}
+              edges={keyPointStructure.edges}
+              vertices={keyPointStructure.vertices}
+              currentZoomFactor={zoomFactor[viewId]}
+            />
+          {/each}
         {/if}
         {#each bboxes as bbox}
           {#if bbox.viewId === viewId}

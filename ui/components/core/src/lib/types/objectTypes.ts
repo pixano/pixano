@@ -18,7 +18,7 @@ export type SaveShapeBase = {
 
 export type SaveKeyBoxShape = SaveShapeBase & {
   type: "keyPoint";
-  keyPoints: KeyPoints;
+  keyPoints: KeyPointsTemplate;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
@@ -49,22 +49,21 @@ export type PolygonGroupPoint = {
   id: number;
 };
 
-export type KeyPoint = {
+export type Vertex = {
   x: number;
   y: number;
-  id: number;
-  origin_points: number[];
-};
-
-export type BasePoint = {
-  x: number;
-  y: number;
-  features: string[];
+  features?: string[];
 };
 
 export type KeyPoints = {
-  vertices: BasePoint[];
+  id: string;
+  vertices: Vertex[];
+};
+
+export type KeyPointsTemplate = {
+  id: string;
   edges: [number, number][];
+  vertices: Required<Vertex>[];
 };
 
 export type CreateKeyPointShape = {
@@ -75,7 +74,7 @@ export type CreateKeyPointShape = {
   y: number;
   width: number;
   height: number;
-  keyPoints: KeyPoints;
+  keyPoints: KeyPointsTemplate;
 };
 
 export type CreateMaskShape = {
