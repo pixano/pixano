@@ -33,7 +33,6 @@
     addSmartPointTool,
     removeSmartPointTool,
     polygonTool,
-    keyPointTool,
   } from "../lib/settings/selectionTools";
   import {
     interactiveSegmenterModel,
@@ -42,6 +41,8 @@
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
+
+  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
 
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
@@ -101,13 +102,7 @@
     >
       <Share2 />
     </IconButton>
-    <IconButton
-      tooltipContent="Skeleton - TO CHANGE"
-      on:click={() => selectTool(keyPointTool)}
-      selected={$selectedTool?.type === "KEY_POINT"}
-    >
-      <BrushIcon />
-    </IconButton>
+    <KeyPointsSelection />
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

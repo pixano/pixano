@@ -27,6 +27,7 @@
     itemObjects,
     preAnnotationIsActive,
     colorScale,
+    selectedKeyPointsTemplate,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -70,7 +71,7 @@
     bboxes={$itemBboxes}
     masks={$itemMasks}
     keyPoints={$itemKeyPoints}
-    selectedKeyPointTemplate={templates[0]}
+    selectedKeyPointTemplate={templates.find((t) => t.id === $selectedKeyPointsTemplate)}
     {embeddings}
     {brightness}
     {contrast}

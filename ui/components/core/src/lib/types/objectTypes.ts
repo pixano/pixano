@@ -52,11 +52,15 @@ export type PolygonGroupPoint = {
 export type Vertex = {
   x: number;
   y: number;
-  features?: string[];
+  features?: {
+    state?: "hidden" | "visible" | "invisible";
+    label?: string;
+    color?: string;
+  };
 };
 
 export type KeyPoints = {
-  id: string;
+  templateId: string;
   vertices: Vertex[];
 };
 

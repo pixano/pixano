@@ -42,6 +42,7 @@ export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
+export const selectedKeyPointsTemplate = writable<KeyPointsTemplate["id"] | null>(null);
 
 type ColorScale = [Array<string>, (id: string) => string];
 
@@ -81,7 +82,7 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
 export const itemKeyPoints = derived(itemObjects, ($itemObjects) => {
   return $itemObjects.reduce((acc, object) => {
     if (object.datasetItemType === "video" || !object.keyPoints) return acc;
-    const template = templates.find((t) => t.id === object.keyPoints?.id);
+    const template = templates.find((t) => t.id === object.keyPoints?.templateId);
     if (!template) return acc;
     const vertices = object.keyPoints.vertices.map((vertex, i) => ({
       ...vertex,

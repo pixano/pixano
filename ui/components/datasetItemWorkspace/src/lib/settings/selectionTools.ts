@@ -21,7 +21,7 @@ export const polygonTool: SelectionTool = {
 };
 
 export const keyPointTool: SelectionTool = {
-  name: "Create a skeleton",
+  name: "Create key points",
   type: "KEY_POINT",
   cursor: "crosshair",
   isSmart: false,

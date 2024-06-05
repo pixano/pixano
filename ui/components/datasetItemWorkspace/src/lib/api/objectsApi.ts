@@ -361,7 +361,10 @@ export const defineCreatedObject = (
     newObject = {
       ...baseObject,
       datasetItemType: "image",
-      keyPoints: shape.keyPoints,
+      keyPoints: {
+        templateId: shape.keyPoints.id,
+        vertices: shape.keyPoints.vertices,
+      },
     };
   }
   return newObject;

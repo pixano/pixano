@@ -61,7 +61,7 @@
     x,
     y,
     radius: 4 / zoomFactor,
-    fill: "rgb(0,128,0)",
+    fill: vertex.features?.color || "rgb(0,128,0)",
     stroke: "white",
     strokeWidth: 1 / zoomFactor,
     id: `keyPoint-${keyPointsId}-${vertexIndex}`,
@@ -71,14 +71,14 @@
   on:mouseover={onMouseOver}
   on:mouseleave={onMouseLeave}
 />
-{#if vertex.features}
+{#if vertex.features?.label}
   <LabelTag
     x={x + 16 / zoomFactor}
     {y}
     id={`${vertexIndex}`}
     visible={showLabel}
     {zoomFactor}
-    color="rgb(0,128,0)"
-    tooltip={vertex.features.join(", ")}
+    color={vertex.features?.color || "rgb(0,128,0)"}
+    tooltip={vertex.features.label}
   />
 {/if}

@@ -58,7 +58,7 @@
   export let masks: Mask[];
   export let bboxes: BBox[];
   export let keyPoints: KeyPointsTemplate[] = [];
-  export let selectedKeyPointTemplate: KeyPointsTemplate | null = null;
+  export let selectedKeyPointTemplate: KeyPointsTemplate | undefined = undefined;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
