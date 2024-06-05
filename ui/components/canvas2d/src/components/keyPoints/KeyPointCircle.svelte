@@ -80,6 +80,7 @@
     if (!hasStateFeature) return;
     const circle = stage.findOne(`#keyPoint-${keyPointsId}-${vertexIndex}`);
     circle.addEventListener("contextmenu", (e) => {
+      if (!draggable) return;
       e.preventDefault();
       const target = e.target as unknown as Konva.Node;
       if (target === stage) return;
