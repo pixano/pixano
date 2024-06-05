@@ -21,9 +21,9 @@
 
   import type { CreateKeyPointShape, KeyPointsTemplate, SaveKeyBoxShape } from "@pixano/core";
 
-  import KeyPoints from "./KeyPoints.svelte";
+  import KeyPoints from "./keyPoints/KeyPoints.svelte";
 
-  export let zoomFactor: Record<string, number>;
+  export let zoomFactor: number;
   export let newShape: CreateKeyPointShape | SaveKeyBoxShape;
   export let stage: Konva.Stage;
   export let viewId: string;
@@ -57,24 +57,19 @@
 
 {#if newShape.viewId === viewId}
   <Group config={{ id: keyPointsId, x: 0, y: 0 }}>
-    {#if newShape.status === "creating"}
-      <Rect
-        config={{
-          x: newShape.x,
-          y: newShape.y,
-          width: newShape.width,
-          height: newShape.height,
-          fill: "rgba(135, 47, 100, 0.4)",
-          id: "move-keyPoints-group",
-        }}
-      />
-    {/if}
-    <KeyPoints
-      {stage}
-      {keyPointStructure}
-      currentZoomFactor={zoomFactor[viewId]}
-      {findPointCoordinate}
-      {onPointChange}
-    />
+    <KeyPoints {stage} {keyPointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
+      {#if newShape.status === "creating"}
+        <Rect
+          config={{
+            x: newShape.x,
+            y: newShape.y,
+            width: newShape.width,
+            height: newShape.height,
+            fill: "rgba(135, 47, 100, 0.4)",
+            id: "move-keyPoints-group",
+          }}
+        />
+      {/if}
+    </KeyPoints>
   </Group>
 {/if}

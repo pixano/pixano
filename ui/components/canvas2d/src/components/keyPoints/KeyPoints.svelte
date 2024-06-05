@@ -27,7 +27,7 @@
 
   export let keyPointStructure: KeyPointsTemplate;
   export let onPointChange: (vertices: KeyPointsTemplate["vertices"]) => void = () => {};
-  export let currentZoomFactor: number;
+  export let zoomFactor: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
 
   $: edges = keyPointStructure.edges;
@@ -54,12 +54,13 @@
   };
 </script>
 
+<slot />
 {#each edges as line}
   <Line
     config={{
       points: [...findVertex(line[0]), ...findVertex(line[1])],
       stroke: "#781e60",
-      strokeWidth: 2 / currentZoomFactor,
+      strokeWidth: 2 / zoomFactor,
     }}
   />
 {/each}
@@ -67,7 +68,7 @@
   <KeyPointCircle
     vertexIndex={i}
     {stage}
-    {currentZoomFactor}
+    {zoomFactor}
     {vertex}
     {keyPointsId}
     {onPointDragMove}

@@ -50,7 +50,7 @@
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
   import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
-  import KeyPoints from "./components/KeyPoints.svelte";
+  import ShowKeyPoints from "./components/ShowKeyPoints.svelte";
 
   // Exports
 
@@ -517,15 +517,6 @@
         viewLayer.off("pointerup");
       }
     }
-  }
-
-  function onKeyPointsChange(vertices: KeyPointsTemplate["vertices"], id: string) {
-    newShape = {
-      status: "editing",
-      type: "keyPoint",
-      vertices,
-      shapeId: id,
-    };
   }
 
   // ********** PAN TOOL ********** //
@@ -1115,21 +1106,13 @@
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
         {#if (newShape.status === "creating" && newShape.type === "keyPoint") || (newShape.status === "saving" && newShape.type === "keyPoint")}
-          <CreateKeyPoint {zoomFactor} bind:newShape {stage} {viewId} />
+          <CreateKeyPoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
         {/if}
+        <ShowKeyPoints {stage} {keyPoints} zoomFactor={zoomFactor[viewId]} bind:newShape />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
-        {#if keyPoints}
-          {#each keyPoints as keyPointStructure}
-            <KeyPoints
-              onPointChange={(vertices) => onKeyPointsChange(vertices, keyPointStructure.id)}
-              {stage}
-              {keyPointStructure}
-              currentZoomFactor={zoomFactor[viewId]}
-            />
-          {/each}
-        {/if}
+
         {#each bboxes as bbox}
           {#if bbox.viewId === viewId}
             {#key bbox.id}

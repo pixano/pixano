@@ -21,10 +21,10 @@
   import type { Vertex } from "@pixano/core";
 
   import type Konva from "konva";
-  import LabelTag from "./LabelTag.svelte";
+  import LabelTag from "../LabelTag.svelte";
 
   export let stage: Konva.Stage;
-  export let currentZoomFactor: number;
+  export let zoomFactor: number;
   export let vertex: Vertex;
   export let keyPointsId: string;
   export let onPointDragMove: (pointId: number) => void;
@@ -60,10 +60,10 @@
   config={{
     x,
     y,
-    radius: 4 / currentZoomFactor,
+    radius: 4 / zoomFactor,
     fill: "rgb(0,128,0)",
     stroke: "white",
-    strokeWidth: 1 / currentZoomFactor,
+    strokeWidth: 1 / zoomFactor,
     id: `keyPoint-${keyPointsId}-${vertexIndex}`,
     draggable,
   }}
@@ -73,11 +73,11 @@
 />
 {#if vertex.features}
   <LabelTag
-    x={x + 16 / currentZoomFactor}
+    x={x + 16 / zoomFactor}
     {y}
     id={`${vertexIndex}`}
     visible={showLabel}
-    zoomFactor={currentZoomFactor}
+    {zoomFactor}
     color="rgb(0,128,0)"
     tooltip={vertex.features.join(", ")}
   />
