@@ -24,12 +24,16 @@ class CompressedRLE(pydantic.BaseModel):
     """Compressed RLE mask type.
 
     Attributes:
-        _size (list[int]): Mask size
-        _counts (bytes): Mask RLE encoding
+        size (list[int]): Mask size
+        counts (bytes): Mask RLE encoding
     """
 
     size: list[int]
     counts: bytes
+
+    @staticmethod
+    def none():
+        return CompressedRLE(size=[0, 0], counts=b'')
 
     def to_mask(self) -> np.ndarray:
         """Convert compressed RLE mask to NumPy array.
