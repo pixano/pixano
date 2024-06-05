@@ -1,5 +1,28 @@
 # Dataset Items
 
+### Image dataset Item
+
+Objects keypoints will have the following signature
+
+```
+{
+  keyPoints: {
+    templateId: string;
+    vertices: [
+      {
+        x: number;
+        y: number;
+        features: {
+          state: "string"; // can be "visible", "hidden" or "invisible"
+          color: "string";
+          name: "string";
+        }
+      }
+    ]
+  }
+}
+```
+
 ### Video dataset Item
 
 ```
