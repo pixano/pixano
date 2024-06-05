@@ -74,7 +74,8 @@
 
   const onSave = async () => {
     isSaving = true;
-    let savedItem = { ...selectedItem };
+    const objects = $itemObjects;
+    let savedItem = { ...selectedItem, objects } as DatasetItem;
 
     itemMetas.subscribe((value) => {
       savedItem.features = value.mainFeatures;

@@ -13,43 +13,26 @@
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
 
-from .base_schema import BaseSchema
+from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
 
 
 @_register_schema_internal
-class Tracklet(BaseSchema):
-    """Tracklet Lance Model."""
-
-    item_id: str
-    track_id: str
-
-
-@_register_schema_internal
-class TrackletWithTimestep(Tracklet):
-    """Tracklet with Timestep Lance Model."""
-
-    start_timestep: int
-    end_timestep: int
+class TrackObject(Object):
+    tracklet_id: str
+    is_key: bool
+    frame_idx: int
 
 
 @_register_schema_internal
-class TrackletWithTimestamp(Tracklet):
-    """Tracklet with Timestamp Lance Model."""
-
-    start_timestamp: int  # Note timestamps may be float ?
-    end_timestamp: int
+class TrackObjectWithBBox(TrackObject, ObjectWithBBox):
+    pass
 
 
 @_register_schema_internal
-class TrackletWithTimestepAndTimestamp(Tracklet):
-    """Tracklet with Timestep and Timestamp Lance Model."""
-
-    start_timestep: int
-    end_timestep: int
-    start_timestamp: int
-    end_timestamp: int
+class TrackObjectWithMask(TrackObject, ObjectWithMask):
+    pass
 
 
-def is_tracklet(cls: type) -> bool:
-    """Check if the given class is a subclass of Tracklet."""
-    return issubclass(cls, Tracklet)
+@_register_schema_internal
+class TrackObjectWithBBoxAndMask(TrackObject, ObjectWithBBoxAndMask):
+    pass

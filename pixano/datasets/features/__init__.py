@@ -25,6 +25,12 @@ from .schemas.object import (
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
 from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
+from .schemas.track_object import (
+    TrackObject,
+    TrackObjectWithBBox,
+    TrackObjectWithBBoxAndMask,
+    TrackObjectWithMask,
+)
 from .schemas.tracklet import (
     Tracklet,
     TrackletWithTimestamp,
@@ -35,11 +41,10 @@ from .schemas.video import Video
 from .schemas.view import View
 from .types.bbox import BBox, is_bbox
 from .types.bbox3d import BBox3D
+from .types.camcalibration import CamCalibration
 from .types.compressed_rle import CompressedRLE
 from .types.keypoints import KeyPoints
 from .types.nd_array_float import NDArrayFloat
-from .types.camcalibration import CamCalibration
-
 
 __all__ = [
     "BaseSchema",
@@ -54,6 +59,10 @@ __all__ = [
     "ObjectWithBBox",
     "ObjectWithBBoxAndMask",
     "ObjectWithMask",
+    "TrackObject",
+    "TrackObjectWithBBox",
+    "TrackObjectWithBBoxAndMask",
+    "TrackObjectWithMask",
     "NDArrayFloat",
     "CamCalibration",
     "PointCloud",

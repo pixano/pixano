@@ -136,6 +136,8 @@
 
 <svelte:head>
   <link rel="icon" type="image/svg" href={pixanoFavicon} />
+  <title>Pixano</title>
+  <meta name="description" content="Pixano app" />
 </svelte:head>
 
 <div class="app">
