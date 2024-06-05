@@ -20,7 +20,7 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
-  import type { Writable } from "svelte/store";
+  import { writable, type Writable } from "svelte/store";
   import { WarningModal } from "@pixano/core";
 
   import { cn } from "@pixano/core/src";
@@ -63,7 +63,7 @@
   export let isVideo: boolean = false;
 
   // Image settings
-  export let filters: Writable<Filters>;
+  export let filters: Writable<Filters> = writable<Filters>();
 
   let isReady = false;
 
