@@ -20,6 +20,7 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import type { Writable } from "svelte/store";
   import { WarningModal } from "@pixano/core";
 
   import { cn } from "@pixano/core/src";
@@ -47,7 +48,7 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
-  import type { Filters } from "./lib/types/canvas2dTypes";
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
 
   // Exports
   export let selectedItemId: DatasetItem["id"];
@@ -62,7 +63,7 @@
   export let isVideo: boolean = false;
 
   // Image settings
-  export let filters: Filters;
+  export let filters: Writable<Filters>;
 
   let isReady = false;
 
@@ -405,9 +406,9 @@
     const nPixels = data.length / 4;
 
     for (let i = 0; i < nPixels * 4; i += 4) {
-      data[i] = adjustChannel(data[i], filters.redRange);
-      data[i + 1] = adjustChannel(data[i + 1], filters.greenRange);
-      data[i + 2] = adjustChannel(data[i + 2], filters.blueRange);
+      data[i] = adjustChannel(data[i], $filters.redRange);
+      data[i + 1] = adjustChannel(data[i + 1], $filters.greenRange);
+      data[i + 2] = adjustChannel(data[i + 2], $filters.blueRange);
     }
   };
 
@@ -420,11 +421,11 @@
 
     images.forEach((image) => {
       let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
-      if (filters.equalizeHistogram) filtersList.push(EqualizeHistogram);
+      if ($filters.equalizeHistogram) filtersList.push(EqualizeHistogram);
 
       image.filters(filtersList);
-      image.brightness(filters.brightness);
-      image.contrast(filters.contrast);
+      image.brightness($filters.brightness);
+      image.contrast($filters.contrast);
     });
   };
 

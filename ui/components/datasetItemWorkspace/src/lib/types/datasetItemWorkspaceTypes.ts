@@ -76,3 +76,12 @@ export type ItemsMeta = {
   id: DatasetItem["id"];
   type: DatasetItem["type"];
 };
+
+export type Filters = {
+  brightness: number;
+  contrast: number;
+  equalizeHistogram: boolean;
+  redRange: number[];
+  greenRange: number[];
+  blueRange: number[];
+};

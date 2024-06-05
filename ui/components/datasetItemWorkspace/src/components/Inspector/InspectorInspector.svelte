@@ -21,9 +21,7 @@
   import ObjectsInspector from "./ObjectsInspector.svelte";
   import SaveShapeForm from "../SaveShape/SaveShapeForm.svelte";
   import { canSave, newShape } from "../../lib/stores/datasetItemWorkspaceStores";
-  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
-  export let filters: Filters;
   export let isLoading: boolean;
 
   let shape: Shape;
@@ -68,7 +66,7 @@
               <Skeleton class="h-8 w-full" />
             </div>
           {:else}
-            <SceneInspector bind:filters />
+            <SceneInspector />
           {/if}
         </Tabs.Content>
         <button

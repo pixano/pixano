@@ -27,13 +27,11 @@
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
-  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
   export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
-  export let filters: Filters;
 
   $: {
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
@@ -54,9 +52,9 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} bind:currentAnn {filters} />
+    <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn {filters} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

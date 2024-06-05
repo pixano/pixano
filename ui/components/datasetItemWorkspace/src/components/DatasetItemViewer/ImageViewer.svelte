@@ -26,14 +26,14 @@
     itemObjects,
     preAnnotationIsActive,
     colorScale,
+    filters
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
+    import type { Filters } from "../../lib/types/datasetItemWorkspaceTypes";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let filters: Filters;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 

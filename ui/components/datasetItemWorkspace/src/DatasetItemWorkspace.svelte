@@ -29,7 +29,6 @@
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
-  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
@@ -40,14 +39,6 @@
   export let shouldSaveCurrentItem: boolean;
 
   let isSaving: boolean = false;
-  let filters: Filters = {
-    brightness: 0,
-    contrast: 0,
-    equalizeHistogram: false,
-    redRange: [0, 255],
-    greenRange: [0, 255],
-    blueRange: [0, 255],
-  };
 
   let embeddings: Embeddings = {};
 
@@ -108,8 +99,8 @@
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {filters} />
-  <Inspector on:click={onSave} {isLoading} bind:filters />
+  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} />
+  <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
     currentDatasetId={selectedItem.datasetId}

@@ -19,15 +19,12 @@
 
   import { IconButton, type ItemView } from "@pixano/core/src";
 
-  import { canSave, itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { canSave, itemMetas, filters } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
-  import type { Filters } from "@pixano/canvas2d/src/lib/types/canvas2dTypes";
-
-  export let filters: Filters;
 
   type ImageMeta = {
     fileName: string;
@@ -126,7 +123,7 @@
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
   <h3 class="uppercase font-medium h-10">FILTERS</h3>
   <div class="mb-4">
-    <label for="brightness">Brightness : {Math.round(filters.brightness * 100 + 50)}%</label>
+    <label for="brightness">Brightness : {Math.round($filters.brightness * 100 + 50)}%</label>
     <input
       type="range"
       id="brightness"
@@ -134,10 +131,10 @@
       max="0.5"
       step="0.01"
       class="w-full mt-1 cursor-pointer accent-primary"
-      bind:value={filters.brightness}
+      bind:value={$filters.brightness}
     />
 
-    <label for="contrast">Contrast : {Math.round(filters.contrast + 50)}%</label>
+    <label for="contrast">Contrast : {Math.round($filters.contrast + 50)}%</label>
     <input
       type="range"
       id="contrast"
@@ -145,7 +142,7 @@
       max="50"
       step="1"
       class="w-full mt-1 cursor-pointer accent-primary"
-      bind:value={filters.contrast}
+      bind:value={$filters.contrast}
     />
 
     <!-- WIP -->
@@ -154,7 +151,7 @@
         type="checkbox"
         id="equalizer"
         class="cursor-pointer w-4 h-4"
-        bind:checked={filters.equalizeHistogram}
+        bind:checked={$filters.equalizeHistogram}
       />
       <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
     </div>
@@ -164,31 +161,31 @@
     <!-- Red -->
     <div class="flex items-center text-sm text-center text-red-500">
       <span class="text-left w-6"> R : </span>
-      <span class="w-8"> {filters.redRange[0]} </span>
+      <span class="w-8"> {$filters.redRange[0]} </span>
       <div class="grow">
-        <RangeSlider min={0} max={255} step={1} bind:values={filters.redRange} />
+        <RangeSlider min={0} max={255} step={1} bind:values={$filters.redRange} />
       </div>
-      <span class="w-8"> {filters.redRange[1]} </span>
+      <span class="w-8"> {$filters.redRange[1]} </span>
     </div>
 
     <!-- Green -->
     <div class="flex items-center text-sm text-center text-green-500">
       <span class="text-left w-6"> G : </span>
-      <span class="w-8"> {filters.greenRange[0]} </span>
+      <span class="w-8"> {$filters.greenRange[0]} </span>
       <div class="grow">
-        <RangeSlider min={0} max={255} step={1} bind:values={filters.greenRange} />
+        <RangeSlider min={0} max={255} step={1} bind:values={$filters.greenRange} />
       </div>
-      <span class="w-8"> {filters.greenRange[1]} </span>
+      <span class="w-8"> {$filters.greenRange[1]} </span>
     </div>
 
     <!-- Blue -->
     <div class="flex items-center text-sm text-center text-blue-500">
       <span class="text-left w-6"> B : </span>
-      <span class="w-8"> {filters.blueRange[0]} </span>
+      <span class="w-8"> {$filters.blueRange[0]} </span>
       <div class="grow">
-        <RangeSlider min={0} max={255} step={1} bind:values={filters.blueRange} />
+        <RangeSlider min={0} max={255} step={1} bind:values={$filters.blueRange} />
       </div>
-      <span class="w-8"> {filters.blueRange[1]} </span>
+      <span class="w-8"> {$filters.blueRange[1]} </span>
     </div>
   </div>
 </div>
