@@ -25,14 +25,17 @@
 
   export let stage: Konva.Stage;
 
-  export let edges: KeyPointsTemplate["edges"];
-  export let vertices: KeyPointsTemplate["vertices"];
+  export let keyPointStructure: KeyPointsTemplate;
   export let onPointChange: (vertices: KeyPointsTemplate["vertices"]) => void = () => {};
   export let currentZoomFactor: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
-  export let keyPointsId: string;
+
+  $: edges = keyPointStructure.edges;
+  $: vertices = keyPointStructure.vertices;
+  $: keyPointsId = keyPointStructure.id;
 
   const onPointDragMove = (pointIndex: number) => {
+    if (!keyPointStructure.editing) return;
     const pointPosition = stage.findOne(`#keyPoint-${keyPointsId}-${pointIndex}`).position();
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
@@ -69,5 +72,6 @@
     {keyPointsId}
     {onPointDragMove}
     {findPointCoordinate}
+    draggable={keyPointStructure.editing}
   />
 {/each}

@@ -46,6 +46,13 @@
       },
     };
   };
+
+  $: keyPointStructure = {
+    edges: newShape.keyPoints.edges,
+    vertices: newShape.keyPoints.vertices,
+    id: keyPointsId,
+    editing: true,
+  } as KeyPointsTemplate;
 </script>
 
 {#if newShape.viewId === viewId}
@@ -64,12 +71,10 @@
     {/if}
     <KeyPoints
       {stage}
-      edges={newShape.keyPoints.edges}
-      vertices={newShape.keyPoints.vertices}
+      {keyPointStructure}
       currentZoomFactor={zoomFactor[viewId]}
       {findPointCoordinate}
       {onPointChange}
-      {keyPointsId}
     />
   </Group>
 {/if}

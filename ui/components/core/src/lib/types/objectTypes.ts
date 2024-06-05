@@ -64,6 +64,7 @@ export type KeyPointsTemplate = {
   id: string;
   edges: [number, number][];
   vertices: Required<Vertex>[];
+  editing?: boolean;
 };
 
 export type CreateKeyPointShape = {
@@ -106,11 +107,16 @@ export type EditRectangleShape = {
   coords: number[];
 };
 
+export type EditKeyPointsShape = {
+  type: "keyPoint";
+  vertices: KeyPointsTemplate["vertices"];
+};
+
 export type EditShape = {
   status: "editing";
   shapeId: string;
   highlighted?: "all" | "self" | "none";
-} & (EditRectangleShape | EditMaskShape | { type: "none" });
+} & (EditRectangleShape | EditMaskShape | EditKeyPointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

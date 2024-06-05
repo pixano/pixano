@@ -519,6 +519,15 @@
     }
   }
 
+  function onKeyPointsChange(vertices: KeyPointsTemplate["vertices"], id: string) {
+    newShape = {
+      status: "editing",
+      type: "keyPoint",
+      vertices,
+      shapeId: id,
+    };
+  }
+
   // ********** PAN TOOL ********** //
 
   function displayPanTool(tool: SelectionTool) {
@@ -1114,10 +1123,9 @@
         {#if keyPoints}
           {#each keyPoints as keyPointStructure}
             <KeyPoints
+              onPointChange={(vertices) => onKeyPointsChange(vertices, keyPointStructure.id)}
               {stage}
-              keyPointsId={keyPointStructure.id}
-              edges={keyPointStructure.edges}
-              vertices={keyPointStructure.vertices}
+              {keyPointStructure}
               currentZoomFactor={zoomFactor[viewId]}
             />
           {/each}

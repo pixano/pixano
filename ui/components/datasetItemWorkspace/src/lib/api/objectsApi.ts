@@ -211,6 +211,15 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           },
         };
       }
+      if (newShape.type === "keyPoint" && object.keyPoints) {
+        return {
+          ...object,
+          keyPoints: {
+            ...object.keyPoints,
+            vertices: newShape.vertices,
+          },
+        };
+      }
     }
 
     return object;

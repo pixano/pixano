@@ -30,6 +30,7 @@
   export let onPointDragMove: (pointId: number) => void;
   export let vertexIndex: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
+  export let draggable: boolean = false;
 
   let showLabel = false;
 
@@ -41,6 +42,7 @@
   };
 
   const onMouseOver = () => {
+    if (!draggable) return;
     scaleCircleRadius(vertexIndex, 2);
     showLabel = true;
   };
@@ -63,7 +65,7 @@
     stroke: "white",
     strokeWidth: 1 / currentZoomFactor,
     id: `keyPoint-${keyPointsId}-${vertexIndex}`,
-    draggable: true,
+    draggable,
   }}
   on:dragmove={() => onPointDragMove(vertexIndex)}
   on:mouseover={onMouseOver}
