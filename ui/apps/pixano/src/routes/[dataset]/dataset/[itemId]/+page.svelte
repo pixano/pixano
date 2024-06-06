@@ -84,7 +84,6 @@
     handleSelectItem(selectedDataset, currentItemId);
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
-  $: console.log({ selectedDataset, selectedItem });
 </script>
 
 {#if selectedItem && selectedDataset}

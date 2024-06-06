@@ -152,9 +152,9 @@ export const toggleObjectDisplayControl = (
 
   // Check if the object is a VideoObject
   if (object.datasetItemType === "video") {
-    if (properties.includes("bbox") && object.displayControl) {
+    if (properties.includes("bbox")) {
       object.displayControl = {
-        ...object.displayControl,
+        ...(object.displayControl || {}),
         [displayControlProperty]: value,
       };
     }
