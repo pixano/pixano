@@ -44,6 +44,12 @@
   export let brightness: number;
   export let contrast: number;
 
+  $: {
+    if (selectedItem) {
+      currentFrameIndex.set(0);
+    }
+  }
+
   let inspectorMaxHeight = 250;
   let expanding = false;
 
