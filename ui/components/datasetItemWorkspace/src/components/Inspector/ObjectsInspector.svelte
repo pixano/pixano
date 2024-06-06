@@ -83,7 +83,8 @@
             imageDimension={thumbnail.baseImageDimensions}
             coords={thumbnail.coords}
             imageUrl={`/${thumbnail.uri}`}
-            minSize={150}
+            maxHeight={150}
+            maxWidth={300}
           />
         {/key}
       {/if}

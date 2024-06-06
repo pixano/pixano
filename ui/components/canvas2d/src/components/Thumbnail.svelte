@@ -20,8 +20,9 @@
   export let imageDimension: { width: number; height: number };
   export let coords: number[];
   export let imageUrl: string;
-  export let maxSize: number | undefined = undefined;
-  export let minSize: number | undefined = undefined;
+  export let maxHeight: number | undefined = undefined;
+  export let maxWidth: number | undefined = undefined;
+  export let minWidth: number | undefined = undefined;
 
   let [x, y, width, height] = coords;
 
@@ -34,23 +35,58 @@
   let stageHeight = height * imageDimension.height;
 
   $: {
-    if (maxSize && Math.max(stageWidth, stageHeight) > maxSize) {
-      const ratio = Math.max(stageWidth, stageHeight) / maxSize;
+    if (maxHeight && stageHeight > maxHeight) {
+      const ratio = stageHeight / maxHeight;
+      stageWidth /= ratio;
+      stageHeight /= ratio;
+    }
+    if (maxHeight && stageHeight < maxHeight) {
+      const ratio = maxHeight / stageHeight;
+      stageWidth *= ratio;
+      stageHeight *= ratio;
+    }
+    if (maxWidth && stageWidth > maxWidth) {
+      const ratio = stageWidth / maxWidth;
       stageWidth /= ratio;
       stageHeight /= ratio;
     }
   }
 
   $: {
-    if (minSize && Math.max(stageWidth, stageHeight) < minSize) {
-      const ratio = Math.max(stageWidth, stageHeight) / minSize;
+    if (minWidth && Math.max(stageWidth, stageHeight) < minWidth) {
+      const ratio = Math.max(stageWidth, stageHeight) / minWidth;
       stageWidth /= ratio;
       stageHeight /= ratio;
     }
   }
+
+  const defineCrop = () => {
+    let cropX = x * imageDimension.width - (width * imageDimension.width) / 2;
+    if (cropX < 0) {
+      cropX = 0;
+    }
+    let cropY = y * imageDimension.height;
+    if (cropY < 0) {
+      cropY = 0;
+    }
+    let cropWidth = width * imageDimension.width * 2;
+    if (cropWidth > imageDimension.width) {
+      cropWidth = imageDimension.width;
+    }
+    let cropHeight = height * imageDimension.height * 2;
+    if (cropHeight > imageDimension.height) {
+      cropHeight = imageDimension.height;
+    }
+    return {
+      x: cropX,
+      y: cropY,
+      width: cropWidth,
+      height: cropHeight,
+    };
+  };
 </script>
 
-<div class="w-fit z-40">
+<div class="w-full h-fit flex justify-center">
   <Stage
     bind:handle={stage}
     config={{
@@ -69,12 +105,7 @@
           height: stageHeight,
           image: img,
           id: "thumbnail-image",
-          crop: {
-            x: x * imageDimension.width - (width * imageDimension.width) / 2,
-            y: y * imageDimension.height - (height * imageDimension.height) / 2,
-            width: width * imageDimension.width * 2,
-            height: height * imageDimension.height * 2,
-          },
+          crop: { ...defineCrop() },
         }}
       />
     </Layer>
