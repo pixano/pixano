@@ -80,7 +80,6 @@
 
   $: {
     if (canvasSize) {
-      console.log({ canvasSize });
       for (const viewId of Object.keys(imagesPerView)) {
         scaleView(viewId);
       }
