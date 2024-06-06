@@ -58,7 +58,7 @@
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborBoxes(tracklet, newFrameIndex);
-    if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
+    if (newFrameIndex < prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
     tracklet.boxes = tracklet.boxes.map((box) => {
       if (box.frame_index === draggedFrameIndex) {
         box.frame_index = newFrameIndex;
