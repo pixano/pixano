@@ -37,6 +37,7 @@
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
+  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
   let brightness: number = 0;
@@ -101,7 +102,14 @@
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {brightness} {contrast} />
+  <DatasetItemViewer
+    {selectedItem}
+    {embeddings}
+    {isLoading}
+    {brightness}
+    {contrast}
+    {headerHeight}
+  />
   <Inspector on:click={onSave} {isLoading} bind:brightness bind:contrast />
   <LoadModelModal
     {models}

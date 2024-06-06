@@ -84,6 +84,7 @@
     handleSelectItem(selectedDataset, currentItemId);
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
+  $: console.log({ selectedDataset, selectedItem });
 </script>
 
 {#if selectedItem && selectedDataset}
@@ -96,6 +97,7 @@
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
       {shouldSaveCurrentItem}
+      headerHeight={80}
     />
   </div>
 {/if}

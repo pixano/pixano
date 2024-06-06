@@ -44,7 +44,7 @@
   export let brightness: number;
   export let contrast: number;
 
-  let height = 250;
+  let inspectorMaxHeight = 250;
   let expanding = false;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
@@ -139,13 +139,13 @@
 
   const expand = (e: MouseEvent) => {
     if (expanding) {
-      height = document.body.scrollHeight - e.pageY;
+      inspectorMaxHeight = document.body.scrollHeight - e.pageY;
     }
   };
 </script>
 
 <section
-  class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]"
+  class="pl-4 h-full w-full flex flex-col"
   on:mouseup={stopExpand}
   on:mousemove={expand}
   role="tab"
@@ -168,7 +168,10 @@
       />
     </div>
     <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />
-    <div class="h-full grow max-h-[25%] overflow-hidden" style={`max-height: ${height}px`}>
+    <div
+      class="h-full grow max-h-[25%] overflow-hidden"
+      style={`max-height: ${inspectorMaxHeight}px`}
+    >
       <VideoInspector {updateView} />
     </div>
   {/if}
