@@ -33,7 +33,7 @@ class CompressedRLE(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        return CompressedRLE(size=[0, 0], counts=b'')
+        return CompressedRLE(size=[0.0, 0.0], counts=b'')
 
     def to_mask(self) -> np.ndarray:
         """Convert compressed RLE mask to NumPy array.

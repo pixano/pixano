@@ -36,7 +36,7 @@ class BBox(pydantic.BaseModel):
     @staticmethod
     def none():
         return BBox(
-            coords=[0, 0, 0, 0], format="xywh", is_normalized=True, confidence=0
+            coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=0
         )
 
     @property

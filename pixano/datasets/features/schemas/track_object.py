@@ -13,7 +13,7 @@
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
 
-from .object import Object, ObjectWithBBox, ObjectWithBBoxAndMask, ObjectWithMask
+from .object import Object
 
 
 @_register_schema_internal
@@ -21,18 +21,3 @@ class TrackObject(Object):
     tracklet_id: str
     is_key: bool
     frame_idx: int
-
-
-@_register_schema_internal
-class TrackObjectWithBBox(TrackObject, ObjectWithBBox):
-    pass
-
-
-@_register_schema_internal
-class TrackObjectWithMask(TrackObject, ObjectWithMask):
-    pass
-
-
-@_register_schema_internal
-class TrackObjectWithBBoxAndMask(TrackObject, ObjectWithBBoxAndMask):
-    pass
