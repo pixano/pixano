@@ -1,5 +1,5 @@
 import type { SegmentationResult } from ".";
-import type { BBox, Mask } from "./datasetTypes";
+import type { BBox, DisplayControl, Mask } from "./datasetTypes";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -64,6 +64,7 @@ export type Vertex = {
 export type KeyPoints = {
   templateId: string;
   vertices: Vertex[];
+  displayControl?: DisplayControl;
 };
 
 export type KeyPointsTemplate = {
@@ -71,6 +72,8 @@ export type KeyPointsTemplate = {
   edges: [number, number][];
   vertices: Required<Vertex>[];
   editing?: boolean;
+  visible?: boolean;
+  displayControl?: DisplayControl;
 };
 
 export type CreateKeyPointShape = {

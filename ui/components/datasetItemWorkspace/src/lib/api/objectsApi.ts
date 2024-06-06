@@ -125,7 +125,7 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
 export const toggleObjectDisplayControl = (
   object: ItemObject,
   displayControlProperty: keyof DisplayControl,
-  properties: ("bbox" | "mask")[],
+  properties: ("bbox" | "mask" | "keyPoints")[],
   value: boolean,
 ): ItemObject => {
   // Check if the object is an ImageObject
@@ -139,6 +139,12 @@ export const toggleObjectDisplayControl = (
     if (properties.includes("mask") && object.mask) {
       object.mask.displayControl = {
         ...object.mask.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
+    if (properties.includes("keyPoints") && object.keyPoints) {
+      object.keyPoints.displayControl = {
+        ...(object.keyPoints.displayControl || {}),
         [displayControlProperty]: value,
       };
     }

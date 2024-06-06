@@ -96,6 +96,7 @@ export const itemKeyPoints = derived(itemObjects, ($itemObjects) => {
       vertices,
       edges: template.edges,
       editing: object.displayControl?.editing,
+      visible: !object.keyPoints.displayControl?.hidden && !object.displayControl?.hidden,
     });
     return acc;
   }, [] as KeyPointsTemplate[]);

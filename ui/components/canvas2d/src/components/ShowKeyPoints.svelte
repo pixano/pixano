@@ -26,6 +26,7 @@
   export let keyPoints: KeyPointsTemplate[] = [];
   export let newShape: Shape;
   export let zoomFactor: number;
+  export let colorScale: (id: string) => string;
 
   const onKeyPointsChange = (vertices: KeyPointsTemplate["vertices"], id: string) => {
     newShape = {
@@ -47,26 +48,29 @@
 
 {#if keyPoints}
   {#each keyPoints as keyPointStructure}
-    <KeyPoints
-      onPointChange={(vertices) => onKeyPointsChange(vertices, keyPointStructure.id)}
-      {stage}
-      {keyPointStructure}
-      {zoomFactor}
-    >
-      {#if keyPointStructure.editing}
-        <Rect
-          config={{
-            x: findRectBoundaries(keyPointStructure.vertices).x - 10 / zoomFactor,
-            y: findRectBoundaries(keyPointStructure.vertices).y - 10 / zoomFactor,
-            width: findRectBoundaries(keyPointStructure.vertices).width + 20 / zoomFactor,
-            height: findRectBoundaries(keyPointStructure.vertices).height + 20 / zoomFactor,
-            fill: "rgba(135, 47, 100, 0.1)",
-            stroke: "rgba(135, 47, 100, 0.8)",
-            id: "move-keyPoints-group",
-            listening: false,
-          }}
-        />
-      {/if}
-    </KeyPoints>
+    {#if keyPointStructure.visible}
+      <KeyPoints
+        onPointChange={(vertices) => onKeyPointsChange(vertices, keyPointStructure.id)}
+        {stage}
+        {keyPointStructure}
+        {zoomFactor}
+      >
+        {#if keyPointStructure.editing}
+          <Rect
+            config={{
+              x: findRectBoundaries(keyPointStructure.vertices).x - 10 / zoomFactor,
+              y: findRectBoundaries(keyPointStructure.vertices).y - 10 / zoomFactor,
+              width: findRectBoundaries(keyPointStructure.vertices).width + 20 / zoomFactor,
+              height: findRectBoundaries(keyPointStructure.vertices).height + 20 / zoomFactor,
+              fill: colorScale(keyPointStructure.id),
+              stroke: "rgba(135, 47, 100, 0.8)",
+              id: "move-keyPoints-group",
+              listening: false,
+              opacity: 0.4,
+            }}
+          />
+        {/if}
+      </KeyPoints>
+    {/if}
   {/each}
 {/if}

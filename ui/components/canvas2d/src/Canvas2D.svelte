@@ -1108,7 +1108,13 @@
         {#if (newShape.status === "creating" && newShape.type === "keyPoint") || (newShape.status === "saving" && newShape.type === "keyPoint")}
           <CreateKeyPoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
         {/if}
-        <ShowKeyPoints {stage} {keyPoints} zoomFactor={zoomFactor[viewId]} bind:newShape />
+        <ShowKeyPoints
+          {colorScale}
+          {stage}
+          {keyPoints}
+          zoomFactor={zoomFactor[viewId]}
+          bind:newShape
+        />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
