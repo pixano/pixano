@@ -127,27 +127,27 @@
     <h3 class="uppercase font-medium h-10">FILTERS</h3>
     <div class="mb-4">
       <label for="brightness">Brightness : {Math.round($filters.brightness * 100 + 50)}%</label>
-      <input
-        type="range"
-        id="brightness"
-        min="-0.5"
-        max="0.5"
-        step="0.01"
-        class="w-full mt-1 cursor-pointer accent-primary"
-        bind:value={$filters.brightness}
+      <RangeSlider
+        range="min"
+        min={-0.5}
+        max={0.5}
+        step={0.01}
+        values={[$filters.brightness]}
+        springValues={{ stiffness: 1, damping: 1 }}
+        on:change={(e) => ($filters.brightness = e.detail.value)}
       />
 
-      <label for="contrast">Contrast : {Math.round($filters.contrast + 50)}%</label>
-      <input
-        type="range"
-        id="contrast"
-        min="-50"
-        max="50"
-        step="1"
-        class="w-full mt-1 cursor-pointer accent-primary"
-        bind:value={$filters.contrast}
+      <label for="contrast"> Contrast : {Math.round($filters.contrast + 50)}% </label>
+      <RangeSlider
+        range="min"
+        min={-50}
+        max={50}
+        step={1}
+        values={[$filters.contrast]}
+        springValues={{ stiffness: 1, damping: 1 }}
+        on:change={(e) => ($filters.contrast = e.detail.value)}
       />
-      
+
       <div class="pt-2 flex items-center space-x-2">
         <input
           type="checkbox"
@@ -159,33 +159,57 @@
       </div>
 
       <!-- Color ranges -->
-      <div class="pt-4">Color ranges :</div>
+      <div class="mt-4 mb-2">Color ranges :</div>
       <!-- Red -->
       <div class="flex items-center text-sm text-center text-red-500">
-        <span class="text-left w-6"> R : </span>
+        <span class="text-left w-5"> R : </span>
         <span class="w-8"> {$filters.redRange[0]} </span>
         <div class="grow">
-          <RangeSlider min={0} max={255} step={1} bind:values={$filters.redRange} />
+          <RangeSlider
+            range
+            pushy
+            min={0}
+            max={255}
+            step={1}
+            springValues={{ stiffness: 1, damping: 1 }}
+            bind:values={$filters.redRange}
+          />
         </div>
         <span class="w-8"> {$filters.redRange[1]} </span>
       </div>
 
       <!-- Green -->
       <div class="flex items-center text-sm text-center text-green-500">
-        <span class="text-left w-6"> G : </span>
+        <span class="text-left w-5"> G : </span>
         <span class="w-8"> {$filters.greenRange[0]} </span>
         <div class="grow">
-          <RangeSlider min={0} max={255} step={1} bind:values={$filters.greenRange} />
+          <RangeSlider
+            range
+            pushy
+            min={0}
+            max={255}
+            step={1}
+            springValues={{ stiffness: 1, damping: 1 }}
+            bind:values={$filters.greenRange}
+          />
         </div>
         <span class="w-8"> {$filters.greenRange[1]} </span>
       </div>
 
       <!-- Blue -->
       <div class="flex items-center text-sm text-center text-blue-500">
-        <span class="text-left w-6"> B : </span>
+        <span class="text-left w-5"> B : </span>
         <span class="w-8"> {$filters.blueRange[0]} </span>
         <div class="grow">
-          <RangeSlider min={0} max={255} step={1} bind:values={$filters.blueRange} />
+          <RangeSlider
+            range
+            pushy
+            min={0}
+            max={255}
+            step={1}
+            springValues={{ stiffness: 1, damping: 1 }}
+            bind:values={$filters.blueRange}
+          />
         </div>
         <span class="w-8"> {$filters.blueRange[1]} </span>
       </div>
