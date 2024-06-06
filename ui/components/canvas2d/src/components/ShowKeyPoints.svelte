@@ -28,6 +28,15 @@
   export let zoomFactor: number;
   export let colorScale: (id: string) => string;
 
+  const onDoubleClick = (keyPointsId: string) => {
+    newShape = {
+      status: "editing",
+      shapeId: keyPointsId,
+      highlighted: "self",
+      type: "none",
+    };
+  };
+
   const onKeyPointsChange = (vertices: KeyPointsTemplate["vertices"], id: string) => {
     newShape = {
       status: "editing",
@@ -54,22 +63,21 @@
         {stage}
         {keyPointStructure}
         {zoomFactor}
+        color={colorScale(keyPointStructure.id)}
       >
-        {#if keyPointStructure.editing}
-          <Rect
-            config={{
-              x: findRectBoundaries(keyPointStructure.vertices).x - 10 / zoomFactor,
-              y: findRectBoundaries(keyPointStructure.vertices).y - 10 / zoomFactor,
-              width: findRectBoundaries(keyPointStructure.vertices).width + 20 / zoomFactor,
-              height: findRectBoundaries(keyPointStructure.vertices).height + 20 / zoomFactor,
-              fill: colorScale(keyPointStructure.id),
-              stroke: "rgba(135, 47, 100, 0.8)",
-              id: "move-keyPoints-group",
-              listening: false,
-              opacity: 0.4,
-            }}
-          />
-        {/if}
+        <Rect
+          config={{
+            x: findRectBoundaries(keyPointStructure.vertices).x - 10 / zoomFactor,
+            y: findRectBoundaries(keyPointStructure.vertices).y - 10 / zoomFactor,
+            width: findRectBoundaries(keyPointStructure.vertices).width + 20 / zoomFactor,
+            height: findRectBoundaries(keyPointStructure.vertices).height + 20 / zoomFactor,
+            fill: colorScale(keyPointStructure.id),
+            stroke: "rgba(135, 47, 100, 0.8)",
+            id: "move-keyPoints-group",
+            opacity: keyPointStructure.editing ? 0.3 : 0,
+          }}
+          on:dblclick={() => onDoubleClick(keyPointStructure.id)}
+        />
       </KeyPoints>
     {/if}
   {/each}

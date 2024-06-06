@@ -30,6 +30,8 @@
   export let keyPointsId: string;
   export let vertexIndex: number;
   export let draggable: boolean = false;
+  export let color: string = "rgb(0,128,0)";
+  export let opacity: number = 1;
   export let onPointDragMove: (pointId: number) => void;
   export let onPointStateChange: (pointId: number, value: VertexStates) => void;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
@@ -61,13 +63,13 @@
     menuNode.style.display = "none";
   };
 
-  let fill: string = "rgb(0,128,0)";
+  let fill = color;
 
   const defineFill = (features: Vertex["features"]) => {
-    if (features.state === "invisible") return "white";
-    if (features.state === "hidden") return "transparent";
+    if (features.state === "invisible") return "transparent";
+    if (features.state === "hidden") return "white";
     if (features?.color) return features.color;
-    return "rgb(0,128,0)";
+    return color;
   };
 
   $: {
@@ -123,6 +125,7 @@
     strokeWidth: 1 / zoomFactor,
     id: `keyPoint-${keyPointsId}-${vertexIndex}`,
     draggable,
+    opacity,
     cancelBubble: true,
   }}
   on:dragmove={() => onPointDragMove(vertexIndex)}
@@ -136,7 +139,7 @@
     id={`${vertexIndex}`}
     visible={showLabel}
     {zoomFactor}
-    color={vertex.features?.color || "rgb(0,128,0)"}
+    color={vertex.features?.color || "white"}
     tooltip={vertex.features.label}
   />
 {/if}

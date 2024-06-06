@@ -29,7 +29,7 @@
   export let onPointChange: (vertices: KeyPointsTemplate["vertices"]) => void = () => {};
   export let zoomFactor: number;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
-
+  export let color: string = "rgba(135, 47, 100)";
   $: edges = keyPointStructure.edges;
   $: vertices = keyPointStructure.vertices;
   $: keyPointsId = keyPointStructure.id;
@@ -62,6 +62,8 @@
     const vertexY = findPointCoordinate(vertex.y, "y");
     return [vertexX, vertexY];
   };
+
+  $: opacity = keyPointStructure.highlighted === "none" ? 0.5 : 1;
 </script>
 
 <slot />
@@ -69,8 +71,9 @@
   <Line
     config={{
       points: [...findVertex(line[0]), ...findVertex(line[1])],
-      stroke: "#781e60",
-      strokeWidth: 2 / zoomFactor,
+      stroke: color,
+      strokeWidth: keyPointStructure.highlighted === "self" ? 4 : 2 / zoomFactor,
+      opacity,
     }}
   />
 {/each}
@@ -81,6 +84,8 @@
     {zoomFactor}
     {vertex}
     {keyPointsId}
+    {color}
+    {opacity}
     {onPointDragMove}
     {findPointCoordinate}
     draggable={keyPointStructure.editing}

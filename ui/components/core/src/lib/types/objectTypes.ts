@@ -74,6 +74,7 @@ export type KeyPointsTemplate = {
   editing?: boolean;
   visible?: boolean;
   displayControl?: DisplayControl;
+  highlighted?: "all" | "self" | "none";
 };
 
 export type CreateKeyPointShape = {
