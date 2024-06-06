@@ -23,9 +23,10 @@ import {
   type BBox,
   type SelectionTool,
   utils,
+  type KeyPointsTemplate,
 } from "@pixano/core";
 
-import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
+import { mapObjectToBBox, mapObjectToKeyPoints, mapObjectToMasks } from "../api/objectsApi";
 import type { ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
 
 // Exports
@@ -40,6 +41,7 @@ export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
+export const selectedKeyPointsTemplate = writable<KeyPointsTemplate["id"] | null>(null);
 
 type ColorScale = [Array<string>, (id: string) => string];
 
@@ -75,3 +77,11 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
     return acc;
   }, [] as Mask[]),
 );
+
+export const itemKeyPoints = derived(itemObjects, ($itemObjects) => {
+  return $itemObjects.reduce((acc, object) => {
+    const keyPoints = mapObjectToKeyPoints(object);
+    if (keyPoints) acc.push(keyPoints);
+    return acc;
+  }, [] as KeyPointsTemplate[]);
+});

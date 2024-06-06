@@ -32,6 +32,8 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
+    KeyPointsTemplate,
+    Vertex,
   } from "@pixano/core";
 
   import {
@@ -47,20 +49,24 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
+  import ShowKeyPoints from "./components/ShowKeyPoints.svelte";
 
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
   export let masks: Mask[];
   export let bboxes: BBox[];
+  export let keyPoints: KeyPointsTemplate[] = [];
+  export let selectedKeyPointTemplate: KeyPointsTemplate | undefined = undefined;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
-  export let brightness: number;
-  export let contrast: number;
+  // export let brightness: number;
+  // export let contrast: number;
 
   let isReady = false;
 
@@ -296,19 +302,19 @@
     }
   }
 
-  const applyFilters = () => {
-    if (stage) {
-      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+  // const applyFilters = () => {
+  //   if (stage) {
+  //     let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-      images.forEach((image) => {
-        if (image.width() === 0 || image.height() === 0) return;
+  //     images.forEach((image) => {
+  //       if (image.width() === 0 || image.height() === 0) return;
 
-        image.cache();
-        image.brightness(brightness);
-        image.contrast(contrast);
-      });
-    }
-  };
+  //       image.cache();
+  //       image.brightness(brightness);
+  //       image.contrast(contrast);
+  //     });
+  //   }
+  // };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
@@ -412,6 +418,9 @@
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
+      case "KEY_POINT":
+        // Enable key point creation or change cursor style
+        break;
       case "DELETE":
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
@@ -455,6 +464,59 @@
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
       viewId,
     };
+  }
+
+  // ********** KEY_POINT TOOL ********** //
+
+  function dragInputKeyPointRectMove(viewId: string) {
+    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+
+      const pos = viewLayer.getRelativePointerPosition();
+      const x = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.y : pos.y;
+      const width = pos.x - x;
+      const height = pos.y - y;
+      newShape = {
+        status: "creating",
+        type: "keyPoint",
+        x,
+        y,
+        width,
+        height,
+        viewId,
+        keyPoints: selectedKeyPointTemplate,
+      };
+    }
+  }
+
+  function dragKeyPointInputRectEnd(viewId: string) {
+    if (selectedTool?.type == "KEY_POINT") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
+      if (rect && newShape.status === "creating" && newShape.type === "keyPoint") {
+        const vertices = newShape.keyPoints.vertices.map((vertex) => {
+          if (newShape.status === "creating" && newShape.type === "keyPoint")
+            return {
+              ...vertex,
+              x: newShape.x + vertex.x * newShape.width,
+              y: newShape.y + vertex.y * newShape.height,
+            } as Required<Vertex>;
+        });
+        newShape = {
+          status: "saving",
+          type: "keyPoint",
+          viewId,
+          itemId: selectedItemId,
+          imageWidth: getCurrentImage(viewId).width,
+          imageHeight: getCurrentImage(viewId).height,
+          keyPoints: { ...newShape.keyPoints, vertices },
+        };
+        rect.destroy();
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      }
+    }
   }
 
   // ********** PAN TOOL ********** //
@@ -841,6 +903,7 @@
     if (selectedTool?.type === "POLYGON") {
       drawPolygonPoints(viewId);
     }
+
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -862,7 +925,8 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (newShape.status === "none" || (newShape.status == "editing" && newShape.type == "none")) {
+
+    if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
         type: "none",
@@ -907,11 +971,13 @@
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewId);
-
       await updateCurrentMask(viewId);
     } else if (selectedTool?.type == "RECTANGLE") {
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
+    } else if (selectedTool?.type === "KEY_POINT") {
+      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewId));
+      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewId));
     }
   }
 
@@ -1006,7 +1072,7 @@
 </script>
 
 <div
-  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100", {
+  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
@@ -1040,9 +1106,20 @@
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
+        {#if (newShape.status === "creating" && newShape.type === "keyPoint") || (newShape.status === "saving" && newShape.type === "keyPoint")}
+          <CreateKeyPoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+        {/if}
+        <ShowKeyPoints
+          {colorScale}
+          {stage}
+          {keyPoints}
+          zoomFactor={zoomFactor[viewId]}
+          bind:newShape
+        />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
+
         {#each bboxes as bbox}
           {#if bbox.viewId === viewId}
             {#key bbox.id}
