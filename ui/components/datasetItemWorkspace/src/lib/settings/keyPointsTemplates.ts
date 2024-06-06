@@ -43,7 +43,7 @@ const face: KeyPointsTemplate = {
   ],
 };
 
-const car: KeyPointsTemplate = {
+const person: KeyPointsTemplate = {
   id: "person",
   vertices: [
     {
@@ -113,4 +113,4 @@ const car: KeyPointsTemplate = {
   ],
 };
 
-export const templates: KeyPointsTemplate[] = [face, car];
+export const templates: KeyPointsTemplate[] = [face, person];
