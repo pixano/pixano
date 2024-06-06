@@ -24,28 +24,8 @@ class Object(BaseSchema):
 
     item_id: str
     view_id: str
-
-
-@_register_schema_internal
-class ObjectWithBBox(Object):
-    """Object with Bounding Box Lance Model."""
-
-    bbox: BBox
-
-
-@_register_schema_internal
-class ObjectWithMask(Object):
-    """Object with Mask Lance Model."""
-
-    mask: CompressedRLE
-
-
-@_register_schema_internal
-class ObjectWithBBoxAndMask(Object):
-    """Object with Bounding Box and Mask Lance Model."""
-
-    bbox: BBox
-    mask: CompressedRLE
+    bbox: BBox = BBox.none()
+    mask: CompressedRLE = CompressedRLE.none()
 
 
 def is_object(cls: type) -> bool:
