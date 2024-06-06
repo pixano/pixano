@@ -159,6 +159,7 @@
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
+        canvasSize={inspectorMaxHeight}
         {embeddings}
         {brightness}
         {contrast}

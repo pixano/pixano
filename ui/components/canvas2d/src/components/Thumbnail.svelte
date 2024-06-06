@@ -65,7 +65,7 @@
     if (cropX < 0) {
       cropX = 0;
     }
-    let cropY = y * imageDimension.height;
+    let cropY = y * imageDimension.height - (height * imageDimension.height) / 2;
     if (cropY < 0) {
       cropY = 0;
     }
