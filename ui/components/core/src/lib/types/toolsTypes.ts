@@ -22,6 +22,7 @@ export type ToolType =
   | "DELETE"
   | "PAN"
   | "CLASSIFICATION"
+  | "KEY_POINT"
   | "POLYGON";
 
 // Exports
@@ -33,7 +34,9 @@ type BaseTool<T extends ToolType> = {
   type: T;
 };
 
-export type AllTool = BaseTool<"RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION" | "POLYGON">;
+export type AllTool = BaseTool<
+  "RECTANGLE" | "PAN" | "DELETE" | "CLASSIFICATION" | "POLYGON" | "KEY_POINT"
+>;
 
 export type LabeledPointTool = BaseTool<"POINT_SELECTION"> & {
   label: number;

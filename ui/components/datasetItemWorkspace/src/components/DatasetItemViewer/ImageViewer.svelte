@@ -21,13 +21,16 @@
   import {
     newShape,
     itemBboxes,
+    itemKeyPoints,
     itemMasks,
     selectedTool,
     itemObjects,
     preAnnotationIsActive,
     colorScale,
+    selectedKeyPointsTemplate,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -67,6 +70,8 @@
     colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}
+    keyPoints={$itemKeyPoints}
+    selectedKeyPointTemplate={templates.find((t) => t.id === $selectedKeyPointsTemplate)}
     {embeddings}
     {brightness}
     {contrast}

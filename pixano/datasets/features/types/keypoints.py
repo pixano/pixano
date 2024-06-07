@@ -21,17 +21,17 @@ class KeyPoints(pydantic.BaseModel):
     """A set of keypoints.
 
     Attributes:
+        template_id (str): id of keypoint template
         coords (list[float]): List of 2D coordinates of the keypoints.
-        edges (list[list[int]]): List of edges between keypoints.
+        # edges (list[list[int]]): List of edges between keypoints.
         visibles (list[bool]): List of visibility status for each keypoint.
     """
 
+    template_id: str
     coords: list[float]
-    edges: list[list[int]]
+    # edges: list[list[int]]
     visibles: list[bool]
 
-# class KeyPoints(pydantic.BaseModel):
-#     vertices: list[float]
-#     vertices_visibily: list[bool]
-#     # edges: list[list[int]]  # inclus dans type/template (?)
-#     type: str  # <-- refere à un pattern
+    @staticmethod
+    def none():
+        return KeyPoints(template_id="None", coords=[0, 0], visibles=[False])

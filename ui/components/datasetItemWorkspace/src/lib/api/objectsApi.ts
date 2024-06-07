@@ -27,6 +27,7 @@ import type {
   ItemObjectBase,
   Tracklet,
   VideoItemBBox,
+  KeyPointsTemplate,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -44,6 +45,7 @@ import type {
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
+import { templates } from "../settings/keyPointsTemplates";
 
 const defineTooltip = (object: ItemObject): string | null => {
   let bbox: ItemBBox | undefined;
@@ -122,10 +124,31 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   return undefined;
 };
 
+export const mapObjectToKeyPoints = (object: ItemObject): KeyPointsTemplate | undefined => {
+  if (object.datasetItemType === "video" || !object.keyPoints) return undefined;
+  const template = templates.find((t) => t.id === object.keyPoints?.templateId);
+  if (!template) return undefined;
+  const vertices = object.keyPoints.vertices.map((vertex, i) => ({
+    ...vertex,
+    features: {
+      ...(template.vertices[i].features || {}),
+      ...(vertex.features || {}),
+    },
+  }));
+  return {
+    id: object.id,
+    vertices,
+    edges: template.edges,
+    editing: object.displayControl?.editing,
+    visible: !object.keyPoints.displayControl?.hidden && !object.displayControl?.hidden,
+    highlighted: object.highlighted,
+  };
+};
+
 export const toggleObjectDisplayControl = (
   object: ItemObject,
   displayControlProperty: keyof DisplayControl,
-  properties: ("bbox" | "mask")[],
+  properties: ("bbox" | "mask" | "keyPoints")[],
   value: boolean,
 ): ItemObject => {
   // Check if the object is an ImageObject
@@ -139,6 +162,12 @@ export const toggleObjectDisplayControl = (
     if (properties.includes("mask") && object.mask) {
       object.mask.displayControl = {
         ...object.mask.displayControl,
+        [displayControlProperty]: value,
+      };
+    }
+    if (properties.includes("keyPoints") && object.keyPoints) {
+      object.keyPoints.displayControl = {
+        ...(object.keyPoints.displayControl || {}),
         [displayControlProperty]: value,
       };
     }
@@ -181,6 +210,10 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
       object.highlighted = "all";
+      object.displayControl = {
+        ...object.displayControl,
+        editing: false,
+      };
     }
     if (newShape.highlighted === "self") {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
@@ -189,6 +222,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
         editing: newShape.shapeId === object.id,
       };
     }
+
     if (newShape.shapeId !== object.id) return object;
 
     // Check if the object is an ImageObject
@@ -208,6 +242,15 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           bbox: {
             ...object.bbox,
             coords: newShape.coords,
+          },
+        };
+      }
+      if (newShape.type === "keyPoint" && object.keyPoints) {
+        return {
+          ...object,
+          keyPoints: {
+            ...object.keyPoints,
+            vertices: newShape.vertices,
           },
         };
       }
@@ -345,6 +388,16 @@ export const defineCreatedObject = (
       mask: {
         counts: shape.rle.counts,
         size: shape.rle.size,
+      },
+    };
+  }
+  if (shape.type === "keyPoint") {
+    newObject = {
+      ...baseObject,
+      datasetItemType: "image",
+      keyPoints: {
+        templateId: shape.keyPoints.id,
+        vertices: shape.keyPoints.vertices,
       },
     };
   }

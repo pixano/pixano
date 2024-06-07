@@ -25,8 +25,9 @@ from pydantic import BaseModel
 import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
-from pixano.datasets.features import Image, SequenceFrame
+from pixano.datasets.features import Image, SequenceFrame, BBox, CompressedRLE
 from pixano.datasets.features.schemas.group import _SchemaGroup
+from pixano.datasets.utils import image as image_utils
 
 
 class FrontDatasetItem(BaseModel):
@@ -349,6 +350,8 @@ async def get_dataset_item(  # noqa: D417
     # objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
     objects = []
+    NoneBBox = BBox.none()
+    NoneMask = CompressedRLE.none()
     if view_type == "image":
         for obj_group in groups[_SchemaGroup.OBJECT]:
             objects.extend(
@@ -377,8 +380,22 @@ async def get_dataset_item(  # noqa: D417
                             ]
                         },  # ????
                         # bbox/mask/whatelse?
-                        "bbox": obj.bbox if hasattr(obj, "bbox") else None,
-                        "mask": obj.mask if hasattr(obj, "mask") else None,
+                        "bbox": (
+                            obj.bbox
+                            if hasattr(obj, "bbox")
+                            and obj.bbox != NoneBBox
+                            and obj.bbox.coords != []
+                            else None
+                        ),
+                        "mask": (
+                            image_utils.rle_to_urle(
+                                {"size": obj.mask.size, "counts": obj.mask.counts}
+                            )
+                            if hasattr(obj, "mask")
+                            and obj.mask != NoneMask
+                            and len(obj.mask.size) == 2
+                            else None
+                        ),
                     }
                     for obj in getattr(item, obj_group)
                 ]
@@ -506,6 +523,15 @@ async def post_dataset_item(  # noqa: D417
         # Convert objects to PyArrow
         # adapt features
         for obj in objs:
+            if "mask" in obj:
+                obj["mask"] = (
+                    image_utils.urle_to_rle(obj["mask"])
+                    if obj["mask"]
+                    and "counts" in obj["mask"]
+                    and "size" in obj["mask"]
+                    and len(obj["mask"]["size"]) == 2
+                    else {"size": [0, 0], "counts": b""}
+                )
             if "features" in obj:
                 for feat in obj["features"].values():
                     # TODO coerce to type feat["dtype"] (need mapping dtype string to type)

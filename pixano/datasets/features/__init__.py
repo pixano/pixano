@@ -15,22 +15,11 @@ from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
 from .schemas.image import Image, is_image
 from .schemas.item import Item
-from .schemas.object import (
-    Object,
-    ObjectWithBBox,
-    ObjectWithBBoxAndMask,
-    ObjectWithMask,
-    is_object,
-)
+from .schemas.object import Object, is_object
 from .schemas.point_cloud import PointCloud
 from .schemas.registry import register_schema
 from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
-from .schemas.track_object import (
-    TrackObject,
-    TrackObjectWithBBox,
-    TrackObjectWithBBoxAndMask,
-    TrackObjectWithMask,
-)
+from .schemas.track_object import TrackObject
 from .schemas.tracklet import (
     Tracklet,
     TrackletWithTimestamp,
@@ -56,13 +45,7 @@ __all__ = [
     "Image",
     "Item",
     "Object",
-    "ObjectWithBBox",
-    "ObjectWithBBoxAndMask",
-    "ObjectWithMask",
     "TrackObject",
-    "TrackObjectWithBBox",
-    "TrackObjectWithBBoxAndMask",
-    "TrackObjectWithMask",
     "NDArrayFloat",
     "CamCalibration",
     "PointCloud",
