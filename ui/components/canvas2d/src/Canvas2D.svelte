@@ -391,24 +391,33 @@
     }
   };
 
-  const adjustChannel = (value, range) => {
-    if (value < range[0]) {
-      return 0;
-    } else if (value > range[1]) {
-      return 255;
-    } else {
-      return Math.round(((value - range[0]) / (range[1] - range[0])) * 255);
-    }
-  };
-
   const AdjustChannels = (imageData) => {
     const { data } = imageData;
-    const nPixels = data.length / 4;
 
-    for (let i = 0; i < nPixels * 4; i += 4) {
-      data[i] = adjustChannel(data[i], $filters.redRange);
-      data[i + 1] = adjustChannel(data[i + 1], $filters.greenRange);
-      data[i + 2] = adjustChannel(data[i + 2], $filters.blueRange);
+    const redMin = $filters.redRange[0];
+    const redMax = $filters.redRange[1];
+    const greenMin = $filters.greenRange[0];
+    const greenMax = $filters.greenRange[1];
+    const blueMin = $filters.blueRange[0];
+    const blueMax = $filters.blueRange[1];
+
+    for (let i = 0; i < data.length; i += 4) {
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+
+      if (
+        red < redMin ||
+        red > redMax ||
+        green < greenMin ||
+        green > greenMax ||
+        blue < blueMin ||
+        blue > blueMax
+      ) {
+        data[i] = 0; // Red channel
+        data[i + 1] = 0; // Green channel
+        data[i + 2] = 0; // Blue channel
+      }
     }
   };
 
