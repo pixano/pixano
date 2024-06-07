@@ -83,6 +83,7 @@
       for (const viewId of Object.keys(imagesPerView)) {
         scaleView(viewId);
       }
+      canvasSize = 0;
     }
   }
 
@@ -305,19 +306,19 @@
     }
   }
 
-  const applyFilters = () => {
-    if (stage) {
-      let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+  // const applyFilters = () => {
+  //   if (stage) {
+  //     let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
 
-      images.forEach((image) => {
-        if (image.width() === 0 || image.height() === 0) return;
+  //     images.forEach((image) => {
+  //       if (image.width() === 0 || image.height() === 0) return;
 
-        image.cache();
-        image.brightness(brightness);
-        image.contrast(contrast);
-      });
-    }
-  };
+  //       image.cache();
+  //       image.brightness(brightness);
+  //       image.contrast(contrast);
+  //     });
+  //   }
+  // };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
