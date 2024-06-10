@@ -17,7 +17,7 @@
   import { Pencil } from "lucide-svelte";
   import RangeSlider from "svelte-range-slider-pips";
 
-  import { IconButton, type ItemView } from "@pixano/core/src";
+  import { IconButton, Switch, type ItemView } from "@pixano/core/src";
 
   import { canSave, itemMetas, filters } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
@@ -38,6 +38,8 @@
   let itemMeta: ItemMeta[] = [];
   let isEditing: boolean = false;
   let itemType: string;
+
+  let isGrayscale: boolean = false;
 
   itemMetas.subscribe((metas) => {
     itemMeta = Object.values(metas.views).map((view: ItemView | ItemView[]) => {
@@ -148,71 +150,97 @@
         on:change={(e) => ($filters.contrast = e.detail.value)}
       />
 
-      <div class="pt-2 flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="equalizer"
-          class="cursor-pointer w-4 h-4"
-          bind:checked={$filters.equalizeHistogram}
-        />
-        <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
+      <!-- Color channels -->
+      <div class="mt-8 mb-2">Color channels :</div>
+      <div class="w-full my-2 flex items-center justify-between">
+        <label for="equalizer" class="select-none cursor-pointer text-sm text-gray-500">
+          Equalize histogram
+        </label>
+        <Switch id="equalizer" bind:checked={$filters.equalizeHistogram} onChange={() => {}} />
       </div>
-
-      <!-- Color ranges -->
-      <div class="mt-4 mb-2">Color ranges :</div>
-      <!-- Red -->
-      <div class="flex items-center text-sm text-center text-red-500">
-        <span class="text-left w-5"> R : </span>
-        <span class="w-8"> {$filters.redRange[0]} </span>
-        <div class="grow">
-          <RangeSlider
-            range
-            pushy
-            min={0}
-            max={255}
-            step={1}
-            springValues={{ stiffness: 1, damping: 1 }}
-            bind:values={$filters.redRange}
-          />
+      <div class="w-full my-2 flex items-center justify-between">
+        <label for="grayscale" class="select-none cursor-pointer text-sm text-gray-500">
+          Combine RGB channels
+        </label>
+        <Switch id="grayscale" bind:checked={isGrayscale} onChange={() => {}} />
+      </div>
+      {#if isGrayscale}
+        <!-- Grayscale -->
+        <div class="flex items-center text-sm text-center">
+          <span class="w-8"> {$filters.redRange[0]} </span>
+          <div class="grow">
+            <RangeSlider
+              range
+              pushy
+              min={0}
+              max={255}
+              step={1}
+              springValues={{ stiffness: 1, damping: 1 }}
+              bind:values={$filters.redRange}
+              on:change={(e) => {
+                $filters.redRange = e.detail.values;
+                $filters.blueRange = e.detail.values;
+                $filters.greenRange = e.detail.values;
+              }}
+            />
+          </div>
+          <span class="w-8"> {$filters.blueRange[1]} </span>
         </div>
-        <span class="w-8"> {$filters.redRange[1]} </span>
-      </div>
-
-      <!-- Green -->
-      <div class="flex items-center text-sm text-center text-green-500">
-        <span class="text-left w-5"> G : </span>
-        <span class="w-8"> {$filters.greenRange[0]} </span>
-        <div class="grow">
-          <RangeSlider
-            range
-            pushy
-            min={0}
-            max={255}
-            step={1}
-            springValues={{ stiffness: 1, damping: 1 }}
-            bind:values={$filters.greenRange}
-          />
+      {:else}
+        <!-- Red -->
+        <div class="flex items-center text-sm text-center text-red-500">
+          <span class="text-left w-5"> R : </span>
+          <span class="w-8"> {$filters.redRange[0]} </span>
+          <div class="grow">
+            <RangeSlider
+              range
+              pushy
+              min={0}
+              max={255}
+              step={1}
+              springValues={{ stiffness: 1, damping: 1 }}
+              bind:values={$filters.redRange}
+            />
+          </div>
+          <span class="w-8"> {$filters.redRange[1]} </span>
         </div>
-        <span class="w-8"> {$filters.greenRange[1]} </span>
-      </div>
 
-      <!-- Blue -->
-      <div class="flex items-center text-sm text-center text-blue-500">
-        <span class="text-left w-5"> B : </span>
-        <span class="w-8"> {$filters.blueRange[0]} </span>
-        <div class="grow">
-          <RangeSlider
-            range
-            pushy
-            min={0}
-            max={255}
-            step={1}
-            springValues={{ stiffness: 1, damping: 1 }}
-            bind:values={$filters.blueRange}
-          />
+        <!-- Green -->
+        <div class="flex items-center text-sm text-center text-green-500">
+          <span class="text-left w-5"> G : </span>
+          <span class="w-8"> {$filters.greenRange[0]} </span>
+          <div class="grow">
+            <RangeSlider
+              range
+              pushy
+              min={0}
+              max={255}
+              step={1}
+              springValues={{ stiffness: 1, damping: 1 }}
+              bind:values={$filters.greenRange}
+            />
+          </div>
+          <span class="w-8"> {$filters.greenRange[1]} </span>
         </div>
-        <span class="w-8"> {$filters.blueRange[1]} </span>
-      </div>
+
+        <!-- Blue -->
+        <div class="flex items-center text-sm text-center text-blue-500">
+          <span class="text-left w-5"> B : </span>
+          <span class="w-8"> {$filters.blueRange[0]} </span>
+          <div class="grow">
+            <RangeSlider
+              range
+              pushy
+              min={0}
+              max={255}
+              step={1}
+              springValues={{ stiffness: 1, damping: 1 }}
+              bind:values={$filters.blueRange}
+            />
+          </div>
+          <span class="w-8"> {$filters.blueRange[1]} </span>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}
