@@ -100,7 +100,7 @@
         if (object.datasetItemType !== "video") return object;
         let { displayedBox } = object;
         const newCoords = linearInterpolation(object.track, imageIndex);
-        if (newCoords) {
+        if (newCoords && newCoords.every((c) => c)) {
           const [x, y, width, height] = newCoords;
           displayedBox = { ...displayedBox, coords: [x, y, width, height] };
         }

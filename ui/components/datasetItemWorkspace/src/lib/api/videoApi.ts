@@ -153,15 +153,25 @@ const createNewTracklet = (
   } as Tracklet;
 };
 
-const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, box: VideoItemBBox) =>
-  track.map((trackItem) => {
-    if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
-      trackItem.boxes.push(box);
-      trackItem.boxes.sort((a, b) => a.frame_index - b.frame_index);
-      trackItem.start = trackItem.boxes[0].frame_index;
-      trackItem.end = trackItem.boxes[trackItem.boxes.length - 1].frame_index;
+const addKeyBoxToTracklet = (track: Tracklet[], currentTracklet: Tracklet, box: VideoItemBBox) =>
+  track.map((tracklet) => {
+    if (tracklet.start === currentTracklet.start && tracklet.end === currentTracklet.end) {
+      const currentBox = tracklet.boxes.find((b) => b.frame_index === box.frame_index);
+      if (currentBox) {
+        tracklet.boxes = tracklet.boxes.map((b) => {
+          if (b.frame_index === box.frame_index) {
+            return box;
+          }
+          return b;
+        });
+      } else {
+        tracklet.boxes.push(box);
+        tracklet.boxes.sort((a, b) => a.frame_index - b.frame_index);
+        tracklet.start = tracklet.boxes[0].frame_index;
+        tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
+      }
     }
-    return trackItem;
+    return tracklet;
   });
 
 export const addKeyBox = (
