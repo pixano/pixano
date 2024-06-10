@@ -242,7 +242,7 @@ export const splitTrackletInTwo = (
     end: rightClickFrameIndex,
     boxes: filterBoxes(
       tracklet.boxes,
-      { ...object.displayedBox, frame_index: rightClickFrameIndex },
+      { ...object.displayedBox, frame_index: rightClickFrameIndex, is_key: true },
       (index) => index < rightClickFrameIndex,
     ),
   };
@@ -251,7 +251,7 @@ export const splitTrackletInTwo = (
     end: tracklet.end,
     boxes: filterBoxes(
       tracklet.boxes,
-      { ...object.displayedBox, frame_index: rightClickFrameIndex + 1 },
+      { ...object.displayedBox, frame_index: rightClickFrameIndex + 1, is_key: true },
       (index) => index > rightClickFrameIndex + 1,
     ),
   };
@@ -261,4 +261,68 @@ export const splitTrackletInTwo = (
     endTracklet,
     ...object.track.slice(trackletIndex + 1),
   ];
+};
+
+export const filterTrackletBoxes = (
+  newFrameIndex: VideoItemBBox["frame_index"],
+  draggedFrameIndex: VideoItemBBox["frame_index"],
+  currentTracklet: Tracklet,
+  objects: ItemObject[],
+  objectId: ItemObject["id"],
+) => {
+  const isGoingRight = newFrameIndex > draggedFrameIndex;
+  const isStart = draggedFrameIndex === currentTracklet.start;
+
+  return objects.map((object) => {
+    if (object.id === objectId && object.datasetItemType === "video") {
+      object.track = object.track.map((tracklet) => {
+        if (tracklet.start === currentTracklet.start && tracklet.end === currentTracklet.end) {
+          tracklet.boxes = tracklet.boxes.filter((box) => {
+            if (
+              isGoingRight &&
+              box.frame_index > draggedFrameIndex &&
+              box.frame_index < newFrameIndex
+            ) {
+              return false;
+            }
+            if (
+              !isGoingRight &&
+              box.frame_index > newFrameIndex &&
+              box.frame_index < draggedFrameIndex
+            ) {
+              return false;
+            }
+            return true;
+          });
+          if (isStart && !isGoingRight) {
+            tracklet.start = newFrameIndex;
+            tracklet.boxes[0].is_key = true;
+            tracklet.boxes[0].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          if (!isStart && isGoingRight) {
+            tracklet.end = newFrameIndex;
+            tracklet.boxes[tracklet.boxes.length - 1].is_key = true;
+            tracklet.boxes[tracklet.boxes.length - 1].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          if (isStart && isGoingRight) {
+            tracklet.start = newFrameIndex;
+            tracklet.boxes[0].is_key = true;
+            tracklet.boxes[0].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          if (!isStart && !isGoingRight) {
+            tracklet.end = newFrameIndex;
+            tracklet.boxes[tracklet.boxes.length - 1].is_key = true;
+            tracklet.boxes[tracklet.boxes.length - 1].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          return tracklet;
+        }
+        return tracklet;
+      });
+    }
+    return object;
+  });
 };

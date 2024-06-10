@@ -25,6 +25,7 @@
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { filterTrackletBoxes } from "../../lib/api/videoApi";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -47,8 +48,6 @@
   let left: number = getLeft(tracklet);
   let trackletElement: HTMLElement;
 
-  $: width = getWidth(tracklet);
-  $: left = getLeft(tracklet);
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
   $: color = $colorScale[1](object.id);
@@ -59,14 +58,19 @@
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborBoxes(tracklet, newFrameIndex);
     if (newFrameIndex < prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
-    tracklet.boxes = tracklet.boxes.map((box) => {
-      if (box.frame_index === draggedFrameIndex) {
-        box.frame_index = newFrameIndex;
-      }
-      return box;
-    });
-    tracklet.start = tracklet.boxes[0].frame_index;
-    tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
+
+    const isStart = draggedFrameIndex === tracklet.start;
+
+    if (isStart) {
+      left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
+      width = ((tracklet.end - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+    } else {
+      width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+    }
+
+    itemObjects.update((oldObjects) =>
+      filterTrackletBoxes(newFrameIndex, draggedFrameIndex, tracklet, oldObjects, object.id),
+    );
     updateView(newFrameIndex);
     currentFrameIndex.set(newFrameIndex);
   };

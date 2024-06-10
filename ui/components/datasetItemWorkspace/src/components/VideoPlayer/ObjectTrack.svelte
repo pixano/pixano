@@ -122,17 +122,19 @@
     </ContextMenu.Content>
   </ContextMenu.Root>
   {#each object.track as tracklet, i}
-    <ObjectTracklet
-      {tracklet}
-      {object}
-      {onAddKeyBoxClick}
-      {onContextMenu}
-      {onEditKeyBoxClick}
-      onSplitTrackletClick={() => onSplitTrackletClick(i)}
-      onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-      {findNeighborBoxes}
-      {updateView}
-      {moveCursorToPosition}
-    />
+    {#key `${tracklet.start}-${tracklet.end}`}
+      <ObjectTracklet
+        {tracklet}
+        {object}
+        {onAddKeyBoxClick}
+        {onContextMenu}
+        {onEditKeyBoxClick}
+        onSplitTrackletClick={() => onSplitTrackletClick(i)}
+        onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
+        {findNeighborBoxes}
+        {updateView}
+        {moveCursorToPosition}
+      />
+    {/key}
   {/each}
 </div>

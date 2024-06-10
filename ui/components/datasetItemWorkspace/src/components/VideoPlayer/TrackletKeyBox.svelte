@@ -44,8 +44,8 @@
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
-  const getKeyBoxLeftPosition = (box: VideoItemBBox) => {
-    const boxFrameIndex = box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index;
+  const getKeyBoxLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+    const boxFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
 
@@ -54,6 +54,7 @@
     let startPosition: number;
     let startFrameIndex: number;
     let startOneFrameInPixel: number;
+    let newFrameIndex: number | undefined;
 
     node.addEventListener("mousedown", (event) => {
       moving = true;
@@ -67,13 +68,15 @@
       if (moving) {
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
-        const newFrameIndex = startFrameIndex + raise;
+        newFrameIndex = startFrameIndex + raise;
+        newFrameIndex = Math.round(newFrameIndex);
         updateTrackletWidth(Math.round(newFrameIndex), box.frame_index);
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
+      newFrameIndex = undefined;
     });
   };
 </script>
@@ -85,7 +88,7 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBoxBeingEdited },
     )}
-    style={`left: ${getKeyBoxLeftPosition(box)}%; border-color: ${color}`}
+    style={`left: ${getKeyBoxLeftPosition(box.frame_index)}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
