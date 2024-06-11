@@ -25,7 +25,7 @@
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { filterTrackletBoxes } from "../../lib/api/videoApi";
+  import { filterTrackletBoxes, getNewTrackletValues } from "../../lib/api/videoApi";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -35,7 +35,7 @@
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
-  export let updateView: (frameIndex: number) => void;
+  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
@@ -68,11 +68,18 @@
       width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
     }
 
+    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
+    updateView(newFrameIndex, [newTracklet]);
+    currentFrameIndex.set(newFrameIndex);
+  };
+
+  const filterTracklet = (
+    newFrameIndex: VideoItemBBox["frame_index"],
+    draggedFrameIndex: VideoItemBBox["frame_index"],
+  ) => {
     itemObjects.update((oldObjects) =>
       filterTrackletBoxes(newFrameIndex, draggedFrameIndex, tracklet, oldObjects, object.id),
     );
-    updateView(newFrameIndex);
-    currentFrameIndex.set(newFrameIndex);
   };
 
   const onClick = (clientX: number) => {
@@ -118,15 +125,18 @@
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.boxes as box}
-  {#if box.is_key}
-    <TrackletKeyBox
-      {box}
-      {color}
-      {oneFrameInPixel}
-      {onEditKeyBoxClick}
-      objectId={object.id}
-      {updateTrackletWidth}
-    />
-  {/if}
-{/each}
+{#key tracklet.boxes.length}
+  {#each tracklet.boxes as box}
+    {#if box.is_key}
+      <TrackletKeyBox
+        {box}
+        {color}
+        {oneFrameInPixel}
+        {onEditKeyBoxClick}
+        objectId={object.id}
+        {updateTrackletWidth}
+        {filterTracklet}
+      />
+    {/if}
+  {/each}
+{/key}

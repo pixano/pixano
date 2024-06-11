@@ -31,6 +31,10 @@
     newIndex: VideoItemBBox["frame_index"],
     draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
+  export let filterTracklet: (
+    newIndex: VideoItemBBox["frame_index"],
+    draggedIndex: VideoItemBBox["frame_index"],
+  ) => void;
 
   let isBoxBeingEdited = false;
 
@@ -48,6 +52,8 @@
     const boxFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
     return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
   };
+
+  let left = getKeyBoxLeftPosition(box.frame_index);
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
@@ -70,12 +76,14 @@
         const raise = distance / startOneFrameInPixel;
         newFrameIndex = startFrameIndex + raise;
         newFrameIndex = Math.round(newFrameIndex);
+        left = getKeyBoxLeftPosition(newFrameIndex);
         updateTrackletWidth(Math.round(newFrameIndex), box.frame_index);
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
+      if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, box.frame_index);
       newFrameIndex = undefined;
     });
   };
@@ -88,7 +96,7 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBoxBeingEdited },
     )}
-    style={`left: ${getKeyBoxLeftPosition(box.frame_index)}%; border-color: ${color}`}
+    style={`left: ${left}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>

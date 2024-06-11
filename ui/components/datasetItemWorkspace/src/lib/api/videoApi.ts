@@ -336,3 +336,24 @@ export const filterTrackletBoxes = (
     return object;
   });
 };
+
+export const getNewTrackletValues = (
+  isStart: boolean,
+  newFrameIndex: number,
+  tracklet: Tracklet,
+) => {
+  const startingBox = {
+    ...tracklet.boxes[0],
+    frame_index: isStart ? newFrameIndex : tracklet.start,
+  };
+  const endingBox = {
+    ...tracklet.boxes[tracklet.boxes.length - 1],
+    frame_index: isStart ? tracklet.end : newFrameIndex,
+  };
+  const newTracklet = {
+    boxes: [startingBox, endingBox],
+    start: isStart ? newFrameIndex : tracklet.start,
+    end: isStart ? tracklet.end : newFrameIndex,
+  };
+  return newTracklet;
+};

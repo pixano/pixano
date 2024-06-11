@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { type EditShape, type VideoDatasetItem } from "@pixano/core";
+  import { type EditShape, type Tracklet, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -83,7 +83,7 @@
     lastFrameIndex.set(longestView - 1);
   });
 
-  const updateView = (imageIndex: number) => {
+  const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
       const src = `/${urls[imageIndex]}`;
@@ -99,8 +99,8 @@
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedBox } = object;
-        const newCoords = linearInterpolation(object.track, imageIndex);
-        if (newCoords && newCoords.every((c) => c)) {
+        const newCoords = linearInterpolation(newTrack || object.track, imageIndex);
+        if (newCoords && newCoords.every((value) => value)) {
           const [x, y, width, height] = newCoords;
           displayedBox = { ...displayedBox, coords: [x, y, width, height] };
         }

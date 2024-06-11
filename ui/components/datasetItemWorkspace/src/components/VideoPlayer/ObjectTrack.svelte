@@ -30,7 +30,7 @@
 
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
-  export let updateView: (frameIndex: number) => void;
+  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
