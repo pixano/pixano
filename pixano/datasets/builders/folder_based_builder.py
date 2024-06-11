@@ -54,7 +54,9 @@ class FolderBasedBuilder(DatasetBuilder):
                         view = self._create_view(item, view_file, view_name)
 
                         # creat objects
-                        objects = self._create_objects(item.id, view_name, item_metadata)
+                        objects = self._create_objects(
+                            item.id, view_name, item_metadata
+                        )
 
                         yield {
                             "item": [item],
@@ -101,31 +103,41 @@ class FolderBasedBuilder(DatasetBuilder):
 
         # TODO: check obj_attrs match the schema
         obj_attrs = list(obj_data.keys())
-        num_objects = len(obj_data[obj_attrs[0]])
+        nums_objects = {len(v) for v in obj_data.values() if isinstance(v, list)}
+        if len(nums_objects) > 1:
+            raise ValueError("All list must have same length")
 
-        for i in range(num_objects):
-            obj = {}
-            for attr in obj_attrs:
-                if is_bbox(
-                    self._schemas["objects"].model_fields[attr].annotation,
-                ):
-                    obj[attr] = BBox(
-                        coords=obj_data[attr][i],
-                        format="xywh",
-                        is_normalized=True,
-                        confidence=1.0,
+        if len(nums_objects) == 1:
+            num_objects = nums_objects.pop()
+            for i in range(num_objects):
+                obj = {}
+                for attr in obj_attrs:
+                    if obj_data[attr]:
+                        if is_bbox(
+                            self._schemas["objects"].model_fields[attr].annotation,
+                        ):
+                            obj[attr] = BBox(
+                                coords=obj_data[attr][i],
+                                format="xywh",
+                                is_normalized=True,
+                                confidence=1.0,
+                            )
+                        # TODO check jsonl format for mask & keypoints
+                        else:
+                            if isinstance(obj_data[attr], list):
+                                obj[attr] = obj_data[attr][i]
+                            else:
+                                # if not a list, put given value for each elem
+                                obj[attr] = obj_data[attr]
+
+                objects.append(
+                    self._schemas["objects"](
+                        id=shortuuid.uuid(),
+                        item_id=item_id,
+                        view_id=view_name,
+                        **obj,
                     )
-                else:
-                    obj[attr] = obj_data[attr][i]
-
-            objects.append(
-                self._schemas["objects"](
-                    id=shortuuid.uuid(),
-                    item_id=item_id,
-                    view_id=view_name,
-                    **obj,
                 )
-            )
 
         return objects
 

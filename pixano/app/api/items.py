@@ -25,7 +25,14 @@ from pydantic import BaseModel
 import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
-from pixano.datasets.features import Image, SequenceFrame, BBox, CompressedRLE
+from pixano.datasets.features import (
+    BBox,
+    CompressedRLE,
+    Image,
+    KeyPoints,
+    SequenceFrame,
+    map_back2front_vertices,
+)
 from pixano.datasets.features.schemas.group import _SchemaGroup
 from pixano.datasets.utils import image as image_utils
 
@@ -352,6 +359,7 @@ async def get_dataset_item(  # noqa: D417
     objects = []
     NoneBBox = BBox.none()
     NoneMask = CompressedRLE.none()
+    NoneKeypoints = KeyPoints.none()
     if view_type == "image":
         for obj_group in groups[_SchemaGroup.OBJECT]:
             objects.extend(
@@ -377,6 +385,7 @@ async def get_dataset_item(  # noqa: D417
                                 "view_id",
                                 "bbox",
                                 "mask",
+                                "keypoints",
                             ]
                         },  # ????
                         # bbox/mask/whatelse?
@@ -394,6 +403,16 @@ async def get_dataset_item(  # noqa: D417
                             if hasattr(obj, "mask")
                             and obj.mask != NoneMask
                             and len(obj.mask.size) == 2
+                            else None
+                        ),
+                        "keyPoints": (
+                            {
+                                "templateId": obj.keypoints.template_id,
+                                "vertices": map_back2front_vertices(obj.keypoints),
+                            }
+                            if hasattr(obj, "keypoints")
+                            and obj.keypoints != NoneKeypoints
+                            and obj.keypoints.coords != []
                             else None
                         ),
                     }
@@ -532,6 +551,23 @@ async def post_dataset_item(  # noqa: D417
                     and len(obj["mask"]["size"]) == 2
                     else {"size": [0, 0], "counts": b""}
                 )
+            if "keyPoints" in obj:
+                obj["keypoints"] = (
+                    {
+                        "template_id": obj["keyPoints"]["templateId"],
+                        "coords": [coord for pt in obj["keyPoints"]["vertices"] for coord in (pt['x'], pt['y'])],
+                        "states": [
+                            pt["features"]["state"]
+                            if "features" in pt and "state" in pt["features"]
+                            else "visible"
+                            for pt in obj["keyPoints"]["vertices"]
+                        ],
+                    }
+                    if obj["keyPoints"]
+                    and "vertices" in obj["keyPoints"]
+                    else {"template_id": "None", "coords": [0, 0], "states": ["invisible"]}
+                )
+                obj.pop("keyPoints")  # remove keyPoints, we want keypoints (no capital P)
             if "features" in obj:
                 for feat in obj["features"].values():
                     # TODO coerce to type feat["dtype"] (need mapping dtype string to type)

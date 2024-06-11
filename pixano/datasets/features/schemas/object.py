@@ -15,6 +15,7 @@ from pixano.datasets.features.schemas.registry import _register_schema_internal
 
 from ..types.bbox import BBox
 from ..types.compressed_rle import CompressedRLE
+from ..types.keypoints import KeyPoints
 from .base_schema import BaseSchema
 
 
@@ -26,6 +27,7 @@ class Object(BaseSchema):
     view_id: str
     bbox: BBox = BBox.none()
     mask: CompressedRLE = CompressedRLE.none()
+    keypoints: KeyPoints = KeyPoints.none()
 
 
 def is_object(cls: type) -> bool:
