@@ -47,6 +47,7 @@ export const filters = writable<Filters>({
   redRange: [0, 255],
   greenRange: [0, 255],
   blueRange: [0, 255],
+  u16BitRange: [0, 65535],
 });
 
 type ColorScale = [Array<string>, (id: string) => string];

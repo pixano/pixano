@@ -30,6 +30,7 @@
     "@pixano/core": "workspace:^",
     "@pixano/models": "workspace:^",
     "clsx": "^2.1.1",
+    "image-js": "^0.35.5",
     "lucide-svelte": "^0.292.0",
     "nanoid": "^5.0.7",
     "onnxruntime-web": "~1.16.3",

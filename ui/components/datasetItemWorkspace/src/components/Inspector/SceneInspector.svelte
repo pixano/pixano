@@ -39,7 +39,7 @@
   let isEditing: boolean = false;
   let itemType: string;
 
-  let isGrayscale: boolean = false;
+  let combineChannels: boolean = false;
 
   itemMetas.subscribe((metas) => {
     itemMeta = Object.values(metas.views).map((view: ItemView | ItemView[]) => {
@@ -127,48 +127,70 @@
   <!-- FILTERS -->
   <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
     <h3 class="uppercase font-medium h-10">FILTERS</h3>
-    <div class="mb-4">
-      <label for="brightness">Brightness : {Math.round($filters.brightness * 100 + 50)}%</label>
-      <RangeSlider
-        range="min"
-        min={-0.5}
-        max={0.5}
-        step={0.01}
-        values={[$filters.brightness]}
-        springValues={{ stiffness: 1, damping: 1 }}
-        on:change={(e) => ($filters.brightness = e.detail.value)}
-      />
 
-      <label for="contrast"> Contrast : {Math.round($filters.contrast + 50)}% </label>
-      <RangeSlider
-        range="min"
-        min={-50}
-        max={50}
-        step={1}
-        values={[$filters.contrast]}
-        springValues={{ stiffness: 1, damping: 1 }}
-        on:change={(e) => ($filters.contrast = e.detail.value)}
-      />
-
-      <!-- Color channels -->
-      <div class="mt-8 mb-2">Color channels :</div>
-      <div class="w-full my-2 flex items-center justify-between">
-        <label for="equalizer" class="select-none cursor-pointer text-sm text-gray-500">
-          Equalize histogram
-        </label>
+    <!-- GENERAL FILTERS -->
+    <div class="border border-gray-300 rounded py-2 px-4 text-sm">
+      <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
+      <div class="w-full my-1 flex items-center justify-between">
+        <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
         <Switch id="equalizer" bind:checked={$filters.equalizeHistogram} onChange={() => {}} />
       </div>
-      <div class="w-full my-2 flex items-center justify-between">
-        <label for="grayscale" class="select-none cursor-pointer text-sm text-gray-500">
-          Combine RGB channels
-        </label>
-        <Switch id="grayscale" bind:checked={isGrayscale} onChange={() => {}} />
+      <!-- Brightness -->
+      <div class="flex items-center">
+        <label for="brightness" class="w-20 pb-1">Brightness </label>
+        <div class="grow text-xs">
+          <RangeSlider
+            range="min"
+            min={-0.5}
+            max={0.5}
+            step={0.01}
+            values={[$filters.brightness]}
+            springValues={{ stiffness: 1, damping: 1 }}
+            class="-px-2"
+            on:change={(e) => ($filters.brightness = e.detail.value)}
+          />
+        </div>
+        <span class="w-8">{Math.round($filters.brightness * 100 + 50)}%</span>
       </div>
-      {#if isGrayscale}
+
+      <!-- Contrast -->
+      <div class="flex items-center text-sm">
+        <label for="contrast" class="w-20 pb-1">Contrast </label>
+        <div class="grow text-xs">
+          <RangeSlider
+            range="min"
+            min={-50}
+            max={50}
+            step={1}
+            values={[$filters.contrast]}
+            springValues={{ stiffness: 1, damping: 1 }}
+            class="-px-2"
+            on:change={(e) => ($filters.contrast = e.detail.value)}
+          />
+        </div>
+        <span class="w-8">{Math.round($filters.contrast + 50)}% </span>
+      </div>
+    </div>
+
+    <!-- COLOR CHANNELS -->
+    <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
+      <h4 class="uppercase font-medium h-6 text-gray-500">CHANNELS</h4>
+
+      <!-- Color channels -->
+      {#if $itemMetas.color === "rgba"}
+        <div class="w-full my-1 flex items-center justify-between">
+          <label for="grayscale" class="select-none cursor-pointer text-sm">
+            Combine RGB channels
+          </label>
+          <Switch id="grayscale" bind:checked={combineChannels} onChange={() => {}} />
+        </div>
+      {/if}
+      {#if combineChannels || $itemMetas.color === "grayscale"}
         <!-- Grayscale -->
         <div class="flex items-center text-sm text-center">
+          <span class="text-left w-4"> G </span>
           <span class="w-8"> {$filters.redRange[0]} </span>
-          <div class="grow">
+          <div class="grow text-xs">
             <RangeSlider
               range
               pushy
@@ -176,7 +198,7 @@
               max={255}
               step={1}
               springValues={{ stiffness: 1, damping: 1 }}
-              bind:values={$filters.redRange}
+              values={$filters.redRange}
               on:change={(e) => {
                 $filters.redRange = e.detail.values;
                 $filters.blueRange = e.detail.values;
@@ -184,14 +206,14 @@
               }}
             />
           </div>
-          <span class="w-8"> {$filters.blueRange[1]} </span>
+          <span class="w-8"> {$filters.redRange[1]} </span>
         </div>
       {:else}
         <!-- Red -->
         <div class="flex items-center text-sm text-center text-red-500">
-          <span class="text-left w-5"> R : </span>
+          <span class="text-left w-4"> R </span>
           <span class="w-8"> {$filters.redRange[0]} </span>
-          <div class="grow">
+          <div class="grow text-xs">
             <RangeSlider
               range
               pushy
@@ -207,9 +229,9 @@
 
         <!-- Green -->
         <div class="flex items-center text-sm text-center text-green-500">
-          <span class="text-left w-5"> G : </span>
+          <span class="text-left w-4"> G </span>
           <span class="w-8"> {$filters.greenRange[0]} </span>
-          <div class="grow">
+          <div class="grow text-xs">
             <RangeSlider
               range
               pushy
@@ -225,9 +247,9 @@
 
         <!-- Blue -->
         <div class="flex items-center text-sm text-center text-blue-500">
-          <span class="text-left w-5"> B : </span>
+          <span class="text-left w-4"> B </span>
           <span class="w-8"> {$filters.blueRange[0]} </span>
-          <div class="grow">
+          <div class="grow text-xs">
             <RangeSlider
               range
               pushy
@@ -242,5 +264,28 @@
         </div>
       {/if}
     </div>
+
+    <!-- 16-BIT SETTINGS -->
+    {#if $itemMetas.format === "16bit"}
+      <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
+        <h4 class="uppercase font-medium h-6 text-gray-500">16-BIT SETTINGS</h4>
+        <div class="my-1"> Select range : </div>
+        <div class="flex items-center text-sm text-center">
+          <span class="w-8"> {$filters.u16BitRange[0]} </span>
+          <div class="grow text-xs">
+            <RangeSlider
+              range
+              pushy
+              min={0}
+              max={65535}
+              step={1}
+              springValues={{ stiffness: 1, damping: 1 }}
+              bind:values={$filters.u16BitRange}
+            />
+          </div>
+          <span class="w-12"> {$filters.u16BitRange[1]} </span>
+        </div>
+      </div>
+    {/if}
   </div>
 {/if}
