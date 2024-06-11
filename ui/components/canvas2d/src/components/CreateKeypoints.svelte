@@ -47,7 +47,7 @@
     };
   };
 
-  $: keyPointStructure = {
+  $: keypointStructure = {
     edges: newShape.keypoints.edges,
     vertices: newShape.keypoints.vertices,
     id: keypointsId,
@@ -57,7 +57,7 @@
 
 {#if newShape.viewId === viewId}
   <Group config={{ id: keypointsId, x: 0, y: 0 }}>
-    <Keypoints {stage} {keyPointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
+    <Keypoints {stage} {keypointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
       {#if newShape.status === "creating"}
         <Rect
           config={{

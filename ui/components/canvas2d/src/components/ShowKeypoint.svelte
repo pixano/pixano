@@ -60,7 +60,7 @@
       <KeyPoints
         onPointChange={(vertices) => onKeyPointsChange(vertices, keypointStructure.id)}
         {stage}
-        keyPointStructure={keypointStructure}
+        {keypointStructure}
         {zoomFactor}
         color={colorScale(keypointStructure.id)}
       >
