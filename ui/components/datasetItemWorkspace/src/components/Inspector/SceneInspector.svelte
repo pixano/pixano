@@ -269,9 +269,9 @@
     {#if $itemMetas.format === "16bit"}
       <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
         <h4 class="uppercase font-medium h-6 text-gray-500">16-BIT SETTINGS</h4>
-        <div class="my-1"> Select range : </div>
+        <div class="my-1">Select range :</div>
         <div class="flex items-center text-sm text-center">
-          <span class="w-8"> {$filters.u16BitRange[0]} </span>
+          <input type="number" class="w-16 bg-inherit outline-none text-center" bind:value={$filters.u16BitRange[0]} />
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -283,7 +283,7 @@
               bind:values={$filters.u16BitRange}
             />
           </div>
-          <span class="w-12"> {$filters.u16BitRange[1]} </span>
+          <input type="number" class="w-16 bg-inherit outline-none text-center" bind:value={$filters.u16BitRange[1]} />
         </div>
       </div>
     {/if}
