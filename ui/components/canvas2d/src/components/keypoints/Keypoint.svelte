@@ -21,7 +21,7 @@
 
   import type { KeyPointsTemplate, VertexStates } from "@pixano/core";
 
-  import KeyPointCircle from "./KeypointCircle.svelte";
+  import KeyPointCircle from "./KeypointsCircle.svelte";
 
   export let stage: Konva.Stage;
 

@@ -19,7 +19,7 @@
   import { Rect } from "svelte-konva";
   import type { KeypointsTemplate, Shape } from "@pixano/core";
 
-  import KeyPoints from "./keypoints/Keypoints.svelte";
+  import KeyPoints from "./keypoints/Keypoint.svelte";
 
   export let stage: Konva.Stage;
   export let keypoints: KeypointsTemplate[] = [];
