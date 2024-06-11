@@ -60,14 +60,14 @@
     if (newFrameIndex < prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
 
     const isStart = draggedFrameIndex === tracklet.start;
-
+    const isEnd = draggedFrameIndex === tracklet.end;
     if (isStart) {
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
       width = ((tracklet.end - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
-    } else {
+    }
+    if (isEnd) {
       width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
     }
-
     const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
     updateView(newFrameIndex, [newTracklet]);
     currentFrameIndex.set(newFrameIndex);

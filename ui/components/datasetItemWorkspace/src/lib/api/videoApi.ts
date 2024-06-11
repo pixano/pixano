@@ -282,6 +282,7 @@ export const filterTrackletBoxes = (
 ) => {
   const isGoingRight = newFrameIndex > draggedFrameIndex;
   const isStart = draggedFrameIndex === currentTracklet.start;
+  const isEnd = draggedFrameIndex === currentTracklet.end;
 
   return objects.map((object) => {
     if (object.id === objectId && object.datasetItemType === "video") {
@@ -304,30 +305,26 @@ export const filterTrackletBoxes = (
             }
             return true;
           });
-          if (isStart && !isGoingRight) {
+          if (isStart) {
             tracklet.start = newFrameIndex;
             tracklet.boxes[0].is_key = true;
             tracklet.boxes[0].frame_index = newFrameIndex;
             return tracklet;
           }
-          if (!isStart && isGoingRight) {
+          if (isEnd) {
             tracklet.end = newFrameIndex;
             tracklet.boxes[tracklet.boxes.length - 1].is_key = true;
             tracklet.boxes[tracklet.boxes.length - 1].frame_index = newFrameIndex;
             return tracklet;
           }
-          if (isStart && isGoingRight) {
-            tracklet.start = newFrameIndex;
-            tracklet.boxes[0].is_key = true;
-            tracklet.boxes[0].frame_index = newFrameIndex;
-            return tracklet;
-          }
-          if (!isStart && !isGoingRight) {
-            tracklet.end = newFrameIndex;
-            tracklet.boxes[tracklet.boxes.length - 1].is_key = true;
-            tracklet.boxes[tracklet.boxes.length - 1].frame_index = newFrameIndex;
-            return tracklet;
-          }
+          tracklet.boxes = tracklet.boxes.map((box) => {
+            if (box.frame_index === draggedFrameIndex) {
+              box.is_key = true;
+              box.frame_index = newFrameIndex;
+              return box;
+            }
+            return box;
+          });
           return tracklet;
         }
         return tracklet;
