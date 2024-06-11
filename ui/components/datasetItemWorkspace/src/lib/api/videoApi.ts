@@ -325,6 +325,12 @@ export const filterTrackletBoxes = (
             }
             return box;
           });
+          if (newFrameIndex < tracklet.start) {
+            tracklet.start = newFrameIndex;
+          }
+          if (newFrameIndex > tracklet.end) {
+            tracklet.end = newFrameIndex;
+          }
           return tracklet;
         }
         return tracklet;

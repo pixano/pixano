@@ -50,7 +50,8 @@
 
   const getKeyBoxLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
     const boxFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
-    return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
+    const leftPosition = (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
+    return leftPosition;
   };
 
   let left = getKeyBoxLeftPosition(box.frame_index);
@@ -74,10 +75,10 @@
       if (moving) {
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
-        newFrameIndex = startFrameIndex + raise;
-        newFrameIndex = Math.round(newFrameIndex);
+        newFrameIndex = Math.round(startFrameIndex + raise);
+        if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
         left = getKeyBoxLeftPosition(newFrameIndex);
-        updateTrackletWidth(Math.round(newFrameIndex), box.frame_index);
+        updateTrackletWidth(newFrameIndex, box.frame_index);
       }
     });
 
