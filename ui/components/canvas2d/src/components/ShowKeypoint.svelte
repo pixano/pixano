@@ -36,7 +36,8 @@
     };
   };
 
-  const onKeyPointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
+  const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
+    console.log({ vertices, id });
     newShape = {
       status: "editing",
       type: "keypoint",
@@ -58,7 +59,7 @@
   {#each keypoints as keypointStructure}
     {#if keypointStructure.visible}
       <KeyPoints
-        onPointChange={(vertices) => onKeyPointsChange(vertices, keypointStructure.id)}
+        onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}
         {keypointStructure}
         {zoomFactor}

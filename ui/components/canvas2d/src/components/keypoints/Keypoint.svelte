@@ -36,7 +36,7 @@
 
   const onPointDragMove = (pointIndex: number) => {
     if (!keypointStructure.editing) return;
-    const pointPosition = stage.findOne(`#keyPoint-${keypointsId}-${pointIndex}`).position();
+    const pointPosition = stage.findOne(`#keypoint-${keypointsId}-${pointIndex}`).position();
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
         return { ...point, x: pointPosition.x, y: pointPosition.y };
