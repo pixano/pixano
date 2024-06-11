@@ -49,8 +49,8 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
-  import CreateKeypoint from "./components/CreateKeypoint.svelte";
-  import ShowKeypoints from "./components/ShowKeypoints.svelte";
+  import CreateKeypoint from "./components/CreateKeypoints.svelte";
+  import ShowKeypoints from "./components/ShowKeypoint.svelte";
 
   // Exports
 
