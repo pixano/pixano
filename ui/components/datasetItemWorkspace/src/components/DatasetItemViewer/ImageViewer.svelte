@@ -21,13 +21,13 @@
   import {
     newShape,
     itemBboxes,
-    itemKeyPoints,
+    itemKeypoints,
     itemMasks,
     selectedTool,
     itemObjects,
     preAnnotationIsActive,
     colorScale,
-    selectedKeyPointsTemplate,
+    selectedKeypointsTemplate,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -70,8 +70,8 @@
     colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}
-    keyPoints={$itemKeyPoints}
-    selectedKeyPointTemplate={templates.find((t) => t.id === $selectedKeyPointsTemplate)}
+    keypoints={$itemKeypoints}
+    selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
     {embeddings}
     {brightness}
     {contrast}

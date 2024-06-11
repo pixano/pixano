@@ -32,7 +32,7 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
-    KeyPointsTemplate,
+    KeypointsTemplate,
     Vertex,
   } from "@pixano/core";
 
@@ -49,16 +49,16 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
-  import CreateKeyPoint from "./components/CreateKeyPoint.svelte";
-  import ShowKeyPoints from "./components/ShowKeyPoints.svelte";
+  import CreateKeypoint from "./components/CreateKeypoint.svelte";
+  import ShowKeypoints from "./components/ShowKeypoints.svelte";
 
   // Exports
 
   export let selectedItemId: DatasetItem["id"];
   export let masks: Mask[];
   export let bboxes: BBox[];
-  export let keyPoints: KeyPointsTemplate[] = [];
-  export let selectedKeyPointTemplate: KeyPointsTemplate | undefined = undefined;
+  export let keypoints: KeypointsTemplate[] = [];
+  export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
@@ -473,19 +473,19 @@
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
       const pos = viewLayer.getRelativePointerPosition();
-      const x = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.x : pos.x;
-      const y = newShape.status === "creating" && newShape.type === "keyPoint" ? newShape.y : pos.y;
+      const x = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.y : pos.y;
       const width = pos.x - x;
       const height = pos.y - y;
       newShape = {
         status: "creating",
-        type: "keyPoint",
+        type: "keypoint",
         x,
         y,
         width,
         height,
         viewId,
-        keyPoints: selectedKeyPointTemplate,
+        keypoints: selectedKeypointTemplate,
       };
     }
   }
@@ -494,9 +494,9 @@
     if (selectedTool?.type == "KEY_POINT") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
-      if (rect && newShape.status === "creating" && newShape.type === "keyPoint") {
-        const vertices = newShape.keyPoints.vertices.map((vertex) => {
-          if (newShape.status === "creating" && newShape.type === "keyPoint")
+      if (rect && newShape.status === "creating" && newShape.type === "keypoint") {
+        const vertices = newShape.keypoints.vertices.map((vertex) => {
+          if (newShape.status === "creating" && newShape.type === "keypoint")
             return {
               ...vertex,
               x: newShape.x + vertex.x * newShape.width,
@@ -505,12 +505,12 @@
         });
         newShape = {
           status: "saving",
-          type: "keyPoint",
+          type: "keypoint",
           viewId,
           itemId: selectedItemId,
           imageWidth: getCurrentImage(viewId).width,
           imageHeight: getCurrentImage(viewId).height,
-          keyPoints: { ...newShape.keyPoints, vertices },
+          keypoints: { ...newShape.keypoints, vertices },
         };
         rect.destroy();
         viewLayer.off("pointermove");
@@ -1106,13 +1106,13 @@
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
-        {#if (newShape.status === "creating" && newShape.type === "keyPoint") || (newShape.status === "saving" && newShape.type === "keyPoint")}
-          <CreateKeyPoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
         {/if}
-        <ShowKeyPoints
+        <ShowKeypoints
           {colorScale}
           {stage}
-          {keyPoints}
+          {keypoints}
           zoomFactor={zoomFactor[viewId]}
           bind:newShape
         />

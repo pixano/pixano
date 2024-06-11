@@ -21,7 +21,7 @@
 
   import type { KeyPointsTemplate, VertexStates } from "@pixano/core";
 
-  import KeyPointCircle from "./KeyPointCircle.svelte";
+  import KeyPointCircle from "./KeypointCircle.svelte";
 
   export let stage: Konva.Stage;
 
@@ -83,7 +83,7 @@
     {stage}
     {zoomFactor}
     {vertex}
-    {keyPointsId}
+    keypointsId={keyPointsId}
     {color}
     {opacity}
     {onPointDragMove}

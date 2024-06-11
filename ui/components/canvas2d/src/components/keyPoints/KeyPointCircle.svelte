@@ -27,7 +27,7 @@
   export let stage: Konva.Stage;
   export let zoomFactor: number;
   export let vertex: Vertex;
-  export let keyPointsId: string;
+  export let keypointsId: string;
   export let vertexIndex: number;
   export let draggable: boolean = false;
   export let color: string = "rgb(0,128,0)";
@@ -42,7 +42,7 @@
   let menuNode: HTMLDivElement;
 
   const scaleCircleRadius = (id: number, scale: number) => {
-    const point: Konva.Circle = stage.findOne(`#keyPoint-${keyPointsId}-${id}`);
+    const point: Konva.Circle = stage.findOne(`#keypoint-${keypointsId}-${id}`);
     point.scaleX(scale);
     point.scaleY(scale);
   };
@@ -80,7 +80,7 @@
 
   onMount(() => {
     if (!hasStateFeature) return;
-    const circle = stage.findOne(`#keyPoint-${keyPointsId}-${vertexIndex}`);
+    const circle = stage.findOne(`#keypoint-${keypointsId}-${vertexIndex}`);
     circle.addEventListener("contextmenu", (e) => {
       if (!draggable) return;
       e.preventDefault();
@@ -123,7 +123,7 @@
     fill,
     stroke: "white",
     strokeWidth: 1 / zoomFactor,
-    id: `keyPoint-${keyPointsId}-${vertexIndex}`,
+    id: `keypoint-${keypointsId}-${vertexIndex}`,
     draggable,
     opacity,
     cancelBubble: true,

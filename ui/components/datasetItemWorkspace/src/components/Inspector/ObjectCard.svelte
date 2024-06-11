@@ -50,15 +50,15 @@
     itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible =
     itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
-  $: keyPointsIsVisible =
-    itemObject.datasetItemType === "image" && !itemObject.keyPoints?.displayControl?.hidden;
+  $: keypointsIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.keypoints?.displayControl?.hidden;
 
   $: color = $colorScale[1](itemObject.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
     value: boolean,
-    properties: ("bbox" | "mask" | "keyPoints")[] = ["bbox", "mask", "keyPoints"],
+    properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
   ) => {
     itemObjects.update((objects) =>
       objects.map((object) => {
@@ -191,14 +191,14 @@
                     />
                   </div>
                 {/if}
-                {#if itemObject.keyPoints}
+                {#if itemObject.keypoints}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox
                       handleClick={() =>
-                        handleIconClick("hidden", keyPointsIsVisible, ["keyPoints"])}
-                      bind:checked={keyPointsIsVisible}
-                      title={keyPointsIsVisible ? "Hide" : "Show"}
+                        handleIconClick("hidden", keypointsIsVisible, ["keypoints"])}
+                      bind:checked={keypointsIsVisible}
+                      title={keypointsIsVisible ? "Hide" : "Show"}
                       class="mx-1"
                     />
                   </div>

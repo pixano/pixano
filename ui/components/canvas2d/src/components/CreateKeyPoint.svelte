@@ -19,16 +19,16 @@
   import Konva from "konva";
   import { Group, Rect } from "svelte-konva";
 
-  import type { CreateKeyPointShape, KeyPointsTemplate, SaveKeyBoxShape } from "@pixano/core";
+  import type { CreateKeypointShape, KeypointsTemplate, SaveKeyBoxShape } from "@pixano/core";
 
-  import KeyPoints from "./keyPoints/KeyPoints.svelte";
+  import Keypoints from "./keypoints/Keypoints.svelte";
 
   export let zoomFactor: number;
-  export let newShape: CreateKeyPointShape | SaveKeyBoxShape;
+  export let newShape: CreateKeypointShape | SaveKeyBoxShape;
   export let stage: Konva.Stage;
   export let viewId: string;
 
-  let keyPointsId = "keyPoints";
+  let keypointsId = "keyPoints";
 
   const findPointCoordinate = (point: number, type: "x" | "y") => {
     if (newShape.status === "creating") {
@@ -37,27 +37,27 @@
     return point;
   };
 
-  const onPointChange = (vertices: KeyPointsTemplate["vertices"]) => {
+  const onPointChange = (vertices: KeypointsTemplate["vertices"]) => {
     newShape = {
       ...newShape,
-      keyPoints: {
-        ...newShape.keyPoints,
+      keypoints: {
+        ...newShape.keypoints,
         vertices,
       },
     };
   };
 
   $: keyPointStructure = {
-    edges: newShape.keyPoints.edges,
-    vertices: newShape.keyPoints.vertices,
-    id: keyPointsId,
+    edges: newShape.keypoints.edges,
+    vertices: newShape.keypoints.vertices,
+    id: keypointsId,
     editing: true,
-  } as KeyPointsTemplate;
+  } as KeypointsTemplate;
 </script>
 
 {#if newShape.viewId === viewId}
-  <Group config={{ id: keyPointsId, x: 0, y: 0 }}>
-    <KeyPoints {stage} {keyPointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
+  <Group config={{ id: keypointsId, x: 0, y: 0 }}>
+    <Keypoints {stage} {keyPointStructure} {zoomFactor} {findPointCoordinate} {onPointChange}>
       {#if newShape.status === "creating"}
         <Rect
           config={{
@@ -70,6 +70,6 @@
           }}
         />
       {/if}
-    </KeyPoints>
+    </Keypoints>
   </Group>
 {/if}
