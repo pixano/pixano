@@ -37,7 +37,6 @@
   };
 
   const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
-    console.log({ vertices, id });
     newShape = {
       status: "editing",
       type: "keypoint",
