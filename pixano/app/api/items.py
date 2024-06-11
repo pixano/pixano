@@ -405,9 +405,9 @@ async def get_dataset_item(  # noqa: D417
                             and len(obj.mask.size) == 2
                             else None
                         ),
-                        "keyPoints": (
+                        "keypoints": (
                             {
-                                "templateId": obj.keypoints.template_id,
+                                "template_id": obj.keypoints.template_id,
                                 "vertices": map_back2front_vertices(obj.keypoints),
                             }
                             if hasattr(obj, "keypoints")
@@ -551,23 +551,31 @@ async def post_dataset_item(  # noqa: D417
                     and len(obj["mask"]["size"]) == 2
                     else {"size": [0, 0], "counts": b""}
                 )
-            if "keyPoints" in obj:
+            if "keypoints" in obj:
                 obj["keypoints"] = (
                     {
-                        "template_id": obj["keyPoints"]["templateId"],
-                        "coords": [coord for pt in obj["keyPoints"]["vertices"] for coord in (pt['x'], pt['y'])],
+                        "template_id": obj["keypoints"]["template_id"],
+                        "coords": [
+                            coord
+                            for pt in obj["keypoints"]["vertices"]
+                            for coord in (pt["x"], pt["y"])
+                        ],
                         "states": [
-                            pt["features"]["state"]
-                            if "features" in pt and "state" in pt["features"]
-                            else "visible"
-                            for pt in obj["keyPoints"]["vertices"]
+                            (
+                                pt["features"]["state"]
+                                if "features" in pt and "state" in pt["features"]
+                                else "visible"
+                            )
+                            for pt in obj["keypoints"]["vertices"]
                         ],
                     }
-                    if obj["keyPoints"]
-                    and "vertices" in obj["keyPoints"]
-                    else {"template_id": "None", "coords": [0, 0], "states": ["invisible"]}
+                    if obj["keypoints"] and "vertices" in obj["keypoints"]
+                    else {
+                        "template_id": "None",
+                        "coords": [0, 0],
+                        "states": ["invisible"],
+                    }
                 )
-                obj.pop("keyPoints")  # remove keyPoints, we want keypoints (no capital P)
             if "features" in obj:
                 for feat in obj["features"].values():
                     # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
