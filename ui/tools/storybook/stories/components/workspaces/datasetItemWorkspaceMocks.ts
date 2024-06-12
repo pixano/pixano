@@ -494,6 +494,8 @@ const track: Tracklet[] = [
         is_normalized: true,
         confidence: 1,
         frame_index: 0,
+        is_key: true,
+        is_thumbnail: true,
       },
       {
         coords: [0.5914342337390056, 0.2693339921343171, 0.09993766916635072, 0.18671048750633337],
@@ -501,6 +503,7 @@ const track: Tracklet[] = [
         is_normalized: true,
         confidence: 1,
         frame_index: 73,
+        is_key: true,
       },
     ],
   },
@@ -538,7 +541,8 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           value: 338,
         },
       },
-      uri: image,
+      // remove first caracter of image
+      uri: image.slice(1),
     })),
   },
   objects: [
@@ -555,12 +559,12 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
         category_name: {
           name: "category_name",
           dtype: "str",
-          value: "Flower",
+          value: "Type",
         },
         category: {
           name: "category",
           dtype: "str",
-          value: "nature",
+          value: "Vehicle",
         },
         category_id: {
           name: "category_id",

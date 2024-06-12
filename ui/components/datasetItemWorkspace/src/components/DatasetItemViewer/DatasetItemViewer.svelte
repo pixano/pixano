@@ -34,6 +34,7 @@
   export let isLoading: boolean;
   export let brightness: number;
   export let contrast: number;
+  export let headerHeight: number;
 
   $: {
     if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
@@ -48,7 +49,7 @@
   }
 </script>
 
-<div class="max-w-[100%] bg-slate-800">
+<div class="max-w-[100%] bg-slate-800" style={`max-height: calc(100vh - ${headerHeight}px)`}>
   {#if isLoading}
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />

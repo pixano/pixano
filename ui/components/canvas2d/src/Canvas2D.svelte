@@ -65,8 +65,9 @@
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
   export let colorScale: (value: string) => string;
-  // export let brightness: number;
-  // export let contrast: number;
+  export let brightness: number;
+  export let contrast: number;
+  export let canvasSize: number = 0;
 
   let isReady = false;
 
@@ -81,6 +82,15 @@
       clearAnnotationAndInputs();
     }
     prevSelectedTool = selectedTool;
+  }
+
+  $: {
+    if (canvasSize) {
+      for (const viewId of Object.keys(imagesPerView)) {
+        scaleView(viewId);
+      }
+      canvasSize = 0;
+    }
   }
 
   $: {
@@ -214,7 +224,7 @@
   }
 
   function scaleView(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
     if (viewLayer) {
       // Calculate max dims for every image in the grid
       const maxWidth = stage.width() / gridSize.cols;

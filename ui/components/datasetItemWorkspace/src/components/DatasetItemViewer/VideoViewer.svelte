@@ -16,7 +16,7 @@
 
   import * as ort from "onnxruntime-web";
 
-  import { type EditShape, type VideoDatasetItem } from "@pixano/core";
+  import { type EditShape, type Tracklet, type VideoDatasetItem } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -44,7 +44,13 @@
   export let brightness: number;
   export let contrast: number;
 
-  let height = 250;
+  $: {
+    if (selectedItem) {
+      currentFrameIndex.set(0);
+    }
+  }
+
+  let inspectorMaxHeight = 250;
   let expanding = false;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
@@ -77,7 +83,7 @@
     lastFrameIndex.set(longestView - 1);
   });
 
-  const updateView = (imageIndex: number) => {
+  const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
       const src = `/${urls[imageIndex]}`;
@@ -93,8 +99,8 @@
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedBox } = object;
-        const newCoords = linearInterpolation(object.track, imageIndex);
-        if (newCoords) {
+        const newCoords = linearInterpolation(newTrack || object.track, imageIndex);
+        if (newCoords && newCoords.every((value) => value)) {
           const [x, y, width, height] = newCoords;
           displayedBox = { ...displayedBox, coords: [x, y, width, height] };
         }
@@ -139,13 +145,13 @@
 
   const expand = (e: MouseEvent) => {
     if (expanding) {
-      height = document.body.scrollHeight - e.pageY;
+      inspectorMaxHeight = document.body.scrollHeight - e.pageY;
     }
   };
 </script>
 
 <section
-  class="pl-4 h-full w-full flex flex-col max-h-[calc(100vh-80px)]"
+  class="pl-4 h-full w-full flex flex-col"
   on:mouseup={stopExpand}
   on:mousemove={expand}
   role="tab"
@@ -159,6 +165,7 @@
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
+        canvasSize={inspectorMaxHeight}
         {embeddings}
         {brightness}
         {contrast}
@@ -168,7 +175,10 @@
       />
     </div>
     <button class="h-1 bg-primary-light cursor-row-resize w-full" on:mousedown={startExpand} />
-    <div class="h-full grow max-h-[25%] overflow-hidden" style={`max-height: ${height}px`}>
+    <div
+      class="h-full grow max-h-[25%] overflow-hidden"
+      style={`max-height: ${inspectorMaxHeight}px`}
+    >
       <VideoInspector {updateView} />
     </div>
   {/if}

@@ -190,9 +190,9 @@ export const toggleObjectDisplayControl = (
 
   // Check if the object is a VideoObject
   if (object.datasetItemType === "video") {
-    if (properties.includes("bbox") && object.displayControl) {
+    if (properties.includes("bbox")) {
       object.displayControl = {
-        ...object.displayControl,
+        ...(object.displayControl || {}),
         [displayControlProperty]: value,
       };
     }
@@ -427,7 +427,7 @@ export const highlightCurrentObject = (
   return objects.map((object) => {
     object.displayControl = {
       ...object.displayControl,
-      editing: false,
+      editing: object.id === currentObject.id ? object.displayControl?.editing : false,
     };
     if (isObjectHighlighted && shouldUnHighlight) {
       object.highlighted = "all";
@@ -458,10 +458,10 @@ export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
   const coords = box.coords;
   return {
     baseImageDimensions: {
-      width: view.features.width.value as number,
-      height: view.features.height.value as number,
+      width: view?.features.width.value as number,
+      height: view?.features.height.value as number,
     },
     coords,
-    uri: view.uri,
+    uri: view?.uri,
   };
 };

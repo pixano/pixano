@@ -37,6 +37,7 @@
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
+  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
   let brightness: number = 0;
@@ -44,14 +45,15 @@
 
   let embeddings: Embeddings = {};
 
-  $: itemObjects.update((oldObjects) =>
-    selectedItem?.objects.map((object) => {
-      const oldObject = oldObjects.find((o) => o.id === object.id);
-      if (oldObject) {
-        return { ...oldObject, ...object };
-      }
-      return object;
-    }),
+  $: itemObjects.update(
+    (oldObjects) =>
+      selectedItem?.objects?.map((object) => {
+        const oldObject = oldObjects.find((o) => o.id === object.id);
+        if (oldObject) {
+          return { ...oldObject, ...object };
+        }
+        return object;
+      }) || [],
   );
 
   $: itemMetas.set({
@@ -101,7 +103,14 @@
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {brightness} {contrast} />
+  <DatasetItemViewer
+    {selectedItem}
+    {embeddings}
+    {isLoading}
+    {brightness}
+    {contrast}
+    {headerHeight}
+  />
   <Inspector on:click={onSave} {isLoading} bind:brightness bind:contrast />
   <LoadModelModal
     {models}

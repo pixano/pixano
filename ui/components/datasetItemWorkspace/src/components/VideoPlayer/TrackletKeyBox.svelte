@@ -31,6 +31,10 @@
     newIndex: VideoItemBBox["frame_index"],
     draggedIndex: VideoItemBBox["frame_index"],
   ) => void;
+  export let filterTracklet: (
+    newIndex: VideoItemBBox["frame_index"],
+    draggedIndex: VideoItemBBox["frame_index"],
+  ) => void;
 
   let isBoxBeingEdited = false;
 
@@ -44,16 +48,20 @@
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
   };
 
-  const getKeyBoxLeftPosition = (box: VideoItemBBox) => {
-    const boxFrameIndex = box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index;
-    return (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
+  const getKeyBoxLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+    const boxFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
+    const leftPosition = (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
+    return leftPosition;
   };
+
+  let left = getKeyBoxLeftPosition(box.frame_index);
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
     let startPosition: number;
     let startFrameIndex: number;
     let startOneFrameInPixel: number;
+    let newFrameIndex: number | undefined;
 
     node.addEventListener("mousedown", (event) => {
       moving = true;
@@ -67,13 +75,17 @@
       if (moving) {
         const distance = event.clientX - startPosition;
         const raise = distance / startOneFrameInPixel;
-        const newFrameIndex = startFrameIndex + raise;
-        updateTrackletWidth(Math.round(newFrameIndex), box.frame_index);
+        newFrameIndex = Math.round(startFrameIndex + raise);
+        if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
+        left = getKeyBoxLeftPosition(newFrameIndex);
+        updateTrackletWidth(newFrameIndex, box.frame_index);
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
+      if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, box.frame_index);
+      newFrameIndex = undefined;
     });
   };
 </script>
@@ -85,7 +97,7 @@
       "hover:scale-150",
       { "bg-primary !border-primary": isBoxBeingEdited },
     )}
-    style={`left: ${getKeyBoxLeftPosition(box)}%; border-color: ${color}`}
+    style={`left: ${left}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>

@@ -96,6 +96,7 @@
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
       {shouldSaveCurrentItem}
+      headerHeight={80}
     />
   </div>
 {/if}

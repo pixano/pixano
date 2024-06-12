@@ -20,11 +20,7 @@ import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItem
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
 import { MockInteractiveImageSegmenter } from "./mocks";
-import {
-  mockedCurrentDataset,
-  mockHandleSaveItem,
-  mockedVideoDatasetItem,
-} from "./datasetItemWorkspaceMocks";
+import { mockHandleSaveItem, mockedVideoDatasetItem } from "./datasetItemWorkspaceMocks";
 
 type Story = StoryObj<typeof meta>;
 
@@ -48,7 +44,7 @@ export const BasicVideoWorkspace: Story = {
     shouldSaveCurrentItem: false,
     models: [],
     handleSaveItem: mockHandleSaveItem,
-    currentDataset: mockedCurrentDataset,
     selectedItem: mockedVideoDatasetItem,
+    featureValues: { main: {}, objects: {} },
   },
 };
