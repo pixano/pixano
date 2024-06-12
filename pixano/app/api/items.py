@@ -302,26 +302,7 @@ async def get_dataset_item(  # noqa: D417
     view_type = "image"
     for view_name in groups[_SchemaGroup.VIEW]:
         view_item = getattr(item, view_name)
-        if isinstance(view_item, Image):
-            views[view_name] = {
-                "id": view_item.id,
-                "type": "image",
-                "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
-                "thumbnail": None,  # view_item.open(dataset.path / "media"),
-                "features": {
-                    "width": {
-                        "name": "width",
-                        "dtype": "int",
-                        "value": view_item.width,
-                    },
-                    "height": {
-                        "name": "height",
-                        "dtype": "int",
-                        "value": view_item.height,
-                    },
-                },
-            }
-        elif (
+        if (
             isinstance(view_item, list)
             and len(view_item) > 0
             and isinstance(view_item[0], SequenceFrame)
@@ -353,6 +334,25 @@ async def get_dataset_item(  # noqa: D417
                 key=lambda x: x["frame_index"],
             )
             view_type = "video"
+        elif isinstance(view_item, Image):
+            views[view_name] = {
+                "id": view_item.id,
+                "type": "image",
+                "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
+                "thumbnail": None,  # view_item.open(dataset.path / "media"),
+                "features": {
+                    "width": {
+                        "name": "width",
+                        "dtype": "int",
+                        "value": view_item.width,
+                    },
+                    "height": {
+                        "name": "height",
+                        "dtype": "int",
+                        "value": view_item.height,
+                    },
+                },
+            }
 
     # objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
@@ -427,8 +427,18 @@ async def get_dataset_item(  # noqa: D417
                 tracks[tracklet.track_id].append(tracklet)
 
         for track_id, tracklets in tracks.items():
+            #TODO - WARNING: not a very good idea to disallow a specific ID
+            # Note: there is no really good reason for this, but some users tend to give such ID for broken data
+            # it would be better to allow '-1' ID and manage specific errors if exists
+            if track_id == "-1":
+                print("Data Error: bad track_id ('-1'). Track skipped")
+                continue
+
             # Sort tracklets by timestep or timestamp
-            tracklets.sort(key=lambda x: x.start_timestep)  # TODO or timestamp
+            if hasattr(tracklets[0], "start_timestep"):
+                tracklets.sort(key=lambda x: x.start_timestep)
+            else:
+                tracklets.sort(key=lambda x: x.start_timestamp)
             # TODO check if tracklets in a track overlaps: --> create "error_overlap#N_{track_id}" if so
 
             # gather objects by tracklets (for boxes) #TODO ?? from different OBJECT groups ??
@@ -445,7 +455,11 @@ async def get_dataset_item(  # noqa: D417
             track_feats = tracklets[0]
 
             # view_id is taken from first object in the first tracklet
-            view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+            try:
+                view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+            except StopIteration:
+                print(f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped")
+                continue
 
             objects.append(
                 {
@@ -476,8 +490,16 @@ async def get_dataset_item(  # noqa: D417
                     "track": [
                         {
                             "id": tracklet.id,
-                            "start": tracklet.start_timestep,
-                            "end": tracklet.end_timestep,
+                            "start": (
+                                tracklet.start_timestep
+                                if hasattr(tracklet, "start_timestep")
+                                else tracklet.start_timestamp
+                            ),
+                            "end": (
+                                tracklet.end_timestep
+                                if hasattr(tracklet, "end_timestep")
+                                else tracklet.end_timestamp
+                            ),
                             "boxes": [
                                 {
                                     **vars(obj.bbox),
