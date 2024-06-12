@@ -135,7 +135,7 @@ importers:
         version: 4.2.11
       svelte-check:
         specifier: ^3.6.4
-        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.35))(postcss@8.4.35)(svelte@4.2.11)
+        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.38))(postcss@8.4.38)(svelte@4.2.11)
       tailwindcss:
         specifier: ^3.4.1
         version: 3.4.1
@@ -169,7 +169,7 @@ importers:
         version: 4.2.11
       svelte-check:
         specifier: ^3.6.4
-        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.35))(postcss@8.4.35)(svelte@4.2.11)
+        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.38))(postcss@8.4.38)(svelte@4.2.11)
       tailwindcss:
         specifier: ^3.4.1
         version: 3.4.1
@@ -328,6 +328,9 @@ importers:
       '@tsconfig/svelte':
         specifier: ^5.0.4
         version: 5.0.4
+      '@types/svelte-range-slider-pips':
+        specifier: ^2.0.4
+        version: 2.0.4
       postcss:
         specifier: ^8.4.38
         version: 8.4.38
@@ -413,7 +416,7 @@ importers:
         version: 4.2.11
       svelte-check:
         specifier: ^3.6.4
-        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.35))(postcss@8.4.35)(svelte@4.2.11)
+        version: 3.6.4(@babel/core@7.24.6)(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.38))(postcss@8.4.38)(svelte@4.2.11)
       svelte-headless-table:
         specifier: ^0.18.2
         version: 0.18.2(svelte@4.2.11)
@@ -449,7 +452,7 @@ importers:
         version: link:../../components/table
       '@storybook/test':
         specifier: ^8.1.5
-        version: 8.1.5(vitest@0.30.1(less@4.2.0)(terser@5.29.2))
+        version: 8.1.5
       autoprefixer:
         specifier: ^10.4.18
         version: 10.4.18(postcss@8.4.36)
@@ -462,10 +465,10 @@ importers:
     devDependencies:
       '@storybook/addon-essentials':
         specifier: ^8.1.5
-        version: 8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/addon-interactions':
         specifier: ^8.1.5
-        version: 8.1.5(vitest@0.30.1(less@4.2.0)(terser@5.29.2))
+        version: 8.1.5
       '@storybook/addon-links':
         specifier: ^8.1.5
         version: 8.1.5(react@18.2.0)
@@ -474,13 +477,13 @@ importers:
         version: 8.1.5
       '@storybook/blocks':
         specifier: ^8.1.5
-        version: 8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/svelte':
         specifier: ^8.1.5
-        version: 8.1.5(prettier@3.3.1)(svelte@4.2.12)
+        version: 8.1.5(prettier@3.2.5)(svelte@4.2.12)
       '@storybook/svelte-vite':
         specifier: ^8.1.5
-        version: 8.1.5(@babel/core@7.24.6)(@sveltejs/vite-plugin-svelte@2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2)))(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.36))(postcss@8.4.36)(prettier@3.3.1)(svelte@4.2.12)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
+        version: 8.1.5(@babel/core@7.24.6)(@sveltejs/vite-plugin-svelte@2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2)))(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.36))(postcss@8.4.36)(prettier@3.2.5)(svelte@4.2.12)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
       '@sveltejs/vite-plugin-svelte':
         specifier: ^2.5.3
         version: 2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
@@ -2737,6 +2740,9 @@ packages:
   '@types/serve-static@1.15.5':
     resolution: {integrity: sha512-PDRk21MnK70hja/YF8AHfC7yIsiQHn1rcXx7ijCFBX/k+XQJhQT/gw3xekXKJvx+5SXaMMS8oqQy09Mzvz2TuQ==}
 
+  '@types/svelte-range-slider-pips@2.0.4':
+    resolution: {integrity: sha512-yrGp8/6h+ML54PbFxxf3zdRiExMk6fM32fb7bfCjLIydF2AsVRD/+ke5u/AP4k4SoFrAO1eLzTmx36UbEVTc2Q==}
+
   '@types/unist@3.0.2':
     resolution: {integrity: sha512-dqId9J8K/vGi5Zr7oo212BGii5m3q5Hxlkwy3WpYuKPklmBEvsbMYYyLxAQpSffdLl/gdW0XUpKWFvYmyoWCoQ==}
 
@@ -4988,8 +4994,8 @@ packages:
   ml-matrix-convolution@0.4.3:
     resolution: {integrity: sha512-B4AATOjxDw4J0oVcoeYHsXrhMr31x9SWhVKZjWucDU+brwXLR0enMdqb1OuRy/REdpL5/iSshA46sS2B1dO2OQ==}
 
-  ml-matrix@6.11.0:
-    resolution: {integrity: sha512-7jr9NmFRkaUxbKslfRu3aZOjJd2LkSitCGv+QH9PF0eJoEG7jIpjXra1Vw8/kgao8+kHCSsJONG6vfWmXQ+/Eg==}
+  ml-matrix@6.11.1:
+    resolution: {integrity: sha512-Fvp1xF1O07tt6Ux9NcnEQTei5UlqbRpvvaFZGs7l3Ij+nOaEDcmbSVtxwNa8V4IfdyFI1NLNUteroMJ1S6vcEg==}
 
   ml-regression-base@2.1.6:
     resolution: {integrity: sha512-yTckvEc8szc6VrUTJSgAClShvCoPZdNt8pmyRe8aGsIWGjg6bYFotp9mDUwAB0snvKAbQWd6A4trL/PDCASLug==}
@@ -6143,6 +6149,10 @@ packages:
       svelte: ^3.54.0 || ^4.0.0
       vega: '*'
       vega-lite: '*'
+
+  svelte@3.59.2:
+    resolution: {integrity: sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==}
+    engines: {node: '>= 8'}
 
   svelte@4.2.11:
     resolution: {integrity: sha512-YIQk3J4X89wOLhjsqIW8tqY3JHPuBdtdOIkASP2PZeAMcSW9RsIjQzMesCrxOF3gdWYC0mKknlKF7OqmLM+Zqg==}
@@ -8523,9 +8533,9 @@ snapshots:
       memoizerific: 1.11.3
       ts-dedent: 2.2.0
 
-  '@storybook/addon-controls@8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@storybook/addon-controls@8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@storybook/blocks': 8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@storybook/blocks': 8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       dequal: 2.0.3
       lodash: 4.17.21
       ts-dedent: 2.2.0
@@ -8538,11 +8548,11 @@ snapshots:
       - react-dom
       - supports-color
 
-  '@storybook/addon-docs@8.1.5(prettier@3.3.1)':
+  '@storybook/addon-docs@8.1.5(prettier@3.2.5)':
     dependencies:
       '@babel/core': 7.24.6
       '@mdx-js/react': 3.0.1(@types/react@18.2.67)(react@18.2.0)
-      '@storybook/blocks': 8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@storybook/blocks': 8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/client-logger': 8.1.5
       '@storybook/components': 8.1.5(@types/react@18.2.67)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/csf-plugin': 8.1.5
@@ -8566,18 +8576,18 @@ snapshots:
       - prettier
       - supports-color
 
-  '@storybook/addon-essentials@8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@storybook/addon-essentials@8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
       '@storybook/addon-actions': 8.1.5
       '@storybook/addon-backgrounds': 8.1.5
-      '@storybook/addon-controls': 8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      '@storybook/addon-docs': 8.1.5(prettier@3.3.1)
+      '@storybook/addon-controls': 8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@storybook/addon-docs': 8.1.5(prettier@3.2.5)
       '@storybook/addon-highlight': 8.1.5
       '@storybook/addon-measure': 8.1.5
       '@storybook/addon-outline': 8.1.5
       '@storybook/addon-toolbars': 8.1.5
       '@storybook/addon-viewport': 8.1.5
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/manager-api': 8.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/node-logger': 8.1.5
       '@storybook/preview-api': 8.1.5
@@ -8595,11 +8605,11 @@ snapshots:
     dependencies:
       '@storybook/global': 5.0.0
 
-  '@storybook/addon-interactions@8.1.5(vitest@0.30.1(less@4.2.0)(terser@5.29.2))':
+  '@storybook/addon-interactions@8.1.5':
     dependencies:
       '@storybook/global': 5.0.0
       '@storybook/instrumenter': 8.1.5
-      '@storybook/test': 8.1.5(vitest@0.30.1(less@4.2.0)(terser@5.29.2))
+      '@storybook/test': 8.1.5
       '@storybook/types': 8.1.5
       polished: 4.3.1
       ts-dedent: 2.2.0
@@ -8642,14 +8652,14 @@ snapshots:
     dependencies:
       memoizerific: 1.11.3
 
-  '@storybook/blocks@8.1.5(@types/react@18.2.67)(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@storybook/blocks@8.1.5(@types/react@18.2.67)(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
       '@storybook/channels': 8.1.5
       '@storybook/client-logger': 8.1.5
       '@storybook/components': 8.1.5(@types/react@18.2.67)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/core-events': 8.1.5
       '@storybook/csf': 0.1.8
-      '@storybook/docs-tools': 8.1.5(prettier@3.3.1)
+      '@storybook/docs-tools': 8.1.5(prettier@3.2.5)
       '@storybook/global': 5.0.0
       '@storybook/icons': 1.2.9(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/manager-api': 8.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -8678,10 +8688,10 @@ snapshots:
       - prettier
       - supports-color
 
-  '@storybook/builder-manager@8.1.5(prettier@3.3.1)':
+  '@storybook/builder-manager@8.1.5(prettier@3.2.5)':
     dependencies:
       '@fal-works/esbuild-plugin-global-externals': 2.1.2
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/manager': 8.1.5
       '@storybook/node-logger': 8.1.5
       '@types/ejs': 3.1.5
@@ -8699,11 +8709,11 @@ snapshots:
       - prettier
       - supports-color
 
-  '@storybook/builder-vite@8.1.5(prettier@3.3.1)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))':
+  '@storybook/builder-vite@8.1.5(prettier@3.2.5)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))':
     dependencies:
       '@storybook/channels': 8.1.5
       '@storybook/client-logger': 8.1.5
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/core-events': 8.1.5
       '@storybook/csf-plugin': 8.1.5
       '@storybook/node-logger': 8.1.5
@@ -8740,12 +8750,12 @@ snapshots:
       '@babel/types': 7.24.0
       '@ndelangen/get-tarball': 3.0.9
       '@storybook/codemod': 8.1.5
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/core-events': 8.1.5
-      '@storybook/core-server': 8.1.5(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      '@storybook/core-server': 8.1.5(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/csf-tools': 8.1.5
       '@storybook/node-logger': 8.1.5
-      '@storybook/telemetry': 8.1.5(prettier@3.3.1)
+      '@storybook/telemetry': 8.1.5(prettier@3.2.5)
       '@storybook/types': 8.1.5
       '@types/semver': 7.5.8
       '@yarnpkg/fslib': 2.10.3
@@ -8823,7 +8833,7 @@ snapshots:
       - '@types/react'
       - '@types/react-dom'
 
-  '@storybook/core-common@8.1.5(prettier@3.3.1)':
+  '@storybook/core-common@8.1.5(prettier@3.2.5)':
     dependencies:
       '@storybook/core-events': 8.1.5
       '@storybook/csf-tools': 8.1.5
@@ -8855,7 +8865,7 @@ snapshots:
       ts-dedent: 2.2.0
       util: 0.12.5
     optionalDependencies:
-      prettier: 3.3.1
+      prettier: 3.2.5
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -8865,15 +8875,15 @@ snapshots:
       '@storybook/csf': 0.1.8
       ts-dedent: 2.2.0
 
-  '@storybook/core-server@8.1.5(prettier@3.3.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
+  '@storybook/core-server@8.1.5(prettier@3.2.5)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
       '@aw-web-design/x-default-browser': 1.4.126
       '@babel/core': 7.24.6
       '@babel/parser': 7.24.6
       '@discoveryjs/json-ext': 0.5.7
-      '@storybook/builder-manager': 8.1.5(prettier@3.3.1)
+      '@storybook/builder-manager': 8.1.5(prettier@3.2.5)
       '@storybook/channels': 8.1.5
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/core-events': 8.1.5
       '@storybook/csf': 0.1.8
       '@storybook/csf-tools': 8.1.5
@@ -8883,7 +8893,7 @@ snapshots:
       '@storybook/manager-api': 8.1.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@storybook/node-logger': 8.1.5
       '@storybook/preview-api': 8.1.5
-      '@storybook/telemetry': 8.1.5(prettier@3.3.1)
+      '@storybook/telemetry': 8.1.5(prettier@3.2.5)
       '@storybook/types': 8.1.5
       '@types/detect-port': 1.3.5
       '@types/diff': 5.2.1
@@ -8949,9 +8959,9 @@ snapshots:
 
   '@storybook/docs-mdx@3.1.0-next.0': {}
 
-  '@storybook/docs-tools@8.1.5(prettier@3.3.1)':
+  '@storybook/docs-tools@8.1.5(prettier@3.2.5)':
     dependencies:
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/core-events': 8.1.5
       '@storybook/preview-api': 8.1.5
       '@storybook/types': 8.1.5
@@ -9036,11 +9046,11 @@ snapshots:
       memoizerific: 1.11.3
       qs: 6.12.0
 
-  '@storybook/svelte-vite@8.1.5(@babel/core@7.24.6)(@sveltejs/vite-plugin-svelte@2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2)))(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.36))(postcss@8.4.36)(prettier@3.3.1)(svelte@4.2.12)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))':
+  '@storybook/svelte-vite@8.1.5(@babel/core@7.24.6)(@sveltejs/vite-plugin-svelte@2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2)))(less@4.2.0)(postcss-load-config@4.0.2(postcss@8.4.36))(postcss@8.4.36)(prettier@3.2.5)(svelte@4.2.12)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))':
     dependencies:
-      '@storybook/builder-vite': 8.1.5(prettier@3.3.1)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
+      '@storybook/builder-vite': 8.1.5(prettier@3.2.5)(typescript@5.4.2)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
       '@storybook/node-logger': 8.1.5
-      '@storybook/svelte': 8.1.5(prettier@3.3.1)(svelte@4.2.12)
+      '@storybook/svelte': 8.1.5(prettier@3.2.5)(svelte@4.2.12)
       '@storybook/types': 8.1.5
       '@sveltejs/vite-plugin-svelte': 2.5.3(svelte@4.2.12)(vite@4.5.2(@types/node@20.14.2)(less@4.2.0)(terser@5.29.2))
       magic-string: 0.30.8
@@ -9066,11 +9076,11 @@ snapshots:
       - typescript
       - vite-plugin-glimmerx
 
-  '@storybook/svelte@8.1.5(prettier@3.3.1)(svelte@4.2.12)':
+  '@storybook/svelte@8.1.5(prettier@3.2.5)(svelte@4.2.12)':
     dependencies:
       '@storybook/client-logger': 8.1.5
       '@storybook/core-events': 8.1.5
-      '@storybook/docs-tools': 8.1.5(prettier@3.3.1)
+      '@storybook/docs-tools': 8.1.5(prettier@3.2.5)
       '@storybook/global': 5.0.0
       '@storybook/preview-api': 8.1.5
       '@storybook/types': 8.1.5
@@ -9083,10 +9093,10 @@ snapshots:
       - prettier
       - supports-color
 
-  '@storybook/telemetry@8.1.5(prettier@3.3.1)':
+  '@storybook/telemetry@8.1.5(prettier@3.2.5)':
     dependencies:
       '@storybook/client-logger': 8.1.5
-      '@storybook/core-common': 8.1.5(prettier@3.3.1)
+      '@storybook/core-common': 8.1.5(prettier@3.2.5)
       '@storybook/csf-tools': 8.1.5
       chalk: 4.1.2
       detect-package-manager: 2.0.1
@@ -9098,14 +9108,14 @@ snapshots:
       - prettier
       - supports-color
 
-  '@storybook/test@8.1.5(vitest@0.30.1(less@4.2.0)(terser@5.29.2))':
+  '@storybook/test@8.1.5':
     dependencies:
       '@storybook/client-logger': 8.1.5
       '@storybook/core-events': 8.1.5
       '@storybook/instrumenter': 8.1.5
       '@storybook/preview-api': 8.1.5
       '@testing-library/dom': 9.3.4
-      '@testing-library/jest-dom': 6.4.2(vitest@0.30.1(less@4.2.0)(terser@5.29.2))
+      '@testing-library/jest-dom': 6.4.2
       '@testing-library/user-event': 14.5.2(@testing-library/dom@9.3.4)
       '@vitest/expect': 1.3.1
       '@vitest/spy': 1.4.0
@@ -9266,7 +9276,7 @@ snapshots:
       lz-string: 1.5.0
       pretty-format: 27.5.1
 
-  '@testing-library/jest-dom@6.4.2(vitest@0.30.1(less@4.2.0)(terser@5.29.2))':
+  '@testing-library/jest-dom@6.4.2':
     dependencies:
       '@adobe/css-tools': 4.3.3
       '@babel/runtime': 7.24.0
@@ -9276,8 +9286,6 @@ snapshots:
       dom-accessibility-api: 0.6.3
       lodash: 4.17.21
       redent: 3.0.0
-    optionalDependencies:
-      vitest: 0.30.1(less@4.2.0)(terser@5.29.2)
 
   '@testing-library/user-event@14.5.2(@testing-library/dom@9.3.4)':
     dependencies:
@@ -9549,6 +9557,10 @@ snapshots:
       '@types/http-errors': 2.0.4
       '@types/mime': 3.0.4
       '@types/node': 20.11.29
+
+  '@types/svelte-range-slider-pips@2.0.4':
+    dependencies:
+      svelte: 3.59.2
 
   '@types/unist@3.0.2': {}
 
@@ -11393,7 +11405,7 @@ snapshots:
       median-quickselect: 1.0.1
       ml-convolution: 0.2.0
       ml-disjoint-set: 1.0.0
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
       ml-matrix-convolution: 0.4.3
       ml-regression: 5.0.0
       monotone-chain-convex-hull: 1.1.0
@@ -12236,14 +12248,14 @@ snapshots:
       ml-kernel-gaussian: 2.0.2
       ml-kernel-polynomial: 2.0.1
       ml-kernel-sigmoid: 1.0.1
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
 
   ml-matrix-convolution@0.4.3:
     dependencies:
       ml-fft: 1.3.5
       ml-stat: 1.3.3
 
-  ml-matrix@6.11.0:
+  ml-matrix@6.11.1:
     dependencies:
       is-any-array: 2.0.1
       ml-array-rescale: 1.3.7
@@ -12269,11 +12281,11 @@ snapshots:
 
   ml-regression-multivariate-linear@2.0.4:
     dependencies:
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
 
   ml-regression-polynomial@2.2.0:
     dependencies:
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
       ml-regression-base: 2.1.6
 
   ml-regression-power@2.0.0:
@@ -12283,7 +12295,7 @@ snapshots:
 
   ml-regression-robust-polynomial@2.0.1:
     dependencies:
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
       ml-regression-base: 2.1.6
 
   ml-regression-simple-linear@2.0.5:
@@ -12303,7 +12315,7 @@ snapshots:
   ml-regression@5.0.0:
     dependencies:
       ml-kernel: 3.0.0
-      ml-matrix: 6.11.0
+      ml-matrix: 6.11.1
       ml-regression-base: 2.1.6
       ml-regression-exponential: 2.1.3
       ml-regression-multivariate-linear: 2.0.4
@@ -13562,6 +13574,8 @@ snapshots:
       vega: 5.27.0
       vega-embed: 6.24.0(vega-lite@5.16.3(vega@5.27.0))(vega@5.27.0)
       vega-lite: 5.16.3(vega@5.27.0)
+
+  svelte@3.59.2: {}
 
   svelte@4.2.11:
     dependencies:

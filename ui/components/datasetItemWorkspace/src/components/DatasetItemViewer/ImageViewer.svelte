@@ -13,12 +13,16 @@
    *
    * http://www.cecill.info
    */
+
+  // Imports
   import { Loader2Icon } from "lucide-svelte";
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { ImageDatasetItem, ItemView } from "@pixano/core";
+  import { Image as ImageJS } from "image-js";
 
+  // Import stores and API functions
   import {
     newShape,
     itemBboxes,
@@ -31,85 +35,96 @@
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { Image as ImageJS } from "image-js";
 
+  // Attributes
   export let selectedItem: ImageDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
-  let imagesPerView: Record<string, HTMLImageElement[]> = {};
-  let loaded: boolean = false;
+  // Images per view type
+  type ImagesPerView = Record<string, HTMLImageElement[]>;
+  let imagesPerView: ImagesPerView = {};
+  let loaded: boolean = false; // Loading status of images per view
 
-  const normalizeRange = (image: ImageJS, min: number, max: number) => {
+  /**
+   * Normalize the pixel values of an image to a specified range.
+   * @param image The image to normalize.
+   * @param min The minimum pixel value.
+   * @param max The maximum pixel value.
+   */
+  const normalizeRange = (image: ImageJS, min: number, max: number): void => {
     image.bitDepth = 8;
     image.maxValue = 255;
 
-    const nPixels = image.size;
+    const nPixels: number = image.size;
     for (let i = 0; i < nPixels; ++i) {
-      let pixel = image.data[i];
-      if (pixel < min) {
-        pixel = 0;
-      } else if (pixel > max) {
-        pixel = 255;
-      } else {
-        pixel = ((pixel - min) / (max - min)) * 255;
-      }
+      let pixel: number = image.data[i];
+      pixel = pixel < min ? 0 : pixel > max ? 255 : ((pixel - min) / (max - min)) * 255;
       image.data[i] = pixel;
     }
   };
 
-  async function loadImages(views: Record<string, ItemView>) {
-    let images: Record<string, HTMLImageElement[]> = {};
-    const promises = Object.entries(views).map(async ([key, value]) => {
-      const img = await ImageJS.load(`/${value.uri}`);
+  /**
+   * Load images from the given views.
+   * @param views The views to load images from.
+   * @returns A promise that resolves to the loaded images per view.
+   */
+  const loadImages = async (views: Record<string, ItemView>): Promise<ImagesPerView> => {
+    const images: ImagesPerView = {};
+    const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
+      const img: ImageJS = await ImageJS.load(`/${value.uri}`);
 
-      $itemMetas.color = img.channels == 1 ? "grayscale" : "rgba";
-      $itemMetas.format = img.bitDepth == 8 ? "8bit" : "16bit";
+      $itemMetas.color = img.channels === 1 ? "grayscale" : "rgba";
+      $itemMetas.format = (img.bitDepth as number) === 8 ? "8bit" : "16bit";
 
-      if ($itemMetas.format == "16bit" && $itemMetas.color == "grayscale") {
-        if ($filters.u16BitRange)
-          normalizeRange(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
-
-        const image = new Image();
-        image.src = await img.toDataURL();
-        images[key] = [image];
-      } else {
-        images = Object.entries(selectedItem.views).reduce(
-          (acc, [key, value]) => {
-            const image = new Image();
-            image.src = `/${value.uri}`;
-            acc[key] = [image];
-            return acc;
-          },
-          {} as Record<string, HTMLImageElement[]>,
-        );
+      if ($itemMetas.format === "16bit" && $itemMetas.color === "grayscale") {
+        normalizeRange(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
       }
+
+      const image: HTMLImageElement = new Image();
+      image.src = img.toDataURL();
+      images[key] = [image];
     });
 
     await Promise.all(promises);
     return images;
-  }
+  };
 
-  async function updateImages() {
+  /**
+   * Update the images based on the selected item views.
+   */
+  const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
       imagesPerView = await loadImages(selectedItem.views);
       loaded = true;
     }
-  }
+  };
 
-  // Reactive statement to update images when selectedItem changes
-  $: if (selectedItem || $filters.u16BitRange) updateImages();
-
-  $: {
-    if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-      itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+  // Reactive statement to update images when selectedItem changes or the 16 bit filters change
+  let prev16BitRange: number[] = [];
+  $: if (selectedItem || $filters.u16BitRange) {
+    if (
+      prev16BitRange[0] !== $filters.u16BitRange[0] ||
+      prev16BitRange[1] !== $filters.u16BitRange[1]
+    ) {
+      updateImages().catch(() => {
+        console.error("Error loading the images.");
+      });
+      prev16BitRange = [...$filters.u16BitRange];
     }
   }
 
+  // Reactive statement to update item objects when new shape is being edited and pre-annotation is not active
+  $: if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
+    itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+  }
+
+  // Reactive statement to set the selected tool
   $: selectedTool.set($selectedTool);
 </script>
 
+<!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
 {#key selectedItem.id}
   {#if loaded}
     <Canvas2D

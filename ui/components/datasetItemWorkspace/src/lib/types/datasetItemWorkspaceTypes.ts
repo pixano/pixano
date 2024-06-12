@@ -75,8 +75,8 @@ export type ItemsMeta = {
   views: DatasetItem["views"];
   id: DatasetItem["id"];
   type: DatasetItem["type"];
-  format: "8bit" | "16bit";
-  color: "grayscale" | "rgba";
+  format?: "8bit" | "16bit";
+  color?: "grayscale" | "rgba";
 };
 
 export type Filters = {

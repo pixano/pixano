@@ -135,9 +135,9 @@
 
       if (entry.contentBoxSize) {
         // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
-        const contentBoxSize = Array.isArray(entry.contentBoxSize)
-          ? entry.contentBoxSize[0]
-          : entry.contentBoxSize;
+        const contentBoxSize: ResizeObserverSize = (
+          Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize
+        ) as ResizeObserverSize;
         width = contentBoxSize.inlineSize;
         height = contentBoxSize.blockSize;
       } else {
@@ -330,7 +330,10 @@
   const cacheImage = () => {
     if (!stage) return;
 
-    let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+    let images = stage.find(
+      (node: { attrs: { id: string } }): boolean =>
+        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
+    );
 
     if (!images) return;
 
@@ -340,14 +343,14 @@
     });
   };
 
-  const EqualizeHistogram = (imageData) => {
+  const EqualizeHistogram = (imageData: ImageData) => {
     const { width, height, data } = imageData;
     const nPixels = width * height;
 
     // Create histograms for each channel
-    const histR = new Array(256).fill(0);
-    const histG = new Array(256).fill(0);
-    const histB = new Array(256).fill(0);
+    const histR: number[] = new Array(256).fill(0) as number[];
+    const histG: number[] = new Array(256).fill(0) as number[];
+    const histB: number[] = new Array(256).fill(0) as number[];
 
     // Calculate histograms
     for (let i = 0; i < nPixels * 4; i += 4) {
@@ -357,9 +360,9 @@
     }
 
     // Calculate cumulative distribution function (CDF) for each channel
-    const cdfR = new Array(256).fill(0);
-    const cdfG = new Array(256).fill(0);
-    const cdfB = new Array(256).fill(0);
+    const cdfR: number[] = new Array(256).fill(0) as number[];
+    const cdfG: number[] = new Array(256).fill(0) as number[];
+    const cdfB: number[] = new Array(256).fill(0) as number[];
 
     cdfR[0] = histR[0];
     cdfG[0] = histG[0];
@@ -390,7 +393,7 @@
     }
   };
 
-  const AdjustChannels = (imageData) => {
+  const AdjustChannels = (imageData: ImageData) => {
     const { data } = imageData;
 
     const redMin = $filters.redRange[0];
@@ -423,7 +426,10 @@
   const applyFilters = () => {
     if (!stage) return;
 
-    let images = stage.find((node) => node.attrs.id && node.attrs.id.startsWith("image-"));
+    let images = stage.find(
+      (node: { attrs: { id: string } }): boolean =>
+        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
+    );
 
     if (!images) return;
 

@@ -14,16 +14,18 @@
    * http://www.cecill.info
    */
 
-  import { Pencil } from "lucide-svelte";
+  // External library imports
   import RangeSlider from "svelte-range-slider-pips";
 
-  import { IconButton, Switch, type ItemView } from "@pixano/core/src";
+  // Internal library imports
+  import { Pencil } from "lucide-svelte";
+  import { IconButton, Switch, type ItemFeature, type ItemView } from "@pixano/core/src";
 
+  // Local imports
   import { canSave, itemMetas, filters } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-
   import { createFeature } from "../../lib/api/featuresApi";
-  import type { Feature } from "../../lib/types/datasetItemWorkspaceTypes";
+  import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ItemMeta = {
@@ -34,12 +36,12 @@
     id: string;
   };
 
-  let features: Feature[];
-  let itemMeta: ItemMeta[] = [];
+  // Component state variables
+  let features: Feature[] = [];
   let isEditing: boolean = false;
-  let itemType: string;
-
+  let itemType: string = "";
   let combineChannels: boolean = false;
+  let itemMeta: ItemMeta[] = [];
 
   itemMetas.subscribe((metas) => {
     itemMeta = Object.values(metas.views).map((view: ItemView | ItemView[]) => {
@@ -53,19 +55,28 @@
         id: image.id,
       };
     });
-    const mainFeatures = Object.values(metas.mainFeatures).length
+    const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures).length
       ? metas.mainFeatures
       : defaultSceneFeatures;
     features = createFeature(mainFeatures);
   });
 
-  const handleEditIconClick = () => {
+  /**
+   * Toggle the editing state.
+   */
+  const handleEditIconClick = (): void => {
     isEditing = !isEditing;
   };
 
+  /**
+   * Update the text input change for a specific property in itemMetas.
+   *
+   * @param value - The new value for the property.
+   * @param propertyName - The name of the property to update.
+   */
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
-      const newMetas = { ...oldMetas };
+      const newMetas: ItemsMeta = { ...oldMetas };
       newMetas.mainFeatures = {
         ...newMetas.mainFeatures,
         [propertyName]: {
@@ -75,10 +86,11 @@
       };
       return newMetas;
     });
-    canSave.set(true);
+    $canSave = true;
   };
 </script>
 
+<!-- Features Section -->
 <div class="border-b-2 border-b-slate-500 p-4 pb-8 text-slate-800">
   <h3 class="uppercase font-medium h-10">
     <span>Features</span>
@@ -99,6 +111,8 @@
     />
   </div>
 </div>
+
+<!-- Item Meta Information Section -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
   {#each itemMeta as meta}
     <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
@@ -123,12 +137,12 @@
   {/each}
 </div>
 
+<!-- Filters Section -->
 {#if itemType === "image"}
-  <!-- FILTERS -->
   <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
     <h3 class="uppercase font-medium h-10">FILTERS</h3>
 
-    <!-- GENERAL FILTERS -->
+    <!-- General Filters -->
     <div class="border border-gray-300 rounded py-2 px-4 text-sm">
       <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
       <div class="w-full my-1 flex items-center justify-between">
@@ -147,7 +161,9 @@
             values={[$filters.brightness]}
             springValues={{ stiffness: 1, damping: 1 }}
             class="-px-2"
-            on:change={(e) => ($filters.brightness = e.detail.value)}
+            on:change={(e) => {
+              $filters.brightness = e.detail.value;
+            }}
           />
         </div>
         <span class="w-8">{Math.round($filters.brightness * 100 + 50)}%</span>
@@ -165,18 +181,19 @@
             values={[$filters.contrast]}
             springValues={{ stiffness: 1, damping: 1 }}
             class="-px-2"
-            on:change={(e) => ($filters.contrast = e.detail.value)}
+            on:change={(e) => {
+              $filters.contrast = e.detail.value;
+            }}
           />
         </div>
         <span class="w-8">{Math.round($filters.contrast + 50)}% </span>
       </div>
     </div>
 
-    <!-- COLOR CHANNELS -->
+    <!-- Color Channels Filters -->
     <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
       <h4 class="uppercase font-medium h-6 text-gray-500">CHANNELS</h4>
 
-      <!-- Color channels -->
       {#if $itemMetas.color === "rgba"}
         <div class="w-full my-1 flex items-center justify-between">
           <label for="grayscale" class="select-none cursor-pointer text-sm">
@@ -271,7 +288,11 @@
         <h4 class="uppercase font-medium h-6 text-gray-500">16-BIT SETTINGS</h4>
         <div class="my-1">Select range :</div>
         <div class="flex items-center text-sm text-center">
-          <input type="number" class="w-16 bg-inherit outline-none text-center" bind:value={$filters.u16BitRange[0]} />
+          <input
+            type="number"
+            class="w-16 bg-inherit outline-none text-center"
+            bind:value={$filters.u16BitRange[0]}
+          />
           <div class="grow text-xs">
             <RangeSlider
               range
@@ -283,7 +304,11 @@
               bind:values={$filters.u16BitRange}
             />
           </div>
-          <input type="number" class="w-16 bg-inherit outline-none text-center" bind:value={$filters.u16BitRange[1]} />
+          <input
+            type="number"
+            class="w-16 bg-inherit outline-none text-center"
+            bind:value={$filters.u16BitRange[1]}
+          />
         </div>
       </div>
     {/if}
