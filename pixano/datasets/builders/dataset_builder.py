@@ -86,9 +86,9 @@ class DatasetBuilder(ABC):
                 accumulate_tables = {table_name: [] for table_name in tables.keys()}
 
             for table_name, table in tables.items():
-                if table_name == "objects" and len(items[table_name]) == 0:
-                    continue
                 if table_name not in items:
+                    continue
+                if table_name == "objects" and len(items[table_name]) == 0:
                     continue
                 # checks for id format: must not contains whitespace (else we have bugs
                 # later...)
