@@ -20,6 +20,7 @@
   import type { KeypointsTemplate, Shape } from "@pixano/core";
 
   import KeyPoints from "./keypoints/Keypoint.svelte";
+  import { findRectBoundaries } from "../api/keypointsApi";
 
   export let stage: Konva.Stage;
   export let keypoints: KeypointsTemplate[] = [];
@@ -51,14 +52,6 @@
       vertices: normalizedVertices,
       shapeId: id,
     };
-  };
-
-  const findRectBoundaries = (vertices: KeypointsTemplate["vertices"]) => {
-    const x = Math.min(...vertices.map((point) => point.x));
-    const y = Math.min(...vertices.map((point) => point.y));
-    const width = Math.max(...vertices.map((point) => point.x)) - x;
-    const height = Math.max(...vertices.map((point) => point.y)) - y;
-    return { x, y, width, height };
   };
 </script>
 
