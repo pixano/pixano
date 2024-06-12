@@ -27,7 +27,7 @@ import type {
   ItemObjectBase,
   Tracklet,
   VideoItemBBox,
-  KeyPointsTemplate,
+  KeypointsTemplate,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -124,12 +124,21 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   return undefined;
 };
 
-export const mapObjectToKeyPoints = (object: ItemObject): KeyPointsTemplate | undefined => {
-  if (object.datasetItemType === "video" || !object.keyPoints) return undefined;
-  const template = templates.find((t) => t.id === object.keyPoints?.templateId);
+export const mapObjectToKeypoints = (
+  object: ItemObject,
+  views: DatasetItem["views"],
+): KeypointsTemplate | undefined => {
+  if (object.datasetItemType === "video" || !object.keypoints) return undefined;
+  const template = templates.find((t) => t.id === object.keypoints?.template_id);
   if (!template) return undefined;
-  const vertices = object.keyPoints.vertices.map((vertex, i) => ({
+  const view = views?.[object.view_id];
+  const image: ItemView = Array.isArray(view) ? view[0] : view;
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
+  const vertices = object.keypoints.vertices.map((vertex, i) => ({
     ...vertex,
+    x: vertex.x * imageWidth,
+    y: vertex.y * imageHeight,
     features: {
       ...(template.vertices[i].features || {}),
       ...(vertex.features || {}),
@@ -140,7 +149,7 @@ export const mapObjectToKeyPoints = (object: ItemObject): KeyPointsTemplate | un
     vertices,
     edges: template.edges,
     editing: object.displayControl?.editing,
-    visible: !object.keyPoints.displayControl?.hidden && !object.displayControl?.hidden,
+    visible: !object.keypoints.displayControl?.hidden && !object.displayControl?.hidden,
     highlighted: object.highlighted,
   };
 };
@@ -148,7 +157,7 @@ export const mapObjectToKeyPoints = (object: ItemObject): KeyPointsTemplate | un
 export const toggleObjectDisplayControl = (
   object: ItemObject,
   displayControlProperty: keyof DisplayControl,
-  properties: ("bbox" | "mask" | "keyPoints")[],
+  properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
 ): ItemObject => {
   // Check if the object is an ImageObject
@@ -165,9 +174,9 @@ export const toggleObjectDisplayControl = (
         [displayControlProperty]: value,
       };
     }
-    if (properties.includes("keyPoints") && object.keyPoints) {
-      object.keyPoints.displayControl = {
-        ...(object.keyPoints.displayControl || {}),
+    if (properties.includes("keypoints") && object.keypoints) {
+      object.keypoints.displayControl = {
+        ...(object.keypoints.displayControl || {}),
         [displayControlProperty]: value,
       };
     }
@@ -245,11 +254,11 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           },
         };
       }
-      if (newShape.type === "keyPoint" && object.keyPoints) {
+      if (newShape.type === "keypoint" && object.keypoints) {
         return {
           ...object,
-          keyPoints: {
-            ...object.keyPoints,
+          keypoints: {
+            ...object.keypoints,
             vertices: newShape.vertices,
           },
         };
@@ -391,13 +400,17 @@ export const defineCreatedObject = (
       },
     };
   }
-  if (shape.type === "keyPoint") {
+  if (shape.type === "keypoint") {
     newObject = {
       ...baseObject,
       datasetItemType: "image",
-      keyPoints: {
-        templateId: shape.keyPoints.id,
-        vertices: shape.keyPoints.vertices,
+      keypoints: {
+        template_id: shape.keypoints.id,
+        vertices: shape.keypoints.vertices.map((vertex) => ({
+          ...vertex,
+          x: vertex.x / shape.imageWidth,
+          y: vertex.y / shape.imageHeight,
+        })),
       },
     };
   }

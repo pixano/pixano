@@ -17,8 +17,8 @@ export type SaveShapeBase = {
 };
 
 export type SaveKeyBoxShape = SaveShapeBase & {
-  type: "keyPoint";
-  keyPoints: KeyPointsTemplate;
+  type: "keypoint";
+  keypoints: KeypointsTemplate;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
@@ -61,13 +61,13 @@ export type Vertex = {
   };
 };
 
-export type KeyPoints = {
-  templateId: string;
+export type Keypoints = {
+  template_id: string;
   vertices: Vertex[];
   displayControl?: DisplayControl;
 };
 
-export type KeyPointsTemplate = {
+export type KeypointsTemplate = {
   id: string;
   edges: [number, number][];
   vertices: Required<Vertex>[];
@@ -77,15 +77,15 @@ export type KeyPointsTemplate = {
   highlighted?: "all" | "self" | "none";
 };
 
-export type CreateKeyPointShape = {
+export type CreateKeypointShape = {
   status: "creating";
-  type: "keyPoint";
+  type: "keypoint";
   viewId: string;
   x: number;
   y: number;
   width: number;
   height: number;
-  keyPoints: KeyPointsTemplate;
+  keypoints: KeypointsTemplate;
 };
 
 export type CreateMaskShape = {
@@ -105,7 +105,7 @@ export type CreateRectangleShape = {
   viewId: string;
 };
 
-export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeyPointShape;
+export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeypointShape;
 
 export type EditMaskShape = {
   type: "mask";
@@ -117,16 +117,16 @@ export type EditRectangleShape = {
   coords: number[];
 };
 
-export type EditKeyPointsShape = {
-  type: "keyPoint";
-  vertices: KeyPointsTemplate["vertices"];
+export type EditKeypointsShape = {
+  type: "keypoint";
+  vertices: KeypointsTemplate["vertices"];
 };
 
 export type EditShape = {
   status: "editing";
   shapeId: string;
   highlighted?: "all" | "self" | "none";
-} & (EditRectangleShape | EditMaskShape | EditKeyPointsShape | { type: "none" });
+} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

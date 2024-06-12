@@ -13,7 +13,7 @@
  * http://www.cecill.info
  */
 
-import type { KeyPoints } from "./objectTypes";
+import type { Keypoints } from "./objectTypes";
 
 // Exports
 
@@ -188,7 +188,7 @@ export type ImageObject = ItemObjectBase & {
   datasetItemType: "image";
   bbox?: ItemBBox;
   mask?: ItemRLE;
-  keyPoints?: KeyPoints;
+  keypoints?: Keypoints;
 };
 
 export type ItemObject = ImageObject | VideoObject;

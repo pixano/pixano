@@ -20,7 +20,7 @@
   import { keyPointTool } from "../../lib/settings/selectionTools";
   import {
     selectedTool,
-    selectedKeyPointsTemplate,
+    selectedKeypointsTemplate,
     newShape,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
@@ -32,15 +32,15 @@
   };
 
   const onTemplateClick = (templateId: string) => {
-    selectedKeyPointsTemplate.set(templateId);
+    selectedKeypointsTemplate.set(templateId);
     newShape.set({ status: "none" });
   };
 
   selectedTool.subscribe((tool) => {
     if (tool?.type !== "KEY_POINT") {
-      selectedKeyPointsTemplate.set(null);
+      selectedKeypointsTemplate.set(null);
     } else {
-      selectedKeyPointsTemplate.set(templates[0].id);
+      selectedKeypointsTemplate.set(templates[0].id);
     }
   });
 </script>
@@ -58,12 +58,12 @@
       <IconButton
         tooltipContent={template.id}
         on:click={() => onTemplateClick(template.id)}
-        selected={$selectedKeyPointsTemplate === template.id}
+        selected={$selectedKeypointsTemplate === template.id}
       >
         {#each template.vertices as vertex}
           <div
             class="w-1 h-1 bg-primary rounded-full absolute"
-            style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.id === $selectedKeyPointsTemplate)}`}
+            style={`top: ${vertex.y * 100}%; left: ${vertex.x * 100}%; background: ${defineDotColor(vertex, template.id === $selectedKeypointsTemplate)}`}
           />
         {/each}
       </IconButton>

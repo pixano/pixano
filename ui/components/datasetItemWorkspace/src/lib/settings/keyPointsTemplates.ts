@@ -1,6 +1,6 @@
-import type { KeyPointsTemplate } from "@pixano/core";
+import type { KeypointsTemplate } from "@pixano/core";
 
-const face: KeyPointsTemplate = {
+const face: KeypointsTemplate = {
   id: "face",
   vertices: [
     {
@@ -43,7 +43,7 @@ const face: KeyPointsTemplate = {
   ],
 };
 
-const person: KeyPointsTemplate = {
+const person: KeypointsTemplate = {
   id: "person",
   vertices: [
     {
@@ -113,4 +113,4 @@ const person: KeyPointsTemplate = {
   ],
 };
 
-export const templates: KeyPointsTemplate[] = [face, person];
+export const templates: KeypointsTemplate[] = [face, person];

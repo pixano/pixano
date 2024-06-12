@@ -1,6 +1,4 @@
 <script lang="ts">
-  import type { KeyPointsTemplate, Shape } from "@pixano/core";
-
   /**
    * @copyright CEA
    * @author CEA
@@ -19,14 +17,16 @@
   // Imports
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
+  import type { KeypointsTemplate, Shape } from "@pixano/core";
 
-  import KeyPoints from "./keyPoints/KeyPoints.svelte";
+  import KeyPoints from "./keypoints/Keypoint.svelte";
 
   export let stage: Konva.Stage;
-  export let keyPoints: KeyPointsTemplate[] = [];
+  export let keypoints: KeypointsTemplate[] = [];
   export let newShape: Shape;
   export let zoomFactor: number;
   export let colorScale: (id: string) => string;
+  export let viewId: string;
 
   const onDoubleClick = (keyPointsId: string) => {
     newShape = {
@@ -37,16 +37,23 @@
     };
   };
 
-  const onKeyPointsChange = (vertices: KeyPointsTemplate["vertices"], id: string) => {
+  const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
+    const image = stage.findOne(`#image-${viewId}`);
+    const imageSize = image.getSize();
+    const normalizedVertices = vertices.map((point) => ({
+      ...point,
+      x: point.x / imageSize.width,
+      y: point.y / imageSize.height,
+    }));
     newShape = {
       status: "editing",
-      type: "keyPoint",
-      vertices,
+      type: "keypoint",
+      vertices: normalizedVertices,
       shapeId: id,
     };
   };
 
-  const findRectBoundaries = (vertices: KeyPointsTemplate["vertices"]) => {
+  const findRectBoundaries = (vertices: KeypointsTemplate["vertices"]) => {
     const x = Math.min(...vertices.map((point) => point.x));
     const y = Math.min(...vertices.map((point) => point.y));
     const width = Math.max(...vertices.map((point) => point.x)) - x;
@@ -55,28 +62,28 @@
   };
 </script>
 
-{#if keyPoints}
-  {#each keyPoints as keyPointStructure}
-    {#if keyPointStructure.visible}
+{#if keypoints}
+  {#each keypoints as keypointStructure}
+    {#if keypointStructure.visible}
       <KeyPoints
-        onPointChange={(vertices) => onKeyPointsChange(vertices, keyPointStructure.id)}
+        onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}
-        {keyPointStructure}
+        {keypointStructure}
         {zoomFactor}
-        color={colorScale(keyPointStructure.id)}
+        color={colorScale(keypointStructure.id)}
       >
         <Rect
           config={{
-            x: findRectBoundaries(keyPointStructure.vertices).x - 10 / zoomFactor,
-            y: findRectBoundaries(keyPointStructure.vertices).y - 10 / zoomFactor,
-            width: findRectBoundaries(keyPointStructure.vertices).width + 20 / zoomFactor,
-            height: findRectBoundaries(keyPointStructure.vertices).height + 20 / zoomFactor,
-            fill: colorScale(keyPointStructure.id),
+            x: findRectBoundaries(keypointStructure.vertices).x - 10 / zoomFactor,
+            y: findRectBoundaries(keypointStructure.vertices).y - 10 / zoomFactor,
+            width: findRectBoundaries(keypointStructure.vertices).width + 20 / zoomFactor,
+            height: findRectBoundaries(keypointStructure.vertices).height + 20 / zoomFactor,
+            fill: colorScale(keypointStructure.id),
             stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
-            opacity: keyPointStructure.editing ? 0.3 : 0,
+            opacity: keypointStructure.editing ? 0.3 : 0,
           }}
-          on:dblclick={() => onDoubleClick(keyPointStructure.id)}
+          on:dblclick={() => onDoubleClick(keypointStructure.id)}
         />
       </KeyPoints>
     {/if}
