@@ -124,12 +124,21 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   return undefined;
 };
 
-export const mapObjectToKeypoints = (object: ItemObject): KeypointsTemplate | undefined => {
+export const mapObjectToKeypoints = (
+  object: ItemObject,
+  views: DatasetItem["views"],
+): KeypointsTemplate | undefined => {
   if (object.datasetItemType === "video" || !object.keypoints) return undefined;
   const template = templates.find((t) => t.id === object.keypoints?.template_id);
   if (!template) return undefined;
+  const view = views?.[object.view_id];
+  const image: ItemView = Array.isArray(view) ? view[0] : view;
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
   const vertices = object.keypoints.vertices.map((vertex, i) => ({
     ...vertex,
+    x: vertex.x * imageWidth,
+    y: vertex.y * imageHeight,
     features: {
       ...(template.vertices[i].features || {}),
       ...(vertex.features || {}),
@@ -397,7 +406,11 @@ export const defineCreatedObject = (
       datasetItemType: "image",
       keypoints: {
         template_id: shape.keypoints.id,
-        vertices: shape.keypoints.vertices,
+        vertices: shape.keypoints.vertices.map((vertex) => ({
+          ...vertex,
+          x: vertex.x / shape.imageWidth,
+          y: vertex.y / shape.imageHeight,
+        })),
       },
     };
   }

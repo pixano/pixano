@@ -78,9 +78,9 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
   }, [] as Mask[]),
 );
 
-export const itemKeypoints = derived(itemObjects, ($itemObjects) => {
+export const itemKeypoints = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) => {
   return $itemObjects.reduce((acc, object) => {
-    const keypoints = mapObjectToKeypoints(object);
+    const keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
     if (keypoints) acc.push(keypoints);
     return acc;
   }, [] as KeypointsTemplate[]);

@@ -26,6 +26,7 @@
   export let newShape: Shape;
   export let zoomFactor: number;
   export let colorScale: (id: string) => string;
+  export let viewId: string;
 
   const onDoubleClick = (keyPointsId: string) => {
     newShape = {
@@ -37,10 +38,17 @@
   };
 
   const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
+    const image = stage.findOne(`#image-${viewId}`);
+    const imageSize = image.getSize();
+    const normalizedVertices = vertices.map((point) => ({
+      ...point,
+      x: point.x / imageSize.width,
+      y: point.y / imageSize.height,
+    }));
     newShape = {
       status: "editing",
       type: "keypoint",
-      vertices,
+      vertices: normalizedVertices,
       shapeId: id,
     };
   };

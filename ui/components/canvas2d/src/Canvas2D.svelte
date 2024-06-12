@@ -1112,6 +1112,7 @@
         <ShowKeypoints
           {colorScale}
           {stage}
+          {viewId}
           {keypoints}
           zoomFactor={zoomFactor[viewId]}
           bind:newShape
