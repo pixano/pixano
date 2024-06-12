@@ -614,6 +614,10 @@ async def post_dataset_item(  # noqa: D417
     obj_table = dataset.open_table("objects")
     obj_table.delete(f"item_id in ('{item.id}')")
 
+    # TODO : how to select the correct TRACKLET table name ? store it in front ?
+    tracklet_table = dataset.open_table("tracklets")
+    tracklet_table.delete(f"item_id in ('{item.id}')")
+
     # items objects (and tracklets for video)
     if item.objects:
         if item.type == "image":
@@ -621,10 +625,6 @@ async def post_dataset_item(  # noqa: D417
         elif item.type == "video":
             obj_add = []
             tracklet_add = []
-
-            # TODO : how to select the correct TRACKLET table name ? store it in front ?
-            tracklet_table = dataset.open_table("tracklets")
-            tracklet_table.delete(f"item_id in ('{item.id}')")
 
             for obj in item.objects:
                 for tracklet in obj["track"]:
