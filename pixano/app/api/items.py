@@ -637,8 +637,9 @@ async def post_dataset_item(  # noqa: D417
     obj_table.delete(f"item_id in ('{item.id}')")
 
     # TODO : how to select the correct TRACKLET table name ? store it in front ?
-    tracklet_table = dataset.open_table("tracklets")
-    tracklet_table.delete(f"item_id in ('{item.id}')")
+    if "tracklets" in dataset.dataset_schema.schemas.keys():
+        tracklet_table = dataset.open_table("tracklets")
+        tracklet_table.delete(f"item_id in ('{item.id}')")
 
     # items objects (and tracklets for video)
     if item.objects:
