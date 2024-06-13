@@ -113,4 +113,110 @@ const person: KeypointsTemplate = {
   ],
 };
 
-export const templates: KeypointsTemplate[] = [face, person];
+const cow: KeypointsTemplate = {
+  id: "cow",
+  vertices: [
+    {
+      x: 0.5,
+      y: 0.1,
+      features: {
+        label: "museau",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.5,
+      features: {
+        label: "dosA",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.9,
+      features: {
+        label: "dosD",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.23,
+      features: {
+        label: "chignon",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.37,
+      features: {
+        label: "cou",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.63,
+      features: {
+        label: "dosB",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.5,
+      y: 0.77,
+      features: {
+        label: "dosC",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.3,
+      y: 0.5,
+      features: {
+        label: "AG",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.7,
+      y: 0.5,
+      features: {
+        label: "AD",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.7,
+      y: 0.9,
+      features: {
+        label: "PD",
+        state: "visible",
+      },
+    },
+    {
+      x: 0.3,
+      y: 0.9,
+      features: {
+        label: "PG",
+        state: "visible",
+      },
+    },
+  ],
+  edges: [
+    [0, 3],
+    [3, 4],
+    [4, 1],
+    [1, 5],
+    [5, 6],
+    [6, 2],
+    [1, 7],
+    [1, 8],
+    [2, 9],
+    [2, 10],
+  ],
+};
+
+export const templates: KeypointsTemplate[] = [face, person, cow];
