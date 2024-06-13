@@ -27,6 +27,7 @@ import type {
   ItemObjectBase,
   Tracklet,
   VideoItemBBox,
+  KeypointsTemplate,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -44,6 +45,7 @@ import type {
 } from "../types/datasetItemWorkspaceTypes";
 import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
+import { templates } from "../settings/keyPointsTemplates";
 
 const defineTooltip = (object: ItemObject): string | null => {
   let bbox: ItemBBox | undefined;
@@ -122,10 +124,40 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   return undefined;
 };
 
+export const mapObjectToKeypoints = (
+  object: ItemObject,
+  views: DatasetItem["views"],
+): KeypointsTemplate | undefined => {
+  if (object.datasetItemType === "video" || !object.keypoints) return undefined;
+  const template = templates.find((t) => t.id === object.keypoints?.template_id);
+  if (!template) return undefined;
+  const view = views?.[object.view_id];
+  const image: ItemView = Array.isArray(view) ? view[0] : view;
+  const imageHeight = (image.features.height.value as number) || 1;
+  const imageWidth = (image.features.width.value as number) || 1;
+  const vertices = object.keypoints.vertices.map((vertex, i) => ({
+    ...vertex,
+    x: vertex.x * imageWidth,
+    y: vertex.y * imageHeight,
+    features: {
+      ...(template.vertices[i].features || {}),
+      ...(vertex.features || {}),
+    },
+  }));
+  return {
+    id: object.id,
+    vertices,
+    edges: template.edges,
+    editing: object.displayControl?.editing,
+    visible: !object.keypoints.displayControl?.hidden && !object.displayControl?.hidden,
+    highlighted: object.highlighted,
+  };
+};
+
 export const toggleObjectDisplayControl = (
   object: ItemObject,
   displayControlProperty: keyof DisplayControl,
-  properties: ("bbox" | "mask")[],
+  properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
 ): ItemObject => {
   // Check if the object is an ImageObject
@@ -142,6 +174,12 @@ export const toggleObjectDisplayControl = (
         [displayControlProperty]: value,
       };
     }
+    if (properties.includes("keypoints") && object.keypoints) {
+      object.keypoints.displayControl = {
+        ...(object.keypoints.displayControl || {}),
+        [displayControlProperty]: value,
+      };
+    }
     if (properties.includes("bbox") && properties.includes("mask")) {
       object.displayControl = {
         ...object.displayControl,
@@ -152,9 +190,9 @@ export const toggleObjectDisplayControl = (
 
   // Check if the object is a VideoObject
   if (object.datasetItemType === "video") {
-    if (properties.includes("bbox") && object.displayControl) {
+    if (properties.includes("bbox")) {
       object.displayControl = {
-        ...object.displayControl,
+        ...(object.displayControl || {}),
         [displayControlProperty]: value,
       };
     }
@@ -181,6 +219,10 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
       object.highlighted = "all";
+      object.displayControl = {
+        ...object.displayControl,
+        editing: false,
+      };
     }
     if (newShape.highlighted === "self") {
       object.highlighted = newShape.shapeId === object.id ? "self" : "none";
@@ -189,6 +231,7 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
         editing: newShape.shapeId === object.id,
       };
     }
+
     if (newShape.shapeId !== object.id) return object;
 
     // Check if the object is an ImageObject
@@ -208,6 +251,15 @@ export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemOb
           bbox: {
             ...object.bbox,
             coords: newShape.coords,
+          },
+        };
+      }
+      if (newShape.type === "keypoint" && object.keypoints) {
+        return {
+          ...object,
+          keypoints: {
+            ...object.keypoints,
+            vertices: newShape.vertices,
           },
         };
       }
@@ -348,6 +400,20 @@ export const defineCreatedObject = (
       },
     };
   }
+  if (shape.type === "keypoint") {
+    newObject = {
+      ...baseObject,
+      datasetItemType: "image",
+      keypoints: {
+        template_id: shape.keypoints.id,
+        vertices: shape.keypoints.vertices.map((vertex) => ({
+          ...vertex,
+          x: vertex.x / shape.imageWidth,
+          y: vertex.y / shape.imageHeight,
+        })),
+      },
+    };
+  }
   return newObject;
 };
 
@@ -361,7 +427,7 @@ export const highlightCurrentObject = (
   return objects.map((object) => {
     object.displayControl = {
       ...object.displayControl,
-      editing: false,
+      editing: object.id === currentObject.id ? object.displayControl?.editing : false,
     };
     if (isObjectHighlighted && shouldUnHighlight) {
       object.highlighted = "all";
@@ -392,10 +458,10 @@ export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
   const coords = box.coords;
   return {
     baseImageDimensions: {
-      width: view.features.width.value as number,
-      height: view.features.height.value as number,
+      width: view?.features.width.value as number,
+      height: view?.features.height.value as number,
     },
     coords,
-    uri: view.uri,
+    uri: view?.uri,
   };
 };

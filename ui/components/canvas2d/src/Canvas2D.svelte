@@ -33,6 +33,8 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
+    KeypointsTemplate,
+    Vertex,
   } from "@pixano/core";
 
   import {
@@ -48,12 +50,16 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import CreateKeypoint from "./components/CreateKeypoints.svelte";
+  import ShowKeypoints from "./components/ShowKeypoint.svelte";
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
 
   // Exports
   export let selectedItemId: DatasetItem["id"];
   export let masks: Mask[];
   export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[] = [];
+  export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
@@ -65,6 +71,7 @@
 
   // Image settings
   export let filters: Writable<Filters> = writable<Filters>();
+  export let canvasSize: number = 0;
 
   let isReady = false;
 
@@ -83,6 +90,21 @@
       clearAnnotationAndInputs();
     }
     prevSelectedTool = selectedTool;
+  }
+
+  $: {
+    if (canvasSize) {
+      for (const viewId of Object.keys(imagesPerView)) {
+        scaleView(viewId);
+      }
+      canvasSize = 0;
+    }
+  }
+
+  $: {
+    if (newShape.status === "none" && newShape.shouldReset) {
+      clearAnnotationAndInputs();
+    }
   }
 
   $: {
@@ -224,8 +246,40 @@
   }
 
   function scaleView(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (!viewLayer) {
+    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+    if (viewLayer) {
+      // Calculate max dims for every image in the grid
+      const maxWidth = stage.width() / gridSize.cols;
+      const maxHeight = stage.height() / gridSize.rows;
+
+      //calculate view pos in grid
+      let i = 0;
+      //get view index
+      for (const view of Object.keys(imagesPerView)) {
+        if (view === viewId) break;
+        i++;
+      }
+      const grid_pos = {
+        x: i % gridSize.cols,
+        y: Math.floor(i / gridSize.cols),
+      };
+
+      // Fit stage
+      const currentImage = getCurrentImage(viewId);
+      const scaleByHeight = maxHeight / currentImage.height;
+      const scaleByWidth = maxWidth / currentImage.width;
+      const scale = Math.min(scaleByWidth, scaleByHeight);
+      //set zoomFactor for view
+      zoomFactor[viewId] = scale;
+
+      viewLayer.scale({ x: scale, y: scale });
+
+      // Center view
+      const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
+      const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
+      viewLayer.x(offsetX);
+      viewLayer.y(offsetY);
+    } else {
       console.log("Canvas2D.scaleView - Error: Cannot scale");
       return;
     }
@@ -545,6 +599,9 @@
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
+      case "KEY_POINT":
+        // Enable key point creation or change cursor style
+        break;
       case "DELETE":
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
@@ -588,6 +645,59 @@
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
       viewId,
     };
+  }
+
+  // ********** KEY_POINT TOOL ********** //
+
+  function dragInputKeyPointRectMove(viewId: string) {
+    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+
+      const pos = viewLayer.getRelativePointerPosition();
+      const x = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.y : pos.y;
+      const width = pos.x - x;
+      const height = pos.y - y;
+      newShape = {
+        status: "creating",
+        type: "keypoint",
+        x,
+        y,
+        width,
+        height,
+        viewId,
+        keypoints: selectedKeypointTemplate,
+      };
+    }
+  }
+
+  function dragKeyPointInputRectEnd(viewId: string) {
+    if (selectedTool?.type == "KEY_POINT") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
+      if (rect && newShape.status === "creating" && newShape.type === "keypoint") {
+        const vertices = newShape.keypoints.vertices.map((vertex) => {
+          if (newShape.status === "creating" && newShape.type === "keypoint")
+            return {
+              ...vertex,
+              x: newShape.x + vertex.x * newShape.width,
+              y: newShape.y + vertex.y * newShape.height,
+            } as Required<Vertex>;
+        });
+        newShape = {
+          status: "saving",
+          type: "keypoint",
+          viewId,
+          itemId: selectedItemId,
+          imageWidth: getCurrentImage(viewId).width,
+          imageHeight: getCurrentImage(viewId).height,
+          keypoints: { ...newShape.keypoints, vertices },
+        };
+        rect.destroy();
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      }
+    }
   }
 
   // ********** PAN TOOL ********** //
@@ -974,6 +1084,7 @@
     if (selectedTool?.type === "POLYGON") {
       drawPolygonPoints(viewId);
     }
+
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -995,7 +1106,8 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (newShape.status === "none" || (newShape.status == "editing" && newShape.type == "none")) {
+
+    if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
         type: "none",
@@ -1040,11 +1152,13 @@
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewId);
-
       await updateCurrentMask(viewId);
     } else if (selectedTool?.type == "RECTANGLE") {
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
+    } else if (selectedTool?.type === "KEY_POINT") {
+      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewId));
+      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewId));
     }
   }
 
@@ -1139,7 +1253,7 @@
 </script>
 
 <div
-  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100", {
+  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
@@ -1172,9 +1286,21 @@
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
+        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+        {/if}
+        <ShowKeypoints
+          {colorScale}
+          {stage}
+          {viewId}
+          {keypoints}
+          zoomFactor={zoomFactor[viewId]}
+          bind:newShape
+        />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
+
         {#each bboxes as bbox}
           {#if bbox.viewId === viewId}
             {#key bbox.id}

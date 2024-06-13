@@ -23,9 +23,10 @@ import {
   type BBox,
   type SelectionTool,
   utils,
+  type KeypointsTemplate,
 } from "@pixano/core";
 
-import { mapObjectToBBox, mapObjectToMasks } from "../api/objectsApi";
+import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
 import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
 
 // Exports
@@ -49,6 +50,7 @@ export const filters = writable<Filters>({
   blueRange: [0, 255],
   u16BitRange: [0, 65535],
 });
+export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
 
 type ColorScale = [Array<string>, (id: string) => string];
 
@@ -84,3 +86,11 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
     return acc;
   }, [] as Mask[]),
 );
+
+export const itemKeypoints = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) => {
+  return $itemObjects.reduce((acc, object) => {
+    const keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
+    if (keypoints) acc.push(keypoints);
+    return acc;
+  }, [] as KeypointsTemplate[]);
+});

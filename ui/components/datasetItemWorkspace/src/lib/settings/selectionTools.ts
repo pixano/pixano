@@ -20,6 +20,13 @@ export const polygonTool: SelectionTool = {
   isSmart: false,
 };
 
+export const keyPointTool: SelectionTool = {
+  name: "Create key points",
+  type: "KEY_POINT",
+  cursor: "crosshair",
+  isSmart: false,
+};
+
 export const removeSmartPointTool: SelectionTool = {
   name: "Negative point selection",
   type: "POINT_SELECTION",

@@ -44,7 +44,7 @@
   let itemMeta: ItemMeta[] = [];
 
   itemMetas.subscribe((metas) => {
-    itemMeta = Object.values(metas.views).map((view: ItemView | ItemView[]) => {
+    imageMeta = Object.values(metas.views || {}).map((view: ItemView | ItemView[]) => {
       const image: ItemView = Array.isArray(view) ? view[0] : view;
       itemType = metas.type;
       return {
@@ -55,7 +55,7 @@
         id: image.id,
       };
     });
-    const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures).length
+    const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures || {}).length
       ? metas.mainFeatures
       : defaultSceneFeatures;
     features = createFeature(mainFeatures);

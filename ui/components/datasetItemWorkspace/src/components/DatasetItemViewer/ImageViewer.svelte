@@ -26,6 +26,7 @@
   import {
     newShape,
     itemBboxes,
+    itemKeypoints,
     itemMasks,
     selectedTool,
     itemObjects,
@@ -33,8 +34,10 @@
     colorScale,
     filters,
     itemMetas,
+    selectedKeypointsTemplate,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { templates } from "../../lib/settings/keyPointsTemplates";
 
   // Attributes
   export let selectedItem: ImageDatasetItem;
@@ -134,6 +137,8 @@
       colorScale={$colorScale[1]}
       bboxes={$itemBboxes}
       masks={$itemMasks}
+      keypoints={$itemKeypoints}
+      selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
       {embeddings}
       {filters}
       bind:selectedTool={$selectedTool}

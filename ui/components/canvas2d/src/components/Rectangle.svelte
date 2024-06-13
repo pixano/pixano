@@ -120,10 +120,10 @@
   <Rect
     config={{
       id: `rect${bbox.id}`,
-      x: bbox.bbox[0],
-      y: bbox.bbox[1],
-      width: bbox.bbox[2],
-      height: bbox.bbox[3],
+      x: bbox.bbox[0] || 0,
+      y: bbox.bbox[1] || 0,
+      width: bbox.bbox[2] || 0,
+      height: bbox.bbox[3] || 0,
       stroke: colorScale(bbox.id),
       strokeWidth: bbox.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.opacity,

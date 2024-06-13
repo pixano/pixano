@@ -30,7 +30,7 @@
 
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
-  export let updateView: (frameIndex: number) => void;
+  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
@@ -122,17 +122,19 @@
     </ContextMenu.Content>
   </ContextMenu.Root>
   {#each object.track as tracklet, i}
-    <ObjectTracklet
-      {tracklet}
-      {object}
-      {onAddKeyBoxClick}
-      {onContextMenu}
-      {onEditKeyBoxClick}
-      onSplitTrackletClick={() => onSplitTrackletClick(i)}
-      onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-      {findNeighborBoxes}
-      {updateView}
-      {moveCursorToPosition}
-    />
+    {#key `${tracklet.start}-${tracklet.end}`}
+      <ObjectTracklet
+        {tracklet}
+        {object}
+        {onAddKeyBoxClick}
+        {onContextMenu}
+        {onEditKeyBoxClick}
+        onSplitTrackletClick={() => onSplitTrackletClick(i)}
+        onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
+        {findNeighborBoxes}
+        {updateView}
+        {moveCursorToPosition}
+      />
+    {/key}
   {/each}
 </div>

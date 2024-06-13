@@ -42,6 +42,8 @@
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
 
+  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
+
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
 
@@ -100,10 +102,7 @@
     >
       <Share2 />
     </IconButton>
-    <!-- <IconButton tooltipContent="TODO">
-      uncomment when ready
-      <BrushIcon />
-    </IconButton> -->
+    <KeyPointsSelection />
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

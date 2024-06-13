@@ -153,15 +153,25 @@ const createNewTracklet = (
   } as Tracklet;
 };
 
-const addKeyBoxToTracklet = (track: Tracklet[], tracklet: Tracklet, box: VideoItemBBox) =>
-  track.map((trackItem) => {
-    if (trackItem.start === tracklet.start && trackItem.end === tracklet.end) {
-      trackItem.boxes.push(box);
-      trackItem.boxes.sort((a, b) => a.frame_index - b.frame_index);
-      trackItem.start = trackItem.boxes[0].frame_index;
-      trackItem.end = trackItem.boxes[trackItem.boxes.length - 1].frame_index;
+const addKeyBoxToTracklet = (track: Tracklet[], currentTracklet: Tracklet, box: VideoItemBBox) =>
+  track.map((tracklet) => {
+    if (tracklet.start === currentTracklet.start && tracklet.end === currentTracklet.end) {
+      const currentBox = tracklet.boxes.find((b) => b.frame_index === box.frame_index);
+      if (currentBox) {
+        tracklet.boxes = tracklet.boxes.map((b) => {
+          if (b.frame_index === box.frame_index) {
+            return box;
+          }
+          return b;
+        });
+      } else {
+        tracklet.boxes.push(box);
+        tracklet.boxes.sort((a, b) => a.frame_index - b.frame_index);
+        tracklet.start = tracklet.boxes[0].frame_index;
+        tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
+      }
     }
-    return trackItem;
+    return tracklet;
   });
 
 export const addKeyBox = (
@@ -242,7 +252,7 @@ export const splitTrackletInTwo = (
     end: rightClickFrameIndex,
     boxes: filterBoxes(
       tracklet.boxes,
-      { ...object.displayedBox, frame_index: rightClickFrameIndex },
+      { ...object.displayedBox, frame_index: rightClickFrameIndex, is_key: true },
       (index) => index < rightClickFrameIndex,
     ),
   };
@@ -251,7 +261,7 @@ export const splitTrackletInTwo = (
     end: tracklet.end,
     boxes: filterBoxes(
       tracklet.boxes,
-      { ...object.displayedBox, frame_index: rightClickFrameIndex + 1 },
+      { ...object.displayedBox, frame_index: rightClickFrameIndex + 1, is_key: true },
       (index) => index > rightClickFrameIndex + 1,
     ),
   };
@@ -261,4 +271,92 @@ export const splitTrackletInTwo = (
     endTracklet,
     ...object.track.slice(trackletIndex + 1),
   ];
+};
+
+export const filterTrackletBoxes = (
+  newFrameIndex: VideoItemBBox["frame_index"],
+  draggedFrameIndex: VideoItemBBox["frame_index"],
+  currentTracklet: Tracklet,
+  objects: ItemObject[],
+  objectId: ItemObject["id"],
+) => {
+  const isGoingRight = newFrameIndex > draggedFrameIndex;
+  const isStart = draggedFrameIndex === currentTracklet.start;
+  const isEnd = draggedFrameIndex === currentTracklet.end;
+
+  return objects.map((object) => {
+    if (object.id === objectId && object.datasetItemType === "video") {
+      object.track = object.track.map((tracklet) => {
+        if (tracklet.start === currentTracklet.start && tracklet.end === currentTracklet.end) {
+          tracklet.boxes = tracklet.boxes.filter((box) => {
+            if (
+              isGoingRight &&
+              box.frame_index > draggedFrameIndex &&
+              box.frame_index < newFrameIndex
+            ) {
+              return false;
+            }
+            if (
+              !isGoingRight &&
+              box.frame_index > newFrameIndex &&
+              box.frame_index < draggedFrameIndex
+            ) {
+              return false;
+            }
+            return true;
+          });
+          if (isStart) {
+            tracklet.start = newFrameIndex;
+            tracklet.boxes[0].is_key = true;
+            tracklet.boxes[0].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          if (isEnd) {
+            tracklet.end = newFrameIndex;
+            tracklet.boxes[tracklet.boxes.length - 1].is_key = true;
+            tracklet.boxes[tracklet.boxes.length - 1].frame_index = newFrameIndex;
+            return tracklet;
+          }
+          tracklet.boxes = tracklet.boxes.map((box) => {
+            if (box.frame_index === draggedFrameIndex) {
+              box.is_key = true;
+              box.frame_index = newFrameIndex;
+              return box;
+            }
+            return box;
+          });
+          if (newFrameIndex < tracklet.start) {
+            tracklet.start = newFrameIndex;
+          }
+          if (newFrameIndex > tracklet.end) {
+            tracklet.end = newFrameIndex;
+          }
+          return tracklet;
+        }
+        return tracklet;
+      });
+    }
+    return object;
+  });
+};
+
+export const getNewTrackletValues = (
+  isStart: boolean,
+  newFrameIndex: number,
+  tracklet: Tracklet,
+) => {
+  const startingBox = {
+    ...tracklet.boxes[0],
+    frame_index: isStart ? newFrameIndex : tracklet.start,
+  };
+  const endingBox = {
+    ...tracklet.boxes[tracklet.boxes.length - 1],
+    frame_index: isStart ? tracklet.end : newFrameIndex,
+  };
+  const newTracklet = {
+    boxes: [startingBox, endingBox],
+    start: isStart ? newFrameIndex : tracklet.start,
+    end: isStart ? tracklet.end : newFrameIndex,
+  };
+  return newTracklet;
 };

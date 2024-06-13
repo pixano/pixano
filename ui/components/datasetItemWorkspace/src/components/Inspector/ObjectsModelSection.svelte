@@ -46,24 +46,24 @@
     }
   });
 
-  $: itemObjects.update((items) => {
-    return items.map((item) => {
+  $: itemObjects.update((objects) => {
+    return objects.map((object) => {
       const isHidden = visibilityStatus === "hidden";
       if (modelName === GROUND_TRUTH) {
-        if (item.source_id === modelName) {
-          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+        if (object.source_id === modelName) {
+          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
         } else {
-          return item;
+          return object;
         }
       }
-      if (!EXISTING_SOURCE_IDS.includes(item.source_id)) {
-        if (item.source_id === modelName) {
-          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], isHidden);
+      if (!EXISTING_SOURCE_IDS.includes(object.source_id)) {
+        if (object.source_id === modelName) {
+          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
         } else {
-          return toggleObjectDisplayControl(item, "hidden", ["bbox", "mask"], true);
+          return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], true);
         }
       }
-      return item;
+      return object;
     });
   });
 

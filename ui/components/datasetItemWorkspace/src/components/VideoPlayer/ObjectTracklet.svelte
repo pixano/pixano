@@ -25,6 +25,7 @@
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { filterTrackletBoxes, getNewTrackletValues } from "../../lib/api/videoApi";
 
   export let object: VideoObject;
   export let tracklet: Tracklet;
@@ -34,7 +35,7 @@
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
-  export let updateView: (frameIndex: number) => void;
+  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
@@ -47,8 +48,6 @@
   let left: number = getLeft(tracklet);
   let trackletElement: HTMLElement;
 
-  $: width = getWidth(tracklet);
-  $: left = getLeft(tracklet);
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
   $: color = $colorScale[1](object.id);
@@ -58,17 +57,29 @@
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborBoxes(tracklet, newFrameIndex);
-    if (newFrameIndex <= prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
-    tracklet.boxes = tracklet.boxes.map((box) => {
-      if (box.frame_index === draggedFrameIndex) {
-        box.frame_index = newFrameIndex;
-      }
-      return box;
-    });
-    tracklet.start = tracklet.boxes[0].frame_index;
-    tracklet.end = tracklet.boxes[tracklet.boxes.length - 1].frame_index;
-    updateView(newFrameIndex);
+    if (newFrameIndex < prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
+
+    const isStart = draggedFrameIndex === tracklet.start;
+    const isEnd = draggedFrameIndex === tracklet.end;
+    if (isStart) {
+      left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
+      width = ((tracklet.end - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+    }
+    if (isEnd) {
+      width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+    }
+    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
+    updateView(newFrameIndex, [newTracklet]);
     currentFrameIndex.set(newFrameIndex);
+  };
+
+  const filterTracklet = (
+    newFrameIndex: VideoItemBBox["frame_index"],
+    draggedFrameIndex: VideoItemBBox["frame_index"],
+  ) => {
+    itemObjects.update((oldObjects) =>
+      filterTrackletBoxes(newFrameIndex, draggedFrameIndex, tracklet, oldObjects, object.id),
+    );
   };
 
   const onClick = (clientX: number) => {
@@ -114,15 +125,18 @@
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.boxes as box}
-  {#if box.is_key}
-    <TrackletKeyBox
-      {box}
-      {color}
-      {oneFrameInPixel}
-      {onEditKeyBoxClick}
-      objectId={object.id}
-      {updateTrackletWidth}
-    />
-  {/if}
-{/each}
+{#key tracklet.boxes.length}
+  {#each tracklet.boxes as box}
+    {#if box.is_key}
+      <TrackletKeyBox
+        {box}
+        {color}
+        {oneFrameInPixel}
+        {onEditKeyBoxClick}
+        objectId={object.id}
+        {updateTrackletWidth}
+        {filterTracklet}
+      />
+    {/if}
+  {/each}
+{/key}

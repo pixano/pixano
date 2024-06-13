@@ -50,19 +50,15 @@
     itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
   $: maskIsVisible =
     itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
+  $: keypointsIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.keypoints?.displayControl?.hidden;
 
   $: color = $colorScale[1](itemObject.id);
-
-  $: {
-    if (itemObject.highlighted === "self") {
-      open = true;
-    }
-  }
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
     value: boolean,
-    properties: ("bbox" | "mask")[] = ["bbox", "mask"],
+    properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
   ) => {
     itemObjects.update((objects) =>
       objects.map((object) => {
@@ -195,6 +191,18 @@
                     />
                   </div>
                 {/if}
+                {#if itemObject.keypoints}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Key points</p>
+                    <Checkbox
+                      handleClick={() =>
+                        handleIconClick("hidden", keypointsIsVisible, ["keypoints"])}
+                      bind:checked={keypointsIsVisible}
+                      title={keypointsIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
               </div>
             </div>
           {/if}
@@ -204,7 +212,8 @@
               imageDimension={thumbnail.baseImageDimensions}
               coords={thumbnail.coords}
               imageUrl={`/${thumbnail.uri}`}
-              minSize={150}
+              minWidth={150}
+              maxWidth={300}
             />
           {/if}
         </div>

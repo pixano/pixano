@@ -20,6 +20,7 @@ from .base_schema import BaseSchema
 class Tracklet(BaseSchema):
     """Tracklet Lance Model."""
 
+    item_id: str
     track_id: str
 
 
@@ -35,7 +36,7 @@ class TrackletWithTimestep(Tracklet):
 class TrackletWithTimestamp(Tracklet):
     """Tracklet with Timestamp Lance Model."""
 
-    start_timestamp: int
+    start_timestamp: int  # Note timestamps may be float ?
     end_timestamp: int
 
 
