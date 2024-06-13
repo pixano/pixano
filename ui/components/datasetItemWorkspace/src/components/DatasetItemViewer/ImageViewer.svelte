@@ -94,7 +94,7 @@
       const img: ImageJS = await ImageJS.load(`/${value.uri}`);
 
       const bitDepth = img.bitDepth as number;
-      $itemMetas.format = bitDepth === 16 ? "16bit" : bitDepth === 8 ? "8bit" : "1bit";
+      $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
       if ($itemMetas.format === "16bit") {
