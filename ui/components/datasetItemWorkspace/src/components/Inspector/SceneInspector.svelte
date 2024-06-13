@@ -44,7 +44,7 @@
   let itemMeta: ItemMeta[] = [];
 
   itemMetas.subscribe((metas) => {
-    imageMeta = Object.values(metas.views || {}).map((view: ItemView | ItemView[]) => {
+    itemMeta = Object.values(metas.views || {}).map((view: ItemView | ItemView[]) => {
       const image: ItemView = Array.isArray(view) ? view[0] : view;
       itemType = metas.type;
       return {
