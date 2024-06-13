@@ -55,15 +55,31 @@
    * @param min The minimum pixel value.
    * @param max The maximum pixel value.
    */
-  const normalizeRange = (image: ImageJS, min: number, max: number): void => {
+  const normalize16BitImage = (image: ImageJS, min: number, max: number): void => {
     image.bitDepth = 8;
     image.maxValue = 255;
 
     const nPixels: number = image.size;
-    for (let i = 0; i < nPixels; ++i) {
-      let pixel: number = image.data[i];
-      pixel = pixel < min ? 0 : pixel > max ? 255 : ((pixel - min) / (max - min)) * 255;
-      image.data[i] = pixel;
+    if (image.channels === 4) {
+      for (let i = 0; i < nPixels; i += 4) {
+        let rPixel: number = image.data[i];
+        let gPixel: number = image.data[i + 1];
+        let bPixel: number = image.data[i + 2];
+
+        rPixel = rPixel < min ? 0 : rPixel > max ? 255 : ((rPixel - min) / (max - min)) * 255;
+        gPixel = gPixel < min ? 0 : gPixel > max ? 255 : ((gPixel - min) / (max - min)) * 255;
+        bPixel = bPixel < min ? 0 : bPixel > max ? 255 : ((bPixel - min) / (max - min)) * 255;
+
+        image.data[i] = rPixel;
+        image.data[i + 1] = gPixel;
+        image.data[i + 2] = bPixel;
+      }
+    } else {
+      for (let i = 0; i < nPixels; ++i) {
+        let pixel: number = image.data[i];
+        pixel = pixel < min ? 0 : pixel > max ? 255 : ((pixel - min) / (max - min)) * 255;
+        image.data[i] = pixel;
+      }
     }
   };
 
@@ -77,11 +93,12 @@
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
       const img: ImageJS = await ImageJS.load(`/${value.uri}`);
 
-      $itemMetas.color = img.channels === 1 ? "grayscale" : "rgba";
-      $itemMetas.format = (img.bitDepth as number) === 8 ? "8bit" : "16bit";
+      const bitDepth = img.bitDepth as number;
+      $itemMetas.format = bitDepth === 16 ? "16bit" : bitDepth === 8 ? "8bit" : "1bit";
+      $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
 
-      if ($itemMetas.format === "16bit" && $itemMetas.color === "grayscale") {
-        normalizeRange(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
+      if ($itemMetas.format === "16bit") {
+        normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
       }
 
       const image: HTMLImageElement = new Image();
