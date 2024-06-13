@@ -71,19 +71,17 @@ class DatasetBuilder(ABC):
         """
         tables = self._create_tables()
 
-        accumulate = 0
-        for count, items in enumerate(
-            tqdm.tqdm(
-                self._generate_items(), total=self._count_items(), desc="Import items"
-            )
+        accumulate = {table_name: 0 for table_name in tables.keys()}
+        accumulate_tables = {table_name: [] for table_name in tables.keys()}
+        item_count = 0
+
+        for items in tqdm.tqdm(
+            self._generate_items(), total=self._count_items(), desc="Import items"
         ):
             # Assert that items and tables have the same keys
             # assert set(items.keys()) == set(
             #     tables.keys()
             # ), "Keys of 'items' and 'tables' do not match"
-
-            if accumulate == 0:
-                accumulate_tables = {table_name: [] for table_name in tables.keys()}
 
             for table_name, table in tables.items():
                 if table_name not in items:
@@ -99,24 +97,28 @@ class DatasetBuilder(ABC):
                             f"id:{elem.id})"
                         )
 
+                if table_name == "item":
+                    item_count += 1
+
+                if accumulate[table_name] == 0:
+                    accumulate_tables[table_name] = []
                 accumulate_tables[table_name].extend(items[table_name])
+                accumulate[table_name] += 1
 
-            accumulate += 1
-
-            if accumulate % self._batch_size == 0:
-                for table_name, table in tables.items():
+                if accumulate[table_name] % self._batch_size == 0:
                     if accumulate_tables[table_name]:
                         table.add(accumulate_tables[table_name])
-                accumulate = 0
+                    accumulate = 0
 
-        if accumulate > 0:
-            for table_name, table in tables.items():
+        # finish final batch
+        for table_name, table in tables.items():
+            if accumulate[table_name] > 0:
                 if accumulate_tables[table_name]:
                     table.add(accumulate_tables[table_name])
 
         # save info.json
         self._info.id = shortuuid.uuid()
-        self._info.num_elements = count + 1
+        self._info.num_elements = item_count
         self._info.to_json(self._target_dir / Dataset.INFO_FILE)
 
         # save features_values.json
