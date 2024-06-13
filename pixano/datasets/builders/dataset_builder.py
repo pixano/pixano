@@ -108,7 +108,7 @@ class DatasetBuilder(ABC):
                 if accumulate[table_name] % self._batch_size == 0:
                     if accumulate_tables[table_name]:
                         table.add(accumulate_tables[table_name])
-                    accumulate = 0
+                    accumulate[table_name] = 0
 
         # finish final batch
         for table_name, table in tables.items():
