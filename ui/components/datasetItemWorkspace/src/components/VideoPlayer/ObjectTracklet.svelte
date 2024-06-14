@@ -90,13 +90,12 @@
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
-    console.log({ tracklet, updateView });
     itemObjects.update((oldObjects) =>
       oldObjects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
           obj.track = obj.track.map((trackItem) => {
             if (trackItem.id === tracklet.id) {
-              trackItem = tracklet;
+              return tracklet;
             }
             return trackItem;
           });

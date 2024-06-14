@@ -209,12 +209,12 @@ export const mapTrackItemsToObject = (
     (acc, tracklet) => [...acc, ...tracklet.items],
     [] as TrackletItem[],
   );
-  console.log({ allItems, boxes: object.boxes });
+
   const boxes: VideoObject["boxes"] = object.boxes
     ? allItems.map((item) => {
         const box = {
           ...object.displayedBox,
-          frame_index: rightClickFrameIndex,
+          frame_index: item.frame_index,
           is_key: true,
         } as VideoItemBBox;
         const currentBox = object.boxes?.find((box) => box.frame_index === item.frame_index) || box;
@@ -287,9 +287,10 @@ export const mapSplittedTrackToObject = (
 };
 
 export const mapTrackletItems = (object: VideoObject, tracklet: TrackletWithItems) => {
-  console.log("object", object);
-  const boxes = object.boxes?.filter((box) =>
-    tracklet.items.some((item) => item.frame_index === box.frame_index),
+  const boxes = object.boxes?.filter(
+    (box) =>
+      box.tracklet_id !== tracklet.id ||
+      tracklet.items.some((item) => item.frame_index === box.frame_index),
   );
   const keypoints = object.keypoints?.filter((kp) =>
     tracklet.items.some((item) => item.frame_index === kp.frame_index),

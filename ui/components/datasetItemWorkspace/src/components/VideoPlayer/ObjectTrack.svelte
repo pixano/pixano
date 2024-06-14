@@ -118,6 +118,20 @@
       objects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
           obj.track.splice(trackletIndex, 1);
+          obj.boxes = obj.boxes?.filter(
+            (box) =>
+              !(
+                box.frame_index >= trackWithItems[trackletIndex].start &&
+                box.frame_index <= trackWithItems[trackletIndex].end
+              ),
+          );
+          obj.keypoints = obj.keypoints?.filter(
+            (kp) =>
+              !(
+                kp.frame_index >= trackWithItems[trackletIndex].start &&
+                kp.frame_index <= trackWithItems[trackletIndex].end
+              ),
+          );
         }
         return obj;
       }),
@@ -130,27 +144,30 @@
       [] as TrackletItem[],
     );
     const nextItem =
-      allItems.find((item) => item.frame_index > frameIndex)?.frame_index || $lastFrameIndex;
+      allItems.find((item) => item.frame_index > frameIndex && item.is_key)?.frame_index ||
+      $lastFrameIndex;
     const prevItem =
       allItems
         .slice()
         .reverse()
-        .find((item) => item.frame_index < frameIndex)?.frame_index || 0;
+        .find((item) => item.frame_index < frameIndex && item.is_key)?.frame_index || 0;
 
     return [prevItem, nextItem];
   };
 
-  $: trackWithItems = object.track.map((tracklet) => ({
-    ...tracklet,
-    items:
-      object.boxes?.filter(
-        (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
-      ) ||
-      object.keypoints?.filter(
-        (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
-      ) ||
-      [],
-  }));
+  $: {
+    trackWithItems = object.track.map((tracklet) => ({
+      ...tracklet,
+      items:
+        object.boxes?.filter(
+          (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
+        ) ||
+        object.keypoints?.filter(
+          (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
+        ) ||
+        [],
+    }));
+  }
 </script>
 
 {#if trackWithItems}
