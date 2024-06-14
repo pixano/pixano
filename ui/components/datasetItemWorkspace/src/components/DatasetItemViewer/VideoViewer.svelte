@@ -38,7 +38,7 @@
   import { onMount } from "svelte";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+  import { linearInterpolation, editKeyItemInTracklet } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectedItem: VideoDatasetItem;
@@ -133,9 +133,9 @@
 
   const updateOrCreateBox = (shape: EditShape) => {
     const currentFrame = $currentFrameIndex;
-    if (shape.type === "rectangle") {
+    if (shape.type === "rectangle" || shape.type === "keypoint") {
       itemObjects.update((objects) =>
-        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+        editKeyItemInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
       newShape.set({ status: "none" });
     } else {

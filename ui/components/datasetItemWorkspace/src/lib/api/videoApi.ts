@@ -111,7 +111,91 @@ const editBoxesInTracklet = (
     return box;
   });
 
-export const editKeyBoxInTracklet = (
+// export const editKeyBoxInTracklet = (
+//   objects: ItemObject[],
+//   shape: EditShape,
+//   currentFrame: number,
+//   objectIdBeingEdited: string | null,
+// ) =>
+//   objects.map((object) => {
+//     if (
+//       shape.type === "rectangle" &&
+//       object.id === shape.shapeId &&
+//       object.datasetItemType === "video" &&
+//       objectIdBeingEdited === object.id &&
+//       object.boxes
+//     ) {
+//       object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
+//       const currentTracklet = object.track.find(
+//         (t) => t.start <= currentFrame && t.end >= currentFrame,
+//       );
+//       if (currentTracklet && !object.boxes?.some((b) => b.frame_index === currentFrame)) {
+//         object.boxes?.push({
+//           ...object.boxes[0],
+//           coords: shape.coords,
+//           frame_index: currentFrame,
+//           is_key: true,
+//           tracklet_id: currentTracklet.id,
+//         });
+//       }
+//       object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
+//       object.displayedBox = object.displayedBox
+//         ? {
+//             ...object.displayedBox,
+//             coords: shape.coords,
+//           }
+//         : undefined;
+//       return object;
+//     }
+//     return object;
+//   });
+
+// export const editKeypointsInTracklet = (
+//   objects: ItemObject[],
+//   shape: EditShape,
+//   currentFrame: number,
+//   objectIdBeingEdited: string | null,
+// ) =>
+//   objects.map((object) => {
+//     if (
+//       shape.type === "keypoint" &&
+//       object.id === shape.shapeId &&
+//       object.datasetItemType === "video" &&
+//       objectIdBeingEdited === object.id &&
+//       object.keypoints
+//     ) {
+//       object.keypoints = object.keypoints.map((kp) => {
+//         if (kp.displayControl === currentFrame) {
+//           kp.vertices = shape.vertices;
+//           kp.is_key = true;
+//           return kp;
+//         }
+//         return kp;
+//       });
+//       const currentTracklet = object.track.find(
+//         (t) => t.start <= currentFrame && t.end >= currentFrame,
+//       );
+//       if (currentTracklet && !object.keypoints?.some((b) => b.frame_index === currentFrame)) {
+//         object.keypoints?.push({
+//           ...object.keypoints[0],
+//           vertices: shape.vertices,
+//           frame_index: currentFrame,
+//           is_key: true,
+//           tracklet_id: currentTracklet.id,
+//         });
+//       }
+//       object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
+//       object.displayedKeypoints = object.displayedKeypoints
+//         ? {
+//             ...object.displayedKeypoints,
+//             vertices: shape.vertices,
+//           }
+//         : undefined;
+//       return object;
+//     }
+//     return object;
+//   });
+export const editKeyItemInTracklet = (
   objects: ItemObject[],
   shape: EditShape,
   currentFrame: number,
@@ -119,16 +203,45 @@ export const editKeyBoxInTracklet = (
 ) =>
   objects.map((object) => {
     if (
-      shape.type === "rectangle" &&
-      object.id === shape.shapeId &&
-      object.datasetItemType === "video" &&
-      objectIdBeingEdited === object.id &&
-      object.boxes
+      object.id !== shape.shapeId ||
+      object.datasetItemType !== "video" ||
+      objectIdBeingEdited !== object.id
     ) {
+      console.log("youhou");
+      return object;
+    }
+    const currentTracklet = object.track.find(
+      (t) => t.start <= currentFrame && t.end >= currentFrame,
+    );
+    if (shape.type === "keypoint" && object.keypoints) {
+      object.keypoints = object.keypoints.map((kp) => {
+        if (kp.displayControl === currentFrame) {
+          kp.vertices = shape.vertices;
+          kp.is_key = true;
+          return kp;
+        }
+        return kp;
+      });
+      if (currentTracklet && !object.keypoints?.some((b) => b.frame_index === currentFrame)) {
+        object.keypoints?.push({
+          ...object.keypoints[0],
+          vertices: shape.vertices,
+          frame_index: currentFrame,
+          is_key: true,
+          tracklet_id: currentTracklet.id,
+        });
+      }
+      object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
+      object.displayedKeypoints = object.displayedKeypoints
+        ? {
+            ...object.displayedKeypoints,
+            vertices: shape.vertices,
+          }
+        : undefined;
+      return object;
+    }
+    if (shape.type === "rectangle" && object.boxes) {
       object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
-      const currentTracklet = object.track.find(
-        (t) => t.start <= currentFrame && t.end >= currentFrame,
-      );
       if (currentTracklet && !object.boxes?.some((b) => b.frame_index === currentFrame)) {
         object.boxes?.push({
           ...object.boxes[0],
