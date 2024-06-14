@@ -33,7 +33,7 @@
   import { panTool } from "../../lib/settings/selectionTools";
   import {
     filterTrackletItems,
-    // getNewTrackletValues,
+    getNewTrackletValues,
     mapTrackletItems,
   } from "../../lib/api/videoApi";
 
@@ -79,8 +79,8 @@
     if (isEnd) {
       width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
     }
-    // const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
-    // updateView(newFrameIndex, [newTracklet]);
+    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
+    updateView(newFrameIndex, [newTracklet]);
     currentFrameIndex.set(newFrameIndex);
     return true;
   };

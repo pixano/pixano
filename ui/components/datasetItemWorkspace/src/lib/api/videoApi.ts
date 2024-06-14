@@ -401,18 +401,19 @@ export const filterTrackletItems = (
 export const getNewTrackletValues = (
   isStart: boolean,
   newFrameIndex: number,
-  tracklet: Tracklet,
-) => {
+  tracklet: TrackletWithItems,
+): TrackletWithItems => {
   const startingBox = {
-    ...tracklet.boxes?.[0],
+    ...tracklet.items?.[0],
     frame_index: isStart ? newFrameIndex : tracklet.start,
   };
   const endingBox = {
-    ...tracklet.boxes?.[tracklet.boxes.length - 1],
+    ...tracklet.items?.[tracklet.items.length - 1],
     frame_index: isStart ? tracklet.end : newFrameIndex,
   };
   const newTracklet = {
-    boxes: [startingBox, endingBox],
+    ...tracklet,
+    items: [startingBox, endingBox],
     start: isStart ? newFrameIndex : tracklet.start,
     end: isStart ? tracklet.end : newFrameIndex,
   };
