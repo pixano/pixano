@@ -144,7 +144,6 @@ export interface ItemView {
 export interface DisplayControl {
   hidden?: boolean;
   editing?: boolean;
-  displayed?: boolean;
 }
 
 export interface ObjectThumbnail {
