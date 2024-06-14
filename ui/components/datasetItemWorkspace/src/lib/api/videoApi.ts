@@ -215,6 +215,7 @@ export const mapTrackItemsToObject = (
         const box = {
           ...object.displayedBox,
           frame_index: item.frame_index,
+          tracklet_id: item.tracklet_id,
           is_key: true,
         } as VideoItemBBox;
         const currentBox = object.boxes?.find((box) => box.frame_index === item.frame_index) || box;
@@ -292,8 +293,10 @@ export const mapTrackletItems = (object: VideoObject, tracklet: TrackletWithItem
       box.tracklet_id !== tracklet.id ||
       tracklet.items.some((item) => item.frame_index === box.frame_index),
   );
-  const keypoints = object.keypoints?.filter((kp) =>
-    tracklet.items.some((item) => item.frame_index === kp.frame_index),
+  const keypoints = object.keypoints?.filter(
+    (kp) =>
+      kp.tracklet_id !== tracklet.id ||
+      tracklet.items.some((item) => item.frame_index === kp.frame_index),
   );
   return { boxes, keypoints };
 };

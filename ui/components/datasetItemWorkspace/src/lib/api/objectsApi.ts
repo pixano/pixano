@@ -216,8 +216,8 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemObject[] => {
-  return old.map((object) => {
+export const updateExistingObject = (objects: ItemObject[], newShape: Shape): ItemObject[] => {
+  return objects.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
       object.highlighted = "all";
