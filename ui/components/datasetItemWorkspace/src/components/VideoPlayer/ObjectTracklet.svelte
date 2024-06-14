@@ -15,9 +15,15 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { Tracklet, VideoObject, VideoItemBBox } from "@pixano/core";
+  import type {
+    Tracklet,
+    VideoObject,
+    VideoItemBBox,
+    TrackletWithItems,
+    TrackletItem,
+  } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import TrackletKeyBox from "./TrackletKeyBox.svelte";
+  import TrackletKeyBox from "./TrackletKeyItem.svelte";
   import {
     colorScale,
     itemObjects,
@@ -25,16 +31,20 @@
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { filterTrackletBoxes, getNewTrackletValues } from "../../lib/api/videoApi";
+  import {
+    filterTrackletItems,
+    // getNewTrackletValues,
+    mapTrackletItems,
+  } from "../../lib/api/videoApi";
 
   export let object: VideoObject;
-  export let tracklet: Tracklet;
+  export let tracklet: TrackletWithItems;
   export let onContextMenu: (event: MouseEvent) => void;
-  export let onEditKeyBoxClick: (box: VideoItemBBox) => void;
-  export let onAddKeyBoxClick: () => void;
+  export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
+  export let onAddKeyItemClick: () => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
-  export let findNeighborBoxes: (tracklet: Tracklet, frameIndex: number) => [number, number];
+  export let findNeighborItems: (frameIndex: number) => [number, number];
   export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
@@ -55,9 +65,10 @@
   const updateTrackletWidth = (
     newFrameIndex: VideoItemBBox["frame_index"],
     draggedFrameIndex: VideoItemBBox["frame_index"],
-  ) => {
-    const [prevFrameIndex, nextFrameIndex] = findNeighborBoxes(tracklet, newFrameIndex);
-    if (newFrameIndex < prevFrameIndex || newFrameIndex >= nextFrameIndex) return;
+  ): boolean => {
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
+
+    if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex >= nextFrameIndex - 1) return false;
 
     const isStart = draggedFrameIndex === tracklet.start;
     const isEnd = draggedFrameIndex === tracklet.end;
@@ -68,17 +79,33 @@
     if (isEnd) {
       width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
     }
-    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
-    updateView(newFrameIndex, [newTracklet]);
+    // const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
+    // updateView(newFrameIndex, [newTracklet]);
     currentFrameIndex.set(newFrameIndex);
+    return true;
   };
 
   const filterTracklet = (
     newFrameIndex: VideoItemBBox["frame_index"],
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
+    tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
+    console.log({ tracklet, updateView });
     itemObjects.update((oldObjects) =>
-      filterTrackletBoxes(newFrameIndex, draggedFrameIndex, tracklet, oldObjects, object.id),
+      oldObjects.map((obj) => {
+        if (obj.id === object.id && obj.datasetItemType === "video") {
+          obj.track = obj.track.map((trackItem) => {
+            if (trackItem.id === tracklet.id) {
+              trackItem = tracklet;
+            }
+            return trackItem;
+          });
+          const { boxes, keypoints } = mapTrackletItems(obj, tracklet);
+          obj.boxes = boxes;
+          obj.keypoints = keypoints;
+        }
+        return obj;
+      }),
     );
   };
 
@@ -120,19 +147,19 @@
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#key tracklet.boxes.length}
-  {#each tracklet.boxes as box}
-    {#if box.is_key}
+{#key tracklet.items.length}
+  {#each tracklet.items as item}
+    {#if item.is_key}
       <TrackletKeyBox
-        {box}
+        {item}
         {color}
         {oneFrameInPixel}
-        {onEditKeyBoxClick}
+        {onEditKeyItemClick}
         objectId={object.id}
         {updateTrackletWidth}
         {filterTracklet}

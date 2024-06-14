@@ -99,7 +99,10 @@
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedBox } = object;
-        const newCoords = linearInterpolation(newTrack || object.track, imageIndex);
+
+        if (!displayedBox || !object.boxes) return object;
+        const newCoords = linearInterpolation(newTrack || object.track, imageIndex, object.boxes);
+
         if (newCoords && newCoords.every((value) => value)) {
           const [x, y, width, height] = newCoords;
           displayedBox = { ...displayedBox, coords: [x, y, width, height] };

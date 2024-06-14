@@ -15,7 +15,13 @@
    */
 
   import { ContextMenu } from "@pixano/core";
-  import type { Tracklet, VideoItemBBox, VideoObject } from "@pixano/core";
+  import type {
+    Tracklet,
+    TrackletItem,
+    TrackletWithItems,
+    VideoItemBBox,
+    VideoObject,
+  } from "@pixano/core";
   import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -23,7 +29,12 @@
     objectIdBeingEdited,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { addKeyBox, findNeighbors, splitTrackletInTwo } from "../../lib/api/videoApi";
+  import {
+    addKeyItem,
+    mapSplittedTrackToObject,
+    mapTrackItemsToObject,
+    splitTrackletInTwo,
+  } from "../../lib/api/videoApi";
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
@@ -34,6 +45,7 @@
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
+  let trackWithItems: TrackletWithItems[];
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
 
@@ -50,8 +62,8 @@
     selectedTool.set(panTool);
   };
 
-  const onEditKeyBoxClick = (box: VideoItemBBox) => {
-    onTimeTrackClick(box.frame_index > $lastFrameIndex ? $lastFrameIndex : box.frame_index);
+  const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
+    onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
     objectIdBeingEdited.set(object.id);
     itemObjects.update((objects) =>
       objects.map((obj) => {
@@ -65,20 +77,36 @@
     );
   };
 
-  const onAddKeyBoxClick = () => {
-    const box = { ...object.displayedBox, frame_index: rightClickFrameIndex, is_key: true };
-    itemObjects.update((objects) =>
-      addKeyBox(objects, box, object.id, rightClickFrameIndex, $lastFrameIndex),
-    );
-    onEditKeyBoxClick(box);
-  };
-
-  const onSplitTrackletClick = (trackletIndex: number) => {
+  const onAddKeyItemClick = () => {
+    trackWithItems = addKeyItem(rightClickFrameIndex, $lastFrameIndex, trackWithItems);
     itemObjects.update((objects) =>
       objects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
-          const newTrack = splitTrackletInTwo(obj, trackletIndex, rightClickFrameIndex);
-          return { ...obj, track: newTrack };
+          const { boxes, keypoints } = mapTrackItemsToObject(
+            trackWithItems,
+            object,
+            rightClickFrameIndex,
+          );
+          return { ...obj, track: trackWithItems, boxes, keypoints };
+        }
+        return obj;
+      }),
+    );
+    onEditKeyItemClick(rightClickFrameIndex);
+  };
+
+  const onSplitTrackletClick = (trackletIndex: number) => {
+    trackWithItems = splitTrackletInTwo(trackWithItems, trackletIndex, rightClickFrameIndex);
+    itemObjects.update((objects) =>
+      objects.map((obj) => {
+        if (obj.id === object.id && obj.datasetItemType === "video") {
+          const { boxes, keypoints } = mapSplittedTrackToObject(
+            trackWithItems,
+            object,
+            rightClickFrameIndex,
+          );
+          console.log({ boxes, keypoints });
+          return { ...obj, track: trackWithItems, boxes, keypoints };
         }
         return obj;
       }),
@@ -96,45 +124,70 @@
     );
   };
 
-  const findNeighborBoxes = (
-    tracklet: Tracklet,
-    frameIndex: VideoItemBBox["frame_index"],
-  ): [number, number] => findNeighbors(object.track, tracklet, frameIndex, $lastFrameIndex);
+  const findNeighborItems = (frameIndex: VideoItemBBox["frame_index"]): [number, number] => {
+    const allItems = trackWithItems.reduce(
+      (acc, tracklet) => [...acc, ...tracklet.items],
+      [] as TrackletItem[],
+    );
+    const nextItem =
+      allItems.find((item) => item.frame_index > frameIndex)?.frame_index || $lastFrameIndex;
+    const prevItem =
+      allItems
+        .slice()
+        .reverse()
+        .find((item) => item.frame_index < frameIndex)?.frame_index || 0;
+
+    return [prevItem, nextItem];
+  };
+
+  $: trackWithItems = object.track.map((tracklet) => ({
+    ...tracklet,
+    items:
+      object.boxes?.filter(
+        (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
+      ) ||
+      object.keypoints?.filter(
+        (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
+      ) ||
+      [],
+  }));
 </script>
 
-<div
-  class="flex gap-5 relative h-12 my-auto z-20"
-  id={`video-object-${object.id}`}
-  style={`width: ${$videoControls.zoomLevel[0]}%`}
-  bind:this={objectTimeTrack}
-  role="complementary"
->
-  <span
-    class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
-    style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
-  />
-  <ContextMenu.Root>
-    <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
-      <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
-    </ContextMenu.Trigger>
-    <ContextMenu.Content>
-      <ContextMenu.Item inset on:click={onAddKeyBoxClick}>Add a point</ContextMenu.Item>
-    </ContextMenu.Content>
-  </ContextMenu.Root>
-  {#each object.track as tracklet, i}
-    {#key `${tracklet.start}-${tracklet.end}`}
-      <ObjectTracklet
-        {tracklet}
-        {object}
-        {onAddKeyBoxClick}
-        {onContextMenu}
-        {onEditKeyBoxClick}
-        onSplitTrackletClick={() => onSplitTrackletClick(i)}
-        onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-        {findNeighborBoxes}
-        {updateView}
-        {moveCursorToPosition}
-      />
-    {/key}
-  {/each}
-</div>
+{#if trackWithItems}
+  <div
+    class="flex gap-5 relative h-12 my-auto z-20"
+    id={`video-object-${object.id}`}
+    style={`width: ${$videoControls.zoomLevel[0]}%`}
+    bind:this={objectTimeTrack}
+    role="complementary"
+  >
+    <span
+      class="w-[1px] bg-primary h-full absolute top-0 z-30 pointer-events-none"
+      style={`left: ${($currentFrameIndex / ($lastFrameIndex + 1)) * 100}%`}
+    />
+    <ContextMenu.Root>
+      <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
+        <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
+    {#each trackWithItems as tracklet, i}
+      {#key `${tracklet.start}-${tracklet.end}`}
+        <ObjectTracklet
+          {tracklet}
+          {object}
+          {onAddKeyItemClick}
+          {onContextMenu}
+          {onEditKeyItemClick}
+          onSplitTrackletClick={() => onSplitTrackletClick(i)}
+          onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
+          {findNeighborItems}
+          {updateView}
+          {moveCursorToPosition}
+        />
+      {/key}
+    {/each}
+  </div>
+{/if}

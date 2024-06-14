@@ -41,6 +41,10 @@
         if (selectedItem.type === "video") {
           selectedItem.objects.map((obj) => {
             if (obj.datasetItemType === "video") {
+              obj.boxes = obj.track[0]?.boxes?.map((b, i) => ({
+                ...b,
+                displayControl: { ...b.displayControl, displayed: i === 0 },
+              }));
               obj.displayedBox = obj.track[0].boxes[0];
             }
             return obj;
