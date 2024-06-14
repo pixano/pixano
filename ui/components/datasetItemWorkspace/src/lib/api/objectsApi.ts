@@ -25,9 +25,9 @@ import type {
   ItemView,
   SaveShape,
   ItemObjectBase,
-  Tracklet,
   VideoItemBBox,
   KeypointsTemplate,
+  VideoObject,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -450,18 +450,14 @@ export const highlightCurrentObject = (
   });
 };
 
-const findThumbnailBox = (track: Tracklet[]) => {
-  // const trackletWithThumbnail = track.find((tracklet) =>
-  //   tracklet.boxes.some((box) => box.is_thumbnail),
-  // );
-  // const box = trackletWithThumbnail?.boxes.find((b) => b.is_thumbnail);
-  // return box;
-  // TODO refactor videos
-  return undefined;
+const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
+  if (!boxes) return undefined;
+  const box = boxes.find((b) => b.is_thumbnail);
+  return box;
 };
 
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
-  const box = object.datasetItemType === "video" ? findThumbnailBox(object.track) : object.bbox;
+  const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
   if (!box) return null;
   const view =
     metas.type === "video"
