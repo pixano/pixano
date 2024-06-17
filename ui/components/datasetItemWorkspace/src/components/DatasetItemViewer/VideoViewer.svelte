@@ -38,7 +38,11 @@
   import { onMount } from "svelte";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { linearInterpolation, editKeyItemInTracklet } from "../../lib/api/videoApi";
+  import {
+    boxLinearInterpolation,
+    editKeyItemInTracklet,
+    keypointsLinearInterpolation,
+  } from "../../lib/api/videoApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectedItem: VideoDatasetItem;
@@ -104,7 +108,11 @@
         let { displayedBox, displayedKeypoints } = object;
 
         if (displayedBox && object.boxes) {
-          const newCoords = linearInterpolation(newTrack || object.track, imageIndex, object.boxes);
+          const newCoords = boxLinearInterpolation(
+            newTrack || object.track,
+            imageIndex,
+            object.boxes,
+          );
 
           if (newCoords && newCoords.every((value) => value)) {
             const [x, y, width, height] = newCoords;
@@ -115,16 +123,8 @@
           return { ...object, displayedBox };
         }
         if (displayedKeypoints && object.keypoints) {
-          const currentTracklet = object.track.find(
-            (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
-          );
-          const shouldBeHidden = !currentTracklet;
-          displayedKeypoints.displayControl = {
-            ...displayedKeypoints.displayControl,
-            hidden: shouldBeHidden,
-          };
-          displayedKeypoints.hidden = shouldBeHidden;
-          return { ...object };
+          const newObject = keypointsLinearInterpolation(object, imageIndex);
+          return { ...newObject };
         }
         return object;
       }),

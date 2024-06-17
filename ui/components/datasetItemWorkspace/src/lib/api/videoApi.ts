@@ -32,7 +32,7 @@ export const getImageIndexFromMouseMove = (
   return index < 0 ? 0 : index;
 };
 
-export const linearInterpolation = (
+export const boxLinearInterpolation = (
   track: Tracklet[],
   imageIndex: number,
   boxes: VideoItemBBox[],
@@ -59,6 +59,32 @@ export const linearInterpolation = (
   return [x, y, width, height];
 };
 
+export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: number) => {
+  const { displayedKeypoints } = object;
+  if (!object.keypoints || !displayedKeypoints) return object;
+  const currentTracklet = object.track.find(
+    (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
+  );
+  let endIndex = object.keypoints.findIndex((kp) => kp.frame_index > imageIndex);
+  endIndex = endIndex < 0 ? object.keypoints.length - 1 : endIndex;
+  const start = object.keypoints[endIndex - 1] || object.keypoints[0];
+  const end = object.keypoints[endIndex];
+  const vertices = start.vertices.map((vertex, i) => {
+    const xInterpolation = (end.vertices[i].x - vertex.x) / (end.frame_index - start?.frame_index);
+    const yInterpolation = (end.vertices[i].y - vertex.y) / (end.frame_index - start?.frame_index);
+    const x = vertex.x + xInterpolation * (imageIndex - start.frame_index);
+    const y = vertex.y + yInterpolation * (imageIndex - start.frame_index);
+    return { ...vertex, x, y };
+  });
+  const shouldBeHidden = !currentTracklet;
+  displayedKeypoints.displayControl = {
+    ...displayedKeypoints.displayControl,
+    hidden: shouldBeHidden,
+  };
+  displayedKeypoints.vertices = vertices;
+  displayedKeypoints.hidden = shouldBeHidden;
+  return { ...object, displayedKeypoints };
+};
 export const deleteKeyBoxFromTracklet = (
   objects: ItemObject[],
   trackletItem: TrackletItem,
@@ -111,90 +137,6 @@ const editBoxesInTracklet = (
     return box;
   });
 
-// export const editKeyBoxInTracklet = (
-//   objects: ItemObject[],
-//   shape: EditShape,
-//   currentFrame: number,
-//   objectIdBeingEdited: string | null,
-// ) =>
-//   objects.map((object) => {
-//     if (
-//       shape.type === "rectangle" &&
-//       object.id === shape.shapeId &&
-//       object.datasetItemType === "video" &&
-//       objectIdBeingEdited === object.id &&
-//       object.boxes
-//     ) {
-//       object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
-//       const currentTracklet = object.track.find(
-//         (t) => t.start <= currentFrame && t.end >= currentFrame,
-//       );
-//       if (currentTracklet && !object.boxes?.some((b) => b.frame_index === currentFrame)) {
-//         object.boxes?.push({
-//           ...object.boxes[0],
-//           coords: shape.coords,
-//           frame_index: currentFrame,
-//           is_key: true,
-//           tracklet_id: currentTracklet.id,
-//         });
-//       }
-//       object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
-//       object.displayedBox = object.displayedBox
-//         ? {
-//             ...object.displayedBox,
-//             coords: shape.coords,
-//           }
-//         : undefined;
-//       return object;
-//     }
-//     return object;
-//   });
-
-// export const editKeypointsInTracklet = (
-//   objects: ItemObject[],
-//   shape: EditShape,
-//   currentFrame: number,
-//   objectIdBeingEdited: string | null,
-// ) =>
-//   objects.map((object) => {
-//     if (
-//       shape.type === "keypoint" &&
-//       object.id === shape.shapeId &&
-//       object.datasetItemType === "video" &&
-//       objectIdBeingEdited === object.id &&
-//       object.keypoints
-//     ) {
-//       object.keypoints = object.keypoints.map((kp) => {
-//         if (kp.displayControl === currentFrame) {
-//           kp.vertices = shape.vertices;
-//           kp.is_key = true;
-//           return kp;
-//         }
-//         return kp;
-//       });
-//       const currentTracklet = object.track.find(
-//         (t) => t.start <= currentFrame && t.end >= currentFrame,
-//       );
-//       if (currentTracklet && !object.keypoints?.some((b) => b.frame_index === currentFrame)) {
-//         object.keypoints?.push({
-//           ...object.keypoints[0],
-//           vertices: shape.vertices,
-//           frame_index: currentFrame,
-//           is_key: true,
-//           tracklet_id: currentTracklet.id,
-//         });
-//       }
-//       object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
-//       object.displayedKeypoints = object.displayedKeypoints
-//         ? {
-//             ...object.displayedKeypoints,
-//             vertices: shape.vertices,
-//           }
-//         : undefined;
-//       return object;
-//     }
-//     return object;
-//   });
 export const editKeyItemInTracklet = (
   objects: ItemObject[],
   shape: EditShape,
@@ -207,7 +149,6 @@ export const editKeyItemInTracklet = (
       object.datasetItemType !== "video" ||
       objectIdBeingEdited !== object.id
     ) {
-      console.log("youhou");
       return object;
     }
     const currentTracklet = object.track.find(
@@ -215,7 +156,7 @@ export const editKeyItemInTracklet = (
     );
     if (shape.type === "keypoint" && object.keypoints) {
       object.keypoints = object.keypoints.map((kp) => {
-        if (kp.displayControl === currentFrame) {
+        if (kp.frame_index === currentFrame) {
           kp.vertices = shape.vertices;
           kp.is_key = true;
           return kp;
@@ -238,6 +179,7 @@ export const editKeyItemInTracklet = (
             vertices: shape.vertices,
           }
         : undefined;
+      console.log({ object });
       return object;
     }
     if (shape.type === "rectangle" && object.boxes) {
