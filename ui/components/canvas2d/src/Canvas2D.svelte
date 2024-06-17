@@ -20,7 +20,6 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
-  import { writable, type Writable } from "svelte/store";
 
   import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src";
