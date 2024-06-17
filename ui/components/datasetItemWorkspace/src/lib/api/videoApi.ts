@@ -65,6 +65,7 @@ export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: nu
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
+  if (!currentTracklet) return object;
   let endIndex = object.keypoints.findIndex((kp) => kp.frame_index > imageIndex);
   endIndex = endIndex < 0 ? object.keypoints.length - 1 : endIndex;
   const start = object.keypoints[endIndex - 1] || object.keypoints[0];
@@ -477,3 +478,32 @@ export const getNewTrackletValues = (
   };
   return newTracklet;
 };
+
+export const deleteTracklet = (
+  objects: ItemObject[],
+  objectId: VideoObject["id"],
+  trackletIndex: number,
+  trackWithItems: TrackletWithItems[],
+) =>
+  objects
+    .map((obj) => {
+      if (obj.id === objectId && obj.datasetItemType === "video") {
+        obj.track.splice(trackletIndex, 1);
+        obj.boxes = obj.boxes?.filter(
+          (box) =>
+            !(
+              box.frame_index >= trackWithItems[trackletIndex].start &&
+              box.frame_index <= trackWithItems[trackletIndex].end
+            ),
+        );
+        obj.keypoints = obj.keypoints?.filter(
+          (kp) =>
+            !(
+              kp.frame_index >= trackWithItems[trackletIndex].start &&
+              kp.frame_index <= trackWithItems[trackletIndex].end
+            ),
+        );
+      }
+      return obj;
+    })
+    .filter((obj) => obj.datasetItemType === "video" && obj.track.length > 0);

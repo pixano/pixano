@@ -31,6 +31,7 @@
   } from "../../lib/stores/videoViewerStores";
   import {
     addKeyItem,
+    deleteTracklet,
     mapSplittedTrackToObject,
     mapTrackItemsToObject,
     splitTrackletInTwo,
@@ -105,7 +106,6 @@
             object,
             rightClickFrameIndex,
           );
-          console.log({ boxes, keypoints });
           return { ...obj, track: trackWithItems, boxes, keypoints };
         }
         return obj;
@@ -115,26 +115,7 @@
 
   const onDeleteTrackletClick = (trackletIndex: number) => {
     itemObjects.update((objects) =>
-      objects.map((obj) => {
-        if (obj.id === object.id && obj.datasetItemType === "video") {
-          obj.track.splice(trackletIndex, 1);
-          obj.boxes = obj.boxes?.filter(
-            (box) =>
-              !(
-                box.frame_index >= trackWithItems[trackletIndex].start &&
-                box.frame_index <= trackWithItems[trackletIndex].end
-              ),
-          );
-          obj.keypoints = obj.keypoints?.filter(
-            (kp) =>
-              !(
-                kp.frame_index >= trackWithItems[trackletIndex].start &&
-                kp.frame_index <= trackWithItems[trackletIndex].end
-              ),
-          );
-        }
-        return obj;
-      }),
+      deleteTracklet(objects, object.id, trackletIndex, trackWithItems),
     );
   };
 
