@@ -72,11 +72,7 @@ type videoDatasetItemPayload = {
       source_id: string;
       review_state: undefined;
       features: {},
-      track: [
-        {
-          start: number;
-          end: number;
-          keyBoxes: [
+      boxes: [
             {
               coords: [number, number, number, number];
               format: string;
@@ -84,9 +80,35 @@ type videoDatasetItemPayload = {
               confidence: number;
               frame_index: number;
               is_key: boolean;
-              is_thumbnail: boolean
+              is_thumbnail: boolean;
+              tracklet_id: number
             },
           ],
+      keypoints: [
+            {
+              vertices: [
+                {
+                  x: number;
+                  y: number;
+                  features: {
+                    state: "string"; // can be "visible", "hidden" or "invisible"
+                    color: "string";
+                    name: "string";
+                  },
+                }
+              ],
+              template_id: number;
+              frame_index: number;
+              is_key: boolean;
+              is_thumbnail: boolean;
+              tracklet_id: number
+            },
+          ],
+      track: [
+        {
+          start: number;
+          end: number;
+          id: number;
         },
       ],
     },
