@@ -38,14 +38,24 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
+        // video: add displayControl, displayedBox and displayedKeypoints props
         if (selectedItem.type === "video") {
           selectedItem.objects.map((obj) => {
             if (obj.datasetItemType === "video") {
-              obj.boxes = obj.track[0]?.boxes?.map((b, i) => ({
+              obj.boxes = obj.boxes?.map((b, i) => ({
                 ...b,
                 displayControl: { ...b.displayControl, displayed: i === 0 },
               }));
-              obj.displayedBox = obj.track[0].boxes[0];
+              obj.displayedBox =
+                obj.boxes !== undefined && obj.boxes.length > 0 ? obj.boxes[0] : undefined;
+              obj.keypoints = obj.keypoints?.map((k, i) => ({
+                ...k,
+                displayControl: { ...k.displayControl, displayed: i === 0 },
+              }));
+              obj.displayedKeypoints =
+                obj.keypoints !== undefined && obj.keypoints.length > 0
+                  ? obj.keypoints[0]
+                  : undefined;
             }
             return obj;
           });
