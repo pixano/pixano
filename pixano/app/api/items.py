@@ -521,8 +521,16 @@ async def get_dataset_item(  # noqa: D417
                     "track": [
                         {
                             "id": tracklet.id,
-                            "start": tracklet.start_timestep,
-                            "end": tracklet.end_timestep,
+                            "start": (
+                                tracklet.start_timestep
+                                if hasattr(tracklet, "start_timestep")
+                                else tracklet.start_timestamp
+                            ),
+                            "end": (
+                                tracklet.end_timestep
+                                if hasattr(tracklet, "end_timestep")
+                                else tracklet.end_timestamp
+                            ),
                         }
                         for tracklet in tracklets
                     ],
