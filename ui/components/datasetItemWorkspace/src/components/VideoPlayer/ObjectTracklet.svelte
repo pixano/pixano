@@ -23,7 +23,7 @@
     TrackletItem,
   } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import TrackletKeyBox from "./TrackletKeyItem.svelte";
+  import TrackletKeyItem from "./TrackletKeyItem.svelte";
   import {
     colorScale,
     itemObjects,
@@ -154,7 +154,7 @@
 {#key tracklet.items.length}
   {#each tracklet.items as item}
     {#if item.is_key}
-      <TrackletKeyBox
+      <TrackletKeyItem
         {item}
         {color}
         {oneFrameInPixel}
