@@ -20,6 +20,7 @@
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { writable, type Writable } from "svelte/store";
 
   import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src";
@@ -59,6 +60,7 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let imageSmoothing: Writable<boolean> = writable<boolean>(false);
 
   let isReady = false;
 
@@ -1007,7 +1009,7 @@
   >
     {#each Object.entries(imagesPerView) as [viewId, images]}
       <Layer
-        config={{ id: viewId }}
+        config={{ id: viewId, imageSmoothingEnabled: $imageSmoothing }}
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, viewId)}
       >
         {#each images as image}

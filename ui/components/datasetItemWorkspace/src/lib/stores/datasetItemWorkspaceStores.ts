@@ -49,6 +49,7 @@ export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
+export const imageSmoothing = writable<boolean>(true);
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {
