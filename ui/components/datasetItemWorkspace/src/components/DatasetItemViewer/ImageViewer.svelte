@@ -55,7 +55,7 @@
     {imagesPerView}
     selectedItemId={selectedItem.id}
     {colorRange}
-    {imageSmoothing}
+    imageSmoothing={$imageSmoothing}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}
