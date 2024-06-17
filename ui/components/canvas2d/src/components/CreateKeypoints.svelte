@@ -22,6 +22,7 @@
   import type { CreateKeypointShape, KeypointsTemplate, SaveKeyBoxShape } from "@pixano/core";
 
   import Keypoints from "./keypoints/Keypoint.svelte";
+  import { findRectBoundaries } from "../api/keypointsApi";
 
   export let zoomFactor: number;
   export let newShape: CreateKeypointShape | SaveKeyBoxShape;
@@ -53,6 +54,16 @@
     id: keypointsId,
     editing: true,
   } as KeypointsTemplate;
+
+  const findCreationRectangleDimensions = (shape: CreateKeypointShape) => {
+    const { x, y, width, height } = findRectBoundaries(keypointStructure.vertices);
+    return {
+      x: (x * shape.width - 30 + shape.x) / zoomFactor,
+      y: (y * shape.height - 30 + shape.y) / zoomFactor,
+      width: (width * shape.width + 30) / zoomFactor,
+      height: (height * shape.height + 30) / zoomFactor,
+    };
+  };
 </script>
 
 {#if newShape.viewId === viewId}
@@ -61,12 +72,14 @@
       {#if newShape.status === "creating"}
         <Rect
           config={{
-            x: newShape.x,
-            y: newShape.y,
-            width: newShape.width,
-            height: newShape.height,
+            x: findCreationRectangleDimensions(newShape).x,
+            y: findCreationRectangleDimensions(newShape).y,
+            width: findCreationRectangleDimensions(newShape).width,
+            height: findCreationRectangleDimensions(newShape).height,
             fill: "rgba(135, 47, 100, 0.4)",
+            stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
+            opacity: keypointStructure.editing ? 0.3 : 0,
           }}
         />
       {/if}

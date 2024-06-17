@@ -302,26 +302,7 @@ async def get_dataset_item(  # noqa: D417
     view_type = "image"
     for view_name in groups[_SchemaGroup.VIEW]:
         view_item = getattr(item, view_name)
-        if isinstance(view_item, Image):
-            views[view_name] = {
-                "id": view_item.id,
-                "type": "image",
-                "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
-                "thumbnail": None,  # view_item.open(dataset.path / "media"),
-                "features": {
-                    "width": {
-                        "name": "width",
-                        "dtype": "int",
-                        "value": view_item.width,
-                    },
-                    "height": {
-                        "name": "height",
-                        "dtype": "int",
-                        "value": view_item.height,
-                    },
-                },
-            }
-        elif (
+        if (
             isinstance(view_item, list)
             and len(view_item) > 0
             and isinstance(view_item[0], SequenceFrame)
@@ -353,6 +334,25 @@ async def get_dataset_item(  # noqa: D417
                 key=lambda x: x["frame_index"],
             )
             view_type = "video"
+        elif isinstance(view_item, Image):
+            views[view_name] = {
+                "id": view_item.id,
+                "type": "image",
+                "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
+                "thumbnail": None,  # view_item.open(dataset.path / "media"),
+                "features": {
+                    "width": {
+                        "name": "width",
+                        "dtype": "int",
+                        "value": view_item.width,
+                    },
+                    "height": {
+                        "name": "height",
+                        "dtype": "int",
+                        "value": view_item.height,
+                    },
+                },
+            }
 
     # objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
@@ -486,7 +486,11 @@ async def get_dataset_item(  # noqa: D417
             track_feats = tracklets[0]
 
             # view_id is taken from first object in the first tracklet
-            view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+            try:
+                view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+            except StopIteration:
+                print(f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped")
+                continue
 
             objects.append(
                 {
