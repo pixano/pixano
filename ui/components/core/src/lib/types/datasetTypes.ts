@@ -177,7 +177,6 @@ export type TrackletItem = {
 export type VideoItemBBox = ItemBBox & TrackletItem;
 export type VideoKeypoints = Keypoints & TrackletItem;
 export interface Tracklet {
-  boxes?: VideoItemBBox[]; // shall be removed after refactor
   start: number;
   end: number;
   id: string;
