@@ -65,7 +65,7 @@ export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: nu
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
-  if (!currentTracklet) return object;
+
   let endIndex = object.keypoints.findIndex((kp) => kp.frame_index > imageIndex);
   endIndex = endIndex < 0 ? object.keypoints.length - 1 : endIndex;
   const start = object.keypoints[endIndex - 1] || object.keypoints[0];
