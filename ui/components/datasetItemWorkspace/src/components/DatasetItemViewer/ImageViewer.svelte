@@ -23,7 +23,7 @@
     itemBboxes,
     itemMasks,
     selectedTool,
-    imageSmoothing
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let selectedItem: ImageDatasetItem;
