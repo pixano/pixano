@@ -59,7 +59,7 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
-  export let imageSmoothing: boolean = false;
+  export let imageSmoothing: boolean = true;
 
   let isReady = false;
 
