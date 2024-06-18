@@ -137,16 +137,36 @@
   };
 
   $: {
+    // trackWithItems = object.track.map((tracklet) => ({
+    //   ...tracklet,
+    //   items:
+    //     object.boxes?.filter(
+    //       (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
+    //     ) ||
+    //     object.keypoints?.filter(
+    //       (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
+    //     ) ||
+    //     [],
+    // }));
+    // NOTE: the commented code up could not affect items with keypoints if no boxes fill condition
+    //       because then filter return [] which is not falsy for || operator
+    // here is another version (thanks to chatGPT) 
+    // BUT I fear this version could mix boxes and keypoints ??? so I keep this note here for now
+    //  ...it could happen if we have an object that has both boxes and keypoints (maybe it's the wanted behaviour anyway?)
     trackWithItems = object.track.map((tracklet) => ({
       ...tracklet,
-      items:
-        object.boxes?.filter(
-          (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
-        ) ||
-        object.keypoints?.filter(
-          (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
-        ) ||
-        [],
+      items: [
+        ...(object.boxes
+          ? object.boxes.filter(
+              (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
+            )
+          : []),
+        ...(object.keypoints
+          ? object.keypoints.filter(
+              (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
+            )
+          : []),
+      ],
     }));
   }
 </script>
