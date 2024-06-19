@@ -28,6 +28,7 @@
     colorScale,
     itemKeypoints,
     selectedKeypointsTemplate,
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
