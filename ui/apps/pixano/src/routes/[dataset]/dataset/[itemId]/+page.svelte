@@ -38,10 +38,12 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
+        // video: add displayControl, displayedBox and displayedKeypoints props
         if (selectedItem.type === "video") {
           selectedItem.objects.map((obj) => {
             if (obj.datasetItemType === "video") {
-              obj.displayedBox = obj.track[0].boxes[0];
+              obj.displayedBox = obj.boxes?.[0];
+              obj.displayedKeypoints = structuredClone(obj.keypoints?.[0]);  // clone required as keypoints are not shallow
             }
             return obj;
           });

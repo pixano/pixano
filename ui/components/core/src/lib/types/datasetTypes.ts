@@ -166,22 +166,33 @@ export type ItemObjectBase = {
   review_state?: "accepted" | "rejected";
 };
 
-export type VideoItemBBox = ItemBBox & {
+export type TrackletItem = {
   frame_index: number;
+  tracklet_id: string;
   is_key?: boolean;
   is_thumbnail?: boolean;
   hidden?: boolean;
 };
+
+export type VideoItemBBox = ItemBBox & TrackletItem;
+export type VideoKeypoints = Keypoints & TrackletItem;
 export interface Tracklet {
-  boxes: VideoItemBBox[];
   start: number;
   end: number;
+  id: string;
 }
+
+export type TrackletWithItems = Tracklet & {
+  items: TrackletItem[];
+};
 
 export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
-  displayedBox: VideoItemBBox;
+  boxes?: VideoItemBBox[];
+  keypoints?: VideoKeypoints[];
+  displayedBox?: VideoItemBBox;
+  displayedKeypoints?: VideoKeypoints;
 };
 
 export type ImageObject = ItemObjectBase & {

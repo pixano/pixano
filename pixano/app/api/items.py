@@ -420,36 +420,67 @@ async def get_dataset_item(  # noqa: D417
                 ]
             )
     else:  # video
-        # organize tracklets by tracks
+        boxes = defaultdict(list)
+        keypoints = defaultdict(list)
+        tracklet_objs = {}
         tracks = defaultdict(list)
+
         for tracklet_group in groups[_SchemaGroup.TRACKLET]:
             for tracklet in getattr(item, tracklet_group):
-                tracks[tracklet.track_id].append(tracklet)
 
-        for track_id, tracklets in tracks.items():
-            #TODO - WARNING: not a very good idea to disallow a specific ID
-            # Note: there is no really good reason for this, but some users tend to give such ID for broken data
-            # it would be better to allow '-1' ID and manage specific errors if exists
-            if track_id == "-1":
-                print("Data Error: bad track_id ('-1'). Track skipped")
-                continue
-
-            # Sort tracklets by timestep or timestamp
-            if hasattr(tracklets[0], "start_timestep"):
-                tracklets.sort(key=lambda x: x.start_timestep)
-            else:
-                tracklets.sort(key=lambda x: x.start_timestamp)
-            # TODO check if tracklets in a track overlaps: --> create "error_overlap#N_{track_id}" if so
-
-            # gather objects by tracklets (for boxes) #TODO ?? from different OBJECT groups ??
-            tracklet_objs = {}
-            for tracklet in tracklets:
+                # gather objects by tracklets
                 tracklet_objs[tracklet.id] = [
                     obj
                     for obj_group in groups[_SchemaGroup.OBJECT]
                     for obj in getattr(item, obj_group)
                     if obj.tracklet_id == tracklet.id
                 ]
+                boxes[tracklet.track_id].extend(
+                    [
+                        {
+                            **vars(obj.bbox),
+                            "frame_index": obj.frame_idx,
+                            "is_key": obj.is_key,
+                            "is_thumbnail": i == 0,
+                            "tracklet_id": tracklet.id,
+                        }
+                        for i, obj in enumerate(
+                            [
+                                x
+                                for x in tracklet_objs[tracklet.id]
+                                if hasattr(x, "bbox")
+                                and x.bbox != NoneBBox
+                                and x.bbox.coords != []
+                            ]
+                        )
+                    ]
+                )
+                keypoints[tracklet.track_id].extend(
+                    [
+                        {
+                            "template_id": obj.keypoints.template_id,
+                            "vertices": map_back2front_vertices(obj.keypoints),
+                            "frame_index": obj.frame_idx,
+                            "is_key": obj.is_key,
+                            "is_thumbnail": i == 0,
+                            "tracklet_id": tracklet.id,
+                        }
+                        for i, obj in enumerate(
+                            [
+                                x
+                                for x in tracklet_objs[tracklet.id]
+                                if hasattr(x, "keypoints")
+                                and x.keypoints != NoneKeypoints
+                                and x.keypoints.coords != []
+                            ]
+                        )
+                    ]
+                )
+
+                # organize tracklets by tracks
+                tracks[tracklet.track_id].append(tracklet)
+
+        for track_id, tracklets in tracks.items():
 
             # features are taken from first tracklet of each track
             track_feats = tracklets[0]
@@ -500,18 +531,11 @@ async def get_dataset_item(  # noqa: D417
                                 if hasattr(tracklet, "end_timestep")
                                 else tracklet.end_timestamp
                             ),
-                            "boxes": [
-                                {
-                                    **vars(obj.bbox),
-                                    "frame_index": obj.frame_idx,
-                                    "is_key": obj.is_key,
-                                    "is_thumbnail": i == 0,
-                                }
-                                for i, obj in enumerate(tracklet_objs[tracklet.id])
-                            ],
                         }
                         for tracklet in tracklets
                     ],
+                    "boxes": boxes[track_id],
+                    "keypoints": keypoints[track_id],
                 }
             )
 
@@ -636,11 +660,6 @@ async def post_dataset_item(  # noqa: D417
     obj_table = dataset.open_table("objects")
     obj_table.delete(f"item_id in ('{item.id}')")
 
-    # TODO : how to select the correct TRACKLET table name ? store it in front ?
-    if "tracklets" in dataset.dataset_schema.schemas.keys():
-        tracklet_table = dataset.open_table("tracklets")
-        tracklet_table.delete(f"item_id in ('{item.id}')")
-
     # items objects (and tracklets for video)
     if item.objects:
         if item.type == "image":
@@ -649,8 +668,12 @@ async def post_dataset_item(  # noqa: D417
             obj_add = []
             tracklet_add = []
 
-            for obj in item.objects:
-                for tracklet in obj["track"]:
+            # TODO : how to select the correct TRACKLET table name ? store it in front ?
+            tracklet_table = dataset.open_table("tracklets")
+            tracklet_table.delete(f"item_id in ('{item.id}')")
+
+            for track in item.objects:
+                for tracklet in track["track"]:
                     tracklet_id = (
                         tracklet["id"] if "id" in tracklet else shortuuid.uuid()
                     )
@@ -658,7 +681,7 @@ async def post_dataset_item(  # noqa: D417
                         {
                             "id": tracklet_id,
                             "item_id": item.id,
-                            "track_id": obj["id"],
+                            "track_id": track["id"],
                             "start_timestep": tracklet[
                                 "start"
                             ],  # TODO timestamp/timestep, front keep only one... ?
@@ -667,13 +690,14 @@ async def post_dataset_item(  # noqa: D417
                             "end_timestamp": tracklet["end"],
                         }
                     )
-                    for box in tracklet["boxes"]:
+                if "boxes" in track:
+                    for box in track["boxes"]:
                         obj_add.append(
                             {
                                 "id": box["id"] if "id" in box else shortuuid.uuid(),
                                 "item_id": item.id,
-                                "view_id": obj["view_id"],
-                                "tracklet_id": tracklet_id,
+                                "view_id": track["view_id"],
+                                "tracklet_id": box["tracklet_id"],
                                 "frame_idx": box["frame_index"],
                                 "is_key": box["is_key"],
                                 "is_thumbnail": (
@@ -687,6 +711,28 @@ async def post_dataset_item(  # noqa: D417
                                     "is_normalized": box["is_normalized"],
                                     "confidence": box["confidence"],
                                 },
+                            }
+                        )
+                if "keypoints" in track:
+                    for keypoints in track["keypoints"]:
+                        obj_add.append(
+                            {
+                                "id": (
+                                    keypoints["id"]
+                                    if "id" in keypoints
+                                    else shortuuid.uuid()
+                                ),
+                                "item_id": item.id,
+                                "view_id": track["view_id"],
+                                "tracklet_id": keypoints["tracklet_id"],
+                                "frame_idx": keypoints["frame_index"],
+                                "is_key": keypoints["is_key"],
+                                "is_thumbnail": (
+                                    keypoints["is_thumbnail"]
+                                    if "is_thumbnail" in keypoints
+                                    else False
+                                ),
+                                "keypoints": keypoints,
                             }
                         )
 

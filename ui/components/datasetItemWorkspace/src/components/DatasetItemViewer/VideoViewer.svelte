@@ -26,7 +26,8 @@
     newShape,
     selectedTool,
     colorScale,
-    imageSmoothing,
+    itemKeypoints,
+    selectedKeypointsTemplate,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -37,7 +38,12 @@
   import { onMount } from "svelte";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject } from "../../lib/api/objectsApi";
-  import { editKeyBoxInTracklet, linearInterpolation } from "../../lib/api/videoApi";
+  import {
+    boxLinearInterpolation,
+    editKeyItemInTracklet,
+    keypointsLinearInterpolation,
+  } from "../../lib/api/videoApi";
+  import { templates } from "../../lib/settings/keyPointsTemplates";
 
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
@@ -98,15 +104,28 @@
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        let { displayedBox } = object;
-        const newCoords = linearInterpolation(newTrack || object.track, imageIndex);
-        if (newCoords && newCoords.every((value) => value)) {
-          const [x, y, width, height] = newCoords;
-          displayedBox = { ...displayedBox, coords: [x, y, width, height] };
+        let { displayedBox, displayedKeypoints } = object;
+
+        if (displayedBox && object.boxes) {
+          const newCoords = boxLinearInterpolation(
+            newTrack || object.track,
+            imageIndex,
+            object.boxes,
+          );
+
+          if (newCoords && newCoords.every((value) => value)) {
+            const [x, y, width, height] = newCoords;
+            displayedBox = { ...displayedBox, coords: [x, y, width, height] };
+          }
+          displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+          displayedBox.hidden = !newCoords;
+          return { ...object, displayedBox };
         }
-        displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-        displayedBox.hidden = !newCoords;
-        return { ...object, displayedBox };
+        if (displayedKeypoints && object.keypoints) {
+          const newObject = keypointsLinearInterpolation(object, imageIndex);
+          return { ...newObject };
+        }
+        return object;
       }),
     );
 
@@ -115,9 +134,9 @@
 
   const updateOrCreateBox = (shape: EditShape) => {
     const currentFrame = $currentFrameIndex;
-    if (shape.type === "rectangle") {
+    if (shape.type === "rectangle" || shape.type === "keypoint") {
       itemObjects.update((objects) =>
-        editKeyBoxInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+        editKeyItemInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
       );
       newShape.set({ status: "none" });
     } else {
@@ -167,6 +186,8 @@
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
+        keypoints={$itemKeypoints}
+        selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
         canvasSize={inspectorMaxHeight}
         {embeddings}
         isVideo={true}

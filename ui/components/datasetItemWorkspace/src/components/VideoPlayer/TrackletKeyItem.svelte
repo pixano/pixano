@@ -15,7 +15,7 @@
    */
 
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, VideoItemBBox } from "@pixano/core";
+  import type { ItemObject, TrackletItem, VideoItemBBox } from "@pixano/core";
   import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
@@ -23,38 +23,38 @@
 
   export let objectId: ItemObject["id"];
 
-  export let box: VideoItemBBox;
+  export let item: TrackletItem;
   export let color: string;
   export let oneFrameInPixel: number;
-  export let onEditKeyBoxClick: (keyBox: VideoItemBBox) => void;
+  export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let updateTrackletWidth: (
-    newIndex: VideoItemBBox["frame_index"],
-    draggedIndex: VideoItemBBox["frame_index"],
-  ) => void;
+    newIndex: TrackletItem["frame_index"],
+    draggedIndex: TrackletItem["frame_index"],
+  ) => boolean;
   export let filterTracklet: (
-    newIndex: VideoItemBBox["frame_index"],
-    draggedIndex: VideoItemBBox["frame_index"],
+    newIndex: TrackletItem["frame_index"],
+    draggedIndex: TrackletItem["frame_index"],
   ) => void;
 
-  let isBoxBeingEdited = false;
+  let isItemBeingEdited = false;
 
   $: {
     const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
-    isBoxBeingEdited =
-      box.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
+    isItemBeingEdited =
+      item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
-  const onDeleteKeyBoxClick = (box: VideoItemBBox) => {
-    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, box, objectId));
+  const onDeleteItemClick = (item: TrackletItem) => {
+    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
   };
 
-  const getKeyBoxLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
-    const boxFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
-    const leftPosition = (boxFrameIndex / ($lastFrameIndex + 1)) * 100;
+  const getKeyItemLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+    const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
+    const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
     return leftPosition;
   };
 
-  let left = getKeyBoxLeftPosition(box.frame_index);
+  let left = getKeyItemLeftPosition(item.frame_index);
 
   const dragMe = (node: HTMLButtonElement) => {
     let moving = false;
@@ -66,7 +66,7 @@
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = box.frame_index;
+      startFrameIndex = item.frame_index;
       startOneFrameInPixel = oneFrameInPixel;
       selectedTool.set(panTool);
     });
@@ -77,14 +77,16 @@
         const raise = distance / startOneFrameInPixel;
         newFrameIndex = Math.round(startFrameIndex + raise);
         if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
-        left = getKeyBoxLeftPosition(newFrameIndex);
-        updateTrackletWidth(newFrameIndex, box.frame_index);
+        const canContinue = updateTrackletWidth(newFrameIndex, item.frame_index);
+        if (canContinue) {
+          left = getKeyItemLeftPosition(newFrameIndex);
+        }
       }
     });
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, box.frame_index);
+      if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, item.frame_index);
       newFrameIndex = undefined;
     });
   };
@@ -95,18 +97,18 @@
     class={cn(
       "w-4 h-4 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
       "hover:scale-150",
-      { "bg-primary !border-primary": isBoxBeingEdited },
+      { "bg-primary !border-primary": isItemBeingEdited },
     )}
     style={`left: ${left}%; border-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeleteKeyBoxClick(box)}
-      >Remove key box</ContextMenu.Item
-    >
-    {#if !isBoxBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyBoxClick(box)}>Edit box</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={() => onDeleteItemClick(item)}>Remove item</ContextMenu.Item>
+    {#if !isItemBeingEdited}
+      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(item.frame_index)}
+        >Edit item</ContextMenu.Item
+      >
     {/if}
   </ContextMenu.Content>
 </ContextMenu.Root>

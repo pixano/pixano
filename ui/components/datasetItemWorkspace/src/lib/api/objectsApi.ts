@@ -25,9 +25,9 @@ import type {
   ItemView,
   SaveShape,
   ItemObjectBase,
-  Tracklet,
   VideoItemBBox,
   KeypointsTemplate,
+  VideoObject,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -52,7 +52,10 @@ const defineTooltip = (object: ItemObject): string | null => {
 
   // Check object type to extract the bbox object
   if (object.datasetItemType === "image" && object.bbox) bbox = object.bbox;
-  else if (object.datasetItemType === "video" && object.displayedBox) bbox = object.displayedBox;
+  else if (object.datasetItemType === "video") {
+    const displayedBox = object.displayedBox;
+    bbox = displayedBox;
+  }
 
   if (!bbox) return null;
 
@@ -69,8 +72,7 @@ const defineTooltip = (object: ItemObject): string | null => {
 
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox | undefined => {
   const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
-
-  if (!box || (obj.datasetItemType === "video" && obj.displayedBox.hidden)) return;
+  if (!box || (obj.datasetItemType === "video" && box.displayControl?.hidden)) return;
   if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
   const view = views?.[obj.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
@@ -128,14 +130,17 @@ export const mapObjectToKeypoints = (
   object: ItemObject,
   views: DatasetItem["views"],
 ): KeypointsTemplate | undefined => {
-  if (object.datasetItemType === "video" || !object.keypoints) return undefined;
-  const template = templates.find((t) => t.id === object.keypoints?.template_id);
+  const keypoints =
+    object.datasetItemType === "video" ? object.displayedKeypoints : object.keypoints;
+  if (!keypoints || (object.datasetItemType === "video" && keypoints.displayControl?.hidden))
+    return undefined;
+  const template = templates.find((t) => t.id === keypoints?.template_id);
   if (!template) return undefined;
   const view = views?.[object.view_id];
   const image: ItemView = Array.isArray(view) ? view[0] : view;
   const imageHeight = (image.features.height.value as number) || 1;
   const imageWidth = (image.features.width.value as number) || 1;
-  const vertices = object.keypoints.vertices.map((vertex, i) => ({
+  const vertices = keypoints.vertices.map((vertex, i) => ({
     ...vertex,
     x: vertex.x * imageWidth,
     y: vertex.y * imageHeight,
@@ -149,7 +154,7 @@ export const mapObjectToKeypoints = (
     vertices,
     edges: template.edges,
     editing: object.displayControl?.editing,
-    visible: !object.keypoints.displayControl?.hidden && !object.displayControl?.hidden,
+    visible: !keypoints.displayControl?.hidden && !object.displayControl?.hidden,
     highlighted: object.highlighted,
   };
 };
@@ -214,8 +219,8 @@ export const sortObjectsByModel = (objects: ItemObject[]) =>
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
   );
 
-export const updateExistingObject = (old: ItemObject[], newShape: Shape): ItemObject[] => {
-  return old.map((object) => {
+export const updateExistingObject = (objects: ItemObject[], newShape: Shape): ItemObject[] => {
+  return objects.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
       object.highlighted = "all";
@@ -339,6 +344,7 @@ export const defineCreatedObject = (
   features: ItemObjectBase["features"],
   currentFrameIndex: number,
 ) => {
+  const isVideo = videoType === "video";
   let newObject: ItemObject | null = null;
   const baseObject = {
     id: nanoid(10),
@@ -363,6 +369,7 @@ export const defineCreatedObject = (
     };
     const isVideo = videoType === "video";
     if (isVideo) {
+      const id = nanoid(5);
       newObject = {
         ...baseObject,
         highlighted: "self",
@@ -370,17 +377,24 @@ export const defineCreatedObject = (
           editing: true,
         },
         datasetItemType: "video",
+        displayedBox: { ...bbox, frame_index: 0, tracklet_id: id },
+        boxes: [
+          {
+            ...bbox,
+            frame_index: currentFrameIndex,
+            is_key: true,
+            is_thumbnail: true,
+            tracklet_id: id,
+          },
+          { ...bbox, frame_index: currentFrameIndex + 5, is_key: true, tracklet_id: id },
+        ],
         track: [
           {
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
-            boxes: [
-              { ...bbox, frame_index: currentFrameIndex, is_key: true, is_thumbnail: true },
-              { ...bbox, frame_index: currentFrameIndex + 5, is_key: true },
-            ],
+            id,
           },
         ],
-        displayedBox: { ...bbox, frame_index: 0 },
       };
     } else {
       newObject = {
@@ -401,18 +415,45 @@ export const defineCreatedObject = (
     };
   }
   if (shape.type === "keypoint") {
-    newObject = {
-      ...baseObject,
-      datasetItemType: "image",
-      keypoints: {
-        template_id: shape.keypoints.id,
-        vertices: shape.keypoints.vertices.map((vertex) => ({
-          ...vertex,
-          x: vertex.x / shape.imageWidth,
-          y: vertex.y / shape.imageHeight,
-        })),
-      },
+    const keypoints = {
+      template_id: shape.keypoints.id,
+      vertices: shape.keypoints.vertices.map((vertex) => ({
+        ...vertex,
+        x: vertex.x / shape.imageWidth,
+        y: vertex.y / shape.imageHeight,
+      })),
     };
+    if (isVideo) {
+      const id = nanoid(5);
+      newObject = {
+        ...baseObject,
+        datasetItemType: "video",
+        keypoints: [
+          {
+            ...keypoints,
+            frame_index: currentFrameIndex,
+            tracklet_id: id,
+            is_key: true,
+            is_thumbnail: true,
+          },
+          { ...keypoints, frame_index: currentFrameIndex + 5, tracklet_id: id, is_key: true },
+        ],
+        track: [
+          {
+            start: currentFrameIndex,
+            end: currentFrameIndex + 5,
+            id,
+          },
+        ],
+        displayedKeypoints: { ...keypoints, frame_index: 0, tracklet_id: id },
+      };
+    } else {
+      newObject = {
+        ...baseObject,
+        datasetItemType: "image",
+        keypoints,
+      };
+    }
   }
   return newObject;
 };
@@ -440,16 +481,14 @@ export const highlightCurrentObject = (
   });
 };
 
-const findThumbnailBox = (track: Tracklet[]) => {
-  const trackletWithThumbnail = track.find((tracklet) =>
-    tracklet.boxes.some((box) => box.is_thumbnail),
-  );
-  const box = trackletWithThumbnail?.boxes.find((b) => b.is_thumbnail);
+const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
+  if (!boxes) return undefined;
+  const box = boxes.find((b) => b.is_thumbnail);
   return box;
 };
 
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
-  const box = object.datasetItemType === "video" ? findThumbnailBox(object.track) : object.bbox;
+  const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
   if (!box) return null;
   const view =
     metas.type === "video"
