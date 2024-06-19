@@ -73,7 +73,7 @@
         class="max-w-[200px]"
         bind:value={$videoControls.zoomLevel}
         min={100}
-        max={$lastFrameIndex * 3}
+        max={Math.max($lastFrameIndex * 3, 200)}
       />
     </div>
   </div>
