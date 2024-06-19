@@ -50,6 +50,7 @@ export const filters = writable<Filters>({
   blueRange: [0, 255],
   u16BitRange: [0, 65535],
 });
+export const imageSmoothing = writable<boolean>(true);
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
 
 type ColorScale = [Array<string>, (id: string) => string];

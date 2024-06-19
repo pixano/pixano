@@ -68,6 +68,7 @@
   export let loaded: boolean;
   export let colorScale: (value: string) => string;
   export let isVideo: boolean = false;
+  export let imageSmoothing: boolean = true;
 
   // Image settings
   export let filters: Writable<Filters> = writable<Filters>();
@@ -1267,7 +1268,7 @@
   >
     {#each Object.entries(imagesPerView) as [viewId, images]}
       <Layer
-        config={{ id: viewId }}
+        config={{ id: viewId, imageSmoothingEnabled: imageSmoothing }}
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, viewId)}
       >
         {#each images as image}

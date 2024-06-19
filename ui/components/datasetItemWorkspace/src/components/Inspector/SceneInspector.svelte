@@ -22,7 +22,12 @@
   import { IconButton, Switch, type ItemFeature, type ItemView } from "@pixano/core/src";
 
   // Local imports
-  import { canSave, itemMetas, filters } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    canSave,
+    itemMetas,
+    filters,
+    imageSmoothing,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { createFeature } from "../../lib/api/featuresApi";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
@@ -138,13 +143,20 @@
 </div>
 
 <!-- Filters Section -->
-{#if itemType === "image"}
-  <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
-    <h3 class="uppercase font-medium h-10">FILTERS</h3>
+<div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800 font-medium">
+  <h3 class="uppercase font-medium h-10">FILTERS</h3>
 
-    <!-- General Filters -->
-    <div class="border border-gray-300 rounded py-2 px-4 text-sm">
-      <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
+  <!-- General Filters -->
+  <div class="border border-gray-300 rounded py-2 px-4 text-sm">
+    <h4 class="uppercase font-medium h-6 text-gray-500">GENERAL</h4>
+    <!-- Image Smoothing -->
+    <div class="w-full my-1 flex items-center justify-between">
+      <label for="smoothing" class="select-none cursor-pointer"> Image smoothing </label>
+      <Switch id="smoothing" bind:checked={$imageSmoothing} onChange={() => {}}></Switch>
+    </div>
+
+    {#if itemType === "image"}
+      <!-- Histogram Equalizer -->
       <div class="w-full my-1 flex items-center justify-between">
         <label for="equalizer" class="select-none cursor-pointer"> Equalize histogram </label>
         <Switch id="equalizer" bind:checked={$filters.equalizeHistogram} onChange={() => {}} />
@@ -188,8 +200,10 @@
         </div>
         <span class="w-8">{Math.round($filters.contrast + 50)}% </span>
       </div>
-    </div>
+    {/if}
+  </div>
 
+  {#if itemType === "image"}
     <!-- Color Channels Filters -->
     <div class="mt-4 border border-gray-300 rounded py-2 px-4 text-sm">
       <h4 class="uppercase font-medium h-6 text-gray-500">CHANNELS</h4>
@@ -312,5 +326,5 @@
         </div>
       </div>
     {/if}
-  </div>
-{/if}
+  {/if}
+</div>

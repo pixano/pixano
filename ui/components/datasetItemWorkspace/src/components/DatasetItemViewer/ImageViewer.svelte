@@ -35,6 +35,7 @@
     filters,
     itemMetas,
     selectedKeypointsTemplate,
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { updateExistingObject } from "../../lib/api/objectsApi";
   import { templates } from "../../lib/settings/keyPointsTemplates";
@@ -158,6 +159,7 @@
       selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
       {embeddings}
       {filters}
+      imageSmoothing={$imageSmoothing}
       bind:selectedTool={$selectedTool}
       bind:currentAnn
       bind:newShape={$newShape}

@@ -26,6 +26,7 @@
     newShape,
     selectedTool,
     colorScale,
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -169,6 +170,7 @@
         canvasSize={inspectorMaxHeight}
         {embeddings}
         isVideo={true}
+        imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}
