@@ -9,7 +9,7 @@
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = undefined;
   export { className as class };
-  export let onChange: (checked: boolean | undefined) => void;
+  export let onChange: (checked: boolean | undefined) => void = () => {};
 
   $: {
     onChange(checked);

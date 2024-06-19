@@ -26,6 +26,7 @@
     newShape,
     selectedTool,
     colorScale,
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -41,8 +42,6 @@
   export let selectedItem: VideoDatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
-  export let brightness: number;
-  export let contrast: number;
 
   $: {
     if (selectedItem) {
@@ -52,6 +51,7 @@
 
   let inspectorMaxHeight = 250;
   let expanding = false;
+  let currentFrame: number;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -109,6 +109,8 @@
         return { ...object, displayedBox };
       }),
     );
+
+    currentFrame = imageIndex;
   };
 
   const updateOrCreateBox = (shape: EditShape) => {
@@ -160,15 +162,15 @@
   {#if isLoaded}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id}
+        selectedItemId={selectedItem.id + currentFrame}
         {imagesPerView}
         colorScale={$colorScale[1]}
         bboxes={$itemBboxes}
         masks={$itemMasks}
         canvasSize={inspectorMaxHeight}
         {embeddings}
-        {brightness}
-        {contrast}
+        isVideo={true}
+        imageSmoothing={$imageSmoothing}
         bind:selectedTool={$selectedTool}
         bind:currentAnn
         bind:newShape={$newShape}

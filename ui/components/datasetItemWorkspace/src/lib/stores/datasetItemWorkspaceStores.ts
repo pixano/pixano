@@ -27,7 +27,7 @@ import {
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
-import type { ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
+import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWorkspaceTypes";
 
 // Exports
 export const newShape = writable<Shape>();
@@ -41,6 +41,16 @@ export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
   selectedModelName: "",
 });
+export const filters = writable<Filters>({
+  brightness: 0,
+  contrast: 0,
+  equalizeHistogram: false,
+  redRange: [0, 255],
+  greenRange: [0, 255],
+  blueRange: [0, 255],
+  u16BitRange: [0, 65535],
+});
+export const imageSmoothing = writable<boolean>(true);
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
 
 type ColorScale = [Array<string>, (id: string) => string];

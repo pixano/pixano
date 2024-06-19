@@ -32,8 +32,6 @@
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
-  export let brightness: number;
-  export let contrast: number;
   export let headerHeight: number;
 
   $: {
@@ -55,9 +53,9 @@
       <Loader2Icon class="animate-spin text-white" />
     </div>
   {:else if selectedItem.type === "video"}
-    <VideoViewer {selectedItem} {embeddings} bind:currentAnn {brightness} {contrast} />
+    <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "image" || !selectedItem.type}
-    <ImageViewer {selectedItem} {embeddings} bind:currentAnn {brightness} {contrast} />
+    <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
   {:else if selectedItem.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}

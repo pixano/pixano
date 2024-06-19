@@ -75,4 +75,16 @@ export type ItemsMeta = {
   views: DatasetItem["views"];
   id: DatasetItem["id"];
   type: DatasetItem["type"];
+  format?: "1bit" | "8bit" | "16bit";
+  color?: "grayscale" | "rgb" | "rgba";
+};
+
+export type Filters = {
+  brightness: number;
+  contrast: number;
+  equalizeHistogram: boolean;
+  redRange: number[];
+  greenRange: number[];
+  blueRange: number[];
+  u16BitRange: number[];
 };

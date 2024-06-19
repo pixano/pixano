@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@pixano/core": "workspace:^",
+    "@pixano/dataset-item-workspace": "workspace:^",
     "@pixano/models": "workspace:^",
     "konva": "^8.4.3",
     "nanoid": "^5.0.5",
