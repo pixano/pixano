@@ -23,6 +23,7 @@
     itemBboxes,
     itemMasks,
     selectedTool,
+    imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let selectedItem: ImageDatasetItem;
@@ -54,6 +55,7 @@
     {imagesPerView}
     selectedItemId={selectedItem.id}
     {colorRange}
+    imageSmoothing={$imageSmoothing}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     {embeddings}

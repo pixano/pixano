@@ -59,6 +59,7 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let imageSmoothing: boolean = true;
 
   let isReady = false;
 
@@ -1007,7 +1008,7 @@
   >
     {#each Object.entries(imagesPerView) as [viewId, images]}
       <Layer
-        config={{ id: viewId }}
+        config={{ id: viewId, imageSmoothingEnabled: imageSmoothing }}
         on:wheel={(event) => handleWheelOnImage(event.detail.evt, viewId)}
       >
         {#each images as image}

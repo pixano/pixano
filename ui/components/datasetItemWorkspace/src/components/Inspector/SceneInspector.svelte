@@ -16,9 +16,9 @@
 
   import { Pencil } from "lucide-svelte";
 
-  import { IconButton, type ItemView } from "@pixano/core/src";
+  import { IconButton, Switch, type ItemView } from "@pixano/core/src";
 
-  import { canSave, itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { canSave, imageSmoothing, itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
 
   import { createFeature } from "../../lib/api/featuresApi";
@@ -116,4 +116,13 @@
       </div>
     </div>
   {/each}
+</div>
+<div class="border-t-2 border-t-slate-500 p-4 pb-8 text-slate-800">
+  <h3 class="uppercase font-medium h-10">
+    <span>SETTINGS</span>
+  </h3>
+  <div class="mx-4 flex items-center justify-between">
+    <label for="smoothing" class="select-none cursor-pointer"> Image smoothing </label>
+    <Switch id="smoothing" bind:checked={$imageSmoothing} onChange={() => {}}></Switch>
+  </div>
 </div>
