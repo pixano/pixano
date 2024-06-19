@@ -40,8 +40,6 @@
   export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
-  let brightness: number = 0;
-  let contrast: number = 0;
 
   let embeddings: Embeddings = {};
 
@@ -103,15 +101,8 @@
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer
-    {selectedItem}
-    {embeddings}
-    {isLoading}
-    {brightness}
-    {contrast}
-    {headerHeight}
-  />
-  <Inspector on:click={onSave} {isLoading} bind:brightness bind:contrast />
+  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {headerHeight} />
+  <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
     currentDatasetId={selectedItem.datasetId}

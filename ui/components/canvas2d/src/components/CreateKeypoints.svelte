@@ -58,10 +58,10 @@
   const findCreationRectangleDimensions = (shape: CreateKeypointShape) => {
     const { x, y, width, height } = findRectBoundaries(keypointStructure.vertices);
     return {
-      x: (x * shape.width - 30 + shape.x) / zoomFactor,
-      y: (y * shape.height - 30 + shape.y) / zoomFactor,
-      width: (width * shape.width + 30) / zoomFactor,
-      height: (height * shape.height + 30) / zoomFactor,
+      x: x * shape.width + shape.x,
+      y: y * shape.height + shape.y,
+      width: width * shape.width,
+      height: height * shape.height,
     };
   };
 </script>

@@ -1,6 +1,7 @@
 import type {
   DatasetInfo,
   DatasetItem,
+  FeaturesValues,
   ImageDatasetItem,
   ItemView,
   Tracklet,
@@ -9,22 +10,45 @@ import type {
 } from "@pixano/core/src";
 import { datasetPreview, imgThumbnail } from "../../assets/base64image";
 import fleurs from "../../../assets/fleurs.jpg";
+import tiff from "../../../assets/tiff.png";
 
 // IMPORT ALL IMAGES
 const gallery: string[] = Object.values(
-  import.meta.glob("../../../assets/videos/mock/*.{png,jpg,jpeg,PNG,JPEG}", {
+  import.meta.glob("../../../assets/videos/mock/*.{png,jpg,jpeg,PNG,JPEG,tif}", {
     eager: true,
     as: "url",
   }),
 );
 
 const fleursUrl = fleurs as string;
+const tiffUrl = tiff as string;
 
 const mockImage: ItemView = {
   id: "image",
   type: "image",
   uri: fleursUrl.slice(1),
   thumbnail: imgThumbnail,
+  frame_number: undefined,
+  total_frames: undefined,
+  features: {
+    width: {
+      name: "width",
+      dtype: "int",
+      value: 770,
+    },
+    height: {
+      name: "height",
+      dtype: "int",
+      value: 513,
+    },
+  },
+};
+
+const mock16BitImage: ItemView = {
+  id: "image",
+  type: "image",
+  uri: tiffUrl.slice(1),
+  thumbnail: "img",
   frame_number: undefined,
   total_frames: undefined,
   features: {
@@ -244,6 +268,76 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
   embeddings: {},
 };
 
+export const mocked16BitImageDatasetItem: ImageDatasetItem = {
+  type: "image",
+  id: "fleurs.jpg",
+  split: "demo",
+  datasetId: "foo",
+  features: {
+    label: {
+      name: "label",
+      dtype: "str",
+      value: "printemps",
+    },
+    category_name: {
+      name: "category_name",
+      dtype: "str",
+      value: "foo",
+    },
+  },
+  views: {
+    image: mock16BitImage,
+  },
+  objects: [],
+  embeddings: {},
+};
+
+export const mockedFeaturesValues: FeaturesValues = {
+  main: {
+    label: {
+      restricted: false,
+      values: ["arbre", "oranges", "poire", "None", "abeille", "printemps"],
+    },
+    category_name: { restricted: false, values: ["foo", "None"] },
+  },
+  objects: {
+    category_id: { restricted: false, values: [] },
+    category_name: {
+      restricted: false,
+      values: [
+        "toilet",
+        "chair",
+        "oranges",
+        "donut",
+        "bar",
+        "apple",
+        "dining table",
+        "pizza",
+        "refrigerator",
+        "None",
+        "potted plant",
+        "orange",
+        "bird",
+        "cake",
+        "sheep",
+        "salade",
+        "broccoli",
+        "olive",
+        "sandwich",
+        "oooo",
+        "banano",
+        "carrot",
+        "bowl",
+        "banana",
+        "carrotes",
+        "foo",
+        "choubidou",
+        "bottle",
+      ],
+    },
+    category: { restricted: false, values: ["vzfe", "front", "None", "seed", "foo", "bar"] },
+  },
+};
 export const mockedCurrentDataset: DatasetInfo = {
   size: "25",
   id: "QSctnfM7Ek68M7w6tyNhHf",
@@ -384,51 +478,7 @@ export const mockedCurrentDataset: DatasetInfo = {
   //     },
   //   ],
   // },
-  // features_values: {
-  //   main: {
-  //     label: {
-  //       restricted: false,
-  //       values: ["arbre", "oranges", "poire", "None", "abeille", "printemps"],
-  //     },
-  //     category_name: { restricted: false, values: ["foo", "None"] },
-  //   },
-  //   objects: {
-  //     category_id: { restricted: false, values: [] },
-  //     category_name: {
-  //       restricted: false,
-  //       values: [
-  //         "toilet",
-  //         "chair",
-  //         "oranges",
-  //         "donut",
-  //         "bar",
-  //         "apple",
-  //         "dining table",
-  //         "pizza",
-  //         "refrigerator",
-  //         "None",
-  //         "potted plant",
-  //         "orange",
-  //         "bird",
-  //         "cake",
-  //         "sheep",
-  //         "salade",
-  //         "broccoli",
-  //         "olive",
-  //         "sandwich",
-  //         "oooo",
-  //         "banano",
-  //         "carrot",
-  //         "bowl",
-  //         "banana",
-  //         "carrotes",
-  //         "foo",
-  //         "choubidou",
-  //         "bottle",
-  //       ],
-  //     },
-  //     category: { restricted: false, values: ["vzfe", "front", "None", "seed", "foo", "bar"] },
-  //   },
+
   // },
   preview: datasetPreview,
   // stats: [],
