@@ -387,10 +387,9 @@ async def get_dataset_item(  # noqa: D417
                                 "mask",
                                 "keypoints",
                             ]
-                        },  # ????
-                        # bbox/mask/whatelse?
+                        },
                         "bbox": (
-                            obj.bbox
+                            obj.bbox.to_xywh()
                             if hasattr(obj, "bbox")
                             and obj.bbox != NoneBBox
                             and obj.bbox.coords != []
@@ -438,7 +437,7 @@ async def get_dataset_item(  # noqa: D417
                 boxes[tracklet.track_id].extend(
                     [
                         {
-                            **vars(obj.bbox),
+                            **vars(obj.bbox.to_xywh()),
                             "frame_index": obj.frame_idx,
                             "is_key": obj.is_key,
                             "is_thumbnail": i == 0,

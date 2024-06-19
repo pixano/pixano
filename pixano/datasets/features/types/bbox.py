@@ -71,7 +71,12 @@ class BBox(pydantic.BaseModel):
         Returns:
             BBox: Bounding box in xyxy format
         """
-        return BBox(self.xyxy_coords, "xyxy", self.is_normalized, self.confidence)
+        return BBox(
+            coords=self.xyxy_coords,
+            format="xyxy",
+            is_normalized=self.is_normalized,
+            confidence=self.confidence,
+        )
 
     def to_xywh(self) -> "BBox":
         """Return bounding box in xywh format.
@@ -79,7 +84,12 @@ class BBox(pydantic.BaseModel):
         Returns:
             BBox: Bounding box in xyxy format
         """
-        return BBox(self.xywh_coords, "xywh", self.is_normalized, self.confidence)
+        return BBox(
+            coords=self.xywh_coords,
+            format="xywh",
+            is_normalized=self.is_normalized,
+            confidence=self.confidence,
+        )
 
     def normalize(self, height: int, width: int) -> "BBox":
         """Return bounding box with coordinates normalized to image size.
@@ -92,10 +102,10 @@ class BBox(pydantic.BaseModel):
             BBox: Bounding box with coordinates normalized to image size
         """
         return BBox(
-            bbox_utils.normalize_coords(self.coords, height, width),
-            self.format,
-            True,
-            self.confidence,
+            coords=bbox_utils.normalize_coords(self.coords, height, width),
+            format=self.format,
+            is_normalized=True,
+            confidence=self.confidence,
         )
 
     def denormalize(self, height: int, width: int) -> "BBox":
@@ -109,10 +119,10 @@ class BBox(pydantic.BaseModel):
             BBox: Bounding box with coordinates denormalized from image size
         """
         return BBox(
-            bbox_utils.denormalize_coords(self.coords, height, width),
-            self.format,
-            False,
-            self.confidence,
+            coords=bbox_utils.denormalize_coords(self.coords, height, width),
+            format=self.format,
+            is_normalized=False,
+            confidence=self.confidence,
         )
 
     @staticmethod
