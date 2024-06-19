@@ -172,7 +172,6 @@
             step={0.01}
             values={[$filters.brightness]}
             springValues={{ stiffness: 1, damping: 1 }}
-            class="-px-2"
             on:change={(e) => {
               $filters.brightness = e.detail.value;
             }}
@@ -192,7 +191,6 @@
             step={1}
             values={[$filters.contrast]}
             springValues={{ stiffness: 1, damping: 1 }}
-            class="-px-2"
             on:change={(e) => {
               $filters.contrast = e.detail.value;
             }}
@@ -252,7 +250,10 @@
               max={255}
               step={1}
               springValues={{ stiffness: 1, damping: 1 }}
-              bind:values={$filters.redRange}
+              values={$filters.redRange}
+              on:change={(e) => {
+                $filters.redRange = e.detail.values;
+              }}
             />
           </div>
           <span class="w-8"> {$filters.redRange[1]} </span>
@@ -270,7 +271,10 @@
               max={255}
               step={1}
               springValues={{ stiffness: 1, damping: 1 }}
-              bind:values={$filters.greenRange}
+              values={$filters.greenRange}
+              on:change={(e) => {
+                $filters.greenRange = e.detail.values;
+              }}
             />
           </div>
           <span class="w-8"> {$filters.greenRange[1]} </span>
@@ -288,7 +292,10 @@
               max={255}
               step={1}
               springValues={{ stiffness: 1, damping: 1 }}
-              bind:values={$filters.blueRange}
+              values={$filters.blueRange}
+              on:change={(e) => {
+                $filters.blueRange = e.detail.values;
+              }}
             />
           </div>
           <span class="w-8"> {$filters.blueRange[1]} </span>
