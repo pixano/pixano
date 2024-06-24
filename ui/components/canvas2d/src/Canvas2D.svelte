@@ -65,7 +65,6 @@
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
-  export let loaded: boolean;
   export let colorScale: (value: string) => string;
   export let isVideo: boolean = false;
   export let imageSmoothing: boolean = true;
@@ -190,7 +189,7 @@
   });
 
   afterUpdate(() => {
-    if (currentId !== selectedItemId || loaded) loadItem();
+    if (currentId !== selectedItemId) loadItem();
 
     if (selectedTool) {
       handleChangeTool();
