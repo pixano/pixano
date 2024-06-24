@@ -144,7 +144,9 @@ async def get_dataset_explorer(  # noqa: D417
                     and len(view_item) > 0
                     and isinstance(view_item[0], SequenceFrame)
                 ):
-                    view_type = "image"  # TMP (previews video pas encore générés, alors on met une image pour l'instant)  "video"  # or "sequenceframe" ?
+                    # TMP (video previews are not generated yet
+                    # so we put an image for now ("video"  # or "sequenceframe" ?)
+                    view_type = "image"
                 else:
                     print("ERROR: unknown view type", type(view_item), view_item)
                     view_type = type(view_item).__name__
