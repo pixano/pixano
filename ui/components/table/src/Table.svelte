@@ -27,7 +27,7 @@
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render, DataBodyCell, type RenderConfig } from "svelte-headless-table";
+  import { createTable, Subscribe, Render } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
