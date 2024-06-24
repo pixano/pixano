@@ -79,6 +79,9 @@ class InferenceModel(ABC):
         Returns:
             DatasetTable: Inference table
         """
+        table = None
+        table_group = None
+
         # Inference table filename
         table_filename = (
             f"emb_{self.model_id}" if "emb" in process_type else f"obj_{self.model_id}"
@@ -132,7 +135,8 @@ class InferenceModel(ABC):
             )
 
         # Create table
-        dataset.create_table(table, table_group)
+        if table and table_group:
+            dataset.create_table(table, table_group)
 
         return table
 

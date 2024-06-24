@@ -40,10 +40,20 @@
     hideCols: addHiddenColumns(),
   });
 
-  // Initialise columns by parsing the first row and order them based on their type
-  let itemColumns = [];
-  let highPriorityColumns: string[] = [];
-  let lowPriorityColumns: string[] = [];
+  // Initialise columns
+  let itemColumns = [
+    table.column({
+      header: "ID",
+      cell: DefaultCell,
+      accessor: "id",
+    }),
+    table.column({
+      header: "Split",
+      cell: DefaultCell,
+      accessor: "split",
+    }),
+  ];
+  let colOrder: string[] = [];
 
   // Parse a feature into a table cell
 
@@ -66,30 +76,28 @@
   });
   let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];
 
-  // Create columns object and view model
+  // Create columns
   const columns = table.createColumns(itemColumns);
+
+  // Create view model
   const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
     table.createViewModel(columns);
 
-  // Initialise plugin to order and re-order columns
+  // Order columns
   const { columnIdOrder } = pluginStates.colOrder;
-  $columnIdOrder = [...columnOrder];
+  $columnIdOrder = [...colOrder];
+
+  // Handle column re-order
   const sortList = (ev: { detail: string[] }) => {
     $columnIdOrder = ev.detail;
   };
 
-  // Initialise plugin to change column visibility
+  // Column visibility
   const { hiddenColumnIds } = pluginStates.hideCols;
   let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
   $: $hiddenColumnIds = Object.entries(shownColumnsById)
     .filter(([, hide]) => !hide)
     .map(([id]) => id);
-
-  // Handler to select an item
-  const dispatch = createEventDispatcher();
-  function handleSelectItem(id: string) {
-    dispatch("selectItem", id);
-  }
 
   // Settings popup status
   let popupOpened = false;
@@ -102,7 +110,8 @@
     {popupOpened ? 'block' : 'hidden'}"
 >
   <div
-    class="px-12 pt-10 flex flex-col bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
+    class="px-12 pt-10 flex flex-col
+    bg-white border border-slate-300 shadow-sm shadow-slate-300 rounded-lg"
   >
     <span class="text-3xl font-bold mb-4"> Column settings </span>
     <span class="text-sm italic text-gray-500 font-medium mb-3">
