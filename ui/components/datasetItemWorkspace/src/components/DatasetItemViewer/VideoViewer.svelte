@@ -20,7 +20,6 @@
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
-    imageSmoothing,
     itemBboxes,
     itemMasks,
     itemObjects,

@@ -40,20 +40,10 @@
     hideCols: addHiddenColumns(),
   });
 
-  // Initialise columns
-  let itemColumns = [
-    table.column({
-      header: "ID",
-      cell: DefaultCell,
-      accessor: "id",
-    }),
-    table.column({
-      header: "Split",
-      cell: DefaultCell,
-      accessor: "split",
-    }),
-  ];
-  let colOrder: string[] = [];
+  // Initialise columns by parsing the first row and order them based on their type
+  let itemColumns = [];
+  let highPriorityColumns: string[] = [];
+  let lowPriorityColumns: string[] = [];
 
   // Parse a feature into a table cell
 
@@ -76,28 +66,30 @@
   });
   let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];
 
-  // Create columns
+  // Create columns object and view model
   const columns = table.createColumns(itemColumns);
-
-  // Create view model
   const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
     table.createViewModel(columns);
 
-  // Order columns
+  // Initialise plugin to order and re-order columns
   const { columnIdOrder } = pluginStates.colOrder;
-  $columnIdOrder = [...colOrder];
-
-  // Handle column re-order
+  $columnIdOrder = [...columnOrder];
   const sortList = (ev: { detail: string[] }) => {
     $columnIdOrder = ev.detail;
   };
 
-  // Column visibility
+  // Initialise plugin to change column visibility
   const { hiddenColumnIds } = pluginStates.hideCols;
   let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
   $: $hiddenColumnIds = Object.entries(shownColumnsById)
     .filter(([, hide]) => !hide)
     .map(([id]) => id);
+
+  // Handler to select an item
+  const dispatch = createEventDispatcher();
+  function handleSelectItem(id: string) {
+    dispatch("selectItem", id);
+  }
 
   // Settings popup status
   let popupOpened = false;
