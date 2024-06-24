@@ -27,7 +27,7 @@
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render } from "svelte-headless-table";
+  import { createTable, Subscribe, Render, DataBodyCell, ComponentRenderConfig } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
@@ -52,7 +52,7 @@
     itemColumns.push(
       table.column({
         header: col.name,
-        cell: TableCell[col.type],
+        cell: TableCell[col.type] as (value: DataBodyCell<any>) => ComponentRenderConfig,
         accessor: col.name,
       }),
     );

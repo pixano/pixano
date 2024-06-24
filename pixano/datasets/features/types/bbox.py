@@ -35,6 +35,12 @@ class BBox(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value
+
+        Returns:
+            BBox: "None" BBox
+        """
         return BBox(
             coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=0
         )

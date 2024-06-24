@@ -27,10 +27,31 @@ class Image(View):
     format: str
 
     def open(self, media_dir: Path) -> IO:
+        """Open image.
+
+        Args:
+            media_dir (Path): image path
+
+        Returns:
+            IO: opened image
+        """
         return Image.open_url(self.url, media_dir)
 
     @staticmethod
-    def open_url(url, media_dir: Path) -> IO:
+    def open_url(url: str, media_dir: Path) -> IO:
+        """Open URL image
+
+        Args:
+            url (str): image url
+            media_dir (Path): uri prefix
+
+        Raises:
+            ValueError: No scheme provided
+            ValueError: Incomplete URI
+
+        Returns:
+            IO: _description_
+        """
         # URI is incomplete
         if urlparse(url).scheme == "":
             uri_prefix = media_dir.absolute().as_uri()

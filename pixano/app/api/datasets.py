@@ -35,7 +35,9 @@ async def get_datasets(
         list[DatasetInfo]: List of dataset infos
     """
     # Load datasets
-    infos = DatasetLibrary.load_directory(directory=settings.data_dir, load_thumbnail=True)
+    infos = DatasetLibrary.load_directory(
+        directory=settings.data_dir, load_thumbnail=True
+    )
 
     # Return datasets
     if infos:
@@ -52,8 +54,8 @@ async def get_dataset(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> DatasetLibrary:
-    """Load dataset. 
-    
+    """Load dataset.
+
     **!!! UNUSED ? !!!**
 
     Args:

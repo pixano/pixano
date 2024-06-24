@@ -38,7 +38,7 @@ from pixano.datasets.utils import image as image_utils
 
 
 class FrontDatasetItem(BaseModel):
-    """Front format DatasetItem"""
+    """Front format DatasetItem."""
 
     id: str
     datasetId: str
@@ -58,10 +58,11 @@ async def get_dataset_item_ids(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> list[str]:
-    """## Get all dataset items ids
+    """## Get all dataset items ids.
 
     Args:
         ds_id (str): dataset id
+        settings(Settings): settings
 
     Returns:
         list[str]: all items id
@@ -488,7 +489,9 @@ async def get_dataset_item(  # noqa: D417
             try:
                 view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
             except StopIteration:
-                print(f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped")
+                print(
+                    f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped"
+                )
                 continue
 
             objects.append(

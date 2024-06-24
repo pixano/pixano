@@ -18,6 +18,12 @@ class NDArrayFloat(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value
+
+        Returns:
+            NDArrayFloat: "None" NDArrayFloat
+        """
         return NDArrayFloat(values=[0, 0], shape=[1, 1])
 
     @classmethod

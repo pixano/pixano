@@ -32,6 +32,12 @@ class KeyPoints(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value
+
+        Returns:
+            KeyPoints: "None" KeyPoints
+        """
         return KeyPoints(template_id="None", coords=[0, 0], states=["invisible"])
 
 
@@ -48,7 +54,7 @@ def is_keypoints(cls: type) -> bool:
 
 
 def map_back2front_vertices(keypoints: KeyPoints) -> list:
-    """Utility function to map back format for KeyPoint to front vertices format
+    """Utility function to map back format for KeyPoint to front vertices format.
 
     Args:
         keypoints (KeyPoints): Keypoints to map

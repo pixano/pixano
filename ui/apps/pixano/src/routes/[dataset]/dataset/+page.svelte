@@ -6,7 +6,7 @@
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
   import { getDatasetItems } from "@pixano/core/src/api";
-  import { currentDatasetStore, datasetTableStore } from "$lib/stores/datasetStores";
+  import { datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDatasetId: string;
   let selectedDataset: ExplorerData;
@@ -20,9 +20,9 @@
         // NOTE: WEIRD BUG(?) HERE, this got called more and more often, each time we go back to library
         // number of call increases (when going to a page > 1)
         console.log("BUGLOG 'not once' - datasetTableStore subscribe");
-        getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
-          (datasetItems) => (selectedDataset = datasetItems),
-        );
+        getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize)
+          .then((datasetItems) => (selectedDataset = datasetItems))
+          .catch((err) => console.log("ERROR: Couldn't get dataset items", err));
       }
       // currentDatasetStore.subscribe((currentDataset) => {
       //   getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(

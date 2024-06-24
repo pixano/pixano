@@ -109,8 +109,8 @@
         pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
         return pagination;
       });
-      navigateTo(`/${currentDataset.id}/dataset`);
-    } else navigateTo("/");
+      await navigateTo(`/${currentDataset.id}/dataset`);
+    } else await navigateTo("/");
   };
 
   const navigateTo = async (route: string) => {

@@ -33,6 +33,12 @@ class KeyPoints3D(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value
+
+        Returns:
+            KeyPoints3D: "None" KeyPoints3D
+        """
         return KeyPoints3D(template_id="None", coords=[0, 0, 0], visibles=[False])
 
 

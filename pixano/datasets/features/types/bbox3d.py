@@ -32,4 +32,10 @@ class BBox3D(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value
+
+        Returns:
+            BBox3D: "None" BBox3D
+        """
         return BBox3D(position=[0, 0, 0, 0, 0, 0], size=[0, 0, 0], heading=[0, 0, 0])

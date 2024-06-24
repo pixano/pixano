@@ -16,23 +16,43 @@ from pydantic import BaseModel
 
 
 class ColDesc(BaseModel):
+    """Column description.
+
+    Attributes:
+        name (str): column name
+        type (str): column type
+    """
     name: str
     type: str
 
 
 class TableData(BaseModel):
+    """Table data.
+
+    Attributes:
+        col (list[ColDesc]): column descriptions
+        rows (list[dict[str, Any]]): rows (actual data)
+    """
     cols: list[ColDesc]
-    rows: list[dict[str, Any]]   # <-- Any is one of the allowed cell types (int, float, str, bool, Image/Video/..., graph, ...)
+    rows: list[dict[str, Any]]
+    # Note: Any is one of the allowed cell types (int, float, str, bool, Image/Video/..., graph, ...)
 
 
 class PaginationInfo(BaseModel):
+    """Pagination info.
+
+    Attributes:
+        current (int): current page
+        size (int): number of items per page
+        total (int): total number of items
+    """
     current: int
     size: int
     total: int
 
 
 class DatasetExplorer(BaseModel):
-    """Data for Dataset Explorer page
+    """Data for Dataset Explorer page.
 
     Attributes:
         id (str): dataset id

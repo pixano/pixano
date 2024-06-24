@@ -22,7 +22,7 @@ from pixano.datasets.features import Image
 
 
 class DatasetLibrary(BaseModel):
-    """DatasetLibrary. Data for a dataset library card in Datasets Library page
+    """DatasetLibrary. Data for a dataset library card in Datasets Library page.
 
     Attributes:
         id (str): Dataset ID
@@ -72,7 +72,7 @@ class DatasetLibrary(BaseModel):
         load_thumbnail: bool = False,
         load_stats: bool = False,
     ) -> list["DatasetLibrary"]:
-        """Load list of DatasetLibrary from directory
+        """Load list of DatasetLibrary from directory.
 
         Args:
             directory (Path): Directory to load
