@@ -21,7 +21,7 @@
 
   let datasets: Array<DatasetInfo>;
 
-    datasetsStore.subscribe((value) => {
+  datasetsStore.subscribe((value) => {
     if (value) {
       datasets = value;
     }

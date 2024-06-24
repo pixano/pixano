@@ -49,7 +49,7 @@ export const BasicImageWorkspace: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     selectedItem: mockedImageDatasetItem,
-    featureValues: mockedFeaturesValues
+    featureValues: mockedFeaturesValues,
   },
 };
 
@@ -61,6 +61,6 @@ export const SixteenBitImageWorkspace: Story = {
     models: [],
     handleSaveItem: mockHandleSaveItem,
     selectedItem: mocked16BitImageDatasetItem,
-    featureValues: mockedFeaturesValues
+    featureValues: mockedFeaturesValues,
   },
 };

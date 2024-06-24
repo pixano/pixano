@@ -221,7 +221,10 @@
           <Loader2Icon class="animate-spin" />
         </div>
       {:else if !selectedDataset.isErrored}
-        <Table items={selectedDataset.table_data} on:selectItem={(event) => handleSelectItem(event.detail)} />
+        <Table
+          items={selectedDataset.table_data}
+          on:selectItem={(event) => handleSelectItem(event.detail)}
+        />
       {:else}
         <div
           class="flex flex-col gap-5 justify-center align-middle text-center max-w-xs m-auto mt-10"

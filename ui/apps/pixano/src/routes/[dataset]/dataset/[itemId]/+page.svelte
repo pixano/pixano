@@ -43,7 +43,7 @@
           selectedItem.objects.map((obj) => {
             if (obj.datasetItemType === "video") {
               obj.displayedBox = obj.boxes?.[0];
-              obj.displayedKeypoints = structuredClone(obj.keypoints?.[0]);  // clone required as keypoints are not shallow
+              obj.displayedKeypoints = structuredClone(obj.keypoints?.[0]); // clone required as keypoints are not shallow
             }
             return obj;
           });
