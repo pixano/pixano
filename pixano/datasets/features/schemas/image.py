@@ -39,7 +39,7 @@ class Image(View):
 
     @staticmethod
     def open_url(url: str, media_dir: Path) -> IO:
-        """Open URL image
+        """Open URL image.
 
         Args:
             url (str): image url

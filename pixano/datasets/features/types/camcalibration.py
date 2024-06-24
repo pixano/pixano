@@ -72,7 +72,8 @@ class Extrinsics(pydantic.BaseModel):
 
 @_register_type_internal
 class CamCalibration(pydantic.BaseModel):
-    """Camera calibration
+    """Camera calibration.
+
     Attributes:
         type (str): type of camera
         base_intrinsics (BaseIntrinsics): base intrinsics
@@ -87,8 +88,9 @@ class CamCalibration(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value
+        """
+        Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value.
 
         Returns:
             CamCalibration: "None" CamCalibration

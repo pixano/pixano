@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
 
-  import type { DatasetInfo, ExplorerData } from "@pixano/core/src";
+  import type { DatasetInfo } from "@pixano/core/src";
   import { api } from "@pixano/core/src";
 
   import MainHeader from "../components/layout/MainHeader.svelte";
@@ -17,7 +17,6 @@
   import pixanoFavicon from "../assets/favicon.ico";
 
   import "./styles.css";
-  import type { DatasetTableStore } from "$lib/types/pixanoTypes";
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
@@ -47,9 +46,8 @@
   });
 
   // Get all the ids of the items of the selected dataset
-  $: async () => {
-    getCurrentDatasetItemsIds(currentDatasetId);
-  };
+  $: void getCurrentDatasetItemsIds(currentDatasetId); //void here to avoid .then/.catch. But maybe we could manage error ?
+
   const getCurrentDatasetItemsIds = async (datasetId: string) => {
     if (datasetId === undefined) return;
     currentDatasetItemsIds = await api.getDatasetItemsIds(datasetId);

@@ -33,6 +33,13 @@ class CompressedRLE(pydantic.BaseModel):
 
     @staticmethod
     def none():
+        """
+        Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value.
+
+        Returns:
+            CompressedRLE: "None" CompressedRLE
+        """
         return CompressedRLE(size=[0.0, 0.0], counts=b'')
 
     def to_mask(self) -> np.ndarray:

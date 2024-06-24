@@ -32,8 +32,9 @@ class BBox3D(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """Utility function to get a None equivalent.
-        Should be removed when Lance could manage None value
+        """
+        Utility function to get a None equivalent.
+        Should be removed when Lance could manage None value.
 
         Returns:
             BBox3D: "None" BBox3D
