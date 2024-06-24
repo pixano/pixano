@@ -21,9 +21,12 @@ import NumberCell from "./TableCells/NumberCell.svelte";
 import BooleanCell from "./TableCells/BooleanCell.svelte";
 import TextCell from "./TableCells/TextCell.svelte";
 import { createRender } from "svelte-headless-table";
+import type { DatasetStat } from "@pixano/core";
+
+type cellType = string | number | boolean | DatasetStat;
 
 // Generic function to create render function for a given component
-const createRenderFunction = (Cell) => (value) => {
+const createRenderFunction = (Cell) => (value: { value: cellType }) => {
   return createRender(Cell, {
     value: value.value,
   });

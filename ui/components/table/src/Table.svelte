@@ -27,12 +27,11 @@
   import { createEventDispatcher } from "svelte";
   import { readable } from "svelte/store";
   import SortableList from "svelte-sortable-list";
-  import { createTable, Subscribe, Render, createRender } from "svelte-headless-table";
+  import { createTable, Subscribe, Render } from "svelte-headless-table";
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
   export let items: TableData;
-  console.log(items);
 
   // Add data into a readable store and create table object
   const data = readable(items.rows);
@@ -142,7 +141,7 @@
   </div>
 </div>
 <div
-  class="h-full w-full overflow-y-auto overflow-x-auto
+  class="h-[75vh] w-full overflow-y-auto overflow-x-auto
     rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
@@ -152,7 +151,7 @@
         <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
           <tr
             {...rowAttrs}
-            class="sticky top-0 z-10 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
+            class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
           >
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs>
