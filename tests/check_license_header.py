@@ -1,13 +1,31 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 import os
 
 # Headers for each file type
 HEADERS = {
-    ".py": r"# =====================================\n# Copyright: CEA-LIST/DIASI/SIALV/LVA\n\
-    # Author : pixano@cea.fr\n# License: CECILL-C\n# =====================================",
-    ".svelte": r"<!-------------------------------------\nCopyright: CEA-LIST/DIASI/SIALV/LVA\n\
-        Author : pixano@cea.fr\nLicense: CECILL-C\n-------------------------------------->",
-    ".ts": r"/\*-------------------------------------\nCopyright: CEA-LIST/DIASI/SIALV/LVA\n\
-        Author : pixano@cea.fr\nLicense: CECILL-C\n-------------------------------------\*/",
+    ".py": """# =====================================
+    # Copyright: CEA-LIST/DIASI/SIALV/LVA
+    # Author : pixano@cea.fr
+    # License: CECILL-C
+    # =====================================
+    \n""",
+    ".svelte": """<!-------------------------------------
+    Copyright: CEA-LIST/DIASI/SIALV/LVA
+    Author : pixano@cea.fr
+    License: CECILL-C
+    -------------------------------------->
+    \n""",
+    ".ts": """/\*-------------------------------------
+    Copyright: CEA-LIST/DIASI/SIALV/LVA
+    Author : pixano@cea.fr
+    License: CECILL-C
+    -------------------------------------\*/
+    \n""",
 }
 
 # Files to exclude
