@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 export const theme = {
   fontFamily: {
     "DM Sans": ["DM Sans", "sans-serif"],

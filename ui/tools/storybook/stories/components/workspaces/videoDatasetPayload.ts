@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 export const videoDatasetItemPayload = {
   id: "id.jpg", // string
   datasetId: "datasetId", // string - could be inferred

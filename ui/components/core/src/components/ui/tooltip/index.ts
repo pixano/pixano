@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { Tooltip as TooltipPrimitive } from "bits-ui";
 import Content from "./tooltip-content.svelte";
 

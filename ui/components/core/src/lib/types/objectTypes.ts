@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { SegmentationResult } from ".";
 import type { BBox, DisplayControl, Mask } from "./datasetTypes";
 

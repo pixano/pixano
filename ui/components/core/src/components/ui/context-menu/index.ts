@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
 
 import Item from "./context-menu-item.svelte";

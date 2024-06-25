@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { KeypointsTemplate } from "@pixano/core";
 
 export const findRectBoundaries = (vertices: KeypointsTemplate["vertices"]) => {

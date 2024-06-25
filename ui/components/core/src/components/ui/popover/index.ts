@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { Popover as PopoverPrimitive } from "bits-ui";
 import Content from "./popover-content.svelte";
 const Root = PopoverPrimitive.Root;
