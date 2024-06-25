@@ -1,0 +1,22 @@
+name: Check License Header
+
+on: [push, pull_request]
+
+jobs:
+  check_license_header:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies
+      run: pip install pyyaml
+
+    - name: Run license header check
+      run: python tests/check_license_header.py
