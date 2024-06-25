@@ -9,23 +9,23 @@ import os
 # Headers for each file type
 HEADERS = {
     ".py": """# =====================================
-    # Copyright: CEA-LIST/DIASI/SIALV/LVA
-    # Author : pixano@cea.fr
-    # License: CECILL-C
-    # =====================================
-    \n""",
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+\n""",
     ".svelte": """<!-------------------------------------
-    Copyright: CEA-LIST/DIASI/SIALV/LVA
-    Author : pixano@cea.fr
-    License: CECILL-C
-    -------------------------------------->
-    \n""",
-    ".ts": """/\*-------------------------------------
-    Copyright: CEA-LIST/DIASI/SIALV/LVA
-    Author : pixano@cea.fr
-    License: CECILL-C
-    -------------------------------------\*/
-    \n""",
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+\n""",
+    ".ts": """/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+\n""",
 }
 
 # Files to exclude
