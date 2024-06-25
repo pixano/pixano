@@ -7,6 +7,7 @@ We pledge to make participation in our community a harassment-free experience fo
 ## Our Standards
 
 Positive behaviors include:
+
 - Demonstrating empathy and kindness
 - Being respectful of differing opinions and experiences
 - Giving and gracefully accepting constructive feedback
@@ -14,6 +15,7 @@ Positive behaviors include:
 - Focusing on the overall community's best interests
 
 Unacceptable behaviors include:
+
 - Sexualized language or imagery
 - Trolling, insulting or derogatory comments, and personal attacks
 - Public or private harassment
@@ -27,6 +29,7 @@ Community leaders are responsible for enforcing this Code of Conduct and may tak
 ## Enforcement Guidelines
 
 Consequences for unacceptable behavior may include:
+
 1. **Correction**: A private warning and explanation.
 2. **Warning**: A public or private warning with specified consequences.
 3. **Temporary Ban**: A temporary ban from community interaction.
