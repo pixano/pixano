@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { page } from "$app/stores";
   import { type DatasetItem, type DatasetInfo, PrimaryButton } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";

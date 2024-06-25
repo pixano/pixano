@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { Check, ChevronsUpDown } from "lucide-svelte";
   import * as Command from "../command";
   import * as Popover from "../popover";

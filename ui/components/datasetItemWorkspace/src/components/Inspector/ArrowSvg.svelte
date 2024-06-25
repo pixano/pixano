@@ -1,3 +1,9 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0.00 0.00 300.00 170.00" height={30}>
   <g stroke-width="2.00" stroke-linecap="butt">
     <path

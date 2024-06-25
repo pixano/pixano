@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import type { HTMLInputAttributes } from "svelte/elements";
   import { cn } from "../../../lib/utils/styleUtils";
   import type { InputEvents } from ".";

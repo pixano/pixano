@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { Switch as SwitchPrimitive } from "bits-ui";
   import { cn } from "../../../lib/utils/styleUtils";
 

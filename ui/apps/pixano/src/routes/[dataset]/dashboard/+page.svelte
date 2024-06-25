@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { page } from "$app/stores";
 
   import type { DatasetInfo } from "@pixano/core/src";
