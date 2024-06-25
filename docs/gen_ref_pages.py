@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Generate the code API reference pages
 
 Refer to https://mkdocstrings.github.io/recipes/ for more details.
