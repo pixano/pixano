@@ -4,7 +4,6 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-
 // Imports
 import fs from "fs";
 import { readFile } from "fs/promises";

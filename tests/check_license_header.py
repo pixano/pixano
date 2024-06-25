@@ -35,7 +35,8 @@ EXCLUDE_FILES = {
     "vite.env.d.ts",
     "ambient.d.ts",
     "$types.d.ts",
-    "app.d.ts"
+    "app.d.ts",
+    "io.test.ts"
 }
 
 
