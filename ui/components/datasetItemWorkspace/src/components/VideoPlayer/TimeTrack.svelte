@@ -12,6 +12,7 @@ License: CECILL-C
     currentFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
+  import { onMount } from "svelte";
   import { selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { panTool } from "../../lib/settings/selectionTools";
 
