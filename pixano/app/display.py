@@ -1,15 +1,8 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
-# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-# @License: CECILL-C
-#
-# This software is a collaborative computer program whose purpose is to
-# generate and explore labeled data for computer vision applications.
-# This software is governed by the CeCILL-C license under French law and
-# abiding by the rules of distribution of free software. You can use,
-# modify and/ or redistribute the software under the terms of the CeCILL-C
-# license as circulated by CEA, CNRS and INRIA at the following URL
-#
-# http://www.cecill.info
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
 
 import html
 import json
@@ -19,14 +12,13 @@ import shortuuid
 
 
 def display_colab(url: str, port: int, height: int):
-    """Display a Pixano app inside a Google Colab
+    """Display a Pixano app inside a Google Colab.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
         height (int): Frame height
     """
-
     # Define frame template
     shell = """
         (() => {
@@ -59,14 +51,13 @@ def display_colab(url: str, port: int, height: int):
 
 
 def display_ipython(url: str, port: int, height: int):
-    """Display a Pixano app inside a Jupyter notebook
+    """Display a Pixano app inside a Jupyter notebook.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
         height (int): Frame height
     """
-
     # Define frame template
     shell = """
         <iframe id="%HTML_ID%" width="100%" height="%HEIGHT%" frameborder="0">
@@ -102,11 +93,10 @@ def display_ipython(url: str, port: int, height: int):
 
 
 def display_cli(url: str, port: int):
-    """Display a Pixano app inside a command line interface
+    """Display a Pixano app inside a command line interface.
 
     Args:
         url (str): Pixano app URL
         port (int): Pixano app port
     """
-
     print(f"Please visit {url}:{port} in a web browser.")

@@ -77,16 +77,39 @@ pnpm -r run storybook
 
 ### Backend
 
-We format Python files and Jupyter notebooks with the **Black formatter**.
+We format and lint backend files (Python, Jupyter notebooks) with **Ruff**.
 
-You can install the <a href="https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter" target="_blank">Visual Studio Extension</a> and set it to format files automatically on save.
+You can install the <a href="https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff" target="_blank">Visual Studio Extension</a> and set it to format files automatically on save with the following configuration in your VSCode `settings.json`:
 
-Or you can use the Python package:
+```json
+{
+  "notebook.formatOnSave.enabled": true,
+  "notebook.codeActionsOnSave": {
+    "notebook.source.fixAll": "explicit",
+    "notebook.source.organizeImports": "explicit"
+  },
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  }
+}
+```
+
+You can also use our **pre-commit** configuration to format and lint all backend files before commiting your changes:
 
 ```bash
-pip install black
-black pixano/
-black notebooks/
+pip install pre-commit
+pre-commit run --all-files
+```
+
+You can also install the pre-commit hook if you want it to run automatically on `git commit`:
+
+```bash
+pre-commit install
 ```
 
 ### Frontend
@@ -94,21 +117,62 @@ black notebooks/
 We format frontend files (Typescript, Javascript, Svelte, HTML, CSS, JSON, YAML, Markdown) with the **Prettier formatter**.
 
 You can install the <a href="https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode" target="_blank">Visual Studio Extension</a> (and <a href="https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode
-" target="_blank">this Extension</a> for Svelte) and set them to format files automatically on save.
+" target="_blank">this Extension</a> for Svelte) and set them to format files automatically on save with the following configuration in your VSCode `settings.json`:
 
-Or you can use the command line we have set up:
+```json
+{
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[github-actions-workflow]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  }
+}
+```
+
+You can also use the command lines we have set up to format and lint all frontend files before commiting your changes:
 
 ```bash
 cd ui/
 pnpm format
-```
-
-We also lint frontend files with **eslint**.
-
-You can use the command line we have set up:
-
-```bash
-cd ui/
 pnpm lint
 ```
 

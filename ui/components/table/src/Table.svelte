@@ -1,25 +1,16 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Local Imports
-  import { DefaultCell, FeatureCell, ImgCell } from "./cells";
+  import { TableCell } from "./TableCell";
 
   // Pixano Core Imports
   import { icons } from "@pixano/core";
-  import type { DatasetItem } from "@pixano/core";
+  import type { TableData } from "@pixano/core";
   import Button from "@pixano/core/src/components/ui/button/button.svelte";
   import Checkbox from "@pixano/core/src/components/ui/checkbox/checkbox.svelte";
 
@@ -31,92 +22,67 @@
   import { addColumnOrder, addHiddenColumns } from "svelte-headless-table/plugins";
 
   // Exports
-  export let items: Array<DatasetItem>;
+  export let items: TableData;
 
-  // Handler to select an item
-  const dispatch = createEventDispatcher();
-  function handleSelectItem(id: number) {
-    dispatch("selectItem", id);
-  }
-
-  // Add data into a readable store
-  const data = readable(items);
-
-  // Create table object
+  // Add data into a readable store and create table object
+  const data = readable(items.rows);
   const table = createTable(data, {
     colOrder: addColumnOrder(),
     hideCols: addHiddenColumns(),
   });
 
-  // Initialise columns
-  let itemColumns = [
-    table.column({
-      header: "ID",
-      cell: DefaultCell,
-      accessor: "id",
-    }),
-    table.column({
-      header: "Split",
-      cell: DefaultCell,
-      accessor: "split",
-    }),
-  ];
-  let colOrder: string[] = [];
+  // Initialise columns by parsing the first row and order them based on their type
+  let itemColumns = [];
+  let highPriorityColumns: string[] = [];
+  let lowPriorityColumns: string[] = [];
 
-  // Parse views and add them to the columns
-  if (items[0]?.views) {
-    Object.values(items[0].views).forEach(({ id }) => {
-      itemColumns.push(
-        table.column({
-          header: id as string,
-          cell: ImgCell,
-          accessor: (item) => JSON.stringify(item.views[id]),
-        }),
-      );
-      colOrder.push(id);
-    });
-  }
+  // Parse a feature into a table cell
 
-  // Add id and split to column order
-  colOrder.push("id");
-  colOrder.push("split");
+  Object.values(items.cols).forEach((col) => {
+    // Add field to column list
+    itemColumns.push(
+      table.column({
+        header: col.name,
+        // giving the exact type is troublesome here, for this one we will allow 'any' assignement
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        cell: TableCell[col.type],
+        accessor: col.name,
+      }),
+    );
 
-  // Parse features and add them to the columns
-  if (items[0]?.features) {
-    Object.values(items[0].features).forEach(({ name }) => {
-      itemColumns.push(
-        table.column({
-          header: name,
-          cell: FeatureCell,
-          accessor: (item) => JSON.stringify(item.features[name]),
-        }),
-      );
-      colOrder.push(name);
-    });
-  }
+    // Insert images and videos to the beginning of the column list
+    if (col.type === "image" || col.type === "video") {
+      highPriorityColumns.push(col.name);
+    } else {
+      lowPriorityColumns.push(col.name);
+    }
+  });
+  let columnOrder: string[] = [...highPriorityColumns, ...lowPriorityColumns];
 
-  // Create columns
+  // Create columns object and view model
   const columns = table.createColumns(itemColumns);
-
-  // Create view model
   const { headerRows, rows, tableAttrs, tableBodyAttrs, pluginStates } =
     table.createViewModel(columns);
 
-  // Order columns
+  // Initialise plugin to order and re-order columns
   const { columnIdOrder } = pluginStates.colOrder;
-  $columnIdOrder = [...colOrder];
-
-  // Handle column re-order
+  $columnIdOrder = [...columnOrder];
   const sortList = (ev: { detail: string[] }) => {
     $columnIdOrder = ev.detail;
   };
 
-  // Column visibility
+  // Initialise plugin to change column visibility
   const { hiddenColumnIds } = pluginStates.hideCols;
   let shownColumnsById = Object.fromEntries($columnIdOrder.map((id) => [id, true]));
   $: $hiddenColumnIds = Object.entries(shownColumnsById)
     .filter(([, hide]) => !hide)
     .map(([id]) => id);
+
+  // Handler to select an item
+  const dispatch = createEventDispatcher();
+  function handleSelectItem(id: string) {
+    dispatch("selectItem", id);
+  }
 
   // Settings popup status
   let popupOpened = false;
@@ -169,7 +135,7 @@
   </div>
 </div>
 <div
-  class="h-full w-full overflow-y-auto overflow-x-auto
+  class="h-[75vh] w-full overflow-y-auto overflow-x-auto
     rounded-sm bg-white border border-slate-300 shadow-sm shadow-slate-300 font-Montserrat"
 >
   <table {...$tableAttrs} class="table-auto z-0 w-full text-center text-base text-slate-800">
@@ -179,7 +145,7 @@
         <Subscribe rowAttrs={headerRow.attrs()} let:rowAttrs>
           <tr
             {...rowAttrs}
-            class="sticky top-0 z-10 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
+            class="sticky top-0 bg-white shadow-sm shadow-slate-300 border-b border-b-slate-400"
           >
             {#each headerRow.cells as cell (cell.id)}
               <Subscribe attrs={cell.attrs()} let:attrs>
@@ -221,7 +187,7 @@
             {...rowAttrs}
             class="h-24 cursor-pointer hover:bg-slate-100"
             on:click={() => {
-              handleSelectItem(row.original.id); // or row.cellForId.id.value
+              handleSelectItem(items.rows[row.id].id);
             }}
           >
             {#each row.cells as cell (cell.id)}

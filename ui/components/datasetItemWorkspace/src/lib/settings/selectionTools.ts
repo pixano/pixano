@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { SelectionTool } from "@pixano/core";
 
 export const panTool: SelectionTool = {
@@ -16,6 +22,13 @@ export const rectangleTool: SelectionTool = {
 export const polygonTool: SelectionTool = {
   name: "Create a polygon",
   type: "POLYGON",
+  cursor: "crosshair",
+  isSmart: false,
+};
+
+export const keyPointTool: SelectionTool = {
+  name: "Create key points",
+  type: "KEY_POINT",
   cursor: "crosshair",
   isSmart: false,
 };

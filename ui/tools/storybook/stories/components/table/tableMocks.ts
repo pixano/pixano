@@ -1,33 +1,75 @@
-// import type { DatasetItem } from "@pixano/core";
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
 
-import type { ItemFeature } from "@pixano/core";
+import type { TableData } from "@pixano/core";
 
-export const items: Array<Array<ItemFeature>> = [
-  [
+export const items: TableData = {
+  cols: [
     {
       name: "id",
-      dtype: "int",
-      value: "1",
+      type: "int",
     },
     {
       name: "split",
-      dtype: "str",
-      value: "val",
+      type: "str",
     },
     {
       name: "image",
-      dtype: "image",
-      value: "https://www.w3schools.com/tags/img_girl.jpg",
+      type: "image",
     },
     {
       name: "video",
-      dtype: "video",
-      value: "https://www.w3schools.com/html/mov_bbb.mp4",
+      type: "video",
     },
     {
       name: "categories",
-      dtype: "histogram",
-      value: {
+      type: "histogram",
+    },
+  ],
+  rows: [
+    {
+      id: "1",
+      split: "val",
+      image: "https://www.w3schools.com/tags/img_girl.jpg",
+      video: "https://www.w3schools.com/html/mov_bbb.mp4",
+      categories: {
+        name: "categories",
+        type: "categorical",
+        histogram: [
+          { categories: "woman", counts: 838421, split: "train" },
+          { categories: "man", counts: 738421, split: "train" },
+          { categories: "car", counts: 19901, split: "train" },
+          { categories: "dog", counts: 300000, split: "train" },
+          { categories: "cat", counts: 150000, split: "train" },
+        ],
+      },
+    },
+    {
+      id: "2",
+      split: "val",
+      image: "https://www.w3schools.com/tags/img_girl.jpg",
+      video: "https://www.w3schools.com/html/mov_bbb.mp4",
+      categories: {
+        name: "categories",
+        type: "categorical",
+        histogram: [
+          { categories: "woman", counts: 838421, split: "train" },
+          { categories: "man", counts: 738421, split: "train" },
+          { categories: "car", counts: 19901, split: "train" },
+          { categories: "dog", counts: 300000, split: "train" },
+          { categories: "cat", counts: 150000, split: "train" },
+        ],
+      },
+    },
+    {
+      id: "3",
+      split: "val",
+      image: "https://www.w3schools.com/tags/img_girl.jpg",
+      video: "https://www.w3schools.com/html/mov_bbb.mp4",
+      categories: {
         name: "categories",
         type: "categorical",
         histogram: [
@@ -40,78 +82,4 @@ export const items: Array<Array<ItemFeature>> = [
       },
     },
   ],
-  [
-    {
-      name: "id",
-      dtype: "int",
-      value: "2",
-    },
-    {
-      name: "split",
-      dtype: "str",
-      value: "val",
-    },
-    {
-      name: "image",
-      dtype: "image",
-      value: "https://www.w3schools.com/tags/img_girl.jpg",
-    },
-    {
-      name: "video",
-      dtype: "video",
-      value: "https://www.w3schools.com/html/mov_bbb.mp4",
-    },
-    {
-      name: "categories",
-      dtype: "histogram",
-      value: {
-        name: "categories",
-        type: "categorical",
-        histogram: [
-          { categories: "woman", counts: 838421, split: "train" },
-          { categories: "man", counts: 738421, split: "train" },
-          { categories: "car", counts: 19901, split: "train" },
-          { categories: "dog", counts: 300000, split: "train" },
-          { categories: "cat", counts: 150000, split: "train" },
-        ],
-      },
-    },
-  ],
-  [
-    {
-      name: "id",
-      dtype: "int",
-      value: "3",
-    },
-    {
-      name: "split",
-      dtype: "str",
-      value: "val",
-    },
-    {
-      name: "image",
-      dtype: "image",
-      value: "https://www.w3schools.com/tags/img_girl.jpg",
-    },
-    {
-      name: "video",
-      dtype: "video",
-      value: "https://www.w3schools.com/html/mov_bbb.mp4",
-    },
-    {
-      name: "categories",
-      dtype: "histogram",
-      value: {
-        name: "categories",
-        type: "categorical",
-        histogram: [
-          { categories: "woman", counts: 838421, split: "train" },
-          { categories: "man", counts: 738421, split: "train" },
-          { categories: "car", counts: 19901, split: "train" },
-          { categories: "dog", counts: 300000, split: "train" },
-          { categories: "cat", counts: 150000, split: "train" },
-        ],
-      },
-    },
-  ],
-];
+};

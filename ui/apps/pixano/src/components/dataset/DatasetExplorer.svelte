@@ -1,26 +1,17 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Imports
   import { createEventDispatcher } from "svelte";
   import { Loader2Icon } from "lucide-svelte";
 
   import { LoadingModal, WarningModal, PrimaryButton } from "@pixano/core/src";
   import { Table } from "@pixano/table";
-  import type { DatasetInfo } from "@pixano/core/src";
+  import type { ExplorerData } from "@pixano/core/src";
 
   import {
     svg_clear,
@@ -38,14 +29,14 @@
   } from "$lib/constants/pixanoConstants";
 
   // Exports
-  export let selectedDataset: DatasetInfo;
+  export let selectedDataset: ExplorerData;
   let isLoadingTableItems = false;
 
   // Page navigation
   let currentPage: number;
   let pageSize: number;
   $: {
-    if (selectedDataset.page?.items) {
+    if (selectedDataset.table_data) {
       isLoadingTableItems = false;
     }
   }
@@ -63,15 +54,13 @@
   let searchInput: string = "";
   let selectedSearchModel: string | undefined;
   const searchModels: string[] = [];
-  if ("embeddings" in selectedDataset.tables) {
-    for (const table of selectedDataset.tables.embeddings) {
-      if (table.type == "search") {
-        // Initialize selected search model
-        if (!selectedSearchModel) {
-          selectedSearchModel = table.source;
-        }
-        searchModels.push(table.source as string);
+  if (selectedDataset.sem_search.length > 0) {
+    for (const model of selectedDataset.sem_search) {
+      // Initialize selected search model
+      if (!selectedSearchModel) {
+        selectedSearchModel = model;
       }
+      searchModels.push(model);
     }
   }
 
@@ -109,7 +98,7 @@
   }
 
   function handleGoToNextPage() {
-    if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+    if (selectedDataset.pagination.total > currentPage * pageSize) {
       isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
@@ -120,12 +109,12 @@
   }
 
   function handleGoToLastPage() {
-    if ((selectedDataset.page?.total || 1) > currentPage * pageSize) {
+    if (selectedDataset.pagination.total > currentPage * pageSize) {
       isLoadingTableItems = true;
       datasetTableStore.update((value) => ({
         ...value,
         pageSize: value?.pageSize || pageSize,
-        currentPage: Math.ceil((selectedDataset.page?.total || 1) / pageSize),
+        currentPage: Math.ceil((selectedDataset.pagination.total || 1) / pageSize),
       }));
     }
   }
@@ -140,10 +129,33 @@
       query,
     }));
   }
+
+  // HACK TO CONVERT PREVIOUS TABLE INPUT TO NEW FORMAT
+  // WILL NEED TO BE CHANGED/REMOVED ONCE THE NEW FORMAT IS SENT
+  // let tableItems: Array<Array<ItemFeature>> = [];
+  // selectedDataset.page?.items.forEach((item) => {
+  //   let tableItem: Array<ItemFeature> = [];
+  //   tableItem.push({ name: "id", dtype: "int", value: item.id });
+  //   tableItem.push({ name: "split", dtype: "str", value: item.split });
+
+  //   Object.values(item.views).forEach((view: ItemView) => {
+  //     tableItem.push({
+  //       name: view.id,
+  //       dtype: "image",
+  //       value: view.thumbnail ? view.thumbnail : "",
+  //     });
+  //   });
+
+  //   Object.values(item.features).forEach((feature) => {
+  //     tableItem.push({ name: feature.name, dtype: feature.dtype, value: feature.value });
+  //   });
+
+  //   tableItems.push(tableItem);
+  // });
 </script>
 
 <div class="w-full px-20 bg-slate-50 flex flex-col text-slate-800 min-h-[calc(100vh-80px)]">
-  {#if selectedDataset.page}
+  {#if selectedDataset.pagination}
     <!-- Items list -->
     <div class="w-full h-full flex flex-col">
       <div class="py-5 h-20 flex space-x-2 items-center">
@@ -201,7 +213,7 @@
         </div>
       {:else if !selectedDataset.isErrored}
         <Table
-          items={selectedDataset.page.items}
+          items={selectedDataset.table_data}
           on:selectItem={(event) => handleSelectItem(event.detail)}
         />
       {:else}
@@ -216,7 +228,7 @@
 
     {#if !selectedDataset.isErrored}
       <div class="w-full py-5 h-20 flex justify-center items-center text-slate-800">
-        {#if selectedDataset.page.total > pageSize}
+        {#if selectedDataset.pagination.total > pageSize}
           <button on:click={handleGoToFirstPage}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -245,12 +257,12 @@
         <span class="mx-4">
           {1 + pageSize * (currentPage - 1)} - {Math.min(
             pageSize * currentPage,
-            selectedDataset.page.total,
+            selectedDataset.pagination.total,
           )} of
-          {selectedDataset.page.total}
+          {selectedDataset.pagination.total}
         </span>
 
-        {#if selectedDataset.page.total > pageSize}
+        {#if selectedDataset.pagination.total > pageSize}
           <button on:click={handleGoToNextPage}>
             <svg
               xmlns="http://www.w3.org/2000/svg"

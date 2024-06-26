@@ -1,19 +1,11 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
+  // Imports
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
   import { nanoid } from "nanoid";
 
@@ -24,6 +16,7 @@
     canSave,
     itemObjects,
     preAnnotationIsActive,
+    colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { GROUND_TRUTH } from "../../lib/constants";
   import {
@@ -34,8 +27,6 @@
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  export let colorScale: (id: string) => string;
-
   let objectsToAnnotate: ItemObject[] = [];
   let filteredObjectsToAnnotate: ItemObject[] = [];
   let isFormValid: boolean = false;
@@ -44,7 +35,7 @@
   let objectProperties: ObjectProperties = {};
 
   $: objectToAnnotate = filteredObjectsToAnnotate[0];
-  $: color = colorScale(objectToAnnotate?.id || "");
+  $: color = $colorScale[1](objectToAnnotate?.id || "");
 
   itemObjects.subscribe((objects) => {
     objectsToAnnotate = getObjectsToPreAnnotate(objects);

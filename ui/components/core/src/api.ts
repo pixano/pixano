@@ -1,20 +1,16 @@
-/**
- * @copyright CEA
- * @author CEA
- * @license CECILL
- *
- * This software is a collaborative computer program whose purpose is to
- * generate and explore labeled data for computer vision applications.
- * This software is governed by the CeCILL-C license under French law and
- * abiding by the rules of distribution of free software. You can use,
- * modify and/ or redistribute the software under the terms of the CeCILL-C
- * license as circulated by CEA, CNRS and INRIA at the following URL
- *
- * http://www.cecill.info
- */
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
 
 // Imports
-import type { DatasetInfo, DatasetItems, DatasetItem } from "./lib/types/datasetTypes";
+import type {
+  DatasetInfo,
+  DatasetItems,
+  DatasetItem,
+  ExplorerData,
+} from "./lib/types/datasetTypes";
 
 // Exports
 export async function getDatasets(): Promise<Array<DatasetInfo>> {
@@ -59,15 +55,15 @@ export async function getDatasetItems(
   datasetId: string,
   page: number = 1,
   size: number = 100,
-): Promise<DatasetItems> {
-  let datasetItems: DatasetItems;
+): Promise<ExplorerData> {
+  let datasetItems: ExplorerData;
 
   try {
-    const response = await fetch(`/datasets/${datasetId}/items?page=${page}&size=${size}`);
+    const response = await fetch(`/datasets/${datasetId}/explorer?page=${page}&size=${size}`);
     if (response.ok) {
-      datasetItems = (await response.json()) as DatasetItems;
+      datasetItems = (await response.json()) as ExplorerData;
     } else {
-      datasetItems = {} as DatasetItems;
+      datasetItems = {} as ExplorerData;
       console.log(
         "api.getDatasetItems -",
         response.status,
@@ -76,11 +72,28 @@ export async function getDatasetItems(
       );
     }
   } catch (e) {
-    datasetItems = {} as DatasetItems;
+    datasetItems = {} as ExplorerData;
     console.log("api.getDatasetItems -", e);
   }
 
   return datasetItems;
+}
+
+// Request API to get all the items ids for a given dataset
+export async function getDatasetItemsIds(datasetId: string): Promise<Array<string>> {
+  let datasetItemsIds: string[] = [];
+
+  try {
+    const response = await fetch(`/datasets/${datasetId}/item_ids`);
+    if (response.ok)
+      datasetItemsIds = (await response.json()) as string[]; // Parse API response if valid
+    else
+      console.log("api.getDataset -", response.status, response.statusText, await response.text()); // Handle API errors
+  } catch (e) {
+    console.log("api.getDataset -", e); // Handle other errors
+  }
+
+  return datasetItemsIds;
 }
 
 export async function searchDatasetItems(
@@ -116,6 +129,51 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
+
+      // TODO : remove this when the backend is fixed
+      // TODO : API changes | keyBoxes should be renamed `boxes` since is_key is now a params
+      // if (item.type === "video") {
+      //   const objects: Array<VideoObject> = item.objects.map((obj) => {
+      //     obj.track = obj.track.map((tracklet) => {
+      //       tracklet.start = tracklet.keyBoxes[0].frame_index;
+      //       tracklet.end = tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index;
+      //       tracklet.keyBoxes = tracklet.keyBoxes.map((keyBox, i) => {
+      //         if (
+      //           keyBox.frame_index === tracklet.keyBoxes[0].frame_index ||
+      //           keyBox.frame_index === tracklet.keyBoxes[tracklet.keyBoxes.length - 1].frame_index
+      //         ) {
+      //           keyBox.is_key = true;
+      //           keyBox.is_thumbnail = i === 0;
+      //         }
+      //         return keyBox;
+      //       });
+      //       return tracklet;
+      //     });
+      //     obj.displayedBox = undefined;
+      //     // obj.thumbnails =
+      //     //   item?.type === "video"
+      //     //     ? Object.entries(item.views).reduce(
+      //     //         (acc, [viewId, views]) => {
+      //     //           if (obj.datasetItemType === "video") {
+      //     //             acc[viewId] = {
+      //     //               uri: views[0].uri,
+      //     //               baseImageDimensions: {
+      //     //                 width: views[0].features.width.value as number,
+      //     //                 height: views[0].features.height.value as number,
+      //     //               },
+      //     //               frameIndex: 0,
+      //     //               coords: obj.track[0].keyBoxes[0].coords,
+      //     //             };
+      //     //           }
+      //     //           return acc;
+      //     //         },
+      //     //         {} as Record<string, ObjectThumbnail>,
+      //     //       )
+      //     //     : undefined;
+      //     return obj;
+      //   });
+      //   item.objects = objects;
+      // }
     } else {
       item = {} as DatasetItem;
       console.log(
@@ -129,40 +187,6 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     item = {} as DatasetItem;
     console.log("api.getDatasetItem -", e);
   }
-
-  // if (IS_DEV) {
-  //   item.objects = Object.values(item.objects).reduce(
-  //     (acc, obj) => {
-  //       obj.datasetItemType = "video";
-  //       if (obj.datasetItemType === "video" && obj.bbox) {
-  //         const [x, y, w, h] = obj.bbox.coords;
-  //         const box = obj.bbox;
-  //         obj.displayedBox = obj.bbox; // TODO IS_DEV should be done on the frontend not api
-  //         obj.track = [
-  //           {
-  //             start: 0,
-  //             end: 10,
-  //             keyBoxes: [
-  //               { ...box, frameIndex: 0, coords: [x, y, w, h] },
-  //               { ...box, frameIndex: 10, coords: [x + 0.1, y + 0.5, w, h] },
-  //             ],
-  //           },
-  //           {
-  //             start: 52,
-  //             end: 91,
-  //             keyBoxes: [
-  //               { ...box, frameIndex: 52, coords: [x + 0.1, y + 0.5, w, h] },
-  //               { ...box, frameIndex: 91, coords: [x, y, w, h] },
-  //             ],
-  //           },
-  //         ];
-  //       }
-  //       acc[obj.id] = obj;
-  //       return acc;
-  //     },
-  //     {} as DatasetItem["objects"],
-  //   );
-  // }
 
   return item;
 }

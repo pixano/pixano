@@ -1,15 +1,8 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
-# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-# @License: CECILL-C
-#
-# This software is a collaborative computer program whose purpose is to
-# generate and explore labeled data for computer vision applications.
-# This software is governed by the CeCILL-C license under French law and
-# abiding by the rules of distribution of free software. You can use,
-# modify and/ or redistribute the software under the terms of the CeCILL-C
-# license as circulated by CEA, CNRS and INRIA at the following URL
-#
-# http://www.cecill.info
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
 
 from abc import ABC
 from datetime import datetime, timedelta
@@ -22,11 +15,11 @@ import lancedb
 import pyarrow as pa
 from tqdm.auto import tqdm
 
-from pixano.data import Dataset, DatasetTable, Fields
+from pixano.datasets import Dataset, DatasetTable, Fields
 
 
 class InferenceModel(ABC):
-    """Abstract parent class for OfflineModel and OnlineModel
+    """Abstract parent class for OfflineModel and OnlineModel.
 
     Attributes:
         name (str): Model name
@@ -42,7 +35,7 @@ class InferenceModel(ABC):
         device: str = "",
         description: str = "",
     ) -> None:
-        """Initialize model name and ID
+        """Initialize model name and ID.
 
         Args:
             name (str): Model name
@@ -50,7 +43,6 @@ class InferenceModel(ABC):
             device (str, optional): Model GPU or CPU device. Defaults to "".
             description (str, optional): Model description. Defaults to "".
         """
-
         self.name = name
         if model_id == "":
             self.model_id = f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{name}"
@@ -65,11 +57,12 @@ class InferenceModel(ABC):
         views: list[str],
         dataset: Dataset,
     ) -> DatasetTable:
-        """Create inference table in dataset
+        """Create inference table in dataset.
 
         Args:
             process_type (str): Process type
-                                - 'pre_ann' for pre-annotations to accept or reject as Ground Truth
+                                - 'pre_ann' for pre-annotations to accept or
+                                  reject as Ground Truth
                                 - 'model_run' for annotations to compare to Ground Truth
                                 - 'segment_emb' for segmentation embeddings
                                 - 'search_emb' for semantic search embeddings
@@ -148,7 +141,7 @@ class InferenceModel(ABC):
         threshold: float = 0.0,
         prompt: str = "",
     ) -> list[dict]:
-        """Generate annotations for dataset rows
+        """Generate annotations for dataset rows.
 
         Args:
             batch (pa.RecordBatch): Input batch
@@ -167,7 +160,7 @@ class InferenceModel(ABC):
         views: list[str],
         uri_prefix: str,
     ) -> list[dict]:
-        """Precompute embeddings for dataset rows
+        """Precompute embeddings for dataset rows.
 
         Args:
             batch (pa.RecordBatch): Input batch
@@ -188,25 +181,26 @@ class InferenceModel(ABC):
         threshold: float = 0.0,
         prompt: str = "",
     ) -> Dataset:
-        """Process dataset for annotations or embeddings
+        """Process dataset for annotations or embeddings.
 
         Args:
             dataset_dir (Path): Dataset directory
             views (list[str]): Dataset views
             process_type (str): Process type
-                                - 'pre_ann' for pre-annotations to accept or reject as Ground Truth
+                                - 'pre_ann' for pre-annotations to accept or reject
+                                  as Ground Truth
                                 - 'model_run' for annotations to compare to Ground Truth
                                 - 'segment_emb' for segmentation embeddings
                                 - 'search_emb' for semantic search embeddings
             splits (list[str], optional): Dataset splits, all if None. Defaults to None.
             batch_size (int, optional): Rows per process batch. Defaults to 1.
-            threshold (float, optional): Confidence threshold for predictions. Defaults to 0.0.
+            threshold (float, optional): Confidence threshold for predictions.
+                Defaults to 0.0.
             prompt (str, optional): Annotation text prompt. Defaults to "".
 
         Returns:
             Dataset: Dataset
         """
-
         if process_type not in [
             "pre_ann",
             "model_run",
@@ -216,7 +210,8 @@ class InferenceModel(ABC):
             raise ValueError(
                 "Please choose a valid process type"
                 "('pre_ann' or 'model_run' for for annotations,"
-                "'segment_emb' or 'search_emb' for segmentation or semantic search embeddings)"
+                "'segment_emb' or 'search_emb' for segmentation or semantic "
+                "search embeddings)"
             )
 
         if not views:
@@ -290,7 +285,7 @@ class InferenceModel(ABC):
         save_batch_size: int,
         save_batch_index: int,
     ) -> list[pa.RecordBatch]:
-        """Load dataset rows as list of process batches
+        """Load dataset rows as list of process batches.
 
         Args:
             dataset (Dataset): Dataset
@@ -303,41 +298,40 @@ class InferenceModel(ABC):
         Returns:
             list[pa.RecordBatch]: Process batches
         """
-
         # Batch parameters
         offset = save_batch_index * save_batch_size
         limit = min(dataset.num_rows, offset + save_batch_size)
 
         # Main table
-        # pylint: disable=unused-variable
-        pyarrow_table = ds_tables["main"]["db"].to_lance()
+        pyarrow_table = ds_tables["main"]["db"].to_lance()  # noqa: F841
         if splits:
             pyarrow_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_table WHERE split IN {tuple(splits)} ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                f"SELECT * FROM pyarrow_table WHERE split IN {tuple(splits)} "
+                f"ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
             ).to_arrow_table()
         else:
             pyarrow_batch = duckdb.query(
-                f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} OFFSET {offset}"
+                f"SELECT * FROM pyarrow_table ORDER BY len(id), id LIMIT {limit} "
+                f"OFFSET {offset}"
             ).to_arrow_table()
         id_list = tuple(pyarrow_batch.to_pydict()["id"])
 
         # Media tables
         for media_table in ds_tables["media"].values():
-            # pylint: disable=unused-variable
-            pyarrow_media_table = media_table.to_lance()
-            # pylint: disable=unused-variable
-            pyarrow_media_batch = duckdb.query(
+            pyarrow_media_table = media_table.to_lance()  # noqa: F841
+            pyarrow_media_batch = duckdb.query(  # noqa: F841
                 f"SELECT * FROM pyarrow_media_table WHERE id in {id_list}"
             ).to_arrow_table()
             pyarrow_batch = duckdb.query(
-                "SELECT * FROM pyarrow_batch LEFT JOIN pyarrow_media_batch USING (id) ORDER BY len(id), id"
+                "SELECT * FROM pyarrow_batch LEFT JOIN pyarrow_media_batch USING (id) "
+                "ORDER BY len(id), id"
             ).to_arrow_table()
 
         # Convert to RecordBatch
         return pyarrow_batch.to_batches(max_chunksize=process_batch_size)
 
     def export_to_onnx(self, library_dir: Path):
-        """Export Torch model to ONNX
+        """Export Torch model to ONNX.
 
         Args:
             library_dir (Path): Dataset library directory

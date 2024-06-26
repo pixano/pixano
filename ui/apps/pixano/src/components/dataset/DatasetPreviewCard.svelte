@@ -1,24 +1,16 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Imports
   import { createEventDispatcher } from "svelte";
 
   import type { DatasetInfo } from "@pixano/core/src";
   import { svg_right_arrow } from "@pixano/core/src/icons";
+  import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
   // Exports
   export let dataset: DatasetInfo;
@@ -47,8 +39,8 @@
     </div>
 
     <p class="text-sm text-slate-500 font-medium">
-      {dataset.num_elements} items {dataset.estimated_size && dataset.estimated_size != "N/A"
-        ? " - " + dataset.estimated_size
+      {dataset.num_elements} items {dataset.size && dataset.size != "N/A"
+        ? " - " + dataset.size
         : ""}
     </p>
     <svg
@@ -64,12 +56,10 @@
 
   <!-- Dataset Thumbnail -->
   <div class="m-4 bg-slate-50">
-    {#if dataset.preview}
-      <img
-        src={dataset.preview}
-        alt="{dataset.name} thumbnail"
-        class="w-[350px] h-[176px] rounded-sm object-contain object-center"
-      />
-    {/if}
+    <img
+      src={dataset.preview ?? pixanoLogo}
+      alt="{dataset.name} thumbnail"
+      class="w-[350px] h-[176px] rounded-sm object-contain object-center"
+    />
   </div>
 </button>

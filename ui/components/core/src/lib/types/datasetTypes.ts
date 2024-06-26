@@ -1,17 +1,10 @@
-/**
- * @copyright CEA
- * @author CEA
- * @license CECILL
- *
- * This software is a collaborative computer program whose purpose is to
- * generate and explore labeled data for computer vision applications.
- * This software is governed by the CeCILL-C license under French law and
- * abiding by the rules of distribution of free software. You can use,
- * modify and/ or redistribute the software under the terms of the CeCILL-C
- * license as circulated by CEA, CNRS and INRIA at the following URL
- *
- * http://www.cecill.info
- */
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
+import type { Keypoints } from "./objectTypes";
 
 // Exports
 
@@ -21,17 +14,56 @@ export interface DatasetInfo {
   id: string;
   name: string;
   description: string;
-  estimated_size: string;
   num_elements: number;
+  size: string;
   preview: string;
-  splits: Array<string>;
-  tables: Record<string, Array<DatasetTable>>;
-  features_values?: FeaturesValues;
-  stats: Array<DatasetStat>;
-  page?: DatasetItems;
   isFiltered?: boolean;
+}
+
+export interface ExplorerData {
+  id: string;
+  name: string;
+  table_data: TableData;
+  pagination: PaginationInfo;
+  sem_search: Array<string>;
   isErrored?: boolean;
 }
+
+export interface TableData {
+  cols: Array<TableColumn>;
+  rows: Array<TableRow>;
+}
+
+export interface TableColumn {
+  name: string;
+  type: string;
+}
+
+export type TableRow = Record<string, string | number | boolean | DatasetStat>;
+
+export interface PaginationInfo {
+  current: number;
+  size: number;
+  total: number;
+}
+
+// OLD
+
+// export interface DatasetInfo {
+//   id: string;
+//   name: string;
+//   description: string;
+//   estimated_size: string;
+//   num_elements: number;
+//   preview: string;
+//   splits: Array<string>;
+//   tables: Record<string, Array<DatasetTable>>;
+//   features_values?: FeaturesValues;
+//   stats: Array<DatasetStat>;
+//   page?: DatasetItems;
+//   isFiltered?: boolean;
+//   isErrored?: boolean;
+// }
 
 export interface DatasetTable {
   name: string;
@@ -55,21 +87,22 @@ export interface DatasetStat {
 // DATASET ITEM
 interface BaseDatasetItem {
   id: string;
+  datasetId: string;
   split: string;
-  objects: Record<string, ItemObject>;
-  features: Record<string, ItemFeature>;
-  embeddings: Record<string, ItemEmbedding>;
+  objects: Array<ItemObject>;
+  features: Record<string, ItemFeature>; //remplacer par? Array<ItemFeature>
+  embeddings: Record<string, ItemEmbedding>; //remplacer par? Array<ItemEmbedding>
 }
 
 export type ImageDatasetItem = BaseDatasetItem & {
   type: "image";
-  objects: Record<string, ImageObject>;
+  objects: Array<ImageObject>;
   views: Record<string, ItemView>;
 };
 
 export type VideoDatasetItem = BaseDatasetItem & {
   type: "video";
-  objects: Record<string, VideoObject>;
+  objects: Array<VideoObject>;
   views: Record<string, ItemView[]>;
 };
 
@@ -104,39 +137,60 @@ export interface DisplayControl {
   editing?: boolean;
 }
 
+export interface ObjectThumbnail {
+  uri: string;
+  baseImageDimensions: {
+    width: number;
+    height: number;
+  };
+  coords: Array<number>;
+}
+
 export type ItemObjectBase = {
   id: string;
   item_id: string;
   source_id: string;
   view_id: string;
-  bbox?: ItemBBox;
-  mask?: ItemRLE;
   features: Record<string, ItemFeature>;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
 };
 
-export type VideoItemBBox = ItemBBox & {
-  frameIndex: number;
+export type TrackletItem = {
+  frame_index: number;
+  tracklet_id: string;
+  is_key?: boolean;
+  is_thumbnail?: boolean;
   hidden?: boolean;
 };
+
+export type VideoItemBBox = ItemBBox & TrackletItem;
+export type VideoKeypoints = Keypoints & TrackletItem;
 export interface Tracklet {
-  keyBoxes: VideoItemBBox[];
   start: number;
   end: number;
+  id: string;
 }
+
+export type TrackletWithItems = Tracklet & {
+  items: TrackletItem[];
+};
 
 export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
-  displayedBox: VideoItemBBox;
+  boxes?: VideoItemBBox[];
+  keypoints?: VideoKeypoints[];
+  displayedBox?: VideoItemBBox;
+  displayedKeypoints?: VideoKeypoints;
 };
 
 export type ImageObject = ItemObjectBase & {
   datasetItemType: "image";
   bbox?: ItemBBox;
   mask?: ItemRLE;
+  keypoints?: Keypoints;
 };
 
 export type ItemObject = ImageObject | VideoObject;

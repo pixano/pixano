@@ -16,11 +16,11 @@ name: Test
 on:
   push:
     branches:
-      - "develop"
+      # - "develop"
       - "main"
-  pull_request:
-    branches:
-      - "develop"
+  #pull_request:
+  #  branches:
+  #    - "develop"
 
 permissions:
   contents: read

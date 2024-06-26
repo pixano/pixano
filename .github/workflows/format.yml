@@ -98,25 +98,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Format backend code with black
-        uses: psf/black@stable
+      - name: Format backend code with ruff
+        uses: chartboost/ruff-action@v1
         with:
-          options: "--check --verbose --diff --color"
-          src: "./pixano"
-          version: "~= 24.0"
-
-      - name: Format backend tests with black
-        uses: psf/black@stable
-        with:
-          options: "--check --verbose --diff --color"
-          src: "./tests"
-          jupyter: true
-          version: "~= 24.0"
-
-      - name: Format Jupyter notebooks with black
-        uses: psf/black@stable
-        with:
-          options: "--check --verbose --diff --color"
-          src: "./notebooks"
-          jupyter: true
-          version: "~= 24.0"
+          version: 0.3.2
+          args: format

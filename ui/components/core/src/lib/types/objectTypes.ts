@@ -1,5 +1,11 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { SegmentationResult } from ".";
-import type { BBox, Mask } from "./datasetTypes";
+import type { BBox, DisplayControl, Mask } from "./datasetTypes";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -14,6 +20,11 @@ export type SaveShapeBase = {
   imageWidth: number;
   imageHeight: number;
   status: "saving";
+};
+
+export type SaveKeyBoxShape = SaveShapeBase & {
+  type: "keypoint";
+  keypoints: KeypointsTemplate;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
@@ -31,7 +42,7 @@ type SaveMaskShape = SegmentationResult &
     type: "mask";
   };
 
-export type SaveShape = SaveRectangleShape | SaveMaskShape;
+export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape;
 
 export type noShape = {
   status: "none";
@@ -42,6 +53,45 @@ export type PolygonGroupPoint = {
   x: number;
   y: number;
   id: number;
+};
+
+export type VertexStates = "hidden" | "visible" | "invisible";
+
+export type Vertex = {
+  x: number;
+  y: number;
+  features?: {
+    state?: VertexStates;
+    label?: string;
+    color?: string;
+  };
+};
+
+export type Keypoints = {
+  template_id: string;
+  vertices: Vertex[];
+  displayControl?: DisplayControl;
+};
+
+export type KeypointsTemplate = {
+  id: string;
+  edges: [number, number][];
+  vertices: Required<Vertex>[];
+  editing?: boolean;
+  visible?: boolean;
+  displayControl?: DisplayControl;
+  highlighted?: "all" | "self" | "none";
+};
+
+export type CreateKeypointShape = {
+  status: "creating";
+  type: "keypoint";
+  viewId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  keypoints: KeypointsTemplate;
 };
 
 export type CreateMaskShape = {
@@ -61,7 +111,7 @@ export type CreateRectangleShape = {
   viewId: string;
 };
 
-export type CreateShape = CreateMaskShape | CreateRectangleShape;
+export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeypointShape;
 
 export type EditMaskShape = {
   type: "mask";
@@ -73,11 +123,16 @@ export type EditRectangleShape = {
   coords: number[];
 };
 
+export type EditKeypointsShape = {
+  type: "keypoint";
+  vertices: KeypointsTemplate["vertices"];
+};
+
 export type EditShape = {
   status: "editing";
   shapeId: string;
   highlighted?: "all" | "self" | "none";
-} & (EditRectangleShape | EditMaskShape | { type: "none" });
+} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

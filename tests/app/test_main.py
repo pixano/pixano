@@ -1,16 +1,8 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
-# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-# @License: CECILL-C
-#
-# This software is a collaborative computer program whose purpose is to
-# generate and explore labeled data for computer vision applications.
-#
-# This software is governed by the CeCILL-C license under French law and
-# abiding by the rules of distribution of free software. You can use,
-# modify and/ or redistribute the software under the terms of the CeCILL-C
-# license as circulated by CEA, CNRS and INRIA at the following URL
-#
-# http://www.cecill.info
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
 
 import json
 import tempfile
@@ -231,7 +223,8 @@ class AppTestCase(unittest.TestCase):
         self.assertEqual(response_2.status_code, 200)
 
     def test_get_dataset_item_embeddings(self):
-        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id} endpoint (GET)"""
+        """Test /datasets/{dataset_id}/items/{item_id}/embeddings/{model_id}
+        endpoint (GET)"""
 
         response = self.client.get("/datasets/coco_dataset/items/139/embeddings/SAM")
 

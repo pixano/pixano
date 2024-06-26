@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import Command from "./command.svelte";
   import * as Dialog from "../dialog";
   import type { Dialog as DialogPrimitive } from "bits-ui";

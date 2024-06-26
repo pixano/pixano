@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import Root from "./button.svelte";
 import { tv, type VariantProps } from "tailwind-variants";
 import type { Button as ButtonPrimitive } from "bits-ui";

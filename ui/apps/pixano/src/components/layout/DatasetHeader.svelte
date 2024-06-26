@@ -1,20 +1,10 @@
-<script lang="ts">
-  /// <reference types="svelte" />
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Imports
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
@@ -24,19 +14,21 @@
 
   import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
 
-  import { findSelectedItem } from "$lib/api/navigationApi";
+  import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
   import {
-    datasetsStore,
+    currentDatasetStore,
+    datasetTableStore,
     isLoadingNewItemStore,
     saveCurrentItemStore,
   } from "$lib/stores/datasetStores";
   import { navItems } from "$lib/constants/headerConstants";
 
-  export let datasetName: string;
   export let pageId: string | null;
-  export let currentDatasetName: string;
+  export let datasetItemsIds: string[];
 
-  let datasets: DatasetInfo[];
+  let currentDataset: DatasetInfo;
+  $: currentDatasetStore.subscribe((value) => (currentDataset = value));
+
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
@@ -49,25 +41,27 @@
     isLoading = value;
   });
 
-  datasetsStore.subscribe((value) => {
-    datasets = value;
-  });
-
   $: page.subscribe((value) => {
     currentItemId = value.params.itemId;
   });
 
+  // Handle bi-directional navigation using arrows
   const goToNeighborItem = async (direction: "previous" | "next") => {
-    const currentDataset = datasets.find((dataset) => dataset.name === currentDatasetName);
-    const datasetItems = Object.values(currentDataset?.page?.items || {});
-    const selectedId = findSelectedItem(direction, datasetItems, currentItemId);
-    if (selectedId) {
-      const route = `/${currentDatasetName}/dataset/${selectedId}`;
+    // Find the neighbor item id
+    const neighborId = findNeighborItemId(datasetItemsIds, direction, currentItemId);
+
+    // If a neighbor item has been found
+    if (neighborId) {
+      const route = `/${currentDataset.id}/dataset/${neighborId}`;
+
+      // Ask for confirmation if modifications have been made to the item
       if (canSaveCurrentItem) {
-        newItemId = selectedId;
+        newItemId = neighborId;
         return (showConfirmModal = route);
       }
-      currentItemId = selectedId;
+
+      // Go to next/previous item
+      currentItemId = neighborId;
       await goto(route);
     }
   };
@@ -97,6 +91,18 @@
     saveCurrentItemStore.set({ canSave: false, shouldSave: false });
   };
 
+  // Return to the previous page
+  const handleReturnToPreviousPage = async () => {
+    if (currentItemId) {
+      // Update the current page to ensure that we follow the selected item
+      datasetTableStore.update((pagination) => {
+        pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
+        return pagination;
+      });
+      await navigateTo(`/${currentDataset.id}/dataset`);
+    } else await navigateTo("/");
+  };
+
   const navigateTo = async (route: string) => {
     if (canSaveCurrentItem) {
       return (showConfirmModal = route);
@@ -110,20 +116,22 @@
     class="h-20 p-5 flex justify-between items-center shrink-0
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
   >
-    <div class="h-10 flex items-center font-semibold text-2xl">
-      <div class="flex gap-4 items-center font-light">
-        <button on:click={() => navigateTo("/")} class="h-10 w-10">
-          <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
-        </button>
-        <IconButton
-          on:click={() => navigateTo(currentItemId ? `/${datasetName}/dataset` : "/")}
-          tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
-        >
-          <ArrowLeftCircleIcon />
-        </IconButton>
-        {datasetName}
+    {#if currentDataset}
+      <div class="h-10 flex items-center font-semibold text-2xl">
+        <div class="flex gap-4 items-center font-light">
+          <button on:click={() => navigateTo("/")} class="h-10 w-10">
+            <img src={pixanoLogo} alt="Logo Pixano" class="w-8 h-8 mx-2" />
+          </button>
+          <IconButton
+            on:click={handleReturnToPreviousPage}
+            tooltipContent={currentItemId ? "Back to dataset" : "Back to home"}
+          >
+            <ArrowLeftCircleIcon />
+          </IconButton>
+          {currentDataset.name}
+        </div>
       </div>
-    </div>
+    {/if}
     {#if currentItemId}
       {#if isLoading}
         <Loader2Icon class="animate-spin" />
@@ -143,7 +151,7 @@
       {#each navItems as { name, Icon }}
         <PrimaryButton
           isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-          on:click={() => navigateTo(`/${datasetName}/${name.toLocaleLowerCase()}`)}
+          on:click={() => navigateTo(`/${currentDataset.id}/${name.toLocaleLowerCase()}`)}
         >
           <Icon strokeWidth={1} />
           {name}

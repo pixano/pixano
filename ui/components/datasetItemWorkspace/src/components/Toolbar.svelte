@@ -1,18 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+  // Imports
   import {
     MousePointer,
     Square,
@@ -41,6 +34,8 @@
     selectedTool,
   } from "../lib/stores/datasetItemWorkspaceStores";
   import { onMount } from "svelte";
+
+  import KeyPointsSelection from "./Toolbar/KeyPointsSelectionTool.svelte";
 
   let previousSelectedTool: SelectionTool | null = null;
   let showSmartTools: boolean = false;
@@ -100,10 +95,7 @@
     >
       <Share2 />
     </IconButton>
-    <!-- <IconButton tooltipContent="TODO">
-      uncomment when ready
-      <BrushIcon />
-    </IconButton> -->
+    <KeyPointsSelection />
   </div>
   <div
     class={cn("flex items-center flex-col gap-4 mt-4", {

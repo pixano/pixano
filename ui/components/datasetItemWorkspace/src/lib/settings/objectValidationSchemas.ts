@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import type { ItemFeature } from "@pixano/core";
 import { z } from "zod";
 import type { CreateObjectSchemaDefinition } from "../types/datasetItemWorkspaceTypes";

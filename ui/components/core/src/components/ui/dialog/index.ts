@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import { Dialog as DialogPrimitive } from "bits-ui";
 
 const Root = DialogPrimitive.Root;

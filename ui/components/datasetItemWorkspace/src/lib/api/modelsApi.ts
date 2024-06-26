@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 import * as ort from "onnxruntime-web";
 
 import type { DatasetItem, DatasetInfo } from "@pixano/core";

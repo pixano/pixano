@@ -1,3 +1,9 @@
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
+
 // source ids
 export const GROUND_TRUTH = "Ground Truth";
 export const MODEL_RUN = "Model Run";

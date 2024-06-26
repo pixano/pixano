@@ -1,0 +1,52 @@
+{
+    "relations": {
+        "item": {"image": "one_to_one"},
+        "image": {"item": "one_to_one"}
+    },
+    "schemas": {
+        "image": {
+            "schema": "image",
+            "base_schema": "image",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "url": {
+                    "type": "str",
+                    "collection": false
+                },
+                "width": {
+                    "type": "int",
+                    "collection": false
+                },
+                "height": {
+                    "type": "int",
+                    "collection": false
+                },
+                "format": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        },
+        "item": {
+            "schema": "item",
+            "base_schema": "item",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "split": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        }
+    }
+}

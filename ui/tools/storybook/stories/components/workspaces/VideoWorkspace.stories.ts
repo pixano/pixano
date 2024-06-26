@@ -1,17 +1,8 @@
-/**
- * @copyright CEA
- * @author CEA
- * @license CECILL
- *
- * This software is a collaborative computer program whose purpose is to
- * generate and explore labeled data for computer vision applications.
- * This software is governed by the CeCILL-C license under French law and
- * abiding by the rules of distribution of free software. You can use,
- * modify and/ or redistribute the software under the terms of the CeCILL-C
- * license as circulated by CEA, CNRS and INRIA at the following URL
- *
- * http://www.cecill.info
- */
+/*-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------*/
 
 // FIX IN FUTURE PR
 import type { Meta, StoryObj } from "@storybook/svelte";
@@ -20,11 +11,7 @@ import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItem
 import { interactiveSegmenterModel } from "@pixano/dataset-item-workspace/src/lib/stores/datasetItemWorkspaceStores";
 
 import { MockInteractiveImageSegmenter } from "./mocks";
-import {
-  mockedCurrentDataset,
-  mockHandleSaveItem,
-  mockedVideoDatasetItem,
-} from "./datasetItemWorkspaceMocks";
+import { mockHandleSaveItem, mockedVideoDatasetItem } from "./datasetItemWorkspaceMocks";
 
 type Story = StoryObj<typeof meta>;
 
@@ -48,7 +35,7 @@ export const BasicVideoWorkspace: Story = {
     shouldSaveCurrentItem: false,
     models: [],
     handleSaveItem: mockHandleSaveItem,
-    currentDataset: mockedCurrentDataset,
     selectedItem: mockedVideoDatasetItem,
+    featureValues: { main: {}, objects: {} },
   },
 };

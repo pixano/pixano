@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { Command as CommandPrimitive } from "cmdk-sv";
   import { Search } from "lucide-svelte";
   import { cn } from "../../../lib/utils/styleUtils";

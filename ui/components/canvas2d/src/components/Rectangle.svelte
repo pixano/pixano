@@ -1,19 +1,10 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Imports
   import { afterUpdate, onDestroy, tick } from "svelte";
   import Konva from "konva";
@@ -115,15 +106,15 @@
 <Group
   on:dblclick={onDoubleClick}
   on:click={onClick}
-  config={{ listening: selectedTool?.type === "PAN", zIndex: 2 }}
+  config={{ listening: selectedTool?.type === "PAN" }}
 >
   <Rect
     config={{
       id: `rect${bbox.id}`,
-      x: bbox.bbox[0],
-      y: bbox.bbox[1],
-      width: bbox.bbox[2],
-      height: bbox.bbox[3],
+      x: bbox.bbox[0] || 0,
+      y: bbox.bbox[1] || 0,
+      width: bbox.bbox[2] || 0,
+      height: bbox.bbox[3] || 0,
       stroke: colorScale(bbox.id),
       strokeWidth: bbox.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.opacity,

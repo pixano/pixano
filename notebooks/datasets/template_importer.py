@@ -1,15 +1,8 @@
-# @Copyright: CEA-LIST/DIASI/SIALV/LVA (2023)
-# @Author: CEA-LIST/DIASI/SIALV/LVA <pixano@cea.fr>
-# @License: CECILL-C
-#
-# This software is a collaborative computer program whose purpose is to
-# generate and explore labeled data for computer vision applications.
-# This software is governed by the CeCILL-C license under French law and
-# abiding by the rules of distribution of free software. You can use,
-# modify and/ or redistribute the software under the terms of the CeCILL-C
-# license as circulated by CEA, CNRS and INRIA at the following URL
-#
-# http://www.cecill.info
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
 
 import glob
 from collections.abc import Iterator
@@ -22,7 +15,7 @@ from pixano.utils import coco_names_91, image_to_thumbnail
 
 
 class TemplateImporter(Importer):
-    """Template Dataset Importer class template
+    """Template Dataset Importer class template.
 
     Attributes:
         info (DatasetInfo): Dataset information
@@ -36,7 +29,7 @@ class TemplateImporter(Importer):
         input_dirs: dict[str, Path],
         splits: list[str],
     ):
-        """Initialize Template Importer
+        """Initialize Template Importer.
 
         Args:
             name (str): Dataset name
@@ -44,7 +37,6 @@ class TemplateImporter(Importer):
             input_dirs (dict[str, Path]): Dataset input directories
             splits (list[str]): Dataset splits
         """
-
         tables = {
             "main": [
                 {
@@ -108,12 +100,11 @@ class TemplateImporter(Importer):
         )
 
     def import_rows(self) -> Iterator:
-        """Process dataset rows for import
+        """Process dataset rows for import.
 
         Yields:
             Iterator: Processed rows
         """
-
         for split in self.info.splits:
             # #### Retrieve your annotations #####
             annotations = self.input_dirs["objects"] / "......"

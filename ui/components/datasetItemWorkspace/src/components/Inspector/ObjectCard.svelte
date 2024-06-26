@@ -1,52 +1,57 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+  // Imports
   import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
-  import type { DisplayControl, ItemObject } from "@pixano/core";
+  import { Thumbnail } from "@pixano/canvas2d";
+  import type { DisplayControl, ItemObject, ObjectThumbnail } from "@pixano/core";
 
-  import { canSave, itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { createObjectCardId, toggleObjectDisplayControl } from "../../lib/api/objectsApi";
+  import {
+    canSave,
+    itemObjects,
+    selectedTool,
+    colorScale,
+    itemMetas,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
+  import {
+    createObjectCardId,
+    toggleObjectDisplayControl,
+    highlightCurrentObject,
+    defineObjectThumbnail,
+  } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
-  import { itemBoxBeingEdited } from "../../lib/stores/videoViewerStores";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
   export let itemObject: ItemObject;
-  export let colorScale: (id: string) => string;
 
-  let color: string;
   let open: boolean = false;
   let showIcons: boolean = false;
 
   $: features = createFeature(itemObject.features);
   $: isEditing = itemObject.displayControl?.editing || false;
   $: isVisible = !itemObject.displayControl?.hidden;
-  $: boxIsVisible = !itemObject.bbox?.displayControl?.hidden;
-  $: maskIsVisible = !itemObject.mask?.displayControl?.hidden;
+  $: boxIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
+  $: maskIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
+  $: keypointsIsVisible =
+    itemObject.datasetItemType === "image" && !itemObject.keypoints?.displayControl?.hidden;
 
-  $: {
-    color = colorScale(itemObject.id);
-  }
+  $: color = $colorScale[1](itemObject.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
     value: boolean,
-    properties: ("bbox" | "mask")[] = ["bbox", "mask"],
+    properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
   ) => {
     itemObjects.update((objects) =>
       objects.map((object) => {
@@ -60,13 +65,7 @@
         }
         if (object.id === itemObject.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-          itemBoxBeingEdited.update(() => {
-            const startingBox = object.datasetItemType === "video" && object.track[0]?.keyBoxes[0];
-            if (value && startingBox) {
-              return { ...startingBox, objectId: object.id };
-            }
-            return null;
-          });
+          objectIdBeingEdited.set(value ? object.id : null);
         }
         return object;
       }),
@@ -96,26 +95,15 @@
     canSave.set(true);
   };
 
-  const onColoredDotClick = () => {
-    const isObjectHighlighted = itemObject.highlighted === "self";
-    itemObjects.update((oldObjects) =>
-      oldObjects.map((object) => {
-        if (isObjectHighlighted) {
-          object.highlighted = "all";
-        } else if (object.id === itemObject.id) {
-          object.highlighted = "self";
-        } else {
-          object.highlighted = "none";
-        }
-        return object;
-      }),
-    );
-  };
+  const onColoredDotClick = () =>
+    itemObjects.update((objects) => highlightCurrentObject(objects, itemObject));
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);
     !isEditing && selectedTool.set(panTool);
   };
+
+  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, itemObject);
 </script>
 
 <article
@@ -170,34 +158,57 @@
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          <div>
-            <p class="font-medium first-letter:uppercase">display</p>
-            <div class="flex gap-4">
-              {#if itemObject.bbox}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Box</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
-                    bind:checked={boxIsVisible}
-                    title={boxIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
-              {#if itemObject.mask}
-                <div class="flex gap-2 mt-2 items-center">
-                  <p class="font-light first-letter:uppercase">Mask</p>
-                  <Checkbox
-                    handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
-                    bind:checked={maskIsVisible}
-                    title={maskIsVisible ? "Hide" : "Show"}
-                    class="mx-1"
-                  />
-                </div>
-              {/if}
+          {#if itemObject.datasetItemType === "image"}
+            <div>
+              <p class="font-medium first-letter:uppercase">display</p>
+              <div class="flex gap-4">
+                {#if itemObject.bbox}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Box</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", boxIsVisible, ["bbox"])}
+                      bind:checked={boxIsVisible}
+                      title={boxIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+                {#if itemObject.mask}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Mask</p>
+                    <Checkbox
+                      handleClick={() => handleIconClick("hidden", maskIsVisible, ["mask"])}
+                      bind:checked={maskIsVisible}
+                      title={maskIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+                {#if itemObject.keypoints}
+                  <div class="flex gap-2 mt-2 items-center">
+                    <p class="font-light first-letter:uppercase">Key points</p>
+                    <Checkbox
+                      handleClick={() =>
+                        handleIconClick("hidden", keypointsIsVisible, ["keypoints"])}
+                      bind:checked={keypointsIsVisible}
+                      title={keypointsIsVisible ? "Hide" : "Show"}
+                      class="mx-1"
+                    />
+                  </div>
+                {/if}
+              </div>
             </div>
-          </div>
+          {/if}
           <UpdateFeatureInputs featureClass="objects" {features} {isEditing} {saveInputChange} />
+          {#if thumbnail}
+            <Thumbnail
+              imageDimension={thumbnail.baseImageDimensions}
+              coords={thumbnail.coords}
+              imageUrl={`/${thumbnail.uri}`}
+              minWidth={150}
+              maxWidth={300}
+            />
+          {/if}
         </div>
       </div>
     </div>

@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { Switch as SwitchPrimitive } from "bits-ui";
   import { cn } from "../../../lib/utils/styleUtils";
 
@@ -9,7 +16,7 @@
   let className: $$Props["class"] = undefined;
   export let checked: $$Props["checked"] = undefined;
   export { className as class };
-  export let onChange: (checked: boolean | undefined) => void;
+  export let onChange: (checked: boolean | undefined) => void = () => {};
 
   $: {
     onChange(checked);

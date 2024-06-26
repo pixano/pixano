@@ -1,27 +1,19 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
   // Imports
   import * as ort from "onnxruntime-web";
   import Konva from "konva";
   import { nanoid } from "nanoid";
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
+  import { writable, type Writable } from "svelte/store";
+  import { WarningModal } from "@pixano/core";
 
-  import { WarningModal, utils } from "@pixano/core";
   import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
   import type {
@@ -32,6 +24,8 @@
     SelectionTool,
     LabeledPointTool,
     Shape,
+    KeypointsTemplate,
+    Vertex,
   } from "@pixano/core";
 
   import {
@@ -47,23 +41,30 @@
   import CreatePolygon from "./components/CreatePolygon.svelte";
   import Rectangle from "./components/Rectangle.svelte";
   import CreateRectangle from "./components/CreateRectangle.svelte";
+  import CreateKeypoint from "./components/CreateKeypoints.svelte";
+  import ShowKeypoints from "./components/ShowKeypoint.svelte";
+  import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
 
   // Exports
-
   export let selectedItemId: DatasetItem["id"];
-  export let colorRange: string[] = ["0", "10"];
   export let masks: Mask[];
   export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[] = [];
+  export let selectedKeypointTemplate: KeypointsTemplate | undefined = undefined;
   export let embeddings: Record<string, ort.Tensor> = {};
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
   export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let colorScale: (value: string) => string;
+  export let isVideo: boolean = false;
   export let imageSmoothing: boolean = true;
 
-  let isReady = false;
+  // Image settings
+  export let filters: Writable<Filters> = writable<Filters>();
+  export let canvasSize: number = 0;
 
-  let colorScale: (id: string) => string;
+  let isReady = false;
 
   let viewEmbeddingModal = false;
   let viewWithoutEmbeddings = "";
@@ -72,20 +73,29 @@
   let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
 
   $: {
-    if (!prevSelectedTool?.isSmart || !selectedTool?.isSmart) {
+    if (
+      !prevSelectedTool?.isSmart ||
+      !selectedTool?.isSmart ||
+      (newShape.status === "none" && newShape.shouldReset)
+    ) {
       clearAnnotationAndInputs();
     }
     prevSelectedTool = selectedTool;
   }
 
   $: {
-    if (newShape.status === "none" && newShape.shouldReset) {
-      clearAnnotationAndInputs();
+    if (canvasSize) {
+      for (const viewId of Object.keys(imagesPerView)) {
+        scaleView(viewId);
+      }
+      canvasSize = 0;
     }
   }
 
   $: {
-    colorScale = utils.ordinalColorScale(colorRange);
+    if (newShape.status === "none" && newShape.shouldReset) {
+      clearAnnotationAndInputs();
+    }
   }
 
   $: {
@@ -131,21 +141,25 @@
   // Dynamically set the canvas stage size
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      if (entry.target === stageContainer) {
-        let width: number;
-        let height: number;
-        if (entry.contentBoxSize) {
-          // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
-          const contentBoxSize: ResizeObserverSize =
-            entry.contentBoxSize instanceof ResizeObserverSize
-              ? entry.contentBoxSize
-              : entry.contentBoxSize[0];
-          width = contentBoxSize.inlineSize;
-          height = contentBoxSize.blockSize;
-        } else {
-          width = entry.contentRect.width;
-          height = entry.contentRect.height;
-        }
+      if (entry.target !== stageContainer) continue;
+
+      let width: number;
+      let height: number;
+
+      if (entry.contentBoxSize) {
+        // Firefox implements `contentBoxSize` as a single ResizeObserverSize, rather than an array
+        const contentBoxSize: ResizeObserverSize = (
+          Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize
+        ) as ResizeObserverSize;
+        width = contentBoxSize.inlineSize;
+        height = contentBoxSize.blockSize;
+      } else {
+        width = entry.contentRect.width;
+        height = entry.contentRect.height;
+      }
+
+      // Check if the dimensions have actually changed to avoid unnecessary redraws
+      if (stage.width() !== width || stage.height() !== height) {
         stage.width(width);
         stage.height(height);
         stage.batchDraw();
@@ -178,39 +192,52 @@
       validateCurrentAnn();
     }
 
-    for (const viewId of Object.keys(imagesPerView)) {
+    // Add transformer to view layers
+    Object.keys(imagesPerView).forEach((viewId) => {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       if (viewLayer) viewLayer.add(transformer);
-    }
+    });
+
+    if (isVideo) return; // Only apply filters to images, because of performance issues
+
+    applyFilters();
   });
 
   const getCurrentImage = (viewId: string) =>
     imagesPerView[viewId][imagesPerView[viewId].length - 1];
 
   function loadItem() {
+    const keys = Object.keys(imagesPerView);
+    const totalKeys = keys.length;
+
     // Calculate new grid size
-    gridSize.cols = Math.ceil(Math.sqrt(Object.keys(imagesPerView).length));
-    gridSize.rows = Math.ceil(Object.keys(imagesPerView).length / gridSize.cols);
+    gridSize.cols = Math.ceil(Math.sqrt(totalKeys));
+    gridSize.rows = Math.ceil(totalKeys / gridSize.cols);
 
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
 
-    for (const viewId of Object.keys(imagesPerView)) {
+    keys.forEach((viewId) => {
       zoomFactor[viewId] = 1;
-      getCurrentImage(viewId).onload = () => {
+      const currentImage = getCurrentImage(viewId);
+
+      currentImage.onload = () => {
         scaleView(viewId);
         scaleElements(viewId);
         isReady = true;
-        // hack to refresh view (display masks/bboxes)
-        masks = masks;
-        bboxes = bboxes;
+        // Refresh view (display masks/bboxes) if needed
+        masks = [...masks];
+        bboxes = [...bboxes];
+
+        if (!isVideo) cacheImage();
       };
-    }
+    });
+
     currentId = selectedItemId;
   }
 
   function scaleView(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
     if (viewLayer) {
       // Calculate max dims for every image in the grid
       const maxWidth = stage.width() / gridSize.cols;
@@ -245,58 +272,221 @@
       viewLayer.y(offsetY);
     } else {
       console.log("Canvas2D.scaleView - Error: Cannot scale");
+      return;
     }
+
+    // Calculate max dims for every image in the grid
+    const maxWidth = stage.width() / gridSize.cols;
+    const maxHeight = stage.height() / gridSize.rows;
+
+    // Get view index
+    const keys = Object.keys(imagesPerView);
+    const i = keys.findIndex((view) => view === viewId);
+
+    // Calculate view position in grid
+    const grid_pos = {
+      x: i % gridSize.cols,
+      y: Math.floor(i / gridSize.cols),
+    };
+
+    // Fit stage
+    const currentImage = getCurrentImage(viewId);
+    const scaleByHeight = maxHeight / currentImage.height;
+    const scaleByWidth = maxWidth / currentImage.width;
+    const scale = Math.min(scaleByWidth, scaleByHeight);
+
+    // Set zoomFactor for view
+    zoomFactor[viewId] = scale;
+    viewLayer.scale({ x: scale, y: scale });
+
+    // Center view
+    const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
+    const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
+    viewLayer.x(offsetX);
+    viewLayer.y(offsetY);
   }
 
   function scaleElements(viewId: ItemView["id"]) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    if (!viewLayer) return;
+
+    const zoom = zoomFactor[viewId];
+
+    const scaleCircle = (circle: Konva.Circle) => {
+      circle.radius(INPUTPOINT_RADIUS / zoom);
+      circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+    };
+
+    const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
+      rect.strokeWidth(strokeWidth / zoom);
+    };
 
     // Scale input points
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    if (!inputGroup) return;
-    for (const point of inputGroup.children) {
-      if (point instanceof Konva.Circle) {
-        point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
-        point.strokeWidth(INPUTPOINT_STROKEWIDTH / zoomFactor[viewId]);
-      }
-      if (point instanceof Konva.Rect) {
-        point.strokeWidth(INPUTRECT_STROKEWIDTH / zoomFactor[viewId]);
-      }
+    if (inputGroup) {
+      inputGroup.children.forEach((point) => {
+        if (point instanceof Konva.Circle) {
+          scaleCircle(point);
+        } else if (point instanceof Konva.Rect) {
+          scaleRect(point, INPUTRECT_STROKEWIDTH);
+        }
+      });
     }
 
     // Scale bboxes
     const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-    if (!bboxGroup) return;
-    for (const bboxKonva of bboxGroup.children) {
-      if (bboxKonva instanceof Konva.Group) {
-        for (const bboxElement of bboxKonva.children) {
-          if (bboxElement instanceof Konva.Rect) {
-            bboxElement.strokeWidth(BBOX_STROKEWIDTH / zoomFactor[viewId]);
-          }
-          if (bboxElement instanceof Konva.Label) {
-            bboxElement.scale({
-              x: 1 / zoomFactor[viewId],
-              y: 1 / zoomFactor[viewId],
-            });
-          }
+    if (bboxGroup) {
+      bboxGroup.children.forEach((bboxKonva) => {
+        if (bboxKonva instanceof Konva.Group) {
+          bboxKonva.children.forEach((bboxElement) => {
+            if (bboxElement instanceof Konva.Rect) {
+              scaleRect(bboxElement, BBOX_STROKEWIDTH);
+            } else if (bboxElement instanceof Konva.Label) {
+              bboxElement.scale({
+                x: 1 / zoom,
+                y: 1 / zoom,
+              });
+            }
+          });
         }
-      }
+      });
     }
 
     // Scale masks
+    const scaleMaskGroup = (maskGroup: Konva.Group) => {
+      maskGroup.children.forEach((maskKonva) => {
+        if (maskKonva instanceof Konva.Shape) {
+          maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
+        }
+      });
+    };
+
     const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-    for (const maskKonva of maskGroup.children) {
-      if (maskKonva instanceof Konva.Shape) {
-        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
-      }
+    if (maskGroup) {
+      scaleMaskGroup(maskGroup);
     }
+
     const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
-    for (const maskKonva of currentMaskGroup.children) {
-      if (maskKonva instanceof Konva.Shape) {
-        maskKonva.strokeWidth(MASK_STROKEWIDTH / zoomFactor[viewId]);
-      }
+    if (currentMaskGroup) {
+      scaleMaskGroup(currentMaskGroup);
     }
   }
+
+  const cacheImage = () => {
+    if (!stage) return;
+
+    let images = stage.find(
+      (node: { attrs: { id: string } }): boolean =>
+        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
+    );
+
+    if (!images) return;
+
+    images.forEach((image) => {
+      if (image.width() === 0 || image.height() === 0) return;
+      image.cache();
+    });
+  };
+
+  const EqualizeHistogram = (imageData: ImageData) => {
+    const { width, height, data } = imageData;
+    const nPixels = width * height;
+
+    // Create histograms for each channel
+    const histR: number[] = new Array(256).fill(0) as number[];
+    const histG: number[] = new Array(256).fill(0) as number[];
+    const histB: number[] = new Array(256).fill(0) as number[];
+
+    // Calculate histograms
+    for (let i = 0; i < nPixels * 4; i += 4) {
+      histR[data[i]]++;
+      histG[data[i + 1]]++;
+      histB[data[i + 2]]++;
+    }
+
+    // Calculate cumulative distribution function (CDF) for each channel
+    const cdfR: number[] = new Array(256).fill(0) as number[];
+    const cdfG: number[] = new Array(256).fill(0) as number[];
+    const cdfB: number[] = new Array(256).fill(0) as number[];
+
+    cdfR[0] = histR[0];
+    cdfG[0] = histG[0];
+    cdfB[0] = histB[0];
+
+    for (let i = 1; i < 256; i++) {
+      cdfR[i] = cdfR[i - 1] + histR[i];
+      cdfG[i] = cdfG[i - 1] + histG[i];
+      cdfB[i] = cdfB[i - 1] + histB[i];
+    }
+
+    // Normalize the CDF
+    const cdfRMin = cdfR.find((value) => value > 0);
+    const cdfGMin = cdfG.find((value) => value > 0);
+    const cdfBMin = cdfB.find((value) => value > 0);
+
+    for (let i = 0; i < 256; i++) {
+      cdfR[i] = ((cdfR[i] - cdfRMin) / (nPixels - cdfRMin)) * 255;
+      cdfG[i] = ((cdfG[i] - cdfGMin) / (nPixels - cdfGMin)) * 255;
+      cdfB[i] = ((cdfB[i] - cdfBMin) / (nPixels - cdfBMin)) * 255;
+    }
+
+    // Apply equalization to the image data
+    for (let i = 0; i < nPixels * 4; i += 4) {
+      data[i] = Math.round(cdfR[data[i]]);
+      data[i + 1] = Math.round(cdfG[data[i + 1]]);
+      data[i + 2] = Math.round(cdfB[data[i + 2]]);
+    }
+  };
+
+  const AdjustChannels = (imageData: ImageData) => {
+    const { data } = imageData;
+
+    const redMin = $filters.redRange[0];
+    const redMax = $filters.redRange[1];
+    const greenMin = $filters.greenRange[0];
+    const greenMax = $filters.greenRange[1];
+    const blueMin = $filters.blueRange[0];
+    const blueMax = $filters.blueRange[1];
+
+    for (let i = 0; i < data.length; i += 4) {
+      const red = data[i];
+      const green = data[i + 1];
+      const blue = data[i + 2];
+
+      if (
+        red < redMin ||
+        red > redMax ||
+        green < greenMin ||
+        green > greenMax ||
+        blue < blueMin ||
+        blue > blueMax
+      ) {
+        data[i] = 0; // Red channel
+        data[i + 1] = 0; // Green channel
+        data[i + 2] = 0; // Blue channel
+      }
+    }
+  };
+
+  const applyFilters = () => {
+    if (!stage) return;
+
+    let images = stage.find(
+      (node: { attrs: { id: string } }): boolean =>
+        node.attrs.id && node.attrs.id.startsWith("image-"), // node is of Node type, but the attrs attribute is of any time, which provokes linting errors
+    );
+
+    if (!images) return;
+
+    images.forEach((image) => {
+      let filtersList = [Konva.Filters.Brighten, Konva.Filters.Contrast, AdjustChannels];
+      if ($filters.equalizeHistogram) filtersList.push(EqualizeHistogram);
+
+      image.filters(filtersList);
+      image.brightness($filters.brightness);
+      image.contrast($filters.contrast);
+    });
+  };
 
   function findViewId(shape: Konva.Shape): string {
     let viewId: string;
@@ -400,6 +590,9 @@
         displayInputRectTool(selectedTool);
         // Enable box creation or change cursor style
         break;
+      case "KEY_POINT":
+        // Enable key point creation or change cursor style
+        break;
       case "DELETE":
         clearAnnotationAndInputs();
         displayInputDeleteTool(selectedTool);
@@ -443,6 +636,59 @@
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
       viewId,
     };
+  }
+
+  // ********** KEY_POINT TOOL ********** //
+
+  function dragInputKeyPointRectMove(viewId: string) {
+    if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+
+      const pos = viewLayer.getRelativePointerPosition();
+      const x = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.y : pos.y;
+      const width = pos.x - x;
+      const height = pos.y - y;
+      newShape = {
+        status: "creating",
+        type: "keypoint",
+        x,
+        y,
+        width,
+        height,
+        viewId,
+        keypoints: selectedKeypointTemplate,
+      };
+    }
+  }
+
+  function dragKeyPointInputRectEnd(viewId: string) {
+    if (selectedTool?.type == "KEY_POINT") {
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
+      if (rect && newShape.status === "creating" && newShape.type === "keypoint") {
+        const vertices = newShape.keypoints.vertices.map((vertex) => {
+          if (newShape.status === "creating" && newShape.type === "keypoint")
+            return {
+              ...vertex,
+              x: newShape.x + vertex.x * newShape.width,
+              y: newShape.y + vertex.y * newShape.height,
+            } as Required<Vertex>;
+        });
+        newShape = {
+          status: "saving",
+          type: "keypoint",
+          viewId,
+          itemId: selectedItemId,
+          imageWidth: getCurrentImage(viewId).width,
+          imageHeight: getCurrentImage(viewId).height,
+          keypoints: { ...newShape.keypoints, vertices },
+        };
+        rect.destroy();
+        viewLayer.off("pointermove");
+        viewLayer.off("pointerup");
+      }
+    }
   }
 
   // ********** PAN TOOL ********** //
@@ -829,6 +1075,7 @@
     if (selectedTool?.type === "POLYGON") {
       drawPolygonPoints(viewId);
     }
+
     if (highlighted_point) {
       //hack to unhiglight when we drag while predicting...
       //try to determine if we are still on highlighted point
@@ -850,7 +1097,8 @@
 
   async function handleClickOnImage(event: PointerEvent, viewId: string) {
     const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (newShape.status === "none" || (newShape.status == "editing" && newShape.type == "none")) {
+
+    if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
         type: "none",
@@ -895,11 +1143,13 @@
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
       highlightInputPoint(input_point, viewId);
-
       await updateCurrentMask(viewId);
     } else if (selectedTool?.type == "RECTANGLE") {
       viewLayer.on("pointermove", () => dragInputRectMove(viewId));
       viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
+    } else if (selectedTool?.type === "KEY_POINT") {
+      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewId));
+      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewId));
     }
   }
 
@@ -994,7 +1244,7 @@
 </script>
 
 <div
-  class={cn("flex h-full bg-slate-800 transition-opacity duration-300 delay-100", {
+  class={cn("h-full bg-slate-800 transition-opacity duration-300 delay-100 relative", {
     "opacity-0": !isReady,
   })}
   bind:this={stageContainer}
@@ -1013,7 +1263,11 @@
       >
         {#each images as image}
           <KonvaImage
-            config={{ image, id: `image-${viewId}`, zIndex: 1 }}
+            config={{
+              image,
+              id: `image-${viewId}`,
+              zIndex: 1,
+            }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
             on:pointerup={() => handlePointerUpOnImage(viewId)}
             on:dblclick={() => handleDoubleClickOnImage(viewId)}
@@ -1023,9 +1277,21 @@
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
+        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+        {/if}
+        <ShowKeypoints
+          {colorScale}
+          {stage}
+          {viewId}
+          {keypoints}
+          zoomFactor={zoomFactor[viewId]}
+          bind:newShape
+        />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
+
         {#each bboxes as bbox}
           {#if bbox.viewId === viewId}
             {#key bbox.id}

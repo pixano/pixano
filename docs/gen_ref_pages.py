@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 """Generate the code API reference pages
 
 Refer to https://mkdocstrings.github.io/recipes/ for more details.
@@ -6,6 +12,7 @@ Refer to https://mkdocstrings.github.io/recipes/ for more details.
 from pathlib import Path
 
 import mkdocs_gen_files
+
 
 SRC_PATH = "../pixano/pixano"
 REF_PATH = "api_reference"

@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { Checkbox as CheckboxPrimitive } from "bits-ui";
   import { Check, Minus } from "lucide-svelte";
   import { cn } from "../../../lib/utils/styleUtils";

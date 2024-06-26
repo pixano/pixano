@@ -1,4 +1,11 @@
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
+
 <script lang="ts">
+  // Imports
   import { page } from "$app/stores";
   import { type DatasetItem, type DatasetInfo, PrimaryButton } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
@@ -14,7 +21,7 @@
   let selectedItem: DatasetItem;
   let selectedDataset: DatasetInfo;
   let models: Array<string>;
-  let currentDatasetName: string;
+  let currentDatasetId: string;
   let currentItemId: string;
   let isLoadingNewItem: boolean = false;
   let canSaveCurrentItem: boolean = false;
@@ -38,6 +45,16 @@
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
+        // video: add displayControl, displayedBox and displayedKeypoints props
+        if (selectedItem.type === "video") {
+          selectedItem.objects.map((obj) => {
+            if (obj.datasetItemType === "video") {
+              obj.displayedBox = obj.boxes?.[0];
+              obj.displayedKeypoints = structuredClone(obj.keypoints?.[0]); // clone required as keypoints are not shallow
+            }
+            return obj;
+          });
+        }
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {
@@ -49,12 +66,12 @@
   };
 
   page.subscribe((value) => {
-    currentDatasetName = value.params.dataset;
+    currentDatasetId = value.params.dataset;
     currentItemId = value.params.itemId;
   });
 
   datasetsStore.subscribe((value) => {
-    const foundDataset = value?.find((dataset) => dataset.name === currentDatasetName);
+    const foundDataset = value?.find((dataset) => dataset.id === currentDatasetId);
     if (foundDataset) {
       selectedDataset = foundDataset;
     }
@@ -83,19 +100,20 @@
     <DatasetItemWorkspace
       {selectedItem}
       {models}
-      currentDataset={selectedDataset}
+      featureValues={{ main: {}, objects: {} }}
       {handleSaveItem}
       isLoading={isLoadingNewItem}
       bind:canSaveCurrentItem
       {shouldSaveCurrentItem}
+      headerHeight={80}
     />
   </div>
 {/if}
 {#if !selectedItem && noItemFound}
   <div class="w-full pt-40 text-center flex flex-col gap-5 items-center">
     <p>Current item could not be loaded</p>
-    <PrimaryButton on:click={() => goto(`/${currentDatasetName}/dataset`)}
-      >Back to dataset</PrimaryButton
-    >
+    <PrimaryButton on:click={() => goto(`/${currentDatasetId}/dataset`)}>
+      Back to dataset
+    </PrimaryButton>
   </div>
 {/if}

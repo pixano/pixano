@@ -1,20 +1,12 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
-  import type { DatasetItem, DatasetInfo, ItemObject } from "@pixano/core";
+<script lang="ts">
+  // Imports
+  import type { DatasetItem, FeaturesValues } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -30,34 +22,34 @@
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
 
-  export let currentDataset: DatasetInfo;
+  export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
   export let handleSaveItem: (item: DatasetItem) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
+  export let headerHeight: number = 0;
 
   let isSaving: boolean = false;
 
   let embeddings: Embeddings = {};
 
-  $: itemObjects.update((old) => {
-    return Object.values(selectedItem.objects || {})
-      .flat()
-      .map((object) => {
-        const oldObject = old.find((o) => o.id === object.id);
+  $: itemObjects.update(
+    (oldObjects) =>
+      selectedItem?.objects?.map((object) => {
+        const oldObject = oldObjects.find((o) => o.id === object.id);
         if (oldObject) {
           return { ...oldObject, ...object };
         }
         return object;
-      });
-  });
+      }) || [],
+  );
 
   $: itemMetas.set({
     mainFeatures: selectedItem.features,
     objectFeatures: Object.values(selectedItem.objects || {})[0]?.features,
-    featuresList: currentDataset.features_values || { main: {}, objects: {} },
+    featuresList: featureValues || { main: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,
     type: selectedItem.type,
@@ -74,17 +66,9 @@
 
   const onSave = async () => {
     isSaving = true;
-    let savedItem = { ...selectedItem };
+    const objects = $itemObjects;
+    let savedItem = { ...selectedItem, objects } as DatasetItem;
 
-    itemObjects.subscribe((value) => {
-      savedItem.objects = value.reduce(
-        (acc, obj) => {
-          acc[obj.id] = obj;
-          return acc;
-        },
-        {} as Record<string, ItemObject>,
-      );
-    });
     itemMetas.subscribe((value) => {
       savedItem.features = value.mainFeatures;
     });
@@ -109,11 +93,11 @@
     </div>
   {/if}
   <Toolbar />
-  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} />
+  <DatasetItemViewer {selectedItem} {embeddings} {isLoading} {headerHeight} />
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
-    currentDatasetId={currentDataset.id}
+    currentDatasetId={selectedItem.datasetId}
     selectedItemId={selectedItem.id}
     bind:embeddings
   />

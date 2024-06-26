@@ -1,19 +1,11 @@
-<script lang="ts">
-  /**
-   * @copyright CEA
-   * @author CEA
-   * @license CECILL
-   *
-   * This software is a collaborative computer program whose purpose is to
-   * generate and explore labeled data for computer vision applications.
-   * This software is governed by the CeCILL-C license under French law and
-   * abiding by the rules of distribution of free software. You can use,
-   * modify and/ or redistribute the software under the terms of the CeCILL-C
-   * license as circulated by CEA, CNRS and INRIA at the following URL
-   *
-   * http://www.cecill.info
-   */
+<!-------------------------------------
+Copyright: CEA-LIST/DIASI/SIALV/LVA
+Author : pixano@cea.fr
+License: CECILL-C
+-------------------------------------->
 
+<script lang="ts">
+  // Imports
   import type { Shape } from "@pixano/core";
   import { cn, Tabs, Skeleton } from "@pixano/core/src";
 
@@ -23,6 +15,7 @@
   import { canSave, newShape } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let isLoading: boolean;
+
   let shape: Shape;
   let currentTab: "scene" | "objects" = "objects";
   let isButtonEnabled = false;
@@ -71,7 +64,7 @@
         <button
           disabled={!isButtonEnabled}
           class={cn(
-            "h-[48px] w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer bg-slate-50 z-50",
+            "h-12 w-full border-t border-t-primary-light hover:bg-primary-light hover:cursor-pointer bg-slate-50 z-50",
             {
               "bg-slate-100 hover:bg-slate-100 pointer-events-none cursor-not-allowed text-slate-500":
                 !isButtonEnabled,
