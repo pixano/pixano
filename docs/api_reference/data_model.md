@@ -17,6 +17,8 @@ Pixano Data Model consist of extandable Python classes
     "TrackletWithTimestep",
     "TrackletWithTimestepAndTimestamp",
 
+    *"Embedding",
+
     "BBox",
     "CompressedRLE",
     "KeyPoints",
@@ -24,7 +26,6 @@ Pixano Data Model consist of extandable Python classes
     *"KeyPoints3D",
 
     "NDArrayFloat",
-    *"Embedding",
     *"CamCalibration",
 
     * theses classes are available but not currently supported front side
@@ -33,14 +34,47 @@ Pixano Data Model consist of extandable Python classes
 
 Defined in pixano.datasets
 
-## Vision classes
+DatasetItem is the main dataset item class, which contains metadata, and also custom fields for different groups of data.
+
+- ITEM: Item
+- VIEW: View (chilren: Image, SequenceFrame, Video, PointCloud)
+- OBJECT: Object (child: TrackObject)
+- TRACKLET: Tracklet (children: TrackletWithTimestamp, TrackletWithTimestep, TrackletWithTimestepAndTimestamp)
+- EMBEDDING: Embedding
+
+```
+Item:
+    id: str
+    split: str
+```
+
+When you create a DatasetItem class, each field fall in a group depending on his type.
+
+Item's fields 'id' and 'split' are automatically included in DatasetItem.
+
+If your dataset item contains several instance of a data (in example below, each dataset item contains several sequence frames), you must give a list type
+
+```
+class CustomDataItem(DatasetItem):
+    sequence_name: str  # <-- this type doesn't extends one of group types, it falls in Item as datasetItem metadata
+    nb_frames: int      # <-- idem
+    image: list[SequenceFrame]   # <-- this type is a list of SequenceType, it falls in VIEW group
+    objects: list[TrackObject]   # <-- this type is a list of TrackObject, it falls in OBJECT group
+    tracklets: list[TrackletWithTimestep]  # <-- this type is a list of TrackletWithTimestep, it falls in TRACKLET group
+```
+
+## VIEW Group classes
 
 Defined in pixano.datasets.features.schemas
 
 ```
-Image:
+View(BaseSchema):
     id: str
     item_id: str
+```
+
+```
+Image(View):
     url: str
     width: int
     height: int
@@ -48,22 +82,14 @@ Image:
 ```
 
 ```
-SequenceFrame:
-    id: str
-    item_id: str
-    url: str
-    width: int
-    height: int
-    format: str
+SequenceFrame(Image):
     sequence_id: str
     timestamp: float
     frame_index: int
 ```
 
 ```
-Video:
-    id: str
-    item_id: str
+Video(View):
     url: str
     num_frames: int
     fps: float
@@ -74,13 +100,11 @@ Video:
 ```
 
 ```
-PointCloud:
-    id: str
-    item_id: str
+PointCloud(View):
     url: str
 ```
 
-## Objects classes
+## OBJECT Group classes
 
 Defined in pixano.datasets.features.schemas
 
@@ -95,19 +119,13 @@ Object:
 ```
 
 ```
-TrackObject:
-    id: str
-    item_id: str
-    view_id: str
-    bbox: BBox = BBox.none()
-    mask: CompressedRLE = CompressedRLE.none()
-    keypoints: KeyPoints = KeyPoints.none()
+TrackObject(Object):
     tracklet_id: str
     is_key: bool
     frame_idx: int
 ```
 
-## Tracklets classes
+## TRACKLET Group classes
 
 Defined in pixano.datasets.features.schemas
 
@@ -121,32 +139,33 @@ Tracklet:
 ```
 
 ```
-TrackletWithTimestamp:
-    id: str
-    item_id: str
-    track_id: str
+TrackletWithTimestamp(Tracklet):
     start_timestamp: int
     end_timestamp: int
 ```
 
 ```
-TrackletWithTimestep:
-    id: str
-    item_id: str
-    track_id: str
+TrackletWithTimestep(Tracklet):
     start_timestep: int
     end_timestep: int
 ```
 
 ```
-TrackletWithTimestepAndTimestamp:
-    id: str
-    item_id: str
-    track_id: str
+TrackletWithTimestepAndTimestamp(Tracklet):
     start_timestep: int
     end_timestep: int
     start_timestamp: int
     end_timestamp: int
+```
+
+## EMBEDDING Group class
+
+Defined in pixano.datasets.features.schemas
+
+```
+Embedding:
+    id: str
+    item_id: str
 ```
 
 ## Shapes classes
@@ -171,21 +190,21 @@ CompressedRLE:
 KeyPoints:
     template_id: str
     coords: list[float]
-    states: list[str]  # replace by features: list[dict] ?
+    states: list[str]
 ```
 
 ```
 BBox3D:
     position: list[float]
     size: list[float]
-    heading: float  # TODO : use list[float] instead (need to adapt VDP dataset)
+    heading: float
 ```
 
 ```
 KeyPoints3D:
     template_id: str
     coords: list[float]
-    visibles: list[bool]   # replace by features: list[dict] ?
+    visibles: list[bool]
 ```
 
 ## Misc.
@@ -204,12 +223,4 @@ CamCalibration:
     base_intrinsics (BaseIntrinsics): base intrinsics
     extrinsics (Extrinsics): extrinsics
     intrinsics (Intrinsics): intrinsics
-```
-
-Defined in pixano.datasets.features.schemas
-
-```
-Embedding:
-    id: str
-    item_id: str
 ```
