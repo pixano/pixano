@@ -352,13 +352,12 @@ async def get_dataset_item(  # noqa: D417
                 },
             }
 
-
-    #TMP 1V we split everything by view (for now we take 1st view, then we we'll make some way to choose which view)
+    # TMP 1V we split everything by view (for now we take 1st view, then we we'll make some way to choose which view)
     if view:
         selected_view = view
     else:
         selected_view = next(iter(views))
-    #---TMP 1V
+    # ---TMP 1V
 
     # objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
@@ -439,7 +438,7 @@ async def get_dataset_item(  # noqa: D417
                     for obj_group in groups[_SchemaGroup.OBJECT]
                     for obj in getattr(item, obj_group)
                     if obj.tracklet_id == tracklet.id
-                    if obj.view_id == selected_view  #TMP 1V
+                    if obj.view_id == selected_view  # TMP 1V
                 ]
                 boxes[tracklet.track_id].extend(
                     [
@@ -484,7 +483,8 @@ async def get_dataset_item(  # noqa: D417
                 )
 
                 # organize tracklets by tracks
-                if boxes[tracklet.track_id] or keypoints[tracklet.track_id]:  #TMP 1V (? maybe we could let it? it avoid empty tracks)
+                # TMP 1V Note: maybe we could let this check? it avoid empty tracks
+                if boxes[tracklet.track_id] or keypoints[tracklet.track_id]:  # TMP 1V
                     tracks[tracklet.track_id].append(tracklet)
 
         for track_id, tracklets in tracks.items():
@@ -494,8 +494,8 @@ async def get_dataset_item(  # noqa: D417
 
             # view_id is taken from first object in the first tracklet
             try:
-                #TMP 1V  view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
-                view_id = selected_view  #TMP 1V
+                # TMP 1V  view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
+                view_id = selected_view  # TMP 1V
             except StopIteration:
                 print(
                     f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped"
@@ -554,8 +554,8 @@ async def get_dataset_item(  # noqa: D417
         type=view_type,
         datasetId=ds_id,
         split=item.split,
-        #TMP 1V views=views,
-        views={selected_view: views[selected_view]},  #TMP 1V
+        # TMP 1V views=views,
+        views={selected_view: views[selected_view]},  # TMP 1V
         objects=objects,
         features=features,
         embeddings={},  # TODO
