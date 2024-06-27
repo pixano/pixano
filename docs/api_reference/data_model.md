@@ -2,7 +2,6 @@
 
 Pixano Data Model consist of extandable Python classes
 
-
     "DatasetItem",
 
     "Image",
@@ -30,15 +29,12 @@ Pixano Data Model consist of extandable Python classes
 
     * theses classes are available but not currently supported front side
 
-
-
-
 ## DatasetItem
 
 Defined in pixano.datasets
 
-
 ## Vision classes
+
 Defined in pixano.datasets.features.schemas
 
 ```
@@ -50,6 +46,7 @@ Image:
     height: int
     format: str
 ```
+
 ```
 SequenceFrame:
     id: str
@@ -62,6 +59,7 @@ SequenceFrame:
     timestamp: float
     frame_index: int
 ```
+
 ```
 Video:
     id: str
@@ -74,6 +72,7 @@ Video:
     format: str
     duration: float
 ```
+
 ```
 PointCloud:
     id: str
@@ -82,6 +81,7 @@ PointCloud:
 ```
 
 ## Objects classes
+
 Defined in pixano.datasets.features.schemas
 
 ```
@@ -107,12 +107,11 @@ TrackObject:
     frame_idx: int
 ```
 
-
 ## Tracklets classes
+
 Defined in pixano.datasets.features.schemas
 
-Note: We need start_timestep and end_timestep
-So, we should keep only Tracklet and TrackletWithTimestamp ((add start/end_timestep to both)
+Note: Pixano front requires start_timestep and end_timestep. So, we should keep only Tracklet and TrackletWithTimestamp (add start/end_timestep to both)
 
 ```
 Tracklet:
@@ -120,6 +119,7 @@ Tracklet:
     item_id: str
     track_id: str
 ```
+
 ```
 TrackletWithTimestamp:
     id: str
@@ -128,6 +128,7 @@ TrackletWithTimestamp:
     start_timestamp: int
     end_timestamp: int
 ```
+
 ```
 TrackletWithTimestep:
     id: str
@@ -136,6 +137,7 @@ TrackletWithTimestep:
     start_timestep: int
     end_timestep: int
 ```
+
 ```
 TrackletWithTimestepAndTimestamp:
     id: str
@@ -148,8 +150,8 @@ TrackletWithTimestepAndTimestamp:
 ```
 
 ## Shapes classes
-Defined in pixano.datasets.features.types
 
+Defined in pixano.datasets.features.types
 
 ```
 BBox:
@@ -158,23 +160,27 @@ BBox:
     is_normalized: bool
     confidence: float
 ```
+
 ```
 CompressedRLE:
     size: list[int]
     counts: bytes
 ```
+
 ```
 KeyPoints:
     template_id: str
     coords: list[float]
     states: list[str]  # replace by features: list[dict] ?
 ```
+
 ```
 BBox3D:
     position: list[float]
     size: list[float]
     heading: float  # TODO : use list[float] instead (need to adapt VDP dataset)
 ```
+
 ```
 KeyPoints3D:
     template_id: str
@@ -183,12 +189,15 @@ KeyPoints3D:
 ```
 
 ## Misc.
+
 Defined in pixano.datasets.features.types
+
 ```
 NDArrayFloat:
     values: list[float]
     shape: list[int]
 ```
+
 ```
 CamCalibration:
     type (str): type of camera
@@ -198,6 +207,7 @@ CamCalibration:
 ```
 
 Defined in pixano.datasets.features.schemas
+
 ```
 Embedding:
     id: str
