@@ -12,5 +12,4 @@ from .registry import _register_schema_internal
 class Embedding(BaseSchema):
     """Embedding Lance Model."""
 
-    id: str
     item_id: str
