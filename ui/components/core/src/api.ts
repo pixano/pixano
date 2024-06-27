@@ -123,10 +123,35 @@ export async function searchDatasetItems(
   return datasetItems;
 }
 
-export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
+  export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
   let item: DatasetItem | undefined;
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
+    ////////////////TMP 1V
+    let view;
+    const currentDataset = await getDatasetItems(datasetId, 1, 1);
+    if (!currentDataset) return {}
+
+    const available_views = currentDataset.table_data.cols.filter((c)=> c.type == 'image').map(v => v.name);
+    if (available_views.length > 1) {
+      let message = 'Please choose a view (default to first):\n';
+      available_views.forEach((choice, index) => {
+        message += `${index + 1}: ${choice}\n`;
+      });
+      let userChoice = prompt(message);
+      if (userChoice == undefined) userChoice = '1';
+      const choiceIndex = parseInt(userChoice, 10) - 1;
+      if (choiceIndex >= 0 && choiceIndex < available_views.length) {
+        view = available_views[choiceIndex];
+      } else {
+        view = available_views[0];
+      }
+    } else {
+      view = available_views[0];
+    }
+    const response = await fetch(`/datasets/${datasetId}/items/${itemId}?view=${view}`);
+    ////////////////TMP 1V
+    //TMP 1V  const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
+
     if (response.ok) {
       item = (await response.json()) as DatasetItem;
 
