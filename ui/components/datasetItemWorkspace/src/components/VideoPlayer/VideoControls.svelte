@@ -79,7 +79,7 @@ License: CECILL-C
 
 <div class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200 w-fit">
   <p>
-    {currentTime}
+    <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
   </p>
   <button on:click={onPlayClick} class="text-primary">
     {#if $videoControls.intervalId}
