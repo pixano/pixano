@@ -58,7 +58,10 @@ License: CECILL-C
     } else {
       if (!$videoControls.isLoaded) return;
       clearInterval($videoControls.intervalId);
-      currentFrameIndex.update((index) => (index - 1) % ($lastFrameIndex + 1));
+      currentFrameIndex.update((index) => {
+        if (index == 0) return $lastFrameIndex;
+        else return (index - 1) % ($lastFrameIndex + 1);
+      });
       updateView($currentFrameIndex);
     }
   };
