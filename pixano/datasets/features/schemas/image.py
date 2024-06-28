@@ -11,6 +11,11 @@ from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
+import PIL
+import shortuuid
+
+from pixano.datasets.utils import is_obj_of_type
+
 from .registry import _register_schema_internal
 from .view import View
 
@@ -58,10 +63,7 @@ class Image(View):
                 parsed_uri = urlparse(uri_prefix)
                 # URI prefix is incomplete
                 if parsed_uri.scheme == "":
-                    raise ValueError(
-                        "URI prefix is incomplete, "
-                        "no scheme provided (http://, file://, ...)"
-                    )
+                    raise ValueError("URI prefix is incomplete, " "no scheme provided (http://, file://, ...)")
                 combined_path = Path(parsed_uri.path) / url
                 parsed_uri = parsed_uri._replace(path=str(combined_path))
                 api_url = parsed_uri.geturl()
@@ -85,13 +87,51 @@ class Image(View):
         return ""
 
 
-def is_image(cls: type) -> bool:
-    """Check if the given class is a subclass of Image.
+def is_image(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is Image or a subclass of Image."""
+    return is_obj_of_type(cls, Image, strict)
+
+
+def create_image(
+    item_id: str,
+    url: Path,
+    id: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
+    format: str | None = None,
+    other_path: Path | None = None,
+) -> Image:
+    """Create an Image instance.
 
     Args:
-        cls (type): The class to check.
+        item_id (str): The item id.
+        url (Path): The image URL. If not relative, the URL is converted to a relative path using `other_path`.
+        id (str | None, optional): The image id. If None, a random id is generated.
+        width (int | None, optional): The image width. If None, the width is extracted from the image file.
+        height (int | None, optional): The image height. If None, the height is extracted from the image file.
+        format (str | None, optional): The image format. If None, the format is extracted from the image file.
+        other_path (Path | None, optional): The path to convert the URL to a relative path.
 
     Returns:
-        bool: True if the class is a subclass of Image, False otherwise.
+        Image: The created Image instance.
     """
-    return issubclass(cls, Image)
+    none_conditions = [width is None, height is None, format is None]
+    not_none_conditions = [width is not None, height is not None, format is not None]
+    if not all(none_conditions) and not all(not_none_conditions):
+        raise ValueError("width, height and format must be all defined or all None")
+
+    url = Path(url)
+    if id is None:
+        id = shortuuid.uuid()
+
+    if width is None:
+        img = PIL.Image.open(url)
+        width = img.width
+        height = img.height
+        format = img.format
+
+    if other_path is not None:
+        other_path = Path(other_path)
+        url = url.relative_to(other_path)
+
+    return Image(id=id, item_id=item_id, url=url.as_posix(), width=width, height=height, format=format)

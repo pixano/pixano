@@ -4,13 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-import pydantic
+from pydantic import BaseModel
+
+from pixano.datasets.utils import is_obj_of_type
 
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class KeyPoints(pydantic.BaseModel):
+class KeyPoints(BaseModel):
     """A set of keypoints.
 
     Attributes:
@@ -25,26 +27,13 @@ class KeyPoints(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """
-        Utility function to get a None equivalent.
+        """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
             KeyPoints: "None" KeyPoints
         """
         return KeyPoints(template_id="None", coords=[0, 0], states=["invisible"])
-
-
-def is_keypoints(cls: type) -> bool:
-    """Check if a class is a subclass of Keypoints.
-
-    Parameters:
-        cls (type): The class to check.
-
-    Returns:
-        bool: True if the class is a subclass of KeyPoints, False otherwise.
-    """
-    return issubclass(cls, KeyPoints)
 
 
 def map_back2front_vertices(keypoints: KeyPoints) -> list:
@@ -71,13 +60,27 @@ def map_back2front_vertices(keypoints: KeyPoints) -> list:
 
         result = [
             {"x": x, "y": y, "features": {"state": state}}
-            for (x, y), state in zip(
-                zip(keypoints.coords[0::2], keypoints.coords[1::2]), keypoints.states
-            )
+            for (x, y), state in zip(zip(keypoints.coords[0::2], keypoints.coords[1::2]), keypoints.states)
         ]
     else:
-        result = [
-            {"x": x, "y": y}
-            for x, y in zip(keypoints.coords[0::2], keypoints.coords[1::2])
-        ]
+        result = [{"x": x, "y": y} for x, y in zip(keypoints.coords[0::2], keypoints.coords[1::2])]
     return result
+
+
+def is_keypoints(cls: type, strict: bool = False) -> bool:
+    """Check if a class is a KeyPoints or subclass of KeyPoints."""
+    return is_obj_of_type(cls, KeyPoints, strict)
+
+
+def create_keypoints(template_id: str, coords: list[float], states: list[str]) -> KeyPoints:
+    """Create a KeyPoints instance.
+
+    Args:
+        template_id (str): id of keypoint template
+        coords (list[float]): List of 2D coordinates of the keypoints.
+        states (list[str]): Status for each keypoint. ("visible", "invisible", "hidden")
+
+    Returns:
+        KeyPoints: The created KeyPoints instance.
+    """
+    return KeyPoints(template_id=template_id, coords=coords, states=states)

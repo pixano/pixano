@@ -4,12 +4,14 @@
 # License: CECILL-C
 # =====================================
 
-import pydantic
+from pydantic import BaseModel
+
+from pixano.datasets.utils import is_obj_of_type
 
 from .registry import _register_type_internal
 
 
-class BaseIntrinsics(pydantic.BaseModel):
+class BaseIntrinsics(BaseModel):
     """BaseIntrinsics (TODO: description?).
 
     Attributes:
@@ -25,7 +27,7 @@ class BaseIntrinsics(pydantic.BaseModel):
     img_width_px: int
 
 
-class Intrinsics(pydantic.BaseModel):
+class Intrinsics(BaseModel):
     """Intrinsics (TODO: description?).
 
     Attributes:
@@ -43,7 +45,7 @@ class Intrinsics(pydantic.BaseModel):
     pixel_aspect_ratio: float
 
 
-class Extrinsics(pydantic.BaseModel):
+class Extrinsics(BaseModel):
     """Extrinsics (TODO: description?).
 
     Attributes:
@@ -64,7 +66,7 @@ class Extrinsics(pydantic.BaseModel):
 
 
 @_register_type_internal
-class CamCalibration(pydantic.BaseModel):
+class CamCalibration(BaseModel):
     """Camera calibration.
 
     Attributes:
@@ -81,8 +83,7 @@ class CamCalibration(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """
-        Utility function to get a None equivalent.
+        """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
@@ -112,3 +113,75 @@ class CamCalibration(pydantic.BaseModel):
                 pixel_aspect_ratio=0.0,
             ),
         )
+
+
+def is_cam_calibration(cls: type, strict: bool = False) -> bool:
+    """Check if a class is a CamCalibration or subclass of CamCalibration."""
+    return is_obj_of_type(cls, CamCalibration, strict)
+
+
+def create_cam_calibration(
+    type: str,
+    cx_offset_px: float,
+    cy_offset_px: float,
+    img_height_px: int,
+    img_width_px: int,
+    pos_x_m: float,
+    pos_y_m: float,
+    pos_z_m: float,
+    rot_x_deg: float,
+    rot_z1_deg: float,
+    rot_z2_deg: float,
+    c1: float,
+    c2: float,
+    c3: float,
+    c4: float,
+    pixel_aspect_ratio: float,
+) -> CamCalibration:
+    """Create a CamCalibration instance.
+
+    Args:
+        type (str): The type of camera.
+        cx_offset_px (float): cx_offset_px
+        cy_offset_px (float): cy_offset_px
+        img_height_px (int): img_height_px
+        img_width_px (int): img_width_px
+        pos_x_m (float): pos_x_m
+        pos_y_m (float): pos_y_m
+        pos_z_m (float): pos_z_m
+        rot_x_deg (float): rot_x_deg
+        rot_z1_deg (float): rot_z1_deg
+        rot_z2_deg (float): rot_z2_deg
+        c1 (float): c1
+        c2 (float): c2
+        c3 (float): c3
+        c4 (float): c4
+        pixel_aspect_ratio (float): pixel_aspect_ratio
+
+    Returns:
+        CamCalibration: The created CamCalibration instance.
+    """
+    return CamCalibration(
+        type=type,
+        base_intrinsics=BaseIntrinsics(
+            cx_offset_px=cx_offset_px,
+            cy_offset_px=cy_offset_px,
+            img_height_px=img_height_px,
+            img_width_px=img_width_px,
+        ),
+        extrinsics=Extrinsics(
+            pos_x_m=pos_x_m,
+            pos_y_m=pos_y_m,
+            pos_z_m=pos_z_m,
+            rot_x_deg=rot_x_deg,
+            rot_z1_deg=rot_z1_deg,
+            rot_z2_deg=rot_z2_deg,
+        ),
+        intrinsics=Intrinsics(
+            c1=c1,
+            c2=c2,
+            c3=c3,
+            c4=c4,
+            pixel_aspect_ratio=pixel_aspect_ratio,
+        ),
+    )

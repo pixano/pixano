@@ -73,12 +73,11 @@ class Dataset:
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, path: Path | S3Path, info: DatasetLibrary | None = None):
+    def __init__(self, path: Path | S3Path):
         """Initialize dataset.
 
         Args:
             path (Path | S3Path): Dataset path
-            info (DatasetInfo, optional): Dataset info. Default is None.
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE

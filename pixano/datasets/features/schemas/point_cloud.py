@@ -4,8 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-from .view import View
+
+import shortuuid
+
+from pixano.datasets.utils import is_obj_of_type
+
 from .registry import _register_schema_internal
+from .view import View
 
 
 @_register_schema_internal
@@ -16,6 +21,20 @@ class PointCloud(View):
     url: str
 
 
-def is_point_cloud(cls: type) -> bool:
+def is_point_cloud(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a subclass of PointCloud."""
-    return issubclass(cls, PointCloud)
+    return is_obj_of_type(cls, PointCloud, strict)
+
+
+def create_point_cloud(item_id: str, url: str, id: str | None = None) -> PointCloud:
+    """Create a PointCloud instance.
+
+    Args:
+        item_id (str): The item id.
+        url (str): The point cloud URL.
+        id (str | None,  optional): The point cloud id. If None, a random id is generated.
+
+    Returns:
+        _description_
+    """
+    return PointCloud(item_id=item_id, url=url, id=id if id is not None else shortuuid.uuid())

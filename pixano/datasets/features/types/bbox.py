@@ -4,14 +4,16 @@
 # License: CECILL-C
 # =====================================
 
-import pydantic
+from pydantic import BaseModel
+
+from pixano.datasets.utils import is_obj_of_type
 
 from ...utils import boxes as bbox_utils
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class BBox(pydantic.BaseModel):
+class BBox(BaseModel):
     """Bounding box type using coordinates in xyxy or xywh format.
 
     Attributes:
@@ -28,16 +30,13 @@ class BBox(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """
-        Utility function to get a None equivalent.
+        """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
             BBox: "None" BBox
         """
-        return BBox(
-            coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=0
-        )
+        return BBox(coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=0)
 
     @property
     def xyxy_coords(self) -> list[float]:
@@ -46,11 +45,7 @@ class BBox(pydantic.BaseModel):
         Returns:
             list[float]: Coordinates in xyxy format
         """
-        return (
-            self.coords
-            if self.format == "xyxy"
-            else bbox_utils.xywh_to_xyxy(self.coords)
-        )
+        return self.coords if self.format == "xyxy" else bbox_utils.xywh_to_xyxy(self.coords)
 
     @property
     def xywh_coords(self) -> list[float]:
@@ -59,11 +54,7 @@ class BBox(pydantic.BaseModel):
         Returns:
             list[float]: Coordinates in xywh format
         """
-        return (
-            self.coords
-            if self.format == "xywh"
-            else bbox_utils.xyxy_to_xywh(self.coords)
-        )
+        return self.coords if self.format == "xywh" else bbox_utils.xyxy_to_xywh(self.coords)
 
     def to_xyxy(self) -> "BBox":
         """Return bounding box in xyxy format.
@@ -180,13 +171,26 @@ class BBox(pydantic.BaseModel):
     #     return BBox.from_mask(rle.to_mask())
 
 
-def is_bbox(cls: type) -> bool:
-    """Check if a class is a subclass of BBox.
+def is_bbox(cls: type, strict: bool = False) -> bool:
+    """Check if a class is a BBox or  a subclass of BBox."""
+    return is_obj_of_type(cls, BBox, strict)
 
-    Parameters:
-        cls (type): The class to check.
+
+def create_bbox(
+    coords: list[float],
+    format: str,
+    is_normalized: bool,
+    confidence: float = 0,
+) -> BBox:
+    """Create a BBox instance.
+
+    Args:
+        coords (list[float]): List of coordinates in given format
+        format (str): Coordinates format, 'xyxy' or 'xywh'
+        is_normalized (bool): True if coordinates are normalized to image size
+        confidence (float, optional): Bounding box confidence if predicted. Defaults to 0.
 
     Returns:
-        bool: True if the class is a subclass of BBox, False otherwise.
+        BBox: The created BBox instance.
     """
-    return issubclass(cls, BBox)
+    return BBox(coords=coords, format=format, is_normalized=is_normalized, confidence=confidence)

@@ -3,7 +3,6 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
-
 from .schemas.base_schema import BaseSchema
 from .schemas.embedding import Embedding
 from .schemas.image import Image, is_image
@@ -15,9 +14,6 @@ from .schemas.sequence_frame import SequenceFrame, is_sequence_frame
 from .schemas.track_object import TrackObject
 from .schemas.tracklet import (
     Tracklet,
-    TrackletWithTimestamp,
-    TrackletWithTimestep,
-    TrackletWithTimestepAndTimestamp,
 )
 from .schemas.video import Video
 from .schemas.view import View
@@ -28,6 +24,7 @@ from .types.compressed_rle import CompressedRLE
 from .types.keypoints import KeyPoints, is_keypoints, map_back2front_vertices
 from .types.keypoints3d import KeyPoints3D, is_keypoints3d
 from .types.nd_array_float import NDArrayFloat
+
 
 __all__ = [
     "BaseSchema",
@@ -46,9 +43,6 @@ __all__ = [
     "PointCloud",
     "SequenceFrame",
     "Tracklet",
-    "TrackletWithTimestamp",
-    "TrackletWithTimestep",
-    "TrackletWithTimestepAndTimestamp",
     "Video",
     "View",
     "is_bbox",

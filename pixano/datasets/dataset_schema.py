@@ -366,19 +366,22 @@ class DatasetSchema(BaseModel):
 class DatasetItem(BaseModel):
     """Dataset Item."""
 
-    def to_dataset_schema(self) -> DatasetSchema:
+    @classmethod
+    def to_dataset_schema(cls) -> DatasetSchema:
         """Convert DatasetItem to a DatasetSchema."""
-        return DatasetSchema.from_dataset_item(self)
+        return DatasetSchema.from_dataset_item(cls)
 
+    @classmethod
     def to_dataset_schema_dict(
-        self,
+        cls,
     ) -> dict[str, dict[str, BaseSchema | SchemaRelation]]:
         """Convert DatasetItem to a dataset schema dict."""
-        return _dataset_item_to_dict(self)
+        return _dataset_item_to_dict(cls)
 
-    def serialize(self) -> dict[str, dict[str, Any]]:
+    @classmethod
+    def serialize(cls) -> dict[str, dict[str, Any]]:
         """Serialize DatasetItem."""
-        return _serialize_dataset_schema_dict(_dataset_item_to_dict(self))
+        return _serialize_dataset_schema_dict(_dataset_item_to_dict(cls))
 
 
 def create_custom_dataset_item_class_from_dataset_schema(

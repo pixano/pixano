@@ -5,13 +5,15 @@
 # =====================================
 
 import numpy as np
-import pydantic
+from pydantic import BaseModel
+
+from pixano.datasets.utils import is_obj_of_type
 
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class NDArrayFloat(pydantic.BaseModel):
+class NDArrayFloat(BaseModel):
     """Represents an N-dimensional array of floating-point values.
 
     Attributes:
@@ -24,8 +26,7 @@ class NDArrayFloat(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """
-        Utility function to get a None equivalent.
+        """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
@@ -45,3 +46,21 @@ class NDArrayFloat(pydantic.BaseModel):
                 the input array.
         """
         return cls(values=arr.reshape(-1).tolist(), shape=list(arr.shape))
+
+
+def is_ndarray_float(cls: type) -> bool:
+    """Check if a class is an NDArrayFloat or a subclass of NDArrayFloat."""
+    return is_obj_of_type(cls, NDArrayFloat)
+
+
+def create_ndarray_float(values: list[float], shape: list[int]) -> NDArrayFloat:
+    """Create an NDArrayFloat instance.
+
+    Args:
+        values (list[float]): The list of floating-point values in the array.
+        shape (list[int]): The shape of the array, represented as a list of integers.
+
+    Returns:
+        NDArrayFloat: The created NDArrayFloat instance.
+    """
+    return NDArrayFloat(values=values, shape=shape)

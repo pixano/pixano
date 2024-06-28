@@ -9,7 +9,7 @@ from typing import Type
 from pydantic import BaseModel
 
 
-ATOMIC_PYTHON_TYPES: list[type] = [
+_ATOMIC_PYTHON_TYPES: list[type] = [
     int,
     float,
     complex,
@@ -24,7 +24,7 @@ _TYPES_REGISTRY: dict[str, Type[BaseModel]] = {}
 
 
 def _add_type_to_registry(cls, registry: dict[str, Type[BaseModel]]) -> None:
-    if not (cls in ATOMIC_PYTHON_TYPES or issubclass(cls, BaseModel)):
+    if not (cls in _ATOMIC_PYTHON_TYPES or issubclass(cls, BaseModel)):
         raise ValueError(
             f"Table type {type} must be a an atomic python type or "
             "derive from BaseModel."
@@ -42,5 +42,5 @@ def _register_type_internal(cls):
     return cls
 
 
-for python_type in ATOMIC_PYTHON_TYPES:
+for python_type in _ATOMIC_PYTHON_TYPES:
     _register_type_internal(python_type)
