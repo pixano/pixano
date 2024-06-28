@@ -27,7 +27,7 @@ try:
 
     ffmpeg.probe(SAMPLE_DATA_PATHS["video_mp4"])
     VIDEO_INSTALLED = True
-except:
+except: # noqa: E722
     pass
 
 
