@@ -6,6 +6,7 @@
 
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import timedelta
 from pathlib import Path
 from typing import Iterator, Literal
 
@@ -174,8 +175,10 @@ class DatasetBuilder(ABC):
             table_name (str): The name of the table to compact.
         """
         table = self.db.open_table(table_name)
-        table.cleanup_old_versions(delete_unverified=True)
-        table.compact_files()
+        table.compact_files(
+            target_rows_per_fragment=1048576, max_rows_per_group=1024, materialize_deletions=False, num_threads=None
+        )
+        table.cleanup_old_versions(older_than=timedelta(days=0), delete_unverified=True)
 
     def compact_dataset(self) -> None:
         """Compact the dataset by calling :meth:`compact_table` for each table in the database."""
