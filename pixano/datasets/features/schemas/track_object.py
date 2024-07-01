@@ -9,11 +9,14 @@ import shortuuid
 from pixano.datasets.features.schemas.registry import _register_schema_internal
 from pixano.datasets.utils import is_obj_of_type
 
-from .object import Object
+from ..types.bbox import BBox
+from ..types.compressed_rle import CompressedRLE
+from ..types.keypoints import KeyPoints
+from .image_object import ImageObject
 
 
 @_register_schema_internal
-class TrackObject(Object):
+class TrackObject(ImageObject):
     """Object belonging to a track.
 
     Attributes:
@@ -39,6 +42,10 @@ def create_track_object(
     is_key: bool,
     frame_idx: int,
     id: str | None = None,
+    bbox: BBox = BBox.none(),
+    mask: CompressedRLE = CompressedRLE.none(),
+    keypoints: KeyPoints = KeyPoints.none(),
+
 ) -> TrackObject:
     """Create a TrackObject instance.
 
@@ -49,6 +56,9 @@ def create_track_object(
         is_key (bool): True if object is a "key".
         frame_idx (int): The frame index.
         id (str | None, optional): The object id. If None, a random id is generated.
+        bbox (BBox, optional): The bounding box of the object.
+        mask (CompressedRLE, optional): The mask of the object.
+        keypoints (KeyPoints, optional): The keypoints of the object.
 
     Returns:
         TrackObject: The created TrackObject instance.
@@ -60,4 +70,7 @@ def create_track_object(
         tracklet_id=tracklet_id,
         is_key=is_key,
         frame_idx=frame_idx,
+        bbox=bbox,
+        mask=mask,
+        keypoints=keypoints,
     )
