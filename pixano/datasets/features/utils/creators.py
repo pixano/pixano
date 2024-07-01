@@ -1,8 +1,14 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 from pydantic import BaseModel
 
 from pixano.datasets.features.schemas.base_schema import BaseSchema
 from pixano.datasets.features.schemas.image import create_image, is_image
-from pixano.datasets.features.schemas.object import create_image_object, is_image_object
+from pixano.datasets.features.schemas.image_object import create_image_object, is_image_object
 from pixano.datasets.features.schemas.sequence_frame import create_sequence_frame, is_sequence_frame
 from pixano.datasets.features.schemas.track_object import create_track_object, is_track_object
 from pixano.datasets.features.schemas.tracklet import create_tracklet, is_tracklet

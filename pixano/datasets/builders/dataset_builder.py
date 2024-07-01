@@ -28,11 +28,16 @@ from ..utils import video as video_utils
 
 
 class DatasetBuilder(ABC):
-    """Abstract base class for dataset builders.
+    """Abstract base class for Dataset builders.
+
+    To build a dataset, the easiest is to launch the :meth:`build` method which requires to inherit from this class and
+    implement :meth:`generate_data`.
 
     Attributes:
         target_dir (Path): The target directory for the dataset.
         source_dir (Path): The source directory for the dataset.
+        previews_path (Path): The path to the previews directory.
+        info (DatasetLibrary): Dataset informations (name, description, ...).
         dataset_schema (DatasetSchema): The dataset schema for the dataset.
         schemas (dict[str, BaseSchema]): The schemas for the dataset tables infered from the dataset schema.
         db (lancedb.Database): The lancedb.Database instance for the dataset.
@@ -51,8 +56,8 @@ class DatasetBuilder(ABC):
             source_dir (Path | str): The source directory for the dataset.
             target_dir (Path | str): The target directory for the dataset.
             schemas (type[DatasetItem]): The schemas for the dataset tables.
-            info (DatasetLibrary): User informations (name, description, ...)
-            for the dataset.
+            info (DatasetLibrary): Dataset informations (name, description, ...)
+                for the dataset.
         """
         self.target_dir = Path(target_dir)
         self.source_dir = Path(source_dir)
@@ -76,31 +81,40 @@ class DatasetBuilder(ABC):
 
     def build(
         self,
-        items_per_transaction: int | None = None,
+        mode: Literal["add", "create", "overwrite"] = "create",
+        flush_every_n_samples: int | None = None,
         compact_every_n_transactions: int | None = None,
-        mode: Literal["create", "overwrite", "add"] = "create",
     ) -> Dataset:
         """Build the dataset.
 
+        It generates data from the source directory and insert them in the tables of the database.
+
         Args:
-            items_per_transaction (int | None): The number of items per transaction. If None, items are inserted at each
-                iteration.
+            mode (Literal["add", "create", "overwrite"]): The mode for creating the tables in the database.
+                The mode can be "create", "overwrite" or "add":
+                - "create": Create the tables in the database.
+                - "overwrite": Overwrite the tables in the database.
+                - "add": Append to the tables in the database.
+            flush_every_n_samples (int | None): The number of samples accumulated from :meth:`generate_data` before
+                flush in tables. If None, data are inserted at each iteration.
             compact_every_n_transactions (int | None): The number of transactions before compacting the dataset.
                 If None, the dataset is compacted only at the end.
-            mode (Literal["create", "overwrite", "add"]): The mode for creating the tables in the database.
+
 
         Returns:
             Dataset: The built dataset.
         """
         if mode == "add":
-            tables = self._open_tables()
+            tables = self.open_tables()
         else:
-            tables = self._create_tables(mode)
+            tables = self.create_tables(mode)
 
         # accumulate items to insert in tables
-        accumulate_tables = {table_name: [] for table_name in tables.keys()}
+        accumulate_data_tables = {table_name: [] for table_name in tables.keys()}
+        # count transactions per table
+        transactions_per_table = {table_name: 0 for table_name in tables.keys()}
 
-        for count, items in enumerate(tqdm.tqdm(self._generate_items(), desc="Import items")):
+        for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
             # assert that items have keys that are in tables
             for table_name, item_value in items.items():
                 assert table_name in tables, f"Table {table_name} not found in tables"
@@ -109,25 +123,32 @@ class DatasetBuilder(ABC):
                     if " " in it.id:
                         raise ValueError(f"ids should not contain spaces (table: {table_name}, " f"id:{it.id})")
 
-                accumulate_tables[table_name].extend(item_value if isinstance(item_value, list) else [item_value])
+                accumulate_data_tables[table_name].extend(item_value if isinstance(item_value, list) else [item_value])
 
-                # make transaction every n items per table
-                if len(accumulate_tables[table_name]) > 0 and (
-                    items_per_transaction is None or len(accumulate_tables[table_name]) % items_per_transaction == 0
+                # make transaction every n iterations per table
+                if len(accumulate_data_tables[table_name]) > 0 and (
+                    flush_every_n_samples is None
+                    or len(accumulate_data_tables[table_name]) % flush_every_n_samples == 0
                 ):
                     table = tables[table_name]
-                    table.add(accumulate_tables[table_name])
-                    accumulate_tables[table_name] = []
+                    table.add(accumulate_data_tables[table_name])
+                    transactions_per_table[table_name] += 1
+                    accumulate_data_tables[table_name] = []
 
-                # compact dataset every n transactions
-                if compact_every_n_transactions is not None and count % compact_every_n_transactions == 0:
-                    self._compact_dataset()
+                # compact dataset every n transactions per table
+                if (
+                    compact_every_n_transactions is not None
+                    and transactions_per_table[table_name] % compact_every_n_transactions == 0
+                    and transactions_per_table[table_name] > 0
+                ):
+                    print(f"Compacting {table_name}")
+                    self.compact_table(table_name)
 
         # make transaction for final batch
         for table_name, table in tables.items():
-            if len(accumulate_tables[table_name]) > 0:
-                table.add(accumulate_tables[table_name])
-        self._compact_dataset()
+            if len(accumulate_data_tables[table_name]) > 0:
+                table.add(accumulate_data_tables[table_name])
+        self.compact_dataset()
 
         # save info.json
         self.info.id = shortuuid.uuid()
@@ -146,35 +167,44 @@ class DatasetBuilder(ABC):
 
         return Dataset(self.target_dir)
 
-    def _compact_dataset(self) -> None:
-        for table in self._open_tables().values():
-            table.cleanup_old_versions(delete_unverified=True)
-            table.compact_files()
+    def compact_table(self, table_name: str) -> None:
+        """Compact a table in the database by cleaning up old versions and compacting files.
+
+        Args:
+            table_name (str): The name of the table to compact.
+        """
+        table = self.db.open_table(table_name)
+        table.cleanup_old_versions(delete_unverified=True)
+        table.compact_files()
+
+    def compact_dataset(self) -> None:
+        """Compact the dataset by calling :meth:`compact_table` for each table in the database."""
+        for table_name in self.schemas.keys():
+            self.compact_table(table_name)
 
     @abstractmethod
-    def _generate_items(self) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
-        """Read items from the source directory.
+    def generate_data(self) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
+        """Generate data from the source directory.
 
         Returns:
-            Iterator[dict[str, Any]]: An iterator over the items following data schema.
-
+            Iterator[dict[str, Any]]: An iterator over the data following data schema.
         """
         raise NotImplementedError
 
-    def _generate_media_previews(self, **kwargs) -> None:
+    def generate_media_previews(self, **kwargs) -> None:
         """Generate media previews for the dataset."""
         for table_name, schema in self.schemas.items():
             print(f"Will generate previews for {table_name}")
             if image_schema.is_image(schema):
-                self._generate_image_previews(table_name)
+                self.generate_image_previews(table_name)
             elif sequence_frame_schema.is_sequence_frame(schema):
                 fps = kwargs.get("fps", 25)
                 scale = kwargs.get("scale", 0.5)
-                self._generate_sequence_frame_previews(table_name, fps, scale)
+                self.generate_sequence_frame_previews(table_name, fps, scale)
             else:
                 continue
 
-    def _create_tables(
+    def create_tables(
         self,
         mode: Literal["create", "overwrite"] = "create",
     ) -> dict[str, Table]:
@@ -192,7 +222,7 @@ class DatasetBuilder(ABC):
 
         return tables
 
-    def _open_tables(self) -> dict[str, Table]:
+    def open_tables(self) -> dict[str, Table]:
         """Open tables in the database.
 
         Returns:
@@ -205,11 +235,11 @@ class DatasetBuilder(ABC):
 
         return tables
 
-    def _generate_image_previews(self) -> None:
+    def generate_image_previews(self) -> None:
         """Generate image previews for the dataset."""
         pass
 
-    def _generate_sequence_frame_previews(self, table_name: str, fps: int, scale: float):
+    def generate_sequence_frame_previews(self, table_name: str, fps: int, scale: float):
         """Generate video (sequence frames) previews for the dataset."""
         sequence_table = self.db.open_table(table_name).to_lance()  # noqa: F841
 

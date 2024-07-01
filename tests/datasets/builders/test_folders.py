@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 import json
 import tempfile
 from pathlib import Path
@@ -8,8 +14,8 @@ from pixano.datasets.builders.folders import ImageFolderBuilder, VideoFolderBuil
 from pixano.datasets.dataset_library import DatasetLibrary
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.features.schemas.image import Image
+from pixano.datasets.features.schemas.image_object import ImageObject
 from pixano.datasets.features.schemas.item import Item
-from pixano.datasets.features.schemas.object import ImageObject
 from pixano.datasets.features.schemas.video import Video
 
 
@@ -27,7 +33,7 @@ try:
 
     ffmpeg.probe(SAMPLE_DATA_PATHS["video_mp4"])
     VIDEO_INSTALLED = True
-except: # noqa: E722
+except:  # noqa: E722
     pass
 
 
@@ -248,7 +254,7 @@ class TestFolderBaseBuilder:
             objects = image_folder_builder._create_objects(item, view, objects_data)
 
     def test_generate_items(self, image_folder_builder: ImageFolderBuilder):
-        items = list(image_folder_builder._generate_items())
+        items = list(image_folder_builder.generate_data())
         assert len(items) == 15
         assert len([item for item in items if item["item"].split == "train"]) == 10
         assert len([item for item in items if item["item"].split == "val"]) == 5
@@ -262,7 +268,7 @@ class TestFolderBaseBuilder:
             assert view.item_id == actual_item.id
             assert view.url == f"{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
 
-            if i % 2:
+            if i % 2:  # has objects
                 objects: list[MyImageObject] = item["objects"]
                 assert len(objects) == i
                 for object in objects:
@@ -272,5 +278,5 @@ class TestFolderBaseBuilder:
                     assert object.bbox.format == "xywh"
                     assert object.bbox.is_normalized is True
                     assert object.bbox.confidence == 1.0
-            else:
+            else:  # no objects
                 assert "objects" not in item

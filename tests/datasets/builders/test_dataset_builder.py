@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -37,7 +43,7 @@ class DumbDatasetBuilder(DatasetBuilder):
         self.num_rows = num_rows
         super().__init__(*args, **kwargs)
 
-    def _generate_items(self):
+    def generate_data(self):
         for i in range(self.num_rows):
             item_id = str(i)
             image = Image(
@@ -97,15 +103,17 @@ class TestDatasetBuilder:
         assert builder.db._uri == str(Path(target_dir) / Dataset.DB_PATH)
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
-    @pytest.mark.parametrize("items_per_transaction", [None, 2])
+    @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
     @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
-    def test_build(self, builder, mode, items_per_transaction, compact_every_n_transactions):
+    def test_build(self, builder, mode, flush_every_n_samples, compact_every_n_transactions):
         # Mock the compact method to register the call count
-        compact_mock = MagicMock()
-        builder._compact_dataset = compact_mock
+        compact_dataset_mock = MagicMock()
+        compact_table_mock = MagicMock()
+        builder.compact_dataset = compact_dataset_mock
+        builder.compact_table = compact_table_mock
 
         dataset = builder.build(
-            items_per_transaction=items_per_transaction,
+            flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
         )
@@ -123,12 +131,21 @@ class TestDatasetBuilder:
         assert dataset.num_rows == 5
         assert set(dataset.open_tables().keys()) == {"image", "item", "objects"}
 
-        assert compact_mock.call_count == 1 if compact_every_n_transactions is None else 3
+        assert compact_dataset_mock.call_count == 1
+        if compact_every_n_transactions is None:
+            assert compact_table_mock.call_count == 0
+        else:
+            if flush_every_n_samples is None:
+                assert compact_table_mock.call_count == 6
+            elif flush_every_n_samples == 3:
+                assert compact_table_mock.call_count == 0
+            else:
+                raise ValueError("Invalid flush_every_n_samples value, update test")
 
         if mode == "create":
             with pytest.raises(OSError, match="Dataset already exists"):
                 builder.build(
-                    items_per_transaction=items_per_transaction,
+                    flush_every_n_samples=flush_every_n_samples,
                     compact_every_n_transactions=compact_every_n_transactions,
                     mode=mode,
                 )
@@ -139,33 +156,43 @@ class TestDatasetBuilder:
         def _side_effect_table_add(self, *args, **kwargs):
             return self.add(*args, **kwargs)
         table_mocks = []
-        for table in builder._open_tables().values():
+        for table in builder.open_tables().values():
             table_mock = MagicMock(side_effect=_side_effect_table_add)
             table.add = table_mock
             table_mocks.append(table_mock)
 
-        builder.num_rows = 2
+        builder.num_rows = 6
         dataset = builder.build(
-            items_per_transaction=items_per_transaction,
+            flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode=mode,
         )
 
-        assert dataset.num_rows == 2 if mode == "overwrite" else 7
-        assert compact_mock.call_count == 2 if compact_every_n_transactions is None else 5
+        assert dataset.num_rows ==  6 if mode == "overwrite" else 11
+        assert compact_dataset_mock.call_count == 2
+
+        if compact_every_n_transactions is None:
+            assert compact_table_mock.call_count == 0
+        else:
+            if flush_every_n_samples is None:
+                assert compact_table_mock.call_count == 14
+            elif flush_every_n_samples == 3:
+                assert compact_table_mock.call_count == 2
+            else:
+                raise ValueError("Invalid flush_every_n_samples value, update test")
 
         for mock in table_mocks:
-            mock.call_count == 2 if items_per_transaction is None else 1
+            mock.call_count == 2 if flush_every_n_samples is None else 1
 
     def test_build_error(self):
         class WrongIdBuilder(DatasetBuilder):
-            def _generate_items(self):
+            def generate_data(self):
                 yield {
                     self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")
                 }
 
         class WrongSchemaNameBuilder(DatasetBuilder):
-            def _generate_items(self):
+            def generate_data(self):
                 yield {"wrong_schema": self.item_schema(id="id", metadata="metadata", split="train")}
 
         with pytest.raises(ValueError, match="ids should not contain spaces"):

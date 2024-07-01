@@ -20,6 +20,6 @@ VIDEO_EXTENSIONS = [
 
 
 class VideoFolderBuilder(FolderBaseBuilder):
-    """Builder for image datasets stored in a folder."""
+    """Builder for video datasets stored in a folder."""
 
     EXTENSIONS = VIDEO_EXTENSIONS

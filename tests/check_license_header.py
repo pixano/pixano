@@ -6,6 +6,7 @@
 
 import os
 
+
 # Headers for each file type
 HEADERS = {
     ".py": """# =====================================
@@ -36,7 +37,7 @@ EXCLUDE_FILES = {
     "ambient.d.ts",
     "$types.d.ts",
     "app.d.ts",
-    "io.test.ts"
+    "io.test.ts",
 }
 
 

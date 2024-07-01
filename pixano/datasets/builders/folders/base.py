@@ -31,7 +31,6 @@ class FolderBaseBuilder(DatasetBuilder):
     The folder structure should be as follows:
     - source_dir/{split}/{item}.{ext}
     - source_dir/{split}/metadata.jsonl
-    Only one view  is supported in folder based builders.
 
     The metadata file should be a jsonl file with the following format:
     .. code-block:: json
@@ -60,6 +59,9 @@ class FolderBaseBuilder(DatasetBuilder):
         },
         ...
     ]
+
+    .. note:
+        Only one view is supported in folder builders.
 
     Attributes:
         view_name (str): The name of the view.
@@ -96,14 +98,13 @@ class FolderBaseBuilder(DatasetBuilder):
         self.view_name = view_name
         self.view_schema = view_schema
 
-    def _generate_items(
+    def generate_data(
         self,
     ) -> Iterator[dict[str, BaseSchema | list[BaseSchema]]]:
-        """Read items from the folder directory.
+        """Generate data from the source directory.
 
         Returns:
-            Iterator[dict[str, BaseSchema | list[BaseSchema]]]: An iterator over the items following data schema.
-
+            Iterator[dict[str, Any]]: An iterator over the data following data schema.
         """
         for split in self.source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):
