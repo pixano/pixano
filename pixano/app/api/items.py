@@ -352,7 +352,7 @@ async def get_dataset_item(  # noqa: D417
                 },
             }
 
-    # TMP 1V we split everything by view (for now we take 1st view, then we we'll make some way to choose which view)
+    # TMP 1V we split everything by view
     if view:
         selected_view = view
     else:
