@@ -9,13 +9,10 @@ Pixano Data Model consist of extandable Python classes
     *"Video",
     *"PointCloud",
 
-    "Object",
+    "ImageObject",
     "TrackObject",
 
     "Tracklet",
-    "TrackletWithTimestamp",
-    "TrackletWithTimestep",
-    "TrackletWithTimestepAndTimestamp",
 
     *"Embedding",
 
@@ -38,8 +35,8 @@ DatasetItem is the main dataset item class, which contains metadata, and also cu
 
 - ITEM: Item
 - VIEW: View (chilren: Image, SequenceFrame, Video, PointCloud)
-- OBJECT: Object (child: TrackObject)
-- TRACKLET: Tracklet (children: TrackletWithTimestamp, TrackletWithTimestep, TrackletWithTimestepAndTimestamp)
+- OBJECT: Object (child: ImageObject, TrackObject)
+- TRACKLET: Tracklet
 - EMBEDDING: Embedding
 
 ```
@@ -60,7 +57,7 @@ class CustomDataItem(DatasetItem):
     nb_frames: int      # <-- idem
     image: list[SequenceFrame]   # <-- this type is a list of SequenceType, it falls in VIEW group
     objects: list[TrackObject]   # <-- this type is a list of TrackObject, it falls in OBJECT group
-    tracklets: list[TrackletWithTimestep]  # <-- this type is a list of TrackletWithTimestep, it falls in TRACKLET group
+    tracklets: list[Tracklet]  # <-- this type is a list of Tracklet, it falls in TRACKLET group
 ```
 
 ## VIEW Group classes
@@ -109,7 +106,7 @@ PointCloud(View):
 Defined in pixano.datasets.features.schemas
 
 ```
-Object:
+ImageObject:
     id: str
     item_id: str
     view_id: str
@@ -119,7 +116,7 @@ Object:
 ```
 
 ```
-TrackObject(Object):
+TrackObject(ImageObject):
     tracklet_id: str
     is_key: bool
     frame_idx: int
@@ -136,22 +133,6 @@ Tracklet:
     id: str
     item_id: str
     track_id: str
-```
-
-```
-TrackletWithTimestamp(Tracklet):
-    start_timestamp: int
-    end_timestamp: int
-```
-
-```
-TrackletWithTimestep(Tracklet):
-    start_timestep: int
-    end_timestep: int
-```
-
-```
-TrackletWithTimestepAndTimestamp(Tracklet):
     start_timestep: int
     end_timestep: int
     start_timestamp: int
