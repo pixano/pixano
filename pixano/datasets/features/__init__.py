@@ -60,7 +60,6 @@ from .types import (
     is_keypoints,
     is_keypoints3d,
     is_ndarray_float,
-    map_back2front_vertices,
 )
 from .utils import create_pixano_object, create_row
 
@@ -120,5 +119,4 @@ __all__ = [
     "create_video",
     "create_pixano_object",
     "register_schema",
-    "map_back2front_vertices",
 ]

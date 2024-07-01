@@ -25,7 +25,6 @@ from pixano.datasets.features import (
     Image,
     KeyPoints,
     SequenceFrame,
-    map_back2front_vertices,
 )
 from pixano.datasets.features.schemas.group import _SchemaGroup
 from pixano.datasets.utils import image as image_utils
@@ -404,7 +403,7 @@ async def get_dataset_item(  # noqa: D417
                         "keypoints": (
                             {
                                 "template_id": obj.keypoints.template_id,
-                                "vertices": map_back2front_vertices(obj.keypoints),
+                                "vertices": obj.keypoints.map_back2front_vertices(),
                             }
                             if hasattr(obj, "keypoints")
                             and obj.keypoints != NoneKeypoints
@@ -455,7 +454,7 @@ async def get_dataset_item(  # noqa: D417
                     [
                         {
                             "template_id": obj.keypoints.template_id,
-                            "vertices": map_back2front_vertices(obj.keypoints),
+                            "vertices": obj.keypoints.map_back2front_vertices(),
                             "frame_index": obj.frame_idx,
                             "is_key": obj.is_key,
                             "is_thumbnail": i == 0,
