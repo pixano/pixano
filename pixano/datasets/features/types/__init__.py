@@ -15,7 +15,7 @@ from .camcalibration import (
     is_cam_calibration,
 )
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
-from .keypoints import KeyPoints, create_keypoints, is_keypoints
+from .keypoints import KeyPoints, create_keypoints, is_keypoints, map_back2front_vertices
 from .keypoints3d import KeyPoints3D, create_keypoints3d, is_keypoints3d
 from .nd_array_float import NDArrayFloat, create_ndarray_float, is_ndarray_float
 
@@ -45,4 +45,5 @@ __all__ = [
     "is_keypoints",
     "is_keypoints3d",
     "is_ndarray_float",
+    "map_back2front_vertices",
 ]

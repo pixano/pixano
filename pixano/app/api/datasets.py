@@ -28,9 +28,7 @@ async def get_datasets(
         list[DatasetInfo]: List of dataset infos
     """
     # Load datasets
-    infos = DatasetLibrary.load_directory(
-        directory=settings.data_dir, load_thumbnail=True
-    )
+    infos = DatasetLibrary.load_directory(directory=settings.data_dir)
 
     # Return datasets
     if infos:
