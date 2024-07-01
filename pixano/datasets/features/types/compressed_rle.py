@@ -5,15 +5,17 @@
 # =====================================
 
 import numpy as np
-import pydantic
 from PIL import Image as pil_image
+from pydantic import BaseModel
+
+from pixano.datasets.utils import is_obj_of_type
 
 from ...utils import image as image_utils
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class CompressedRLE(pydantic.BaseModel):
+class CompressedRLE(BaseModel):
     """Compressed RLE mask type.
 
     Attributes:
@@ -26,14 +28,13 @@ class CompressedRLE(pydantic.BaseModel):
 
     @staticmethod
     def none():
-        """
-        Utility function to get a None equivalent.
+        """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
             CompressedRLE: "None" CompressedRLE
         """
-        return CompressedRLE(size=[0.0, 0.0], counts=b'')
+        return CompressedRLE(size=[0.0, 0.0], counts=b"")
 
     def to_mask(self) -> np.ndarray:
         """Convert compressed RLE mask to NumPy array.
@@ -99,14 +100,10 @@ class CompressedRLE(pydantic.BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-        return CompressedRLE.from_dict(
-            image_utils.polygons_to_rle(polygons, height, width)
-        )
+        return CompressedRLE.from_dict(image_utils.polygons_to_rle(polygons, height, width))
 
     @staticmethod
-    def encode(
-        mask: list[list] | dict[str, list[int]], height: int, width: int
-    ) -> "CompressedRLE":
+    def encode(mask: list[list] | dict[str, list[int]], height: int, width: int) -> "CompressedRLE":
         """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
 
         Args:
@@ -119,3 +116,21 @@ class CompressedRLE(pydantic.BaseModel):
             CompressedRLE: Compressed RLE mask
         """
         return CompressedRLE.from_dict(image_utils.encode_rle(mask, height, width))
+
+
+def is_compressed_rle(cls: type, strict: bool = False) -> bool:
+    """Check if the given class is a subclass of CompressedRLE."""
+    return is_obj_of_type(cls, CompressedRLE, strict)
+
+
+def create_compressed_rle(size: list[int], counts: bytes) -> CompressedRLE:
+    """Create a CompressedRLE instance.
+
+    Args:
+        size (list[int]): Mask size
+        counts (bytes): Mask RLE encoding
+
+    Returns:
+        CompressedRLE: Compressed RLE instance
+    """
+    return CompressedRLE(size=size, counts=counts)

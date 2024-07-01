@@ -5,10 +5,8 @@
 # =====================================
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
+from pixano.datasets.utils import is_obj_of_type
 
-from ..types.bbox import BBox
-from ..types.compressed_rle import CompressedRLE
-from ..types.keypoints import KeyPoints
 from .base_schema import BaseSchema
 
 
@@ -18,18 +16,8 @@ class Object(BaseSchema):
 
     item_id: str
     view_id: str
-    bbox: BBox = BBox.none()
-    mask: CompressedRLE = CompressedRLE.none()
-    keypoints: KeyPoints = KeyPoints.none()
 
 
-def is_object(cls: type) -> bool:
-    """Check if a class is a subclass of Object.
-
-    Args:
-        cls (type): The class to check.
-
-    Returns:
-        bool: True if the class is a subclass of Object, False otherwise.
-    """
-    return issubclass(cls, Object)
+def is_object(cls: type, strict: bool = False) -> bool:
+    """Check if a class is an Object or subclass of Object."""
+    return is_obj_of_type(cls, Object, strict)

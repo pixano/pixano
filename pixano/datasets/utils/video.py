@@ -7,8 +7,6 @@
 from os import PathLike
 from typing import Iterable
 
-import mediapy
-
 
 def create_video_preview(
     path: PathLike, frame_urls: Iterable[str], fps: int = 25, scale: float = 0.5
@@ -21,6 +19,9 @@ def create_video_preview(
         fps (int, optional): The frames per second of the output video. Defaults to 25.
         scale (float, optional): The scale factor to resize the frames. Defaults to 0.5.
     """
+    # Import mediapy only when needed to avoid unnecessary dependencies.
+    import mediapy
+
     frames = [mediapy.read_image(url) for url in frame_urls]
 
     if scale < 1:

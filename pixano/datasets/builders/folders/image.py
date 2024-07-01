@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from .folder_based_builder import FolderBasedBuilder
+from .base import FolderBaseBuilder
 
 
 # Image extensions supported by Pillow
@@ -75,7 +75,7 @@ IMAGE_EXTENSIONS = [
 ]
 
 
-class ImageFolderBuilder(FolderBasedBuilder):
+class ImageFolderBuilder(FolderBaseBuilder):
     """Builder for image datasets stored in a folder."""
 
     EXTENSIONS = IMAGE_EXTENSIONS

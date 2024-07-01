@@ -11,7 +11,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from .dataset_schema import DatasetSchema
-from pixano.datasets.features import Image
+from .features import Image
 
 
 class DatasetLibrary(BaseModel):
@@ -49,7 +49,7 @@ class DatasetLibrary(BaseModel):
         """Read DatasetLibrary from JSON file.
 
         Args:
-            json_fp (Path | S3Path): JSON file path
+            json_fp (Path): JSON file path
 
         Returns:
             DatasetLibrary: DatasetInfo
@@ -62,20 +62,15 @@ class DatasetLibrary(BaseModel):
     @staticmethod
     def load_directory(
         directory: Path,
-        load_thumbnail: bool = False,
-        load_stats: bool = False,
     ) -> list["DatasetLibrary"]:
         """Load list of DatasetLibrary from directory.
 
         Args:
             directory (Path): Directory to load
-            load_thumbnail (bool, optional): Load dataset thumbnail. Defaults to False.
-            load_stats (bool, optional): Load dataset stats. Defaults to False.
 
         Returns:
             list[DatasetLibrary]: List of DatasetLibrary
         """
-
         library = []
 
         # Browse directory
@@ -110,11 +105,7 @@ class DatasetLibrary(BaseModel):
         tables = {}
         legacy_mapping = {"item": "main", "views": "media"}
         for group in schema._groups:
-            gr = (
-                legacy_mapping[group.value]
-                if group.value in legacy_mapping
-                else group.value
-            )
+            gr = legacy_mapping[group.value] if group.value in legacy_mapping else group.value
             tables[gr] = [
                 {
                     "name": tname,
@@ -124,11 +115,7 @@ class DatasetLibrary(BaseModel):
                 }
                 for tname in schema._groups[group]
             ]
-            gr = (
-                legacy_mapping[group.value]
-                if group.value in legacy_mapping
-                else group.value
-            )
+            gr = legacy_mapping[group.value] if group.value in legacy_mapping else group.value
             tables[gr] = [
                 {
                     "name": tname,
