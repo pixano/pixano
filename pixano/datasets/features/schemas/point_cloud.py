@@ -17,7 +17,6 @@ from .view import View
 class PointCloud(View):
     """Point Cloud Lance Model."""
 
-    item_id: str
     url: str
 
 
