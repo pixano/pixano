@@ -134,7 +134,11 @@ export const mapObjectToKeypoints = (
     object.datasetItemType === "video" ? object.displayedMKeypoints : [object.keypoints];
   if (!m_keypoints) return [] as KeypointsTemplate[];
   for (const keypoints of m_keypoints) {
-    if (!keypoints || (object.datasetItemType === "video" && keypoints.displayControl?.hidden))
+    if (
+      !keypoints ||
+      !keypoints.view_id ||
+      (object.datasetItemType === "video" && keypoints.displayControl?.hidden)
+    )
       continue;
     const template = templates.find((t) => t.id === keypoints?.template_id);
     if (!template) continue;
@@ -500,17 +504,18 @@ const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
 };
 
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
-  const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
-  if (!box) return null;
-  if (
-    object.datasetItemType === "video" &&
-    (!object.displayedMBox || object.displayedMBox.length < 1)
-  )
-    return null;
-  //TMP TODO for video object on several view, we take the first available view (?)
-  const view_id =
-    object.datasetItemType === "video" ? object.displayedMBox[0]?.view_id : object.bbox?.view_id;
-  if (!view_id) return null;
+  let box;
+  let view_id;
+  if (object.datasetItemType === "video") {
+    box = findThumbnailBox(object.boxes); //TODO ? which thumbnail in multiview cases ?
+    //TMP TODO for video object on several view, we take the first available view (?)
+    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
+    view_id = object.displayedMBox[0]?.view_id;
+  } else {
+    box = object.bbox;
+    view_id = object.bbox?.view_id;
+  }
+  if (!box || !view_id) return null;
   const view =
     metas.type === "video"
       ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
