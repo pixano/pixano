@@ -68,7 +68,7 @@ export type Vertex = {
 };
 
 export type Keypoints = {
-  view_id: string;
+  view_id?: string;
   template_id: string;
   vertices: Vertex[];
   displayControl?: DisplayControl;
@@ -76,7 +76,7 @@ export type Keypoints = {
 
 export type KeypointsTemplate = {
   id: string;
-  view_id: string;
+  view_id?: string;
   edges: [number, number][];
   vertices: Required<Vertex>[];
   editing?: boolean;

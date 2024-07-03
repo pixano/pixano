@@ -292,7 +292,11 @@ export const sortAndFilterObjectsToAnnotate = (
         const confidence = object.bbox.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
-      if (object.datasetItemType === "video" && object.displayedMBox && object.displayedMBox.length > 0) {
+      if (
+        object.datasetItemType === "video" &&
+        object.displayedMBox &&
+        object.displayedMBox.length > 0
+      ) {
         //TMP TODO for video object on several view, we take the first available view (?)
         const confidence = object.displayedMBox[0].confidence || 0;
         return confidence >= confidenceFilterValue[0];
@@ -498,10 +502,15 @@ const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
   const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
   if (!box) return null;
-  if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
+  if (
+    object.datasetItemType === "video" &&
+    (!object.displayedMBox || object.displayedMBox.length < 1)
+  )
+    return null;
   //TMP TODO for video object on several view, we take the first available view (?)
   const view_id =
     object.datasetItemType === "video" ? object.displayedMBox[0]?.view_id : object.bbox?.view_id;
+  if (!view_id) return null;
   const view =
     metas.type === "video"
       ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
