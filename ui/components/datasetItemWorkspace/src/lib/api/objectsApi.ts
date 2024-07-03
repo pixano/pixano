@@ -128,10 +128,11 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
 export const mapObjectToKeypoints = (
   object: ItemObject,
   views: DatasetItem["views"],
-): KeypointsTemplate | undefined => {
+): KeypointsTemplate[] => {
   const res_m_keypoints: KeypointsTemplate[] = [];
   const m_keypoints =
     object.datasetItemType === "video" ? object.displayedMKeypoints : [object.keypoints];
+  if (!m_keypoints) return [] as KeypointsTemplate[];
   for (const keypoints of m_keypoints) {
     if (!keypoints || (object.datasetItemType === "video" && keypoints.displayControl?.hidden))
       continue;
@@ -160,7 +161,7 @@ export const mapObjectToKeypoints = (
       highlighted: object.highlighted,
     } as KeypointsTemplate);
   }
-  return res_m_keypoints;
+  return [] as KeypointsTemplate[];
 };
 
 export const toggleObjectDisplayControl = (
@@ -291,7 +292,7 @@ export const sortAndFilterObjectsToAnnotate = (
         const confidence = object.bbox.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
-      if (object.datasetItemType === "video" && object.displayedMBox) {
+      if (object.datasetItemType === "video" && object.displayedMBox && object.displayedMBox.length > 0) {
         //TMP TODO for video object on several view, we take the first available view (?)
         const confidence = object.displayedMBox[0].confidence || 0;
         return confidence >= confidenceFilterValue[0];
@@ -304,12 +305,12 @@ export const sortAndFilterObjectsToAnnotate = (
 
       // Get first bbox position
       if (a.datasetItemType === "image" && a.bbox) firstBoxXPosition = a.bbox.coords[0] || 0;
-      if (a.datasetItemType === "video" && a.displayedBox)
+      if (a.datasetItemType === "video" && a.displayedMBox && a.displayedMBox.length > 0)
         firstBoxXPosition = a.displayedMBox[0].coords[0] || 0;
 
       // Get second bbox position
       if (b.datasetItemType === "image" && b.bbox) secondBoxXPosition = b.bbox.coords[0] || 0;
-      if (b.datasetItemType === "video" && b.displayedBox)
+      if (b.datasetItemType === "video" && b.displayedMBox && b.displayedMBox.length > 0)
         secondBoxXPosition = b.displayedMBox[0].coords[0] || 0;
 
       return firstBoxXPosition - secondBoxXPosition;
@@ -382,7 +383,7 @@ export const defineCreatedObject = (
           editing: true,
         },
         datasetItemType: "video",
-        displayedBox: { ...bbox, frame_index: 0, tracklet_id: id },
+        displayedMBox: [{ ...bbox, frame_index: 0, tracklet_id: id }],
         boxes: [
           {
             ...bbox,
@@ -452,7 +453,7 @@ export const defineCreatedObject = (
             id,
           },
         ],
-        displayedKeypoints: { ...keypoints, frame_index: 0, tracklet_id: id },
+        displayedMKeypoints: [{ ...keypoints, frame_index: 0, tracklet_id: id }],
       };
     } else {
       newObject = {
@@ -497,9 +498,10 @@ const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
   const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
   if (!box) return null;
+  if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
   //TMP TODO for video object on several view, we take the first available view (?)
   const view_id =
-    object.datasetItemType === "video" ? object.displayedMBox[0]?.view_id : object.bbox.view_id;
+    object.datasetItemType === "video" ? object.displayedMBox[0]?.view_id : object.bbox?.view_id;
   const view =
     metas.type === "video"
       ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]

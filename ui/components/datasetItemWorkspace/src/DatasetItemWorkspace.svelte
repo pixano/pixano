@@ -43,7 +43,7 @@ License: CECILL-C
           return { ...oldObject, ...object } as ItemObject;
         }
         return object as ItemObject;
-      }) || [] as ItemObject[],
+      }) || ([] as ItemObject[]),
   );
 
   $: itemMetas.set({
