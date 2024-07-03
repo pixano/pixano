@@ -480,33 +480,6 @@ async def get_dataset_item(  # noqa: D417
                         )
                     ]
                 )
-                # TMP AIHERD "keypoints" ~== "skeleton"
-                keypoints[tracklet.track_id].extend(
-                    [
-                        {
-                            "template_id": obj.category,
-                            "vertices": KeyPoints(
-                                    template_id=obj.category,
-                                    coords=obj.skeleton,
-                                    states=["visible"] * int(len(obj.skeleton) / 2),
-                                ).map_back2front_vertices(),
-                            "frame_index": obj.frame_idx,
-                            "is_key": obj.is_key,
-                            "is_thumbnail": i == 0,
-                            "tracklet_id": tracklet.id,
-                            "view_id": obj.view_id,
-                        }
-                        for i, obj in enumerate(
-                            [
-                                x
-                                for x in tracklet_objs[tracklet.id]
-                                if hasattr(x, "skeleton")
-                                and x.skeleton is not None
-                                and x.skeleton != []
-                            ]
-                        )
-                    ]
-                )
 
                 # organize tracklets by tracks
                 #  Note: is this check usefull? it avoid empty tracks, but do we want it ?
