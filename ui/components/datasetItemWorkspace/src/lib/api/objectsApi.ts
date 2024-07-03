@@ -40,11 +40,11 @@ import { templates } from "../settings/keyPointsTemplates";
 
 const defineTooltip = (object: ItemObject): string | null => {
   let bbox: ItemBBox | undefined;
-
   // Check object type to extract the bbox object
   if (object.datasetItemType === "image" && object.bbox) bbox = object.bbox;
   else if (object.datasetItemType === "video") {
     //TMP TODO for video object on several view, we take the first available view (?)
+    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
     const displayedBox = object.displayedMBox[0];
     bbox = displayedBox;
   }
@@ -65,9 +65,11 @@ const defineTooltip = (object: ItemObject): string | null => {
 export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox[] => {
   const res_bboxes: BBox[] = [];
   const boxes = obj.datasetItemType === "video" ? obj.displayedMBox : [obj.bbox];
+  if (!boxes) return res_bboxes;
   for (const box of boxes) {
     if (!box || (obj.datasetItemType === "video" && box.displayControl?.hidden)) continue;
     if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") continue;
+    if (!box.view_id) continue;
     const view = views?.[box.view_id];
     const image: ItemView = Array.isArray(view) ? view[0] : view;
     const imageHeight = (image.features.height.value as number) || 1;
@@ -97,6 +99,7 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   if (
     obj.datasetItemType === "image" && // Only images use masks ?
     obj.mask &&
+    obj.mask.view_id &&
     !obj.review_state &&
     !(obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   ) {
