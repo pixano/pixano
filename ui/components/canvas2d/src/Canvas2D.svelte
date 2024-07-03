@@ -203,9 +203,9 @@ License: CECILL-C
     applyFilters();
   });
 
-  // 
+  //
   let scaleOnFirstLoad = {};
-  Object.keys(imagesPerView).forEach((viewId)=> {
+  Object.keys(imagesPerView).forEach((viewId) => {
     scaleOnFirstLoad[viewId] = true;
   });
 
@@ -385,7 +385,6 @@ License: CECILL-C
     //   circle.radius(INPUTPOINT_RADIUS / zoom);
     //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
     // };
-
   }
 
   const cacheImage = () => {

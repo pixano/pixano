@@ -49,13 +49,15 @@ export const boxLinearInterpolation = (
   );
   if (!currentTracklet) return null;
   const view_boxes = boxes.filter((box) => box.view_id == view);
-  const endIndex = view_boxes.findIndex((box) => box.view_id == view && box.frame_index >= imageIndex);
+  const endIndex = view_boxes.findIndex(
+    (box) => box.view_id == view && box.frame_index >= imageIndex,
+  );
   if (endIndex < 0) {
     return null;
   }
   const end = view_boxes[endIndex];
   if (imageIndex == end.frame_index) {
-    return end.coords
+    return end.coords;
   }
   const start = view_boxes[endIndex - 1] || boxes[0];
   const [startX, startY, startWidth, startHeight] = start.coords;
@@ -72,7 +74,11 @@ export const boxLinearInterpolation = (
   return [x, y, width, height];
 };
 
-export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: number, view: string) => {
+export const keypointsLinearInterpolation = (
+  object: VideoObject,
+  imageIndex: number,
+  view: string,
+) => {
   if (!object.keypoints) return null;
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,

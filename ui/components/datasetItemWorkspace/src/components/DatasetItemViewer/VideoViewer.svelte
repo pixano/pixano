@@ -120,11 +120,18 @@ License: CECILL-C
         if (displayedMKeypoints && object.keypoints) {
           let new_displayedMKeypoints = [];
           for (let displayedKeypoints of displayedMKeypoints) {
-            const vertices = keypointsLinearInterpolation(object, imageIndex, displayedKeypoints.view_id);
+            const vertices = keypointsLinearInterpolation(
+              object,
+              imageIndex,
+              displayedKeypoints.view_id,
+            );
             if (vertices) {
               displayedKeypoints = { ...displayedKeypoints, vertices };
             }
-            displayedKeypoints.displayControl = { ...displayedKeypoints.displayControl, hidden: !vertices };
+            displayedKeypoints.displayControl = {
+              ...displayedKeypoints.displayControl,
+              hidden: !vertices,
+            };
             new_displayedMKeypoints.push(displayedKeypoints);
           }
           object = { ...object, displayedMKeypoints: new_displayedMKeypoints };

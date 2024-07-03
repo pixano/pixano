@@ -181,8 +181,8 @@ export type VideoObject = ItemObjectBase & {
   track: Tracklet[];
   boxes?: VideoItemBBox[];
   keypoints?: VideoKeypoints[];
-  displayedMBox?: VideoItemBBox[];  //list for multiview
-  displayedMKeypoints?: VideoKeypoints[];  //list for multiview
+  displayedMBox?: VideoItemBBox[]; //list for multiview
+  displayedMKeypoints?: VideoKeypoints[]; //list for multiview
 };
 
 export type ImageObject = ItemObjectBase & {
@@ -195,14 +195,14 @@ export type ImageObject = ItemObjectBase & {
 export type ItemObject = ImageObject | VideoObject;
 
 export interface ItemRLE {
-  view_id: string;
+  view_id?: string;
   counts: Array<number>;
   size: Array<number>;
   displayControl?: DisplayControl;
 }
 
 export interface ItemBBox {
-  view_id: string;
+  view_id?: string;
   coords: Array<number>;
   format: string;
   is_normalized: boolean;
