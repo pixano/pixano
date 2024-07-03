@@ -203,6 +203,12 @@ License: CECILL-C
     applyFilters();
   });
 
+  // 
+  let scaleOnFirstLoad = {};
+  Object.keys(imagesPerView).forEach((viewId)=> {
+    scaleOnFirstLoad[viewId] = true;
+  });
+
   const getCurrentImage = (viewId: string) =>
     imagesPerView[viewId][imagesPerView[viewId].length - 1];
 
@@ -222,7 +228,10 @@ License: CECILL-C
       const currentImage = getCurrentImage(viewId);
 
       currentImage.onload = () => {
-        scaleView(viewId);
+        if (scaleOnFirstLoad[viewId]) {
+          scaleView(viewId);
+          scaleOnFirstLoad[viewId] = false;
+        }
         scaleElements(viewId);
         isReady = true;
         // Refresh view (display masks/bboxes) if needed
@@ -370,6 +379,13 @@ License: CECILL-C
     if (currentMaskGroup) {
       scaleMaskGroup(currentMaskGroup);
     }
+
+    // Scale keypoints //TODO?
+    // const scaleKptCircle = (circle: Konva.Circle) => {
+    //   circle.radius(INPUTPOINT_RADIUS / zoom);
+    //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+    // };
+
   }
 
   const cacheImage = () => {

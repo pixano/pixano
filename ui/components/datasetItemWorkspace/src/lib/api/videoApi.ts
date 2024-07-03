@@ -42,15 +42,22 @@ export const boxLinearInterpolation = (
   track: Tracklet[],
   imageIndex: number,
   boxes: VideoItemBBox[],
+  view: string,
 ) => {
   const currentTracklet = track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
   if (!currentTracklet) return null;
-  let endIndex = boxes.findIndex((box) => box.frame_index > imageIndex);
-  endIndex = endIndex < 0 ? boxes.length - 1 : endIndex;
-  const start = boxes[endIndex - 1] || boxes[0];
-  const end = boxes[endIndex];
+  const view_boxes = boxes.filter((box) => box.view_id == view);
+  const endIndex = view_boxes.findIndex((box) => box.view_id == view && box.frame_index >= imageIndex);
+  if (endIndex < 0) {
+    return null;
+  }
+  const end = view_boxes[endIndex];
+  if (imageIndex == end.frame_index) {
+    return end.coords
+  }
+  const start = view_boxes[endIndex - 1] || boxes[0];
   const [startX, startY, startWidth, startHeight] = start.coords;
   const [endX, endY, endWidth, endHeight] = end.coords;
 
@@ -65,33 +72,39 @@ export const boxLinearInterpolation = (
   return [x, y, width, height];
 };
 
-export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: number) => {
-  const { displayedKeypoints } = object;
-  if (!object.keypoints || !displayedKeypoints) return object;
+export const keypointsLinearInterpolation = (object: VideoObject, imageIndex: number, view: string) => {
+  if (!object.keypoints) return null;
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
-
-  let endIndex = object.keypoints.findIndex((kp) => kp.frame_index > imageIndex);
-  endIndex = endIndex < 0 ? object.keypoints.length - 1 : endIndex;
-  const start = object.keypoints[endIndex - 1] || object.keypoints[0];
-  const end = object.keypoints[endIndex];
-  const vertices = start.vertices.map((vertex, i) => {
-    const xInterpolation = (end.vertices[i].x - vertex.x) / (end.frame_index - start?.frame_index);
-    const yInterpolation = (end.vertices[i].y - vertex.y) / (end.frame_index - start?.frame_index);
-    const x = vertex.x + xInterpolation * (imageIndex - start.frame_index);
-    const y = vertex.y + yInterpolation * (imageIndex - start.frame_index);
-    return { ...vertex, x, y };
-  });
-  const shouldBeHidden = !currentTracklet;
-  displayedKeypoints.displayControl = {
-    ...displayedKeypoints.displayControl,
-    hidden: shouldBeHidden,
-  };
-  displayedKeypoints.vertices = vertices;
-  displayedKeypoints.hidden = shouldBeHidden;
-  return { ...object, displayedKeypoints };
+  if (!currentTracklet) return null;
+  const view_keypoints = object.keypoints.filter((kp) => kp.view_id == view);
+  const endIndex = view_keypoints.findIndex((kp) => kp.frame_index >= imageIndex);
+  if (endIndex < 0) {
+    return null;
+  }
+  const end = view_keypoints[endIndex];
+  if (imageIndex == end.frame_index) {
+    return end.vertices;
+  } else {
+    const start = view_keypoints[endIndex - 1] || view_keypoints[0];
+    if (end.frame_index == start?.frame_index) {
+      console.log("QQ", view);
+      return start.vertices;
+    } else {
+      return start.vertices.map((vertex, i) => {
+        const xInterpolation =
+          (end.vertices[i].x - vertex.x) / (end.frame_index - start?.frame_index);
+        const yInterpolation =
+          (end.vertices[i].y - vertex.y) / (end.frame_index - start?.frame_index);
+        const x = vertex.x + xInterpolation * (imageIndex - start.frame_index);
+        const y = vertex.y + yInterpolation * (imageIndex - start.frame_index);
+        return { ...vertex, x, y };
+      });
+    }
+  }
 };
+
 export const deleteKeyBoxFromTracklet = (
   objects: ItemObject[],
   trackletItem: TrackletItem,
@@ -186,7 +199,6 @@ export const editKeyItemInTracklet = (
             vertices: shape.vertices,
           }
         : undefined;
-      console.log({ object });
       return object;
     }
     if (shape.type === "rectangle" && object.boxes) {

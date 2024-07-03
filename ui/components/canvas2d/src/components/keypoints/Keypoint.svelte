@@ -10,6 +10,7 @@ License: CECILL-C
   import { Line } from "svelte-konva";
 
   import type { KeypointsTemplate, VertexStates } from "@pixano/core";
+  import { videoControls } from "../../../../datasetItemWorkspace/src/lib/stores/videoViewerStores";
 
   import KeyPointCircle from "./KeypointsCircle.svelte";
 
@@ -67,18 +68,20 @@ License: CECILL-C
     }}
   />
 {/each}
-{#each vertices as vertex, i}
-  <KeyPointCircle
-    vertexIndex={i}
-    {stage}
-    {zoomFactor}
-    {vertex}
-    {keypointsId}
-    {color}
-    {opacity}
-    {onPointDragMove}
-    {findPointCoordinate}
-    draggable={keypointStructure.editing}
-    {onPointStateChange}
-  />
-{/each}
+{#if $videoControls.intervalId == 0}
+  {#each vertices as vertex, i}}
+    <KeyPointCircle
+      vertexIndex={i}
+      {stage}
+      {zoomFactor}
+      {vertex}
+      {keypointsId}
+      {color}
+      {opacity}
+      {onPointDragMove}
+      {findPointCoordinate}
+      draggable={keypointStructure.editing}
+      {onPointStateChange}
+    />
+  {/each}
+{/if}

@@ -48,7 +48,7 @@ License: CECILL-C
 
 {#if keypoints}
   {#each keypoints as keypointStructure}
-    {#if keypointStructure.visible}
+    {#if keypointStructure.visible && keypointStructure.view_id == viewId}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}
