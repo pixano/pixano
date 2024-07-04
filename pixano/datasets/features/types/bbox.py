@@ -4,29 +4,46 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel
+from typing import Literal
 
-from pixano.datasets.utils import is_obj_of_type
+import numpy as np
+from pydantic import model_validator
+
+from pixano.datasets.features.types.compressed_rle import CompressedRLE
+from pixano.datasets.utils import issubclass_strict
 
 from ...utils import boxes as bbox_utils
+from .base_type import BaseType
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class BBox(BaseModel):
+class BBox(BaseType):
     """Bounding box type using coordinates in xyxy or xywh format.
 
     Attributes:
         coords (list[float]): List of coordinates in given format
         format (str): Coordinates format, 'xyxy' or 'xywh'
         is_normalized (bool, optional): True if coordinates are normalized to image size
-        confidence (float, optional): Bounding box confidence if predicted
+        confidence (float, optional): Bounding box confidence if predicted. -1 if not predicted.
     """
 
     coords: list[float]
-    format: str
+    format: Literal["xyxy", "xywh"]
     is_normalized: bool
     confidence: float
+
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if len(self.coords) != 4:
+            raise ValueError("Bounding box coordinates must have 4 elements.")
+        elif not all(coord >= 0 for coord in self.coords):
+            raise ValueError("Bounding box coordinates must be positive.")
+        elif self.is_normalized and not all(0 <= coord <= 1 for coord in self.coords):
+            raise ValueError("Normalized bounding box coordinates must be in [0, 1] range.")
+        elif (self.confidence < 0 or self.confidence > 1) and not self.confidence == -1:
+            raise ValueError("Bounding box confidence must be in [0, 1] range or -1.")
+        return self
 
     @staticmethod
     def none():
@@ -36,7 +53,7 @@ class BBox(BaseModel):
         Returns:
             BBox: "None" BBox
         """
-        return BBox(coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=0)
+        return BBox(coords=[0.0, 0.0, 0.0, 0.0], format="xywh", is_normalized=True, confidence=-1)
 
     @property
     def xyxy_coords(self) -> list[float]:
@@ -117,70 +134,68 @@ class BBox(BaseModel):
         )
 
     @staticmethod
-    def from_xyxy(xyxy: list[float], confidence: float = None) -> "BBox":
+    def from_xyxy(xyxy: list[float], confidence: float = -1.0, is_normalized: bool = True) -> "BBox":
         """Create bounding box using normalized xyxy coordinates.
 
         Args:
             xyxy (list[float]): List of coordinates in xyxy format
             confidence (float, optional): Bounding box confidence if predicted.
-                Defaults to None.
+            is_normalized (bool, optional): True if coordinates are normalized to image size.
 
         Returns:
             Bbox: Bounding box
         """
-        return BBox(coords=xyxy, format="xyxy", confidence=confidence)
+        return BBox(coords=xyxy, format="xyxy", confidence=confidence, is_normalized=is_normalized)
 
     @staticmethod
-    def from_xywh(xywh: list[float], confidence: float = None) -> "BBox":
+    def from_xywh(xywh: list[float], confidence: float = -1.0, is_normalized: bool = True) -> "BBox":
         """Create bounding box using normalized xywh coordinates.
 
         Args:
             xywh (list[float]): List of coordinates in xywh format
             confidence (float, optional): Bounding box confidence if predicted.
-                Defaults to None.
+            is_normalized (bool, optional): True if coordinates are normalized to image size.
 
         Returns:
             Bbox: Bounding box
         """
-        return BBox(coord=xywh, format="xywh", confidence=confidence)
+        return BBox(coords=xywh, format="xywh", confidence=confidence, is_normalized=is_normalized)
 
-    # @staticmethod
-    # def from_mask(mask: np.ndarray) -> "BBox":
-    #     """Create bounding box using a NumPy array mask
+    @staticmethod
+    def from_mask(mask: np.ndarray) -> "BBox":
+        """Create bounding box using a NumPy array mask.
 
-    #     Args:
-    #         mask (np.ndarray): NumPy array mask
+        Args:
+            mask (np.ndarray): NumPy array mask
 
-    #     Returns:
-    #         Bbox: Bounding box
-    #     """
+        Returns:
+            Bbox: Bounding box
+        """
+        return BBox.from_xywh(bbox_utils.mask_to_bbox(mask))
 
-    #     return BBox.from_xywh(mask_to_bbox(mask))
+    @staticmethod
+    def from_rle(rle: CompressedRLE) -> "BBox":
+        """Create bounding box using a RLE mask.
 
-    # @staticmethod
-    # def from_rle(rle: CompressedRLE) -> "BBox":
-    #     """Create bounding box using a RLE mask
+        Args:
+            rle (CompressedRLE): RLE mask
 
-    #     Args:
-    #         rle (CompressedRLE): RLE mask
-
-    #     Returns:
-    #         Bbox: Bounding box
-    #     """
-
-    #     return BBox.from_mask(rle.to_mask())
+        Returns:
+            Bbox: Bounding box
+        """
+        return BBox.from_mask(rle.to_mask())
 
 
 def is_bbox(cls: type, strict: bool = False) -> bool:
     """Check if a class is a BBox or  a subclass of BBox."""
-    return is_obj_of_type(cls, BBox, strict)
+    return issubclass_strict(cls, BBox, strict)
 
 
 def create_bbox(
     coords: list[float],
     format: str,
     is_normalized: bool,
-    confidence: float = 0,
+    confidence: float = -1,
 ) -> BBox:
     """Create a BBox instance.
 
@@ -188,7 +203,7 @@ def create_bbox(
         coords (list[float]): List of coordinates in given format
         format (str): Coordinates format, 'xyxy' or 'xywh'
         is_normalized (bool): True if coordinates are normalized to image size
-        confidence (float, optional): Bounding box confidence if predicted. Defaults to 0.
+        confidence (float, optional): Bounding box confidence if predicted.
 
     Returns:
         BBox: The created BBox instance.

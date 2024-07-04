@@ -50,7 +50,7 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     return image_to_binary(image)
 
 
-def binary_to_url(im_bytes: bytes) -> str:
+def binary_to_url(im_bytes: bytes | None) -> str:
     """Encode image from binary to base 64 URL.
 
     Args:
@@ -116,7 +116,7 @@ def depth_array_to_gray(
     return depth_n
 
 
-def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
+def encode_rle(mask: list[list] | dict | None, height: int, width: int) -> dict:
     """Encode mask from polygons / uncompressed RLE / RLE to RLE.
 
     Args:
@@ -129,14 +129,14 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
     """
     if isinstance(mask, list):
         return polygons_to_rle(mask, height, width)
-    if isinstance(mask, dict):
+    elif isinstance(mask, dict):
         if isinstance(mask["counts"], list):
             return urle_to_rle(mask)
         return mask
     return None
 
 
-def mask_to_rle(mask: Image.Image) -> dict:
+def mask_to_rle(mask: Image.Image | None) -> dict:
     """Encode mask from Pillow or NumPy array to RLE.
 
     Args:
@@ -151,7 +151,7 @@ def mask_to_rle(mask: Image.Image) -> dict:
     return None
 
 
-def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
+def rle_to_mask(rle: dict[str, list[int] | bytes] | None) -> np.ndarray:
     """Decode mask from RLE to NumPy array.
 
     Args:
@@ -165,7 +165,7 @@ def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
     return None
 
 
-def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
+def polygons_to_rle(polygons: list[list] | None, height: int, width: int) -> dict:
     """Encode mask from polygons to RLE.
 
     Args:
@@ -182,7 +182,7 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
     return None
 
 
-def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
+def rle_to_polygons(rle: dict[str, list[int] | bytes] | None) -> list[list]:
     """Encode mask from RLE to polygons.
 
     Args:

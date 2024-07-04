@@ -8,7 +8,7 @@ from pathlib import Path
 
 import shortuuid
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .registry import _register_schema_internal
 from .view import View
@@ -29,7 +29,7 @@ class Video(View):
 
 def is_video(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a Video or a subclass of Video."""
-    return is_obj_of_type(cls, Video, strict)
+    return issubclass_strict(cls, Video, strict)
 
 
 def create_video(
@@ -106,10 +106,10 @@ def create_video(
         id=id,
         item_id=item_id,
         url=url.as_posix(),
-        num_frames=int(metadata["nb_frames"]),
+        num_frames=num_frames,
         fps=fps,
-        width=int(metadata["width"]),
-        height=int(metadata["height"]),
+        width=width,
+        height=height,
         format=format,
-        duration=float(metadata["duration"]),
+        duration=duration,
     )

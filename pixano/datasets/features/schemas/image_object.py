@@ -4,7 +4,9 @@
 # License: CECILL-C
 # =====================================
 
-from pixano.datasets.utils import is_obj_of_type
+import shortuuid
+
+from pixano.datasets.utils import issubclass_strict
 
 from ..types.bbox import BBox
 from ..types.compressed_rle import CompressedRLE
@@ -24,7 +26,7 @@ class ImageObject(Object):
 
 def is_image_object(cls: type, strict: bool = False) -> bool:
     """Check if a class is an ImageObject or subclass of ImageObject."""
-    return is_obj_of_type(cls, ImageObject, strict)
+    return issubclass_strict(cls, ImageObject, strict)
 
 
 def create_image_object(
@@ -51,7 +53,7 @@ def create_image_object(
     return ImageObject(
         item_id=item_id,
         view_id=view_id,
-        id=id,
+        id=id if id is not None else shortuuid.uuid(),
         bbox=bbox,
         mask=mask,
         keypoints=keypoints,

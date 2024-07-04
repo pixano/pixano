@@ -14,7 +14,7 @@ from urllib.request import urlopen
 import PIL
 import shortuuid
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .registry import _register_schema_internal
 from .view import View
@@ -89,7 +89,7 @@ class Image(View):
 
 def is_image(cls: type, strict: bool = False) -> bool:
     """Check if the given class is Image or a subclass of Image."""
-    return is_obj_of_type(cls, Image, strict)
+    return issubclass_strict(cls, Image, strict)
 
 
 def create_image(

@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from .base_type import BaseType, is_base_type
 from .bbox import BBox, create_bbox, is_bbox
 from .bbox3d import BBox3D, create_bbox3d, is_bbox3d
 from .camcalibration import (
@@ -22,6 +23,7 @@ from .nd_array_float import NDArrayFloat, create_ndarray_float, is_ndarray_float
 
 __all__ = [
     "BaseIntrinsics",
+    "BaseType",
     "BBox",
     "BBox3D",
     "CamCalibration",
@@ -38,6 +40,7 @@ __all__ = [
     "create_keypoints",
     "create_keypoints3d",
     "create_ndarray_float",
+    "is_base_type",
     "is_bbox",
     "is_bbox3d",
     "is_cam_calibration",

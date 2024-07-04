@@ -5,7 +5,7 @@
 # =====================================
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .base_schema import BaseSchema
 
@@ -20,4 +20,4 @@ class Object(BaseSchema):
 
 def is_object(cls: type, strict: bool = False) -> bool:
     """Check if a class is an Object or subclass of Object."""
-    return is_obj_of_type(cls, Object, strict)
+    return issubclass_strict(cls, Object, strict)

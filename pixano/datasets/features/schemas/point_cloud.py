@@ -7,7 +7,7 @@
 
 import shortuuid
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .registry import _register_schema_internal
 from .view import View
@@ -23,7 +23,7 @@ class PointCloud(View):
 
 def is_point_cloud(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a subclass of PointCloud."""
-    return is_obj_of_type(cls, PointCloud, strict)
+    return issubclass_strict(cls, PointCloud, strict)
 
 
 def create_point_cloud(item_id: str, url: str, id: str | None = None) -> PointCloud:

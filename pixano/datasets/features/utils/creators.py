@@ -13,7 +13,6 @@ from pixano.datasets.features.schemas.sequence_frame import create_sequence_fram
 from pixano.datasets.features.schemas.track_object import create_track_object, is_track_object
 from pixano.datasets.features.schemas.tracklet import create_tracklet, is_tracklet
 from pixano.datasets.features.schemas.video import create_video, is_video
-from pixano.datasets.features.schemas.view import View
 from pixano.datasets.features.types.bbox import create_bbox, is_bbox
 from pixano.datasets.features.types.bbox3d import create_bbox3d, is_bbox3d
 from pixano.datasets.features.types.camcalibration import create_cam_calibration, is_cam_calibration
@@ -23,32 +22,32 @@ from pixano.datasets.features.types.keypoints3d import create_keypoints3d, is_ke
 from pixano.datasets.features.types.nd_array_float import create_ndarray_float, is_ndarray_float
 
 
-def create_row(view_type: type[View], **kwargs) -> BaseSchema:
-    """Create a view."""
-    if is_image(view_type, strict=True):
+def create_row(schema: type[BaseSchema], **kwargs) -> BaseSchema:
+    """Create a row in a Schema."""
+    if is_image(schema, strict=True):
         return create_image(**kwargs)
 
-    elif is_video(view_type, strict=True):
+    elif is_video(schema, strict=True):
         return create_video(**kwargs)
 
-    elif is_sequence_frame(view_type, strict=True):
+    elif is_sequence_frame(schema, strict=True):
         return create_sequence_frame(**kwargs)
 
-    elif is_tracklet(view_type, strict=True):
+    elif is_tracklet(schema, strict=True):
         return create_tracklet(**kwargs)
 
-    elif is_track_object(view_type, True):
+    elif is_track_object(schema, True):
         return create_track_object(**kwargs)
 
-    elif is_image_object(view_type, True):
+    elif is_image_object(schema, True):
         return create_image_object(**kwargs)
 
     else:
-        return view_type(**kwargs)
+        return schema(**kwargs)
 
 
 def create_pixano_object(object_type: type[BaseModel], **kwargs) -> BaseModel:
-    """Create an object."""
+    """Create a pixano object."""
     if is_bbox(object_type, True):
         return create_bbox(**kwargs)
 

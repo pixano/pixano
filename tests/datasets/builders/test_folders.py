@@ -48,7 +48,17 @@ def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_p
                 }
             )
             if item % 2:
-                metadata[-1]["objects"] = {"bbox": [[0 + item, 0 + item, 100 + item, 100 + item]] * item}
+                metadata[-1]["objects"] = {
+                    "bbox": [
+                        [
+                            0 + item / num_items,
+                            0 + item / num_items,
+                            (100 + item) / (100 + num_items),
+                            (100 + item) / (100 + num_items),
+                        ]
+                    ]
+                    * item
+                }
 
         metadata_path = source_dir / split / "metadata.jsonl"
         metadata_path.parent.mkdir(parents=True, exist_ok=True)
@@ -171,13 +181,13 @@ class TestFolderBaseBuilder:
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
 
         # test 1: one bbox infered
-        objects_data = {"bbox": [[0, 0, 100, 100]]}
+        objects_data = {"bbox": [[0, 0, 0.2, 0.2]]}
         objects = image_folder_builder._create_objects(item, view, objects_data)
         assert len(objects) == 1
         assert isinstance(objects[0], MyImageObject)
         assert objects[0].item_id == item.id
         assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 100, 100]
+        assert objects[0].bbox.coords == [0, 0, 0.2, 0.2]
         assert objects[0].bbox.format == "xywh"
         assert objects[0].bbox.is_normalized is True
         assert objects[0].bbox.confidence == 1.0
@@ -200,7 +210,7 @@ class TestFolderBaseBuilder:
         objects_data = {
             "bbox": [
                 {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.5},
-                [10, 10, 90, 90],
+                [0.1, 0.1, 0.2, 0.2],
             ]
         }
         objects = image_folder_builder._create_objects(item, view, objects_data)
@@ -214,13 +224,13 @@ class TestFolderBaseBuilder:
         assert objects[0].bbox.is_normalized is False
         assert objects[1].item_id == item.id
         assert objects[1].view_id == view.id
-        assert objects[1].bbox.coords == [10, 10, 90, 90]
+        assert objects[1].bbox.coords == [0.1, 0.1, 0.2, 0.2]
         assert objects[1].bbox.format == "xywh"
         assert objects[1].bbox.is_normalized is True
 
         # test 4: one bbox and one keypoint not infered and a category
         objects_data = {
-            "bbox": [[0, 0, 100, 100]],
+            "bbox": [[0, 0, 0.2, 0.2]],
             "keypoints": [
                 {
                     "template_id": "template_0",
@@ -235,7 +245,7 @@ class TestFolderBaseBuilder:
         assert isinstance(objects[0], MyImageObject)
         assert objects[0].item_id == item.id
         assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 100, 100]
+        assert objects[0].bbox.coords == [0, 0, 0.2, 0.2]
         assert objects[0].bbox.format == "xywh"
         assert objects[0].bbox.is_normalized is True
         assert objects[0].bbox.confidence == 1.0
@@ -249,7 +259,7 @@ class TestFolderBaseBuilder:
             objects = image_folder_builder._create_objects(item, view, objects_data)
 
         # test 6: error attribute not found in object schema
-        objects_data = {"bbox": [[0, 0, 100, 100]], "unknown": [0]}
+        objects_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
         with pytest.raises(ValueError, match="Attribute unknown not found in object schema."):
             objects = image_folder_builder._create_objects(item, view, objects_data)
 
@@ -272,9 +282,15 @@ class TestFolderBaseBuilder:
                 objects: list[MyImageObject] = item["objects"]
                 assert len(objects) == i
                 for object in objects:
+                    item_per_split = 10 if actual_item.split == "train" else 5
                     assert object.item_id == actual_item.id
                     assert object.view_id == view.id
-                    assert object.bbox.coords == [0 + i, 0 + i, 100 + i, 100 + i]
+                    assert object.bbox.coords == [
+                        0 + i / item_per_split,
+                        0 + i / item_per_split,
+                        (100 + i) / (100 + item_per_split),
+                        (100 + i) / (100 + item_per_split),
+                    ]
                     assert object.bbox.format == "xywh"
                     assert object.bbox.is_normalized is True
                     assert object.bbox.confidence == 1.0

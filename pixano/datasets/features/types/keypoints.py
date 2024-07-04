@@ -4,15 +4,18 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel
+from typing import Literal
 
-from pixano.datasets.utils import is_obj_of_type
+from pydantic import model_validator
 
+from pixano.datasets.utils import issubclass_strict
+
+from .base_type import BaseType
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class KeyPoints(BaseModel):
+class KeyPoints(BaseType):
     """A set of keypoints.
 
     Attributes:
@@ -23,7 +26,17 @@ class KeyPoints(BaseModel):
 
     template_id: str
     coords: list[float]
-    states: list[str]  # replace by features: list[dict] ?
+    states: list[Literal["visible", "invisible", "hidden"]]  # replace by features: list[dict] ?
+
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if len(self.coords) % 2 != 0:
+            raise ValueError("There must be an even number of coords")
+        elif any(coord < 0 for coord in self.coords):
+            raise ValueError("Coordinates must be positive")
+        if len(self.states) != len(self.coords) // 2:
+            raise ValueError("There must be the same number of states than points")
+        return self
 
     @staticmethod
     def none():
@@ -33,7 +46,7 @@ class KeyPoints(BaseModel):
         Returns:
             KeyPoints: "None" KeyPoints
         """
-        return KeyPoints(template_id="None", coords=[0, 0], states=["invisible"])
+        return KeyPoints(template_id="N/A", coords=[0, 0], states=["invisible"])
 
     def map_back2front_vertices(self) -> list:
         """Utility function to map back format for KeyPoint to front vertices format.
@@ -68,7 +81,7 @@ class KeyPoints(BaseModel):
 
 def is_keypoints(cls: type, strict: bool = False) -> bool:
     """Check if a class is a KeyPoints or subclass of KeyPoints."""
-    return is_obj_of_type(cls, KeyPoints, strict)
+    return issubclass_strict(cls, KeyPoints, strict)
 
 
 def create_keypoints(template_id: str, coords: list[float], states: list[str]) -> KeyPoints:

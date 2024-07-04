@@ -51,7 +51,7 @@ def estimate_folder_size(folder_path: Path) -> str:
     return readable_size
 
 
-def is_obj_of_type(obj: type, cls: type, strict: True):
+def issubclass_strict(obj: type, cls: type, strict: bool = False) -> bool:
     """Check if the given object is of the given class type or a subclass of the given class type.
 
     Args:
