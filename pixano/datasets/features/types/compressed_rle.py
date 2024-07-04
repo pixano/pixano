@@ -6,16 +6,17 @@
 
 import numpy as np
 from PIL import Image as pil_image
-from pydantic import BaseModel
+from pydantic import model_validator
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from ...utils import image as image_utils
+from .base_type import BaseType
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class CompressedRLE(BaseModel):
+class CompressedRLE(BaseType):
     """Compressed RLE mask type.
 
     Attributes:
@@ -26,6 +27,16 @@ class CompressedRLE(BaseModel):
     size: list[int]
     counts: bytes
 
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if (
+            len(self.size) != 2
+            and not all(isinstance(s, int) and s > 0 for s in self.size)
+            and not (self.size == [0, 0] and self.counts == b"")
+        ):
+            raise ValueError("Mask size must have 2 elements and be positive integers or [0, 0] for empty mask.")
+        return self
+
     @staticmethod
     def none():
         """Utility function to get a None equivalent.
@@ -34,7 +45,7 @@ class CompressedRLE(BaseModel):
         Returns:
             CompressedRLE: "None" CompressedRLE
         """
-        return CompressedRLE(size=[0.0, 0.0], counts=b"")
+        return CompressedRLE(size=[0, 0], counts=b"")
 
     def to_mask(self) -> np.ndarray:
         """Convert compressed RLE mask to NumPy array.
@@ -42,7 +53,7 @@ class CompressedRLE(BaseModel):
         Returns:
             np.ndarray: Mask as NumPy array
         """
-        return image_utils.rle_to_mask(self.to_dict())
+        return image_utils.rle_to_mask({"size": self.size, "counts": self.counts})
 
     def to_urle(self) -> dict[str, list[int]]:
         """Convert compressed RLE mask to uncompressed RLE.
@@ -50,7 +61,7 @@ class CompressedRLE(BaseModel):
         Returns:
             dict[str, list[int]]: Mask as uncompressed RLE
         """
-        return image_utils.rle_to_urle(self.to_dict())
+        return image_utils.rle_to_urle(self.model_dump())
 
     def to_polygons(self) -> list[list]:
         """Convert compressed RLE mask to poylgons.
@@ -58,7 +69,7 @@ class CompressedRLE(BaseModel):
         Returns:
             list[list]: Mask as polygons
         """
-        return image_utils.rle_to_polygons(self.to_dict())
+        return image_utils.rle_to_polygons(self.model_dump())
 
     @staticmethod
     def from_mask(mask: pil_image.Image | np.ndarray) -> "CompressedRLE":
@@ -70,7 +81,8 @@ class CompressedRLE(BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-        return CompressedRLE.from_dict(image_utils.mask_to_rle(mask))
+        rle = image_utils.mask_to_rle(mask)
+        return CompressedRLE(size=rle["size"], counts=rle["counts"])
 
     @staticmethod
     def from_urle(urle: dict[str, list[int]]) -> "CompressedRLE":
@@ -82,7 +94,7 @@ class CompressedRLE(BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-        return CompressedRLE.from_dict(image_utils.urle_to_rle(urle))
+        return CompressedRLE(**image_utils.urle_to_rle(urle))
 
     @staticmethod
     def from_polygons(
@@ -100,7 +112,7 @@ class CompressedRLE(BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-        return CompressedRLE.from_dict(image_utils.polygons_to_rle(polygons, height, width))
+        return CompressedRLE(**image_utils.polygons_to_rle(polygons, height, width))
 
     @staticmethod
     def encode(mask: list[list] | dict[str, list[int]], height: int, width: int) -> "CompressedRLE":
@@ -115,12 +127,12 @@ class CompressedRLE(BaseModel):
         Returns:
             CompressedRLE: Compressed RLE mask
         """
-        return CompressedRLE.from_dict(image_utils.encode_rle(mask, height, width))
+        return CompressedRLE(**image_utils.encode_rle(mask, height, width))
 
 
 def is_compressed_rle(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a subclass of CompressedRLE."""
-    return is_obj_of_type(cls, CompressedRLE, strict)
+    return issubclass_strict(cls, CompressedRLE, strict)
 
 
 def create_compressed_rle(size: list[int], counts: bytes) -> CompressedRLE:

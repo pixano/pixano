@@ -7,7 +7,7 @@
 import shortuuid
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .object import Object
 
@@ -29,7 +29,7 @@ class TrackObject(Object):
 
 def is_track_object(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a TrackObject or a subclass of TrackObject."""
-    return is_obj_of_type(cls, TrackObject, strict)
+    return issubclass_strict(cls, TrackObject, strict)
 
 
 def create_track_object(

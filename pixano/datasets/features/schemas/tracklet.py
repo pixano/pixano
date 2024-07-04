@@ -7,7 +7,7 @@
 import shortuuid
 
 from pixano.datasets.features.schemas.registry import _register_schema_internal
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .base_schema import BaseSchema
 
@@ -26,7 +26,7 @@ class Tracklet(BaseSchema):
 
 def is_tracklet(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a subclass of Tracklet."""
-    return is_obj_of_type(cls, Tracklet, strict)
+    return issubclass_strict(cls, Tracklet, strict)
 
 
 def create_tracklet(

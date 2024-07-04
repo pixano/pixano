@@ -4,15 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
+from .base_type import BaseType
 from .registry import _register_type_internal
 
 
 @_register_type_internal
-class BBox3D(BaseModel):
+class BBox3D(BaseType):
     """A 3D bounding Box.
 
     Attributes:
@@ -38,7 +38,7 @@ class BBox3D(BaseModel):
 
 def is_bbox3d(cls: type, strict: bool = False) -> bool:
     """Check if a class is a BBox3D or subclass of BBox3D."""
-    return is_obj_of_type(cls, BBox3D, strict)
+    return issubclass_strict(cls, BBox3D, strict)
 
 
 def create_bbox3d(position: list[float], size: list[float], heading: float) -> BBox3D:

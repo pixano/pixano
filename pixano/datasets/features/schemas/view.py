@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pixano.datasets.utils.python import is_obj_of_type
+from pixano.datasets.utils.python import issubclass_strict
 
 from .base_schema import BaseSchema
 from .registry import _register_schema_internal
@@ -19,4 +19,4 @@ class View(BaseSchema):
 
 def is_view(cls: type, strict: bool = False) -> bool:
     """Check if a class is an View or subclass of View."""
-    return is_obj_of_type(cls, View, strict)
+    return issubclass_strict(cls, View, strict)

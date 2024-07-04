@@ -17,7 +17,7 @@ from pixano.datasets.features.schemas.item import Item
 from pixano.datasets.features.schemas.object import Object
 from pixano.datasets.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.datasets.features.schemas.view import View
-from pixano.datasets.features.types.registry import _ATOMIC_PYTHON_TYPES, _TYPES_REGISTRY
+from pixano.datasets.features.types.registry import _PIXANO_TYPES_REGISTRY
 from pixano.datasets.features.utils import create_row
 from pixano.datasets.features.utils.creators import create_pixano_object
 
@@ -189,8 +189,8 @@ class FolderBaseBuilder(DatasetBuilder):
                     continue
 
                 is_attr_pix_type = self.schemas[self.OBJECTS_KEY].model_fields[attr].annotation in set(
-                    _TYPES_REGISTRY.values()
-                ) - set(_ATOMIC_PYTHON_TYPES)
+                    _PIXANO_TYPES_REGISTRY.values()
+                )
                 if is_attr_pix_type:
                     pix_type = self.schemas[self.OBJECTS_KEY].model_fields[attr].annotation
                     if isinstance(objects_data[attr][i], Mapping):

@@ -7,7 +7,7 @@
 
 from pathlib import Path
 
-from pixano.datasets.utils import is_obj_of_type
+from pixano.datasets.utils import issubclass_strict
 
 from .image import Image, create_image
 from .registry import _register_schema_internal
@@ -24,11 +24,12 @@ class SequenceFrame(Image):
 
 def is_sequence_frame(cls: type, strict: bool = False) -> bool:
     """Check if the given class is a subclass of Sequence."""
-    return is_obj_of_type(cls, SequenceFrame, strict)
+    return issubclass_strict(cls, SequenceFrame, strict)
 
 
 def create_sequence_frame(
     item_id: str,
+    sequence_id: str,
     url: Path,
     timestamp: float,
     frame_index: int,
@@ -42,6 +43,7 @@ def create_sequence_frame(
 
     Args:
         item_id (str): The item id.
+        sequence_id (str): The sequence id.
         url (Path): The frame URL. If not relative, the URL is converted to a relative path using `other_path`.
         timestamp (float): The timestamp of the frame.
         frame_index (int): The index of the frame in the sequence.
@@ -57,11 +59,12 @@ def create_sequence_frame(
     image = create_image(item_id, url, id, width, height, format, other_path)
     return SequenceFrame(
         id=image.id,
+        item_id=item_id,
+        sequence_id=sequence_id,
         url=image.url,
         width=image.width,
         height=image.height,
         format=image.format,
-        sequence_id=item_id,
         timestamp=timestamp,
         frame_index=frame_index,
     )
