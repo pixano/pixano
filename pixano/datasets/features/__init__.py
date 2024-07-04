@@ -63,7 +63,6 @@ from .types import (
 )
 from .utils import create_pixano_object, create_row
 
-
 __all__ = [
     "BaseSchema",
     "BBox",

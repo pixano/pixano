@@ -48,36 +48,35 @@ class KeyPoints(BaseType):
         """
         return KeyPoints(template_id="N/A", coords=[0, 0], states=["invisible"])
 
+    def map_back2front_vertices(self) -> list:
+        """Utility function to map back format for KeyPoint to front vertices format.
 
-def map_back2front_vertices(keypoints: KeyPoints) -> list:
-    """Utility function to map back format for KeyPoint to front vertices format.
+        Args:
+            keypoints (KeyPoints): Keypoints to map
 
-    Args:
-        keypoints (KeyPoints): Keypoints to map
+        Raises:
+            ValueError: if keypoints is ill-formed
 
-    Raises:
-        ValueError: if keypoints is ill-formed
+        Returns:
+            dict: keypoint list for vertices front format
+        """
+        # Check coords are even
+        if len(self.coords) % 2 != 0:
+            raise ValueError("There must be an even number of coords")
 
-    Returns:
-        dict: keypoint list for vertices front format
-    """
-    # Check coords are even
-    if len(keypoints.coords) % 2 != 0:
-        raise ValueError("There must be an even number of coords")
+        result = []
+        if self.states is not None:
+            num_points = len(self.coords) // 2
+            if len(self.states) != num_points:
+                raise ValueError("There must be the same number of states than points")
 
-    result = []
-    if keypoints.states is not None:
-        num_points = len(keypoints.coords) // 2
-        if len(keypoints.states) != num_points:
-            raise ValueError("There must be the same number of states than points")
-
-        result = [
-            {"x": x, "y": y, "features": {"state": state}}
-            for (x, y), state in zip(zip(keypoints.coords[0::2], keypoints.coords[1::2]), keypoints.states)
-        ]
-    else:
-        result = [{"x": x, "y": y} for x, y in zip(keypoints.coords[0::2], keypoints.coords[1::2])]
-    return result
+            result = [
+                {"x": x, "y": y, "features": {"state": state}}
+                for (x, y), state in zip(zip(self.coords[0::2], self.coords[1::2]), self.states)
+            ]
+        else:
+            result = [{"x": x, "y": y} for x, y in zip(self.coords[0::2], self.coords[1::2])]
+        return result
 
 
 def is_keypoints(cls: type, strict: bool = False) -> bool:
