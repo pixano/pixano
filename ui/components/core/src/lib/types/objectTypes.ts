@@ -133,6 +133,7 @@ export type EditKeypointsShape = {
 export type EditShape = {
   status: "editing";
   shapeId: string;
+  viewId: string;
   highlighted?: "all" | "self" | "none";
 } & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 

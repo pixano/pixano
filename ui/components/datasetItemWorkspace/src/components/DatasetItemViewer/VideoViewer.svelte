@@ -106,7 +106,7 @@ License: CECILL-C
               newTrack || object.track,
               imageIndex,
               object.boxes,
-              displayedBox.view_id,
+              displayedBox.view_id!,
             );
 
             if (newCoords && newCoords.every((value) => value)) {
@@ -123,7 +123,7 @@ License: CECILL-C
             const vertices = keypointsLinearInterpolation(
               object,
               imageIndex,
-              displayedKeypoints.view_id,
+              displayedKeypoints.view_id!,
             );
             if (vertices) {
               displayedKeypoints = { ...displayedKeypoints, vertices };

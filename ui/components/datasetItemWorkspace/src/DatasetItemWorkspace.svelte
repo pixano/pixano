@@ -42,7 +42,7 @@ License: CECILL-C
         if (oldObject) {
           return { ...oldObject, ...object } as ItemObject;
         }
-        return object as ItemObject;
+        return object;
       }) || ([] as ItemObject[]),
   );
 
