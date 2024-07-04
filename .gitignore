@@ -51,5 +51,3 @@ __pycache__
 # Dataset files
 *.lance
 
-# Continue files
-*.continue
