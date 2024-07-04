@@ -293,53 +293,52 @@ export const mapTrackItemsToObject = (
   const boxes: VideoObject["boxes"] = [];
   if (object.displayedMBox) {
     for (const displayedBox of object.displayedMBox) {
-      boxes.push(
-        object.boxes
-          ? allItems.map((item) => {
-              const box = {
-                ...displayedBox,
-                frame_index: item.frame_index,
-                tracklet_id: item.tracklet_id,
-                is_key: true,
-              } as VideoItemBBox;
-              const currentBox =
-                object.boxes?.find(
-                  (box) =>
-                    box.view_id == displayedBox.view_id && box.frame_index === item.frame_index,
-                ) || box;
-              return {
-                ...item,
-                ...currentBox,
-              } as VideoItemBBox;
-            })
-          : undefined,
-      );
+      if (object.boxes) {
+        boxes.push(
+          allItems.map((item) => {
+            const box = {
+              ...displayedBox,
+              frame_index: item.frame_index,
+              tracklet_id: item.tracklet_id,
+              is_key: true,
+            } as VideoItemBBox;
+            const currentBox =
+              object.boxes?.find(
+                (box) =>
+                  box.view_id == displayedBox.view_id && box.frame_index === item.frame_index,
+              ) || box;
+            return {
+              ...item,
+              ...currentBox,
+            } as VideoItemBBox;
+          }),
+        );
+      }
     }
   }
   const keypoints: VideoObject["keypoints"] = [];
   if (object.displayedMKeypoints) {
     for (const displayedKeypoints of object.displayedMKeypoints) {
-      keypoints.push(
-        object.keypoints
-          ? allItems.map((item) => {
-              const keypoint = {
-                ...displayedKeypoints,
-                frame_index: rightClickFrameIndex,
-                is_key: true,
-              } as VideoKeypoints;
-              const currentKeypoint =
-                object.keypoints?.find(
-                  (kpt) =>
-                    kpt.view_id == displayedKeypoints.view_id &&
-                    kpt.frame_index === item.frame_index,
-                ) || keypoint;
-              return {
-                ...item,
-                ...currentKeypoint,
-              } as VideoKeypoints;
-            })
-          : undefined,
-      );
+      if (object.keypoints) {
+        keypoints.push(
+          allItems.map((item) => {
+            const keypoint = {
+              ...displayedKeypoints,
+              frame_index: rightClickFrameIndex,
+              is_key: true,
+            } as VideoKeypoints;
+            const currentKeypoint =
+              object.keypoints?.find(
+                (kpt) =>
+                  kpt.view_id == displayedKeypoints.view_id && kpt.frame_index === item.frame_index,
+              ) || keypoint;
+            return {
+              ...item,
+              ...currentKeypoint,
+            } as VideoKeypoints;
+          }),
+        );
+      }
     }
   }
   return { boxes, keypoints };
@@ -358,52 +357,51 @@ export const mapSplittedTrackToObject = (
   const boxes: VideoObject["boxes"] = [];
   if (object.displayedMBox) {
     for (const displayedBox of object.displayedMBox) {
-      boxes.push(
-        object.boxes
-          ? allItems.map((item) => {
-              const box = {
-                ...displayedBox,
-                frame_index: rightClickFrameIndex,
-                is_key: true,
-              } as VideoItemBBox;
-              const currentBox =
-                object.boxes?.find(
-                  (box) =>
-                    box.view_id == displayedBox.view_id && box.tracklet_id === item.tracklet_id,
-                ) || box;
-              return {
-                ...item,
-                ...currentBox,
-              } as VideoItemBBox;
-            })
-          : undefined,
-      );
+      if (object.boxes) {
+        boxes.push(
+          allItems.map((item) => {
+            const box = {
+              ...displayedBox,
+              frame_index: rightClickFrameIndex,
+              is_key: true,
+            } as VideoItemBBox;
+            const currentBox =
+              object.boxes?.find(
+                (box) =>
+                  box.view_id == displayedBox.view_id && box.tracklet_id === item.tracklet_id,
+              ) || box;
+            return {
+              ...item,
+              ...currentBox,
+            } as VideoItemBBox;
+          }),
+        );
+      }
     }
   }
   const keypoints: VideoObject["keypoints"] = [];
   if (object.displayedMKeypoints) {
     for (const displayedKeypoints of object.displayedMKeypoints) {
-      keypoints.push(
-        object.keypoints
-          ? allItems.map((item) => {
-              const keypoint = {
-                ...displayedKeypoints,
-                frame_index: rightClickFrameIndex,
-                is_key: true,
-              } as VideoKeypoints;
-              const currentKeypoint =
-                object.keypoints?.find(
-                  (kpt) =>
-                    kpt.view_id == displayedKeypoints.view_id &&
-                    kpt.tracklet_id === item.tracklet_id,
-                ) || keypoint;
-              return {
-                ...item,
-                ...currentKeypoint,
-              } as VideoKeypoints;
-            })
-          : undefined,
-      );
+      if (object.keypoints) {
+        keypoints.push(
+          allItems.map((item) => {
+            const keypoint = {
+              ...displayedKeypoints,
+              frame_index: rightClickFrameIndex,
+              is_key: true,
+            } as VideoKeypoints;
+            const currentKeypoint =
+              object.keypoints?.find(
+                (kpt) =>
+                  kpt.view_id == displayedKeypoints.view_id && kpt.tracklet_id === item.tracklet_id,
+              ) || keypoint;
+            return {
+              ...item,
+              ...currentKeypoint,
+            } as VideoKeypoints;
+          }),
+        );
+      }
     }
   }
   return { boxes, keypoints };
