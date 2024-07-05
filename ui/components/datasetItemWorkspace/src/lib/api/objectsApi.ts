@@ -165,7 +165,7 @@ export const mapObjectToKeypoints = (
       highlighted: object.highlighted,
     } as KeypointsTemplate);
   }
-  return [] as KeypointsTemplate[];
+  return res_m_keypoints;
 };
 
 export const toggleObjectDisplayControl = (
