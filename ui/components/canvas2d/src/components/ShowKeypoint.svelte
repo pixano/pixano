@@ -24,6 +24,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: keyPointsId,
+      viewId,
       highlighted: "self",
       type: "none",
     };
@@ -42,6 +43,7 @@ License: CECILL-C
       type: "keypoint",
       vertices: normalizedVertices,
       shapeId: id,
+      viewId,
     };
   };
 </script>

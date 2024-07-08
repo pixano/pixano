@@ -1116,6 +1116,7 @@ License: CECILL-C
     if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
+        viewId,
         type: "none",
         shapeId: null,
         highlighted: "all",

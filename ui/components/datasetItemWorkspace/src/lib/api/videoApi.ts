@@ -168,8 +168,8 @@ export const editKeyItemInTracklet = (
   shape: EditShape,
   currentFrame: number,
   objectIdBeingEdited: string | null,
-) =>
-  objects.map((object) => {
+) => {
+  return objects.map((object) => {
     if (
       object.id !== shape.shapeId ||
       object.datasetItemType !== "video" ||
@@ -199,7 +199,7 @@ export const editKeyItemInTracklet = (
         });
       }
       object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
-      object.displayedMKeypoints?.map((kpt) => {
+      object.displayedMKeypoints = object.displayedMKeypoints?.map((kpt) => {
         if (kpt.view_id == shape.viewId) {
           return {
             ...kpt,
@@ -208,7 +208,6 @@ export const editKeyItemInTracklet = (
         }
         return kpt;
       });
-      return object;
     }
     if (shape.type === "rectangle" && object.boxes) {
       object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
@@ -222,7 +221,7 @@ export const editKeyItemInTracklet = (
         });
       }
       object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
-      object.displayedMBox?.map((box) => {
+      object.displayedMBox = object.displayedMBox?.map((box) => {
         if (box.view_id == shape.viewId) {
           return {
             ...box,
@@ -231,10 +230,10 @@ export const editKeyItemInTracklet = (
         }
         return box;
       });
-      return object;
     }
     return object;
   });
+};
 
 const createNewTracklet = (
   track: Tracklet[],
