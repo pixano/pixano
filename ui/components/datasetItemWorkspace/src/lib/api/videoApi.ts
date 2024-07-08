@@ -34,7 +34,7 @@ export const getImageIndexFromMouseMove = (
   if (left < 0) left = 0;
   const max = node.parentElement?.offsetWidth || left;
   if (left > max) left = max;
-  const index = Math.floor((left / max) * length) - 1;
+  const index = Math.round((left / max) * length) - 1;
   return index < 0 ? 0 : index;
 };
 
