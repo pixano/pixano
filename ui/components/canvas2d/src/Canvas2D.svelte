@@ -1293,17 +1293,6 @@ License: CECILL-C
         <Group config={{ id: "masks" }} />
         <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
-        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
-          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
-        {/if}
-        <ShowKeypoints
-          {colorScale}
-          {stage}
-          {viewId}
-          {keypoints}
-          zoomFactor={zoomFactor[viewId]}
-          bind:newShape
-        />
         {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
           <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
         {/if}
@@ -1347,6 +1336,17 @@ License: CECILL-C
             {/if}
           {/key}
         {/each}
+        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+        {/if}
+        <ShowKeypoints
+          {colorScale}
+          {stage}
+          {viewId}
+          {keypoints}
+          zoomFactor={zoomFactor[viewId]}
+          bind:newShape
+        />
       </Layer>
     {/each}
 
