@@ -218,7 +218,7 @@ class Dataset:
         }
         for table_name, table in ds_tables.items():
             is_item_table = table_name == _SchemaGroup.ITEM.value
-            item_id_field = "id" if is_item_table else "item_id"
+            item_id_field = "id" if is_item_table else "item_ref.id"
             if not is_item_table:
                 is_collection = (
                     self.dataset_schema.relations[_SchemaGroup.ITEM.value][table_name]
@@ -232,7 +232,7 @@ class Dataset:
             pydantic_table = _lance_query_to_pydantic(lance_query, table_schema)
 
             for row in pydantic_table:
-                id = row.id if is_item_table else row.item_id
+                id = row.id if is_item_table else row.item_ref.id
                 if is_item_table:
                     data_dict[id].update(row)
                 elif is_collection:
