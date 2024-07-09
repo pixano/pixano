@@ -271,82 +271,82 @@ License: CECILL-C
   }
 
   // Unused ... We could remove ?
-  function scaleElements(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (!viewLayer) {
-      console.log("Canvas2D.scaleElements - Error: Cannot scale");
-      return;
-    }
+  // function scaleElements(viewId: ItemView["id"]) {
+  //   const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  //   if (!viewLayer) {
+  //     console.log("Canvas2D.scaleElements - Error: Cannot scale");
+  //     return;
+  //   }
 
-    const zoom = zoomFactor[viewId];
+  //   const zoom = zoomFactor[viewId];
 
-    const scaleCircle = (circle: Konva.Circle) => {
-      circle.radius(INPUTPOINT_RADIUS / zoom);
-      circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
-    };
+  //   const scaleCircle = (circle: Konva.Circle) => {
+  //     circle.radius(INPUTPOINT_RADIUS / zoom);
+  //     circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+  //   };
 
-    const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
-      rect.strokeWidth(strokeWidth / zoom);
-    };
+  //   const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
+  //     rect.strokeWidth(strokeWidth / zoom);
+  //   };
 
-    // Scale input points
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    if (inputGroup) {
-      inputGroup.children.forEach((point) => {
-        if (point instanceof Konva.Circle) {
-          scaleCircle(point);
-        } else if (point instanceof Konva.Rect) {
-          scaleRect(point, INPUTRECT_STROKEWIDTH);
-        }
-      });
-    }
+  //   // Scale input points
+  //   const inputGroup: Konva.Group = viewLayer.findOne("#input");
+  //   if (inputGroup) {
+  //     inputGroup.children.forEach((point) => {
+  //       if (point instanceof Konva.Circle) {
+  //         scaleCircle(point);
+  //       } else if (point instanceof Konva.Rect) {
+  //         scaleRect(point, INPUTRECT_STROKEWIDTH);
+  //       }
+  //     });
+  //   }
 
-    // Scale bboxes
-    const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-    if (bboxGroup) {
-      console.log("HERE!!!");
-      bboxGroup.children.forEach((bboxKonva) => {
-        if (bboxKonva instanceof Konva.Group) {
-          bboxKonva.children.forEach((bboxElement) => {
-            if (bboxElement instanceof Konva.Rect) {
-              console.log("--", bboxElement, BBOX_STROKEWIDTH, zoom);
-              scaleRect(bboxElement, BBOX_STROKEWIDTH);
-            } else if (bboxElement instanceof Konva.Label) {
-              bboxElement.scale({
-                x: 1 / zoom,
-                y: 1 / zoom,
-              });
-            }
-          });
-        }
-      });
-    }
+  //   // Scale bboxes
+  //   const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+  //   if (bboxGroup) {
+  //     console.log("HERE!!!");
+  //     bboxGroup.children.forEach((bboxKonva) => {
+  //       if (bboxKonva instanceof Konva.Group) {
+  //         bboxKonva.children.forEach((bboxElement) => {
+  //           if (bboxElement instanceof Konva.Rect) {
+  //             console.log("--", bboxElement, BBOX_STROKEWIDTH, zoom);
+  //             scaleRect(bboxElement, BBOX_STROKEWIDTH);
+  //           } else if (bboxElement instanceof Konva.Label) {
+  //             bboxElement.scale({
+  //               x: 1 / zoom,
+  //               y: 1 / zoom,
+  //             });
+  //           }
+  //         });
+  //       }
+  //     });
+  //   }
 
-    // Scale masks
-    const scaleMaskGroup = (maskGroup: Konva.Group) => {
-      maskGroup.children.forEach((maskKonva) => {
-        if (maskKonva instanceof Konva.Shape) {
-          maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
-        }
-      });
-    };
+  //   // Scale masks
+  //   const scaleMaskGroup = (maskGroup: Konva.Group) => {
+  //     maskGroup.children.forEach((maskKonva) => {
+  //       if (maskKonva instanceof Konva.Shape) {
+  //         maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
+  //       }
+  //     });
+  //   };
 
-    const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-    if (maskGroup) {
-      scaleMaskGroup(maskGroup);
-    }
+  //   const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+  //   if (maskGroup) {
+  //     scaleMaskGroup(maskGroup);
+  //   }
 
-    const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
-    if (currentMaskGroup) {
-      scaleMaskGroup(currentMaskGroup);
-    }
+  //   const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
+  //   if (currentMaskGroup) {
+  //     scaleMaskGroup(currentMaskGroup);
+  //   }
 
-    // Scale keypoints //TODO?
-    // const scaleKptCircle = (circle: Konva.Circle) => {
-    //   circle.radius(INPUTPOINT_RADIUS / zoom);
-    //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
-    // };
-  }
+  //   // Scale keypoints //TODO?
+  //   // const scaleKptCircle = (circle: Konva.Circle) => {
+  //   //   circle.radius(INPUTPOINT_RADIUS / zoom);
+  //   //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+  //   // };
+  // }
 
   const cacheImage = () => {
     if (!stage) return;
