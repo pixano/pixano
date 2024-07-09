@@ -206,6 +206,12 @@ License: CECILL-C
     applyFilters();
   });
 
+  let scaleOnFirstLoad = {};
+  Object.keys(imagesPerView).forEach((viewId) => {
+    //we need a first scaleView for image only. If video, the scale is done elsewhere
+    scaleOnFirstLoad[viewId] = !isVideo;
+  });
+
   const getCurrentImage = (viewId: string) =>
     imagesPerView[viewId][imagesPerView[viewId].length - 1];
 
@@ -224,6 +230,10 @@ License: CECILL-C
       const currentImage = getCurrentImage(viewId);
 
       currentImage.onload = () => {
+        if (scaleOnFirstLoad[viewId]) {
+          scaleView(viewId);
+          scaleOnFirstLoad[viewId] = false;
+        }
         //scaleElements(viewId);
         isReady = true;
         if (!isVideo) cacheImage();
