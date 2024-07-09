@@ -35,15 +35,15 @@ class NDArrayFloat(BaseType):
             raise ValueError("Number of values must match the product of the shape.")
         return self
 
-    @staticmethod
-    def none() -> "NDArrayFloat":
+    @classmethod
+    def none(cls) -> "NDArrayFloat":
         """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
             NDArrayFloat: "None" NDArrayFloat
         """
-        return NDArrayFloat(values=[0], shape=[1])
+        return cls(values=[0], shape=[1])
 
     @staticmethod
     def from_numpy(arr: np.ndarray) -> "NDArrayFloat":

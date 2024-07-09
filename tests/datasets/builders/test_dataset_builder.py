@@ -15,9 +15,8 @@ from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_library import DatasetLibrary
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
-from pixano.datasets.features.schemas.image import Image
-from pixano.datasets.features.schemas.object import Object
-from pixano.datasets.features.types.bbox import BBox
+from pixano.datasets.features import BBox, Entity, Image
+from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
 
 
 @pytest.fixture
@@ -25,7 +24,8 @@ def dataset_item():
     class Schema(DatasetItem):
         image: Image
         metadata: str
-        objects: list[Object]
+        entities: list[Entity]
+        bboxes: list[BBox]
 
     return Schema
 
@@ -54,22 +54,35 @@ class DumbDatasetBuilder(DatasetBuilder):
                 height=100,
                 format="jpg",
             )
-            objects = []
+            entities = []
+            bboxes = []
             for j in range(0 if i % 2 else 2):
-                objects.append(
-                    Object(
-                        id=f"object_{i}_{j}",
-                        item_id=item_id,
-                        view_id=f"image_{i}",
-                        bbox=BBox(coords=[0, 0, 100, 100], format="xywh", is_normalized=False, confidence=0.9),
+                entities.append(
+                    Entity(
+                        id=f"entity_{i}_{j}",
+                        item_ref=ItemRef(id=item_id),
+                        view_ref=ViewRef(id=f"image_{i}", name="image"),
                     )
                 )
+                bboxes.append(
+                    BBox(
+                        coords=[0, 0, 100, 100],
+                        format="xywh",
+                        is_normalized=False,
+                        confidence=0.9,
+                        id=f"bbox_{i}_{j}",
+                        item_ref=ItemRef(id=item_id),
+                        view_ref=ViewRef(id=f"image_{i}", name="image"),
+                        entity_id=f"entity_{i}_{j}",
+                    )
+                )
+
             yield {
                 "image": image,
                 self.item_schema_name: self.item_schema(
                     id=item_id, metadata=f"metadata_{i}", split="train" if i % 2 else "test"
                 ),
-                "objects": objects,
+                "entities": entities,
             }
 
 
@@ -93,7 +106,7 @@ class TestDatasetBuilder:
         assert builder.previews_path == Path(target_dir) / Dataset.PREVIEWS_PATH
         assert builder.info == info
         assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "objects"}
+        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes"}
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(), dataset_item.to_dataset_schema().schemas.items(), strict=True
         ):
@@ -129,7 +142,7 @@ class TestDatasetBuilder:
         assert isinstance(dataset, Dataset)
         assert dataset.info == builder.info
         assert dataset.num_rows == 5
-        assert set(dataset.open_tables().keys()) == {"image", "item", "objects"}
+        assert set(dataset.open_tables().keys()) == {"image", "item", "entities", "bboxes"}
 
         assert compact_dataset_mock.call_count == 1
         if compact_every_n_transactions is None:
@@ -155,6 +168,7 @@ class TestDatasetBuilder:
         # Not done before as the tables are created only when the build method is called the first time
         def _side_effect_table_add(self, *args, **kwargs):
             return self.add(*args, **kwargs)
+
         table_mocks = []
         for table in builder.open_tables().values():
             table_mock = MagicMock(side_effect=_side_effect_table_add)
@@ -168,7 +182,7 @@ class TestDatasetBuilder:
             mode=mode,
         )
 
-        assert dataset.num_rows ==  6 if mode == "overwrite" else 11
+        assert dataset.num_rows == 6 if mode == "overwrite" else 11
         assert compact_dataset_mock.call_count == 2
 
         if compact_every_n_transactions is None:
@@ -187,9 +201,7 @@ class TestDatasetBuilder:
     def test_build_error(self):
         class WrongIdBuilder(DatasetBuilder):
             def generate_data(self):
-                yield {
-                    self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")
-                }
+                yield {self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")}
 
         class WrongSchemaNameBuilder(DatasetBuilder):
             def generate_data(self):

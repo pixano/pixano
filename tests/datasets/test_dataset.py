@@ -14,7 +14,7 @@ import pytest
 from pixano.datasets import Dataset, DatasetInfo, DatasetItem
 from pixano.datasets.features.schemas.group import _SchemaGroup
 from pixano.datasets.features.schemas.image import Image
-from pixano.datasets.features.schemas.item import Item
+from pixano.datasets.features.items.item import Item
 
 
 class DatasetTestCase(unittest.TestCase):

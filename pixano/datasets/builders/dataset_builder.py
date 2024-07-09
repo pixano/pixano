@@ -17,14 +17,12 @@ import tqdm
 from lancedb.table import Table
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
-from pixano.datasets.features.schemas.base_schema import BaseSchema
-from pixano.datasets.features.schemas.group import _SchemaGroup
-from pixano.datasets.features.schemas.item import Item
 
 from .. import Dataset, DatasetLibrary
 from ..dataset_features_values import DatasetFeaturesValues
-from ..features.schemas import image as image_schema
-from ..features.schemas import sequence_frame as sequence_frame_schema
+from ..features import BaseSchema, Item, _SchemaGroup
+from ..features.schemas.views import image as image_schema
+from ..features.schemas.views import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
 
 
@@ -142,7 +140,6 @@ class DatasetBuilder(ABC):
                     and transactions_per_table[table_name] % compact_every_n_transactions == 0
                     and transactions_per_table[table_name] > 0
                 ):
-                    print(f"Compacting {table_name}")
                     self.compact_table(table_name)
 
         # make transaction for final batch

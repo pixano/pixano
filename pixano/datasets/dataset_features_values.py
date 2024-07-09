@@ -17,12 +17,14 @@ class DatasetFeaturesValues(BaseModel):
     Attributes:
         items (dict[str, list]): Dataset tables
         views (dict[str, list]): Dataset views
-        objects (dict[str, list]): Dataset objects
+        entities (dict[str, list]): Dataset entities
+        annotations (dict[str, list]): Dataset annotations
     """
 
     items: dict[str, list] = {}
     views: dict[str, list] = {}
-    objects: dict[str, list] = {}
+    entities: dict[str, list] = {}
+    annotations: dict[str, list] = {}
 
     def to_json(self, json_fp: Path | S3Path) -> None:
         """Save DatasetFeaturesValues to json file."""

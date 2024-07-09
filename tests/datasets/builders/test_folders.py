@@ -13,10 +13,12 @@ import pytest
 from pixano.datasets.builders.folders import ImageFolderBuilder, VideoFolderBuilder
 from pixano.datasets.dataset_library import DatasetLibrary
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.features.schemas.image import Image
-from pixano.datasets.features.schemas.image_object import ImageObject
-from pixano.datasets.features.schemas.item import Item
-from pixano.datasets.features.schemas.video import Video
+from pixano.datasets.features import Image, Item, Video
+from pixano.datasets.features.schemas.annotations.annotation import Annotation
+from pixano.datasets.features.schemas.annotations.bbox import BBox
+from pixano.datasets.features.schemas.annotations.keypoints import KeyPoints
+from pixano.datasets.features.schemas.entities.entity import Entity
+from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 
 
 ASSETS_DIRECTORY = Path(__file__).parent.parent.parent / "assets"
@@ -48,7 +50,7 @@ def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_p
                 }
             )
             if item % 2:
-                metadata[-1]["objects"] = {
+                metadata[-1]["entities"] = {
                     "bbox": [
                         [
                             0 + item / num_items,
@@ -57,7 +59,8 @@ def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_p
                             (100 + item) / (100 + num_items),
                         ]
                     ]
-                    * item
+                    * item,
+                    "category": [("person" if item % 4 == 0 else "cat") if item % 2 else None] * item,
                 }
 
         metadata_path = source_dir / split / "metadata.jsonl"
@@ -87,7 +90,7 @@ def image_folder():
     return source_dir
 
 
-class MyImageObject(ImageObject):
+class MyEntity(Entity):
     category: str = "none"
 
 
@@ -96,7 +99,9 @@ def image_schema():
     class Schema(DatasetItem):
         view: Image
         metadata: str
-        objects: list[MyImageObject]
+        entities: list[MyEntity]
+        bbox: list[BBox]
+        keypoint: list[KeyPoints]
 
     return Schema
 
@@ -106,7 +111,9 @@ def video_schema():
     class Schema(DatasetItem):
         view: Video
         metadata: str
-        objects: list[MyImageObject]
+        entities: list[MyEntity]
+        bbox: list[BBox]
+        keypoint: list[KeyPoints]
 
     return Schema
 
@@ -149,7 +156,8 @@ class TestFolderBaseBuilder:
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
 
         assert isinstance(view, Image)
-        assert view.item_id == item.id
+        assert view.item_ref == ItemRef(id=item.id)
+        assert isinstance(view.id, str) and len(view.id) == 22
         assert view.url == "train/item_0.jpg"
         assert view.width == 586
         assert view.height == 640
@@ -164,7 +172,8 @@ class TestFolderBaseBuilder:
         view = video_folder_builder._create_view(item, video_folder_builder.source_dir / "train" / "item_0.mp4", Video)
 
         assert isinstance(view, Video)
-        assert view.item_id == item.id
+        assert isinstance(view.id, str) and len(view.id) == 22
+        assert view.item_ref == ItemRef(id=item.id)
         assert view.url == "train/item_0.mp4"
         assert view.num_frames == 209
         assert round(view.fps, 2) == 29.97
@@ -173,7 +182,7 @@ class TestFolderBaseBuilder:
         assert view.format == "mp4"
         assert round(view.duration, 2) == 6.97
 
-    def test_create_objects(self, image_folder_builder: ImageFolderBuilder):
+    def test_create_entities(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
             split="train",
             metadata="metadata",
@@ -181,57 +190,111 @@ class TestFolderBaseBuilder:
         view = image_folder_builder._create_view(item, image_folder_builder.source_dir / "train" / "item_0.jpg", Image)
 
         # test 1: one bbox infered
-        objects_data = {"bbox": [[0, 0, 0.2, 0.2]]}
-        objects = image_folder_builder._create_objects(item, view, objects_data)
-        assert len(objects) == 1
-        assert isinstance(objects[0], MyImageObject)
-        assert objects[0].item_id == item.id
-        assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 0.2, 0.2]
-        assert objects[0].bbox.format == "xywh"
-        assert objects[0].bbox.is_normalized is True
-        assert objects[0].bbox.confidence == 1.0
+        entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+
+        assert len(entities) == 1
+        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
+        assert entities[0] == MyEntity(
+            id=entities[0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            category="none",
+        )
+
+        assert set(annotations.keys()) == {"bbox"}
+        assert len(annotations["bbox"]) == 1
+        assert annotations["bbox"][0] == BBox(
+            id=annotations["bbox"][0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            coords=[0, 0, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            confidence=1.0,
+        )
 
         # test 2: one bbox not infered
-        objects_data = {
+        entities_data = {
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
-        objects = image_folder_builder._create_objects(item, view, objects_data)
-        assert len(objects) == 1
-        assert isinstance(objects[0], MyImageObject)
-        assert objects[0].item_id == item.id
-        assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 100, 100]
-        assert objects[0].bbox.format == "xyxy"
-        assert objects[0].bbox.is_normalized is False
-        assert objects[0].bbox.confidence == 0.9
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        assert len(entities) == 1
+        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
+        assert entities[0] == MyEntity(
+            id=entities[0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            category="none",
+        )
+        assert set(annotations.keys()) == {"bbox"}
+        assert len(annotations["bbox"]) == 1
+        assert annotations["bbox"][0] == BBox(
+            id=annotations["bbox"][0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            coords=[0, 0, 100, 100],
+            format="xyxy",
+            is_normalized=False,
+            confidence=0.9,
+        )
 
         # test 3: two bboxes, one infered, one not infered
-        objects_data = {
+        entities_data = {
             "bbox": [
                 {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.5},
                 [0.1, 0.1, 0.2, 0.2],
             ]
         }
-        objects = image_folder_builder._create_objects(item, view, objects_data)
-        assert len(objects) == 2
-        assert isinstance(objects[0], MyImageObject)
-        assert isinstance(objects[1], MyImageObject)
-        assert objects[0].item_id == item.id
-        assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 100, 100]
-        assert objects[0].bbox.format == "xyxy"
-        assert objects[0].bbox.is_normalized is False
-        assert objects[1].item_id == item.id
-        assert objects[1].view_id == view.id
-        assert objects[1].bbox.coords == [0.1, 0.1, 0.2, 0.2]
-        assert objects[1].bbox.format == "xywh"
-        assert objects[1].bbox.is_normalized is True
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        assert len(entities) == 2
+        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[1], MyEntity)
+        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
+        assert isinstance(entities[1].id, str) and len(entities[1].id) == 22
+        assert entities[0] == MyEntity(
+            id=entities[0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            category="none",
+        )
+        assert entities[1] == MyEntity(
+            id=entities[1].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            category="none",
+        )
+        assert set(annotations.keys()) == {"bbox"}
+        assert len(annotations["bbox"]) == 2
+        assert annotations["bbox"][0] == BBox(
+            id=annotations["bbox"][0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            coords=[0, 0, 100, 100],
+            format="xyxy",
+            is_normalized=False,
+            confidence=0.5,
+        )
+        assert annotations["bbox"][1] == BBox(
+            id=annotations["bbox"][1].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[1].id, name="entities"),
+            coords=[0.1, 0.1, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            confidence=1.0,
+        )
 
         # test 4: one bbox and one keypoint not infered and a category
-        objects_data = {
+        entities_data = {
             "bbox": [[0, 0, 0.2, 0.2]],
-            "keypoints": [
+            "keypoint": [
                 {
                     "template_id": "template_0",
                     "coords": [10, 10, 20, 20, 30, 30],
@@ -240,28 +303,48 @@ class TestFolderBaseBuilder:
             ],
             "category": "person",
         }
-        objects = image_folder_builder._create_objects(item, view, objects_data)
-        assert len(objects) == 1
-        assert isinstance(objects[0], MyImageObject)
-        assert objects[0].item_id == item.id
-        assert objects[0].view_id == view.id
-        assert objects[0].bbox.coords == [0, 0, 0.2, 0.2]
-        assert objects[0].bbox.format == "xywh"
-        assert objects[0].bbox.is_normalized is True
-        assert objects[0].bbox.confidence == 1.0
-        assert objects[0].keypoints.template_id == "template_0"
-        assert objects[0].keypoints.coords == [10, 10, 20, 20, 30, 30]
-        assert objects[0].keypoints.states == ["visible", "visible", "visible"]
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        assert len(entities) == 1
+        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
+        assert entities[0] == MyEntity(
+            id=entities[0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            category="person",
+        )
+        assert set(annotations.keys()) == {"bbox", "keypoint"}
+        assert len(annotations["bbox"]) == 1
+        assert len(annotations["keypoint"]) == 1
+        assert annotations["bbox"][0] == BBox(
+            id=annotations["bbox"][0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            coords=[0, 0, 0.2, 0.2],
+            format="xywh",
+            is_normalized=True,
+            confidence=1.0,
+        )
+        assert annotations["keypoint"][0] == KeyPoints(
+            id=annotations["keypoint"][0].id,
+            item_ref=ItemRef(id=item.id),
+            view_ref=ViewRef(id=view.id, name="view"),
+            entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            template_id="template_0",
+            coords=[10, 10, 20, 20, 30, 30],
+            states=["visible", "visible", "visible"],
+        )
 
         # test 5: error infer keypoints
-        objects_data = {"keypoints": [[10, 10, 20, 20, 30, 30]]}
-        with pytest.raises(ValueError, match="not supported for infered object creation."):
-            objects = image_folder_builder._create_objects(item, view, objects_data)
+        entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
+        with pytest.raises(ValueError, match="not supported for infered entity creation."):
+            entities = image_folder_builder._create_entities(item, view, entities_data)
 
-        # test 6: error attribute not found in object schema
-        objects_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
-        with pytest.raises(ValueError, match="Attribute unknown not found in object schema."):
-            objects = image_folder_builder._create_objects(item, view, objects_data)
+        # test 6: error attribute not found in entity schema
+        entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
+        with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
+            entities = image_folder_builder._create_entities(item, view, entities_data)
 
     def test_generate_items(self, image_folder_builder: ImageFolderBuilder):
         items = list(image_folder_builder.generate_data())
@@ -275,24 +358,36 @@ class TestFolderBaseBuilder:
 
             assert actual_item.metadata == f"metadata_{i}"
 
-            assert view.item_id == actual_item.id
+            assert view.item_ref == ItemRef(id=actual_item.id)
             assert view.url == f"{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
 
-            if i % 2:  # has objects
-                objects: list[MyImageObject] = item["objects"]
-                assert len(objects) == i
-                for object in objects:
+            if i % 2:  # has entities
+                entities: list[MyEntity] = item["entities"]
+                bboxes: list[BBox] = item["bbox"]
+                assert len(entities) == i
+                for entity, bbox in zip(entities, bboxes, strict=True):
                     item_per_split = 10 if actual_item.split == "train" else 5
-                    assert object.item_id == actual_item.id
-                    assert object.view_id == view.id
-                    assert object.bbox.coords == [
-                        0 + i / item_per_split,
-                        0 + i / item_per_split,
-                        (100 + i) / (100 + item_per_split),
-                        (100 + i) / (100 + item_per_split),
-                    ]
-                    assert object.bbox.format == "xywh"
-                    assert object.bbox.is_normalized is True
-                    assert object.bbox.confidence == 1.0
-            else:  # no objects
-                assert "objects" not in item
+                    assert entity == MyEntity(
+                        id=entity.id,
+                        item_ref=ItemRef(id=actual_item.id),
+                        view_ref=ViewRef(id=view.id, name="view"),
+                        category="person" if i % 4 == 0 else "cat",
+                    )
+                    bbox = BBox(
+                        id=bbox.id,
+                        item_ref=ItemRef(id=actual_item.id),
+                        view_ref=ViewRef(id=view.id, name="view"),
+                        entity_ref=EntityRef(id=entity.id, name="entities"),
+                        coords=[
+                            0 + i / item_per_split,
+                            0 + i / item_per_split,
+                            (100 + i) / (100 + item_per_split),
+                            (100 + i) / (100 + item_per_split),
+                        ],
+                        format="xywh",
+                        is_normalized=True,
+                        confidence=1.0,
+                    )
+            else:  # no entities
+                assert "entities" not in item
+                assert "bbox" not in item

@@ -12,16 +12,12 @@ import shortuuid
 
 from pixano.datasets.dataset_library import DatasetLibrary
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.features.schemas.base_schema import BaseSchema
-from pixano.datasets.features.schemas.item import Item
-from pixano.datasets.features.schemas.object import Object
+from pixano.datasets.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
+from pixano.datasets.features.schemas.annotations.annotation import Annotation
 from pixano.datasets.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.datasets.features.schemas.view import View
-from pixano.datasets.features.types.registry import _PIXANO_TYPES_REGISTRY
-from pixano.datasets.features.utils import create_row
-from pixano.datasets.features.utils.creators import create_pixano_object
+from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.datasets.utils.creators import create_row
 
-from ...features.types.bbox import create_bbox, is_bbox
 from ..dataset_builder import DatasetBuilder
 
 
@@ -40,7 +36,7 @@ class FolderBaseBuilder(DatasetBuilder):
             "metadata1": "value1",
             "metadata2": "value2",
             ...
-            "objects": {
+            "entities": {
                 "attr1": [val1, val2, ...],
                 "attr2": [val1, val2, ...],
                 ...
@@ -51,7 +47,7 @@ class FolderBaseBuilder(DatasetBuilder):
             "metadata1": "value1",
             "metadata2": "value2",
             ...
-            "objects": {
+            "entities": {
                 "attr1": [val1, val2, ...],
                 "attr2": [val1, val2, ...],
                 ...
@@ -67,12 +63,12 @@ class FolderBaseBuilder(DatasetBuilder):
         view_name (str): The name of the view.
         view_schema (type[View]): The schema of the view.
         METADATA_FILENAME (str): The metadata filename.
-        OBJECTS_KEY (str): The key for the objects in the metadata file.
+        OBJECTS_KEY (str): The key for the entities in the metadata file.
         EXTENSIONS (list[str]): The list of supported extensions.
     """
 
     METADATA_FILENAME: str = "metadata.jsonl"
-    OBJECTS_KEY: str = "objects"
+    ENTITIES_KEY: str = "entities"
     EXTENSIONS: list[str]
 
     def __init__(
@@ -122,8 +118,8 @@ class FolderBaseBuilder(DatasetBuilder):
                         if not item_metadata:
                             raise ValueError(f"Metadata not found for {view_file}")
 
-                        # extract object metadata from item metadata
-                        objects_data = item_metadata.pop(self.OBJECTS_KEY, None)
+                        # extract entity metadata from item metadata
+                        entities_data = item_metadata.pop(self.ENTITIES_KEY, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)
@@ -131,20 +127,21 @@ class FolderBaseBuilder(DatasetBuilder):
                         # create view
                         view = self._create_view(item, view_file, self.view_schema)
 
-                        if objects_data is None:
+                        if entities_data is None:
                             yield {
                                 self.item_schema_name: item,
                                 self.view_name: view,
                             }
                             continue
 
-                        # create objects
-                        objects = self._create_objects(item, view, objects_data)
+                        # create entities and their annotations
+                        entities, annotations = self._create_entities(item, view, entities_data)
 
                         yield {
                             self.item_schema_name: item,
                             self.view_name: view,
-                            self.OBJECTS_KEY: objects,
+                            self.ENTITIES_KEY: entities,
+                            **annotations,
                         }
 
     def _create_item(self, split: str, **item_metadata) -> BaseSchema:
@@ -162,65 +159,92 @@ class FolderBaseBuilder(DatasetBuilder):
                 f"View schema {view_schema} is not supported. You should implement your own _create_view method."
             )
 
-        return create_row(view_schema, item_id=item.id, url=view_file, other_path=self.source_dir)
+        return create_row(
+            view_schema, id=shortuuid.uuid(), item_ref=ItemRef(id=item.id), url=view_file, other_path=self.source_dir
+        )
 
-    def _create_objects(self, item: Item, view: View, objects_data: dict[str, Any]) -> list[Object]:
-        objects = []
+    def _create_entities(
+        self, item: Item, view: View, entities_data: dict[str, Any]
+    ) -> tuple[list[Entity], dict[str, list[Annotation]]]:
+        entities = []
+        annotations = {}
 
-        obj_attrs = list(objects_data.keys())
-        for attr in obj_attrs:
-            if attr not in self.schemas[self.OBJECTS_KEY].model_fields:
-                raise ValueError(f"Attribute {attr} not found in object schema.")
+        entities_attrs = list(entities_data.keys())
+        for attr in entities_attrs:
+            if attr not in self.schemas[self.ENTITIES_KEY].model_fields.keys() and attr not in self.schemas.keys():
+                raise ValueError(f"Attribute {attr} not found in entity schema and is not a schema annotation.")
 
-        # check if all list of objects data have same length
-        nums_objects = {len(v) if isinstance(v, list) else 1 for v in objects_data.values() if v is not None}
-        if len(nums_objects) > 1:
-            raise ValueError("All list of objects data must have same length")
-        elif len(nums_objects) == 0:
+        # check if all list of entities data have same length
+        nums_entities = {len(v) if isinstance(v, list) else 1 for v in entities_data.values() if v is not None}
+        if len(nums_entities) > 1:
+            raise ValueError("All list of entities data must have same length")
+        elif len(nums_entities) == 0:
             return []
 
-        num_objects = nums_objects.pop()
-        objects_data = {k: v if isinstance(v, list) else [v] for k, v in objects_data.items() if v is not None}
-        obj_attrs = list(objects_data.keys())
-        for i in range(num_objects):
-            object = {}
-            for attr in obj_attrs:
-                if objects_data[attr] is None:
+        num_entities = nums_entities.pop()
+        entities_data = {k: v if isinstance(v, list) else [v] for k, v in entities_data.items() if v is not None}
+        entities_attrs = list(entities_data.keys())
+
+        for i in range(num_entities):
+            entity = {}
+            entity_annotations = {}
+            entity_id = shortuuid.uuid()
+            for attr in entities_attrs:
+                if entities_data[attr] is None:
                     continue
 
-                is_attr_pix_type = self.schemas[self.OBJECTS_KEY].model_fields[attr].annotation in set(
-                    _PIXANO_TYPES_REGISTRY.values()
-                )
-                if is_attr_pix_type:
-                    pix_type = self.schemas[self.OBJECTS_KEY].model_fields[attr].annotation
-                    if isinstance(objects_data[attr][i], Mapping):
-                        object[attr] = create_pixano_object(
-                            pix_type,
-                            **objects_data[attr][i],
+                # check if attribute is an annotation schema
+                is_attr_schema = attr in self.schemas
+                if is_attr_schema and not issubclass(self.schemas[attr], Annotation):
+                    raise ValueError(f"Attribute {attr} must be a subclass of Annotation")
+
+                # create annotation if attribute is an annotation schema
+                if is_attr_schema:
+                    if attr not in entity_annotations:
+                        entity_annotations[attr] = []
+
+                    schema = self.schemas[attr]
+                    if isinstance(entities_data[attr][i], Mapping):
+                        annotation = create_row(
+                            schema,
+                            id=shortuuid.uuid(),
+                            item_ref=ItemRef(id=item.id),
+                            view_ref=ViewRef(id=view.id, name=self.view_name),
+                            entity_ref=EntityRef(id=entity_id, name=self.ENTITIES_KEY),
+                            **entities_data[attr][i],
                         )
                     else:
                         # TODO check jsonl format for mask & keypoints
-                        if is_bbox(pix_type, True):
-                            object[attr] = create_bbox(
-                                objects_data[attr][i],
+                        if is_bbox(schema, True):
+                            annotation = create_bbox(
+                                id=shortuuid.uuid(),
+                                item_ref=ItemRef(id=item.id),
+                                view_ref=ViewRef(id=view.id, name=self.view_name),
+                                entity_ref=EntityRef(id=entity_id, name=self.ENTITIES_KEY),
+                                coords=entities_data[attr][i],
                                 format="xywh",
                                 is_normalized=True,
                                 confidence=1.0,
                             )
                         else:
-                            raise ValueError(f"Type {pix_type} not supported for infered object creation.")
+                            raise ValueError(f"Schema {schema} not supported for infered entity creation.")
+                    entity_annotations[attr].append(annotation)
                 else:
-                    object[attr] = objects_data[attr][i]
-            objects.append(
-                self.schemas[self.OBJECTS_KEY](
-                    id=shortuuid.uuid(),
-                    item_id=item.id,
-                    view_id=view.id,
-                    **object,
+                    entity[attr] = entities_data[attr][i]
+            entities.append(
+                self.schemas[self.ENTITIES_KEY](
+                    id=entity_id,
+                    item_ref=ItemRef(id=item.id),
+                    view_ref=ViewRef(id=view.id, name=self.view_name),
+                    **entity,
                 )
             )
 
-        return objects
+            for key, entity_annotation in entity_annotations.items():
+                if key not in annotations:
+                    annotations[key] = []
+                annotations[key].extend(entity_annotation)
+        return entities, annotations
 
     def _read_metadata(self, metadata_file: Path) -> list[dict]:
         if not metadata_file.exists():
