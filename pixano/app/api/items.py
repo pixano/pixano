@@ -26,7 +26,7 @@ from pixano.datasets.features import (
     KeyPoints,
     SequenceFrame,
 )
-from pixano.datasets.features.schemas.group import _SchemaGroup
+from pixano.datasets.features import _SchemaGroup
 from pixano.datasets.utils import image as image_utils
 
 
