@@ -96,10 +96,10 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
       datasetItemType: "image",
       id: "EZ4s6R0E_y",
       item_id: "fleurs.jpg",
-      view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
       bbox: {
+        view_id: "image",
         coords: [
           0.7411248087882996, 0.031893156468868256, 0.21801991760730743, 0.27492383122444153,
         ],
@@ -137,10 +137,10 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
       datasetItemType: "image",
       id: "QfNTSmYHmg",
       item_id: "fleurs.jpg",
-      view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
       bbox: {
+        view_id: "image",
         coords: [0.3974025845527649, 0.2007797211408615, 0.2805194854736328, 0.35672515630722046],
         format: "xywh",
         is_normalized: true,
@@ -150,6 +150,7 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
         },
       },
       mask: {
+        view_id: "image",
         size: [513, 770],
         counts: [
           157152, 6, 506, 10, 502, 15, 496, 21, 491, 25, 486, 31, 481, 36, 475, 41, 471, 46, 466,
@@ -207,10 +208,10 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
       datasetItemType: "image",
       id: "tJA83zBeSh",
       item_id: "fleurs.jpg",
-      view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
       bbox: {
+        view_id: "image",
         coords: [0.3233766257762909, 0.5808966755867004, 0.24415583908557892, 0.4035087823867798],
         format: "xywh",
         is_normalized: true,
@@ -220,6 +221,7 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
         },
       },
       mask: {
+        view_id: "image",
         size: [513, 770],
         counts: [
           128120, 29, 483, 57, 454, 61, 451, 64, 448, 67, 444, 70, 442, 73, 438, 77, 435, 80, 431,
@@ -531,14 +533,17 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const displayedBox: VideoItemBBox = {
-  coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
-  format: "xywh",
-  is_normalized: true,
-  confidence: 1,
-  frame_index: 1,
-  tracklet_id: "trackletId",
-};
+const displayedMBox: VideoItemBBox[] = [
+  {
+    coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
+    view_id: "image",
+    format: "xywh",
+    is_normalized: true,
+    confidence: 1,
+    frame_index: 0,
+    tracklet_id: "trackletId",
+  },
+];
 
 const track: Tracklet[] = [
   {
@@ -600,6 +605,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           is_key: true,
           is_thumbnail: true,
           tracklet_id: "trackletId",
+          view_id: "image",
         },
         {
           coords: [
@@ -611,6 +617,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           frame_index: 73,
           is_key: true,
           tracklet_id: "trackletId",
+          view_id: "image",
         },
       ],
       track,
@@ -618,7 +625,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
       view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
-      displayedBox,
+      displayedMBox,
       features: {
         category_name: {
           name: "category_name",

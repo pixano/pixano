@@ -141,7 +141,6 @@ License: CECILL-C
   {#if loaded}
     <Canvas2D
       {imagesPerView}
-      {loaded}
       selectedItemId={selectedItem.id}
       colorScale={$colorScale[1]}
       bboxes={$itemBboxes}

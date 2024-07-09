@@ -65,8 +65,10 @@ export const colorScale = derived(
 
 export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
   $itemObjects.reduce((acc, object) => {
-    const box = mapObjectToBBox(object, $itemMetas?.views);
-    if (box) acc.push(box);
+    const boxes = mapObjectToBBox(object, $itemMetas?.views);
+    for (const box of boxes) {
+      if (box) acc.push(box);
+    }
     return acc;
   }, [] as BBox[]),
 );
@@ -81,8 +83,10 @@ export const itemMasks = derived(itemObjects, ($itemObjects) =>
 
 export const itemKeypoints = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) => {
   return $itemObjects.reduce((acc, object) => {
-    const keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
-    if (keypoints) acc.push(keypoints);
+    const m_keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
+    for (const keypoints of m_keypoints) {
+      if (keypoints) acc.push(keypoints);
+    }
     return acc;
   }, [] as KeypointsTemplate[]);
 });

@@ -29,11 +29,11 @@ License: CECILL-C
   } from "@pixano/core";
 
   import {
-    BBOX_STROKEWIDTH,
     INPUTPOINT_RADIUS,
     INPUTPOINT_STROKEWIDTH,
-    INPUTRECT_STROKEWIDTH,
-    MASK_STROKEWIDTH,
+    // INPUTRECT_STROKEWIDTH,
+    // BBOX_STROKEWIDTH,
+    // MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
   import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
@@ -84,7 +84,7 @@ License: CECILL-C
   }
 
   $: {
-    if (canvasSize) {
+    if (canvasSize && isReady) {
       for (const viewId of Object.keys(imagesPerView)) {
         scaleView(viewId);
       }
@@ -170,6 +170,9 @@ License: CECILL-C
   // ********** INIT ********** //
 
   onMount(() => {
+    Object.keys(imagesPerView).forEach((viewId) => {
+      zoomFactor[viewId] = 1;
+    });
     loadItem();
     // Fire stage events observers
     resizeObserver.observe(stageContainer);
@@ -203,6 +206,12 @@ License: CECILL-C
     applyFilters();
   });
 
+  let scaleOnFirstLoad = {};
+  Object.keys(imagesPerView).forEach((viewId) => {
+    //we need a first scaleView for image only. If video, the scale is done elsewhere
+    scaleOnFirstLoad[viewId] = !isVideo;
+  });
+
   const getCurrentImage = (viewId: string) =>
     imagesPerView[viewId][imagesPerView[viewId].length - 1];
 
@@ -218,17 +227,15 @@ License: CECILL-C
     if (currentId) clearAnnotationAndInputs();
 
     keys.forEach((viewId) => {
-      zoomFactor[viewId] = 1;
       const currentImage = getCurrentImage(viewId);
 
       currentImage.onload = () => {
-        scaleView(viewId);
-        scaleElements(viewId);
+        if (scaleOnFirstLoad[viewId]) {
+          scaleView(viewId);
+          scaleOnFirstLoad[viewId] = false;
+        }
+        //scaleElements(viewId);
         isReady = true;
-        // Refresh view (display masks/bboxes) if needed
-        masks = [...masks];
-        bboxes = [...bboxes];
-
         if (!isVideo) cacheImage();
       };
     });
@@ -238,43 +245,10 @@ License: CECILL-C
 
   function scaleView(viewId: ItemView["id"]) {
     const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
-    if (viewLayer) {
-      // Calculate max dims for every image in the grid
-      const maxWidth = stage.width() / gridSize.cols;
-      const maxHeight = stage.height() / gridSize.rows;
-
-      //calculate view pos in grid
-      let i = 0;
-      //get view index
-      for (const view of Object.keys(imagesPerView)) {
-        if (view === viewId) break;
-        i++;
-      }
-      const grid_pos = {
-        x: i % gridSize.cols,
-        y: Math.floor(i / gridSize.cols),
-      };
-
-      // Fit stage
-      const currentImage = getCurrentImage(viewId);
-      const scaleByHeight = maxHeight / currentImage.height;
-      const scaleByWidth = maxWidth / currentImage.width;
-      const scale = Math.min(scaleByWidth, scaleByHeight);
-      //set zoomFactor for view
-      zoomFactor[viewId] = scale;
-
-      viewLayer.scale({ x: scale, y: scale });
-
-      // Center view
-      const offsetX = (maxWidth - currentImage.width * scale) / 2 + grid_pos.x * maxWidth;
-      const offsetY = (maxHeight - currentImage.height * scale) / 2 + grid_pos.y * maxHeight;
-      viewLayer.x(offsetX);
-      viewLayer.y(offsetY);
-    } else {
+    if (!viewLayer) {
       console.log("Canvas2D.scaleView - Error: Cannot scale");
       return;
     }
-
     // Calculate max dims for every image in the grid
     const maxWidth = stage.width() / gridSize.cols;
     const maxHeight = stage.height() / gridSize.rows;
@@ -306,71 +280,81 @@ License: CECILL-C
     viewLayer.y(offsetY);
   }
 
-  function scaleElements(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    if (!viewLayer) return;
+  // Unused ... We could remove ?
+  // function scaleElements(viewId: ItemView["id"]) {
+  //   const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  //   if (!viewLayer) {
+  //     console.log("Canvas2D.scaleElements - Error: Cannot scale");
+  //     return;
+  //   }
 
-    const zoom = zoomFactor[viewId];
+  //   const zoom = zoomFactor[viewId];
 
-    const scaleCircle = (circle: Konva.Circle) => {
-      circle.radius(INPUTPOINT_RADIUS / zoom);
-      circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
-    };
+  //   const scaleCircle = (circle: Konva.Circle) => {
+  //     circle.radius(INPUTPOINT_RADIUS / zoom);
+  //     circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+  //   };
 
-    const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
-      rect.strokeWidth(strokeWidth / zoom);
-    };
+  //   const scaleRect = (rect: Konva.Rect, strokeWidth: number) => {
+  //     rect.strokeWidth(strokeWidth / zoom);
+  //   };
 
-    // Scale input points
-    const inputGroup: Konva.Group = viewLayer.findOne("#input");
-    if (inputGroup) {
-      inputGroup.children.forEach((point) => {
-        if (point instanceof Konva.Circle) {
-          scaleCircle(point);
-        } else if (point instanceof Konva.Rect) {
-          scaleRect(point, INPUTRECT_STROKEWIDTH);
-        }
-      });
-    }
+  //   // Scale input points
+  //   const inputGroup: Konva.Group = viewLayer.findOne("#input");
+  //   if (inputGroup) {
+  //     inputGroup.children.forEach((point) => {
+  //       if (point instanceof Konva.Circle) {
+  //         scaleCircle(point);
+  //       } else if (point instanceof Konva.Rect) {
+  //         scaleRect(point, INPUTRECT_STROKEWIDTH);
+  //       }
+  //     });
+  //   }
 
-    // Scale bboxes
-    const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-    if (bboxGroup) {
-      bboxGroup.children.forEach((bboxKonva) => {
-        if (bboxKonva instanceof Konva.Group) {
-          bboxKonva.children.forEach((bboxElement) => {
-            if (bboxElement instanceof Konva.Rect) {
-              scaleRect(bboxElement, BBOX_STROKEWIDTH);
-            } else if (bboxElement instanceof Konva.Label) {
-              bboxElement.scale({
-                x: 1 / zoom,
-                y: 1 / zoom,
-              });
-            }
-          });
-        }
-      });
-    }
+  //   // Scale bboxes
+  //   const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+  //   if (bboxGroup) {
+  //     bboxGroup.children.forEach((bboxKonva) => {
+  //       if (bboxKonva instanceof Konva.Group) {
+  //         bboxKonva.children.forEach((bboxElement) => {
+  //           if (bboxElement instanceof Konva.Rect) {
+  //             scaleRect(bboxElement, BBOX_STROKEWIDTH);
+  //           } else if (bboxElement instanceof Konva.Label) {
+  //             bboxElement.scale({
+  //               x: 1 / zoom,
+  //               y: 1 / zoom,
+  //             });
+  //           }
+  //         });
+  //       }
+  //     });
+  //   }
 
-    // Scale masks
-    const scaleMaskGroup = (maskGroup: Konva.Group) => {
-      maskGroup.children.forEach((maskKonva) => {
-        if (maskKonva instanceof Konva.Shape) {
-          maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
-        }
-      });
-    };
+  //   // Scale masks
+  //   const scaleMaskGroup = (maskGroup: Konva.Group) => {
+  //     maskGroup.children.forEach((maskKonva) => {
+  //       if (maskKonva instanceof Konva.Shape) {
+  //         maskKonva.strokeWidth(MASK_STROKEWIDTH / zoom);
+  //       }
+  //     });
+  //   };
 
-    const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-    if (maskGroup) {
-      scaleMaskGroup(maskGroup);
-    }
+  //   const maskGroup: Konva.Group = viewLayer.findOne("#masks");
+  //   if (maskGroup) {
+  //     scaleMaskGroup(maskGroup);
+  //   }
 
-    const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
-    if (currentMaskGroup) {
-      scaleMaskGroup(currentMaskGroup);
-    }
-  }
+  //   const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
+  //   if (currentMaskGroup) {
+  //     scaleMaskGroup(currentMaskGroup);
+  //   }
+
+  //   // Scale keypoints //TODO?
+  //   // const scaleKptCircle = (circle: Konva.Circle) => {
+  //   //   circle.radius(INPUTPOINT_RADIUS / zoom);
+  //   //   circle.strokeWidth(INPUTPOINT_STROKEWIDTH / zoom);
+  //   // };
+  // }
 
   const cacheImage = () => {
     if (!stage) return;
@@ -1101,6 +1085,7 @@ License: CECILL-C
     if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
+        viewId,
         type: "none",
         shapeId: null,
         highlighted: "all",
@@ -1197,7 +1182,7 @@ License: CECILL-C
 
     // Zoom
     zoomFactor[viewId] = zoom(stage, direction, viewId);
-    scaleElements(viewId);
+    //scaleElements(viewId);
 
     // Keep highlighted point scaling
     if (highlighted_point) highlightInputPoint(highlighted_point, viewId);
@@ -1234,10 +1219,11 @@ License: CECILL-C
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
         const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-        console.log("masks Konva group:", maskGroup);
-        console.log("masks children length:", maskGroup.children?.length);
-        console.log("bboxes Konva group:", bboxGroup);
-        console.log("bboxes children length:", bboxGroup.children?.length);
+        console.log("view:", viewId);
+        console.log("--masks Konva group:", maskGroup);
+        console.log("--masks children length:", maskGroup.children?.length);
+        console.log("--bboxes Konva group:", bboxGroup);
+        console.log("--bboxes children length:", bboxGroup.children?.length);
       }
     }
   }
@@ -1266,7 +1252,6 @@ License: CECILL-C
             config={{
               image,
               id: `image-${viewId}`,
-              zIndex: 1,
             }}
             on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
             on:pointerup={() => handlePointerUpOnImage(viewId)}
@@ -1274,63 +1259,66 @@ License: CECILL-C
           />
         {/each}
         <Group config={{ id: "currentAnnotation" }} />
-        <Group config={{ id: "masks" }} />
-        <Group config={{ id: "bboxes" }} />
         <Group config={{ id: "input" }} />
-        {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
-          <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
-        {/if}
-        <ShowKeypoints
-          {colorScale}
-          {stage}
-          {viewId}
-          {keypoints}
-          zoomFactor={zoomFactor[viewId]}
-          bind:newShape
-        />
-        {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
-          <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
-        {/if}
-
-        {#each bboxes as bbox}
-          {#if bbox.viewId === viewId}
-            {#key bbox.id}
-              <Rectangle
-                {bbox}
-                {colorScale}
-                zoomFactor={zoomFactor[viewId]}
-                {stage}
-                {viewId}
-                bind:newShape
-                {selectedTool}
-              />
-            {/key}
+        <Group config={{ id: "bboxes" }}>
+          {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
+            <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
           {/if}
-        {/each}
-        <CreatePolygon
-          {viewId}
-          {stage}
-          currentImage={getCurrentImage(viewId)}
-          {zoomFactor}
-          {selectedItemId}
-          bind:newShape
-        />
-        {#each masks as mask}
-          {#key mask.id}
-            {#if mask.viewId === viewId}
-              <PolygonGroup
-                {viewId}
-                bind:newShape
-                {stage}
-                currentImage={getCurrentImage(viewId)}
-                {zoomFactor}
-                {mask}
-                color={colorScale(mask.id)}
-                {selectedTool}
-              />
+          {#each bboxes as bbox}
+            {#if bbox.viewId === viewId}
+              {#key bbox.id}
+                <Rectangle
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[viewId]}
+                  {stage}
+                  {viewId}
+                  bind:newShape
+                  {selectedTool}
+                />
+              {/key}
             {/if}
-          {/key}
-        {/each}
+          {/each}
+        </Group>
+        <Group config={{ id: "masks" }}>
+          <CreatePolygon
+            {viewId}
+            {stage}
+            currentImage={getCurrentImage(viewId)}
+            {zoomFactor}
+            {selectedItemId}
+            bind:newShape
+          />
+          {#each masks as mask}
+            {#key mask.id}
+              {#if mask.viewId === viewId}
+                <PolygonGroup
+                  {viewId}
+                  bind:newShape
+                  {stage}
+                  currentImage={getCurrentImage(viewId)}
+                  {zoomFactor}
+                  {mask}
+                  color={colorScale(mask.id)}
+                  {selectedTool}
+                />
+              {/if}
+            {/key}
+          {/each}
+        </Group>
+        <Group config={{ id: "keypoints" }}>
+          {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+            <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
+          {/if}
+          <ShowKeypoints
+            {colorScale}
+            {stage}
+            {viewId}
+            {keypoints}
+            zoomFactor={zoomFactor[viewId]}
+            bind:newShape
+          />
+        </Group>
       </Layer>
     {/each}
 

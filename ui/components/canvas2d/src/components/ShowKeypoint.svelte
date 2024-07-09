@@ -24,6 +24,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: keyPointsId,
+      viewId,
       highlighted: "self",
       type: "none",
     };
@@ -42,13 +43,14 @@ License: CECILL-C
       type: "keypoint",
       vertices: normalizedVertices,
       shapeId: id,
+      viewId,
     };
   };
 </script>
 
 {#if keypoints}
   {#each keypoints as keypointStructure}
-    {#if keypointStructure.visible}
+    {#if keypointStructure.visible && keypointStructure.view_id == viewId}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}

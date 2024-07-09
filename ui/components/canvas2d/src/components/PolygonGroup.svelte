@@ -97,6 +97,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: mask.id,
+      viewId,
       highlighted: "self",
       type: "none",
     };
@@ -107,6 +108,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: mask.id,
+        viewId,
         highlighted: "all",
         type: "none",
       };

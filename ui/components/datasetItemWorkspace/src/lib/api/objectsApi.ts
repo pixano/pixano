@@ -40,11 +40,12 @@ import { templates } from "../settings/keyPointsTemplates";
 
 const defineTooltip = (object: ItemObject): string | null => {
   let bbox: ItemBBox | undefined;
-
   // Check object type to extract the bbox object
   if (object.datasetItemType === "image" && object.bbox) bbox = object.bbox;
   else if (object.datasetItemType === "video") {
-    const displayedBox = object.displayedBox;
+    //TMP TODO for video object on several view, we take the first available view (?)
+    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
+    const displayedBox = object.displayedMBox[0];
     bbox = displayedBox;
   }
 
@@ -61,37 +62,44 @@ const defineTooltip = (object: ItemObject): string | null => {
   return tooltip;
 };
 
-export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox | undefined => {
-  const box = obj.datasetItemType === "video" ? obj.displayedBox : obj.bbox;
-  if (!box || (obj.datasetItemType === "video" && box.displayControl?.hidden)) return;
-  if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") return;
-  const view = views?.[obj.view_id];
-  const image: ItemView = Array.isArray(view) ? view[0] : view;
-  const imageHeight = (image.features.height.value as number) || 1;
-  const imageWidth = (image.features.width.value as number) || 1;
-  const [x, y, width, height] = box.coords;
-  const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
+export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox[] => {
+  const res_bboxes: BBox[] = [];
+  const boxes = obj.datasetItemType === "video" ? obj.displayedMBox : [obj.bbox];
+  if (!boxes) return res_bboxes;
+  for (const box of boxes) {
+    if (!box || (obj.datasetItemType === "video" && box.displayControl?.hidden)) continue;
+    if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") continue;
+    if (!box.view_id) continue;
+    const view = views?.[box.view_id];
+    const image: ItemView = Array.isArray(view) ? view[0] : view;
+    const imageHeight = (image.features.height.value as number) || 1;
+    const imageWidth = (image.features.width.value as number) || 1;
+    const [x, y, width, height] = box.coords;
+    const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
 
-  const tooltip = defineTooltip(obj);
+    const tooltip = defineTooltip(obj);
 
-  return {
-    id: obj.id,
-    viewId: obj.view_id,
-    catId: (obj.features.category_id?.value || 1) as number,
-    bbox,
-    tooltip,
-    opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
-    editing: obj.displayControl?.editing,
-    strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
-    highlighted: obj.highlighted,
-  } as BBox;
+    res_bboxes.push({
+      id: obj.id,
+      viewId: box.view_id,
+      catId: (obj.features.category_id?.value || 1) as number,
+      bbox,
+      tooltip,
+      opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
+      editing: obj.displayControl?.editing,
+      strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+      highlighted: obj.highlighted,
+    } as BBox);
+  }
+  return res_bboxes;
 };
 
 export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
   if (
     obj.datasetItemType === "image" && // Only images use masks ?
     obj.mask &&
+    obj.mask.view_id &&
     !obj.review_state &&
     !(obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
   ) {
@@ -102,7 +110,7 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
 
     return {
       id: obj.id,
-      viewId: obj.view_id,
+      viewId: obj.mask.view_id,
       svg: masksSVG,
       rle: obj.mask,
       catId: (obj.features.category_id?.value || 1) as number,
@@ -120,34 +128,44 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
 export const mapObjectToKeypoints = (
   object: ItemObject,
   views: DatasetItem["views"],
-): KeypointsTemplate | undefined => {
-  const keypoints =
-    object.datasetItemType === "video" ? object.displayedKeypoints : object.keypoints;
-  if (!keypoints || (object.datasetItemType === "video" && keypoints.displayControl?.hidden))
-    return undefined;
-  const template = templates.find((t) => t.id === keypoints?.template_id);
-  if (!template) return undefined;
-  const view = views?.[object.view_id];
-  const image: ItemView = Array.isArray(view) ? view[0] : view;
-  const imageHeight = (image.features.height.value as number) || 1;
-  const imageWidth = (image.features.width.value as number) || 1;
-  const vertices = keypoints.vertices.map((vertex, i) => ({
-    ...vertex,
-    x: vertex.x * imageWidth,
-    y: vertex.y * imageHeight,
-    features: {
-      ...(template.vertices[i].features || {}),
-      ...(vertex.features || {}),
-    },
-  }));
-  return {
-    id: object.id,
-    vertices,
-    edges: template.edges,
-    editing: object.displayControl?.editing,
-    visible: !keypoints.displayControl?.hidden && !object.displayControl?.hidden,
-    highlighted: object.highlighted,
-  };
+): KeypointsTemplate[] => {
+  const res_m_keypoints: KeypointsTemplate[] = [];
+  const m_keypoints =
+    object.datasetItemType === "video" ? object.displayedMKeypoints : [object.keypoints];
+  if (!m_keypoints) return [] as KeypointsTemplate[];
+  for (const keypoints of m_keypoints) {
+    if (
+      !keypoints ||
+      !keypoints.view_id ||
+      (object.datasetItemType === "video" && keypoints.displayControl?.hidden)
+    )
+      continue;
+    const template = templates.find((t) => t.id === keypoints?.template_id);
+    if (!template) continue;
+    const view = views?.[keypoints.view_id];
+    const image: ItemView = Array.isArray(view) ? view[0] : view;
+    const imageHeight = (image.features.height.value as number) || 1;
+    const imageWidth = (image.features.width.value as number) || 1;
+    const vertices = keypoints.vertices.map((vertex, i) => ({
+      ...vertex,
+      x: vertex.x * imageWidth,
+      y: vertex.y * imageHeight,
+      features: {
+        ...(template.vertices[i].features || {}),
+        ...(vertex.features || {}),
+      },
+    }));
+    res_m_keypoints.push({
+      id: object.id,
+      view_id: keypoints.view_id,
+      vertices,
+      edges: template.edges,
+      editing: object.displayControl?.editing,
+      visible: !keypoints.displayControl?.hidden && !object.displayControl?.hidden,
+      highlighted: object.highlighted,
+    } as KeypointsTemplate);
+  }
+  return res_m_keypoints;
 };
 
 export const toggleObjectDisplayControl = (
@@ -278,8 +296,13 @@ export const sortAndFilterObjectsToAnnotate = (
         const confidence = object.bbox.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
-      if (object.datasetItemType === "video" && object.displayedBox) {
-        const confidence = object.displayedBox.confidence || 0;
+      if (
+        object.datasetItemType === "video" &&
+        object.displayedMBox &&
+        object.displayedMBox.length > 0
+      ) {
+        //TMP TODO for video object on several view, we take the first available view (?)
+        const confidence = object.displayedMBox[0].confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       return false; // Ignore objects without bboxes
@@ -290,13 +313,13 @@ export const sortAndFilterObjectsToAnnotate = (
 
       // Get first bbox position
       if (a.datasetItemType === "image" && a.bbox) firstBoxXPosition = a.bbox.coords[0] || 0;
-      if (a.datasetItemType === "video" && a.displayedBox)
-        firstBoxXPosition = a.displayedBox.coords[0] || 0;
+      if (a.datasetItemType === "video" && a.displayedMBox && a.displayedMBox.length > 0)
+        firstBoxXPosition = a.displayedMBox[0].coords[0] || 0;
 
       // Get second bbox position
       if (b.datasetItemType === "image" && b.bbox) secondBoxXPosition = b.bbox.coords[0] || 0;
-      if (b.datasetItemType === "video" && b.displayedBox)
-        secondBoxXPosition = b.displayedBox.coords[0] || 0;
+      if (b.datasetItemType === "video" && b.displayedMBox && b.displayedMBox.length > 0)
+        secondBoxXPosition = b.displayedMBox[0].coords[0] || 0;
 
       return firstBoxXPosition - secondBoxXPosition;
     });
@@ -341,7 +364,6 @@ export const defineCreatedObject = (
     id: nanoid(10),
     item_id: shape.itemId,
     source_id: GROUND_TRUTH,
-    view_id: shape.viewId,
     features,
   };
   if (shape.type === "rectangle") {
@@ -357,6 +379,7 @@ export const defineCreatedObject = (
       format: "xywh",
       is_normalized: true,
       confidence: 1,
+      view_id: shape.viewId,
     };
     const isVideo = videoType === "video";
     if (isVideo) {
@@ -368,7 +391,7 @@ export const defineCreatedObject = (
           editing: true,
         },
         datasetItemType: "video",
-        displayedBox: { ...bbox, frame_index: 0, tracklet_id: id },
+        displayedMBox: [{ ...bbox, frame_index: 0, tracklet_id: id }],
         boxes: [
           {
             ...bbox,
@@ -402,6 +425,7 @@ export const defineCreatedObject = (
       mask: {
         counts: shape.rle.counts,
         size: shape.rle.size,
+        view_id: shape.viewId,
       },
     };
   }
@@ -413,6 +437,7 @@ export const defineCreatedObject = (
         x: vertex.x / shape.imageWidth,
         y: vertex.y / shape.imageHeight,
       })),
+      view_id: shape.viewId,
     };
     if (isVideo) {
       const id = nanoid(5);
@@ -436,7 +461,7 @@ export const defineCreatedObject = (
             id,
           },
         ],
-        displayedKeypoints: { ...keypoints, frame_index: 0, tracklet_id: id },
+        displayedMKeypoints: [{ ...keypoints, frame_index: 0, tracklet_id: id }],
       };
     } else {
       newObject = {
@@ -479,12 +504,22 @@ const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
 };
 
 export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
-  const box = object.datasetItemType === "video" ? findThumbnailBox(object.boxes) : object.bbox;
-  if (!box) return null;
+  let box;
+  let view_id;
+  if (object.datasetItemType === "video") {
+    box = findThumbnailBox(object.boxes); //TODO ? which thumbnail in multiview cases ?
+    //TMP TODO for video object on several view, we take the first available view (?)
+    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
+    view_id = object.displayedMBox[0]?.view_id;
+  } else {
+    box = object.bbox;
+    view_id = object.bbox?.view_id;
+  }
+  if (!box || !view_id) return null;
   const view =
     metas.type === "video"
-      ? (metas.views[object.view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
-      : (metas.views[object.view_id] as ItemView);
+      ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
+      : (metas.views[view_id] as ItemView);
   const coords = box.coords;
   return {
     baseImageDimensions: {

@@ -365,7 +365,6 @@ async def get_dataset_item(  # noqa: D417
                         "datasetItemType": view_type,
                         "item_id": item_id,
                         "source_id": "Ground Truth",  # ??
-                        "view_id": obj.view_id,
                         "features": {
                             fname: {
                                 "name": fname,
@@ -385,7 +384,10 @@ async def get_dataset_item(  # noqa: D417
                             ]
                         },
                         "bbox": (
-                            obj.bbox.to_xywh()
+                            {
+                                **vars(obj.bbox.to_xywh()),
+                                "view_id": obj.view_id,
+                            }
                             if hasattr(obj, "bbox")
                             and obj.bbox != NoneBBox
                             and obj.bbox.coords != []
@@ -393,7 +395,11 @@ async def get_dataset_item(  # noqa: D417
                         ),
                         "mask": (
                             image_utils.rle_to_urle(
-                                {"size": obj.mask.size, "counts": obj.mask.counts}
+                                {
+                                    "size": obj.mask.size,
+                                    "counts": obj.mask.counts,
+                                    "view_id": obj.view_id,
+                                }
                             )
                             if hasattr(obj, "mask")
                             and obj.mask != NoneMask
@@ -404,6 +410,7 @@ async def get_dataset_item(  # noqa: D417
                             {
                                 "template_id": obj.keypoints.template_id,
                                 "vertices": obj.keypoints.map_back2front_vertices(),
+                                "view_id": obj.view_id,
                             }
                             if hasattr(obj, "keypoints")
                             and obj.keypoints != NoneKeypoints
@@ -438,6 +445,7 @@ async def get_dataset_item(  # noqa: D417
                             "is_key": obj.is_key,
                             "is_thumbnail": i == 0,
                             "tracklet_id": tracklet.id,
+                            "view_id": obj.view_id,
                         }
                         for i, obj in enumerate(
                             [
@@ -459,6 +467,7 @@ async def get_dataset_item(  # noqa: D417
                             "is_key": obj.is_key,
                             "is_thumbnail": i == 0,
                             "tracklet_id": tracklet.id,
+                            "view_id": obj.view_id,
                         }
                         for i, obj in enumerate(
                             [
@@ -473,21 +482,14 @@ async def get_dataset_item(  # noqa: D417
                 )
 
                 # organize tracklets by tracks
-                tracks[tracklet.track_id].append(tracklet)
+                #  Note: is this check usefull? it avoid empty tracks, but do we want it ?
+                if boxes[tracklet.track_id] or keypoints[tracklet.track_id]:
+                    tracks[tracklet.track_id].append(tracklet)
 
         for track_id, tracklets in tracks.items():
 
             # features are taken from first tracklet of each track
             track_feats = tracklets[0]
-
-            # view_id is taken from first object in the first tracklet
-            try:
-                view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
-            except StopIteration:
-                print(
-                    f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped"
-                )
-                continue
 
             objects.append(
                 {
@@ -495,7 +497,6 @@ async def get_dataset_item(  # noqa: D417
                     "datasetItemType": view_type,
                     "item_id": item_id,
                     "source_id": "Ground Truth",  # ?? must ensure source
-                    "view_id": view_id,
                     "features": {
                         fname: {
                             "name": fname,

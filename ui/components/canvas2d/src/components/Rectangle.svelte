@@ -36,6 +36,7 @@ License: CECILL-C
       status: "editing",
       type: "rectangle",
       shapeId: bbox.id,
+      viewId,
       coords,
     };
   };
@@ -65,6 +66,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: bbox.id,
+      viewId,
       highlighted: "self",
       type: "none",
     };
@@ -75,6 +77,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: bbox.id,
+        viewId,
         highlighted: "all",
         type: "none",
       };

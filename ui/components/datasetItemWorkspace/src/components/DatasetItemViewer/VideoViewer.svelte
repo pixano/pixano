@@ -97,26 +97,44 @@ License: CECILL-C
     itemObjects.update((objects) =>
       objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        let { displayedBox, displayedKeypoints } = object;
+        let { displayedMBox, displayedMKeypoints } = object;
 
-        if (displayedBox && object.boxes) {
-          const newCoords = boxLinearInterpolation(
-            newTrack || object.track,
-            imageIndex,
-            object.boxes,
-          );
+        if (displayedMBox && object.boxes) {
+          let new_displayedMBox = [];
+          for (let displayedBox of displayedMBox) {
+            const newCoords = boxLinearInterpolation(
+              newTrack || object.track,
+              imageIndex,
+              object.boxes,
+              displayedBox.view_id!,
+            );
 
-          if (newCoords && newCoords.every((value) => value)) {
-            const [x, y, width, height] = newCoords;
-            displayedBox = { ...displayedBox, coords: [x, y, width, height] };
+            if (newCoords && newCoords.every((value) => value)) {
+              displayedBox = { ...displayedBox, coords: newCoords };
+            }
+            displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+            new_displayedMBox.push(displayedBox);
           }
-          displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-          displayedBox.hidden = !newCoords;
-          return { ...object, displayedBox };
+          object = { ...object, displayedMBox: new_displayedMBox };
         }
-        if (displayedKeypoints && object.keypoints) {
-          const newObject = keypointsLinearInterpolation(object, imageIndex);
-          return { ...newObject };
+        if (displayedMKeypoints && object.keypoints) {
+          let new_displayedMKeypoints = [];
+          for (let displayedKeypoints of displayedMKeypoints) {
+            const vertices = keypointsLinearInterpolation(
+              object,
+              imageIndex,
+              displayedKeypoints.view_id!,
+            );
+            if (vertices) {
+              displayedKeypoints = { ...displayedKeypoints, vertices };
+            }
+            displayedKeypoints.displayControl = {
+              ...displayedKeypoints.displayControl,
+              hidden: !vertices,
+            };
+            new_displayedMKeypoints.push(displayedKeypoints);
+          }
+          object = { ...object, displayedMKeypoints: new_displayedMKeypoints };
         }
         return object;
       }),

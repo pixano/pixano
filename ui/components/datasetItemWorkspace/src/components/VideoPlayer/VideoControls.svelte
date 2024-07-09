@@ -78,9 +78,6 @@ License: CECILL-C
 </script>
 
 <div class="bg-white flex justify-between items-center gap-4 p-4 border-b border-slate-200 w-fit">
-  <p>
-    <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
-  </p>
   <button on:click={onPlayClick} class="text-primary">
     {#if $videoControls.intervalId}
       <PauseIcon />
@@ -94,4 +91,7 @@ License: CECILL-C
   <button on:click={onPlayStepClick} class="text-primary">
     <StepForward />
   </button>
+  <p>
+    <span>{currentTime}</span> <span class="text-gray-400">({$currentFrameIndex})</span>
+  </p>
 </div>

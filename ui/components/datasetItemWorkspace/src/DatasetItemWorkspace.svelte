@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { DatasetItem, FeaturesValues } from "@pixano/core";
+  import type { ItemObject, DatasetItem, FeaturesValues } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -40,10 +40,10 @@ License: CECILL-C
       selectedItem?.objects?.map((object) => {
         const oldObject = oldObjects.find((o) => o.id === object.id);
         if (oldObject) {
-          return { ...oldObject, ...object };
+          return { ...oldObject, ...object } as ItemObject;
         }
         return object;
-      }) || [],
+      }) || ([] as ItemObject[]),
   );
 
   $: itemMetas.set({

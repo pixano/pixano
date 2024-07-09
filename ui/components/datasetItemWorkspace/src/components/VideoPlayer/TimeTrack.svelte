@@ -66,11 +66,16 @@ License: CECILL-C
 
   const onPlayerClick = (event: MouseEvent | KeyboardEvent) => {
     let targetElement = event.target as HTMLElement;
-    if (event instanceof KeyboardEvent || targetElement.localName === "button") return;
+    if (
+      event instanceof KeyboardEvent ||
+      targetElement.localName === "button" ||
+      targetElement instanceof HTMLSpanElement
+    )
+      return;
     clearInterval($videoControls.intervalId);
     $videoControls.intervalId = 0;
     currentFrameIndex.set(
-      Math.floor((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
+      Math.round((event.offsetX / targetElement.offsetWidth) * imageFilesLength),
     );
     updateView($currentFrameIndex);
     changeSelectedTool();
