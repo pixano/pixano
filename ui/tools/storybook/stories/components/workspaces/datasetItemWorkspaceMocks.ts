@@ -531,15 +531,17 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const displayedMBox: VideoItemBBox[] = [{
-  coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
-  view_id: "image",
-  format: "xywh",
-  is_normalized: true,
-  confidence: 1,
-  frame_index: 0,
-  tracklet_id: "trackletId",
-}];
+const displayedMBox: VideoItemBBox[] = [
+  {
+    coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
+    view_id: "image",
+    format: "xywh",
+    is_normalized: true,
+    confidence: 1,
+    frame_index: 0,
+    tracklet_id: "trackletId",
+  },
+];
 
 const track: Tracklet[] = [
   {
