@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from pixano.datasets.features import Track, Tracklet, create_track, create_tracklet, is_track, is_tracklet
-from pixano.datasets.features.schemas.entities.track import TrackReference
+from pixano.datasets.features.schemas.entities.track import TrackRef
 from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.datasets.features.utils import make_tests_is_sublass_strict
 
@@ -68,7 +68,7 @@ def test_create_tracklet():
     assert tracklet.id == ""
     assert tracklet.item_ref == ItemRef.none()
     assert tracklet.view_ref == ViewRef.none()
-    assert tracklet.parent_ref == TrackReference.none()
+    assert tracklet.parent_ref == TrackRef.none()
 
     # Test 2: Custom references
     tracklet = create_tracklet(
@@ -79,7 +79,7 @@ def test_create_tracklet():
         id="id",
         item_ref=ItemRef(id="item_id"),
         view_ref=ViewRef(id="view_id", name="view"),
-        parent_ref=TrackReference(id="track_id", name="track"),
+        parent_ref=TrackRef(id="track_id", name="track"),
     )
 
     assert isinstance(tracklet, Tracklet)
@@ -90,7 +90,7 @@ def test_create_tracklet():
     assert tracklet.id == "id"
     assert tracklet.item_ref == ItemRef(id="item_id")
     assert tracklet.view_ref == ViewRef(id="view_id", name="view")
-    assert tracklet.parent_ref == TrackReference(id="track_id", name="track")
+    assert tracklet.parent_ref == TrackRef(id="track_id", name="track")
 
 
 @pytest.mark.parametrize(
