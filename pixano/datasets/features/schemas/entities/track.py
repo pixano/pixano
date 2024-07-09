@@ -10,7 +10,7 @@ from pydantic import model_validator
 
 from pixano.datasets.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, TrackReference, ViewRef
+from ...types.schema_reference import EntityRef, ItemRef, TrackRef, ViewRef
 from ..registry import _register_schema_internal
 from .entity import Entity
 
@@ -30,7 +30,7 @@ class Track(Entity):
 class Tracklet(Entity):
     """Tracklet Lance Model."""
 
-    parent_ref: TrackReference = TrackReference.none()
+    parent_ref: TrackRef = TrackRef.none()
     start_timestep: int = -1
     end_timestep: int = -1
     start_timestamp: float = -1.0
@@ -113,7 +113,7 @@ def create_tracklet(
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
-    parent_ref: TrackReference = TrackReference.none(),
+    parent_ref: TrackRef = TrackRef.none(),
     start_timestep: int = -1,
     end_timestep: int = -1,
     start_timestamp: float = -1.0,

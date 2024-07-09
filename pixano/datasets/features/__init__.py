@@ -60,13 +60,13 @@ from .schemas import (
     register_schema,
 )
 from .types import (
-    AnnotationReference,
+    AnnotationRef,
     BaseType,
     EntityRef,
     ItemRef,
     NDArrayFloat,
     SchemaRef,
-    TrackReference,
+    TrackRef,
     ViewRef,
     create_ndarray_float,
     is_ndarray_float,
@@ -75,7 +75,7 @@ from .types import (
 
 __all__ = [
     "_SchemaGroup",
-    "AnnotationReference",
+    "AnnotationRef",
     "EmbeddingReference",
     "ItemRef",
     "EntityRef",
@@ -102,9 +102,9 @@ __all__ = [
     "PointCloud",
     "SequenceFrame",
     "SchemaRef",
-    "TrackReference",
+    "TrackRef",
     "Tracklet",
-    "TrackReference",
+    "TrackRef",
     "Video",
     "View",
     "is_annotation",

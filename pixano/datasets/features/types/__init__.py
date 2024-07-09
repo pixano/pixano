@@ -7,11 +7,11 @@
 from .base_type import BaseType
 from .nd_array_float import NDArrayFloat, create_ndarray_float, is_ndarray_float
 from .schema_reference import (
-    AnnotationReference,
+    AnnotationRef,
     EntityRef,
     ItemRef,
     SchemaRef,
-    TrackReference,
+    TrackRef,
     ViewRef,
 )
 
@@ -22,9 +22,9 @@ __all__ = [
     "EntityRef",
     "ItemRef",
     "ViewRef",
-    "AnnotationReference",
+    "AnnotationRef",
     "SchemaRef",
-    "TrackReference",
+    "TrackRef",
     "create_ndarray_float",
     "is_ndarray_float",
 ]

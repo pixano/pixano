@@ -3,6 +3,7 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
+
 from pixano.datasets.utils.python import issubclass_strict
 
 from ...types.schema_reference import ItemRef

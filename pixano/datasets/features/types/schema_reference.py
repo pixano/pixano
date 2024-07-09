@@ -54,14 +54,14 @@ class EntityRef(SchemaRef):
 
 
 @_register_type_internal
-class TrackReference(EntityRef):
+class TrackRef(EntityRef):
     """Track reference Lance Model."""
 
     pass
 
 
 @_register_type_internal
-class AnnotationReference(SchemaRef):
+class AnnotationRef(SchemaRef):
     """Annotation reference class."""
 
     pass
