@@ -60,15 +60,15 @@ class FolderBaseBuilder(DatasetBuilder):
         Only one view is supported in folder builders.
 
     Attributes:
-        view_name (str): The name of the view.
+        view_name (str): The name of the view schema.
         view_schema (type[View]): The schema of the view.
+        entity_name (str): The name of the entities schema.
+        entity_schema (type[Entity]): The schema of the entities.
         METADATA_FILENAME (str): The metadata filename.
-        OBJECTS_KEY (str): The key for the entities in the metadata file.
         EXTENSIONS (list[str]): The list of supported extensions.
     """
 
     METADATA_FILENAME: str = "metadata.jsonl"
-    ENTITIES_KEY: str = "entities"
     EXTENSIONS: list[str]
 
     def __init__(
@@ -85,14 +85,24 @@ class FolderBaseBuilder(DatasetBuilder):
         """
         super().__init__(source_dir, target_dir, schemas, info)
         view_name = None
+        entity_name = None
         for k, s in self.schemas.items():
             if issubclass(s, View):
                 if view_name is not None:
-                    raise ValueError("Only one view type is supported in folder based builders")
+                    raise ValueError("Only one view schema is supported in folder based builders.")
                 view_name = k
                 view_schema = s
+            if issubclass(s, Entity):
+                if entity_name is not None:
+                    raise ValueError("Only one entity schema is supported in folder based builders.")
+                entity_name = k
+                entity_schema = s
+        if view_name is None or entity_name is None:
+            raise ValueError("View and entity schemas must be defined in the schemas argument.")
         self.view_name = view_name
-        self.view_schema = view_schema
+        self.view_schema: type[View] = view_schema
+        self.entity_name = entity_name
+        self.entity_schema: type[Entity] = entity_schema
 
     def generate_data(
         self,
@@ -119,7 +129,7 @@ class FolderBaseBuilder(DatasetBuilder):
                             raise ValueError(f"Metadata not found for {view_file}")
 
                         # extract entity metadata from item metadata
-                        entities_data = item_metadata.pop(self.ENTITIES_KEY, None)
+                        entities_data = item_metadata.pop(self.entity_name, None)
 
                         # create item
                         item = self._create_item(split.name, **item_metadata)
@@ -140,7 +150,7 @@ class FolderBaseBuilder(DatasetBuilder):
                         yield {
                             self.item_schema_name: item,
                             self.view_name: view,
-                            self.ENTITIES_KEY: entities,
+                            self.entity_name: entities,
                             **annotations,
                         }
 
@@ -171,7 +181,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
         entities_attrs = list(entities_data.keys())
         for attr in entities_attrs:
-            if attr not in self.schemas[self.ENTITIES_KEY].model_fields.keys() and attr not in self.schemas.keys():
+            if attr not in self.entity_schema.model_fields.keys() and attr not in self.schemas.keys():
                 raise ValueError(f"Attribute {attr} not found in entity schema and is not a schema annotation.")
 
         # check if all list of entities data have same length
@@ -210,7 +220,7 @@ class FolderBaseBuilder(DatasetBuilder):
                             id=shortuuid.uuid(),
                             item_ref=ItemRef(id=item.id),
                             view_ref=ViewRef(id=view.id, name=self.view_name),
-                            entity_ref=EntityRef(id=entity_id, name=self.ENTITIES_KEY),
+                            entity_ref=EntityRef(id=entity_id, name=self.entity_name),
                             **entities_data[attr][i],
                         )
                     else:
@@ -220,7 +230,7 @@ class FolderBaseBuilder(DatasetBuilder):
                                 id=shortuuid.uuid(),
                                 item_ref=ItemRef(id=item.id),
                                 view_ref=ViewRef(id=view.id, name=self.view_name),
-                                entity_ref=EntityRef(id=entity_id, name=self.ENTITIES_KEY),
+                                entity_ref=EntityRef(id=entity_id, name=self.entity_name),
                                 coords=entities_data[attr][i],
                                 format="xywh",
                                 is_normalized=True,
@@ -232,7 +242,7 @@ class FolderBaseBuilder(DatasetBuilder):
                 else:
                     entity[attr] = entities_data[attr][i]
             entities.append(
-                self.schemas[self.ENTITIES_KEY](
+                self.entity_schema(
                     id=entity_id,
                     item_ref=ItemRef(id=item.id),
                     view_ref=ViewRef(id=view.id, name=self.view_name),
