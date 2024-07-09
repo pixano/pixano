@@ -304,12 +304,10 @@ License: CECILL-C
   //   // Scale bboxes
   //   const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
   //   if (bboxGroup) {
-  //     console.log("HERE!!!");
   //     bboxGroup.children.forEach((bboxKonva) => {
   //       if (bboxKonva instanceof Konva.Group) {
   //         bboxKonva.children.forEach((bboxElement) => {
   //           if (bboxElement instanceof Konva.Rect) {
-  //             console.log("--", bboxElement, BBOX_STROKEWIDTH, zoom);
   //             scaleRect(bboxElement, BBOX_STROKEWIDTH);
   //           } else if (bboxElement instanceof Konva.Label) {
   //             bboxElement.scale({
