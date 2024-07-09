@@ -29,11 +29,11 @@ License: CECILL-C
   } from "@pixano/core";
 
   import {
-    BBOX_STROKEWIDTH,
     INPUTPOINT_RADIUS,
     INPUTPOINT_STROKEWIDTH,
-    INPUTRECT_STROKEWIDTH,
-    MASK_STROKEWIDTH,
+    // INPUTRECT_STROKEWIDTH,
+    // BBOX_STROKEWIDTH,
+    // MASK_STROKEWIDTH,
     POINT_SELECTION,
   } from "./lib/constants";
   import { addMask, findOrCreateCurrentMask, clearCurrentAnn } from "./api/boundingBoxesApi";
