@@ -531,14 +531,15 @@ export const mockHandleSaveItem = (item: DatasetItem) => {
   return Promise.resolve();
 };
 
-const displayedBox: VideoItemBBox = {
+const displayedMBox: VideoItemBBox[] = [{
   coords: [0.5362540535588254, 0.1909159114200253, 0.09993766916635072, 0.18671048750633337],
+  view_id: "image",
   format: "xywh",
   is_normalized: true,
   confidence: 1,
-  frame_index: 1,
+  frame_index: 0,
   tracklet_id: "trackletId",
-};
+}];
 
 const track: Tracklet[] = [
   {
@@ -600,6 +601,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           is_key: true,
           is_thumbnail: true,
           tracklet_id: "trackletId",
+          view_id: "image",
         },
         {
           coords: [
@@ -611,6 +613,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           frame_index: 73,
           is_key: true,
           tracklet_id: "trackletId",
+          view_id: "image",
         },
       ],
       track,
@@ -618,7 +621,7 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
       view_id: "image",
       source_id: "Ground Truth",
       review_state: undefined,
-      displayedBox,
+      displayedMBox,
       features: {
         category_name: {
           name: "category_name",
