@@ -12,7 +12,7 @@ from pixano.datasets.utils.python import issubclass_strict
 class BaseSchema(LanceModel, validate_assignment=True):
     """Base class for all tables."""
 
-    id: str
+    id: str = ""
 
 
 def is_base_schema(cls: type, strict: bool = False) -> bool:

@@ -4,9 +4,15 @@
 # License: CECILL-C
 # =====================================
 
-from pixano.datasets.features.schemas.base_schema import BaseSchema, is_base_schema
+from pixano.datasets.features import BaseSchema, is_base_schema
 
 from ..utils import make_tests_is_sublass_strict
+
+
+class TestBaseSchema:
+    def test_init(self):
+        base_schema = BaseSchema()
+        base_schema.id == ""
 
 
 def test_is_base_schema():

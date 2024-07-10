@@ -11,9 +11,7 @@ _PIXANO_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
 _SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
 
 
-def _add_schema_to_registry(
-    schema: type[BaseSchema], registry: dict[str, type[BaseSchema]]
-) -> None:
+def _add_schema_to_registry(schema: type[BaseSchema], registry: dict[str, type[BaseSchema]]) -> None:
     if not issubclass(schema, BaseSchema):
         raise ValueError(f"Schema {schema} must be a subclass of BaseSchema")
 

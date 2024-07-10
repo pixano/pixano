@@ -24,7 +24,7 @@ from .dataset_schema import (
     create_sub_dataset_item,
 )
 from .dataset_stat import DatasetStat
-from .features.schemas.group import _SchemaGroup
+from .features import _SchemaGroup
 
 
 def _lance_query_to_pydantic(
@@ -218,7 +218,7 @@ class Dataset:
         }
         for table_name, table in ds_tables.items():
             is_item_table = table_name == _SchemaGroup.ITEM.value
-            item_id_field = "id" if is_item_table else "item_id"
+            item_id_field = "id" if is_item_table else "item_ref.id"
             if not is_item_table:
                 is_collection = (
                     self.dataset_schema.relations[_SchemaGroup.ITEM.value][table_name]
@@ -232,7 +232,7 @@ class Dataset:
             pydantic_table = _lance_query_to_pydantic(lance_query, table_schema)
 
             for row in pydantic_table:
-                id = row.id if is_item_table else row.item_id
+                id = row.id if is_item_table else row.item_ref.id
                 if is_item_table:
                     data_dict[id].update(row)
                 elif is_collection:
@@ -558,65 +558,65 @@ class Dataset:
         """
         return self.get_views(idx, 1, select)[0]
 
-    def read_objects(
+    def read_entities(
         self, ids: list[str], select: list[str] | None = None
     ) -> list[DatasetItem]:  # type: ignore
-        """Read objects from dataset.
+        """Read entities from dataset.
 
         Args:
             ids (list[str]): Item ids.
-            select (list[str] | None, optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Entities to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._read_schema_group_data(ids, _SchemaGroup.OBJECT, select)
+        return self._read_schema_group_data(ids, _SchemaGroup.ENTITY, select)
 
-    def read_object(self, id: str, select: list[str] | None = None) -> DatasetItem:
-        """Read object from dataset.
+    def read_entity(self, id: str, select: list[str] | None = None) -> DatasetItem:
+        """Read entity from dataset.
 
         Args:
             id (str): Item id.
-            select (list[str] | None, optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Entities to read. Default is None.
 
         Returns:
             DatasetItem: Dataset item
         """
-        return self.read_objects([id], select)[0]
+        return self.read_entities([id], select)[0]
 
-    def get_objects(
+    def get_entities(
         self,
         offset: int,
         limit: int,
         select: list[str] | None = None,
     ) -> list[DatasetItem]:
-        """Get objects from dataset.
+        """Get entities from dataset.
 
         Args:
             offset (int): Offset
             limit (int): Limit
-            select (list[str]  | None, optional): Objects to read. Default is None.
+            select (list[str]  | None, optional): Entities to read. Default is None.
 
         Returns:
             list[DatasetItem]: Dataset items
         """
-        return self._get_schema_group_data(offset, limit, _SchemaGroup.OBJECT, select)
+        return self._get_schema_group_data(offset, limit, _SchemaGroup.ENTITY, select)
 
-    def get_object(
+    def get_entity(
         self,
         idx: int,
         select: list[str] | None = None,
     ) -> DatasetItem:
-        """Get object from dataset.
+        """Get entity from dataset.
 
         Args:
             idx (int): Index.
-            select (list[str] | None, optional): Objects to read. Default is None.
+            select (list[str] | None, optional): Entities to read. Default is None.
 
         Returns:
             DatasetItem: Dataset items
         """
-        return self.get_objects(idx, 1, select)[0]
+        return self.get_entities(idx, 1, select)[0]
 
     def read_embeddings(
         self, ids: list[str], select: list[str] | None = None

@@ -12,9 +12,9 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, PrivateAttr, create_model
 
-from .features import BaseSchema, Item
-from .features.schemas.group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
+from .features.schemas import BaseSchema, Item
 from .features.schemas.registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
+from .features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
 from .features.types.registry import _TYPES_REGISTRY
 
 
@@ -27,9 +27,7 @@ class SchemaRelation(Enum):
     MANY_TO_MANY = "many_to_many"
 
 
-def _get_super_type_from_dict(
-    sub_type: type, dict_types: dict[str, type]
-) -> type | None:
+def _get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> type | None:
     """Get the first super type in a dictionary of types from type."""
     if sub_type in dict_types.values():
         return sub_type
@@ -47,11 +45,7 @@ def _get_super_type_from_dict(
     while found_type:
         found_type = False
         for dict_type in dict_types.values():
-            if (
-                issubclass(sub_type, dict_type)
-                and issubclass(dict_type, sup_type)
-                and dict_type is not sup_type
-            ):
+            if issubclass(sub_type, dict_type) and issubclass(dict_type, sup_type) and dict_type is not sup_type:
                 sup_type = dict_type
                 found_type = True
                 break
@@ -77,14 +71,10 @@ def _dataset_item_to_dict(
 
             if origin in [list, tuple]:
                 if issubclass(args[0], tuple(_SCHEMA_REGISTRY.values())):
-                    # Categorizing List of Object as objects
+                    # Categorizing List of Entity as entities
                     schemas[field_name] = args[0]
-                    dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][
-                        field_name
-                    ] = SchemaRelation.ONE_TO_MANY
-                    dataset_schema_dict["relations"][field_name] = {
-                        _SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
-                    }
+                    dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_MANY
+                    dataset_schema_dict["relations"][field_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
                 else:
                     item_fields[field_name] = (list[args[0]], ...)
             else:
@@ -93,12 +83,8 @@ def _dataset_item_to_dict(
         elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
             # Categorizing Image as a view
             schemas[field_name] = field.annotation
-            dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = (
-                SchemaRelation.ONE_TO_ONE
-            )
-            dataset_schema_dict["relations"][field_name] = {
-                _SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE
-            }
+            dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_ONE
+            dataset_schema_dict["relations"][field_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
         else:
             # Default case: categorize as item attribute
             item_fields[field_name] = (field.annotation, ...)
@@ -113,9 +99,7 @@ def _dataset_item_to_dict(
 def _serialize_schema(schema: type[BaseSchema]) -> dict[str, dict[str, Any]]:
     json = {
         "schema": schema.__name__.lower().replace(" ", "_"),
-        "base_schema": _get_super_type_from_dict(schema, _PIXANO_SCHEMA_REGISTRY)
-        .__name__.lower()
-        .replace(" ", "_"),
+        "base_schema": _get_super_type_from_dict(schema, _PIXANO_SCHEMA_REGISTRY).__name__.lower().replace(" ", "_"),
     }
     fields = {}
     for field_name, field in schema.model_fields.items():
@@ -156,9 +140,7 @@ def _serialize_dataset_schema_dict(
 ) -> dict[str, dict[str, Any]]:
     dataset_schema_json = {
         "relations": {
-            schema1: {
-                schema2: relation.value for schema2, relation in relations.items()
-            }
+            schema1: {schema2: relation.value for schema2, relation in relations.items()}
             for schema1, relations in dataset_schema_dict["relations"].items()
         },
         "schemas": {},
@@ -184,9 +166,7 @@ def _deserialize_schema(json: dict[str, Any]):
     else:
         table_type = _PIXANO_SCHEMA_REGISTRY[json["base_schema"]]
 
-    allow_table_extra = any(
-        field not in table_type.model_fields.keys() for field in fields.keys()
-    )
+    allow_table_extra = any(field not in table_type.model_fields.keys() for field in fields.keys())
     if allow_table_extra:
         fields["model_config"] = ConfigDict(extra="allow")
     model = create_model(table_type.__name__, **fields, __base__=table_type)
@@ -199,10 +179,7 @@ def _deserialize_dataset_schema_dict(
 ):
     dataset_schema_dict = {
         "relations": {
-            schema1: {
-                schema2: SchemaRelation(relation)
-                for schema2, relation in relations.items()
-            }
+            schema1: {schema2: SchemaRelation(relation) for schema2, relation in relations.items()}
             for schema1, relations in json_schema["relations"].items()
         },
         "schemas": {},
@@ -221,9 +198,7 @@ class DatasetSchema(BaseModel):
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
-    _groups: dict[_SchemaGroup, list[str]] = PrivateAttr(
-        {key: [] for key in _SchemaGroup}
-    )
+    _groups: dict[_SchemaGroup, list[str]] = PrivateAttr({key: [] for key in _SchemaGroup})
 
     def _assign_table_groups(self) -> None:
         for table, schema in self.schemas.items():
@@ -293,12 +268,8 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
-        schema_json["schemas"] = DatasetSchema.format_table_names(
-            schema_json["schemas"]
-        )
-        schema_json["relations"] = DatasetSchema.format_table_names(
-            schema_json["relations"]
-        )
+        schema_json["schemas"] = DatasetSchema.format_table_names(schema_json["schemas"])
+        schema_json["relations"] = DatasetSchema.format_table_names(schema_json["relations"])
 
         if _SchemaGroup.ITEM.value not in schema_json["schemas"].keys():
             raise ValueError(f"Schema should contain a {_SchemaGroup.ITEM.value} key.")
@@ -319,12 +290,8 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
-        schema_dict["schemas"] = DatasetSchema.format_table_names(
-            schema_dict["schemas"]
-        )
-        schema_dict["relations"] = DatasetSchema.format_table_names(
-            schema_dict["relations"]
-        )
+        schema_dict["schemas"] = DatasetSchema.format_table_names(schema_dict["schemas"])
+        schema_dict["relations"] = DatasetSchema.format_table_names(schema_dict["relations"])
         return DatasetSchema.model_validate(schema_dict, *args, **kwargs)
 
     @staticmethod
@@ -399,7 +366,7 @@ def create_custom_dataset_item_class_from_dataset_schema(
     fields = {}
 
     for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
-        # Add default value in case an item does not have a specific view or object.
+        # Add default value in case an item does not have a specific view or entity.
         if relation == SchemaRelation.ONE_TO_MANY:
             fields[schema] = (list[dataset_schema.schemas[schema]], [])
         else:

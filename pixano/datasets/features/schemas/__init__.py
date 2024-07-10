@@ -4,52 +4,118 @@
 # License: CECILL-C
 # =====================================
 
-from .base_schema import BaseSchema
-from .embedding import Embedding
-from .group import _SchemaGroup
-from .image import Image, create_image, is_image
-from .image_object import ImageObject, create_image_object, is_image_object
-from .item import Item, is_item
-from .object import Object, is_object
-from .point_cloud import PointCloud, create_point_cloud, is_point_cloud
+from .annotations import (
+    Annotation,
+    BaseIntrinsics,
+    BBox,
+    BBox3D,
+    CamCalibration,
+    CompressedRLE,
+    Extrinsics,
+    Intrinsics,
+    KeyPoints,
+    KeyPoints3D,
+    create_bbox,
+    create_bbox3d,
+    create_cam_calibration,
+    create_compressed_rle,
+    create_keypoints,
+    create_keypoints3d,
+    is_annotation,
+    is_bbox,
+    is_bbox3d,
+    is_cam_calibration,
+    is_compressed_rle,
+    is_keypoints,
+    is_keypoints3d,
+)
+from .base_schema import BaseSchema, is_base_schema
+from .embeddings import Embedding, is_embedding
+from .entities import (
+    Entity,
+    Track,
+    Tracklet,
+    create_track,
+    create_tracklet,
+    is_entity,
+    is_track,
+    is_tracklet,
+)
+from .items import Item, is_item
 from .registry import register_schema
-from .sequence_frame import SequenceFrame, create_sequence_frame, is_sequence_frame
-from .track_object import TrackObject, create_track_object, is_track_object
-from .tracklet import Tracklet, create_tracklet, is_tracklet
-from .video import Video, create_video, is_video
-from .view import View, is_view
+from .schema_group import _SchemaGroup
+from .views import (
+    Image,
+    PointCloud,
+    SequenceFrame,
+    Video,
+    View,
+    create_image,
+    create_point_cloud,
+    create_sequence_frame,
+    create_video,
+    is_image,
+    is_point_cloud,
+    is_sequence_frame,
+    is_video,
+    is_view,
+)
 
 
 __all__ = [
+    "_SchemaGroup",
+    "Annotation",
+    "BaseIntrinsics",
     "BaseSchema",
+    "BBox",
+    "BBox3D",
+    "CompressedRLE",
+    "KeyPoints",
+    "KeyPoints3D",
     "Embedding",
+    "Extrinsics",
     "Image",
     "ImageObject",
     "Item",
-    "Object",
+    "Intrinsics",
+    "Entity",
+    "Track",
+    "CamCalibration",
     "PointCloud",
     "SequenceFrame",
     "Tracklet",
-    "TrackObject",
     "Video",
     "View",
-    "_SchemaGroup",
+    "is_annotation",
+    "is_base_schema",
+    "is_bbox",
+    "is_bbox3d",
+    "is_cam_calibration",
+    "is_compressed_rle",
+    "is_embedding",
+    "is_keypoints",
+    "is_keypoints3d",
+    "is_image",
+    "is_item",
+    "is_point_cloud",
+    "is_track",
+    "is_tracklet",
+    "is_view",
+    "is_video",
+    "is_entity",
+    "is_sequence_frame",
+    "create_bbox",
+    "create_bbox3d",
+    "create_cam_calibration",
+    "create_compressed_rle",
+    "create_keypoints",
+    "create_keypoints3d",
     "create_image",
     "create_image_object",
     "create_point_cloud",
     "create_sequence_frame",
-    "create_track_object",
+    "create_track",
     "create_tracklet",
     "create_video",
-    "is_image_object",
-    "is_image",
-    "is_item",
-    "is_object",
-    "is_point_cloud",
-    "is_sequence_frame",
-    "is_track_object",
-    "is_tracklet",
-    "is_video",
-    "is_view",
     "register_schema",
 ]
