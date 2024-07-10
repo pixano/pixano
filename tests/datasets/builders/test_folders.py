@@ -15,7 +15,6 @@ from pixano.datasets.builders.folders.base import FolderBaseBuilder
 from pixano.datasets.dataset_library import DatasetLibrary
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.features import Image, Item, Video
-from pixano.datasets.features.schemas.annotations.annotation import Annotation
 from pixano.datasets.features.schemas.annotations.bbox import BBox
 from pixano.datasets.features.schemas.annotations.keypoints import KeyPoints
 from pixano.datasets.features.schemas.entities.entity import Entity
