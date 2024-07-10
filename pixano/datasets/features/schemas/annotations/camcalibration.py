@@ -133,9 +133,9 @@ class CamCalibration(Annotation):
         """
         return cls(
             id="",
-            item=ItemRef.none(),
-            view=ViewRef.none(),
-            entity=EntityRef.none(),
+            item_ref=ItemRef.none(),
+            view_ref=ViewRef.none(),
+            entity_ref=EntityRef.none(),
             type="",
             base_intrinsics=BaseIntrinsics(
                 cx_offset_px=0.0,

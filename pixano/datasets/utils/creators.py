@@ -4,33 +4,50 @@
 # License: CECILL-C
 # =====================================
 
+from pixano.datasets.features.schemas.base_schema import is_base_schema
+
 from ..features import (
     BaseSchema,
     BaseType,
+    create_annotation_ref,
     create_bbox,
     create_bbox3d,
     create_cam_calibration,
     create_compressed_rle,
+    create_embedding_ref,
+    create_entity_ref,
     create_image,
+    create_item_ref,
     create_keypoints,
     create_keypoints3d,
     create_ndarray_float,
+    create_schema_ref,
     create_sequence_frame,
     create_track,
+    create_track_ref,
     create_tracklet,
     create_video,
+    create_view_ref,
+    is_annotation_ref,
+    is_base_type,
     is_bbox,
     is_bbox3d,
     is_cam_calibration,
     is_compressed_rle,
+    is_embedding_ref,
+    is_entity_ref,
     is_image,
+    is_item_ref,
     is_keypoints,
     is_keypoints3d,
     is_ndarray_float,
+    is_schema_ref,
     is_sequence_frame,
     is_track,
+    is_track_ref,
     is_tracklet,
     is_video,
+    is_view_ref,
 )
 
 
@@ -69,8 +86,10 @@ def create_row(schema: type[BaseSchema], **kwargs) -> BaseSchema:
     elif is_keypoints3d(schema, True):
         return create_keypoints3d(**kwargs)
 
-    else:
+    elif is_base_schema(schema, False):
         return schema(**kwargs)
+
+    raise ValueError(f"Schema {schema} is not a base schema.")
 
 
 def create_pixano_object(pix_type: type[BaseType], **kwargs) -> BaseType:
@@ -78,5 +97,28 @@ def create_pixano_object(pix_type: type[BaseType], **kwargs) -> BaseType:
     if is_ndarray_float(pix_type, True):
         return create_ndarray_float(**kwargs)
 
-    else:
-        raise ValueError(f"Pixano type {pix_type} not supported.")
+    elif is_schema_ref(pix_type, True):
+        return create_schema_ref(**kwargs)
+
+    elif is_item_ref(pix_type, True):
+        return create_item_ref(**kwargs)
+
+    elif is_view_ref(pix_type, True):
+        return create_view_ref(**kwargs)
+
+    elif is_entity_ref(pix_type, True):
+        return create_entity_ref(**kwargs)
+
+    elif is_track_ref(pix_type, True):
+        return create_track_ref(**kwargs)
+
+    elif is_annotation_ref(pix_type, True):
+        return create_annotation_ref(**kwargs)
+
+    elif is_embedding_ref(pix_type, True):
+        return create_embedding_ref(**kwargs)
+
+    elif is_base_type(pix_type, False):
+        return pix_type(**kwargs)
+
+    raise ValueError(f"Type {pix_type} not supported.")
