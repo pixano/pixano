@@ -17,7 +17,8 @@ class DatasetStat(BaseModel):
     Attributes:
         name (str): Stats name
         type (str): Stats type ('numerical' or 'categorical')
-        histogram (str): Stats histogram data
+        histogram (list[dict[str, float | int | str]]): Stats histogram data
+        range (list[int | float] | None): Stats range.
     """
 
     name: str
@@ -35,31 +36,26 @@ class DatasetStat(BaseModel):
         Returns:
             list[DatasetStats]: List of DatasetStat
         """
-        if isinstance(json_fp, S3Path):
-            with json_fp.open(encoding="utf-8") as json_file:
-                stats_json = json.load(json_file)
-        else:
-            with open(json_fp, encoding="utf-8") as json_file:
-                stats_json = json.load(json_file)
+        stats_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
         return [DatasetStat.model_validate(stat) for stat in stats_json]
 
-    def save(self, save_dir: Path | S3Path):
-        """Save DatasetInfo to json file.
+    def to_json(self, json_fp: Path):
+        """Save DatasetStats to json file.
 
         Replace existing histogram with same name in json_fp.
 
         Args:
-            save_dir (Path | S3Path): Save directory
+            json_fp (Path): Save directory
         """
         try:
-            stats_json = json.load(open(save_dir, "r", encoding="utf-8"))
+            stats_json = json.loads(json_fp.read_text(encoding="utf-8"))
         except FileNotFoundError:
             stats_json = []
         # keep all stats except the one with same name, we replace it if exist
         stats_json = [stat for stat in stats_json if stat["name"] != self.name]
         stats_json.append(
-            {"name": self.name, "type": self.type, "histogram": self.histogram}
+            {"name": self.name, "type": self.type, "histogram": self.histogram, "range": self.range}
         )
 
-        json.dump(stats_json, open(save_dir, "w", encoding="utf-8"), indent="\t")
+        json_fp.write_text(json.dumps(stats_json, indent=4), encoding="utf-8")

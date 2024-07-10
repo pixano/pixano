@@ -15,12 +15,12 @@ def test_register_type_internal():
         pass
 
     # Test 1: type is not registered
-    assert TestType.__name__.lower().replace(" ", "_") not in _TYPES_REGISTRY
+    assert TestType.__name__ not in _TYPES_REGISTRY
 
     _register_type_internal(TestType)
 
     # Test 2: type is registered
-    assert TestType.__name__.lower().replace(" ", "_") in _TYPES_REGISTRY
+    assert TestType.__name__ in _TYPES_REGISTRY
 
     # Test 3: type cannot be registered twice
     with pytest.raises(

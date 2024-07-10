@@ -18,7 +18,7 @@ from lancedb.table import Table
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 
-from .. import Dataset, DatasetLibrary
+from .. import Dataset, DatasetInfo
 from ..dataset_features_values import DatasetFeaturesValues
 from ..features import BaseSchema, Item, _SchemaGroup
 from ..features.schemas.views import image as image_schema
@@ -36,7 +36,7 @@ class DatasetBuilder(ABC):
         target_dir (Path): The target directory for the dataset.
         source_dir (Path): The source directory for the dataset.
         previews_path (Path): The path to the previews directory.
-        info (DatasetLibrary): Dataset informations (name, description, ...).
+        info (DatasetInfo): Dataset informations (name, description, ...).
         dataset_schema (DatasetSchema): The dataset schema for the dataset.
         schemas (dict[str, BaseSchema]): The schemas for the dataset tables infered from the dataset schema.
         db (lancedb.Database): The lancedb.Database instance for the dataset.
@@ -47,7 +47,7 @@ class DatasetBuilder(ABC):
         source_dir: Path | str,
         target_dir: Path | str,
         schemas: type[DatasetItem],
-        info: DatasetLibrary,
+        info: DatasetInfo,
     ):
         """Initialize the BaseDatasetBuilder instance.
 
@@ -55,7 +55,7 @@ class DatasetBuilder(ABC):
             source_dir (Path | str): The source directory for the dataset.
             target_dir (Path | str): The target directory for the dataset.
             schemas (type[DatasetItem]): The schemas for the dataset tables.
-            info (DatasetLibrary): Dataset informations (name, description, ...)
+            info (DatasetInfo): Dataset informations (name, description, ...)
                 for the dataset.
         """
         self.target_dir = Path(target_dir)

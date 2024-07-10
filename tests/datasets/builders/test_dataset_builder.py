@@ -13,7 +13,7 @@ import pytest
 
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
-from pixano.datasets.dataset_library import DatasetLibrary
+from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 from pixano.datasets.features import BBox, Entity, Image
 from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
@@ -32,7 +32,7 @@ def dataset_item():
 
 @pytest.fixture
 def info():
-    return DatasetLibrary(
+    return DatasetInfo(
         name="test",
         description="test",
     )
@@ -209,10 +209,10 @@ class TestDatasetBuilder:
 
         with pytest.raises(ValueError, match="ids should not contain spaces"):
             WrongIdBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetLibrary(name="test", description="test")
+                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()
 
         with pytest.raises(AssertionError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetLibrary(name="test", description="test")
+                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()

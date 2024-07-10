@@ -34,7 +34,7 @@ from .labels import (
     dota_ids,
     voc_names,
 )
-from .python import estimate_folder_size, issubclass_strict, natural_key
+from .python import estimate_folder_size, get_super_type_from_dict, issubclass_strict, natural_key
 
 
 __all__ = [
@@ -65,4 +65,5 @@ __all__ = [
     "voc_names",
     "estimate_folder_size",
     "natural_key",
+    "get_super_type_from_dict",
 ]
