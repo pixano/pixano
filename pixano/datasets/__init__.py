@@ -6,18 +6,16 @@
 
 from .dataset import Dataset
 from .dataset_explorer import DatasetExplorer
-from .dataset_library import DatasetLibrary
+from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
 from .dataset_stat import DatasetStat
-from .dataset_table import DatasetTable
 
 
 __all__ = [
     "Dataset",
-    "DatasetLibrary",
+    "DatasetInfo",
     "DatasetExplorer",
     "DatasetItem",
     "DatasetSchema",
     "DatasetStat",
-    "DatasetTable",
 ]

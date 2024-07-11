@@ -6,49 +6,45 @@
 
 from collections import defaultdict
 from pathlib import Path
+from typing import cast
 
 import duckdb
 import lancedb
 from lancedb.pydantic import LanceModel
 from lancedb.query import LanceQueryBuilder
+from lancedb.table import LanceTable
 from pydantic import ConfigDict
 from s3path import S3Path
 
+from pixano.datasets.features.schemas.items.item import Item
+
 from .dataset_features_values import DatasetFeaturesValues
-from .dataset_library import DatasetLibrary
+from .dataset_info import DatasetInfo
 from .dataset_schema import (
     DatasetItem,
     DatasetSchema,
     SchemaRelation,
-    create_custom_dataset_item_class_from_dataset_schema,
-    create_sub_dataset_item,
 )
 from .dataset_stat import DatasetStat
 from .features import _SchemaGroup
 
 
-def _lance_query_to_pydantic(
-    lance_query: LanceQueryBuilder,
-    model: type[LanceModel],
-    allow_extra_fields: bool = False,
-):
-    return [
-        model(
-            **{
-                k: v
-                for k, v in row.items()
-                if allow_extra_fields or k in model.field_names()
-            }
-        )
-        for row in lance_query.to_arrow().to_pylist()
-    ]
+def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
+    if ids is None and limit is None:
+        raise ValueError("Limit must be set if ids is None")
+    elif ids is not None and limit is not None:
+        raise ValueError("Ids and limit cannot be set at the same time")
+    elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
+        raise ValueError("Ids must be a list of strings")
+    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(offset, int) or offset < 0:
+        raise ValueError("Limit and offset must be positive integers")
 
 
 class Dataset:
     """Dataset.
 
     Attributes:
-        path (Path | S3Path): Dataset path
+        path (Path): Dataset path
         info (DatasetInfo, optional): Dataset info
         dataset_schema (DatasetSchema, optional): Dataset schema
         features_values (DatasetFeaturesValues, optional): Dataset features values
@@ -64,12 +60,12 @@ class Dataset:
     STAT_FILE: str = "stats.json"
     THUMB_FILE: str = "preview.png"
 
-    path: Path | S3Path
-    info: DatasetLibrary | None = None
-    dataset_schema: DatasetSchema | None = None
-    features_values: DatasetFeaturesValues | None = None
-    stats: list[DatasetStat] | None = None
-    thumbnail: str | None = None
+    path: Path
+    info: DatasetInfo
+    schema: DatasetSchema
+    features_values: DatasetFeaturesValues = DatasetFeaturesValues()
+    stats: list[DatasetStat] = []
+    thumbnail: str
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -86,16 +82,15 @@ class Dataset:
         thumb_file = path / self.THUMB_FILE
 
         self.path = path
-        self.info = DatasetLibrary.from_json(info_file)
-        self.dataset_schema = DatasetSchema.from_json(schema_file)
+        self.info = DatasetInfo.from_json(info_file)
+        self.schema = DatasetSchema.from_json(schema_file)
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
-        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else None
+        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
         self.thumbnail = thumb_file
 
-        self._custom_dataset_item_class = (
-            create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
-        )
         self._db_connection = self._connect()
+
+        self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
 
     @property
     def num_rows(self) -> int:
@@ -108,7 +103,7 @@ class Dataset:
         return len(self.open_table(_SchemaGroup.ITEM.value))
 
     @property
-    def _media_dir(self) -> Path | S3Path:
+    def media_dir(self) -> Path | S3Path:
         """Return dataset media directory.
 
         Returns:
@@ -134,19 +129,7 @@ class Dataset:
         Returns:
             DatasetSchema: Dataset schema
         """
-        self.dataset_schema = DatasetSchema.from_json(self.path / "schema.json")
-        self._custom_dataset_item_class = (
-            create_custom_dataset_item_class_from_dataset_schema(self.dataset_schema)
-        )
-
-    @property
-    def _CustomDatasetItem(self) -> DatasetItem:
-        """Return custom dataset item class.
-
-        Returns:
-            DatasetItem: Custom dataset item class
-        """
-        return self._custom_dataset_item_class
+        self.schema = DatasetSchema.from_json(self.path / "schema.json")
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.
@@ -156,38 +139,7 @@ class Dataset:
         """
         return lancedb.connect(self._db_path)
 
-    def open_tables(
-        self, names: list[str] | None = None
-    ) -> dict[str, lancedb.db.LanceTable]:
-        """Open dataset tables with LanceDB.
-
-        Args:
-            names (list[str] | None, optional): Table names to open. Default is None.
-
-        Returns:
-            dict[str, lancedb.db.LanceTable]: Dataset tables
-        """
-        ds_tables: dict[str, lancedb.db.LanceTable] = defaultdict(dict)
-
-        for table_name in self.dataset_schema.schemas.keys():
-            if names is None or table_name in names:
-                ds_tables[table_name] = self._db_connection.open_table(table_name)
-
-        return ds_tables
-
-    def open_table(self, name) -> lancedb.db.LanceTable:
-        """Open dataset table with LanceDB.
-
-        Returns:
-            lancedb.db.LanceTable: Dataset table
-        """
-        for table_name in self.dataset_schema.schemas.keys():
-            if table_name == name:
-                return self._db_connection.open_table(table_name)
-
-        raise ValueError(f"Table {name} not found in dataset")
-
-    def _search_values_by_field_in_table(
+    def _search_by_field(
         self,
         table: lancedb.db.LanceTable,
         field: str,
@@ -202,503 +154,157 @@ class Dataset:
             .limit(limit)
         )
 
-    def _read_items_data(
+    def _search_by_ids(
         self,
         ids: list[str],
-        select_schemas: list[str] | None = None,
-    ) -> dict[str, dict[str, dict[str, LanceModel]]]:
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else tuple(ids)
+        table: LanceTable,
+        limit: int | None = None,
+    ) -> LanceQueryBuilder:
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        return self._search_by_field(table, "id", sql_ids, limit)
+
+    def open_tables(self, names: list[str] | None = None) -> dict[str, LanceTable]:
+        """Open dataset tables with LanceDB.
+
+        Args:
+            names (list[str] | None, optional): Table names to open. If None, open all tables.
+
+        Returns:
+            dict[str, LanceTable]: Dataset tables
+        """
+        tables: dict[str, LanceTable] = defaultdict(dict)
+
+        for name in names if names is not None else self.schema.schemas.keys():
+            tables[name] = self.open_table(name)
+
+        return tables
+
+    def open_table(self, name) -> LanceTable:
+        """Open dataset table with LanceDB.
+
+        Returns:
+            LanceTable: Dataset table
+        """
+        for table_name in self.schema.schemas.keys():
+            if table_name == name:
+                return self._db_connection.open_table(table_name)
+
+        raise ValueError(f"Table {name} not found in dataset")
+
+    def get_data(
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[LanceModel]:
+        """Read data from a table.
+
+        Args:
+            table_name (str): Table name.
+            ids (list[str]): ids to read.
+            limit (int | None, optional): Limit.
+            offset (int, optional): Offset.
+
+        Returns:
+            list[LanceModel]: List of values.
+        """
+        _validate_ids_and_limit_and_offset(ids, limit, offset)
+
+        table = self.open_table(table_name)
+
+        if ids is None:
+            lance_table = table.to_lance()  # noqa: F841
+            item_rows = (
+                duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
+                .to_arrow_table()
+                .to_pylist()
+            )
+            model = self.schema.schemas[table_name]
+            return [model(**{k: v for k, v in row.items() if k in model.field_names()}) for row in item_rows]
+        return self._search_by_ids(ids, table, limit).to_pydantic(self.schema.schemas[table_name])
+
+    def get_dataset_items(
+        self,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+    ) -> list[DatasetItem]:
+        """Read dataset items.
+
+        Args:
+            ids (list[str] | None, optional): Item ids to read.
+            limit (int | None, optional): Limit.
+            offset (int, optional): Offset.
+
+        Returns:
+            list[DatasetItem]: List of dataset items.
+        """
+        _validate_ids_and_limit_and_offset(ids, limit, offset)
+
+        items = cast(list[Item], self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset))
+        item_ids: list[str] = [item.id for item in items]
+        sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
         # Load tables
-        ds_tables = self.open_tables(select_schemas)
+        ds_tables = self.open_tables()
 
         # Load items data from the tables
-        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {
-            id: {} for id in ids
-        }
+        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {item.id: item.model_dump() for item in items}
         for table_name, table in ds_tables.items():
-            is_item_table = table_name == _SchemaGroup.ITEM.value
-            item_id_field = "id" if is_item_table else "item_ref.id"
-            if not is_item_table:
-                is_collection = (
-                    self.dataset_schema.relations[_SchemaGroup.ITEM.value][table_name]
-                    == SchemaRelation.ONE_TO_MANY
-                )
-            table_schema = self.dataset_schema.schemas[table_name]
-
-            lance_query = self._search_values_by_field_in_table(
-                table, item_id_field, sql_ids
+            if table_name == _SchemaGroup.ITEM.value:
+                continue
+            is_collection = (
+                self.schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             )
-            pydantic_table = _lance_query_to_pydantic(lance_query, table_schema)
+            table_schema = self.schema.schemas[table_name]
+
+            lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
+            pydantic_table = lance_query.to_pydantic(table_schema)
 
             for row in pydantic_table:
-                id = row.id if is_item_table else row.item_ref.id
-                if is_item_table:
-                    data_dict[id].update(row)
-                elif is_collection:
-                    if table_name not in data_dict[id]:
-                        data_dict[id][table_name] = []
-                    data_dict[id][table_name].append(row)
+                item_id = row.item_ref.id
+                if is_collection:
+                    if table_name not in data_dict[item_id]:
+                        data_dict[item_id][table_name] = []
+                    data_dict[item_id][table_name].append(row)
                 else:
-                    data_dict[id][table_name] = row
+                    data_dict[item_id][table_name] = row
 
-        # Raise error if some ids are not found
-        ids_not_found = [id for id in ids if len(data_dict[id]) == 0]
-        if len(ids_not_found) > 0:
-            raise ValueError(
-                f"Ids {ids_not_found} not found in {_SchemaGroup.ITEM.value} table"
-            )
-
-        return data_dict
-
-    def _read_data(
-        self,
-        ids: list[str],
-        select_schema_groups: list[_SchemaGroup] | None = None,
-        select_schemas_per_group: dict[_SchemaGroup, list[str]] | None = None,
-    ) -> list[DatasetItem]:  # type: ignore
-        if select_schema_groups or select_schemas_per_group:
-            select_schemas = []
-        else:
-            select_schemas = None
-
-        if select_schema_groups:
-            for schema_group in select_schema_groups:
-                if schema_group not in _SchemaGroup:
-                    raise ValueError(f"Schema group {schema_group} not found")
-                else:
-                    select_schemas.extend(self.dataset_schema._groups[schema_group])
-        if select_schemas_per_group:
-            for schema_group, schemas in select_schemas_per_group.items():
-                if schema_group not in _SchemaGroup:
-                    raise ValueError(f"Schema group {schema_group} not found")
-                elif select_schema_groups and schema_group in select_schema_groups:
-                    raise ValueError(
-                        f"Schema group {schema_group} is in both select_schema_groups "
-                        "and select_schemas_per_group"
-                    )
-                else:
-                    select_schemas.extend(schemas)
-
-        data_dict = self._read_items_data(ids, select_schemas)
-
-        if select_schemas is not None and _SchemaGroup.ITEM.value not in select_schemas:
-            for id in ids:
-                data_dict[id].update({"id": id})
-
-        if select_schemas is not None:
-            custom_dataset_item = create_sub_dataset_item(
-                self._CustomDatasetItem, select_schemas
-            )
-        else:
-            custom_dataset_item = self._CustomDatasetItem
-
-        dataset_items = [custom_dataset_item(**data_dict[id]) for id in ids]
+        dataset_items = [self.dataset_item_model(**data_dict[item_id]) for item_id in item_ids]
 
         return dataset_items
 
-    def _read_schema_group_data(
-        self,
-        ids: list[str],
-        group: _SchemaGroup,
-        select_schemas: list[str] | None = None,
-    ) -> list[DatasetItem]:
-        if select_schemas:
-            select_schemas_per_group = {
-                group: [
-                    DatasetSchema.format_table_name(schema) for schema in select_schemas
-                ]
-            }
-            return self._read_data(ids, None, select_schemas_per_group)
-        return self._read_data(ids, [group], None)
-
-    def _get_data(
-        self,
-        offset: int,
-        limit: int,
-        select_schema_groups: list[_SchemaGroup] | None = None,
-        select_schemas_per_group: dict[_SchemaGroup, list[str]] | None = None,
-    ) -> list[DatasetItem]:
-        """Get items from dataset.
-
-        Args:
-            offset (int): Offset
-            limit (int): Limit
-            select_schema_groups (list[_SchemaGroup] | None, optional): Schema groups
-                to read. Default is None.
-            select_schemas_per_group (dict[_SchemaGroup, list[str]] | None, optional):
-                Tables to read per group. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        if select_schema_groups or select_schemas_per_group:
-            select_schemas = []
-        else:
-            select_schemas = None
-
-        if select_schema_groups:
-            for schema_group in select_schema_groups:
-                if schema_group not in _SchemaGroup:
-                    raise ValueError(f"Schema group {schema_group} not found")
-                else:
-                    select_schemas.extend(self.dataset_schema._groups[schema_group])
-        if select_schemas_per_group:
-            for schema_group, schemas in select_schemas_per_group.items():
-                if schema_group not in _SchemaGroup:
-                    raise ValueError(f"Schema group {schema_group} not found")
-                elif select_schema_groups and schema_group in select_schema_groups:
-                    raise ValueError(
-                        f"Schema group {schema_group} is in both select_schema_groups "
-                        "and select_schemas_per_group"
-                    )
-                else:
-                    select_schemas.extend(schemas)
-
-        item_table = self.open_table(_SchemaGroup.ITEM.value).to_lance()  # noqa: F841
-        select_item = (
-            select_schemas is None or _SchemaGroup.ITEM.value in select_schemas
-        )
-        item_columns_selected = "*" if select_item else "id"
-        item_rows = (
-            duckdb.query(
-                f"SELECT {item_columns_selected} FROM item_table ORDER BY len(id),"
-                f"id LIMIT {limit} OFFSET {offset}"
-            )
-            .to_arrow_table()
-            .to_pylist()
-        )
-
-        if select_item:
-            item_models = {}
-        ids = []
-        for row in item_rows:
-            if select_item:
-                item_models[row["id"]] = self.dataset_schema.schemas[
-                    _SchemaGroup.ITEM.value
-                ](**row)
-                ids.append(row["id"])
-            else:
-                ids.append(row["id"])
-
-        data_dict = self._read_items_data(
-            ids,
-            [
-                schema
-                for schema in self.dataset_schema.schemas
-                if schema != _SchemaGroup.ITEM.value
-                and (select_schemas is None or schema in select_schemas)
-            ],
-        )
-
-        if select_schemas is not None:
-            custom_dataset_item = create_sub_dataset_item(
-                self._CustomDatasetItem, select_schemas
-            )
-        else:
-            custom_dataset_item = self._CustomDatasetItem
-
-        dataset_items = []
-        for id in data_dict.keys():
-            if select_item:
-                data_dict[id].update(item_models.pop(id))
-                dataset_items.append(custom_dataset_item(**data_dict[id]))
-            else:
-                data_dict[id].update({"id": id})
-                dataset_items.append(custom_dataset_item(**data_dict[id]))
-
-        return dataset_items
-
-    def _get_schema_group_data(
-        self,
-        offset: int,
-        limit: int,
-        group: _SchemaGroup,
-        select: list[str] | None = None,
-    ) -> list[DatasetItem]:
-        if select:
-            select_schemas_per_group = {
-                group: [DatasetSchema.format_table_name(table) for table in select]
-            }
-            return self._get_data(offset, limit, None, select_schemas_per_group)
-        return self._get_data(offset, limit, [group], None)
-
-    def read_items(
-        self,
-        ids: list[str],
-    ) -> list[DatasetItem]:  # type: ignore
-        """Read items from dataset.
-
-        Args:
-            ids (list[str]): Item ids
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._read_data(ids, None, None)
-
-    def read_item(
-        self,
-        id: str,
-    ) -> DatasetItem:
-        """Read item from dataset.
-
-        Args:
-            id (str): Item id
-
-        Returns:
-            DatasetItem: Dataset item
-        """
-        return self.read_items([id])[0]
-
-    def get_items(
-        self,
-        offset: int,
-        limit: int,
-    ) -> list[DatasetItem]:
-        """Get items from dataset.
-
-        Args:
-            offset (int): Offset
-            limit (int): Limit
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._get_data(offset, limit)
-
-    def get_item(
-        self,
-        idx: int,
-    ) -> list[DatasetItem]:
-        """Get item from dataset.
-
-        Args:
-            idx (int): Index
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self.get_items(idx, 1)[0]
-
-    def get_all_ids(
-        self, table_name: str | None = _SchemaGroup.ITEM.value
-    ) -> list[str]:
+    def get_all_ids(self, table_name: str = _SchemaGroup.ITEM.value) -> list[str]:
         """Get all ids from a table.
 
         Args:
-            table_name (str | None, optional): table to look for ids.
-                Defaults to _SchemaGroup.ITEM.value.
+            table_name (str, optional): table to look for ids.
 
         Returns:
             list[str]: list of ids.
         """
-        query = (
-            self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
-        )
+        query = self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
         return sorted(row.as_py() for row in query["id"])
-
-    def read_views(
-        self, ids: list[str], select: list[str] | None = None
-    ) -> list[DatasetItem]:  # type: ignore
-        """Read views from dataset.
-
-        Args:
-            ids (list[str]): Item ids.
-            select (list[str] | None, optional): Views to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items.
-        """
-        return self._read_schema_group_data(ids, _SchemaGroup.VIEW, select)
-
-    def read_view(self, id: str, select: list[str] | None = None) -> DatasetItem:
-        """Read view from dataset.
-
-        Args:
-            id (str): Item id.
-            select (list[str] | None, optional): Views to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset item
-        """
-        return self.read_views([id], select)[0]
-
-    def get_views(
-        self,
-        offset: int,
-        limit: int,
-        select: list[str] | None = None,
-    ) -> list[DatasetItem]:
-        """Get views from dataset.
-
-        Args:
-            offset (int): Offset
-            limit (int): Limit
-            select (list[str] | None, optional): Views to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._get_schema_group_data(offset, limit, _SchemaGroup.VIEW, select)
-
-    def get_view(
-        self,
-        idx: int,
-        select: list[str] | None = None,
-    ) -> DatasetItem:
-        """Get view from dataset.
-
-        Args:
-            idx (int): Index.
-            select (list[str] | None, optional): Views to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset items
-        """
-        return self.get_views(idx, 1, select)[0]
-
-    def read_entities(
-        self, ids: list[str], select: list[str] | None = None
-    ) -> list[DatasetItem]:  # type: ignore
-        """Read entities from dataset.
-
-        Args:
-            ids (list[str]): Item ids.
-            select (list[str] | None, optional): Entities to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._read_schema_group_data(ids, _SchemaGroup.ENTITY, select)
-
-    def read_entity(self, id: str, select: list[str] | None = None) -> DatasetItem:
-        """Read entity from dataset.
-
-        Args:
-            id (str): Item id.
-            select (list[str] | None, optional): Entities to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset item
-        """
-        return self.read_entities([id], select)[0]
-
-    def get_entities(
-        self,
-        offset: int,
-        limit: int,
-        select: list[str] | None = None,
-    ) -> list[DatasetItem]:
-        """Get entities from dataset.
-
-        Args:
-            offset (int): Offset
-            limit (int): Limit
-            select (list[str]  | None, optional): Entities to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._get_schema_group_data(offset, limit, _SchemaGroup.ENTITY, select)
-
-    def get_entity(
-        self,
-        idx: int,
-        select: list[str] | None = None,
-    ) -> DatasetItem:
-        """Get entity from dataset.
-
-        Args:
-            idx (int): Index.
-            select (list[str] | None, optional): Entities to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset items
-        """
-        return self.get_entities(idx, 1, select)[0]
-
-    def read_embeddings(
-        self, ids: list[str], select: list[str] | None = None
-    ) -> list[DatasetItem]:  # type: ignore
-        """Read embeddings from dataset.
-
-        Args:
-            ids (list[str]): Item ids.
-            select (list[str] | None, optional): Embeddings to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._read_schema_group_data(ids, _SchemaGroup.EMBEDDING, select)
-
-    def read_embedding(self, id: str, select: list[str] | None = None) -> DatasetItem:
-        """Read embedding from dataset.
-
-        Args:
-            id (str): Item id.
-            select (list[str] | None, optional): Embeddings to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset item
-        """
-        ##TMP no embeddings now
-        return None  # self.read_embeddings([id], select)[0]
-
-    def get_embeddings(
-        self,
-        offset: int,
-        limit: int,
-        select: list[str] | None = None,
-    ) -> list[DatasetItem]:
-        """Get embeddings from dataset.
-
-        Args:
-            offset (int): Offset
-            limit (int): Limit
-            select (list[str] | None, optional): Embeddings to read. Default is None.
-
-        Returns:
-            list[DatasetItem]: Dataset items
-        """
-        return self._get_schema_group_data(
-            offset, limit, _SchemaGroup.EMBEDDING, select
-        )
-
-    def get_embedding(
-        self,
-        idx: int,
-        select: list[str] | None = None,
-    ) -> DatasetItem:
-        """Get embedding from dataset.
-
-        Args:
-            idx (int): Index.
-            select (list[str] | None, optional): Embeddings to read. Default is None.
-
-        Returns:
-            DatasetItem: Dataset items
-        """
-        return self.get_embedding(idx, 1, select)[0]
 
     @staticmethod
     def find(
-        dataset_id: str,
-        directory: Path | S3Path,
+        id: str,
+        directory: Path,
     ) -> "Dataset":
         """Find Dataset in directory.
 
         Args:
-            dataset_id (str): Dataset ID.
-            directory (Path | S3Path): Directory to search in.
+            id (str): Dataset ID.
+            directory (Path): Directory to search in.
 
         Returns:
             Dataset: The found dataset.
         """
         # Browse directory
         for json_fp in directory.glob("*/info.json"):
-            info = DatasetLibrary.from_json(json_fp)
-            if info.id == dataset_id:
+            info = DatasetInfo.from_json(json_fp)
+            if info.id == id:
                 # Return dataset
                 return Dataset(json_fp.parent)
-        return None
+        raise FileNotFoundError(f"Dataset {id} not found in {directory}")

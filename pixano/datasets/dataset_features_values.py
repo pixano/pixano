@@ -26,7 +26,7 @@ class DatasetFeaturesValues(BaseModel):
     entities: dict[str, list] = {}
     annotations: dict[str, list] = {}
 
-    def to_json(self, json_fp: Path | S3Path) -> None:
+    def to_json(self, json_fp: Path) -> None:
         """Save DatasetFeaturesValues to json file."""
         json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
 

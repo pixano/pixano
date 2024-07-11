@@ -14,8 +14,8 @@ from .dataset_schema import DatasetSchema
 from .features import Image
 
 
-class DatasetLibrary(BaseModel):
-    """DatasetLibrary. Data for a dataset library card in Datasets Library page.
+class DatasetInfo(BaseModel):
+    """DatasetInfo. Data to store information of the datasets.
 
     Attributes:
         id (str): Dataset ID
@@ -26,9 +26,9 @@ class DatasetLibrary(BaseModel):
         preview (str): Path to a preview thumbnail
     """
 
-    id: str = None
-    name: str
-    description: str
+    id: str = ""
+    name: str = ""
+    description: str = ""
     size: str = "Unknown"
     num_elements: int = 0
     preview: str = ""
@@ -45,37 +45,37 @@ class DatasetLibrary(BaseModel):
     @staticmethod
     def from_json(
         json_fp: Path,
-    ) -> "DatasetLibrary":
-        """Read DatasetLibrary from JSON file.
+    ) -> "DatasetInfo":
+        """Read DatasetInfo from JSON file.
 
         Args:
             json_fp (Path): JSON file path
 
         Returns:
-            DatasetLibrary: DatasetInfo
+            DatasetInfo: DatasetInfo
         """
         info_json = json.loads(json_fp.read_text(encoding="utf-8"))
-        info = DatasetLibrary.model_validate(info_json)
+        info = DatasetInfo.model_validate(info_json)
 
         return info
 
     @staticmethod
     def load_directory(
         directory: Path,
-    ) -> list["DatasetLibrary"]:
-        """Load list of DatasetLibrary from directory.
+    ) -> list["DatasetInfo"]:
+        """Load list of DatasetInfo from directory.
 
         Args:
             directory (Path): Directory to load
 
         Returns:
-            list[DatasetLibrary]: List of DatasetLibrary
+            list[DatasetInfo]: List of DatasetInfo
         """
         library = []
 
         # Browse directory
         for json_fp in sorted(directory.glob("*/info.json")):
-            info = DatasetLibrary.from_json(json_fp)
+            info = DatasetInfo.from_json(json_fp)
             library.append(
                 {
                     "id": info.id,

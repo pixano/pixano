@@ -65,3 +65,29 @@ def issubclass_strict(obj: type, cls: type, strict: bool = False) -> bool:
     if strict:
         return obj == cls
     return issubclass(obj, cls)
+
+
+def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> type | None:
+    """Get the first super type in a dictionary of types from type."""
+    if sub_type in dict_types.values():
+        return sub_type
+
+    sup_type = None
+    for dict_type in dict_types.values():
+        if issubclass(sub_type, dict_type):
+            sup_type = dict_type
+            break
+
+    if sup_type is None:
+        return None
+
+    found_type = True
+    while found_type:
+        found_type = False
+        for dict_type in dict_types.values():
+            if issubclass(sub_type, dict_type) and issubclass(dict_type, sup_type) and dict_type is not sup_type:
+                sup_type = dict_type
+                found_type = True
+                break
+
+    return sup_type

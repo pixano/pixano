@@ -10,7 +10,7 @@ from typing import Any, Iterator, Mapping
 import pyarrow.json as pa_json
 import shortuuid
 
-from pixano.datasets.dataset_library import DatasetLibrary
+from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
 from pixano.datasets.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
 from pixano.datasets.features.schemas.annotations.annotation import Annotation
@@ -72,7 +72,7 @@ class FolderBaseBuilder(DatasetBuilder):
     EXTENSIONS: list[str]
 
     def __init__(
-        self, source_dir: Path | str, target_dir: Path | str, schemas: type[DatasetItem], info: DatasetLibrary
+        self, source_dir: Path | str, target_dir: Path | str, schemas: type[DatasetItem], info: DatasetInfo
     ) -> None:
         """Initialize the FolderBaseBuilder.
 
@@ -80,7 +80,7 @@ class FolderBaseBuilder(DatasetBuilder):
             source_dir (Path | str): The source directory for the dataset.
             target_dir (Path | str): The target directory for the dataset.
             schemas (type[DatasetItem]): The schemas for the dataset tables.
-            info (DatasetLibrary): User informations (name, description, ...)
+            info (DatasetInfo): User informations (name, description, ...)
             for the dataset.
         """
         super().__init__(source_dir, target_dir, schemas, info)

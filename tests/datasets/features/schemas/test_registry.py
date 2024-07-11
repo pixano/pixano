@@ -20,14 +20,14 @@ def test_register_schema_internal():
         pass
 
     # Test 1: type is not registered
-    assert TestSchema.__name__.lower().replace(" ", "_") not in _SCHEMA_REGISTRY
-    assert TestSchema.__name__.lower().replace(" ", "_") not in _PIXANO_SCHEMA_REGISTRY
+    assert TestSchema.__name__ not in _SCHEMA_REGISTRY
+    assert TestSchema.__name__ not in _PIXANO_SCHEMA_REGISTRY
 
     _register_schema_internal(TestSchema)
 
     # Test 2: type is registered
-    assert TestSchema.__name__.lower().replace(" ", "_") in _SCHEMA_REGISTRY
-    assert TestSchema.__name__.lower().replace(" ", "_") in _PIXANO_SCHEMA_REGISTRY
+    assert TestSchema.__name__ in _SCHEMA_REGISTRY
+    assert TestSchema.__name__ in _PIXANO_SCHEMA_REGISTRY
 
     # Test 3: type cannot be registered twice
     with pytest.raises(
@@ -58,16 +58,16 @@ def test_register_schema():
         pass
 
     # Test 1: type is not registered
-    assert TestSchema2.__name__.lower().replace(" ", "_") not in _SCHEMA_REGISTRY
-    assert TestSchema2.__name__.lower().replace(" ", "_") not in _PIXANO_SCHEMA_REGISTRY
+    assert TestSchema2.__name__ not in _SCHEMA_REGISTRY
+    assert TestSchema2.__name__ not in _PIXANO_SCHEMA_REGISTRY
 
     @register_schema
     class TestSchema2(BaseSchema):
         pass
 
     # Test 2: type is registered
-    assert TestSchema2.__name__.lower().replace(" ", "_") in _SCHEMA_REGISTRY
-    assert TestSchema2.__name__.lower().replace(" ", "_") not in _PIXANO_SCHEMA_REGISTRY
+    assert TestSchema2.__name__ in _SCHEMA_REGISTRY
+    assert TestSchema2.__name__ not in _PIXANO_SCHEMA_REGISTRY
 
     # Test 3: type cannot be registered twice
     with pytest.raises(

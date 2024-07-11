@@ -9,16 +9,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets import Dataset, DatasetLibrary
+from pixano.datasets import Dataset, DatasetInfo
 
 
 router = APIRouter(tags=["datasets"])
 
 
-@router.get("/datasets", response_model=list[DatasetLibrary])
+@router.get("/datasets", response_model=list[DatasetInfo])
 async def get_datasets(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> list[DatasetLibrary]:
+) -> list[DatasetInfo]:
     """Load dataset list.
 
     Args:
@@ -28,7 +28,7 @@ async def get_datasets(
         list[DatasetInfo]: List of dataset infos
     """
     # Load datasets
-    infos = DatasetLibrary.load_directory(directory=settings.data_dir)
+    infos = DatasetInfo.load_directory(directory=settings.data_dir)
 
     # Return datasets
     if infos:
@@ -40,11 +40,11 @@ async def get_datasets(
 
 
 ####### why do we need this one ?? should be removed ? ################
-@router.get("/datasets/{ds_id}", response_model=DatasetLibrary)
+@router.get("/datasets/{ds_id}", response_model=DatasetInfo)
 async def get_dataset(
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> DatasetLibrary:
+) -> DatasetInfo:
     """Load dataset.
 
     **!!! UNUSED ? !!!**
@@ -54,7 +54,7 @@ async def get_dataset(
         settings (Settings): App settings
 
     Returns:
-        DatasetLibrary: Dataset library info
+        DatasetInfo: Dataset library info
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -63,7 +63,7 @@ async def get_dataset(
     if dataset:
         # return dataset.load_info(load_stats=True, load_features_values=True)
         ### TMP missing stats and features_values
-        tables = DatasetLibrary.tables_from_schema(dataset.dataset_schema)
+        tables = DatasetInfo.tables_from_schema(dataset.schema)
         legacy_info = {
             "id": dataset.info.id,
             "name": dataset.info.name,

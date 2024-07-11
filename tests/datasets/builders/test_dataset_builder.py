@@ -13,10 +13,10 @@ import pytest
 
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
-from pixano.datasets.dataset_library import DatasetLibrary
+from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
-from pixano.datasets.features import BBox, Entity, Image
-from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
+from pixano.datasets.features import BBox, Entity, Image, KeyPoints
+from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 
 
 @pytest.fixture
@@ -26,13 +26,14 @@ def dataset_item():
         metadata: str
         entities: list[Entity]
         bboxes: list[BBox]
+        keypoint: KeyPoints
 
     return Schema
 
 
 @pytest.fixture
 def info():
-    return DatasetLibrary(
+    return DatasetInfo(
         name="test",
         description="test",
     )
@@ -48,7 +49,7 @@ class DumbDatasetBuilder(DatasetBuilder):
             item_id = str(i)
             image = Image(
                 id=f"image_{i}",
-                item_id=item_id,
+                item_ref=ItemRef(id=item_id),
                 url=f"image_{i}.jpg",
                 width=100,
                 height=100,
@@ -56,7 +57,7 @@ class DumbDatasetBuilder(DatasetBuilder):
             )
             entities = []
             bboxes = []
-            for j in range(0 if i % 2 else 2):
+            for j in range(0 if not (i % 2) else 2):
                 entities.append(
                     Entity(
                         id=f"entity_{i}_{j}",
@@ -73,7 +74,7 @@ class DumbDatasetBuilder(DatasetBuilder):
                         id=f"bbox_{i}_{j}",
                         item_ref=ItemRef(id=item_id),
                         view_ref=ViewRef(id=f"image_{i}", name="image"),
-                        entity_id=f"entity_{i}_{j}",
+                        entity_ref=EntityRef(id=f"entity_{i}_{j}", name="entities"),
                     )
                 )
 
@@ -83,6 +84,7 @@ class DumbDatasetBuilder(DatasetBuilder):
                     id=item_id, metadata=f"metadata_{i}", split="train" if i % 2 else "test"
                 ),
                 "entities": entities,
+                "bboxes": bboxes,
             }
 
 
@@ -106,7 +108,7 @@ class TestDatasetBuilder:
         assert builder.previews_path == Path(target_dir) / Dataset.PREVIEWS_PATH
         assert builder.info == info
         assert isinstance(builder.dataset_schema, DatasetSchema)
-        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes"}
+        assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
         for (key1, value1), (key2, value2) in zip(
             builder.schemas.items(), dataset_item.to_dataset_schema().schemas.items(), strict=True
         ):
@@ -142,14 +144,14 @@ class TestDatasetBuilder:
         assert isinstance(dataset, Dataset)
         assert dataset.info == builder.info
         assert dataset.num_rows == 5
-        assert set(dataset.open_tables().keys()) == {"image", "item", "entities", "bboxes"}
+        assert set(dataset.open_tables().keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
 
         assert compact_dataset_mock.call_count == 1
         if compact_every_n_transactions is None:
             assert compact_table_mock.call_count == 0
         else:
             if flush_every_n_samples is None:
-                assert compact_table_mock.call_count == 6
+                assert compact_table_mock.call_count == 8
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 0
             else:
@@ -189,7 +191,7 @@ class TestDatasetBuilder:
             assert compact_table_mock.call_count == 0
         else:
             if flush_every_n_samples is None:
-                assert compact_table_mock.call_count == 14
+                assert compact_table_mock.call_count == 18
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 2
             else:
@@ -209,10 +211,10 @@ class TestDatasetBuilder:
 
         with pytest.raises(ValueError, match="ids should not contain spaces"):
             WrongIdBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetLibrary(name="test", description="test")
+                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()
 
         with pytest.raises(AssertionError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetLibrary(name="test", description="test")
+                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()

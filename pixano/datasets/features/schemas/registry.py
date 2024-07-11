@@ -7,15 +7,15 @@
 from .base_schema import BaseSchema
 
 
-_PIXANO_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
-_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {}
+_PIXANO_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {"BaseSchema": BaseSchema}
+_SCHEMA_REGISTRY: dict[str, type[BaseSchema]] = {"BaseSchema": BaseSchema}
 
 
 def _add_schema_to_registry(schema: type[BaseSchema], registry: dict[str, type[BaseSchema]]) -> None:
     if not issubclass(schema, BaseSchema):
         raise ValueError(f"Schema {schema} must be a subclass of BaseSchema")
 
-    schema_name = schema.__name__.lower().replace(" ", "_")
+    schema_name = schema.__name__
     if schema_name in registry:
         raise ValueError(f"Schema {schema} already registered")
     registry[schema_name] = schema
