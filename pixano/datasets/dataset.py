@@ -34,7 +34,7 @@ def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None,
         raise ValueError("Limit must be set if ids is None")
     elif ids is not None and limit is not None:
         raise ValueError("Ids and limit cannot be set at the same time")
-    elif ids is not None  and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
+    elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
         raise ValueError("Ids must be a list of strings")
     elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(offset, int) or offset < 0:
         raise ValueError("Limit and offset must be positive integers")
@@ -62,10 +62,10 @@ class Dataset:
 
     path: Path
     info: DatasetInfo
-    dataset_schema: DatasetSchema
-    features_values: DatasetFeaturesValues | None = None
-    stats: list[DatasetStat] | None = None
-    thumbnail: str | None = None
+    schema: DatasetSchema
+    features_values: DatasetFeaturesValues = DatasetFeaturesValues()
+    stats: list[DatasetStat] = []
+    thumbnail: str
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -83,14 +83,14 @@ class Dataset:
 
         self.path = path
         self.info = DatasetInfo.from_json(info_file)
-        self.dataset_schema = DatasetSchema.from_json(schema_file)
+        self.schema = DatasetSchema.from_json(schema_file)
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
-        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else None
+        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
         self.thumbnail = thumb_file
 
         self._db_connection = self._connect()
 
-        self.dataset_item_model = DatasetItem.from_dataset_schema(self.dataset_schema)
+        self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
 
     @property
     def num_rows(self) -> int:
@@ -129,7 +129,7 @@ class Dataset:
         Returns:
             DatasetSchema: Dataset schema
         """
-        self.dataset_schema = DatasetSchema.from_json(self.path / "schema.json")
+        self.schema = DatasetSchema.from_json(self.path / "schema.json")
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.
@@ -141,7 +141,7 @@ class Dataset:
 
     def _search_by_field(
         self,
-        table: LanceTable,
+        table: lancedb.db.LanceTable,
         field: str,
         values: str,
         limit: int | None = None,
@@ -174,7 +174,7 @@ class Dataset:
         """
         tables: dict[str, LanceTable] = defaultdict(dict)
 
-        for name in names if names is not None else self.dataset_schema.schemas.keys():
+        for name in names if names is not None else self.schema.schemas.keys():
             tables[name] = self.open_table(name)
 
         return tables
@@ -185,7 +185,7 @@ class Dataset:
         Returns:
             LanceTable: Dataset table
         """
-        for table_name in self.dataset_schema.schemas.keys():
+        for table_name in self.schema.schemas.keys():
             if table_name == name:
                 return self._db_connection.open_table(table_name)
 
@@ -214,15 +214,15 @@ class Dataset:
         table = self.open_table(table_name)
 
         if ids is None:
-            lance_table = table.to_lance() # noqa: F841
+            lance_table = table.to_lance()  # noqa: F841
             item_rows = (
                 duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
                 .to_arrow_table()
                 .to_pylist()
             )
-            model = self.dataset_schema.schemas[table_name]
+            model = self.schema.schemas[table_name]
             return [model(**{k: v for k, v in row.items() if k in model.field_names()}) for row in item_rows]
-        return self._search_by_ids(ids, table, limit).to_pydantic(self.dataset_schema.schemas[table_name])
+        return self._search_by_ids(ids, table, limit).to_pydantic(self.schema.schemas[table_name])
 
     def get_dataset_items(
         self,
@@ -250,16 +250,14 @@ class Dataset:
         ds_tables = self.open_tables()
 
         # Load items data from the tables
-        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {
-            item.id: item.model_dump() for item in items
-        }
+        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {item.id: item.model_dump() for item in items}
         for table_name, table in ds_tables.items():
             if table_name == _SchemaGroup.ITEM.value:
                 continue
             is_collection = (
-                self.dataset_schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
+                self.schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             )
-            table_schema = self.dataset_schema.schemas[table_name]
+            table_schema = self.schema.schemas[table_name]
 
             lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
             pydantic_table = lance_query.to_pydantic(table_schema)
@@ -292,15 +290,13 @@ class Dataset:
     @staticmethod
     def find(
         id: str,
-        directory: Path | S3Path,
-        error_if_not_found: bool = True,
+        directory: Path,
     ) -> "Dataset":
         """Find Dataset in directory.
 
         Args:
             id (str): Dataset ID.
-            directory (Path | S3Path): Directory to search in.
-            error_if_not_found (bool, optional): Raise error if not found else return None.
+            directory (Path): Directory to search in.
 
         Returns:
             Dataset: The found dataset.
@@ -311,7 +307,4 @@ class Dataset:
             if info.id == id:
                 # Return dataset
                 return Dataset(json_fp.parent)
-        if error_if_not_found:
-            raise ValueError(f"Dataset {id} not found in {directory}")
-        else:
-            return None
+        raise FileNotFoundError(f"Dataset {id} not found in {directory}")

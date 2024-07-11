@@ -63,7 +63,7 @@ async def get_dataset(
     if dataset:
         # return dataset.load_info(load_stats=True, load_features_values=True)
         ### TMP missing stats and features_values
-        tables = DatasetInfo.tables_from_schema(dataset.dataset_schema)
+        tables = DatasetInfo.tables_from_schema(dataset.schema)
         legacy_info = {
             "id": dataset.info.id,
             "name": dataset.info.name,
