@@ -24,7 +24,6 @@ from ..features import (
     create_schema_ref,
     create_sequence_frame,
     create_track,
-    create_track_ref,
     create_tracklet,
     create_video,
     create_view_ref,
@@ -44,7 +43,6 @@ from ..features import (
     is_schema_ref,
     is_sequence_frame,
     is_track,
-    is_track_ref,
     is_tracklet,
     is_video,
     is_view_ref,
@@ -108,9 +106,6 @@ def create_pixano_object(pix_type: type[BaseType], **kwargs) -> BaseType:
 
     elif is_entity_ref(pix_type, True):
         return create_entity_ref(**kwargs)
-
-    elif is_track_ref(pix_type, True):
-        return create_track_ref(**kwargs)
 
     elif is_annotation_ref(pix_type, True):
         return create_annotation_ref(**kwargs)

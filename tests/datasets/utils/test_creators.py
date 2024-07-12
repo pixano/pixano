@@ -25,7 +25,6 @@ from pixano.datasets.features import (
     SequenceFrame,
     Track,
     Tracklet,
-    TrackRef,
     Video,
     ViewRef,
     create_annotation_ref,
@@ -44,7 +43,6 @@ from pixano.datasets.features import (
     create_schema_ref,
     create_sequence_frame,
     create_track,
-    create_track_ref,
     create_tracklet,
     create_video,
     create_view_ref,
@@ -189,14 +187,10 @@ def test_create_pixano_object_schema_ref():
     assert schema_ref == create_schema_ref(id="schema1", name="schema")
 
 
-def test_create_pixano_object_track_ref():
-    track_ref = create_pixano_object(TrackRef, id="track1", name="track")
-    assert track_ref == create_track_ref(id="track1", name="track")
-
-
 def test_create_pixano_object_view_ref():
     view_ref = create_pixano_object(ViewRef, id="view1", name="view")
     assert view_ref == create_view_ref(id="view1", name="view")
+
 
 def test_create_pixano_object_custom_type():
     class CustomType(BaseType):

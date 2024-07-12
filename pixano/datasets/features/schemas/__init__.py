@@ -15,12 +15,14 @@ from .annotations import (
     Intrinsics,
     KeyPoints,
     KeyPoints3D,
+    Tracklet,
     create_bbox,
     create_bbox3d,
     create_cam_calibration,
     create_compressed_rle,
     create_keypoints,
     create_keypoints3d,
+    create_tracklet,
     is_annotation,
     is_bbox,
     is_bbox3d,
@@ -28,18 +30,16 @@ from .annotations import (
     is_compressed_rle,
     is_keypoints,
     is_keypoints3d,
+    is_tracklet,
 )
 from .base_schema import BaseSchema, is_base_schema
 from .embeddings import Embedding, is_embedding
 from .entities import (
     Entity,
     Track,
-    Tracklet,
     create_track,
-    create_tracklet,
     is_entity,
     is_track,
-    is_tracklet,
 )
 from .items import Item, is_item
 from .registry import register_schema
