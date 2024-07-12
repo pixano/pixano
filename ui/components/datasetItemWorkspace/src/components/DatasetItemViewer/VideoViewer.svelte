@@ -101,6 +101,13 @@ License: CECILL-C
 
         if (displayedMBox && object.boxes) {
           let new_displayedMBox = [];
+          //Need to add bbox if not present beforehand
+          let frame_bboxes = object.boxes.filter((bbox) => bbox.frame_index == imageIndex);
+          if (frame_bboxes) {
+            for (let frame_box of frame_bboxes) {
+              displayedMBox.push(structuredClone(frame_box)); // clone required as keypoints are not shallow
+            }
+          }
           for (let displayedBox of displayedMBox) {
             const newCoords = boxLinearInterpolation(
               newTrack || object.track,
@@ -117,8 +124,17 @@ License: CECILL-C
           }
           object = { ...object, displayedMBox: new_displayedMBox };
         }
+
         if (displayedMKeypoints && object.keypoints) {
           let new_displayedMKeypoints = [];
+          //Need to add keypoint if not present beforehand
+          let frame_kpts = object.keypoints.filter((kpt) => kpt.frame_index == imageIndex);
+          if (frame_kpts) {
+            for (let frame_kpt of frame_kpts) {
+              displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
+            }
+          }
+
           for (let displayedKeypoints of displayedMKeypoints) {
             const vertices = keypointsLinearInterpolation(
               object,
