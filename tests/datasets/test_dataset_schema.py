@@ -47,7 +47,7 @@ def CustomItem2():
 @pytest.fixture
 def CustomDatasetItem():
     class CustomDatasetItem(DatasetItem):
-        categories: tuple[str]
+        categories: tuple[str, ...]
         other_categories: list[int]
         image: Image
         entity: Entity
@@ -507,3 +507,31 @@ class TestDatasetItem:
         assert dataset_item.bbox == [
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
+
+    def test_to_schemas_data(self, CustomDatasetItem):
+        dataset_schema = CustomDatasetItem.to_dataset_schema()
+        my_custom_dataset_item = CustomDatasetItem(
+            id="id",
+            name="name",
+            index=0,
+            split="default",
+            categories=("cat1", "cat2"),
+            other_categories=[1, 2, 3],
+            image=Image(id="image_id", url="url", width=100, height=100, format="png"),
+            entity=Entity(id="entity_id"),
+            bbox=[BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)],
+        )
+        schemas_data = my_custom_dataset_item.to_schemas_data(dataset_schema)
+        assert schemas_data == {
+            "item": dataset_schema.schemas["item"](
+                id="id",
+                split="default",
+                categories=("cat1", "cat2"),
+                other_categories=[1, 2, 3],
+                name="name",
+                index=0,
+            ),
+            "image": Image(id="image_id", url="url", width=100, height=100, format="png"),
+            "entity": Entity(id="entity_id"),
+            "bbox": [BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)],
+        }
