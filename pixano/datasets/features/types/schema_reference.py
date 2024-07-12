@@ -55,13 +55,6 @@ class EntityRef(SchemaRef):
 
 
 @_register_type_internal
-class TrackRef(EntityRef):
-    """Track reference Lance Model."""
-
-    pass
-
-
-@_register_type_internal
 class AnnotationRef(SchemaRef):
     """Annotation reference class."""
 
@@ -94,12 +87,6 @@ def is_entity_ref(cls: type, strict: bool = False) -> bool:
     """Check if a class is an EntityRef or subclass of EntityRef."""
     return issubclass_strict(cls, EntityRef, strict)
 
-
-def is_track_ref(cls: type, strict: bool = False) -> bool:
-    """Check if a class is a TrackRef or subclass of TrackRef."""
-    return issubclass_strict(cls, TrackRef, strict)
-
-
 def is_annotation_ref(cls: type, strict: bool = False) -> bool:
     """Check if a class is an AnnotationRef or subclass of AnnotationRef."""
     return issubclass_strict(cls, AnnotationRef, strict)
@@ -128,11 +115,6 @@ def create_view_ref(id: str, name: str) -> ViewRef:
 def create_entity_ref(id: str, name: str) -> EntityRef:
     """Create an entity reference."""
     return EntityRef(name=name, id=id)
-
-
-def create_track_ref(id: str, name: str) -> TrackRef:
-    """Create a track reference."""
-    return TrackRef(name=name, id=id)
 
 
 def create_annotation_ref(id: str, name: str) -> AnnotationRef:

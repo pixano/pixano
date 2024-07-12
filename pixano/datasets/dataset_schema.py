@@ -8,9 +8,10 @@ import json
 from enum import Enum
 from pathlib import Path
 from types import GenericAlias
-from typing import Any, Self
+from typing import Any
 
 from pydantic import BaseModel, PrivateAttr, create_model, model_validator
+from typing_extensions import Self
 
 from .features.schemas import BaseSchema, Item
 from .features.schemas.registry import _SCHEMA_REGISTRY
