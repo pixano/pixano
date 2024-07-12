@@ -16,6 +16,7 @@ from .camcalibration import (
 )
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
+from .tracklet import Tracklet, create_tracklet, is_tracklet
 
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "CompressedRLE",
     "KeyPoints",
     "KeyPoints3D",
+    "Tracklet",
     "is_annotation",
     "is_bbox",
     "is_bbox3d",
@@ -36,10 +38,12 @@ __all__ = [
     "is_compressed_rle",
     "is_keypoints",
     "is_keypoints3d",
+    "is_tracklet",
     "create_bbox",
     "create_bbox3d",
     "create_cam_calibration",
     "create_compressed_rle",
     "create_keypoints",
     "create_keypoints3d",
+    "create_tracklet",
 ]

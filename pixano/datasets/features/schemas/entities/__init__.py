@@ -5,7 +5,7 @@
 # =====================================
 
 from .entity import Entity, is_entity
-from .track import Track, Tracklet, create_track, create_tracklet, is_track, is_tracklet
+from .track import Track, create_track, is_track
 
 
 __all__ = [
@@ -14,7 +14,5 @@ __all__ = [
     "Tracklet",
     "is_entity",
     "is_track",
-    "is_tracklet",
     "create_track",
-    "create_tracklet",
 ]
