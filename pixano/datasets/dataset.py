@@ -10,7 +10,6 @@ from typing import cast
 
 import duckdb
 import lancedb
-from lancedb.pydantic import LanceModel
 from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
@@ -26,18 +25,35 @@ from .dataset_schema import (
     SchemaRelation,
 )
 from .dataset_stat import DatasetStat
-from .features import _SchemaGroup
+from .features import BaseSchema, _SchemaGroup
 
 
 def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
     if ids is None and limit is None:
-        raise ValueError("Limit must be set if ids is None")
+        raise ValueError("limit must be set if ids is None")
     elif ids is not None and limit is not None:
-        raise ValueError("Ids and limit cannot be set at the same time")
+        raise ValueError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
-        raise ValueError("Ids must be a list of strings")
+        raise ValueError("ids must be a list of strings")
     elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(offset, int) or offset < 0:
-        raise ValueError("Limit and offset must be positive integers")
+        raise ValueError("limit and offset must be positive integers")
+
+
+def _validate_ids_item_ids_and_limit_and_offset(
+    ids: list[str] | None, limit: int | None, offset: int = 0, item_ids: list[str] | None = None
+) -> None:
+    if ids is not None and item_ids is not None:
+        raise ValueError("ids and item_ids cannot be set at the same time")
+    if ids is None and item_ids is None and limit is None:
+        raise ValueError("limit must be set if ids is None and item_ids is None")
+    elif (ids is not None or item_ids is not None) and limit is not None:
+        raise ValueError("ids or item_ids and limit cannot be set at the same time")
+    elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
+        raise ValueError("ids must be a list of strings")
+    elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
+        raise ValueError("item_ids must be a list of strings")
+    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(offset, int) or offset < 0:
+        raise ValueError("limit and offset must be positive integers")
 
 
 class Dataset:
@@ -197,7 +213,8 @@ class Dataset:
         ids: list[str] | None = None,
         limit: int | None = None,
         offset: int = 0,
-    ) -> list[LanceModel]:
+        item_ids: list[str] | None = None,
+    ) -> list[BaseSchema]:
         """Read data from a table.
 
         Args:
@@ -205,24 +222,41 @@ class Dataset:
             ids (list[str]): ids to read.
             limit (int | None, optional): Limit.
             offset (int, optional): Offset.
+            item_ids (list[str] | None, optional): Item ids to read.
 
         Returns:
-            list[LanceModel]: List of values.
+            list[BaseSchema]: List of values.
         """
-        _validate_ids_and_limit_and_offset(ids, limit, offset)
+        if table_name == _SchemaGroup.ITEM.value:
+            if item_ids is not None:
+                if ids is None:
+                    ids = item_ids
+                else:
+                    raise ValueError("ids and item_ids cannot be set at the same time")
+                item_ids = None
+
+        _validate_ids_item_ids_and_limit_and_offset(ids, limit, offset, item_ids)
+
+        if item_ids is not None:
+            sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
         table = self.open_table(table_name)
 
         if ids is None:
-            lance_table = table.to_lance()  # noqa: F841
-            item_rows = (
-                duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
-                .to_arrow_table()
-                .to_pylist()
-            )
-            model = self.schema.schemas[table_name]
-            return [model(**{k: v for k, v in row.items() if k in model.field_names()}) for row in item_rows]
-        return self._search_by_ids(ids, table, limit).to_pydantic(self.schema.schemas[table_name])
+            if item_ids is None:
+                lance_table = table.to_lance()  # noqa: F841
+                item_rows = (
+                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
+                    .to_arrow_table()
+                    .to_pylist()
+                )
+                model = self.schema.schemas[table_name]
+                return [model(**{k: v for k, v in row.items() if k in model.field_names()}) for row in item_rows]
+            query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
+        else:
+            query = self._search_by_ids(ids, table, None)
+
+        return query.to_pydantic(self.schema.schemas[table_name])
 
     def get_dataset_items(
         self,
@@ -243,6 +277,8 @@ class Dataset:
         _validate_ids_and_limit_and_offset(ids, limit, offset)
 
         items = cast(list[Item], self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset))
+        if items == []:
+            return []
         item_ids: list[str] = [item.id for item in items]
         sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
@@ -250,13 +286,11 @@ class Dataset:
         ds_tables = self.open_tables()
 
         # Load items data from the tables
-        data_dict: dict[str, dict[str, LanceModel | list[LanceModel]]] = {item.id: item.model_dump() for item in items}
+        data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}
         for table_name, table in ds_tables.items():
             if table_name == _SchemaGroup.ITEM.value:
                 continue
-            is_collection = (
-                self.schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
-            )
+            is_collection = self.schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
             lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
@@ -286,6 +320,111 @@ class Dataset:
         """
         query = self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
         return sorted(row.as_py() for row in query["id"])
+
+    def add_data(self, table_name: str, data: list[BaseSchema]) -> None:
+        """Add data to a table.
+
+        Args:
+            table_name (str): Table name.
+            data (list[BaseSchema]): Data to add.
+        """
+        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
+            type(data[0]), self.schema.schemas[table_name]
+        ):
+            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
+
+        table = self.open_table(table_name)
+        table.add(data)
+
+    def add_dataset_items(self, data: list[DatasetItem]) -> None:
+        """Add dataset items.
+
+        Args:
+            data (list[DatasetItem]): Data to add.
+        """
+        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
+            type(data[0]), self.dataset_item_model
+        ):
+            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
+
+        schemas_data = [item.to_schemas_data(self.schema) for item in data]
+        tables_data = {}
+        for table_name in self.schema.schemas.keys():
+            for item in schemas_data:
+                if table_name not in tables_data:
+                    tables_data[table_name] = []
+                if isinstance(item[table_name], list):
+                    tables_data[table_name].extend(item[table_name])
+                elif item[table_name] is not None:
+                    tables_data[table_name].append(item[table_name])
+        for table_name, table_data in tables_data.items():
+            if table_data != []:
+                self.add_data(table_name, table_data)
+
+    def delete_data(self, table_name: str, ids: list[str]) -> None:
+        """Delete data from a table.
+
+        Args:
+            table_name (str): Table name.
+            ids (list[str]): Ids to delete.
+        """
+        table = self.open_table(table_name)
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        table.delete(where=f"id in {sql_ids}")
+
+    def delete_dataset_items(self, ids: list[str]) -> None:
+        """Delete dataset items.
+
+        Args:
+            ids (list[str]): Ids to delete.
+        """
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        for table_name in self.schema.schemas.keys():
+            if table_name == _SchemaGroup.ITEM.value:
+                self.delete_data(table_name, ids)
+            else:
+                table = self.open_table(table_name)
+                table_ids = (
+                    table.search()
+                    .select(["id"])
+                    .where(f"item_ref.id in {sql_ids}")
+                    .limit(None)
+                    .to_arrow()["id"]
+                    .to_pylist()
+                )
+                if table_ids == []:
+                    continue
+                table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
+                table.delete(where=f"id in {table_sql_ids}")
+
+
+    def update_data(self, table_name: str, data: list[BaseSchema]) -> None:
+        """Update data in a table.
+
+        Args:
+            table_name (str): Table name.
+            data (list[BaseSchema]): Data to update.
+        """
+        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
+            type(data[0]), self.schema.schemas[table_name]
+        ):
+            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+
+        table = self.open_table(table_name)
+        ids = [item.id for item in data]
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        table.delete(where=f"id in {sql_ids}")
+        table.add(data)
+
+    def update_dataset_items(self, data: list[DatasetItem]) -> None:
+        """Update dataset items.
+
+        Args:
+            data (list[DatasetItem]): Data to update.
+        """
+        ids = [item.id for item in data]
+        self.delete_dataset_items(ids)
+        self.add_dataset_items(data)
 
     @staticmethod
     def find(

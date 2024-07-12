@@ -239,6 +239,25 @@ class DatasetItem(BaseModel):
     id: str
     split: str = "default"
 
+    def to_schemas_data(self, dataset_schema: DatasetSchema) -> dict[str, BaseSchema | list[BaseSchema] | None]:
+        """Convert DatasetItem to schemas data.
+
+        Args:
+            dataset_schema: DatasetSchema to convert to.
+
+        Returns:
+            dict[str, BaseSchema]: Schemas data.
+        """
+        schemas_data = {}
+        item_data = {}
+        for field_name in self.model_fields.keys():
+            if field_name in dataset_schema.schemas:
+                schemas_data[field_name] = getattr(self, field_name)
+            else:
+                item_data[field_name] = getattr(self, field_name)
+        schemas_data[_SchemaGroup.ITEM.value] = dataset_schema.schemas[_SchemaGroup.ITEM.value](**item_data)
+        return schemas_data
+
     @classmethod
     def to_dataset_schema(cls) -> DatasetSchema:
         """Convert DatasetItem to a DatasetSchema."""
@@ -296,7 +315,6 @@ class DatasetItem(BaseModel):
         """
         fields = {}
         for field_name, field in cls.model_fields.items():
-            print(field_name, field.annotation, field.default)
             if field_name in selected_fields or field_name in ["id", "split"]:
                 if isinstance(field.annotation, GenericAlias):
                     origin = field.annotation.__origin__
