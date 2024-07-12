@@ -400,10 +400,10 @@ async def get_dataset_item(  # noqa: D417
         tracks = defaultdict(list)
 
         # gather tracklets by track
-        for entity_group in groups[_SchemaGroup.ENTITY]:
-            for entity in getattr(item, entity_group):
-                if is_tracklet(type(entity)):
-                    tracks[entity.parent_ref.id].append(entity)
+        for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+            for annotation in getattr(item, annotation_group):
+                if is_tracklet(type(annotation)):
+                    tracks[annotation.entity_ref.id].append(annotation)
 
         for track_id, tracklets in tracks.items():
             bboxes = []
@@ -413,6 +413,10 @@ async def get_dataset_item(  # noqa: D417
             # We need to be able to manage lower level features in front. (will be done in front data refactor)
             for annotation_group in groups[_SchemaGroup.ANNOTATION]:
                 for annotation in getattr(item, annotation_group):
+                    if annotation.view_ref.id == "":
+                        # ignore if annotation is not linked to a view (ex: tracklets)
+                        # Note: Maybe we should still gather features ?
+                        continue
                     if annotation.entity_ref.id == track_id:
                         # get frame_index from annotation.view_ref
                         frame_index = next(
