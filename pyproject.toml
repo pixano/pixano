@@ -44,7 +44,6 @@ dependencies = [
   "pycocotools ~= 2.0.0",
   "pydantic ~= 2.4.0",
   "pydantic-settings ~= 2.0.0",
-  "ruff ~= 0.3.0",
   "s3path ~= 0.5.0",
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
@@ -59,6 +58,14 @@ documentation = [
   "mkdocs-gen-files ~= 0.5.0",
   "mkdocs-literate-nav ~= 0.6.0",
   "mkdocs-redirects ~= 1.2.1",
+]
+test = [
+  "mediapy",
+  "ruff ~= 0.3.0",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "pixano-inference~=0.3.0",
 ]
 
 [project.urls]
