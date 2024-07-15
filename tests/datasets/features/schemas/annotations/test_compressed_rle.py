@@ -21,21 +21,6 @@ from pixano.datasets.utils.image import encode_rle
 from tests.datasets.features.utils import make_tests_is_sublass_strict
 
 
-@pytest.fixture()
-def size():
-    return [10, 10]
-
-
-@pytest.fixture()
-def counts():
-    return bytes(b";37000k1")
-
-
-@pytest.fixture()
-def rle(size, counts):
-    return CompressedRLE(size=size, counts=counts)
-
-
 class TestCompressedRLE:
     def test_none(self):
         none_rle = CompressedRLE.none()

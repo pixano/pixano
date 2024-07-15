@@ -4,21 +4,16 @@
 # License: CECILL-C
 # =====================================
 
-from pathlib import Path
-
 from pixano.datasets.features import Image, create_image, is_image
 from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
 from tests.datasets.features.utils import make_tests_is_sublass_strict
-
-
-ASSETS_DIRECTORY = Path(__file__).parent.parent.parent.parent.parent / "assets"
-IMAGE_ASSET_URL = ASSETS_DIRECTORY / "sample_data/image_jpg.jpg"
+from tests.fixtures.assets.sample_data import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
 
 
 class TestImage:
     def test_open(self):
         image = create_image(
-            url=IMAGE_ASSET_URL,
+            url=IMAGE_JPG_ASSET_URL,
             other_path=ASSETS_DIRECTORY,
         )
 
@@ -37,14 +32,14 @@ def test_is_image():
 def test_create_image():
     # Test 1: read url and default references
     image: Image = create_image(
-        url=IMAGE_ASSET_URL,
+        url=IMAGE_JPG_ASSET_URL,
     )
 
     assert image == Image(
-        url=str(IMAGE_ASSET_URL.as_posix()),
-        width=586,
-        height=640,
-        format="JPEG",
+        url=str(IMAGE_JPG_ASSET_URL.as_posix()),
+        width=IMAGE_JPG_METADATA["width"],
+        height=IMAGE_JPG_METADATA["height"],
+        format=IMAGE_JPG_METADATA["format"],
         id="",
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
@@ -52,7 +47,7 @@ def test_create_image():
 
     # Test 2: read url with custom id and other path and custom references
     image = create_image(
-        url=IMAGE_ASSET_URL,
+        url=IMAGE_JPG_ASSET_URL,
         other_path=ASSETS_DIRECTORY,
         id="id",
         item_ref=ItemRef(id="item_id"),
@@ -60,17 +55,17 @@ def test_create_image():
     )
     assert image == Image(
         url="sample_data/image_jpg.jpg",
-        width=586,
-        height=640,
-        format="JPEG",
+        width=IMAGE_JPG_METADATA["width"],
+        height=IMAGE_JPG_METADATA["height"],
+        format=IMAGE_JPG_METADATA["format"],
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
     )
     # Test 3: no read
-    image = create_image(url=IMAGE_ASSET_URL, width=100, height=100, format="PNG")
+    image = create_image(url=IMAGE_JPG_ASSET_URL, width=100, height=100, format="PNG")
     assert image == Image(
-        url=str(IMAGE_ASSET_URL.as_posix()),
+        url=str(IMAGE_JPG_ASSET_URL.as_posix()),
         width=100,
         height=100,
         format="PNG",
@@ -78,4 +73,3 @@ def test_create_image():
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
     )
-

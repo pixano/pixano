@@ -13,29 +13,23 @@ from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
 from pixano.datasets.features import Image, Item
-
-from .builders.test_dataset_builder import builder, dataset_item, info
-
-
-builder = builder
-dataset_item = dataset_item
-info = info
+from tests.fixtures.datasets import dataset as fixture_dataset
+from tests.fixtures.datasets import dataset_item as fixture_dataset_item
 
 
-@pytest.fixture
-def dataset(builder):
-    return builder.build()
+dataset = fixture_dataset.dumb_dataset
+dataset_item_image_bboxes_keypoint = fixture_dataset_item.dataset_item_image_bboxes_keypoint
 
 
 class TestDataset:
-    def test_dataset(self, dataset: Dataset, dataset_item: DatasetItem):
+    def test_dataset(self, dataset: Dataset, dataset_item_image_bboxes_keypoint: DatasetItem):
         assert isinstance(dataset, Dataset)
         assert isinstance(dataset.schema, DatasetSchema)
         assert isinstance(dataset.info, DatasetInfo)
         assert dataset.info == DatasetInfo(
             id=dataset.info.id, name="test", description="test", size="Unknown", num_elements=5, preview=""
         )
-        assert dataset.schema.serialize() == dataset_item.to_dataset_schema().serialize()
+        assert dataset.schema.serialize() == dataset_item_image_bboxes_keypoint.to_dataset_schema().serialize()
         assert dataset.features_values == DatasetFeaturesValues()
         assert dataset.stats == []
         assert dataset.thumbnail == dataset.path / Dataset.THUMB_FILE
