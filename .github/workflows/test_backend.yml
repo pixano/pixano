@@ -41,6 +41,7 @@ jobs:
       # Install PyTorch and TensorFlow CPU versions manually to prevent installing CUDA
       - name: Install dependencies
         run: |
+          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
           python -m pip install torch~=2.2.0 torchaudio~=2.2.0 torchvision~=0.17.0 --index-url https://download.pytorch.org/whl/cpu
           python -m pip install .[test]
