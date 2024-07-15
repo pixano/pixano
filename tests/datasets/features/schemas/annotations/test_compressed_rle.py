@@ -5,7 +5,6 @@
 # =====================================
 
 import numpy as np
-import pytest
 
 from pixano.datasets.features import CompressedRLE, create_compressed_rle, is_compressed_rle
 from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
