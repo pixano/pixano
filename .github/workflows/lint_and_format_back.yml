@@ -47,10 +47,10 @@ jobs:
           python -m pip install tensorflow-cpu~=2.15.0
           python -m pip install .
           pip install pre-commit
-      
+
       - name: Run pre-commit
         run: pre-commit run --all-files
-      
+
       - name: Format top-level Markdown and YAML files with Prettier
         uses: creyD/prettier_action@v4.3
         with:
