@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Lint and format
+name: Lint and format back
 
 on:
   push:
