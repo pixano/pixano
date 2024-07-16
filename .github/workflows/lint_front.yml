@@ -19,7 +19,6 @@ on:
     branches:
       - "develop"
 
-
 permissions:
   contents: read
 
