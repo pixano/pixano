@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Pre-commit hooks
+name: Pre-commit
 
 on:
   push:
@@ -26,8 +26,8 @@ permissions:
   contents: read
 
 jobs:
-  lint_back:
-    name: Lint backend
+  pre-commit:
+    name: Run pre-commit hooks
     runs-on: ubuntu-latest
 
     steps:
@@ -48,8 +48,5 @@ jobs:
           python -m pip install tensorflow-cpu~=2.15.0
           python -m pip install .
           pip install pre-commit
-      - name: Lint backend code with Ruff
-        run: |
-          ruff check --fix
       - name: Run pre-commit
         run: pre-commit run --all-files
