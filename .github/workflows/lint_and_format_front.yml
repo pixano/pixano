@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Lint
+name: Format
 
 on:
   push:
@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 jobs:
-  # This workflow will lint frontend code (Svelte, Typescript) with eslint
+  # This workflow will format frontend code (Svelte, Typescript) and project files (Markdown, YAML) with Prettier
   lint_front:
     name: Frontend
     runs-on: ubuntu-latest
@@ -46,3 +46,34 @@ jobs:
         run: |
           cd ui
           pnpm lint
+
+  format_front:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+
+      - name: Format frontend code with Prettier
+        run: |
+          cd ui
+          pnpm format_check
+
+  # This job will format backend code (Python) and notebooks (Jupyter) with black
+  # For more information see: https://black.readthedocs.io/en/stable/integrations/github_actions.html
