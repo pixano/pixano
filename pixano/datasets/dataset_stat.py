@@ -54,8 +54,6 @@ class DatasetStat(BaseModel):
             stats_json = []
         # keep all stats except the one with same name, we replace it if exist
         stats_json = [stat for stat in stats_json if stat["name"] != self.name]
-        stats_json.append(
-            {"name": self.name, "type": self.type, "histogram": self.histogram, "range": self.range}
-        )
+        stats_json.append({"name": self.name, "type": self.type, "histogram": self.histogram, "range": self.range})
 
         json_fp.write_text(json.dumps(stats_json, indent=4), encoding="utf-8")

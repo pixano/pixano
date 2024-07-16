@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import model_validator
+from pydantic import ConfigDict, model_validator
 
 from pixano.datasets.utils.python import issubclass_strict
 
@@ -13,9 +13,10 @@ from .registry import _register_type_internal
 
 
 @_register_type_internal
-class SchemaRef(BaseType, validate_assignment=True):
+class SchemaRef(BaseType):
     """Schema reference class."""
 
+    model_config = ConfigDict(validate_assignment=True)
     name: str
     id: str
 
@@ -86,6 +87,7 @@ def is_view_ref(cls: type, strict: bool = False) -> bool:
 def is_entity_ref(cls: type, strict: bool = False) -> bool:
     """Check if a class is an EntityRef or subclass of EntityRef."""
     return issubclass_strict(cls, EntityRef, strict)
+
 
 def is_annotation_ref(cls: type, strict: bool = False) -> bool:
     """Check if a class is an AnnotationRef or subclass of AnnotationRef."""

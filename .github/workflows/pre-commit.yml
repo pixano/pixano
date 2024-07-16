@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-name: Lint and format backend
+name: Pre-commit hooks
 
 on:
   push:
@@ -47,21 +47,9 @@ jobs:
           python -m pip install torch~=2.2.0 torchaudio~=2.2.0 torchvision~=0.17.0 --index-url https://download.pytorch.org/whl/cpu
           python -m pip install tensorflow-cpu~=2.15.0
           python -m pip install .
-          python -m pip install ruff~=0.3.0
-
+          pip install pre-commit
       - name: Lint backend code with Ruff
         run: |
           ruff check --fix
-  format_back:
-    name: Format backend
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Format backend code with Ruff
-        uses: chartboost/ruff-action@v1
-        with:
-          version: 0.3.7
-          args: format
+      - name: Run pre-commit
+        run: pre-commit run --all-files

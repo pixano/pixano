@@ -7,8 +7,8 @@
 name: Check License Header
 
 on:
-  push: 
-  pull_request: 
+  push:
+  pull_request:
 
 jobs:
   check_license_header:

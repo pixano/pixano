@@ -93,5 +93,4 @@ def test_register_schema():
             "NoBaseSchema2'> must be a subclass of BaseSchema"
         ),
     ):
-
         register_schema(NoBaseSchema2)

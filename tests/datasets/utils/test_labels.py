@@ -17,13 +17,16 @@ def test_coco_ids_80to91():
     for i in range(1, 80):
         assert isinstance(coco_ids_80to91(i), int)
 
+
 def test_coco_names_80():
     for i in range(1, 80):
         assert isinstance(coco_names_80(i), str)
 
+
 def test_coco_names_91():
     for i in range(1, 91):
         assert isinstance(coco_names_91(i), str)
+
 
 def test_dota_ids():
     dota_labels = [
@@ -48,6 +51,7 @@ def test_dota_ids():
     ]
     for label in dota_labels:
         assert isinstance(dota_ids(label), int)
+
 
 def test_voc_names():
     for i in range(1, 20):

@@ -8,7 +8,7 @@ from pixano.datasets.features import Item, is_item
 from tests.datasets.features.utils import make_tests_is_sublass_strict
 
 
-class TestItem():
+class TestItem:
     def test_init(self):
         item = Item()
         item.id == ""

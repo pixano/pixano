@@ -25,6 +25,7 @@ def test_denormalize_coords():
 
     assert denormalize_coords(normalized_coords, height, width) == denormalized_coords
 
+
 def test_normalize_coords():
     denormalized_coords = [40, 50, 10, 10]
     width = 100
@@ -32,6 +33,7 @@ def test_normalize_coords():
     normalized_coords = [0.4, 0.5, 0.1, 0.1]
 
     assert normalize_coords(denormalized_coords, height, width) == normalized_coords
+
 
 def test_mask_to_bbox():
     mask = np.array(
@@ -52,6 +54,7 @@ def test_mask_to_bbox():
     bbox = [0.4, 0.5, 0.1, 0.1]
 
     assert mask_to_bbox(mask) == bbox
+
 
 def test_urle_to_bbox():
     mask = np.array(
@@ -74,12 +77,13 @@ def test_urle_to_bbox():
 
     assert urle_to_bbox(urle) == bbox
 
-def test_xywh_to_xyxy():
 
+def test_xywh_to_xyxy():
     xywh_coords = [40, 50, 10, 10]
     xyxy_coords = [40, 50, 50, 60]
 
-    assert xywh_to_xyxy(xywh_coords)== xyxy_coords
+    assert xywh_to_xyxy(xywh_coords) == xyxy_coords
+
 
 def test_xyxy_to_xywh():
     xywh_coords = [40, 50, 10, 10]

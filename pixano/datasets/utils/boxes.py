@@ -9,9 +9,7 @@ import numpy as np
 from .image import rle_to_mask, urle_to_rle
 
 
-def denormalize_coords(
-    coord: list[float], height: int, width: int, rounded_int=True
-) -> list[float]:
+def denormalize_coords(coord: list[float], height: int, width: int, rounded_int=True) -> list[float]:
     """Denormalize coordinates.
 
     Args:

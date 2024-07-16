@@ -155,7 +155,9 @@ async def get_dataset_explorer(  # noqa: D417
                     view_item = getattr(item, feat)
                     if isinstance(view_item, Image):
                         row[feat] = view_item.open(dataset.path / "media")
-                    elif isinstance(view_item, list) and len(view_item) > 0 and isinstance(view_item[0], SequenceFrame):
+                    elif (
+                        isinstance(view_item, list) and len(view_item) > 0 and isinstance(view_item[0], SequenceFrame)
+                    ):
                         row[feat] = view_item[0].open(dataset.path / "media")
                 # ITEM features
                 for feat in groups[_SchemaGroup.ITEM]:
@@ -215,7 +217,7 @@ async def search_dataset_items(  # noqa: D417
             raise HTTPException(status_code=404, detail="Invalid page parameters")
 
         # Load dataset items
-        items = dataset.search_items(raw_params.limit, raw_params.offset, query)
+        items = dataset.search_items(raw_params.limit, raw_params.offset, query)  # type: ignore[attr-defined]
 
         # Return dataset items
         if items:
@@ -320,7 +322,7 @@ async def get_dataset_item(  # noqa: D417
             )
             view_type = "video"
         elif isinstance(view_item, Image):
-            views[view_name] = {
+            views[view_name] = {  # type: ignore[assignment]
                 "id": view_item.id,
                 "type": "image",
                 "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
@@ -341,7 +343,7 @@ async def get_dataset_item(  # noqa: D417
     # But, it is used for retrieving features at various levels
     # and gather them at annotation level...
     # May need to rework / think more about this
-    def findEntity(ann: Annotation) -> Entity:
+    def findEntity(ann: Annotation) -> Entity | None:
         for group_entity in groups[_SchemaGroup.ENTITY]:
             entity = next(
                 (entity for entity in getattr(item, group_entity) if entity.id == ann.entity_ref.id),
@@ -357,7 +359,7 @@ async def get_dataset_item(  # noqa: D417
                 # Entity features
                 features = {}
                 ann_entity = findEntity(annotation)
-                if ann_entity:
+                if ann_entity is not None:
                     features.update(getFeatures(ann_entity, Entity))
 
                 obj = {
@@ -710,7 +712,7 @@ async def get_item_embeddings(  # noqa: D417
 
     if dataset:
         try:
-            embeddings = dataset.get_data(_SchemaGroup.EMBEDDING, [item_id])[0]
+            embeddings = dataset.get_data(_SchemaGroup.EMBEDDING, [item_id])[0]  # type: ignore[arg-type]
         except ValueError:
             raise HTTPException(
                 status_code=404,

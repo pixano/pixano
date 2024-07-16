@@ -31,7 +31,7 @@ def estimate_folder_size(folder_path: Path) -> str:
         str: Folder size as a human-readable string
     """
     # Estimate size
-    total_size = 0
+    total_size = 0.0
     for dirpath, _, filenames in os.walk(folder_path):
         for f in filenames:
             fp = os.path.join(dirpath, f)

@@ -6,7 +6,6 @@
 
 import base64
 from pathlib import Path
-from typing import IO
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -30,19 +29,19 @@ class Image(View):
     height: int
     format: str
 
-    def open(self, media_dir: Path) -> IO:
+    def open(self, media_dir: Path) -> str:
         """Open image.
 
         Args:
             media_dir (Path): image path
 
         Returns:
-            IO: opened image
+            str: opened image
         """
         return Image.open_url(self.url, media_dir)
 
     @staticmethod
-    def open_url(url: str, media_dir: Path) -> IO:
+    def open_url(url: str, media_dir: Path) -> str:
         """Open URL image.
 
         Args:
@@ -54,7 +53,7 @@ class Image(View):
             ValueError: Incomplete URI
 
         Returns:
-            IO: _description_
+            str: opened image
         """
         # URI is incomplete
         if urlparse(url).scheme == "":

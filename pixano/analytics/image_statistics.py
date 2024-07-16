@@ -29,9 +29,7 @@ def compute_image_stats(ds: Dataset):
         # Take a subset of table without image columns
         # (which can't be converted to pandas)
         if not all(p in data_table.column_names for p in ["width", "height"]):
-            print(
-                "INFO: 'width' and 'height' not found in media table, get it from image"
-            )
+            print("INFO: 'width' and 'height' not found in media table, get it from image")
             images = data_table.select([view]).to_pylist()
             sizes = []
             for image in images:
@@ -45,10 +43,6 @@ def compute_image_stats(ds: Dataset):
             data = data_table.select(["width", "height"]).to_pandas()
 
         # Compute additional data
-        data["resolution"] = data.apply(
-            lambda x: str(x["width"]) + "x" + str(x["height"]), axis=1
-        )
-        data["aspect_ratio"] = data.apply(
-            lambda x: str(Fraction(x["width"], x["height"])).replace("/", ":"), axis=1
-        )
+        data["resolution"] = data.apply(lambda x: str(x["width"]) + "x" + str(x["height"]), axis=1)
+        data["aspect_ratio"] = data.apply(lambda x: str(Fraction(x["width"], x["height"])).replace("/", ":"), axis=1)
         return data

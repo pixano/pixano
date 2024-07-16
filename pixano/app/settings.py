@@ -6,7 +6,6 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 from urllib.parse import urlparse
 
 import boto3
@@ -20,25 +19,25 @@ class Settings(BaseSettings):
 
     Attributes:
         library_dir (str): Local or S3 path to dataset library
-        aws_endpoint (str): S3 endpoint URL, use 'AWS' if not provided.
+        aws_endpoint (str | None): S3 endpoint URL, use 'AWS' if not provided.
             Used if library_dir is an S3 path
-        aws_region (str): S3 region name, not always required for private storages.
+        aws_region (str | None): S3 region name, not always required for private storages.
             Used if library_dir is an S3 path
-        aws_access_key (str): S3 AWS access key. Used if library_dir is an S3 path
-        aws_secret_key (str): S3 AWS secret key. Used if library_dir is an S3 path
-        local_model_dir (str): Local path to models. Used if library_dir is an S3 path
+        aws_access_key (str | None): S3 AWS access key. Used if library_dir is an S3 path
+        aws_secret_key (str | None): S3 AWS secret key. Used if library_dir is an S3 path
+        local_model_dir (str | None): Local path to models. Used if library_dir is an S3 path
         data_dir (Path | S3Path): Dataset directory as Path | S3Path
         model_dir (Path): Model directory as Path
     """
 
-    library_dir: Optional[str] = (Path.cwd() / "library").as_posix()
-    aws_endpoint: Optional[str] = None
-    aws_region: Optional[str] = None
-    aws_access_key: Optional[str] = None
-    aws_secret_key: Optional[str] = None
-    local_model_dir: Optional[str] = None
-    data_dir: Optional[Path | S3Path] = None
-    model_dir: Optional[Path] = None
+    library_dir: str = (Path.cwd() / "library").as_posix()
+    aws_endpoint: str | None = None
+    aws_region: str | None = None
+    aws_access_key: str | None = None
+    aws_secret_key: str | None = None
+    local_model_dir: str | None = None
+    data_dir: Path | S3Path
+    model_dir: Path
     # Change Pydantic protected namespace from "model_" to "settings_"
     # because of model_dir
     model_config = ConfigDict(protected_namespaces=("settings_",))

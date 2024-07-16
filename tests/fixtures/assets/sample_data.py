@@ -34,7 +34,6 @@ VIDEO_MP4_METADATA = dict(
     height=240,
     format="mp4",
     num_frames=209,
-    fps=29.97, # rounded
-    duration=6.97, # rounded
+    fps=29.97,  # rounded
+    duration=6.97,  # rounded
 )
-

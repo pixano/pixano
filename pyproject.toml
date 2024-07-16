@@ -61,7 +61,6 @@ documentation = [
 ]
 test = [
   "mediapy",
-  "ruff ~= 0.3.0",
   "pytest",
   "pytest-cov",
   "pytest-mock",
@@ -86,7 +85,7 @@ artifacts = ["/pixano/app/dist"]
 path = "pixano/__version__.py"
 
 [tool.ruff]
-line-length = 120
+line-length = 119
 extend-exclude = ["ui"]
 extend-include = ["notebooks/**/*.ipynb"]
 

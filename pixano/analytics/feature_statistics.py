@@ -27,12 +27,8 @@ def compute_additional_data(data_table: pa.Table) -> pd.DataFrame:
     data = data_table.select(["width", "height"]).to_pandas()
 
     # Compute additional data
-    data["resolution"] = data.apply(
-        lambda x: str(x["width"]) + "x" + str(x["height"]), axis=1
-    )
-    data["aspect_ratio"] = data.apply(
-        lambda x: str(Fraction(x["width"], x["height"])).replace("/", ":"), axis=1
-    )
+    data["resolution"] = data.apply(lambda x: str(x["width"]) + "x" + str(x["height"]), axis=1)
+    data["aspect_ratio"] = data.apply(lambda x: str(Fraction(x["width"], x["height"])).replace("/", ":"), axis=1)
 
     return data
 
@@ -71,7 +67,7 @@ def categorical_stats(df: pd.DataFrame, split: str, field_name: str) -> list[dic
 
 
 def numerical_stats(
-    df: pd.DataFrame, split: str, field_name: str, field_range: list[float] = None
+    df: pd.DataFrame, split: str, field_name: str, field_range: list[float] | None = None
 ) -> list[dict]:
     """Compute feature numerical statistics.
 
