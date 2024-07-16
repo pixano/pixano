@@ -6,8 +6,8 @@
 
 from pixano.datasets.features import Image, create_image, is_image
 from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
+from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
 from tests.datasets.features.utils import make_tests_is_sublass_strict
-from tests.fixtures.assets.sample_data import ASSETS_DIRECTORY, IMAGE_JPG_ASSET_URL, IMAGE_JPG_METADATA
 
 
 class TestImage:

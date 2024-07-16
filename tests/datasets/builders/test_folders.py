@@ -16,7 +16,7 @@ from pixano.datasets.features import Image, Item, Video
 from pixano.datasets.features.schemas.annotations.bbox import BBox
 from pixano.datasets.features.schemas.annotations.keypoints import KeyPoints
 from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
-from tests.fixtures.assets.sample_data import SAMPLE_DATA_PATHS
+from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 from tests.fixtures.datasets.dataset_item import MyEntity
 
 

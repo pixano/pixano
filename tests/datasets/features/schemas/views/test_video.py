@@ -6,8 +6,8 @@
 
 from pixano.datasets.features import Video, create_video, is_video
 from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
+from tests.assets.sample_data.metadata import ASSETS_DIRECTORY, VIDEO_MP4_ASSET_URL, VIDEO_MP4_METADATA
 from tests.datasets.features.utils import make_tests_is_sublass_strict
-from tests.fixtures.assets.sample_data import ASSETS_DIRECTORY, VIDEO_MP4_ASSET_URL, VIDEO_MP4_METADATA
 
 
 def test_is_video():
