@@ -67,18 +67,15 @@ License: CECILL-C
     }
   }
 
-  onMount(
-    /*async*/ () => {
-      if (models.length > 0) {
-        let samModels = models.filter((m) => m.includes("sam"));
-        if (samModels.length == 1) {
-          modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
-          //TMP BR disabled while interactive segmentation is not put back
-          //await loadModel();
-        }
+  onMount(async () => {
+    if (models.length > 0) {
+      let samModels = models.filter((m) => m.includes("sam"));
+      if (samModels.length == 1) {
+        modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
+        await loadModel();
       }
-    },
-  );
+    }
+  });
 
   $: {
     if ($selectedTool?.isSmart && models.length > 1 && !selectedModelName) {
