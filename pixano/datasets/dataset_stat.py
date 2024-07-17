@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel
-from s3path import S3Path
 
 
 class DatasetStat(BaseModel):
@@ -27,11 +26,11 @@ class DatasetStat(BaseModel):
     range: list[int | float] | None = None
 
     @staticmethod
-    def from_json(json_fp: Path | S3Path) -> list["DatasetStat"]:
+    def from_json(json_fp: Path) -> list["DatasetStat"]:
         """Read list of DatasetStats from JSON file.
 
         Args:
-            json_fp (Path | S3Path): JSON file path
+            json_fp (Path): JSON file path
 
         Returns:
             list[DatasetStats]: List of DatasetStat

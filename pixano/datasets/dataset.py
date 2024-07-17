@@ -122,7 +122,7 @@ class Dataset:
         """Return dataset media directory.
 
         Returns:
-            Path | S3Path: Dataset media directory
+            Path: Dataset media directory
         """
         return self.path / "media"
 

@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 
 from pydantic import BaseModel
-from s3path import S3Path
 
 
 class DatasetFeaturesValues(BaseModel):
@@ -31,7 +30,7 @@ class DatasetFeaturesValues(BaseModel):
         json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
 
     @staticmethod
-    def from_json(json_fp: Path | S3Path) -> "DatasetFeaturesValues":
+    def from_json(json_fp: Path) -> "DatasetFeaturesValues":
         """Load DatasetFeaturesValues from json file."""
         fv_json = json.loads(json_fp.read_text(encoding="utf-8"))
         fv = DatasetFeaturesValues.model_validate(fv_json)
