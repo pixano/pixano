@@ -55,8 +55,6 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
-    return;
-
     modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);
@@ -74,7 +72,8 @@ License: CECILL-C
       let samModels = models.filter((m) => m.includes("sam"));
       if (samModels.length == 1) {
         modelsStore.update((store) => ({ ...store, selectedModelName: samModels[0] }));
-        await loadModel();
+        //TMP BR disabled while interactive segmentation is not put back
+        //await loadModel();
       }
     }
   });
