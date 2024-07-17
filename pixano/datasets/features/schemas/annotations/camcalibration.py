@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from pixano.datasets.utils import issubclass_strict
 
@@ -13,7 +13,7 @@ from ..registry import _register_schema_internal
 from .annotation import Annotation
 
 
-class BaseIntrinsics(BaseModel, validate_assignment=True):
+class BaseIntrinsics(BaseModel):
     """BaseIntrinsics (TODO: description?).
 
     Attributes:
@@ -22,6 +22,8 @@ class BaseIntrinsics(BaseModel, validate_assignment=True):
         img_height_px (int): img_height_px
         img_width_px (int): img_width_px
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     cx_offset_px: float
     cy_offset_px: float
@@ -41,7 +43,7 @@ class BaseIntrinsics(BaseModel, validate_assignment=True):
         return self
 
 
-class Intrinsics(BaseModel, validate_assignment=True):
+class Intrinsics(BaseModel):
     """Intrinsics (TODO: description?).
 
     Attributes:
@@ -51,6 +53,8 @@ class Intrinsics(BaseModel, validate_assignment=True):
         c4 (float): c4
         pixel_aspect_ratio (float): pixel_aspect_ratio
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     c1: float
     c2: float
@@ -71,7 +75,7 @@ class Intrinsics(BaseModel, validate_assignment=True):
         return self
 
 
-class Extrinsics(BaseModel, validate_assignment=True):
+class Extrinsics(BaseModel):
     """Extrinsics (TODO: description?).
 
     Attributes:
@@ -82,6 +86,8 @@ class Extrinsics(BaseModel, validate_assignment=True):
         rot_z1_deg (float): rot_z1_deg
         rot_z2_deg (float): rot_z2_deg
     """
+
+    model_config = ConfigDict(validate_assignment=True)
 
     pos_x_m: float
     pos_y_m: float
@@ -272,8 +278,9 @@ def create_cam_calibration(
         raise ValueError("base_intrinsics, extrinsics and intrinsics must be all defined or all None")
     elif not all(none_field_conditions) and not all(not_none_field_conditions):
         raise ValueError(
-            "cx_offset_px, cy_offset_px, img_height_px, img_width_px, pos_x_m, pos_y_m, pos_z_m, rot_x_deg, rot_z1_deg,"
-            " rot_z2_deg, c1, c2, c3, c4 and pixel_aspect_ratio must be all defined or all None"
+            "cx_offset_px, cy_offset_px, img_height_px, img_width_px, pos_x_m, pos_y_m, pos_z_m, "
+            "rot_x_deg, rot_z1_deg, rot_z2_deg, c1, c2, c3, c4 and pixel_aspect_ratio must be all "
+            "defined or all None"
         )
     elif any(not_none_obj_conditions) and any(not_none_field_conditions):
         raise ValueError(

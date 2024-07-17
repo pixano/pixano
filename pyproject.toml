@@ -44,7 +44,6 @@ dependencies = [
   "pycocotools ~= 2.0.0",
   "pydantic ~= 2.4.0",
   "pydantic-settings ~= 2.0.0",
-  "ruff ~= 0.3.0",
   "s3path ~= 0.5.0",
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
@@ -59,6 +58,14 @@ documentation = [
   "mkdocs-gen-files ~= 0.5.0",
   "mkdocs-literate-nav ~= 0.6.0",
   "mkdocs-redirects ~= 1.2.1",
+]
+test = [
+  "mediapy",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "pixano-inference~=0.3.0",
+  "ffmpeg-python~=0.2.0",
 ]
 
 [project.urls]
@@ -78,7 +85,7 @@ artifacts = ["/pixano/app/dist"]
 path = "pixano/__version__.py"
 
 [tool.ruff]
-line-length = 120
+line-length = 119
 extend-exclude = ["ui"]
 extend-include = ["notebooks/**/*.ipynb"]
 

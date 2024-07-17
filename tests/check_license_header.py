@@ -45,7 +45,7 @@ def check_header(file_path, header):
     """Check if the file contains the required header."""
     with open(file_path, "r", encoding="utf-8") as file:
         content = file.read()
-        return content.startswith(header)
+        return content.startswith(header) or content == header[:-1]
 
 
 def main():

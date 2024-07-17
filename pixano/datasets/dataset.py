@@ -6,14 +6,13 @@
 
 from collections import defaultdict
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import duckdb
 import lancedb
 from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
-from s3path import S3Path
 
 from pixano.datasets.features.schemas.items.item import Item
 
@@ -81,15 +80,15 @@ class Dataset:
     schema: DatasetSchema
     features_values: DatasetFeaturesValues = DatasetFeaturesValues()
     stats: list[DatasetStat] = []
-    thumbnail: str
+    thumbnail: Path
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def __init__(self, path: Path | S3Path):
+    def __init__(self, path: Path):
         """Initialize dataset.
 
         Args:
-            path (Path | S3Path): Dataset path
+            path (Path): Dataset path
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE
@@ -119,27 +118,24 @@ class Dataset:
         return len(self.open_table(_SchemaGroup.ITEM.value))
 
     @property
-    def media_dir(self) -> Path | S3Path:
+    def media_dir(self) -> Path:
         """Return dataset media directory.
 
         Returns:
-            Path | S3Path: Dataset media directory
+            Path: Dataset media directory
         """
         return self.path / "media"
 
     @property
-    def _db_path(self) -> Path | S3Path:
+    def _db_path(self) -> Path:
         """Return dataset db path.
 
         Returns:
-            Path | S3Path: Dataset db path
+            Path: Dataset db path
         """
-        if isinstance(self.path, S3Path):
-            return self.path.as_uri() + "/" + self.DB_PATH
-
         return self.path / self.DB_PATH
 
-    def _reload_schema(self) -> DatasetSchema:
+    def _reload_schema(self) -> None:
         """Reload schema.
 
         Returns:
@@ -348,7 +344,7 @@ class Dataset:
             raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
 
         schemas_data = [item.to_schemas_data(self.schema) for item in data]
-        tables_data = {}
+        tables_data: dict[str, Any] = {}
         for table_name in self.schema.schemas.keys():
             for item in schemas_data:
                 if table_name not in tables_data:
@@ -396,7 +392,6 @@ class Dataset:
                     continue
                 table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
                 table.delete(where=f"id in {table_sql_ids}")
-
 
     def update_data(self, table_name: str, data: list[BaseSchema]) -> None:
         """Update data in a table.

@@ -5,12 +5,15 @@
 # =====================================
 
 from lancedb.pydantic import LanceModel
+from pydantic import ConfigDict
 
 from pixano.datasets.utils.python import issubclass_strict
 
 
-class BaseType(LanceModel, validate_assignment=True):
+class BaseType(LanceModel):
     """Base class for all Pixano types."""
+
+    model_config = ConfigDict(validate_assignment=True)
     pass
 
 

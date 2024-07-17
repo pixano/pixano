@@ -14,9 +14,7 @@ from pixano.datasets.dataset_info import DatasetInfo
 class TestDatasetInfo:
     def test_init(self):
         info = DatasetInfo()
-        assert info == DatasetInfo(
-            id="", name="", description="", size="Unknown", num_elements=0, preview=""
-        )
+        assert info == DatasetInfo(id="", name="", description="", size="Unknown", num_elements=0, preview="")
 
         info = DatasetInfo(
             id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", num_elements=100, preview="/preview"

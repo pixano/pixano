@@ -13,7 +13,7 @@ import pytest
 from pixano.datasets.builders.folders.image import ImageFolderBuilder
 from pixano.datasets.builders.folders.video import VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
-from tests.fixtures.assets.sample_data import SAMPLE_DATA_PATHS
+from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 from tests.fixtures.datasets import dataset_item as fixture_dataset_item
 
 

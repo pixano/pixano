@@ -52,4 +52,3 @@ def dataset_item_video_bboxes_keypoint():
         keypoint: list[KeyPoints]
 
     return Schema
-

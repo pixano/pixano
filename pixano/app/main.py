@@ -37,9 +37,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         # If S3, mount models parent folder
         # Check if folder exists
         if not settings.model_dir.exists():
-            raise FileNotFoundError(
-                f"Local model directory '{settings.model_dir.absolute()}' not found"
-            )
+            raise FileNotFoundError(f"Local model directory '{settings.model_dir.absolute()}' not found")
         # Mount
         app.mount(
             "/data",
@@ -50,9 +48,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
         # If local, mount datasets folder with models subfolder
         # Check if folder exists
         if not settings.data_dir.exists():
-            raise FileNotFoundError(
-                f"Dataset library '{settings.data_dir.absolute()}' not found"
-            )
+            raise FileNotFoundError(f"Dataset library '{settings.data_dir.absolute()}' not found")
         # Create models subfolder in case it doesn't exist yet
         settings.model_dir.mkdir(exist_ok=True)
         # Mount

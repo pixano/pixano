@@ -77,17 +77,17 @@ class DatasetInfo(BaseModel):
         for json_fp in sorted(directory.glob("*/info.json")):
             info = DatasetInfo.from_json(json_fp)
             library.append(
-                {
-                    "id": info.id,
-                    "name": info.name,
-                    "description": info.description,
-                    "estimated_size": info.size,
-                    "num_elements": info.num_elements,
-                    "preview": Image.open_url(
+                DatasetInfo(
+                    id=info.id,
+                    name=info.name,
+                    description=info.description,
+                    size=info.size,
+                    num_elements=info.num_elements,
+                    preview=Image.open_url(
                         str(json_fp.parent / "previews/dataset_preview.jpg"),
                         json_fp.parent / "media",
                     ),  # TODO choose correct preview name / path / extension
-                }
+                )
             )
 
         return library

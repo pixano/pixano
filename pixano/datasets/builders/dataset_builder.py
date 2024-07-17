@@ -109,9 +109,9 @@ class DatasetBuilder(ABC):
             tables = self.create_tables(mode)
 
         # accumulate items to insert in tables
-        accumulate_data_tables = {table_name: [] for table_name in tables.keys()}
+        accumulate_data_tables: dict[str, list] = {table_name: [] for table_name in tables.keys()}
         # count transactions per table
-        transactions_per_table = {table_name: 0 for table_name in tables.keys()}
+        transactions_per_table: dict[str, int] = {table_name: 0 for table_name in tables.keys()}
 
         for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
             # assert that items have keys that are in tables
@@ -235,7 +235,7 @@ class DatasetBuilder(ABC):
 
         return tables
 
-    def generate_image_previews(self) -> None:
+    def generate_image_previews(self, table_name: str) -> None:
         """Generate image previews for the dataset."""
         pass
 

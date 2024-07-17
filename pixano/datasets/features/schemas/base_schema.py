@@ -8,30 +8,34 @@ from types import GenericAlias
 from typing import Any
 
 from lancedb.pydantic import LanceModel
-from pydantic import create_model
+from pydantic import ConfigDict, create_model
 
 from pixano.datasets.utils.python import get_super_type_from_dict, issubclass_strict
 
 from ..types.registry import _TYPES_REGISTRY
 
 
-class BaseSchema(LanceModel, validate_assignment=True):
+class BaseSchema(LanceModel):
     """Base class for all tables."""
 
+    model_config = ConfigDict(validate_assignment=True)
     id: str = ""
 
     @classmethod
-    def serialize(cls):
+    def serialize(cls) -> dict[str, str | dict[str, Any]]:
         """Serialize the table."""
         from .registry import _PIXANO_SCHEMA_REGISTRY
 
         # schema can be customized by the user
         # base_schema is the closest schema in the registry
-        json = {
+        super_type = get_super_type_from_dict(cls, _PIXANO_SCHEMA_REGISTRY)
+        if super_type is None:
+            raise ValueError(f"Schema {cls.__name__} does not have a super type in the registry.")
+        json: dict[str, str | dict[str, Any]] = {
             "schema": cls.__name__,
-            "base_schema": get_super_type_from_dict(cls, _PIXANO_SCHEMA_REGISTRY).__name__,
+            "base_schema": super_type.__name__,
         }
-        fields = {}
+        fields: dict[str, Any] = {}
         for field_name, field in cls.model_fields.items():
             if isinstance(field.annotation, GenericAlias):
                 origin = field.annotation.__origin__
@@ -65,7 +69,7 @@ class BaseSchema(LanceModel, validate_assignment=True):
         return json
 
     @staticmethod
-    def deserialize(dataset_schema_json: dict[str, dict[str, Any]]) -> type["BaseSchema"]:
+    def deserialize(dataset_schema_json: dict[str, str | dict[str, Any]]) -> type["BaseSchema"]:
         """Unserialize the dataset schema.
 
         Args:
@@ -76,20 +80,29 @@ class BaseSchema(LanceModel, validate_assignment=True):
         """
         from .registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
 
-        fields = {}
-        for key, value in dataset_schema_json["fields"].items():
+        json_fields = dataset_schema_json["fields"]
+        if not isinstance(json_fields, dict):
+            raise ValueError("Fields should be a dictionary.")
+
+        fields: dict[str, Any] = {}
+        for key, value in json_fields.items():
             if value["type"] in _TYPES_REGISTRY:
-                type = _TYPES_REGISTRY[value["type"]]
+                type_ = _TYPES_REGISTRY[value["type"]]
             else:
                 raise ValueError(f"Type {value['type']} not registered")
             if value["collection"]:
-                type = list[type]
-            fields[key] = (type, ...)
+                type_ = list[type_]  # type: ignore[valid-type]
+            fields[key] = (type_, ...)
 
-        if dataset_schema_json["schema"] in _SCHEMA_REGISTRY:
-            table_type = _SCHEMA_REGISTRY[dataset_schema_json["schema"]]
+        schema, base_schema = dataset_schema_json["schema"], dataset_schema_json["base_schema"]
+
+        if not isinstance(schema, str) or not isinstance(base_schema, str):
+            raise ValueError("Schema and base schema should be strings.")
+
+        if schema in _SCHEMA_REGISTRY:
+            table_type = _SCHEMA_REGISTRY[schema]
         else:
-            table_type = _PIXANO_SCHEMA_REGISTRY[dataset_schema_json["base_schema"]]
+            table_type = _PIXANO_SCHEMA_REGISTRY[base_schema]
 
         model = create_model(dataset_schema_json["schema"], **fields, __base__=table_type)
 

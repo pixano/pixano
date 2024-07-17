@@ -115,7 +115,7 @@ class DatasetSchema(BaseModel):
         Returns:
             dict[str, dict[str, Any]]: Serialized dataset schema
         """
-        dataset_schema_json = {
+        dataset_schema_json: dict[str, dict[str, Any]] = {
             "relations": {
                 schema1: {schema2: relation.value for schema2, relation in relations.items()}
                 for schema1, relations in self.relations.items()
@@ -126,16 +126,16 @@ class DatasetSchema(BaseModel):
             dataset_schema_json["schemas"][table_name] = schema.serialize()
         return dataset_schema_json
 
-    def deserialize(dataset_schema_json: dict[str, dict[str, Any]]) -> type["DatasetSchema"]:
+    def deserialize(dataset_schema_json: dict[str, dict[str, Any]]) -> "DatasetSchema":
         """Unserialize the dataset schema.
 
         Args:
             dataset_schema_json: Serialized dataset schema
 
         Returns:
-            type[DatasetSchema]: DatasetSchema
+            DatasetSchema: DatasetSchema
         """
-        dataset_schema_dict = {
+        dataset_schema_dict: dict[str, Any] = {
             "relations": {
                 schema1: {schema2: SchemaRelation(relation) for schema2, relation in relations.items()}
                 for schema1, relations in dataset_schema_json["relations"].items()
@@ -191,7 +191,7 @@ class DatasetSchema(BaseModel):
         item_fields = {}
 
         # table schemas
-        dataset_schema_dict = {}
+        dataset_schema_dict: dict[str, Any] = {}
         dataset_schema_dict["relations"] = {_SchemaGroup.ITEM.value: {}}
         schemas = {}
 
@@ -213,10 +213,10 @@ class DatasetSchema(BaseModel):
                             _SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
                         }
                     else:
-                        item_fields[field_name] = (list[args[0]], ...)
+                        item_fields[field_name] = (list[args[0]], ...)  # type: ignore[valid-type]
                 else:
                     # Default case: categorize as item attribute
-                    item_fields[field_name] = (args[0], ...)
+                    item_fields[field_name] = (args[0], ...)  # type: ignore[valid-type]
             # Check if field is a schema
             elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
                 schemas[field_name] = field.annotation
@@ -275,14 +275,15 @@ class DatasetItem(BaseModel):
             type[DatasetItem]: The dataset item model
         """
         item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
-        fields = {}
+        fields: dict[str, Any] = {}
 
         for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
             # Add default value in case an item does not have a specific view or entity.
+            schema_type = dataset_schema.schemas[schema]
             if relation == SchemaRelation.ONE_TO_MANY:
-                fields[schema] = (list[dataset_schema.schemas[schema]], [])
+                fields[schema] = (list[schema_type], [])  # type: ignore[valid-type]
             else:
-                fields[schema] = (dataset_schema.schemas[schema], None)
+                fields[schema] = (schema_type, None)
 
         for field_name, field in item_type.model_fields.items():
             # No default value as all items metadata should be retrieved.
@@ -322,8 +323,8 @@ class DatasetItem(BaseModel):
                     args = field.annotation.__args__
 
                     # Check if field is list or tuple
-                    if origin == tuple:
-                        fields[field_name] = (origin[args[0], ...], field.default)
+                    if origin is tuple:
+                        fields[field_name] = (origin[args[0], ...], field.default)  # type: ignore[index]
                     else:
                         fields[field_name] = (field.annotation, field.default)
                 else:

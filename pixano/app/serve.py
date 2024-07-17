@@ -9,7 +9,7 @@ from functools import lru_cache
 
 import click
 import fastapi
-import pkg_resources
+import pkg_resources  # type: ignore[import-untyped]
 import uvicorn
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -64,11 +64,11 @@ class App:
     def __init__(
         self,
         library_dir: str,
-        aws_endpoint: str = None,
-        aws_region: str = None,
-        aws_access_key: str = None,
-        aws_secret_key: str = None,
-        local_model_dir: str = None,
+        aws_endpoint: str | None = None,
+        aws_region: str | None = None,
+        aws_access_key: str | None = None,
+        aws_secret_key: str | None = None,
+        local_model_dir: str | None = None,
         host: str = "127.0.0.1",
         port: int = 8000,
     ):
@@ -76,15 +76,15 @@ class App:
 
         Args:
             library_dir (str): Local or S3 path to dataset library
-            aws_endpoint (str, optional): S3 endpoint URL, use 'AWS' if not provided.
+            aws_endpoint (str | None, optional): S3 endpoint URL, use 'AWS' if not provided.
                 Used if library_dir is an S3 path. Defaults to None.
-            aws_region (str, optional): S3 region name, not always required for
+            aws_region (str | None, optional): S3 region name, not always required for
                 private storages. Used if library_dir is an S3 path. Defaults to None.
-            aws_access_key (str, optional): S3 AWS access key. Used if library_dir is
+            aws_access_key (str | None, optional): S3 AWS access key. Used if library_dir is
                 an S3 path. Defaults to None.
-            aws_secret_key (str, optional): S3 AWS secret key. Used if library_dir
+            aws_secret_key (str | None, optional): S3 AWS secret key. Used if library_dir
                 is an S3 path. Defaults to None.
-            local_model_dir (str, optional): Local path to models. Used if library_dir
+            local_model_dir (str | None, optional): Local path to models. Used if library_dir
                 is an S3 path. Defaults to None.
             host (str, optional): App host. Defaults to "127.0.0.1".
             port (int, optional): App port. Defaults to 8000.
@@ -128,7 +128,7 @@ class App:
         self.server = uvicorn.Server(self.config)
 
         # Serve app
-        task_functions[self.get_env()](self.server.serve())
+        task_functions[self.get_env()](self.server.serve())  # type: ignore[operator]
 
     def display(self, height: int = 1000) -> None:
         """Display Pixano app.
@@ -138,15 +138,13 @@ class App:
         """
         # Wait for app to be online
         while not self.server.started:
-            task_functions[self.get_env()](asyncio.wait(0.1))
+            task_functions[self.get_env()](asyncio.wait(0.1))  # type: ignore[operator, call-overload]
 
         # Display app
         for server in self.server.servers:
             for socket in server.sockets:
                 address = socket.getsockname()
-                display_functions[self.get_env()](
-                    url=f"http://{address[0]}", port=address[1], height=height
-                )
+                display_functions[self.get_env()](url=f"http://{address[0]}", port=address[1], height=height)  # type: ignore[operator]
 
     def get_env(self) -> str:
         """Get the app's current running environment.
@@ -183,18 +181,12 @@ class App:
 @click.option(
     "--aws_endpoint",
     type=str,
-    help=(
-        "S3 endpoint URL, use 'AWS' if not provided. "
-        "Used if library_dir is an S3 path"
-    ),
+    help=("S3 endpoint URL, use 'AWS' if not provided. " "Used if library_dir is an S3 path"),
 )
 @click.option(
     "--aws_region",
     type=str,
-    help=(
-        "S3 region name, not always required for private storages."
-        "Used if library_dir is an S3 path"
-    ),
+    help=("S3 region name, not always required for private storages." "Used if library_dir is an S3 path"),
 )
 @click.option(
     "--aws_access_key",

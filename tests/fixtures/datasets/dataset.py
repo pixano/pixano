@@ -11,8 +11,7 @@ from tests.fixtures.datasets.builders import builder as fixture_builder
 
 
 dumb_builder = fixture_builder.dumb_builder
-print("yolo")
-print(dumb_builder)
+
 
 @pytest.fixture
 def dumb_dataset(dumb_builder):

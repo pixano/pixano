@@ -3,10 +3,3 @@
 # Author : pixano@cea.fr
 # License: CECILL-C
 # =====================================
-
-from pixano.models.inference_model import InferenceModel
-
-
-__all__ = [
-    "InferenceModel",
-]

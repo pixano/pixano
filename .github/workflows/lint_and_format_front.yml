@@ -1,0 +1,76 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+name: Lint and format front
+
+on:
+  push:
+    paths:
+      - "ui/**"
+    branches:
+      - "develop"
+      - "main"
+  pull_request:
+    paths:
+      - "ui/**"
+    branches:
+      - "develop"
+
+permissions:
+  contents: read
+
+jobs:
+  # This workflow will format frontend code (Svelte, Typescript) and project files (Markdown, YAML) with Prettier
+  lint_front:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+      - name: Lint frontend code with eslint
+        run: |
+          cd ui
+          pnpm lint
+
+  format_front:
+    name: Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: |
+          cd ui
+          pnpm i --frozen-lockfile
+
+      - name: Format frontend code with Prettier
+        run: |
+          cd ui
+          pnpm format_check

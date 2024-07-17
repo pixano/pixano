@@ -53,8 +53,8 @@ def create_video(
         id (str, optional): Point cloud ID.
         item_ref (ItemRef, optional): Item reference.
         parent_ref (ViewRef, optional): Parent view reference.
-        num_frames (int | None, optional): The number of frames in the video. If None, the number of frames is extracted
-            from the video file.
+        num_frames (int | None, optional): The number of frames in the video. If None, the number of frames is
+            extracted from the video file.
         fps (float | None, optional): The frames per second of the video. If None, the fps is extracted from the video
             file.
         width (int | None, optional): The video width. If None, the width is extracted from the video file.
@@ -66,7 +66,14 @@ def create_video(
     Returns:
         Video: The created Video instance.
     """
-    none_conditions = [num_frames is None, fps is None, width is None, height is None, format is None, duration is None]
+    none_conditions = [
+        num_frames is None,
+        fps is None,
+        width is None,
+        height is None,
+        format is None,
+        duration is None,
+    ]
     not_none_conditions = [
         num_frames is not None,
         fps is not None,

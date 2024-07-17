@@ -176,8 +176,8 @@ class FolderBaseBuilder(DatasetBuilder):
     def _create_entities(
         self, item: Item, view: View, entities_data: dict[str, Any]
     ) -> tuple[list[Entity], dict[str, list[Annotation]]]:
-        entities = []
-        annotations = {}
+        entities: list[Entity] = []
+        annotations: dict[str, list[Annotation]] = {}
 
         entities_attrs = list(entities_data.keys())
         for attr in entities_attrs:
@@ -189,7 +189,7 @@ class FolderBaseBuilder(DatasetBuilder):
         if len(nums_entities) > 1:
             raise ValueError("All list of entities data must have same length")
         elif len(nums_entities) == 0:
-            return []
+            return [], {}
 
         num_entities = nums_entities.pop()
         entities_data = {k: v if isinstance(v, list) else [v] for k, v in entities_data.items() if v is not None}
@@ -197,7 +197,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
         for i in range(num_entities):
             entity = {}
-            entity_annotations = {}
+            entity_annotations: dict[str, Any] = {}
             entity_id = shortuuid.uuid()
             for attr in entities_attrs:
                 if entities_data[attr] is None:

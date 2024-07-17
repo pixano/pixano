@@ -35,7 +35,9 @@ class TestDatasetBuilder:
         assert isinstance(builder.dataset_schema, DatasetSchema)
         assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
         for (key1, value1), (key2, value2) in zip(
-            builder.schemas.items(), dataset_item_image_bboxes_keypoint.to_dataset_schema().schemas.items(), strict=True
+            builder.schemas.items(),
+            dataset_item_image_bboxes_keypoint.to_dataset_schema().schemas.items(),
+            strict=True,
         ):
             assert key1 == key2
             assert type(value1) == type(value2)
@@ -128,7 +130,9 @@ class TestDatasetBuilder:
     def test_build_error(self):
         class WrongIdBuilder(DatasetBuilder):
             def generate_data(self):
-                yield {self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")}
+                yield {
+                    self.item_schema_name: self.item_schema(id="id with spaces", metadata="metadata", split="train")
+                }
 
         class WrongSchemaNameBuilder(DatasetBuilder):
             def generate_data(self):
