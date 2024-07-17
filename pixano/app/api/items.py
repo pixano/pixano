@@ -252,8 +252,7 @@ def getFeatures(obj: BaseSchema, ignore_cls, add_fields: list[str] = []) -> dict
             "value": getattr(obj, feat_name),
         }
         for feat_name in vars(obj).keys()
-        if feat_name not in ignore_fields
-        and type(getattr(obj, feat_name)).__name__ in ["int", "float", "str", "bool"]
+        if feat_name not in ignore_fields and type(getattr(obj, feat_name)).__name__ in ["int", "float", "str", "bool"]
     }
 
 

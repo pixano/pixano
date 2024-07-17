@@ -242,9 +242,9 @@ class BBox3D(Annotation):
         if len(self.coords) != 6:
             raise ValueError("3D Bounding box coordinates must have 6 elements.")
         elif not all(coord >= 0 for coord in self.coords):
-            pass # raise ValueError("Bounding box coordinates must be positive.")
+            raise ValueError("Bounding box coordinates must be positive.")
         elif self.is_normalized and not all(0 <= coord <= 1 for coord in self.coords):
-            pass # raise ValueError("Normalized bounding box coordinates must be in [0, 1] range.")
+            raise ValueError("Normalized bounding box coordinates must be in [0, 1] range.")
         elif (self.confidence < 0 or self.confidence > 1) and not self.confidence == -1:
             raise ValueError("Bounding box confidence must be in [0, 1] range or -1.")
         elif self.format not in ["xyzxyz", "xyzwhd"]:
