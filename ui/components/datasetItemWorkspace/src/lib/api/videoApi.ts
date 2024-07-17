@@ -44,6 +44,10 @@ export const boxLinearInterpolation = (
   boxes: VideoItemBBox[],
   view: string,
 ) => {
+  //TMP
+  const no_interpol = boxes.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  return no_interpol?no_interpol.coords:null;
+
   const currentTracklet = track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
@@ -79,6 +83,10 @@ export const keypointsLinearInterpolation = (
   imageIndex: number,
   view: string,
 ) => {
+  //TMP
+  const no_interpol = object.keypoints.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  return no_interpol?no_interpol.vertices:null;
+
   if (!object.keypoints) return null;
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
@@ -95,7 +103,6 @@ export const keypointsLinearInterpolation = (
   } else {
     const start = view_keypoints[endIndex - 1] || view_keypoints[0];
     if (end.frame_index == start?.frame_index) {
-      console.log("QQ", view);
       return start.vertices;
     } else {
       return start.vertices.map((vertex, i) => {

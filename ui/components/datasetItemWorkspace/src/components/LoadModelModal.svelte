@@ -55,6 +55,8 @@ License: CECILL-C
   const sam = new SAM();
 
   async function loadModel() {
+    return;
+
     modelsStore.update((store) => ({ ...store, currentModalOpen: "none" }));
     await sam.init("/data/models/" + selectedModelName);
     interactiveSegmenterModel.set(sam);

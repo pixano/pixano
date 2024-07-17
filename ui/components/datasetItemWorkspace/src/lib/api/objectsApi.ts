@@ -80,7 +80,7 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): B
     const tooltip = defineTooltip(obj);
 
     res_bboxes.push({
-      id: obj.id,
+      id: obj.id, // + box.view_id,
       viewId: box.view_id,
       catId: (obj.features.category_id?.value || 1) as number,
       bbox,
@@ -109,7 +109,7 @@ export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
     return {
-      id: obj.id,
+      id: obj.id,  //+ obj.mask.view_id
       viewId: obj.mask.view_id,
       svg: masksSVG,
       rle: obj.mask,
@@ -156,7 +156,7 @@ export const mapObjectToKeypoints = (
       },
     }));
     res_m_keypoints.push({
-      id: object.id,
+      id: object.id, // + keypoints.view_id,
       view_id: keypoints.view_id,
       vertices,
       edges: template.edges,

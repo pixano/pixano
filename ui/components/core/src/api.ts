@@ -125,6 +125,7 @@ export async function searchDatasetItems(
 
 export async function getDatasetItem(datasetId: string, itemId: string): Promise<DatasetItem> {
   let item: DatasetItem | undefined;
+  const start = Date.now();
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${itemId}`);
 
@@ -143,7 +144,7 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
     item = {} as DatasetItem;
     console.log("api.getDatasetItem -", e);
   }
-
+  console.log("api.getDatasetItem - Done in", Date.now() - start);
   return item;
 }
 

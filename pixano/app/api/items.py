@@ -32,6 +32,7 @@ from pixano.datasets.features import (
     is_bbox,
     is_compressed_rle,
     is_keypoints,
+    is_track,
     is_tracklet,
 )
 from pixano.datasets.utils import image as image_utils
@@ -252,6 +253,7 @@ def getFeatures(obj: BaseSchema, ignore_cls, add_fields: list[str] = []) -> dict
         }
         for feat_name in vars(obj).keys()
         if feat_name not in ignore_fields
+        and type(getattr(obj, feat_name)).__name__ in ["int", "float", "str", "bool"]
     }
 
 
@@ -400,6 +402,7 @@ async def get_dataset_item(  # noqa: D417
                 objects.append(obj)
     else:  # video
         tracks = defaultdict(list)
+        entity_id = defaultdict(list)
 
         # gather tracklets by track
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
@@ -407,7 +410,17 @@ async def get_dataset_item(  # noqa: D417
                 if is_tracklet(type(annotation)):
                     tracks[annotation.entity_ref.id].append(annotation)
 
+        # match track_id with spatial object id if exist
+        for entity_group in groups[_SchemaGroup.ENTITY]:
+            for entity in getattr(item, entity_group):
+                if is_track(type(entity)) and entity.id not in entity_id:
+                    entity_id[entity.id].append(entity.id)
+                elif entity.parent_ref.id != "":
+                    entity_id[entity.parent_ref.id].append(entity.id)
+
         for track_id, tracklets in tracks.items():
+            # if track_id.startswith("track_1") or track_id.startswith("track_2") or track_id.startswith("track_3"):
+            #     continue
             bboxes = []
             keypoints = []
             features = {}
@@ -415,11 +428,13 @@ async def get_dataset_item(  # noqa: D417
             # We need to be able to manage lower level features in front. (will be done in front data refactor)
             for annotation_group in groups[_SchemaGroup.ANNOTATION]:
                 for annotation in getattr(item, annotation_group):
-                    if annotation.view_ref.id == "":
-                        # ignore if annotation is not linked to a view (ex: tracklets)
-                        # Note: Maybe we should still gather features ?
+                    # if annotation.view_ref.id == "":
+                    #     # ignore if annotation is not linked to a view
+                    #     # Note: Maybe we should still gather features ?
+                    #     continue
+                    if is_tracklet(type(annotation)):
                         continue
-                    if annotation.entity_ref.id == track_id:
+                    if annotation.entity_ref.id in entity_id[track_id]:
                         # get frame_index from annotation.view_ref
                         frame_index = next(
                             (
@@ -495,6 +510,7 @@ async def get_dataset_item(  # noqa: D417
                             "end": (
                                 tracklet.end_timestep if hasattr(tracklet, "end_timestep") else tracklet.end_timestamp
                             ),
+                            "view_id": tracklet.view_ref.name,
                         }
                         for tracklet in tracklets
                     ],
@@ -502,6 +518,7 @@ async def get_dataset_item(  # noqa: D417
                     "keypoints": keypoints,
                 }
             )
+            # print("OBJ", objects[-1])
 
     front_item = FrontDatasetItem(
         id=item.id,
