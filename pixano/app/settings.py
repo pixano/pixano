@@ -36,8 +36,8 @@ class Settings(BaseSettings):
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
     local_model_dir: str | None = None
-    data_dir: Path | S3Path
-    model_dir: Path
+    data_dir: Path | S3Path = Path()
+    model_dir: Path = Path()
     # Change Pydantic protected namespace from "model_" to "settings_"
     # because of model_dir
     model_config = ConfigDict(protected_namespaces=("settings_",))

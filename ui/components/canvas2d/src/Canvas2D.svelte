@@ -207,9 +207,11 @@ License: CECILL-C
   });
 
   let scaleOnFirstLoad = {};
+  let viewReady = {};
   Object.keys(imagesPerView).forEach((viewId) => {
     //we need a first scaleView for image only. If video, the scale is done elsewhere
     scaleOnFirstLoad[viewId] = !isVideo;
+    viewReady[viewId] = false;
   });
 
   const getCurrentImage = (viewId: string) =>
@@ -235,7 +237,10 @@ License: CECILL-C
           scaleOnFirstLoad[viewId] = false;
         }
         //scaleElements(viewId);
-        isReady = true;
+        viewReady[viewId] = true;
+        if (Object.values(viewReady).every(Boolean)) {
+          isReady = true;
+        }
         if (!isVideo) cacheImage();
       };
     });
@@ -1266,17 +1271,15 @@ License: CECILL-C
           {/if}
           {#each bboxes as bbox}
             {#if bbox.viewId === viewId}
-              {#key bbox.id}
-                <Rectangle
-                  {bbox}
-                  {colorScale}
-                  zoomFactor={zoomFactor[viewId]}
-                  {stage}
-                  {viewId}
-                  bind:newShape
-                  {selectedTool}
-                />
-              {/key}
+              <Rectangle
+                {bbox}
+                {colorScale}
+                zoomFactor={zoomFactor[viewId]}
+                {stage}
+                {viewId}
+                bind:newShape
+                {selectedTool}
+              />
             {/if}
           {/each}
         </Group>
@@ -1289,21 +1292,19 @@ License: CECILL-C
             {selectedItemId}
             bind:newShape
           />
-          {#each masks as mask}
-            {#key mask.id}
-              {#if mask.viewId === viewId}
-                <PolygonGroup
-                  {viewId}
-                  bind:newShape
-                  {stage}
-                  currentImage={getCurrentImage(viewId)}
-                  {zoomFactor}
-                  {mask}
-                  color={colorScale(mask.id)}
-                  {selectedTool}
-                />
-              {/if}
-            {/key}
+          {#each masks as mask (mask.id)}
+            {#if mask.viewId === viewId}
+              <PolygonGroup
+                {viewId}
+                bind:newShape
+                {stage}
+                currentImage={getCurrentImage(viewId)}
+                {zoomFactor}
+                {mask}
+                color={colorScale(mask.id)}
+                {selectedTool}
+              />
+            {/if}
           {/each}
         </Group>
         <Group config={{ id: "keypoints" }}>

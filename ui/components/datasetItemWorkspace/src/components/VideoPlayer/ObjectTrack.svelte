@@ -31,6 +31,7 @@ License: CECILL-C
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
+  import { onMount } from "svelte";
 
   export let object: VideoObject;
   export let onTimeTrackClick: (imageIndex: number) => void;
@@ -128,39 +129,55 @@ License: CECILL-C
     return [prevItem, nextItem];
   };
 
-  $: {
-    // trackWithItems = object.track.map((tracklet) => ({
-    //   ...tracklet,
-    //   items:
-    //     object.boxes?.filter(
-    //       (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
-    //     ) ||
-    //     object.keypoints?.filter(
-    //       (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
-    //     ) ||
-    //     [],
-    // }));
-    // NOTE: the commented code up could not affect items with keypoints if no boxes fill condition
-    //       because then filter return [] which is not falsy for || operator
-    // here is another version
-    // BUT I fear this version could mix boxes and keypoints ??? so I keep this note here for now
-    //  ...it could happen if we have an object that has both boxes and keypoints (maybe it's the wanted behaviour anyway?)
-    trackWithItems = object.track.map((tracklet) => ({
-      ...tracklet,
-      items: [
-        ...(object.boxes
-          ? object.boxes.filter(
-              (box) => box.frame_index >= tracklet.start && box.frame_index <= tracklet.end,
-            )
-          : []),
-        ...(object.keypoints
-          ? object.keypoints.filter(
-              (kp) => kp.frame_index >= tracklet.start && kp.frame_index <= tracklet.end,
-            )
-          : []),
-      ],
-    }));
-  }
+  const getTrackletItem = (ann: TrackletItem) => {
+    let item: TrackletItem = {
+      frame_index: ann.frame_index,
+      tracklet_id: ann.tracklet_id,
+    };
+    if (ann.is_key) item.is_key = ann.is_key;
+    if (ann.is_thumbnail) item.is_thumbnail = ann.is_thumbnail;
+    if (ann.hidden) item.hidden = ann.hidden;
+    return item;
+  };
+
+  const updateTracks = () => {
+    trackWithItems = [];
+    for (const tracklet of object.track) {
+      const boxes = object.boxes
+        ? object.boxes.filter(
+            (box) =>
+              box.view_id == tracklet.view_id &&
+              box.frame_index >= tracklet.start &&
+              box.frame_index <= tracklet.end,
+          )
+        : [];
+      const keypoints = object.keypoints
+        ? object.keypoints.filter(
+            (kp) =>
+              kp.view_id == tracklet.view_id &&
+              kp.frame_index >= tracklet.start &&
+              kp.frame_index <= tracklet.end,
+          )
+        : [];
+      let items: TrackletItem[] = [];
+      for (const ann of boxes) {
+        items.push(getTrackletItem(ann));
+      }
+      for (const ann of keypoints) {
+        const item = getTrackletItem(ann);
+        if (!items.find((it) => it.frame_index == item.frame_index))
+          items.push(getTrackletItem(ann));
+      }
+      trackWithItems.push({
+        ...tracklet,
+        items: items,
+      });
+    }
+  };
+
+  onMount(() => {
+    updateTracks();
+  });
 </script>
 
 {#if trackWithItems}
@@ -184,20 +201,18 @@ License: CECILL-C
       </ContextMenu.Content>
     </ContextMenu.Root>
     {#each trackWithItems as tracklet, i}
-      {#key `${tracklet.start}-${tracklet.end}`}
-        <ObjectTracklet
-          {tracklet}
-          {object}
-          {onAddKeyItemClick}
-          {onContextMenu}
-          {onEditKeyItemClick}
-          onSplitTrackletClick={() => onSplitTrackletClick(i)}
-          onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
-          {findNeighborItems}
-          {updateView}
-          {moveCursorToPosition}
-        />
-      {/key}
+      <ObjectTracklet
+        {tracklet}
+        {object}
+        {onAddKeyItemClick}
+        {onContextMenu}
+        {onEditKeyItemClick}
+        onSplitTrackletClick={() => onSplitTrackletClick(i)}
+        onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
+        {findNeighborItems}
+        {updateView}
+        {moveCursorToPosition}
+      />
     {/each}
   </div>
 {/if}

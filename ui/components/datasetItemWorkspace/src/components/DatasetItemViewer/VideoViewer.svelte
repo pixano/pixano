@@ -50,7 +50,7 @@ License: CECILL-C
 
   let inspectorMaxHeight = 250;
   let expanding = false;
-  let currentFrame: number;
+  let currentFrame: number = 0;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -102,10 +102,13 @@ License: CECILL-C
         if (displayedMBox && object.boxes) {
           let new_displayedMBox = [];
           //Need to add bbox if not present beforehand
-          let frame_bboxes = object.boxes.filter((bbox) => bbox.frame_index == imageIndex);
-          if (frame_bboxes) {
-            for (let frame_box of frame_bboxes) {
-              displayedMBox.push(structuredClone(frame_box)); // clone required as keypoints are not shallow
+          for (const view in imagesPerView) {
+            let frame_bbox = object.boxes.find(
+              (bbox) => bbox.view_id == view && bbox.frame_index == imageIndex,
+            );
+            let dispViewBBox = displayedMBox.find((bbox) => bbox.view_id == view);
+            if (frame_bbox && !dispViewBBox) {
+              displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
             }
           }
           for (let displayedBox of displayedMBox) {
@@ -128,13 +131,15 @@ License: CECILL-C
         if (displayedMKeypoints && object.keypoints) {
           let new_displayedMKeypoints = [];
           //Need to add keypoint if not present beforehand
-          let frame_kpts = object.keypoints.filter((kpt) => kpt.frame_index == imageIndex);
-          if (frame_kpts) {
-            for (let frame_kpt of frame_kpts) {
+          for (const view in imagesPerView) {
+            let frame_kpt = object.keypoints.find(
+              (kpt) => kpt.view_id == view && kpt.frame_index == imageIndex,
+            );
+            let dispViewKpt = displayedMKeypoints.find((kpt) => kpt.view_id == view);
+            if (frame_kpt && !dispViewKpt) {
               displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
             }
           }
-
           for (let displayedKeypoints of displayedMKeypoints) {
             const vertices = keypointsLinearInterpolation(
               object,

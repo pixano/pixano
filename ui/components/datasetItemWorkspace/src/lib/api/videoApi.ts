@@ -44,6 +44,10 @@ export const boxLinearInterpolation = (
   boxes: VideoItemBBox[],
   view: string,
 ) => {
+  //TMP
+  // const no_interpol = boxes.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  // return no_interpol?no_interpol.coords:null;
+
   const currentTracklet = track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
@@ -79,13 +83,17 @@ export const keypointsLinearInterpolation = (
   imageIndex: number,
   view: string,
 ) => {
+  //TMP
+  // const no_interpol = object.keypoints?.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  // return no_interpol?no_interpol.vertices:null;
+
   if (!object.keypoints) return null;
   const currentTracklet = object.track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
   if (!currentTracklet) return null;
-  const view_keypoints = object.keypoints.filter((kp) => kp.view_id == view);
-  const endIndex = view_keypoints.findIndex((kp) => kp.frame_index >= imageIndex);
+  const view_keypoints = object.keypoints?.filter((kp) => kp.view_id == view);
+  const endIndex = view_keypoints?.findIndex((kp) => kp.frame_index >= imageIndex);
   if (endIndex < 0) {
     return null;
   }
@@ -95,7 +103,6 @@ export const keypointsLinearInterpolation = (
   } else {
     const start = view_keypoints[endIndex - 1] || view_keypoints[0];
     if (end.frame_index == start?.frame_index) {
-      console.log("QQ", view);
       return start.vertices;
     } else {
       return start.vertices.map((vertex, i) => {
@@ -437,6 +444,7 @@ export const splitTrackletInTwo = (
     start: tracklet.start,
     end: rightClickFrameIndex,
     id: startId,
+    view_id: tracklet.view_id,
     items: filterItems(
       tracklet.items,
       { tracklet_id: startId, frame_index: rightClickFrameIndex, is_key: true },
@@ -447,6 +455,7 @@ export const splitTrackletInTwo = (
     start: rightClickFrameIndex + 1,
     end: tracklet.end,
     id: endId,
+    view_id: tracklet.view_id,
     items: filterItems(
       tracklet.items,
       { tracklet_id: endId, frame_index: rightClickFrameIndex + 1, is_key: true },

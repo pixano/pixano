@@ -170,6 +170,7 @@ export interface Tracklet {
   start: number;
   end: number;
   id: string;
+  view_id: string;
 }
 
 export type TrackletWithItems = Tracklet & {

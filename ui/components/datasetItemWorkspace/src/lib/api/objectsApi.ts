@@ -407,6 +407,7 @@ export const defineCreatedObject = (
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
             id,
+            view_id: shape.viewId,
           },
         ],
       };
@@ -459,6 +460,7 @@ export const defineCreatedObject = (
             start: currentFrameIndex,
             end: currentFrameIndex + 5,
             id,
+            view_id: shape.viewId,
           },
         ],
         displayedMKeypoints: [{ ...keypoints, frame_index: 0, tracklet_id: id }],
