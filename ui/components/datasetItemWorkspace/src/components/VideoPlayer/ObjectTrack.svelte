@@ -130,15 +130,15 @@ License: CECILL-C
   };
 
   const getTrackletItem = (ann: TrackletItem) => {
-      let item: TrackletItem = {
-        frame_index: ann.frame_index,
-        tracklet_id: ann.tracklet_id,
-      };
-      if (ann.is_key) item.is_key = ann.is_key;
-      if (ann.is_thumbnail) item.is_thumbnail = ann.is_thumbnail;
-      if (ann.hidden) item.hidden = ann.hidden;
-      return item;
+    let item: TrackletItem = {
+      frame_index: ann.frame_index,
+      tracklet_id: ann.tracklet_id,
     };
+    if (ann.is_key) item.is_key = ann.is_key;
+    if (ann.is_thumbnail) item.is_thumbnail = ann.is_thumbnail;
+    if (ann.hidden) item.hidden = ann.hidden;
+    return item;
+  };
 
   const updateTracks = () => {
     trackWithItems = [];

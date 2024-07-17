@@ -45,8 +45,8 @@ export const boxLinearInterpolation = (
   view: string,
 ) => {
   //TMP
-  const no_interpol = boxes.find((box) => box.view_id == view && box.frame_index == imageIndex);
-  return no_interpol?no_interpol.coords:null;
+  // const no_interpol = boxes.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  // return no_interpol?no_interpol.coords:null;
 
   const currentTracklet = track.find(
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
@@ -84,8 +84,8 @@ export const keypointsLinearInterpolation = (
   view: string,
 ) => {
   //TMP
-  const no_interpol = object.keypoints.find((box) => box.view_id == view && box.frame_index == imageIndex);
-  return no_interpol?no_interpol.vertices:null;
+  // const no_interpol = object.keypoints.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  // return no_interpol?no_interpol.vertices:null;
 
   if (!object.keypoints) return null;
   const currentTracklet = object.track.find(

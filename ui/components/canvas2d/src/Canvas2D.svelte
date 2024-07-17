@@ -207,7 +207,7 @@ License: CECILL-C
   });
 
   let scaleOnFirstLoad = {};
-  let viewReady = {}
+  let viewReady = {};
   Object.keys(imagesPerView).forEach((viewId) => {
     //we need a first scaleView for image only. If video, the scale is done elsewhere
     scaleOnFirstLoad[viewId] = !isVideo;

@@ -103,7 +103,9 @@ License: CECILL-C
           let new_displayedMBox = [];
           //Need to add bbox if not present beforehand
           for (const view in imagesPerView) {
-            let frame_bbox = object.boxes.find((bbox) => bbox.view_id == view && bbox.frame_index == imageIndex);
+            let frame_bbox = object.boxes.find(
+              (bbox) => bbox.view_id == view && bbox.frame_index == imageIndex,
+            );
             let dispViewBBox = displayedMBox.find((bbox) => bbox.view_id == view);
             if (frame_bbox && !dispViewBBox) {
               displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
@@ -130,7 +132,9 @@ License: CECILL-C
           let new_displayedMKeypoints = [];
           //Need to add keypoint if not present beforehand
           for (const view in imagesPerView) {
-            let frame_kpt = object.keypoints.find((kpt) => kpt.view_id == view && kpt.frame_index == imageIndex);
+            let frame_kpt = object.keypoints.find(
+              (kpt) => kpt.view_id == view && kpt.frame_index == imageIndex,
+            );
             let dispViewKpt = displayedMKeypoints.find((kpt) => kpt.view_id == view);
             if (frame_kpt && !dispViewKpt) {
               displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
