@@ -84,7 +84,7 @@ export const keypointsLinearInterpolation = (
   view: string,
 ) => {
   //TMP
-  // const no_interpol = object.keypoints.find((box) => box.view_id == view && box.frame_index == imageIndex);
+  // const no_interpol = object.keypoints?.find((box) => box.view_id == view && box.frame_index == imageIndex);
   // return no_interpol?no_interpol.vertices:null;
 
   if (!object.keypoints) return null;
@@ -92,8 +92,8 @@ export const keypointsLinearInterpolation = (
     (tracklet) => tracklet.start <= imageIndex && tracklet.end >= imageIndex,
   );
   if (!currentTracklet) return null;
-  const view_keypoints = object.keypoints.filter((kp) => kp.view_id == view);
-  const endIndex = view_keypoints.findIndex((kp) => kp.frame_index >= imageIndex);
+  const view_keypoints = object.keypoints?.filter((kp) => kp.view_id == view);
+  const endIndex = view_keypoints?.findIndex((kp) => kp.frame_index >= imageIndex);
   if (endIndex < 0) {
     return null;
   }
@@ -444,6 +444,7 @@ export const splitTrackletInTwo = (
     start: tracklet.start,
     end: rightClickFrameIndex,
     id: startId,
+    view_id: tracklet.view_id,
     items: filterItems(
       tracklet.items,
       { tracklet_id: startId, frame_index: rightClickFrameIndex, is_key: true },
@@ -454,6 +455,7 @@ export const splitTrackletInTwo = (
     start: rightClickFrameIndex + 1,
     end: tracklet.end,
     id: endId,
+    view_id: tracklet.view_id,
     items: filterItems(
       tracklet.items,
       { tracklet_id: endId, frame_index: rightClickFrameIndex + 1, is_key: true },
