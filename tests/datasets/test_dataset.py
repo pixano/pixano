@@ -37,11 +37,11 @@ class TestDataset:
         with pytest.raises(ValueError, match="Table nonexistent not found in dataset"):
             dumb_dataset.open_table("nonexistent")
 
-    def test_open_tables(self, dataset: Dataset):
-        tables = dataset.open_tables()
+    def test_open_tables(self, dumb_dataset: Dataset):
+        tables = dumb_dataset.open_tables()
         for table in tables.values():
             assert isinstance(table, LanceTable)
-        assert set(tables.keys()) == set(dataset.schema.schemas.keys())
+        assert set(tables.keys()) == set(dumb_dataset.schema.schemas.keys())
 
     @pytest.mark.parametrize(
         "table_name,type,ids,item_ids,limit,offset,expected_output",
@@ -154,8 +154,8 @@ class TestDataset:
             ),
         ],
     )
-    def test_get_data(self, table_name, type, ids, item_ids, limit, offset, expected_output, dataset: Dataset):
-        data = dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
+    def test_get_data(self, table_name, type, ids, item_ids, limit, offset, expected_output, dumb_dataset: Dataset):
+        data = dumb_dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
         assert isinstance(data, list) and all(isinstance(d, type) for d in data)
         for d, e in zip(data, expected_output, strict=True):
             assert d.model_dump() == e
@@ -176,9 +176,9 @@ class TestDataset:
             ("item", None, None, 2, -1, "limit and offset must be positive integers"),
         ],
     )
-    def test_get_data_error(self, table_name, ids, item_ids, limit, offset, expected_error, dataset: Dataset):
+    def test_get_data_error(self, table_name, ids, item_ids, limit, offset, expected_error, dumb_dataset: Dataset):
         with pytest.raises(ValueError, match=expected_error):
-            dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
+            dumb_dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
 
     @pytest.mark.parametrize(
         "ids,limit,offset,expected_output",
@@ -533,10 +533,10 @@ class TestDataset:
         dumb_dataset.delete_data("item", ids=["0", "1"])
         assert dumb_dataset.get_data("item", ids=["0", "1"]) == []
 
-    def test_delete_dataset_items(self, dataset: Dataset):
-        dataset.get_dataset_items(ids=["0", "1"])
-        dataset.delete_dataset_items(ids=["0", "1"])
-        assert dataset.get_dataset_items(ids=["0", "1"]) == []
+    def test_delete_dataset_items(self, dumb_dataset: Dataset):
+        dumb_dataset.get_dataset_items(ids=["0", "1"])
+        dumb_dataset.delete_dataset_items(ids=["0", "1"])
+        assert dumb_dataset.get_dataset_items(ids=["0", "1"]) == []
 
     def test_update_data(self, dumb_dataset: Dataset):
         item = dumb_dataset.get_data("item", ids=["0"])[0]
