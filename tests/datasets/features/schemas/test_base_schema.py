@@ -25,8 +25,9 @@ class TestBaseSchema:
             base_schema.resolve_ref(SchemaRef(id="", name=""))
 
         base_schema.dataset = dumb_dataset
-        assert base_schema.resolve_ref(SchemaRef(id="0", name="item")) == dumb_dataset.schema.schemas["item"](
-            id="0", split="test", metadata="metadata_0"
+        assert (
+            base_schema.resolve_ref(SchemaRef(id="0", name="item")).model_dump()
+            == dumb_dataset.schema.schemas["item"](id="0", split="test", metadata="metadata_0").model_dump()
         )
 
         for id, name in [
