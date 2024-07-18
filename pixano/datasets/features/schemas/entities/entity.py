@@ -19,6 +19,21 @@ class Entity(BaseSchema):
     view_ref: ViewRef = ViewRef.none()
     parent_ref: EntityRef = EntityRef.none()
 
+    @property
+    def item(self):
+        """Get the item."""
+        return self.resolve_ref(self.item_ref)
+
+    @property
+    def view(self):
+        """Get the view."""
+        return self.resolve_ref(self.view_ref)
+
+    @property
+    def parent(self):
+        """Get the parent."""
+        return self.resolve_ref(self.parent_ref)
+
 
 def is_entity(cls: type, strict: bool = False) -> bool:
     """Check if a class is an Entity or subclass of Entity."""

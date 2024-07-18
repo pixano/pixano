@@ -4,15 +4,22 @@
 # License: CECILL-C
 # =====================================
 
+from __future__ import annotations
+
 from types import GenericAlias
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lancedb.pydantic import LanceModel
-from pydantic import ConfigDict, create_model
+from pydantic import ConfigDict, PrivateAttr, create_model
 
+from pixano.datasets.features.types.schema_reference import SchemaRef
 from pixano.datasets.utils.python import get_super_type_from_dict, issubclass_strict
 
 from ..types.registry import _TYPES_REGISTRY
+
+
+if TYPE_CHECKING:
+    from pixano.datasets.dataset import Dataset
 
 
 class BaseSchema(LanceModel):
@@ -20,6 +27,27 @@ class BaseSchema(LanceModel):
 
     model_config = ConfigDict(validate_assignment=True)
     id: str = ""
+    _dataset: Dataset | None = PrivateAttr(None)
+
+    @property
+    def dataset(self) -> Dataset:
+        """Get the dataset."""
+        if self._dataset is None:
+            raise ValueError("Dataset is not set.")
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, dataset: Dataset):
+        """Set the dataset."""
+        self._dataset = dataset
+
+    def resolve_ref(self, ref: SchemaRef) -> Any:
+        """Resolve a reference."""
+        if self._dataset is None:
+            raise ValueError("Set the dataset before resolving a reference.")
+        if ref.id == "" or ref.name == "":
+            raise ValueError("Reference should have a name and an id.")
+        return self._dataset.get_data(ref.name, ids=[ref.id])[0]
 
     @classmethod
     def serialize(cls) -> dict[str, str | dict[str, Any]]:

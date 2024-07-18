@@ -4,9 +4,11 @@
 # License: CECILL-C
 # =====================================
 
+from __future__ import annotations
+
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import lancedb
@@ -24,7 +26,11 @@ from .dataset_schema import (
     SchemaRelation,
 )
 from .dataset_stat import DatasetStat
-from .features import BaseSchema, _SchemaGroup
+from .features import _SchemaGroup
+
+
+if TYPE_CHECKING:
+    from .features import BaseSchema
 
 
 def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
@@ -247,12 +253,21 @@ class Dataset:
                     .to_pylist()
                 )
                 model = self.schema.schemas[table_name]
-                return [model(**{k: v for k, v in row.items() if k in model.field_names()}) for row in item_rows]
+                models: list[BaseSchema] = []
+                for row in item_rows:
+                    models.append(model(**{k: v for k, v in row.items() if k in model.field_names()}))
+                    models[-1].dataset = self
+                return models
+
             query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
         else:
             query = self._search_by_ids(ids, table, None)
 
-        return query.to_pydantic(self.schema.schemas[table_name])
+        query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
+        for model in query_models:
+            model.dataset = self  # type: ignore[attr-defined]
+
+        return query_models
 
     def get_dataset_items(
         self,
@@ -290,9 +305,10 @@ class Dataset:
             table_schema = self.schema.schemas[table_name]
 
             lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
-            pydantic_table = lance_query.to_pydantic(table_schema)
+            pydantic_table: list[BaseSchema] = lance_query.to_pydantic(table_schema)
 
             for row in pydantic_table:
+                row.dataset = self
                 item_id = row.item_ref.id
                 if is_collection:
                     if table_name not in data_dict[item_id]:

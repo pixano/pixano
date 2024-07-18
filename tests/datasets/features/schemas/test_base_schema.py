@@ -4,7 +4,11 @@
 # License: CECILL-C
 # =====================================
 
+import pytest
+
+from pixano.datasets.dataset import Dataset
 from pixano.datasets.features import BaseSchema, NDArrayFloat, is_base_schema
+from pixano.datasets.features.types.schema_reference import SchemaRef
 
 from ..utils import make_tests_is_sublass_strict
 
@@ -13,6 +17,28 @@ class TestBaseSchema:
     def test_init(self):
         base_schema = BaseSchema()
         base_schema.id == ""
+
+    def test_resolve_ref(self, dumb_dataset: Dataset):
+        base_schema = BaseSchema()
+
+        with pytest.raises(ValueError, match="Set the dataset before resolving a reference."):
+            base_schema.resolve_ref(SchemaRef(id="", name=""))
+
+        base_schema.dataset = dumb_dataset
+        assert base_schema.resolve_ref(SchemaRef(id="0", name="item")) == dumb_dataset.schema.schemas["item"](
+            id="0", split="test", metadata="metadata_0"
+        )
+
+        for id, name in [
+            (
+                "",
+                "1",
+            ),
+            ("1", ""),
+            ("", ""),
+        ]:
+            with pytest.raises(ValueError, match="Reference should have a name and an id."):
+                base_schema.resolve_ref(SchemaRef(id=id, name=name))
 
     def test_serialize(self):
         class CustomSchema(BaseSchema):
