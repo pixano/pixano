@@ -21,6 +21,11 @@ class Embedding(BaseSchema):
 
     item_ref: ItemRef = ItemRef.none()
 
+    @property
+    def item(self):
+        """Get the item."""
+        return self.resolve_ref(self.item_ref)
+
 
 def is_embedding(cls: type, strict: bool = False) -> bool:
     """Check if a class is an Embedding or subclass of Embedding."""

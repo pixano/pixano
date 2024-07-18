@@ -13,6 +13,7 @@ from tests.fixtures.datasets.builders.folder import (
     video_folder,
     video_folder_builder,
 )
+from tests.fixtures.datasets.dataset import dumb_dataset
 from tests.fixtures.datasets.dataset_info import info
 from tests.fixtures.datasets.dataset_item import (
     dataset_item_image_bboxes_keypoint,
