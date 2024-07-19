@@ -34,7 +34,8 @@ class KeyPoints(Annotation):
         if len(self.coords) % 2 != 0:
             raise ValueError("There must be an even number of coords")
         elif any(coord < 0 for coord in self.coords):
-            raise ValueError("Coordinates must be positive")
+            pass
+            # raise ValueError("Coordinates must be positive")
         elif len(self.states) != len(self.coords) // 2:
             raise ValueError("There must be the same number of states than points")
         elif any(state not in ["visible", "invisible", "hidden"] for state in self.states):
