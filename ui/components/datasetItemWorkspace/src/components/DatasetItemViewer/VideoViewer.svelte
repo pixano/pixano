@@ -8,7 +8,12 @@ License: CECILL-C
   // Imports
   import * as ort from "onnxruntime-web";
 
-  import { type EditShape, type Tracklet, type VideoDatasetItem } from "@pixano/core";
+  import {
+    type EditShape,
+    type Tracklet,
+    type VideoDatasetItem,
+    type ItemObject,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -80,6 +85,8 @@ License: CECILL-C
       0,
     );
     lastFrameIndex.set(longestView - 1);
+
+    updateView(0);
   });
 
   const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
@@ -94,72 +101,96 @@ License: CECILL-C
       };
     });
 
-    itemObjects.update((objects) =>
-      objects.map((object) => {
+    itemObjects.update((objects) => {
+      objects = objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedMBox, displayedMKeypoints } = object;
 
-        if (displayedMBox && object.boxes) {
+        if (object.boxes) {
           let new_displayedMBox = [];
           //Need to add bbox if not present beforehand
           for (const view in imagesPerView) {
             let frame_bbox = object.boxes.find(
               (bbox) => bbox.view_id == view && bbox.frame_index == imageIndex,
             );
-            let dispViewBBox = displayedMBox.find((bbox) => bbox.view_id == view);
-            if (frame_bbox && !dispViewBBox) {
-              displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
+            if (frame_bbox) {
+              let dispViewBBox = displayedMBox
+                ? displayedMBox.find((bbox) => bbox.view_id == view)
+                : undefined;
+              if (!dispViewBBox) {
+                if (!displayedMBox) displayedMBox = [];
+                displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
+              }
             }
           }
-          for (let displayedBox of displayedMBox) {
-            const newCoords = boxLinearInterpolation(
-              newTrack || object.track,
-              imageIndex,
-              object.boxes,
-              displayedBox.view_id!,
-            );
+          if (displayedMBox) {
+            for (let displayedBox of displayedMBox) {
+              const newCoords = boxLinearInterpolation(
+                newTrack || object.track,
+                imageIndex,
+                object.boxes,
+                displayedBox.view_id!,
+              );
 
-            if (newCoords && newCoords.every((value) => value)) {
-              displayedBox = { ...displayedBox, coords: newCoords };
+              if (newCoords && newCoords.every((value) => value)) {
+                displayedBox = { ...displayedBox, coords: newCoords, frame_index: imageIndex };
+              }
+              displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+              new_displayedMBox.push(displayedBox);
             }
-            displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-            new_displayedMBox.push(displayedBox);
+            object = { ...object, displayedMBox: new_displayedMBox };
           }
-          object = { ...object, displayedMBox: new_displayedMBox };
         }
 
-        if (displayedMKeypoints && object.keypoints) {
+        if (object.keypoints) {
           let new_displayedMKeypoints = [];
           //Need to add keypoint if not present beforehand
           for (const view in imagesPerView) {
             let frame_kpt = object.keypoints.find(
               (kpt) => kpt.view_id == view && kpt.frame_index == imageIndex,
             );
-            let dispViewKpt = displayedMKeypoints.find((kpt) => kpt.view_id == view);
-            if (frame_kpt && !dispViewKpt) {
-              displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
+            if (frame_kpt) {
+              let dispViewKpt = displayedMKeypoints
+                ? displayedMKeypoints.find((kpt) => kpt.view_id == view)
+                : undefined;
+              if (!dispViewKpt) {
+                if (!displayedMKeypoints) displayedMKeypoints = [];
+                displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
+              }
             }
           }
-          for (let displayedKeypoints of displayedMKeypoints) {
-            const vertices = keypointsLinearInterpolation(
-              object,
-              imageIndex,
-              displayedKeypoints.view_id!,
-            );
-            if (vertices) {
-              displayedKeypoints = { ...displayedKeypoints, vertices };
+          if (displayedMKeypoints) {
+            for (let displayedKeypoints of displayedMKeypoints) {
+              const vertices = keypointsLinearInterpolation(
+                object,
+                imageIndex,
+                displayedKeypoints.view_id!,
+              );
+              if (vertices) {
+                displayedKeypoints = { ...displayedKeypoints, vertices, frame_index: imageIndex };
+              }
+              displayedKeypoints.displayControl = {
+                ...displayedKeypoints.displayControl,
+                hidden: !vertices,
+              };
+              new_displayedMKeypoints.push(displayedKeypoints);
             }
-            displayedKeypoints.displayControl = {
-              ...displayedKeypoints.displayControl,
-              hidden: !vertices,
-            };
-            new_displayedMKeypoints.push(displayedKeypoints);
+            object = { ...object, displayedMKeypoints: new_displayedMKeypoints };
           }
-          object = { ...object, displayedMKeypoints: new_displayedMKeypoints };
         }
         return object;
-      }),
-    );
+      });
+      function findEarlierTracklet(item: ItemObject): number {
+        if (item.datasetItemType !== "video") return 0;
+        if (item.track.length === 0) return 0;
+        return item.track.reduce(
+          (min, obj) => (obj.start < min ? obj.start : min),
+          item.track[0].start,
+        );
+      }
+      objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
+      return objects;
+    });
 
     currentFrame = imageIndex;
   };

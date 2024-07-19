@@ -31,6 +31,7 @@ License: CECILL-C
 
   export let object: VideoObject;
   export let tracklet: TrackletWithItems;
+  export let views: string[];
   export let onContextMenu: (event: MouseEvent) => void;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: () => void;
@@ -45,9 +46,15 @@ License: CECILL-C
     const end = tracklet.end > $lastFrameIndex ? $lastFrameIndex : tracklet.end;
     return ((end - tracklet.start) / ($lastFrameIndex + 1)) * 100;
   };
+  const getHeight = (views: string[]) => 80 / views.length;
+  const getTop = (tracklet: Tracklet, views: string[]) => {
+    return 10 + (80 * views.indexOf(tracklet.view_id)) / views.length;
+  };
 
   let width: number = getWidth(tracklet);
   let left: number = getLeft(tracklet);
+  let height: number = getHeight(views);
+  let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
 
   $: oneFrameInPixel =
@@ -123,11 +130,11 @@ License: CECILL-C
 
 <ContextMenu.Root>
   <ContextMenu.Trigger
-    class={cn("h-4/5 w-full absolute top-1/2 -translate-y-1/2", {
+    class={cn("absolute border-y border-white", {
       "opacity-100": object.highlighted === "self",
       "opacity-30": object.highlighted === "none",
     })}
-    style={`left: ${left}%; width: ${width}%; background-color: ${color}`}
+    style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
       on:contextmenu|preventDefault={(e) => onContextMenu(e)}
@@ -149,6 +156,8 @@ License: CECILL-C
       <TrackletKeyItem
         {item}
         {color}
+        {height}
+        {top}
         {oneFrameInPixel}
         {onEditKeyItemClick}
         objectId={object.id}

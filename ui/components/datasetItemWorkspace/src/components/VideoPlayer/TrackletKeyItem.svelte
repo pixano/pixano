@@ -17,6 +17,8 @@ License: CECILL-C
 
   export let item: TrackletItem;
   export let color: string;
+  export let height: number;
+  export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let updateTrackletWidth: (
@@ -87,11 +89,11 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn(
-      "w-4 h-4 z-50 block bg-white border-2 rounded-full absolute left-[-0.5rem] top-1/2 translate-y-[-50%] translate-x-[-50%]",
+      "w-2 z-50 block border-2 border-slate-500 rounded-full absolute left-[-0.5rem] translate-x-[-50%]",
       "hover:scale-150",
       { "bg-primary !border-primary": isItemBeingEdited },
     )}
-    style={`left: ${left}%; border-color: ${color}`}
+    style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color}`}
   >
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
