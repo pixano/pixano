@@ -45,28 +45,6 @@ License: CECILL-C
       .getDatasetItem(dataset.id, encodeURIComponent(id))
       .then((item) => {
         selectedItem = item;
-        // video: add displayControl, displayedBox and displayedKeypoints props
-        if (selectedItem.type === "video") {
-          selectedItem.objects.map((obj) => {
-            if (obj.datasetItemType === "video") {
-              let frame0_boxes = obj.boxes?.filter((box) => box.frame_index == 0);
-              if (frame0_boxes) {
-                obj.displayedMBox = [];
-                for (let frame0_box of frame0_boxes) {
-                  obj.displayedMBox.push(frame0_box);
-                }
-              }
-              let frame0_kpts = obj.keypoints?.filter((kpt) => kpt.frame_index == 0);
-              if (frame0_kpts) {
-                obj.displayedMKeypoints = [];
-                for (let frame0_kpt of frame0_kpts) {
-                  obj.displayedMKeypoints.push(structuredClone(frame0_kpt)); // clone required as keypoints are not shallow
-                }
-              }
-            }
-            return obj;
-          });
-        }
         if (Object.keys(item).length === 0) {
           noItemFound = true;
         } else {

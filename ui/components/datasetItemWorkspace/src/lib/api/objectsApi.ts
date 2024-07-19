@@ -518,6 +518,8 @@ export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
     view_id = object.bbox?.view_id;
   }
   if (!box || !view_id) return null;
+  //prevent bug: if thumbnail is asked before data are fully loaded, we can have a error on a bad key
+  if (!(view_id in metas.views)) return null;
   const view =
     metas.type === "video"
       ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]

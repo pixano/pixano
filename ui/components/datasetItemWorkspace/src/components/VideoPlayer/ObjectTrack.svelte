@@ -40,8 +40,19 @@ License: CECILL-C
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
   let trackWithItems: TrackletWithItems[];
+  let views: string[];
 
   $: totalWidth = ($lastFrameIndex / ($lastFrameIndex + 1)) * 100;
+
+  $: {
+    if (object.track) {
+      let view_set = new Set<string>();
+      object.track.forEach((tracklet) => {
+        view_set.add(tracklet.view_id);
+      });
+      views = Array.from(view_set);
+    }
+  }
 
   const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
@@ -141,6 +152,7 @@ License: CECILL-C
   };
 
   const updateTracks = () => {
+    console.log("UpdTrack");
     trackWithItems = [];
     for (const tracklet of object.track) {
       const boxes = object.boxes
@@ -204,6 +216,7 @@ License: CECILL-C
       <ObjectTracklet
         {tracklet}
         {object}
+        {views}
         {onAddKeyItemClick}
         {onContextMenu}
         {onEditKeyItemClick}
