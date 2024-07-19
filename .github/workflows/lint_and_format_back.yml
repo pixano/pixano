@@ -11,6 +11,9 @@ on:
     paths:
       - "pixano/**"
       - "tests/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
     branches:
       - "develop"
       - "main"
@@ -18,6 +21,9 @@ on:
     paths:
       - "pixano/**"
       - "tests/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
     branches:
       - "develop"
 

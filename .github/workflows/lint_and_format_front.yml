@@ -10,12 +10,18 @@ on:
   push:
     paths:
       - "ui/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
     branches:
       - "develop"
       - "main"
   pull_request:
     paths:
       - "ui/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
     branches:
       - "develop"
 
