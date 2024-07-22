@@ -9,11 +9,11 @@ name: Check License Header
 on:
   push:
     branches:
-        - "develop"
-        - "main"
+      - "develop"
+      - "main"
   pull_request:
     branches:
-        - "main"
+      - "develop"
 
 jobs:
   check_license_header:
