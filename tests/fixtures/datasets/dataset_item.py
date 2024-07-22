@@ -52,3 +52,17 @@ def dataset_item_video_bboxes_keypoint():
         keypoint: list[KeyPoints]
 
     return Schema
+
+
+@pytest.fixture
+def dataset_item_custom_2():
+    class CustomDatasetItem(DatasetItem):
+        categories: tuple[str, ...]
+        other_categories: list[int]
+        image: Image
+        entity: Entity
+        bbox: list[BBox]
+        name: str
+        index: int
+
+    return CustomDatasetItem

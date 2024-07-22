@@ -16,133 +16,7 @@ from pydantic import ValidationError
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.features.schemas import BBox, Embedding, Entity, Image, Item, SequenceFrame, Track
 from pixano.datasets.features.schemas.base_schema import BaseSchema
-from pixano.datasets.features.schemas.registry import register_schema
 from pixano.datasets.features.schemas.schema_group import _SchemaGroup
-
-
-@pytest.fixture
-def CustomItem():
-    class CustomItem(Item):
-        categories: tuple[str, ...]
-        other_categories: list[int]
-
-    try:
-        register_schema(CustomItem)
-    except ValueError:
-        pass
-    return CustomItem
-
-
-@pytest.fixture
-def CustomItem2():
-    class CustomItem(Item):
-        categories: tuple[str, ...]
-        other_categories: list[int]
-        name: str
-        index: int
-
-    return CustomItem
-
-
-@pytest.fixture
-def CustomDatasetItem():
-    class CustomDatasetItem(DatasetItem):
-        categories: tuple[str, ...]
-        other_categories: list[int]
-        image: Image
-        entity: Entity
-        bbox: list[BBox]
-        name: str
-        index: int
-
-    return CustomDatasetItem
-
-
-@pytest.fixture
-def dataset_schema_1(CustomItem):
-    return DatasetSchema(
-        schemas={
-            "item": CustomItem,
-            "image": Image,
-            "entity": Entity,
-            "bbox": BBox,
-        },
-        relations={
-            "item": {
-                "image": SchemaRelation.ONE_TO_ONE,
-                "entity": SchemaRelation.ONE_TO_ONE,
-                "bbox": SchemaRelation.ONE_TO_MANY,
-            },
-            "image": {
-                "bbox": SchemaRelation.ONE_TO_MANY,
-            },
-        },
-    )
-
-
-@pytest.fixture
-def json_dataset_schema_1():
-    return {
-        "schemas": {
-            "item": {
-                "schema": "CustomItem",
-                "base_schema": "Item",
-                "fields": {
-                    "id": {"type": "str", "collection": False},
-                    "split": {"type": "str", "collection": False},
-                    "categories": {"type": "str", "collection": True},
-                    "other_categories": {"type": "int", "collection": True},
-                },
-            },
-            "image": {
-                "schema": "Image",
-                "base_schema": "Image",
-                "fields": {
-                    "id": {"type": "str", "collection": False},
-                    "item_ref": {"type": "ItemRef", "collection": False},
-                    "parent_ref": {"type": "ViewRef", "collection": False},
-                    "url": {"type": "str", "collection": False},
-                    "width": {"type": "int", "collection": False},
-                    "height": {"type": "int", "collection": False},
-                    "format": {"type": "str", "collection": False},
-                },
-            },
-            "entity": {
-                "schema": "Entity",
-                "base_schema": "Entity",
-                "fields": {
-                    "id": {"type": "str", "collection": False},
-                    "item_ref": {"type": "ItemRef", "collection": False},
-                    "view_ref": {"type": "ViewRef", "collection": False},
-                    "parent_ref": {"type": "EntityRef", "collection": False},
-                },
-            },
-            "bbox": {
-                "schema": "BBox",
-                "base_schema": "BBox",
-                "fields": {
-                    "id": {"type": "str", "collection": False},
-                    "item_ref": {"type": "ItemRef", "collection": False},
-                    "view_ref": {"type": "ViewRef", "collection": False},
-                    "entity_ref": {"type": "EntityRef", "collection": False},
-                    "coords": {"type": "float", "collection": True},
-                    "format": {"type": "str", "collection": False},
-                    "is_normalized": {"type": "bool", "collection": False},
-                    "confidence": {"type": "float", "collection": False},
-                },
-            },
-        },
-        "relations": {
-            "item": {
-                "image": "one_to_one",
-                "entity": "one_to_one",
-                "bbox": "one_to_many",
-            },
-            "image": {
-                "bbox": "one_to_many",
-            },
-        },
-    }
 
 
 class TestDatasetSchema:
@@ -313,10 +187,10 @@ class TestDatasetSchema:
     def test_format_table_name(self, table_name, expected):
         assert DatasetSchema.format_table_name(table_name) == expected
 
-    def test_serialize(self, CustomItem, dataset_schema_1, json_dataset_schema_1):
+    def test_serialize(self, dataset_schema_1, json_dataset_schema_1):
         assert dataset_schema_1.serialize() == json_dataset_schema_1
 
-    def test_to_json(self, CustomItem, dataset_schema_1, json_dataset_schema_1):
+    def test_to_json(self, dataset_schema_1, json_dataset_schema_1):
         json_fp = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
         dataset_schema_1.to_json(json_fp)
         json_content = json.load(json_fp.open())
@@ -330,7 +204,7 @@ class TestDatasetSchema:
             json.load(json_fp.open()) == json_dataset_schema_1
         )  # The content should not have changed for the schema name
 
-    def test_from_json(self, CustomItem, dataset_schema_1, json_dataset_schema_1):
+    def test_from_json(self, dataset_schema_1, json_dataset_schema_1):
         json_fp = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
         json_fp.write_text(json.dumps(json_dataset_schema_1))
 
@@ -340,8 +214,8 @@ class TestDatasetSchema:
         assert set(schema.schemas.keys()) == set(dataset_schema_1.schemas.keys())
         assert all(schema.schemas[k].serialize() == dataset_schema_1.schemas[k].serialize() for k in schema.schemas)
 
-    def test_from_dataset_item(self, CustomDatasetItem, CustomItem2):
-        schema = DatasetSchema.from_dataset_item(CustomDatasetItem)
+    def test_from_dataset_item(self, dataset_item_custom_2, custom_item_2):
+        schema = DatasetSchema.from_dataset_item(dataset_item_custom_2)
         assert set(schema.schemas.keys()) == {
             "item",
             "image",
@@ -349,7 +223,7 @@ class TestDatasetSchema:
             "bbox",
         }
 
-        serialized_item = CustomItem2.serialize()
+        serialized_item = custom_item_2.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
         assert schema.schemas["image"].serialize() == Image.serialize()
@@ -382,8 +256,8 @@ class TestDatasetSchema:
 
 
 class TestDatasetItem:
-    def test_to_dataset_schema(self, CustomDatasetItem, CustomItem2):
-        schema = CustomDatasetItem.to_dataset_schema()
+    def test_to_dataset_schema(self, dataset_item_custom_2, custom_item_2):
+        schema = dataset_item_custom_2.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
             "item",
             "image",
@@ -398,7 +272,7 @@ class TestDatasetItem:
             "bbox",
         }
 
-        serialized_item = CustomItem2.serialize()
+        serialized_item = custom_item_2.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
         assert schema.schemas["image"].serialize() == Image.serialize()
@@ -478,8 +352,10 @@ class TestDatasetItem:
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
 
-    def test_get_sub_dataset_item(self, CustomDatasetItem):
-        sub_dataset_item = CustomDatasetItem.get_sub_dataset_item(["categories", "other_categories", "image", "bbox"])
+    def test_get_sub_dataset_item(self, dataset_item_custom_2):
+        sub_dataset_item = dataset_item_custom_2.get_sub_dataset_item(
+            ["categories", "other_categories", "image", "bbox"]
+        )
         assert sub_dataset_item.__name__ == "CustomDatasetItem"
         assert set(sub_dataset_item.model_fields.keys()) == {
             "id",
@@ -508,9 +384,9 @@ class TestDatasetItem:
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
 
-    def test_to_schemas_data(self, CustomDatasetItem):
-        dataset_schema = CustomDatasetItem.to_dataset_schema()
-        my_custom_dataset_item = CustomDatasetItem(
+    def test_to_schemas_data(self, dataset_item_custom_2):
+        dataset_schema = dataset_item_custom_2.to_dataset_schema()
+        my_custom_dataset_item = dataset_item_custom_2(
             id="id",
             name="name",
             index=0,
