@@ -40,7 +40,7 @@ class TestDatasetBuilder:
             strict=True,
         ):
             assert key1 == key2
-            assert type(value1) == type(value2)
+            assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
         assert builder.db._uri == str(Path(target_dir) / Dataset.DB_PATH)
 
