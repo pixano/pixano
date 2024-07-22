@@ -1,3 +1,9 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetSchema, SchemaRelation
