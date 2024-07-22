@@ -7,7 +7,7 @@ name = "pixano"
 dynamic = ["version"]
 description = 'Data-centric AI building blocks for computer vision applications'
 readme = "README.md"
-requires-python = "~=3.10"
+requires-python = ">=3.10,<3.13"
 license = "CeCILL-C"
 authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
 keywords = [
@@ -20,6 +20,8 @@ keywords = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "License :: CeCILL-C Free Software License Agreement (CECILL-C)",
 ]
 dependencies = [
