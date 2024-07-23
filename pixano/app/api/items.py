@@ -338,28 +338,40 @@ async def get_dataset_item(  # noqa: D417
     NoneMask = CompressedRLE.none()
     NoneKeypoints = KeyPoints.none()
 
-    # Note: This is used to find the entity of an annotation
-    # (see "Entity features" part below)
-    # this could be replaced by new python API get_data(...?)
-    # But, it is used for retrieving features at various levels
-    # and gather them at annotation level...
-    # May need to rework / think more about this
-    def findEntity(ann: Annotation) -> Entity | None:
-        for group_entity in groups[_SchemaGroup.ENTITY]:
-            entity = next(
-                (entity for entity in getattr(item, group_entity) if entity.id == ann.entity_ref.id),
-                None,
-            )
-            if entity:
-                return entity
-        return None
+    def find_top_entity(ann: Annotation) -> Entity | None:
+        """Find top entity of an annotation.
+
+        Args:
+            ann (Annotation): annotation
+
+        Returns:
+            Entity | None: top Entity for this annotation
+        """
+        try:
+            return find_top_parent_entity(ann.entity)
+        except ValueError:
+            return None
+
+    def find_top_parent_entity(entity: Entity) -> Entity | None:
+        """Find top parent entity of an entity.
+
+        Args:
+            entity (Entity): entity
+
+        Returns:
+            Entity | None: top parent Entity for this entity
+        """
+        try:
+            return find_top_parent_entity(entity.parent)
+        except ValueError:
+            return entity
 
     if view_type == "image":
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
             for annotation in getattr(item, annotation_group):
                 # Entity features
                 features = {}
-                ann_entity = findEntity(annotation)
+                ann_entity = find_top_entity(annotation)
                 if ann_entity is not None:
                     features.update(getFeatures(ann_entity, Entity))
 
@@ -451,12 +463,16 @@ async def get_dataset_item(  # noqa: D417
                             continue
 
                         # Entity features
-                        ann_entity = findEntity(annotation)
+                        # TMP WARNING: we miss "dynamic" features
+                        # -- celles attachées à l'entité "spatiale"
+                        # -- modifs fronts nécessaire pour les prendre en compte correctements
+                        # -- de meme que les features au niveau des annotations
+                        ann_entity = find_top_entity(annotation)
                         if ann_entity:
                             features.update(getFeatures(ann_entity, Entity))
 
                         if is_bbox(type(annotation), False) and annotation != NoneBBox:
-                            features.update(getFeatures(annotation, BBox))
+                            # features.update(getFeatures(annotation, BBox))
                             bboxes.append(
                                 {
                                     "coords": annotation.xywh_coords,
@@ -471,7 +487,7 @@ async def get_dataset_item(  # noqa: D417
                                 }
                             )
                         if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
-                            features.update(getFeatures(annotation, KeyPoints))
+                            # features.update(getFeatures(annotation, KeyPoints))
                             keypoints.append(
                                 {
                                     "template_id": annotation.template_id,
