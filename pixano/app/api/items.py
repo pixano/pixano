@@ -338,7 +338,7 @@ async def get_dataset_item(  # noqa: D417
     NoneMask = CompressedRLE.none()
     NoneKeypoints = KeyPoints.none()
 
-    def findTopEntity(ann: Annotation) -> Entity | None:
+    def find_top_entity(ann: Annotation) -> Entity | None:
         """Find top entity of an annotation.
 
         Args:
@@ -348,11 +348,11 @@ async def get_dataset_item(  # noqa: D417
             Entity | None: top Entity for this annotation
         """
         try:
-            return findTopParentEntity(ann.entity)
+            return find_top_parent_entity(ann.entity)
         except ValueError:
             return None
 
-    def findTopParentEntity(entity: Entity) -> Entity | None:
+    def find_top_parent_entity(entity: Entity) -> Entity | None:
         """Find top parent entity of an entity.
 
         Args:
@@ -362,7 +362,7 @@ async def get_dataset_item(  # noqa: D417
             Entity | None: top parent Entity for this entity
         """
         try:
-            return findTopParentEntity(entity.parent)
+            return find_top_parent_entity(entity.parent)
         except ValueError:
             return entity
 
@@ -371,7 +371,7 @@ async def get_dataset_item(  # noqa: D417
             for annotation in getattr(item, annotation_group):
                 # Entity features
                 features = {}
-                ann_entity = findTopEntity(annotation)
+                ann_entity = find_top_entity(annotation)
                 if ann_entity is not None:
                     features.update(getFeatures(ann_entity, Entity))
 
@@ -467,7 +467,7 @@ async def get_dataset_item(  # noqa: D417
                         # -- celles attachées à l'entité "spatiale"
                         # -- modifs fronts nécessaire pour les prendre en compte correctements
                         # -- de meme que les features au niveau des annotations
-                        ann_entity = findTopEntity(annotation)
+                        ann_entity = find_top_entity(annotation)
                         if ann_entity:
                             features.update(getFeatures(ann_entity, Entity))
 
