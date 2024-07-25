@@ -260,6 +260,7 @@ def getFeatures(obj: BaseSchema, ignore_cls, add_fields: list[str] = []) -> dict
 async def get_dataset_item(  # noqa: D417
     ds_id: str,
     item_id: str,
+    view: str,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> FrontDatasetItem:  # type: ignore
     """Load dataset item.
@@ -330,6 +331,12 @@ async def get_dataset_item(  # noqa: D417
                 "thumbnail": None,  # view_item.open(dataset.path / "media"),
                 "features": getFeatures(view_item, Image, ["width", "height"]),
             }
+    # TMP 1V we split everything by view
+    if view:
+        selected_view = view
+    else:
+        selected_view = next(iter(views))
+    # ---TMP 1V
 
     # Objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
@@ -418,7 +425,7 @@ async def get_dataset_item(  # noqa: D417
         # gather tracklets by track
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
             for annotation in getattr(item, annotation_group):
-                if is_tracklet(type(annotation)):
+                if is_tracklet(type(annotation)) and annotation.view_ref.name == selected_view:  # TMP 1V
                     tracks[annotation.entity_ref.id].append(annotation)
 
         # match track_id with spatial object id if exist
@@ -540,7 +547,8 @@ async def get_dataset_item(  # noqa: D417
         type=view_type,
         datasetId=ds_id,
         split=item.split,
-        views=views,
+        # TMP 1V views=views,
+        views={selected_view: views[selected_view]},  # TMP 1V
         objects=objects,
         features=item_features,
         embeddings={},  # TODO
