@@ -44,9 +44,7 @@ class BaseSchema(LanceModel):
 
     def resolve_ref(self, ref: SchemaRef) -> Any:
         """Resolve a reference."""
-        if self._dataset is None:
-            raise ValueError("Set the dataset before resolving a reference.")
-        return self._dataset.resolve_ref(ref)
+        return self.dataset.resolve_ref(ref)
 
     @classmethod
     def serialize(cls) -> dict[str, str | dict[str, Any]]:

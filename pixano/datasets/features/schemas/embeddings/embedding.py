@@ -12,7 +12,6 @@ import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry, register
 from lancedb.pydantic import Vector
-from lancedb.table import LanceTable
 from pydantic import create_model
 from typing_extensions import Self
 
@@ -27,6 +26,14 @@ from ..registry import _register_schema_internal
 
 if TYPE_CHECKING:
     from pixano.datasets.dataset import Dataset
+
+
+def _to_pixano_name(dataset: "Dataset", table_name: str, name: str) -> str:
+    return f"pixano_{dataset.info.id}_{table_name}_{name}"
+
+
+def _from_pixano_name(dataset: "Dataset", table_name: str, name: str) -> str:
+    return name[len(f"pixano_{dataset.info.id}_{table_name}_") :]
 
 
 @_register_schema_internal
@@ -88,17 +95,17 @@ class ViewEmbedding(Embedding, ABC):
         return self.resolve_ref(self.view_ref)
 
     @staticmethod
-    def get_embedding_fn_from_table(dataset: "Dataset", table: LanceTable) -> EmbeddingFunction:
+    def get_embedding_fn_from_table(dataset: "Dataset", table_name: str, metadata: dict) -> EmbeddingFunction:
         """Get the embedding function from a table.
 
         Args:
             dataset: The dataset containing the table.
-            table: The table containing the embedding function.
+            table_name: The name of the table containing the embedding function.
+            metadata: The pyarrow metadata of the table.
 
         Returns:
             EmbeddingFunction: The embedding function.
         """
-        metadata = table.schema.metadata
         registry = get_registry()
 
         serialized = metadata[b"embedding_functions"]
@@ -109,9 +116,8 @@ class ViewEmbedding(Embedding, ABC):
 
         pixano_name = raw_list[0]["name"]
         if pixano_name not in registry._functions:
-            name = pixano_name[len(f"pixano{dataset.info.id}_") :]
-            create_view_embedding_function(registry._functions[name], name, dataset)
-
+            name = _from_pixano_name(dataset, table_name, pixano_name)
+            create_view_embedding_function(registry._functions[name], pixano_name, dataset)
         return registry.get(pixano_name)
 
     @classmethod
@@ -135,13 +141,14 @@ class ViewEmbedding(Embedding, ABC):
         if not isinstance(embedding_fn, str):
             raise TypeError(f"{embedding_fn} should be a string")
 
-        if f"pixano_{embedding_fn}" not in lance_registry._functions:
+        pixano_name = _to_pixano_name(dataset, "embeddings", embedding_fn)
+        if pixano_name not in lance_registry._functions:
             type_embedding_function = lance_registry.get(embedding_fn)
             view_embedding_function: type[EmbeddingFunction] = create_view_embedding_function(
-                type_embedding_function, embedding_fn, dataset
+                type_embedding_function, pixano_name, dataset
             )
         else:
-            view_embedding_function = lance_registry.get(f"pixano{dataset.info.id}_{embedding_fn}")
+            view_embedding_function = lance_registry.get(pixano_name)
 
         view_embedding_function = view_embedding_function.create(**embedding_function_kwargs)
 
@@ -171,7 +178,7 @@ def create_view_embedding_function(
 ) -> type[EmbeddingFunction]:
     """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
 
-    @register(f"pixano{dataset.info.id}_{name}")
+    @register(name)
     class ViewEmbeddingFunction(type_embedding_function):
         """Create a ViewEmbeddingFunction based on an EmbeddingFunction."""
 

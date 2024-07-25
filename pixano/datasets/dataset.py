@@ -193,7 +193,7 @@ class Dataset:
         Args:
             name (str): Table name
             schema (type[BaseSchema]): Table schema
-            relation_item (SchemaRelation): Relation with item table
+            relation_item (SchemaRelation): Relation with item table (item to table)
             data (DATA | None, optional): Table data
             mode (str, optional): Table mode
             exist_ok (bool, optional): Table exist ok
@@ -240,11 +240,10 @@ class Dataset:
             raise ValueError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
-        # table.schema.metadata
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
-            schema_table.get_embedding_fn_from_table(self, table)
+            schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
         return table
 
     def resolve_ref(self, ref: SchemaRef) -> Any:
