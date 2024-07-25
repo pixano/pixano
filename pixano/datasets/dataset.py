@@ -12,11 +12,12 @@ from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import lancedb
+from lancedb.common import DATA
 from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
-from pixano.datasets.features.schemas.items.item import Item
+from pixano.datasets.features.schemas.embeddings.embedding import ViewEmbedding
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
@@ -26,11 +27,11 @@ from .dataset_schema import (
     SchemaRelation,
 )
 from .dataset_stat import DatasetStat
-from .features import _SchemaGroup
+from .features import _SchemaGroup, is_view_embedding
 
 
 if TYPE_CHECKING:
-    from .features import BaseSchema
+    from .features import BaseSchema, SchemaRef
 
 
 def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
@@ -71,6 +72,7 @@ class Dataset:
         features_values (DatasetFeaturesValues, optional): Dataset features values
         stats (list[DatasetStat], optional): Dataset stats
         thumbnail (str, optional): Dataset thumbnail base 64 URL
+        media_dir (Path): Dataset media directory
     """
 
     DB_PATH: str = "db"
@@ -89,12 +91,14 @@ class Dataset:
     thumbnail: Path
     # Allow arbitrary types because of S3 Path
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    media_dir: Path
 
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, media_dir: Path | None = None):
         """Initialize dataset.
 
         Args:
             path (Path): Dataset path
+            media_dir (Path | None, optional): Dataset media directory
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE
@@ -108,6 +112,7 @@ class Dataset:
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
         self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
         self.thumbnail = thumb_file
+        self.media_dir = media_dir or self.path / "media"
 
         self._db_connection = self._connect()
 
@@ -122,15 +127,6 @@ class Dataset:
         """
         # Return number of rows of item table
         return len(self.open_table(_SchemaGroup.ITEM.value))
-
-    @property
-    def media_dir(self) -> Path:
-        """Return dataset media directory.
-
-        Returns:
-            Path: Dataset media directory
-        """
-        return self.path / "media"
 
     @property
     def _db_path(self) -> Path:
@@ -181,6 +177,43 @@ class Dataset:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
         return self._search_by_field(table, "id", sql_ids, limit)
 
+    def create_table(
+        self,
+        name: str,
+        schema: type[BaseSchema],
+        relation_item: SchemaRelation,
+        data: DATA | None = None,
+        mode: str = "create",
+        exist_ok: bool = False,
+        on_bad_vectors: str = "error",
+        fill_value: float = 0.0,
+    ) -> None:
+        """Add table to dataset.
+
+        Args:
+            name (str): Table name
+            schema (type[BaseSchema]): Table schema
+            relation_item (SchemaRelation): Relation with item table
+            data (DATA | None, optional): Table data
+            mode (str, optional): Table mode
+            exist_ok (bool, optional): Table exist ok
+            on_bad_vectors (str, optional): Table on bad vectors
+            fill_value (float, optional): Table fill value
+        """
+        self._db_connection.create_table(
+            name=name,
+            schema=schema,
+            data=data,
+            mode=mode,
+            exist_ok=exist_ok,
+            on_bad_vectors=on_bad_vectors,
+            fill_value=fill_value,
+            embedding_functions=None,
+        )
+        self.schema.add_schema(name, schema, relation_item)
+        self.schema.to_json(self.path / self.SCHEMA_FILE)
+        self._reload_schema()
+
     def open_tables(self, names: list[str] | None = None) -> dict[str, LanceTable]:
         """Open dataset tables with LanceDB.
 
@@ -203,11 +236,22 @@ class Dataset:
         Returns:
             LanceTable: Dataset table
         """
-        for table_name in self.schema.schemas.keys():
-            if table_name == name:
-                return self._db_connection.open_table(table_name)
+        if name not in self.schema.schemas.keys():
+            raise ValueError(f"Table {name} not found in dataset")
 
-        raise ValueError(f"Table {name} not found in dataset")
+        table = self._db_connection.open_table(name)
+        # table.schema.metadata
+        schema_table = self.schema.schemas[name]
+        if is_view_embedding(schema_table):
+            schema_table = cast(type[ViewEmbedding], schema_table)
+            schema_table.get_embedding_fn_from_table(self, table)
+        return table
+
+    def resolve_ref(self, ref: SchemaRef) -> Any:
+        """Resolve a reference."""
+        if ref.id == "" or ref.name == "":
+            raise ValueError("Reference should have a name and an id.")
+        return self.get_data(ref.name, ids=[ref.id])[0]
 
     def get_data(
         self,
@@ -287,7 +331,7 @@ class Dataset:
         """
         _validate_ids_and_limit_and_offset(ids, limit, offset)
 
-        items = cast(list[Item], self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset))
+        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)
         if items == []:
             return []
         item_ids: list[str] = [item.id for item in items]

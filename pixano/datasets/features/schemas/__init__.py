@@ -33,7 +33,13 @@ from .annotations import (
     is_tracklet,
 )
 from .base_schema import BaseSchema, is_base_schema
-from .embeddings import Embedding, is_embedding
+from .embeddings import (
+    Embedding,
+    ViewEmbedding,
+    create_view_embedding_function,
+    is_embedding,
+    is_view_embedding,
+)
 from .entities import (
     Entity,
     Track,
@@ -86,6 +92,7 @@ __all__ = [
     "Tracklet",
     "Video",
     "View",
+    "ViewEmbedding",
     "is_annotation",
     "is_base_schema",
     "is_bbox",
@@ -104,6 +111,8 @@ __all__ = [
     "is_video",
     "is_entity",
     "is_sequence_frame",
+    "is_view_embedding",
+    "create_view_embedding_function",
     "create_bbox",
     "create_bbox3d",
     "create_cam_calibration",

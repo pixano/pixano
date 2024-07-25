@@ -9,17 +9,18 @@ from __future__ import annotations
 from types import GenericAlias
 from typing import TYPE_CHECKING, Any
 
-from lancedb.pydantic import LanceModel
+from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import ConfigDict, PrivateAttr, create_model
 
-from pixano.datasets.features.types.schema_reference import SchemaRef
 from pixano.datasets.utils.python import get_super_type_from_dict, issubclass_strict
 
+from ..pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATATYPE
 from ..types.registry import _TYPES_REGISTRY
 
 
 if TYPE_CHECKING:
     from pixano.datasets.dataset import Dataset
+    from pixano.datasets.features.types.schema_reference import SchemaRef
 
 
 class BaseSchema(LanceModel):
@@ -45,9 +46,7 @@ class BaseSchema(LanceModel):
         """Resolve a reference."""
         if self._dataset is None:
             raise ValueError("Set the dataset before resolving a reference.")
-        if ref.id == "" or ref.name == "":
-            raise ValueError("Reference should have a name and an id.")
-        return self._dataset.get_data(ref.name, ids=[ref.id])[0]
+        return self._dataset.resolve_ref(ref)
 
     @classmethod
     def serialize(cls) -> dict[str, str | dict[str, Any]]:
@@ -88,6 +87,13 @@ class BaseSchema(LanceModel):
                         "type": field.annotation.__name__,
                         "collection": False,
                     }
+                elif issubclass(field.annotation, FixedSizeListMixin):  # LanceDB Vector
+                    fields[field_name] = {
+                        "type": field.annotation.__name__,
+                        "collection": False,
+                        "dim": field.annotation.dim(),
+                        "value_type": SERIALIZE_PYARROW_DATATYPE[field.annotation.value_arrow_type()],
+                    }
                 else:
                     fields[field_name] = {
                         "type": field.annotation.__name__,
@@ -116,6 +122,11 @@ class BaseSchema(LanceModel):
         for key, value in json_fields.items():
             if value["type"] in _TYPES_REGISTRY:
                 type_ = _TYPES_REGISTRY[value["type"]]
+            elif value["type"] == "FixedSizeList":  # LanceDB Vector
+                type_ = value["type"]
+                dim = value["dim"]
+                value_type = DESERIALIZE_PYARROW_DATATYPE[value["value_type"]]
+                type_ = Vector(dim, value_type)
             else:
                 raise ValueError(f"Type {value['type']} not registered")
             if value["collection"]:

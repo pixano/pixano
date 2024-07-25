@@ -5,13 +5,15 @@
 # =====================================
 
 import base64
+import io
 from pathlib import Path
+from typing import Literal
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
 import PIL
-import shortuuid
+from PIL import Image as PILImage
 
 from pixano.datasets.utils import issubclass_strict
 
@@ -29,24 +31,28 @@ class Image(View):
     height: int
     format: str
 
-    def open(self, media_dir: Path) -> str:
+    def open(self, media_dir: Path, output_type: Literal["base64", "image"] = "base64") -> str | PILImage.Image:
         """Open image.
 
         Args:
             media_dir (Path): image path
+            output_type (Literal["base64", "image"], optional): output type.
 
         Returns:
             str: opened image
         """
-        return Image.open_url(self.url, media_dir)
+        return Image.open_url(self.url, media_dir, output_type)
 
     @staticmethod
-    def open_url(url: str, media_dir: Path) -> str:
+    def open_url(
+        url: str, media_dir: Path, output_type: Literal["base64", "image"] = "base64"
+    ) -> str | PILImage.Image:
         """Open URL image.
 
         Args:
             url (str): image url
             media_dir (Path): uri prefix
+            output_type (Literal["base64", "image"], optional): output type.
 
         Raises:
             ValueError: No scheme provided
@@ -78,12 +84,18 @@ class Image(View):
             with urlopen(api_url) as f:
                 im_bytes = f.read()
         except URLError:
+            # TODO: raise error
             print(f"Error: image not found ({api_url})")
             return ""
 
         if im_bytes is not None:
-            encoded = base64.b64encode(im_bytes).decode("utf-8")
-            return f"data:image;base64,{encoded}"
+            if output_type == "base64":
+                encoded = base64.b64encode(im_bytes).decode("utf-8")
+                return f"data:image;base64,{encoded}"
+            elif output_type == "image":
+                return PILImage.open(io.BytesIO(im_bytes))
+        # TODO: raise error
+        print("Error: Image not found")
         return ""
 
 
@@ -123,8 +135,6 @@ def create_image(
         raise ValueError("width, height and format must be all defined or all None")
 
     url = Path(url)
-    if id is None:
-        id = shortuuid.uuid()
 
     if width is None:
         img = PIL.Image.open(url)

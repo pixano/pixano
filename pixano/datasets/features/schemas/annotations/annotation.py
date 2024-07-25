@@ -28,17 +28,17 @@ class Annotation(BaseSchema):
     @property
     def item(self):
         """Get the item."""
-        return self.resolve_ref(self.item_ref)
+        return self.item_ref.resolve()
 
     @property
     def view(self):
         """Get the view."""
-        return self.resolve_ref(self.view_ref)
+        return self.view_ref.resolve()
 
     @property
     def entity(self):
         """Get the entity."""
-        return self.resolve_ref(self.entity_ref)
+        return self.entity_ref.resolve()
 
 
 def is_annotation(cls: type, strict: bool = False) -> bool:
