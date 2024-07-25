@@ -1,0 +1,63 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+name: Test Backend
+
+on:
+  push:
+    paths:
+      - "pixano/**"
+      - "tests/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+    branches:
+      - "develop"
+      - "main"
+  pull_request:
+    paths:
+      - "pixano/**"
+      - "tests/**"
+      - ".github/workflows/**"
+      - "pyproject.toml"
+      - ".pre-commit-config.yaml"
+    branches:
+      - "develop"
+
+permissions:
+  contents: read
+
+jobs:
+  python_test:
+    name: Backend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Install PyTorch and TensorFlow CPU versions manually to prevent installing CUDA
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install .[test]
+
+      - name: Test with pytest
+        run: |
+          pytest --cov=pixano/ tests/
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v4.2.0
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

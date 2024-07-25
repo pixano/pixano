@@ -6,6 +6,7 @@
 
 import os
 
+
 # Headers for each file type
 HEADERS = {
     ".py": """# =====================================
@@ -36,7 +37,7 @@ EXCLUDE_FILES = {
     "ambient.d.ts",
     "$types.d.ts",
     "app.d.ts",
-    "io.test.ts"
+    "io.test.ts",
 }
 
 
@@ -44,7 +45,7 @@ def check_header(file_path, header):
     """Check if the file contains the required header."""
     with open(file_path, "r", encoding="utf-8") as file:
         content = file.read()
-        return content.startswith(header)
+        return content.startswith(header) or content == header[:-1]
 
 
 def main():

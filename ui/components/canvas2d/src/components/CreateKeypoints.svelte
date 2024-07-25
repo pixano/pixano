@@ -42,6 +42,7 @@ License: CECILL-C
     edges: newShape.keypoints.edges,
     vertices: newShape.keypoints.vertices,
     id: keypointsId,
+    view_id: newShape.viewId,
     editing: true,
   } as KeypointsTemplate;
 

@@ -1,9 +1,0 @@
-{
-  "id": "output4",
-  "name": "output4",
-  "description": "Dataset for unit tests",
-  "estimated_size": "N/A",
-  "num_elements": 0,
-  "splits": ["val"],
-  "preview": null
-}

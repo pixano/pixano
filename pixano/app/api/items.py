@@ -20,14 +20,21 @@ import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
 from pixano.datasets.features import (
+    Annotation,
+    BaseSchema,
     BBox,
     CompressedRLE,
+    Entity,
     Image,
     KeyPoints,
     SequenceFrame,
-    map_back2front_vertices,
+    _SchemaGroup,
+    is_bbox,
+    is_compressed_rle,
+    is_keypoints,
+    is_track,
+    is_tracklet,
 )
-from pixano.datasets.features.schemas.group import _SchemaGroup
 from pixano.datasets.utils import image as image_utils
 
 
@@ -61,7 +68,6 @@ async def get_dataset_item_ids(
     Returns:
         list[str]: all items id
     """
-
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
 
@@ -83,7 +89,6 @@ async def get_dataset_explorer(  # noqa: D417
     """## Load dataset items.
 
     Args:
-
         ds_id (str): Dataset ID
 
         params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
@@ -112,7 +117,7 @@ async def get_dataset_explorer(  # noqa: D417
         # Load dataset items
         all_ids = dataset.get_all_ids()
         ids = sorted(all_ids)[raw_params.offset : raw_params.offset + raw_params.limit]
-        items = dataset.read_items(
+        items = dataset.get_dataset_items(
             ids
         )  # future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
         if items:
@@ -120,10 +125,8 @@ async def get_dataset_explorer(  # noqa: D417
             # build ColDesc
             groups = defaultdict(list)
             for tname in vars(items[0]).keys():
-                found_group = (
-                    _SchemaGroup.ITEM
-                )  # if no matching group (-> it's not a table name), it is in ITEM
-                for group, tnames in dataset.dataset_schema._groups.items():
+                found_group = _SchemaGroup.ITEM  # if no matching group (-> it's not a table name), it is in ITEM
+                for group, tnames in dataset.schema._groups.items():
                     if tname in tnames:
                         found_group = group
                         break
@@ -133,11 +136,7 @@ async def get_dataset_explorer(  # noqa: D417
                 view_item = getattr(items[0], feat)
                 if isinstance(view_item, Image):
                     view_type = "image"
-                elif (
-                    isinstance(view_item, list)
-                    and len(view_item) > 0
-                    and isinstance(view_item[0], SequenceFrame)
-                ):
+                elif isinstance(view_item, list) and len(view_item) > 0 and isinstance(view_item[0], SequenceFrame):
                     # TMP (video previews are not generated yet
                     # so we put an image for now ("video"  # or "sequenceframe" ?)
                     view_type = "image"
@@ -146,9 +145,7 @@ async def get_dataset_explorer(  # noqa: D417
                     view_type = type(view_item).__name__
                 cols.append(de.ColDesc(name=feat, type=view_type))
             for feat in groups[_SchemaGroup.ITEM]:
-                cols.append(
-                    de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__)
-                )
+                cols.append(de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__))
 
             # build rows
             rows = []
@@ -160,9 +157,7 @@ async def get_dataset_explorer(  # noqa: D417
                     if isinstance(view_item, Image):
                         row[feat] = view_item.open(dataset.path / "media")
                     elif (
-                        isinstance(view_item, list)
-                        and len(view_item) > 0
-                        and isinstance(view_item[0], SequenceFrame)
+                        isinstance(view_item, list) and len(view_item) > 0 and isinstance(view_item[0], SequenceFrame)
                     ):
                         row[feat] = view_item[0].open(dataset.path / "media")
                 # ITEM features
@@ -176,17 +171,12 @@ async def get_dataset_explorer(  # noqa: D417
                 id=ds_id,
                 name=dataset.info.name,
                 table_data=de.TableData(cols=cols, rows=rows),
-                pagination=de.PaginationInfo(
-                    current=start, size=raw_params.limit, total=total
-                ),
+                pagination=de.PaginationInfo(current=start, size=raw_params.limit, total=total),
                 sem_search=[],
             )
         raise HTTPException(
             status_code=404,
-            detail=(
-                f"No items found with page parameters (start {start}, "
-                f"stop {stop}) in dataset",
-            ),
+            detail=(f"No items found with page parameters (start {start}, " f"stop {stop}) in dataset",),
         )
     raise HTTPException(
         status_code=404,
@@ -228,18 +218,42 @@ async def search_dataset_items(  # noqa: D417
             raise HTTPException(status_code=404, detail="Invalid page parameters")
 
         # Load dataset items
-        items = dataset.search_items(raw_params.limit, raw_params.offset, query)
+        items = dataset.search_items(raw_params.limit, raw_params.offset, query)  # type: ignore[attr-defined]
 
         # Return dataset items
         if items:
             return create_page(items, total=total, params=params)
-        raise HTTPException(
-            status_code=404, detail=f"No items found for query '{query}' in dataset"
-        )
+        raise HTTPException(status_code=404, detail=f"No items found for query '{query}' in dataset")
     raise HTTPException(
         status_code=404,
         detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
     )
+
+
+def getFeatures(obj: BaseSchema, ignore_cls, add_fields: list[str] = []) -> dict[str, dict]:
+    """Create features of obj, without considering fields from ignore_cls.
+
+    Args:
+        obj (BaseSchema): obj whose features are extracted from
+        ignore_cls (_type_): parent class of obj whose fields are excluded from features
+        add_fields (list[str]): fields to add (removed from ignored fields of ignore_cls)
+
+    Returns:
+        dict[str, dict]: _description_
+    """
+    ignore_fields = []
+    for base in ignore_cls.__mro__:
+        if "__annotations__" in base.__dict__:
+            ignore_fields.extend([field for field in base.__annotations__ if field not in add_fields])
+    return {
+        feat_name: {
+            "name": feat_name,
+            "dtype": type(getattr(obj, feat_name)).__name__,
+            "value": getattr(obj, feat_name),
+        }
+        for feat_name in vars(obj).keys()
+        if feat_name not in ignore_fields and type(getattr(obj, feat_name)).__name__ in ["int", "float", "str", "bool"]
+    }
 
 
 @router.get("/items/{item_id}", response_model=FrontDatasetItem)
@@ -267,44 +281,32 @@ async def get_dataset_item(  # noqa: D417
             detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
         )
 
+    groups = dataset.schema._groups
+
     # Load dataset item
-    item = dataset.read_item(item_id)
+    item = dataset.get_dataset_items([item_id])[0]
 
-    groups = defaultdict(list)
-    for tname in vars(item).keys():
-        found_group = (
-            _SchemaGroup.ITEM
-        )  # if no matching group (-> it's not a table name), it is in ITEM
-        for group, tnames in dataset.dataset_schema._groups.items():
-            if tname in tnames:
-                found_group = group
-                break
-        if tname not in [
-            "id",
-            "split",
-        ]:  # id and split are always present, and in ITEM group
-            groups[found_group].append(tname)
-
-    # features
-    features = {
+    # Item Features
+    not_item_meta = ["id", "split"]
+    for group, k in groups.items():
+        if group != _SchemaGroup.ITEM:
+            not_item_meta.extend(k)
+    item_features = {
         feat: {
             "name": feat,
             "dtype": type(getattr(item, feat)).__name__,
             "value": getattr(item, feat),
         }
-        for feat in groups[_SchemaGroup.ITEM]
+        for feat in vars(item).keys()
+        if feat not in not_item_meta
     }
 
-    # views : {"table_name": ItemView}
+    # Views
     views = {}
     view_type = "image"
     for view_name in groups[_SchemaGroup.VIEW]:
         view_item = getattr(item, view_name)
-        if (
-            isinstance(view_item, list)
-            and len(view_item) > 0
-            and isinstance(view_item[0], SequenceFrame)
-        ):
+        if isinstance(view_item, list) and len(view_item) > 0 and isinstance(view_item[0], SequenceFrame):
             views[view_name] = sorted(
                 [
                     {
@@ -314,18 +316,7 @@ async def get_dataset_item(  # noqa: D417
                         "uri": "data/" + dataset.path.name + "/media/" + frame.url,
                         # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
                         "thumbnail": None,  # frame.open(dataset.path / "media"),
-                        "features": {
-                            "width": {
-                                "name": "width",
-                                "dtype": "int",
-                                "value": frame.width,
-                            },
-                            "height": {
-                                "name": "height",
-                                "dtype": "int",
-                                "value": frame.height,
-                            },
-                        },
+                        "features": getFeatures(frame, SequenceFrame, ["width", "height"]),
                     }
                     for frame in view_item
                 ],
@@ -333,25 +324,13 @@ async def get_dataset_item(  # noqa: D417
             )
             view_type = "video"
         elif isinstance(view_item, Image):
-            views[view_name] = {
+            views[view_name] = {  # type: ignore[assignment]
                 "id": view_item.id,
                 "type": "image",
                 "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
                 "thumbnail": None,  # view_item.open(dataset.path / "media"),
-                "features": {
-                    "width": {
-                        "name": "width",
-                        "dtype": "int",
-                        "value": view_item.width,
-                    },
-                    "height": {
-                        "name": "height",
-                        "dtype": "int",
-                        "value": view_item.height,
-                    },
-                },
+                "features": getFeatures(view_item, Image, ["width", "height"]),
             }
-
     # TMP 1V we split everything by view
     if view:
         selected_view = view
@@ -359,148 +338,181 @@ async def get_dataset_item(  # noqa: D417
         selected_view = next(iter(views))
     # ---TMP 1V
 
-    # objects
+    # Objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
     objects = []
     NoneBBox = BBox.none()
     NoneMask = CompressedRLE.none()
     NoneKeypoints = KeyPoints.none()
+
+    def find_top_entity(ann: Annotation) -> Entity | None:
+        """Find top entity of an annotation.
+
+        Args:
+            ann (Annotation): annotation
+
+        Returns:
+            Entity | None: top Entity for this annotation
+        """
+        try:
+            return find_top_parent_entity(ann.entity)
+        except ValueError:
+            return None
+
+    def find_top_parent_entity(entity: Entity) -> Entity | None:
+        """Find top parent entity of an entity.
+
+        Args:
+            entity (Entity): entity
+
+        Returns:
+            Entity | None: top parent Entity for this entity
+        """
+        try:
+            return find_top_parent_entity(entity.parent)
+        except ValueError:
+            return entity
+
     if view_type == "image":
-        for obj_group in groups[_SchemaGroup.OBJECT]:
-            objects.extend(
-                [
-                    {
-                        "id": obj.id,
-                        "datasetItemType": view_type,
-                        "item_id": item_id,
-                        "source_id": "Ground Truth",  # ??
-                        "view_id": obj.view_id,
-                        "features": {
-                            fname: {
-                                "name": fname,
-                                "dtype": type(getattr(obj, fname)).__name__,
-                                "value": getattr(obj, fname),
-                            }
-                            for fname in vars(obj).keys()
-                            if fname
-                            not in [
-                                "id",
-                                "item_id",
-                                "source_id",
-                                "view_id",
-                                "bbox",
-                                "mask",
-                                "keypoints",
-                            ]
-                        },
-                        "bbox": (
-                            obj.bbox.to_xywh()
-                            if hasattr(obj, "bbox")
-                            and obj.bbox != NoneBBox
-                            and obj.bbox.coords != []
-                            else None
-                        ),
-                        "mask": (
-                            image_utils.rle_to_urle(
-                                {"size": obj.mask.size, "counts": obj.mask.counts}
-                            )
-                            if hasattr(obj, "mask")
-                            and obj.mask != NoneMask
-                            and len(obj.mask.size) == 2
-                            else None
-                        ),
-                        "keypoints": (
-                            {
-                                "template_id": obj.keypoints.template_id,
-                                "vertices": map_back2front_vertices(obj.keypoints),
-                            }
-                            if hasattr(obj, "keypoints")
-                            and obj.keypoints != NoneKeypoints
-                            and obj.keypoints.coords != []
-                            else None
-                        ),
+        for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+            for annotation in getattr(item, annotation_group):
+                # Entity features
+                features = {}
+                ann_entity = find_top_entity(annotation)
+                if ann_entity is not None:
+                    features.update(getFeatures(ann_entity, Entity))
+
+                obj = {
+                    "id": annotation.id,
+                    "datasetItemType": view_type,
+                    "item_id": item_id,
+                    "source_id": "Ground Truth",  # ??
+                }
+                if is_bbox(type(annotation), False) and annotation != NoneBBox:
+                    features.update(getFeatures(annotation, BBox))
+                    obj["bbox"] = {
+                        "coords": annotation.xywh_coords,
+                        "format": "xywh",
+                        "is_normalised": annotation.is_normalized,
+                        "confidence": annotation.confidence,
+                        "view_id": annotation.view_ref.name,  # danger faux-ami !
                     }
-                    for obj in getattr(item, obj_group)
-                ]
-            )
+                if is_compressed_rle(type(annotation), False) and annotation != NoneMask:
+                    features.update(getFeatures(annotation, CompressedRLE))
+                    urle = image_utils.rle_to_urle(
+                        {
+                            "size": annotation.size,
+                            "counts": annotation.counts,
+                        }
+                    )
+                    obj["mask"] = {
+                        **vars(urle),
+                        "view_id": annotation.view_ref.name,
+                    }
+                if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
+                    features.update(getFeatures(annotation, KeyPoints))
+                    obj["keypoints"] = {
+                        "template_id": annotation.template_id,
+                        "vertices": annotation.map_back2front_vertices(),
+                        "view_id": annotation.view_ref.name,
+                    }
+                obj["features"] = features
+                objects.append(obj)
     else:  # video
-        boxes = defaultdict(list)
-        keypoints = defaultdict(list)
-        tracklet_objs = {}
         tracks = defaultdict(list)
+        entity_id = defaultdict(list)
 
-        for tracklet_group in groups[_SchemaGroup.TRACKLET]:
-            for tracklet in getattr(item, tracklet_group):
+        # gather tracklets by track
+        for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+            for annotation in getattr(item, annotation_group):
+                if is_tracklet(type(annotation)) and annotation.view_ref.name == selected_view:  # TMP 1V
+                    tracks[annotation.entity_ref.id].append(annotation)
 
-                # gather objects by tracklets
-                tracklet_objs[tracklet.id] = [
-                    obj
-                    for obj_group in groups[_SchemaGroup.OBJECT]
-                    for obj in getattr(item, obj_group)
-                    if obj.tracklet_id == tracklet.id
-                    if obj.view_id == selected_view  # TMP 1V
-                ]
-                boxes[tracklet.track_id].extend(
-                    [
-                        {
-                            **vars(obj.bbox.to_xywh()),
-                            "frame_index": obj.frame_idx,
-                            "is_key": obj.is_key,
-                            "is_thumbnail": i == 0,
-                            "tracklet_id": tracklet.id,
-                        }
-                        for i, obj in enumerate(
-                            [
-                                x
-                                for x in tracklet_objs[tracklet.id]
-                                if hasattr(x, "bbox")
-                                and x.bbox != NoneBBox
-                                and x.bbox.coords != []
-                            ]
-                        )
-                    ]
-                )
-                keypoints[tracklet.track_id].extend(
-                    [
-                        {
-                            "template_id": obj.keypoints.template_id,
-                            "vertices": map_back2front_vertices(obj.keypoints),
-                            "frame_index": obj.frame_idx,
-                            "is_key": obj.is_key,
-                            "is_thumbnail": i == 0,
-                            "tracklet_id": tracklet.id,
-                        }
-                        for i, obj in enumerate(
-                            [
-                                x
-                                for x in tracklet_objs[tracklet.id]
-                                if hasattr(x, "keypoints")
-                                and x.keypoints != NoneKeypoints
-                                and x.keypoints.coords != []
-                            ]
-                        )
-                    ]
-                )
-
-                # organize tracklets by tracks
-                # TMP 1V Note: maybe we could let this check? it avoid empty tracks
-                if boxes[tracklet.track_id] or keypoints[tracklet.track_id]:  # TMP 1V
-                    tracks[tracklet.track_id].append(tracklet)
+        # match track_id with spatial object id if exist
+        for entity_group in groups[_SchemaGroup.ENTITY]:
+            for entity in getattr(item, entity_group):
+                if is_track(type(entity)) and entity.id not in entity_id:
+                    entity_id[entity.id].append(entity.id)
+                elif entity.parent_ref.id != "":
+                    entity_id[entity.parent_ref.id].append(entity.id)
 
         for track_id, tracklets in tracks.items():
+            # if track_id.startswith("track_1") or track_id.startswith("track_2") or track_id.startswith("track_3"):
+            #     continue
+            bboxes = []
+            keypoints = []
+            features = {}
+            # Note: for now, annotation features keeps overwriting for each annotation...
+            # We need to be able to manage lower level features in front. (will be done in front data refactor)
+            for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+                for annotation in getattr(item, annotation_group):
+                    # if annotation.view_ref.id == "":
+                    #     # ignore if annotation is not linked to a view
+                    #     # Note: Maybe we should still gather features ?
+                    #     continue
+                    if is_tracklet(type(annotation)):
+                        continue
+                    if annotation.entity_ref.id in entity_id[track_id]:
+                        # get frame_index from annotation.view_ref
+                        frame_index = next(
+                            (
+                                view["frame_index"]
+                                for view in views[annotation.view_ref.name]
+                                if view["id"] == annotation.view_ref.id
+                            ),
+                            -1,
+                        )
+                        if frame_index == -1:
+                            print(
+                                "Warning: Annotation found that doesn't match to any frame",
+                                annotation,
+                            )
+                            continue
 
-            # features are taken from first tracklet of each track
-            track_feats = tracklets[0]
+                        # Entity features
+                        # TMP WARNING: we miss "dynamic" features
+                        # -- celles attachées à l'entité "spatiale"
+                        # -- modifs fronts nécessaire pour les prendre en compte correctements
+                        # -- de meme que les features au niveau des annotations
+                        ann_entity = find_top_entity(annotation)
+                        if ann_entity:
+                            features.update(getFeatures(ann_entity, Entity))
 
-            # view_id is taken from first object in the first tracklet
-            try:
-                # TMP 1V  view_id = next(x.view_id for x in tracklet_objs[tracklets[0].id])
-                view_id = selected_view  # TMP 1V
-            except StopIteration:
-                print(
-                    f"ERROR: Error in data: cannot find any object for tracklet {tracklets[0].id} - track skipped"
-                )
-                continue
+                        if is_bbox(type(annotation), False) and annotation != NoneBBox:
+                            # features.update(getFeatures(annotation, BBox))
+                            bboxes.append(
+                                {
+                                    "coords": annotation.xywh_coords,
+                                    "format": "xywh",
+                                    "is_normalised": annotation.is_normalized,
+                                    "confidence": annotation.confidence,
+                                    "view_id": annotation.view_ref.name,  # danger faux-ami !
+                                    "frame_index": frame_index,
+                                    "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
+                                    "is_thumbnail": False,
+                                    "tracklet_id": annotation.entity_ref.id,
+                                }
+                            )
+                        if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
+                            # features.update(getFeatures(annotation, KeyPoints))
+                            keypoints.append(
+                                {
+                                    "template_id": annotation.template_id,
+                                    "vertices": annotation.map_back2front_vertices(),
+                                    "frame_index": frame_index,
+                                    "view_id": annotation.view_ref.name,
+                                    "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
+                                    "tracklet_id": annotation.entity_ref.id,
+                                }
+                            )
+
+            # sort annotations by frame_index
+            bboxes.sort(key=lambda bbox: bbox["frame_index"])
+            keypoints.sort(key=lambda kpt: kpt["frame_index"])
+
+            # set thumbnail to first bbox
+            if len(bboxes) > 0:
+                bboxes[0]["is_thumbnail"] = True
 
             objects.append(
                 {
@@ -508,26 +520,7 @@ async def get_dataset_item(  # noqa: D417
                     "datasetItemType": view_type,
                     "item_id": item_id,
                     "source_id": "Ground Truth",  # ?? must ensure source
-                    "view_id": view_id,
-                    "features": {
-                        fname: {
-                            "name": fname,
-                            "dtype": type(getattr(track_feats, fname)).__name__,
-                            "value": getattr(track_feats, fname),
-                        }
-                        for fname in vars(track_feats).keys()
-                        if fname
-                        not in [
-                            "id",
-                            "item_id",
-                            "track_id",
-                            "start_timestamp",
-                            "end_timestamp",
-                            "start_timestep",
-                            "end_timestep",
-                            "is_key",  # ??
-                        ]  # TODO: define list of unwanted tracklet features
-                    },
+                    "features": features,
                     "track": [
                         {
                             "id": tracklet.id,
@@ -537,17 +530,17 @@ async def get_dataset_item(  # noqa: D417
                                 else tracklet.start_timestamp
                             ),
                             "end": (
-                                tracklet.end_timestep
-                                if hasattr(tracklet, "end_timestep")
-                                else tracklet.end_timestamp
+                                tracklet.end_timestep if hasattr(tracklet, "end_timestep") else tracklet.end_timestamp
                             ),
+                            "view_id": tracklet.view_ref.name,
                         }
                         for tracklet in tracklets
                     ],
-                    "boxes": boxes[track_id],
-                    "keypoints": keypoints[track_id],
+                    "boxes": bboxes,
+                    "keypoints": keypoints,
                 }
             )
+            # print("OBJ", objects[-1])
 
     front_item = FrontDatasetItem(
         id=item.id,
@@ -557,11 +550,9 @@ async def get_dataset_item(  # noqa: D417
         # TMP 1V views=views,
         views={selected_view: views[selected_view]},  # TMP 1V
         objects=objects,
-        features=features,
+        features=item_features,
         embeddings={},  # TODO
     )
-
-    # print(front_item)
 
     # Return dataset item
     if front_item:
@@ -612,17 +603,9 @@ async def post_dataset_item(  # noqa: D417
                 obj["keypoints"] = (
                     {
                         "template_id": obj["keypoints"]["template_id"],
-                        "coords": [
-                            coord
-                            for pt in obj["keypoints"]["vertices"]
-                            for coord in (pt["x"], pt["y"])
-                        ],
+                        "coords": [coord for pt in obj["keypoints"]["vertices"] for coord in (pt["x"], pt["y"])],
                         "states": [
-                            (
-                                pt["features"]["state"]
-                                if "features" in pt and "state" in pt["features"]
-                                else "visible"
-                            )
+                            (pt["features"]["state"] if "features" in pt and "state" in pt["features"] else "visible")
                             for pt in obj["keypoints"]["vertices"]
                         ],
                     }
@@ -685,17 +668,13 @@ async def post_dataset_item(  # noqa: D417
 
             for track in item.objects:
                 for tracklet in track["track"]:
-                    tracklet_id = (
-                        tracklet["id"] if "id" in tracklet else shortuuid.uuid()
-                    )
+                    tracklet_id = tracklet["id"] if "id" in tracklet else shortuuid.uuid()
                     tracklet_add.append(
                         {
                             "id": tracklet_id,
                             "item_id": item.id,
                             "track_id": track["id"],
-                            "start_timestep": tracklet[
-                                "start"
-                            ],  # TODO timestamp/timestep, front keep only one... ?
+                            "start_timestep": tracklet["start"],  # TODO timestamp/timestep, front keep only one... ?
                             "start_timestamp": tracklet["start"],
                             "end_timestep": tracklet["end"],
                             "end_timestamp": tracklet["end"],
@@ -711,11 +690,7 @@ async def post_dataset_item(  # noqa: D417
                                 "tracklet_id": box["tracklet_id"],
                                 "frame_idx": box["frame_index"],
                                 "is_key": box["is_key"],
-                                "is_thumbnail": (
-                                    box["is_thumbnail"]
-                                    if "is_thumbnail" in box
-                                    else False
-                                ),
+                                "is_thumbnail": (box["is_thumbnail"] if "is_thumbnail" in box else False),
                                 "bbox": {
                                     "coords": box["coords"],
                                     "format": box["format"],
@@ -728,29 +703,19 @@ async def post_dataset_item(  # noqa: D417
                     for keypoints in track["keypoints"]:
                         obj_add.append(
                             {
-                                "id": (
-                                    keypoints["id"]
-                                    if "id" in keypoints
-                                    else shortuuid.uuid()
-                                ),
+                                "id": (keypoints["id"] if "id" in keypoints else shortuuid.uuid()),
                                 "item_id": item.id,
                                 "view_id": track["view_id"],
                                 "tracklet_id": keypoints["tracklet_id"],
                                 "frame_idx": keypoints["frame_index"],
                                 "is_key": keypoints["is_key"],
-                                "is_thumbnail": (
-                                    keypoints["is_thumbnail"]
-                                    if "is_thumbnail" in keypoints
-                                    else False
-                                ),
+                                "is_thumbnail": (keypoints["is_thumbnail"] if "is_thumbnail" in keypoints else False),
                                 "keypoints": keypoints,
                             }
                         )
 
             if tracklet_add:
-                tracklet_table.add(
-                    convert_objects_to_pyarrow(tracklet_table, tracklet_add)
-                )
+                tracklet_table.add(convert_objects_to_pyarrow(tracklet_table, tracklet_add))
             if obj_add:
                 obj_table.add(convert_objects_to_pyarrow(obj_table, obj_add))
 
@@ -786,17 +751,20 @@ async def get_item_embeddings(  # noqa: D417
     dataset = Dataset.find(ds_id, settings.data_dir)
 
     if dataset:
-        item = dataset.read_embedding(item_id)
+        try:
+            embeddings = dataset.get_data(_SchemaGroup.EMBEDDING, [item_id])[0]  # type: ignore[arg-type]
+        except ValueError:
+            raise HTTPException(
+                status_code=404,
+                detail=("No embeddings table in dataset"),
+            )
 
         # Return dataset item embeddings
-        if item:
-            return item
+        if embeddings:
+            return embeddings
         raise HTTPException(
             status_code=404,
-            detail=(
-                f"No embeddings found for item '{item_id}' "
-                f"with model '{model_id}' in dataset",
-            ),
+            detail=(f"No embeddings found for item '{item_id}' " f"with model '{model_id}' in dataset",),
         )
     raise HTTPException(
         status_code=404,

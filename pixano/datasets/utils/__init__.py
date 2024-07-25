@@ -34,7 +34,7 @@ from .labels import (
     dota_ids,
     voc_names,
 )
-from .python import estimate_folder_size, natural_key
+from .python import estimate_folder_size, get_super_type_from_dict, issubclass_strict, natural_key
 
 
 __all__ = [
@@ -50,6 +50,7 @@ __all__ = [
     "depth_array_to_gray",
     "depth_file_to_binary",
     "encode_rle",
+    "issubclass_strict",
     "mask_to_rle",
     "rle_to_mask",
     "polygons_to_rle",
@@ -64,4 +65,5 @@ __all__ = [
     "voc_names",
     "estimate_folder_size",
     "natural_key",
+    "get_super_type_from_dict",
 ]

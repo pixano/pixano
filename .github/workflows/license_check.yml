@@ -1,6 +1,19 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
 name: Check License Header
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - "develop"
+      - "main"
+  pull_request:
+    branches:
+      - "develop"
 
 jobs:
   check_license_header:

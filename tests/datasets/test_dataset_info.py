@@ -4,105 +4,55 @@
 # License: CECILL-C
 # =====================================
 
+
 import tempfile
-import unittest
 from pathlib import Path
 
-from pixano.datasets import DatasetInfo, DatasetTable
+from pixano.datasets.dataset_info import DatasetInfo
 
 
-class DatasetInfoTestCase(unittest.TestCase):
-    """DatasetInfo test case"""
+class TestDatasetInfo:
+    def test_init(self):
+        info = DatasetInfo()
+        assert info == DatasetInfo(id="", name="", description="", size="Unknown", num_elements=0, preview="")
 
-    def setUp(self):
-        """Tests setup"""
-
-        self.info = DatasetInfo(
-            id="datasetid001",
-            name="My dataset",
-            description="Dataset from a great AI project",
-            estimated_size="N/A",
-            num_elements=0,
-            splits=["train", "val"],
-            tables={
-                "main": [
-                    DatasetTable(
-                        name="db",
-                        fields={
-                            "id": "str",
-                            "views": "[str]",
-                            "split": "str",
-                        },
-                    )
-                ],
-                "media": [
-                    DatasetTable(
-                        name="image",
-                        fields={
-                            "id": "str",
-                            "image": "image",
-                        },
-                    )
-                ],
-                "objects": [
-                    DatasetTable(
-                        name="objects",
-                        fields={
-                            "id": "str",
-                            "item_id": "str",
-                            "view_id": "str",
-                            "bbox": "bbox",
-                            "category": "str",
-                        },
-                        source="Ground Truth",
-                    )
-                ],
-            },
+        info = DatasetInfo(
+            id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", num_elements=100, preview="/preview"
         )
 
-    def test_save(self):
-        """Test DatasetInfo save method"""
+        assert set(info.model_fields.keys()) == {"id", "name", "description", "size", "num_elements", "preview"}
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            self.info.save(Path(temp_dir))
-            saved_info = DatasetInfo.from_json(Path(temp_dir) / "db.json")
+    def test_to_json(self):
+        info = DatasetInfo(
+            id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", num_elements=100, preview="/preview"
+        )
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        info.to_json(temp_file)
+        assert (
+            Path(temp_file).read_text()
+            == """{
+    "id": "id",
+    "name": "pascal",
+    "description": "PASCAL VOC 2007",
+    "size": "8GB",
+    "num_elements": 100,
+    "preview": "/preview"
+}"""
+        )
 
-            self.assertIsInstance(saved_info, DatasetInfo)
-            self.assertEqual(self.info, saved_info)
-
-    def test_dict(self):
-        """Test DatasetInfo export to dict and import from dict"""
-
-        info_to_dict = self.info.model_dump()
-
-        self.assertIsInstance(info_to_dict, dict)
-
-        info_from_dict = DatasetInfo(**info_to_dict)
-
-        self.assertIsInstance(info_from_dict, DatasetInfo)
-        self.assertEqual(self.info, info_from_dict)
-
-    def test_load_directory(self):
-        """Test DatasetInfo load_directory method"""
-
-        with tempfile.TemporaryDirectory() as temp_dir:
-            dir1 = Path(temp_dir) / "dir1"
-            dir2 = Path(temp_dir) / "dir2"
-            dir3 = Path(temp_dir) / "dir3"
-
-            dir1.mkdir()
-            dir2.mkdir()
-            dir3.mkdir()
-
-            self.info.save(dir1)
-            self.info.save(dir2)
-            self.info.save(dir3)
-
-            saved_infos = DatasetInfo.load_directory(Path(temp_dir))
-
-            self.assertIsInstance(saved_infos, list)
-            self.assertEqual(len(saved_infos), 3)
-
-            for info in saved_infos:
-                self.assertIsInstance(info, DatasetInfo)
-                self.assertEqual(info, self.info)
+    def test_from_json(self):
+        temp_file = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        temp_file.write_text(
+            """{
+    "id": "id",
+    "name": "pascal",
+    "description": "PASCAL VOC 2007",
+    "size": "8GB",
+    "num_elements": 100,
+    "preview": "/preview"
+}"""
+        )
+        info = DatasetInfo.from_json(temp_file)
+        assert info == DatasetInfo(
+            id="id", name="pascal", description="PASCAL VOC 2007", size="8GB", num_elements=100, preview="/preview"
+        )

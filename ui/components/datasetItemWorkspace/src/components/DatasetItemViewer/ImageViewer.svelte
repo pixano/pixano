@@ -137,27 +137,24 @@ License: CECILL-C
 </script>
 
 <!-- Render the Canvas2D component with the loaded images or show a loading spinner -->
-{#key selectedItem.id}
-  {#if loaded}
-    <Canvas2D
-      {imagesPerView}
-      {loaded}
-      selectedItemId={selectedItem.id}
-      colorScale={$colorScale[1]}
-      bboxes={$itemBboxes}
-      masks={$itemMasks}
-      keypoints={$itemKeypoints}
-      selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
-      {embeddings}
-      {filters}
-      imageSmoothing={$imageSmoothing}
-      bind:selectedTool={$selectedTool}
-      bind:currentAnn
-      bind:newShape={$newShape}
-    />
-  {:else}
-    <div class="w-full h-full flex items-center justify-center">
-      <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
-    </div>
-  {/if}
-{/key}
+{#if loaded}
+  <Canvas2D
+    {imagesPerView}
+    selectedItemId={selectedItem.id}
+    colorScale={$colorScale[1]}
+    bboxes={$itemBboxes}
+    masks={$itemMasks}
+    keypoints={$itemKeypoints}
+    selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
+    {embeddings}
+    {filters}
+    imageSmoothing={$imageSmoothing}
+    bind:selectedTool={$selectedTool}
+    bind:currentAnn
+    bind:newShape={$newShape}
+  />
+{:else}
+  <div class="w-full h-full flex items-center justify-center">
+    <Loader2Icon class="h-10 w-10 animate-spin stroke-white" />
+  </div>
+{/if}

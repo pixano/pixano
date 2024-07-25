@@ -8,7 +8,12 @@ License: CECILL-C
   // Imports
   import * as ort from "onnxruntime-web";
 
-  import { type EditShape, type Tracklet, type VideoDatasetItem } from "@pixano/core";
+  import {
+    type EditShape,
+    type Tracklet,
+    type VideoDatasetItem,
+    type ItemObject,
+  } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
@@ -50,7 +55,7 @@ License: CECILL-C
 
   let inspectorMaxHeight = 250;
   let expanding = false;
-  let currentFrame: number;
+  let currentFrame: number = 0;
 
   let imagesPerView: Record<string, HTMLImageElement[]> = {};
 
@@ -80,6 +85,8 @@ License: CECILL-C
       0,
     );
     lastFrameIndex.set(longestView - 1);
+
+    updateView(0);
   });
 
   const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
@@ -94,33 +101,96 @@ License: CECILL-C
       };
     });
 
-    itemObjects.update((objects) =>
-      objects.map((object) => {
+    itemObjects.update((objects) => {
+      objects = objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
-        let { displayedBox, displayedKeypoints } = object;
+        let { displayedMBox, displayedMKeypoints } = object;
 
-        if (displayedBox && object.boxes) {
-          const newCoords = boxLinearInterpolation(
-            newTrack || object.track,
-            imageIndex,
-            object.boxes,
-          );
-
-          if (newCoords && newCoords.every((value) => value)) {
-            const [x, y, width, height] = newCoords;
-            displayedBox = { ...displayedBox, coords: [x, y, width, height] };
+        if (object.boxes) {
+          let new_displayedMBox = [];
+          //Need to add bbox if not present beforehand
+          for (const view in imagesPerView) {
+            let frame_bbox = object.boxes.find(
+              (bbox) => bbox.view_id == view && bbox.frame_index == imageIndex,
+            );
+            if (frame_bbox) {
+              let dispViewBBox = displayedMBox
+                ? displayedMBox.find((bbox) => bbox.view_id == view)
+                : undefined;
+              if (!dispViewBBox) {
+                if (!displayedMBox) displayedMBox = [];
+                displayedMBox.push(frame_bbox); // clone not required as bbox are shallow
+              }
+            }
           }
-          displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
-          displayedBox.hidden = !newCoords;
-          return { ...object, displayedBox };
+          if (displayedMBox) {
+            for (let displayedBox of displayedMBox) {
+              const newCoords = boxLinearInterpolation(
+                newTrack || object.track,
+                imageIndex,
+                object.boxes,
+                displayedBox.view_id!,
+              );
+
+              if (newCoords && newCoords.every((value) => value)) {
+                displayedBox = { ...displayedBox, coords: newCoords, frame_index: imageIndex };
+              }
+              displayedBox.displayControl = { ...displayedBox.displayControl, hidden: !newCoords };
+              new_displayedMBox.push(displayedBox);
+            }
+            object = { ...object, displayedMBox: new_displayedMBox };
+          }
         }
-        if (displayedKeypoints && object.keypoints) {
-          const newObject = keypointsLinearInterpolation(object, imageIndex);
-          return { ...newObject };
+
+        if (object.keypoints) {
+          let new_displayedMKeypoints = [];
+          //Need to add keypoint if not present beforehand
+          for (const view in imagesPerView) {
+            let frame_kpt = object.keypoints.find(
+              (kpt) => kpt.view_id == view && kpt.frame_index == imageIndex,
+            );
+            if (frame_kpt) {
+              let dispViewKpt = displayedMKeypoints
+                ? displayedMKeypoints.find((kpt) => kpt.view_id == view)
+                : undefined;
+              if (!dispViewKpt) {
+                if (!displayedMKeypoints) displayedMKeypoints = [];
+                displayedMKeypoints.push(structuredClone(frame_kpt)); // clone required as keypoints are not shallow
+              }
+            }
+          }
+          if (displayedMKeypoints) {
+            for (let displayedKeypoints of displayedMKeypoints) {
+              const vertices = keypointsLinearInterpolation(
+                object,
+                imageIndex,
+                displayedKeypoints.view_id!,
+              );
+              if (vertices) {
+                displayedKeypoints = { ...displayedKeypoints, vertices, frame_index: imageIndex };
+              }
+              displayedKeypoints.displayControl = {
+                ...displayedKeypoints.displayControl,
+                hidden: !vertices,
+              };
+              new_displayedMKeypoints.push(displayedKeypoints);
+            }
+            object = { ...object, displayedMKeypoints: new_displayedMKeypoints };
+          }
         }
         return object;
-      }),
-    );
+      });
+      function findEarlierTracklet(item: ItemObject): number {
+        if (item.datasetItemType !== "video") return 0;
+        if (item.track.length === 0) return 0;
+        return item.track.reduce(
+          (min, obj) => (obj.start < min ? obj.start : min),
+          item.track[0].start,
+        );
+      }
+      objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
+      return objects;
+    });
 
     currentFrame = imageIndex;
   };

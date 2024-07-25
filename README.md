@@ -11,7 +11,8 @@
 
 [![GitHub version](https://img.shields.io/github/v/release/pixano/pixano?label=release&logo=github)](https://github.com/pixano/pixano/releases)
 [![PyPI version](https://img.shields.io/pypi/v/pixano?color=blue&label=release&logo=pypi&logoColor=white)](https://pypi.org/project/pixano/)
-[![Tests](https://img.shields.io/github/actions/workflow/status/pixano/pixano/test.yml?branch=develop&label=tests)](https://github.com/pixano/pixano/actions/workflows/test.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/pixano/pixano/test_back.yml?branch=develop)](https://github.com/pixano/pixano/actions/workflows/test_back.yml)
+[![Coverage](https://codecov.io/github/pixano/pixano/graph/badge.svg?token=4BJY43YQ6L)](https://codecov.io/github/pixano/pixano)
 [![Documentation](https://img.shields.io/website?url=https%3A%2F%2Fpixano.github.io%2F&up_message=online&down_message=offline&label=docs)](https://pixano.github.io)
 [![Python version](https://img.shields.io/pypi/pyversions/pixano?color=important&logo=python&logoColor=white)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-CeCILL--C-blue.svg)](LICENSE)

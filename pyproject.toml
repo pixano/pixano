@@ -7,7 +7,7 @@ name = "pixano"
 dynamic = ["version"]
 description = 'Data-centric AI building blocks for computer vision applications'
 readme = "README.md"
-requires-python = "~=3.10"
+requires-python = ">=3.10,<3.12"
 license = "CeCILL-C"
 authors = [{name = "Pixano Developers", email = "pixano@cea.fr"}]
 keywords = [
@@ -20,6 +20,7 @@ keywords = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
   "License :: CeCILL-C Free Software License Agreement (CECILL-C)",
 ]
 dependencies = [
@@ -33,7 +34,7 @@ dependencies = [
   "ipywidgets ~= 8.0.0",
   "jinja2 ~= 3.1.2",
   "lancedb ~= 0.6.4",
-  "numpy >= 1.23.0",
+  "numpy < 2.0.0",
   "onnx ~= 1.13.0",
   "onnxruntime ~= 1.15.0",
   "opencv-python ~= 4.7.0",
@@ -44,7 +45,6 @@ dependencies = [
   "pycocotools ~= 2.0.0",
   "pydantic ~= 2.4.0",
   "pydantic-settings ~= 2.0.0",
-  "ruff ~= 0.3.0",
   "s3path ~= 0.5.0",
   "setuptools ~= 65.6.0",
   "shortuuid ~= 1.0.0",
@@ -59,6 +59,13 @@ documentation = [
   "mkdocs-gen-files ~= 0.5.0",
   "mkdocs-literate-nav ~= 0.6.0",
   "mkdocs-redirects ~= 1.2.1",
+]
+test = [
+  "mediapy",
+  "pytest",
+  "pytest-cov",
+  "pytest-mock",
+  "ffmpeg-python~=0.2.0",
 ]
 
 [project.urls]
@@ -78,7 +85,7 @@ artifacts = ["/pixano/app/dist"]
 path = "pixano/__version__.py"
 
 [tool.ruff]
-line-length = 120
+line-length = 119
 extend-exclude = ["ui"]
 extend-include = ["notebooks/**/*.ipynb"]
 
