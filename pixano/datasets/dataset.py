@@ -144,6 +144,7 @@ class Dataset:
             DatasetSchema: Dataset schema
         """
         self.schema = DatasetSchema.from_json(self.path / "schema.json")
+        self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.
@@ -187,20 +188,23 @@ class Dataset:
         exist_ok: bool = False,
         on_bad_vectors: str = "error",
         fill_value: float = 0.0,
-    ) -> None:
+    ) -> LanceTable:
         """Add table to dataset.
 
         Args:
             name (str): Table name
             schema (type[BaseSchema]): Table schema
-            relation_item (SchemaRelation): Relation with item table (item to table)
+            relation_item (SchemaRelation): Relation with item table (table to item)
             data (DATA | None, optional): Table data
             mode (str, optional): Table mode
             exist_ok (bool, optional): Table exist ok
             on_bad_vectors (str, optional): Table on bad vectors
             fill_value (float, optional): Table fill value
+
+        Returns:
+            LanceTable: The table
         """
-        self._db_connection.create_table(
+        table = self._db_connection.create_table(
             name=name,
             schema=schema,
             data=data,
@@ -213,6 +217,7 @@ class Dataset:
         self.schema.add_schema(name, schema, relation_item)
         self.schema.to_json(self.path / self.SCHEMA_FILE)
         self._reload_schema()
+        return table
 
     def open_tables(self, names: list[str] | None = None) -> dict[str, LanceTable]:
         """Open dataset tables with LanceDB.
@@ -295,11 +300,12 @@ class Dataset:
                     .to_arrow_table()
                     .to_pylist()
                 )
-                model = self.schema.schemas[table_name]
+                table_model = self.schema.schemas[table_name]
                 models: list[BaseSchema] = []
                 for row in item_rows:
-                    models.append(model(**{k: v for k, v in row.items() if k in model.field_names()}))
+                    models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
                     models[-1].dataset = self
+                    models[-1].table_name = table_name
                 return models
 
             query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
@@ -309,6 +315,7 @@ class Dataset:
         query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
         for model in query_models:
             model.dataset = self  # type: ignore[attr-defined]
+            model.table_name = table_name
 
         return query_models
 
@@ -484,12 +491,14 @@ class Dataset:
     def find(
         id: str,
         directory: Path,
+        media_dir: Path | None = None,
     ) -> "Dataset":
         """Find Dataset in directory.
 
         Args:
             id (str): Dataset ID.
             directory (Path): Directory to search in.
+            media_dir (Path | None, optional): Media directory.
 
         Returns:
             Dataset: The found dataset.
@@ -499,5 +508,5 @@ class Dataset:
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 # Return dataset
-                return Dataset(json_fp.parent)
+                return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")

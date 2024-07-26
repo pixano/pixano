@@ -49,6 +49,13 @@ class DatasetSchema(BaseModel):
         Returns:
             DatasetSchema: DatasetSchema
         """
+        table_name = self.format_table_name(table_name)
+        if table_name in self.schemas:
+            raise ValueError(f"Table {table_name} already exists in the schemas.")
+        elif not issubclass(schema, BaseSchema):
+            raise ValueError(f"Schema {schema} should be a subclass of BaseSchema.")
+        elif not isinstance(relation_item, SchemaRelation):
+            raise ValueError(f"Invalid relation {relation_item}.")
         found_group = False
         for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
             if issubclass(schema, group_type):
@@ -62,11 +69,11 @@ class DatasetSchema(BaseModel):
             self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_ONE
             self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
         elif relation_item == SchemaRelation.ONE_TO_MANY:
-            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_MANY
-            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
-        elif relation_item == SchemaRelation.MANY_TO_ONE:
             self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_ONE
             self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_MANY}
+        elif relation_item == SchemaRelation.MANY_TO_ONE:
+            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_MANY
+            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
         elif relation_item == SchemaRelation.MANY_TO_MANY:
             self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_MANY
             self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_MANY}

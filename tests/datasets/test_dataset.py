@@ -5,13 +5,15 @@
 # =====================================
 
 
+from pathlib import Path
+
 import pytest
 from lancedb.table import LanceTable
 
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
-from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
+from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.features import Image, Item
 
 
@@ -29,6 +31,24 @@ class TestDataset:
         assert dumb_dataset.thumbnail == dumb_dataset.path / Dataset.THUMB_FILE
         assert dumb_dataset.num_rows == 5
         assert dumb_dataset.media_dir == dumb_dataset.path / "media"
+
+    def test_create_table(self, dumb_dataset: Dataset):
+        data = [
+            Image(
+                id=f"new_image_{i}",
+                url=f"new_image_{i}.jpg",
+                width=100,
+                height=100,
+                format="jpg",
+            )
+            for i in range(5)
+        ]
+        table = dumb_dataset.create_table("new_table", Image, SchemaRelation.ONE_TO_MANY, data=data)
+        assert isinstance(table, LanceTable)
+        assert "new_table" in dumb_dataset.schema.schemas
+        assert issubclass(dumb_dataset.schema.schemas["new_table"], Image)
+        assert dumb_dataset.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
+        assert "new_table" in dumb_dataset.dataset_item_model.model_fields
 
     def test_open_table(self, dumb_dataset: Dataset):
         table = dumb_dataset.open_table("item")
@@ -159,6 +179,8 @@ class TestDataset:
         assert isinstance(data, list) and all(isinstance(d, type) for d in data)
         for d, e in zip(data, expected_output, strict=True):
             assert d.model_dump() == e
+            assert d.dataset == dumb_dataset
+            assert d.table_name == table_name
 
     @pytest.mark.parametrize(
         "table_name,ids,item_ids,limit,offset,expected_error",
@@ -558,3 +580,17 @@ class TestDataset:
         dumb_dataset.update_dataset_items([new_item])
 
         assert dumb_dataset.get_dataset_items(ids=["1"])[0] == new_item
+
+    def test_find(self, dumb_dataset: Dataset):
+        path = dumb_dataset.path.parent
+
+        dumb_dataset_found = Dataset.find(dumb_dataset.info.id, path)
+        assert dumb_dataset_found.info == dumb_dataset.info
+        assert dumb_dataset_found.media_dir == dumb_dataset.media_dir
+
+        dumb_dataset_found = Dataset.find(dumb_dataset.info.id, path, Path("/test/media"))
+        assert dumb_dataset_found.info == dumb_dataset.info
+        assert dumb_dataset_found.media_dir == Path("/test/media")
+
+        with pytest.raises(FileNotFoundError, match=f"Dataset nonexistent not found in {path}"):
+            Dataset.find("nonexistent", path)

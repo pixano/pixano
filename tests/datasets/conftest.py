@@ -24,4 +24,5 @@ from tests.fixtures.datasets.dataset_item import (
 from tests.fixtures.datasets.dataset_schema import dataset_schema_1, json_dataset_schema_1
 from tests.fixtures.datasets.features.bbox import bbox_xywh, bbox_xyxy, coords, height_width
 from tests.fixtures.datasets.features.compressed_rle import counts, rle, size
+from tests.fixtures.datasets.features.embedding import dumb_embedding_function, embedding_8, view_embedding_8
 from tests.fixtures.datasets.features.item import custom_item_1, custom_item_2

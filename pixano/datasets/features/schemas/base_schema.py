@@ -29,6 +29,7 @@ class BaseSchema(LanceModel):
     model_config = ConfigDict(validate_assignment=True)
     id: str = ""
     _dataset: Dataset | None = PrivateAttr(None)
+    _table_name: str = PrivateAttr("")
 
     @property
     def dataset(self) -> Dataset:
@@ -41,6 +42,18 @@ class BaseSchema(LanceModel):
     def dataset(self, dataset: Dataset):
         """Set the dataset."""
         self._dataset = dataset
+
+    @property
+    def table_name(self) -> str:
+        """Get the table name."""
+        if self._table_name == "":
+            raise ValueError("Table name is not set.")
+        return self._table_name
+
+    @table_name.setter
+    def table_name(self, table_name: str):
+        """Set the table name."""
+        self._table_name = table_name
 
     def resolve_ref(self, ref: SchemaRef) -> Any:
         """Resolve a reference."""

@@ -13,7 +13,6 @@ from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry, register
 from lancedb.pydantic import Vector
 from pydantic import create_model
-from typing_extensions import Self
 
 from pixano.datasets.features.schemas.views.image import Image, is_image
 from pixano.datasets.features.schemas.views.sequence_frame import is_sequence_frame
@@ -32,8 +31,8 @@ def _to_pixano_name(dataset: "Dataset", table_name: str, name: str) -> str:
     return f"pixano_{dataset.info.id}_{table_name}_{name}"
 
 
-def _from_pixano_name(dataset: "Dataset", table_name: str, name: str) -> str:
-    return name[len(f"pixano_{dataset.info.id}_{table_name}_") :]
+def _from_pixano_name(dataset: "Dataset", table_name: str, pixano_name: str) -> str:
+    return pixano_name[len(f"pixano_{dataset.info.id}_{table_name}_") :]
 
 
 @_register_schema_internal
@@ -46,7 +45,7 @@ class Embedding(BaseSchema, ABC):
     """
 
     item_ref: ItemRef = ItemRef.none()
-    vector: Any
+    vector: Any  # TODO: change to Vector exposed parametrized type when LanceDB is updated
 
     @property
     def item(self):
@@ -124,13 +123,15 @@ class ViewEmbedding(Embedding, ABC):
     def create_schema(
         cls,
         embedding_fn: str,
+        table_name: str,
         dataset: "Dataset",
         **embedding_function_kwargs,
-    ) -> Self:
+    ) -> type["ViewEmbedding"]:
         """Create a ViewEmbedding schema.
 
         Args:
             embedding_fn (EmbeddingFunction): The embedding function.
+            table_name (str): The name of the table containing the schema.
             dataset (Dataset): The dataset to which the schema belongs.
             embedding_function_kwargs: The keyword arguments for creating the embedding function.
 
@@ -141,7 +142,7 @@ class ViewEmbedding(Embedding, ABC):
         if not isinstance(embedding_fn, str):
             raise TypeError(f"{embedding_fn} should be a string")
 
-        pixano_name = _to_pixano_name(dataset, "embeddings", embedding_fn)
+        pixano_name = _to_pixano_name(dataset, table_name, embedding_fn)
         if pixano_name not in lance_registry._functions:
             type_embedding_function = lance_registry.get(embedding_fn)
             view_embedding_function: type[EmbeddingFunction] = create_view_embedding_function(
