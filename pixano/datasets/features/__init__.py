@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from .pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATATYPE
 from .schemas import (
     Annotation,
     BaseIntrinsics,
@@ -26,6 +27,7 @@ from .schemas import (
     Tracklet,
     Video,
     View,
+    ViewEmbedding,
     _SchemaGroup,
     create_bbox,
     create_bbox3d,
@@ -39,6 +41,7 @@ from .schemas import (
     create_track,
     create_tracklet,
     create_video,
+    create_view_embedding_function,
     is_annotation,
     is_base_schema,
     is_bbox,
@@ -57,6 +60,7 @@ from .schemas import (
     is_tracklet,
     is_video,
     is_view,
+    is_view_embedding,
     register_schema,
 )
 from .types import (
@@ -87,6 +91,8 @@ from .types import (
 
 
 __all__ = [
+    "SERIALIZE_PYARROW_DATATYPE",
+    "DESERIALIZE_PYARROW_DATATYPE",
     "_SchemaGroup",
     "AnnotationRef",
     "EmbeddingRef",
@@ -119,6 +125,7 @@ __all__ = [
     "Tracklet",
     "Video",
     "View",
+    "ViewEmbedding",
     "is_annotation",
     "is_base_schema",
     "is_base_type",
@@ -139,6 +146,7 @@ __all__ = [
     "is_view",
     "is_video",
     "is_entity",
+    "is_view_embedding",
     "is_sequence_frame",
     "is_schema_ref",
     "is_item_ref",
@@ -167,5 +175,6 @@ __all__ = [
     "create_track",
     "create_tracklet",
     "create_video",
+    "create_view_embedding_function",
     "register_schema",
 ]

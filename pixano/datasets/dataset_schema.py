@@ -38,6 +38,47 @@ class DatasetSchema(BaseModel):
     relations: dict[str, dict[str, SchemaRelation]]
     _groups: dict[_SchemaGroup, list[str]] = PrivateAttr({key: [] for key in _SchemaGroup})
 
+    def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> "DatasetSchema":
+        """Add a schema to the dataset schema.
+
+        Args:
+            table_name (str): Table name.
+            schema (type[BaseSchema]): Schema.
+            relation_item (SchemaRelation): Relation with the item schema.
+
+        Returns:
+            DatasetSchema: DatasetSchema
+        """
+        table_name = self.format_table_name(table_name)
+        if table_name in self.schemas:
+            raise ValueError(f"Table {table_name} already exists in the schemas.")
+        elif not issubclass(schema, BaseSchema):
+            raise ValueError(f"Schema {schema} should be a subclass of BaseSchema.")
+        elif not isinstance(relation_item, SchemaRelation):
+            raise ValueError(f"Invalid relation {relation_item}.")
+        found_group = False
+        for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
+            if issubclass(schema, group_type):
+                self._groups[group].append(table_name)
+                found_group = True
+                break
+        if not found_group:
+            raise ValueError(f"Invalid table type {schema}")
+        self.schemas[table_name] = schema
+        if relation_item == SchemaRelation.ONE_TO_ONE:
+            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_ONE
+            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
+        elif relation_item == SchemaRelation.ONE_TO_MANY:
+            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_ONE
+            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_MANY}
+        elif relation_item == SchemaRelation.MANY_TO_ONE:
+            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_MANY
+            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
+        elif relation_item == SchemaRelation.MANY_TO_MANY:
+            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_MANY
+            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_MANY}
+        return self
+
     @model_validator(mode="after")
     def _assign_table_groups(self) -> Self:
         for table in (
@@ -158,8 +199,9 @@ class DatasetSchema(BaseModel):
         # Keep the schema field from the old json content for custom schemas.
         if old_json_content is not None:
             for table, schema in json_content["schemas"].items():
+                if table not in old_json_content["schemas"]:
+                    continue
                 schema["schema"] = old_json_content["schemas"][table]["schema"]
-
         json_fp.write_text(json.dumps(json_content, indent=4), encoding="utf-8")
 
     @staticmethod

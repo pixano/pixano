@@ -254,6 +254,40 @@ class TestDatasetSchema:
             _SchemaGroup.EMBEDDING: [],
         }
 
+    @pytest.mark.parametrize(
+        "relation",
+        [
+            SchemaRelation.ONE_TO_ONE,
+            SchemaRelation.ONE_TO_MANY,
+            SchemaRelation.MANY_TO_ONE,
+            SchemaRelation.MANY_TO_MANY,
+        ],
+    )
+    def test_add_schema(self, dataset_schema_1, relation):
+        if relation == SchemaRelation.ONE_TO_ONE:
+            item_relation = SchemaRelation.ONE_TO_ONE
+        elif relation == SchemaRelation.ONE_TO_MANY:
+            item_relation = SchemaRelation.MANY_TO_ONE
+        elif relation == SchemaRelation.MANY_TO_ONE:
+            item_relation = SchemaRelation.ONE_TO_MANY
+        else:
+            item_relation = SchemaRelation.MANY_TO_MANY
+        schema = dataset_schema_1.add_schema("new_table", Image, relation)
+        assert schema.schemas["new_table"] == Image
+        assert schema.relations["new_table"] == {"item": relation}
+        assert set(schema._groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
+        assert schema.relations["item"]["new_table"] == item_relation
+
+    def test_add_error(self, dataset_schema_1):
+        with pytest.raises(ValueError, match="Table image already exists in the schemas."):
+            dataset_schema_1.add_schema("image", Image, SchemaRelation.ONE_TO_ONE)
+
+        with pytest.raises(ValueError, match="Schema <class 'str'> should be a subclass of BaseSchema."):
+            dataset_schema_1.add_schema("new_table", str, SchemaRelation.ONE_TO_ONE)
+
+        with pytest.raises(ValueError, match="Invalid relation 1."):
+            dataset_schema_1.add_schema("new_table", Image, 1)
+
 
 class TestDatasetItem:
     def test_to_dataset_schema(self, dataset_item_custom_2, custom_item_2):

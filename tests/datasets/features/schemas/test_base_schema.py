@@ -21,7 +21,7 @@ class TestBaseSchema:
     def test_resolve_ref(self, dumb_dataset: Dataset):
         base_schema = BaseSchema()
 
-        with pytest.raises(ValueError, match="Set the dataset before resolving a reference."):
+        with pytest.raises(ValueError, match="Dataset is not set."):
             base_schema.resolve_ref(SchemaRef(id="", name=""))
 
         base_schema.dataset = dumb_dataset
