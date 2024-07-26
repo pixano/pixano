@@ -36,7 +36,8 @@ from pixano.datasets.features import (
     is_tracklet,
 )
 from pixano.datasets.utils import image as image_utils
-
+import concurrent.futures
+import time
 
 class FrontDatasetItem(BaseModel):
     """Front format DatasetItem."""
@@ -284,7 +285,7 @@ async def get_dataset_item(  # noqa: D417
     groups = dataset.schema._groups
 
     # Load dataset item
-    item = dataset.get_dataset_items([item_id])[0]
+    item = dataset.get_dataset_items([item_id])[0] # slow
 
     # Item Features
     not_item_meta = ["id", "split"]
@@ -419,107 +420,126 @@ async def get_dataset_item(  # noqa: D417
                 obj["features"] = features
                 objects.append(obj)
     else:  # video
-        tracks = defaultdict(list)
-        entity_id = defaultdict(list)
+        # max_frame_idx = 1e+20
+        trackid2trackletslist = defaultdict(list) #trackid2trackletslist
+        trackid2entityidlist = defaultdict(list) #trackid2entityidlist
+        entity_id2trackid = {}
+        trackid2annotationidlist = {annotation_group:defaultdict(list) for annotation_group in groups[_SchemaGroup.ANNOTATION]} #trackid2entityidlist
+        trackid2track = {}
+        verbose = False
 
-        # gather tracklets by track
+        ## Store a cache of references for faster loading
+        # gather tracklets for each track
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
             for annotation in getattr(item, annotation_group):
                 if is_tracklet(type(annotation)) and annotation.view_ref.name == selected_view:  # TMP 1V
-                    tracks[annotation.entity_ref.id].append(annotation)
+                    trackid2trackletslist[annotation.entity_ref.id].append(annotation)
 
-        # match track_id with spatial object id if exist
+        # gather entities/track references
         for entity_group in groups[_SchemaGroup.ENTITY]:
             for entity in getattr(item, entity_group):
-                if is_track(type(entity)) and entity.id not in entity_id:
-                    entity_id[entity.id].append(entity.id)
+                if is_track(type(entity)):
+                    trackid2track[entity.id] = entity
+                if is_track(type(entity)) and entity.id not in trackid2entityidlist:
+                    trackid2entityidlist[entity.id].append(entity.id)
                 elif entity.parent_ref.id != "":
-                    entity_id[entity.parent_ref.id].append(entity.id)
+                    trackid2entityidlist[entity.parent_ref.id].append(entity.id)
+                    entity_id2trackid[entity.id] = entity.parent_ref.id
 
-        for track_id, tracklets in tracks.items():
-            # if track_id.startswith("track_1") or track_id.startswith("track_2") or track_id.startswith("track_3"):
-            #     continue
-            bboxes = []
-            keypoints = []
-            features = {}
-            # Note: for now, annotation features keeps overwriting for each annotation...
-            # We need to be able to manage lower level features in front. (will be done in front data refactor)
-            for annotation_group in groups[_SchemaGroup.ANNOTATION]:
-                for annotation in getattr(item, annotation_group):
-                    # if annotation.view_ref.id == "":
-                    #     # ignore if annotation is not linked to a view
-                    #     # Note: Maybe we should still gather features ?
-                    #     continue
-                    if is_tracklet(type(annotation)):
-                        continue
-                    if annotation.entity_ref.id in entity_id[track_id]:
-                        # get frame_index from annotation.view_ref
-                        frame_index = next(
-                            (
-                                view["frame_index"]
-                                for view in views[annotation.view_ref.name]
-                                if view["id"] == annotation.view_ref.id
-                            ),
-                            -1,
+        # gather annotations/track references
+        for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+            for annotation in getattr(item, annotation_group):
+                if is_tracklet(type(annotation)):
+                    continue
+                entity_id = annotation.entity_ref.id
+                track_id = entity_id2trackid[entity_id]
+                trackid2annotationidlist[annotation_group][track_id].append(annotation.id)
+
+        # Load all tracks related data
+        track_bboxes = defaultdict(list)
+        track_keypoints = defaultdict(list)
+        track_features = defaultdict(dict)
+        kept_track_ids = []
+        for annotation_group in groups[_SchemaGroup.ANNOTATION]:
+            for annotation in getattr(item, annotation_group):
+                if is_tracklet(type(annotation)):
+                    continue
+                if annotation.view_ref.name == selected_view:
+                    entity_id = annotation.entity_ref.id
+                    track_id =  entity_id2trackid[entity_id]
+                    frame_index = next(
+                        (
+                            view["frame_index"]
+                            for view in views[annotation.view_ref.name]
+                            if view["id"] == annotation.view_ref.id
+                        ),
+                        -1,
+                    )
+                    if frame_index == -1:
+                        print(
+                            "Warning: Annotation found that doesn't match to any frame",
+                            annotation,
                         )
-                        if frame_index == -1:
-                            print(
-                                "Warning: Annotation found that doesn't match to any frame",
-                                annotation,
-                            )
-                            continue
+                        continue
 
-                        # Entity features
-                        # TMP WARNING: we miss "dynamic" features
-                        # -- celles attachées à l'entité "spatiale"
-                        # -- modifs fronts nécessaire pour les prendre en compte correctements
-                        # -- de meme que les features au niveau des annotations
-                        ann_entity = find_top_entity(annotation)
-                        if ann_entity:
-                            features.update(getFeatures(ann_entity, Entity))
+                    # if frame_index >= max_frame_idx:
+                    #     continue
 
-                        if is_bbox(type(annotation), False) and annotation != NoneBBox:
-                            # features.update(getFeatures(annotation, BBox))
-                            bboxes.append(
-                                {
-                                    "coords": annotation.xywh_coords,
-                                    "format": "xywh",
-                                    "is_normalised": annotation.is_normalized,
-                                    "confidence": annotation.confidence,
-                                    "view_id": annotation.view_ref.name,  # danger faux-ami !
-                                    "frame_index": frame_index,
-                                    "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
-                                    "is_thumbnail": False,
-                                    "tracklet_id": annotation.entity_ref.id,
-                                }
-                            )
-                        if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
-                            # features.update(getFeatures(annotation, KeyPoints))
-                            keypoints.append(
-                                {
-                                    "template_id": annotation.template_id,
-                                    "vertices": annotation.map_back2front_vertices(),
-                                    "frame_index": frame_index,
-                                    "view_id": annotation.view_ref.name,
-                                    "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
-                                    "tracklet_id": annotation.entity_ref.id,
-                                }
-                            )
+                    kept_track_ids.append(track_id)
 
-            # sort annotations by frame_index
+                    # ann_entity = find_top_entity(annotation) # Slow general approach
+                    ann_entity = trackid2track[track_id] # Fast specific approach
+
+
+                    if ann_entity:
+                        track_features[track_id].update(getFeatures(ann_entity, Entity))
+
+                    if is_bbox(type(annotation), False) and annotation != NoneBBox:
+                        track_bboxes[track_id].append(
+                            {
+                                "coords": annotation.xywh_coords,
+                                "format": "xywh",
+                                "is_normalised": annotation.is_normalized,
+                                "confidence": annotation.confidence,
+                                "view_id": annotation.view_ref.name,
+                                "frame_index": frame_index,
+                                "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
+                                "is_thumbnail": False,
+                                "tracklet_id": annotation.entity_ref.id,
+                            }
+                        )
+
+                    if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
+                        track_keypoints[track_id].append(
+                            {
+                                "template_id": annotation.template_id,
+                                "vertices": annotation.map_back2front_vertices(),
+                                "frame_index": frame_index,
+                                "view_id": annotation.view_ref.name,
+                                "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
+                                "tracklet_id": annotation.entity_ref.id,
+                            }
+                        )
+
+        objects = []
+        for track_id in sorted(set(kept_track_ids)):
+            bboxes = track_bboxes[track_id]
+            keypoints = track_keypoints[track_id]
+            features = track_features[track_id]
             bboxes.sort(key=lambda bbox: bbox["frame_index"])
             keypoints.sort(key=lambda kpt: kpt["frame_index"])
-
-            # set thumbnail to first bbox
+            tracklets = trackid2trackletslist[track_id]          
             if len(bboxes) > 0:
                 bboxes[0]["is_thumbnail"] = True
-
-            objects.append(
-                {
+            # If empty track, do not show
+            if len(bboxes) == 0 and len(keypoints) == 0:
+               continue
+            else:
+                objects.append({
                     "id": track_id,
                     "datasetItemType": view_type,
                     "item_id": item_id,
-                    "source_id": "Ground Truth",  # ?? must ensure source
+                    "source_id": "Ground Truth",
                     "features": features,
                     "track": [
                         {
@@ -538,9 +558,9 @@ async def get_dataset_item(  # noqa: D417
                     ],
                     "boxes": bboxes,
                     "keypoints": keypoints,
-                }
-            )
-            # print("OBJ", objects[-1])
+                })
+
+
 
     front_item = FrontDatasetItem(
         id=item.id,
