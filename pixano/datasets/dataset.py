@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import duckdb
 import lancedb
@@ -257,14 +257,21 @@ class Dataset:
             raise ValueError("Reference should have a name and an id.")
         return self.get_data(ref.name, ids=[ref.id])[0]
 
+    @overload
+    def get_data(
+        self, table_name: str, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+    ) -> list[BaseSchema]: ...
+    @overload
+    def get_data(self, table_name: str, ids: str, limit: int | None = None, offset: int = 0) -> BaseSchema | None: ...
+
     def get_data(
         self,
         table_name: str,
-        ids: list[str] | None = None,
+        ids: list[str] | str | None = None,
         limit: int | None = None,
         offset: int = 0,
         item_ids: list[str] | None = None,
-    ) -> list[BaseSchema]:
+    ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
 
         Args:
@@ -284,6 +291,9 @@ class Dataset:
                 else:
                     raise ValueError("ids and item_ids cannot be set at the same time")
                 item_ids = None
+
+        return_list = not isinstance(ids, str)
+        ids = [ids] if isinstance(ids, str) else ids
 
         _validate_ids_item_ids_and_limit_and_offset(ids, limit, offset, item_ids)
 
@@ -306,7 +316,8 @@ class Dataset:
                     models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
                     models[-1].dataset = self
                     models[-1].table_name = table_name
-                return models
+
+                return models if return_list else models[0]
 
             query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
         else:
@@ -317,14 +328,20 @@ class Dataset:
             model.dataset = self  # type: ignore[attr-defined]
             model.table_name = table_name
 
-        return query_models
+        return query_models if return_list else (query_models[0] if query_models != [] else None)
 
+    @overload
+    def get_dataset_items(
+        self, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+    ) -> list[BaseSchema]: ...
+    @overload
+    def get_dataset_items(self, ids: str, limit: int | None = None, offset: int = 0) -> BaseSchema | None: ...
     def get_dataset_items(
         self,
-        ids: list[str] | None = None,
+        ids: list[str] | str | None = None,
         limit: int | None = None,
         offset: int = 0,
-    ) -> list[DatasetItem]:
+    ) -> list[DatasetItem] | DatasetItem | None:
         """Read dataset items.
 
         Args:
@@ -335,11 +352,14 @@ class Dataset:
         Returns:
             List of dataset items.
         """
+        return_list = not isinstance(ids, str)
+        ids = [ids] if isinstance(ids, str) else ids
+
         _validate_ids_and_limit_and_offset(ids, limit, offset)
 
         items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)
         if items == []:
-            return []
+            return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
         sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
@@ -369,7 +389,7 @@ class Dataset:
 
         dataset_items = [self.dataset_item_model(**data_dict[item_id]) for item_id in item_ids]
 
-        return dataset_items
+        return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
     def get_all_ids(self, table_name: str = _SchemaGroup.ITEM.value) -> list[str]:
         """Get all ids from a table.
