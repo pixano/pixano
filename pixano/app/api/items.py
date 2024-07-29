@@ -743,7 +743,7 @@ async def get_item_embeddings(  # noqa: D417
 
     if dataset:
         try:
-            embeddings = dataset.get_data(_SchemaGroup.EMBEDDING, [item_id])[0]  # type: ignore[arg-type]
+            embeddings = dataset.get_data(_SchemaGroup.EMBEDDING.value, [item_id])[0]  # type: ignore[arg-type]
         except ValueError:
             raise HTTPException(
                 status_code=404,

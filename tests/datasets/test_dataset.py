@@ -182,6 +182,15 @@ class TestDataset:
             assert d.dataset == dumb_dataset
             assert d.table_name == table_name
 
+    def test_get_one_data(self, dumb_dataset: Dataset):
+        data = dumb_dataset.get_data(table_name="item", ids="0")
+        assert isinstance(data, Item)
+        assert data.model_dump() == {"id": "0", "metadata": "metadata_0", "split": "test"}
+        assert data.dataset == dumb_dataset
+
+        data = dumb_dataset.get_data(table_name="item", ids="-1")
+        assert data is None
+
     @pytest.mark.parametrize(
         "table_name,ids,item_ids,limit,offset,expected_error",
         [
@@ -471,6 +480,31 @@ class TestDataset:
         assert isinstance(dataset_items, list) and all(isinstance(d, DatasetItem) for d in dataset_items)
         for item, expected_output in zip(dataset_items, expected_output):
             assert item.model_dump() == expected_output
+
+    def test_get_one_dataset_item(self, dumb_dataset: Dataset):
+        dataset_item = dumb_dataset.get_dataset_items(ids="0")
+        expected_output = {
+            "id": "0",
+            "metadata": "metadata_0",
+            "split": "test",
+            "image": {
+                "id": "image_0",
+                "item_ref": {"id": "0", "name": "item"},
+                "parent_ref": {"id": "", "name": ""},
+                "url": "image_0.jpg",
+                "width": 100,
+                "height": 100,
+                "format": "jpg",
+            },
+            "entities": [],
+            "bboxes": [],
+            "keypoint": None,
+        }
+        assert isinstance(dataset_item, DatasetItem)
+        assert dataset_item.model_dump() == expected_output
+
+        dataset_item = dumb_dataset.get_dataset_items(ids="-1")
+        assert dataset_item is None
 
     @pytest.mark.parametrize(
         "ids,limit,offset,expected_error",
