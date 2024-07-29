@@ -259,12 +259,10 @@ class Dataset:
 
     @overload
     def get_data(
-        self, table_name: str, ids: list[str], limit: int | None = None, offset: int = 0
+        self, table_name: str, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(self, table_name: str, ids: str, limit: int | None = None, offset: int = 0) -> BaseSchema | None: ...
-    @overload
-    def get_data(self, table_name: str, ids: None, limit: int, offset: int = 0) -> list[BaseSchema]: ...
 
     def get_data(
         self,
@@ -333,11 +331,11 @@ class Dataset:
         return query_models if return_list else (query_models[0] if query_models != [] else None)
 
     @overload
-    def get_dataset_items(self, ids: list[str], limit: int | None = None, offset: int = 0) -> list[BaseSchema]: ...
+    def get_dataset_items(
+        self, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+    ) -> list[BaseSchema]: ...
     @overload
     def get_dataset_items(self, ids: str, limit: int | None = None, offset: int = 0) -> BaseSchema | None: ...
-    @overload
-    def get_dataset_items(self, ids: None, limit: int, offset: int = 0) -> list[BaseSchema]: ...
     def get_dataset_items(
         self,
         ids: list[str] | str | None = None,
@@ -359,7 +357,7 @@ class Dataset:
 
         _validate_ids_and_limit_and_offset(ids, limit, offset)
 
-        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)  # type: ignore[arg-type]
+        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
