@@ -4,9 +4,12 @@
 # License: CECILL-C
 # =====================================
 
+from typing import Any
+
 import numpy as np
 from PIL import Image as pil_image
 from pydantic import model_validator
+from typing_extensions import Self
 
 from pixano.datasets.utils import image as image_utils
 from pixano.datasets.utils import issubclass_strict
@@ -21,8 +24,8 @@ class CompressedRLE(Annotation):
     """Compressed RLE mask type.
 
     Attributes:
-        size (list[int]): Mask size
-        counts (bytes): Mask RLE encoding
+        size: Mask size.
+        counts: Mask RLE encoding.
     """
 
     size: list[int]
@@ -39,12 +42,12 @@ class CompressedRLE(Annotation):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls) -> Self:
         """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
-            CompressedRLE: "None" CompressedRLE
+            "None" `CompressedRLE`.
         """
         return cls(
             id="",
@@ -59,7 +62,7 @@ class CompressedRLE(Annotation):
         """Convert compressed RLE mask to NumPy array.
 
         Returns:
-            np.ndarray: Mask as NumPy array
+            Mask as NumPy array.
         """
         return image_utils.rle_to_mask({"size": self.size, "counts": self.counts})
 
@@ -67,7 +70,7 @@ class CompressedRLE(Annotation):
         """Convert compressed RLE mask to uncompressed RLE.
 
         Returns:
-            dict[str, list[int]]: Mask as uncompressed RLE
+            Mask as uncompressed RLE.
         """
         return image_utils.rle_to_urle(self.model_dump())
 
@@ -75,34 +78,34 @@ class CompressedRLE(Annotation):
         """Convert compressed RLE mask to poylgons.
 
         Returns:
-            list[list]: Mask as polygons
+            Mask as polygons.
         """
         return image_utils.rle_to_polygons(self.model_dump())
 
     @staticmethod
-    def from_mask(mask: pil_image.Image | np.ndarray, **kwargs) -> "CompressedRLE":
+    def from_mask(mask: pil_image.Image | np.ndarray, **kwargs: Any) -> "CompressedRLE":
         """Create compressed RLE mask from NumPy array.
 
         Args:
-            mask (Image.Image | np.ndarray): Mask as NumPy array.
+            mask: Mask as NumPy array.
             kwargs: Additional arguments.
 
         Returns:
-            CompressedRLE: Compressed RLE mask
+            Compressed RLE mask.
         """
         rle = image_utils.mask_to_rle(mask)
         return CompressedRLE(size=rle["size"], counts=rle["counts"], **kwargs)
 
     @staticmethod
-    def from_urle(urle: dict[str, list[int]], **kwargs) -> "CompressedRLE":
+    def from_urle(urle: dict[str, list[int]], **kwargs: Any) -> "CompressedRLE":
         """Create compressed RLE mask from uncompressed RLE.
 
         Args:
-            urle (dict[str, list[int]]): Mask as uncompressed RLE
+            urle: Mask as uncompressed RLE.
             kwargs: Additional arguments.
 
         Returns:
-            CompressedRLE: Compressed RLE mask
+            Compressed RLE mask.
         """
         return CompressedRLE(**image_utils.urle_to_rle(urle), **kwargs)
 
@@ -111,33 +114,33 @@ class CompressedRLE(Annotation):
         polygons: list[list],
         height: int,
         width: int,
-        **kwargs,
+        **kwargs: Any,
     ) -> "CompressedRLE":
         """Create compressed RLE mask from polygons.
 
         Args:
-            polygons (list[list]): Mask as polygons
-            height (int): Image height
-            width (int): Image width
+            polygons: Mask as polygons.
+            height: Image height.
+            width: Image width.
             kwargs: Additional arguments.
 
         Returns:
-            CompressedRLE: Compressed RLE mask
+            Compressed RLE mask.
         """
         return CompressedRLE(**image_utils.polygons_to_rle(polygons, height, width), **kwargs)
 
     @staticmethod
-    def encode(mask: list[list] | dict[str, list[int]], height: int, width: int, **kwargs) -> "CompressedRLE":
+    def encode(mask: list[list] | dict[str, list[int]], height: int, width: int, **kwargs: Any) -> "CompressedRLE":
         """Create compressed RLE mask from polygons / uncompressed RLE / compressed RLE.
 
         Args:
-            mask (list[list] | dict[str, list[int]]): Mask as polygons / uncompressed RLE / compressed RLE
-            height (int): Image height
-            width (int): Image width
-            kwargs: Additional arguments
+            mask: Mask as polygons / uncompressed RLE / compressed RLE.
+            height: Image height.
+            width: Image width.
+            kwargs: Additional arguments.
 
         Returns:
-            CompressedRLE: Compressed RLE mask
+            Compressed RLE mask.
         """
         return CompressedRLE(**image_utils.encode_rle(mask, height, width), **kwargs)
 
@@ -158,14 +161,14 @@ def create_compressed_rle(
     """Create a CompressedRLE instance.
 
     Args:
-        size (list[int]): Mask size
-        counts (bytes): Mask RLE encoding
-        id (str, optional): CompressedRLE ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        entity_ref (EntityRef, optional): Entity reference.
+        size: Mask size.
+        counts: Mask RLE encoding.
+        id: CompressedRLE ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        entity_ref: Entity reference.
 
     Returns:
-        CompressedRLE: Compressed RLE instance
+        Compressed RLE instance.
     """
     return CompressedRLE(size=size, counts=counts, id=id, item_ref=item_ref, view_ref=view_ref, entity_ref=entity_ref)

@@ -18,12 +18,12 @@ class DatasetInfo(BaseModel):
     """DatasetInfo. Data to store information of the datasets.
 
     Attributes:
-        id (str): Dataset ID
-        name (str): Dataset name
-        description (str): Dataset description
-        estimated_size (str): Dataset estimated size
-        num_elements (int): Number of elements in dataset
-        preview (str): Path to a preview thumbnail
+        id: Dataset ID
+        name: Dataset name
+        description: Dataset description
+        estimated_size: Dataset estimated size
+        num_elements: Number of elements in dataset
+        preview: Path to a preview thumbnail
     """
 
     id: str = ""
@@ -37,7 +37,7 @@ class DatasetInfo(BaseModel):
         """Writes the DatasetInfo object to a JSON file.
 
         Args:
-            json_fp (Path): The path to the file where the DatasetInfo object
+            json_fp: The path to the file where the DatasetInfo object
                 will be written.
         """
         json_fp.write_text(json.dumps(self.model_dump(), indent=4), encoding="utf-8")
@@ -49,10 +49,10 @@ class DatasetInfo(BaseModel):
         """Read DatasetInfo from JSON file.
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp: JSON file path.
 
         Returns:
-            DatasetInfo: DatasetInfo
+            the dataset info object.
         """
         info_json = json.loads(json_fp.read_text(encoding="utf-8"))
         info = DatasetInfo.model_validate(info_json)
@@ -66,10 +66,10 @@ class DatasetInfo(BaseModel):
         """Load list of DatasetInfo from directory.
 
         Args:
-            directory (Path): Directory to load
+            directory: Directory to load.
 
         Returns:
-            list[DatasetInfo]: List of DatasetInfo
+            the list of DatasetInfo.
         """
         library = []
 
@@ -97,10 +97,10 @@ class DatasetInfo(BaseModel):
         """Get tables information from schema.
 
         Args:
-            schema (DatasetSchema): Dataset schema.
+            schema: Dataset schema.
 
         Returns:
-            dict[str, Any]: Tables information.
+            Tables information.
         """
         tables = {}
         legacy_mapping = {"item": "main", "views": "media"}

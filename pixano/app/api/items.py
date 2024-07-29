@@ -62,11 +62,11 @@ async def get_dataset_item_ids(
     """## Get all dataset items ids.
 
     Args:
-        ds_id (str): dataset id
-        settings(Settings): settings
+        ds_id: dataset id
+        settings: settings
 
     Returns:
-        list[str]: all items id
+        All items ids.
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -89,12 +89,12 @@ async def get_dataset_explorer(  # noqa: D417
     """## Load dataset items.
 
     Args:
-        ds_id (str): Dataset ID
-
-        params (Params, optional): Pagination parameters (offset and limit). Defaults to Depends().
+        ds_id: Dataset ID.
+        settings: App settings.
+        params: Pagination parameters (offset and limit).
 
     Returns:
-        Page[DatasetExplorer]: Dataset explorer page
+        Dataset explorer page.
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -194,13 +194,12 @@ async def search_dataset_items(  # noqa: D417
     """Load dataset items with a query.
 
     Args:
-        ds_id (str): Dataset ID
-        query (dict[str, str]): Search query
-        params (Params, optional): Pagination parameters (offset and limit).
-            Defaults to Depends().
+        ds_id: Dataset ID.
+        query: Search query.
+        params: Pagination parameters (offset and limit).
 
     Returns:
-        Page[DatasetItem]: Dataset items page
+        Dataset items page.
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -230,16 +229,16 @@ async def search_dataset_items(  # noqa: D417
     )
 
 
-def getFeatures(obj: BaseSchema, ignore_cls, add_fields: list[str] = []) -> dict[str, dict]:
+def get_features(obj: BaseSchema, ignore_cls: type, add_fields: list[str] = []) -> dict[str, dict]:
     """Create features of obj, without considering fields from ignore_cls.
 
     Args:
-        obj (BaseSchema): obj whose features are extracted from
-        ignore_cls (_type_): parent class of obj whose fields are excluded from features
-        add_fields (list[str]): fields to add (removed from ignored fields of ignore_cls)
+        obj: obj whose features are extracted from.
+        ignore_cls: parent class of obj whose fields are excluded from features.
+        add_fields: fields to add (removed from ignored fields of ignore_cls).
 
     Returns:
-        dict[str, dict]: _description_
+        The features of obj.
     """
     ignore_fields = []
     for base in ignore_cls.__mro__:
@@ -265,11 +264,11 @@ async def get_dataset_item(  # noqa: D417
     """Load dataset item.
 
     Args:
-        ds_id (str): Dataset ID
-        item_id (str): Item ID
+        ds_id: Dataset ID
+        item_id: Item ID
 
     Returns:
-        DatasetItem: Dataset item
+        The front dataset item.
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -315,7 +314,7 @@ async def get_dataset_item(  # noqa: D417
                         "uri": "data/" + dataset.path.name + "/media/" + frame.url,
                         # "uri": view_item[0].open(dataset.path / "media"),  # TMP!! need to give vid..?
                         "thumbnail": None,  # frame.open(dataset.path / "media"),
-                        "features": getFeatures(frame, SequenceFrame, ["width", "height"]),
+                        "features": get_features(frame, SequenceFrame, ["width", "height"]),
                     }
                     for frame in view_item
                 ],
@@ -328,7 +327,7 @@ async def get_dataset_item(  # noqa: D417
                 "type": "image",
                 "uri": "data/" + dataset.path.name + "/media/" + view_item.url,
                 "thumbnail": None,  # view_item.open(dataset.path / "media"),
-                "features": getFeatures(view_item, Image, ["width", "height"]),
+                "features": get_features(view_item, Image, ["width", "height"]),
             }
 
     # Objects
@@ -342,10 +341,10 @@ async def get_dataset_item(  # noqa: D417
         """Find top entity of an annotation.
 
         Args:
-            ann (Annotation): annotation
+            ann: annotation.
 
         Returns:
-            Entity | None: top Entity for this annotation
+            top Entity for this annotation.
         """
         try:
             return find_top_parent_entity(ann.entity)
@@ -356,10 +355,10 @@ async def get_dataset_item(  # noqa: D417
         """Find top parent entity of an entity.
 
         Args:
-            entity (Entity): entity
+            entity: The entity.
 
         Returns:
-            Entity | None: top parent Entity for this entity
+            top parent Entity for this entity.
         """
         try:
             return find_top_parent_entity(entity.parent)
@@ -373,7 +372,7 @@ async def get_dataset_item(  # noqa: D417
                 features = {}
                 ann_entity = find_top_entity(annotation)
                 if ann_entity is not None:
-                    features.update(getFeatures(ann_entity, Entity))
+                    features.update(get_features(ann_entity, Entity))
 
                 obj = {
                     "id": annotation.id,
@@ -382,7 +381,7 @@ async def get_dataset_item(  # noqa: D417
                     "source_id": "Ground Truth",  # ??
                 }
                 if is_bbox(type(annotation), False) and annotation != NoneBBox:
-                    features.update(getFeatures(annotation, BBox))
+                    features.update(get_features(annotation, BBox))
                     obj["bbox"] = {
                         "coords": annotation.xywh_coords,
                         "format": "xywh",
@@ -391,7 +390,7 @@ async def get_dataset_item(  # noqa: D417
                         "view_id": annotation.view_ref.name,  # danger faux-ami !
                     }
                 if is_compressed_rle(type(annotation), False) and annotation != NoneMask:
-                    features.update(getFeatures(annotation, CompressedRLE))
+                    features.update(get_features(annotation, CompressedRLE))
                     urle = image_utils.rle_to_urle(
                         {
                             "size": annotation.size,
@@ -403,7 +402,7 @@ async def get_dataset_item(  # noqa: D417
                         "view_id": annotation.view_ref.name,
                     }
                 if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
-                    features.update(getFeatures(annotation, KeyPoints))
+                    features.update(get_features(annotation, KeyPoints))
                     obj["keypoints"] = {
                         "template_id": annotation.template_id,
                         "vertices": annotation.map_back2front_vertices(),
@@ -469,7 +468,7 @@ async def get_dataset_item(  # noqa: D417
                         # -- de meme que les features au niveau des annotations
                         ann_entity = find_top_entity(annotation)
                         if ann_entity:
-                            features.update(getFeatures(ann_entity, Entity))
+                            features.update(get_features(ann_entity, Entity))
 
                         if is_bbox(type(annotation), False) and annotation != NoneBBox:
                             # features.update(getFeatures(annotation, BBox))
@@ -564,8 +563,8 @@ async def post_dataset_item(  # noqa: D417
     """Save dataset item.
 
     Args:
-        ds_id (str): Dataset ID
-        item (FrontDatasetItem): Item to save
+        ds_id: Dataset ID
+        item: Item to save
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)
@@ -735,9 +734,9 @@ async def get_item_embeddings(  # noqa: D417
     """Load dataset item embeddings.
 
     Args:
-        ds_id (str): Dataset ID
-        item_id (str): Item ID
-        model_id (str): Model ID (ONNX file path)
+        ds_id: Dataset ID
+        item_id: Item ID
+        model_id: Model ID (ONNX file path)
     """
     # Load dataset
     dataset = Dataset.find(ds_id, settings.data_dir)

@@ -121,7 +121,7 @@ class BaseSchema(LanceModel):
             dataset_schema_json: Serialized dataset schema
 
         Returns:
-            type[DatasetSchema]: DatasetSchema
+            The dataset schema.
         """
         from .registry import _PIXANO_SCHEMA_REGISTRY, _SCHEMA_REGISTRY
 

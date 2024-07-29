@@ -12,10 +12,10 @@ def create_video_preview(path: PathLike, frame_urls: Iterable[str], fps: int = 2
     """Create a video preview by writing a sequence of frames to a video file.
 
     Args:
-        path (PathLike): The path to the output video file.
-        frame_urls (Iterable[str]): URLs pointing to the frames of the video.
-        fps (int, optional): The frames per second of the output video. Defaults to 25.
-        scale (float, optional): The scale factor to resize the frames. Defaults to 0.5.
+        path: The path to the output video file.
+        frame_urls: URLs pointing to the frames of the video.
+        fps: The frames per second of the output video.
+        scale: The scale factor to resize the frames.
     """
     # Import mediapy only when needed to avoid unnecessary dependencies.
     import mediapy

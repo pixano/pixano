@@ -20,9 +20,9 @@ class KeyPoints(Annotation):
     """A set of keypoints.
 
     Attributes:
-        template_id (str): id of keypoint template
-        coords (list[float]): List of 2D coordinates of the keypoints.
-        states (list[str]): Status for each keypoint. ("visible", "invisible", "hidden")
+        template_id: id of keypoint template.
+        coords: List of 2D coordinates of the keypoints.
+        states: Status for each keypoint. ("visible", "invisible", "hidden").
     """
 
     template_id: str
@@ -47,7 +47,7 @@ class KeyPoints(Annotation):
         Should be removed when Lance could manage None value.
 
         Returns:
-            KeyPoints: "None" KeyPoints
+            "None" KeyPoints.
         """
         return cls(
             id="",
@@ -62,14 +62,11 @@ class KeyPoints(Annotation):
     def map_back2front_vertices(self) -> list:
         """Utility function to map back format for KeyPoint to front vertices format.
 
-        Args:
-            keypoints (KeyPoints): Keypoints to map
-
         Raises:
-            ValueError: if keypoints is ill-formed
+            ValueError: if keypoints is ill-formed.
 
         Returns:
-            dict: keypoint list for vertices front format
+            keypoint list for vertices front format.
         """
         # Check coords are even
         if len(self.coords) % 2 != 0:
@@ -95,9 +92,9 @@ class KeyPoints3D(Annotation):
     """A set of 3D keypoints.
 
     Attributes:
-        template_id (str): id of keypoint template
-        coords (list[float]): List of 3D coordinates of the keypoints.
-        states: Literal["visible", "invisible", "hidden"]: Status for each keypoint.
+        template_id: id of keypoint template.
+        coords: List of 3D coordinates of the keypoints.
+        states: Status for each keypoint.
     """
 
     template_id: str
@@ -122,7 +119,7 @@ class KeyPoints3D(Annotation):
         Should be removed when Lance could manage None value.
 
         Returns:
-            KeyPoints3D: "None" KeyPoints3D
+            "None" KeyPoints3D.
         """
         return cls(
             id="",
@@ -137,7 +134,7 @@ class KeyPoints3D(Annotation):
     def map_back2front_vertices(self) -> list:
         """Utility function to map back format for KeyPoint3D to front vertices format.
 
-        .. warning::
+        Warn:
             Not implemented for 3D keypoints.
         """
         raise NotImplementedError("Not implemented for 3D keypoints.")
@@ -165,16 +162,16 @@ def create_keypoints(
     """Create a KeyPoints instance.
 
     Args:
-        template_id (str): id of keypoint template
-        coords (list[float]): List of 2D coordinates of the keypoints.
-        states (list[str]): Status for each keypoint. ("visible", "invisible", "hidden")
-        id (str, optional): Keypoints ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        entity_ref (EntityRef, optional): Entity reference.
+        template_id: id of keypoint template.
+        coords: List of 2D coordinates of the keypoints.
+        states: Status for each keypoint. ("visible", "invisible", "hidden").
+        id: Keypoints ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        entity_ref: Entity reference.
 
     Returns:
-        KeyPoints: The created KeyPoints instance.
+        The created `KeyPoints` instance.
     """
     return KeyPoints(
         template_id=template_id,
@@ -196,19 +193,19 @@ def create_keypoints3d(
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
 ) -> KeyPoints3D:
-    """Create a KeyPoints3D instance.
+    """Create a `KeyPoints3D` instance.
 
     Args:
-        template_id (str): The id of the keypoint template.
-        coords (list[float]): The 3D coordinates of the keypoints.
-        states (list[Literal["visible", "invisble", "hidden"]]): The visibility status for each keypoint.
-        id (str, optional): Keypoints3D ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        entity_ref (EntityRef, optional): Entity reference.
+        template_id: The id of the keypoint template.
+        coords: The 3D coordinates of the keypoints.
+        states: The visibility status for each keypoint.
+        id: Keypoints3D ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        entity_ref: Entity reference.
 
     Returns:
-        KeyPoints3D: The created KeyPoints3D instance.
+        The created `KeyPoints3D` instance.
     """
     return KeyPoints3D(
         template_id=template_id,

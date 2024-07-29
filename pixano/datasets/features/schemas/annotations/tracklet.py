@@ -73,20 +73,20 @@ def create_tracklet(
     start_timestamp: float = -1.0,
     end_timestamp: float = -1.0,
 ) -> Tracklet:
-    """Create a Tracklet instance.
+    """Create a `Tracklet` instance.
 
     Args:
-        id (str, optional): The tracklet id.
-        item_ref (ItemRef, optional): The item reference.
-        view_ref (ViewRef, optional): The view reference.
-        entity_ref (EntityRef, optional): The parent track reference.
-        start_timestep (int, optional): The start timestep of the tracklet.
-        end_timestep (int, optional): The end timestep of the tracklet.
-        start_timestamp (float, optional): The start timestamp of the tracklet.
-        end_timestamp (float, optional): The end timestamp of the tracklet.
+        id: The tracklet id.
+        item_ref: The item reference.
+        view_ref: The view reference.
+        entity_ref: The parent track reference.
+        start_timestep: The start timestep of the tracklet.
+        end_timestep: The end timestep of the tracklet.
+        start_timestamp: The start timestamp of the tracklet.
+        end_timestamp: The end timestamp of the tracklet.
 
     Returns:
-        Tracklet: The created Tracklet instance.
+        The created `Tracklet` instance.
     """
     return Tracklet(
         id=id,

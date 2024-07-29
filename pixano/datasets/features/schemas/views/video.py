@@ -46,25 +46,25 @@ def create_video(
     duration: float | None = None,
     other_path: Path | None = None,
 ) -> Video:
-    """Create a Video instance.
+    """Create a `Video` instance.
 
     Args:
-        url (Path): The image URL. If not relative, the URL is converted to a relative path using `other_path`.
-        id (str, optional): Point cloud ID.
-        item_ref (ItemRef, optional): Item reference.
-        parent_ref (ViewRef, optional): Parent view reference.
-        num_frames (int | None, optional): The number of frames in the video. If None, the number of frames is
+        url: The image URL. If not relative, the URL is converted to a relative path using `other_path`.
+        id: Point cloud ID.
+        item_ref: Item reference.
+        parent_ref: Parent view reference.
+        num_frames: The number of frames in the video. If None, the number of frames is
             extracted from the video file.
-        fps (float | None, optional): The frames per second of the video. If None, the fps is extracted from the video
+        fps: The frames per second of the video. If None, the fps is extracted from the video
             file.
-        width (int | None, optional): The video width. If None, the width is extracted from the video file.
-        height (int | None, optional): The video height. If None, the height is extracted from the video file.
-        format (str | None, optional): The video format. If None, the format is extracted from the video file.
-        duration (float | None, optional): The video duration. If None, the duration is extracted from the video file.
-        other_path (Path | None, optional): The path to convert the URL to a relative path.
+        width: The video width. If None, the width is extracted from the video file.
+        height: The video height. If None, the height is extracted from the video file.
+        format: The video format. If None, the format is extracted from the video file.
+        duration: The video duration. If None, the duration is extracted from the video file.
+        other_path: The path to convert the URL to a relative path.
 
     Returns:
-        Video: The created Video instance.
+        The created `Video` instance.
     """
     none_conditions = [
         num_frames is None,

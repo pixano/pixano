@@ -22,7 +22,7 @@ def _add_schema_to_registry(schema: type[BaseSchema], registry: dict[str, type[B
     return None
 
 
-def register_schema(cls):
+def register_schema(cls: type[BaseSchema]):
     """Class decorator to register a schema.
 
     Args:

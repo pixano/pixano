@@ -13,8 +13,8 @@ class ColDesc(BaseModel):
     """Column description.
 
     Attributes:
-        name (str): column name
-        type (str): column type
+        name (str): column name.
+        type (str): column type.
     """
 
     name: str
@@ -25,8 +25,8 @@ class TableData(BaseModel):
     """Table data.
 
     Attributes:
-        col (list[ColDesc]): column descriptions
-        rows (list[dict[str, Any]]): rows (actual data)
+        col (list[ColDesc]): column descriptions.
+        rows (list[dict[str, Any]]): rows (actual data).
     """
 
     cols: list[ColDesc]
@@ -38,9 +38,9 @@ class PaginationInfo(BaseModel):
     """Pagination info.
 
     Attributes:
-        current (int): current page
-        size (int): number of items per page
-        total (int): total number of items
+        current (int): current page.
+        size (int): number of items per page.
+        total (int): total number of items.
     """
 
     current: int
@@ -52,11 +52,11 @@ class DatasetExplorer(BaseModel):
     """Data for Dataset Explorer page.
 
     Attributes:
-        id (str): dataset id
-        name (str): dataset name
-        table_data (TableData): table data
-        pagination (PaginationInfo): pagination infos
-        sem_search (list[str]): list of semantic search available models
+        id: dataset id
+        name: dataset name
+        table_data: table data
+        pagination: pagination infos
+        sem_search: list of semantic search available models
     """
 
     id: str

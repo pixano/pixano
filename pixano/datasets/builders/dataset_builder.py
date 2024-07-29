@@ -29,17 +29,17 @@ from ..utils import video as video_utils
 class DatasetBuilder(ABC):
     """Abstract base class for Dataset builders.
 
-    To build a dataset, the easiest is to launch the :meth:`build` method which requires to inherit from this class and
-    implement :meth:`generate_data`.
+    To build a dataset, the easiest is to launch the `build` method which requires to inherit from this class and
+    implement `generate_data`.
 
     Attributes:
-        target_dir (Path): The target directory for the dataset.
-        source_dir (Path): The source directory for the dataset.
-        previews_path (Path): The path to the previews directory.
-        info (DatasetInfo): Dataset informations (name, description, ...).
-        dataset_schema (DatasetSchema): The dataset schema for the dataset.
-        schemas (dict[str, BaseSchema]): The schemas for the dataset tables infered from the dataset schema.
-        db (lancedb.Database): The lancedb.Database instance for the dataset.
+        target_dir: The target directory for the dataset.
+        source_dir: The source directory for the dataset.
+        previews_path: The path to the previews directory.
+        info: Dataset informations (name, description, ...).
+        dataset_schema: The dataset schema for the dataset.
+        schemas: The schemas for the dataset tables infered from the dataset schema.
+        db: The `lancedb.Database` instance for the dataset.
     """
 
     def __init__(
@@ -52,21 +52,21 @@ class DatasetBuilder(ABC):
         """Initialize the BaseDatasetBuilder instance.
 
         Args:
-            source_dir (Path | str): The source directory for the dataset.
-            target_dir (Path | str): The target directory for the dataset.
-            schemas (type[DatasetItem]): The schemas for the dataset tables.
-            info (DatasetInfo): Dataset informations (name, description, ...)
+            source_dir: The source directory for the dataset.
+            target_dir: The target directory for the dataset.
+            schemas: The schemas for the dataset tables.
+            info: Dataset informations (name, description, ...)
                 for the dataset.
         """
-        self.target_dir = Path(target_dir)
-        self.source_dir = Path(source_dir)
-        self.previews_path = self.target_dir / Dataset.PREVIEWS_PATH
+        self.target_dir: Path = Path(target_dir)
+        self.source_dir: Path = Path(source_dir)
+        self.previews_path: Path = self.target_dir / Dataset.PREVIEWS_PATH
 
-        self.info = info
+        self.info: DatasetInfo = info
         self.dataset_schema: DatasetSchema = schemas.to_dataset_schema()
-        self.schemas = self.dataset_schema.schemas
+        self.schemas: dict[str, type[BaseSchema]] = self.dataset_schema.schemas
 
-        self.db = lancedb.connect(self.target_dir / Dataset.DB_PATH)
+        self.db: lancedb.DBConnection = lancedb.connect(self.target_dir / Dataset.DB_PATH)
 
     @property
     def item_schema(self) -> type[Item]:
@@ -89,19 +89,19 @@ class DatasetBuilder(ABC):
         It generates data from the source directory and insert them in the tables of the database.
 
         Args:
-            mode (Literal["add", "create", "overwrite"]): The mode for creating the tables in the database.
+            mode: The mode for creating the tables in the database.
                 The mode can be "create", "overwrite" or "add":
-                - "create": Create the tables in the database.
-                - "overwrite": Overwrite the tables in the database.
-                - "add": Append to the tables in the database.
-            flush_every_n_samples (int | None): The number of samples accumulated from :meth:`generate_data` before
+                    - "create": Create the tables in the database.
+                    - "overwrite": Overwrite the tables in the database.
+                    - "add": Append to the tables in the database.
+            flush_every_n_samples: The number of samples accumulated from :meth:`generate_data` before
                 flush in tables. If None, data are inserted at each iteration.
-            compact_every_n_transactions (int | None): The number of transactions before compacting the dataset.
+            compact_every_n_transactions: The number of transactions before compacting the dataset.
                 If None, the dataset is compacted only at the end.
 
 
         Returns:
-            Dataset: The built dataset.
+            The built dataset.
         """
         if mode == "add":
             tables = self.open_tables()
@@ -169,7 +169,7 @@ class DatasetBuilder(ABC):
         """Compact a table in the database by cleaning up old versions and compacting files.
 
         Args:
-            table_name (str): The name of the table to compact.
+            table_name: The name of the table to compact.
         """
         table = self.db.open_table(table_name)
         table.compact_files(
@@ -187,7 +187,7 @@ class DatasetBuilder(ABC):
         """Generate data from the source directory.
 
         Returns:
-            Iterator[dict[str, Any]]: An iterator over the data following data schema.
+            An iterator over the data following data schema.
         """
         raise NotImplementedError
 
@@ -211,8 +211,7 @@ class DatasetBuilder(ABC):
         """Create tables in the database.
 
         Returns:
-            dict[str, Table]: The tables in the database.
-
+            The tables in the database.
         """
         tables = {}
         for key, schema in self.schemas.items():
@@ -226,8 +225,7 @@ class DatasetBuilder(ABC):
         """Open tables in the database.
 
         Returns:
-            dict[str, Table]: The tables in the database.
-
+            The tables in the database.
         """
         tables = {}
         for key in self.schemas.keys():

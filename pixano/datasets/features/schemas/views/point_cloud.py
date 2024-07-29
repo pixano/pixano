@@ -26,15 +26,15 @@ def is_point_cloud(cls: type, strict: bool = False) -> bool:
 def create_point_cloud(
     url: str, id: str = "", item_ref: ItemRef = ItemRef.none(), parent_ref: ViewRef = ViewRef.none()
 ) -> PointCloud:
-    """Create a PointCloud instance.
+    """Create a `PointCloud` instance.
 
     Args:
-        url (str): The point cloud URL.
-        id (str, optional): Point cloud ID.
-        item_ref (ItemRef, optional): Item reference.
-        parent_ref (ViewRef, optional): Parent view reference.
+        url: The point cloud URL.
+        id: Point cloud ID.
+        item_ref: Item reference.
+        parent_ref: Parent view reference.
 
     Returns:
-        _description_
+        The created `PointCloud` instance.
     """
     return PointCloud(url=url, id=id, item_ref=item_ref, parent_ref=parent_ref)

@@ -22,10 +22,10 @@ async def get_datasets(
     """Load dataset list.
 
     Args:
-        settings (Settings): App settings
+        settings: App settings
 
     Returns:
-        list[DatasetInfo]: List of dataset infos
+        List of dataset infos.
     """
     # Load datasets
     infos = DatasetInfo.load_directory(directory=settings.data_dir)

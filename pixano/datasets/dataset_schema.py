@@ -31,7 +31,7 @@ class DatasetSchema(BaseModel):
     """DatasetSchema.
 
     Attributes:
-        schemas (dict[str, BaseSchema]): The tables.
+        schemas: The tables.
     """
 
     schemas: dict[str, type[BaseSchema]]
@@ -42,12 +42,12 @@ class DatasetSchema(BaseModel):
         """Add a schema to the dataset schema.
 
         Args:
-            table_name (str): Table name.
-            schema (type[BaseSchema]): Schema.
-            relation_item (SchemaRelation): Relation with the item schema.
+            table_name: Table name.
+            schema: Schema.
+            relation_item: Relation with the item schema.
 
         Returns:
-            DatasetSchema: DatasetSchema
+            The dataset schema.
         """
         table_name = self.format_table_name(table_name)
         if table_name in self.schemas:
@@ -116,10 +116,10 @@ class DatasetSchema(BaseModel):
         """Format table name.
 
         Args:
-            table_name (str): Table name
+            table_name: Table name.
 
         Returns:
-            str: Formatted table name
+            the formatted table name.
         """
         return table_name.lower().replace(" ", "_")
 
@@ -154,7 +154,7 @@ class DatasetSchema(BaseModel):
         }
 
         Returns:
-            dict[str, dict[str, Any]]: Serialized dataset schema
+            The serialized dataset schema.
         """
         dataset_schema_json: dict[str, dict[str, Any]] = {
             "relations": {
@@ -171,10 +171,10 @@ class DatasetSchema(BaseModel):
         """Unserialize the dataset schema.
 
         Args:
-            dataset_schema_json: Serialized dataset schema
+            dataset_schema_json: Serialized dataset schema.
 
         Returns:
-            DatasetSchema: DatasetSchema
+            The dataset schema.
         """
         dataset_schema_dict: dict[str, Any] = {
             "relations": {
@@ -208,13 +208,13 @@ class DatasetSchema(BaseModel):
     def from_json(
         json_fp: Path,
     ) -> "DatasetSchema":
-        """Read DatasetSchema from JSON file.
+        """Read a dataset schema from JSON file.
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp: JSON file path
 
         Returns:
-            DatasetSchema: DatasetSchema
+            The dataset schema.
         """
         schema_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
@@ -222,13 +222,13 @@ class DatasetSchema(BaseModel):
 
     @staticmethod
     def from_dataset_item(dataset_item: type["DatasetItem"]) -> "DatasetSchema":
-        """Create DatasetSchema from a DatasetItem.
+        """Create a dataset schema from a `DatasetItem`.
 
         Args:
-            dataset_item (type[DatasetItem]): DatasetItem.
+            dataset_item: The dataset item.
 
         Returns:
-            DatasetSchema: DatasetSchema
+            The dataset schema.
         """
         item_fields = {}
 
@@ -289,7 +289,7 @@ class DatasetItem(BaseModel):
             dataset_schema: DatasetSchema to convert to.
 
         Returns:
-            dict[str, BaseSchema]: Schemas data.
+            Schemas data.
         """
         schemas_data = {}
         item_data = {}
@@ -311,10 +311,10 @@ class DatasetItem(BaseModel):
         """Create a dataset item model based on the schema.
 
         Args:
-            dataset_schema (DatasetSchema): The dataset schema
+            dataset_schema: The dataset schema.
 
         Returns:
-            type[DatasetItem]: The dataset item model
+            The dataset item model
         """
         item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
         fields: dict[str, Any] = {}
@@ -343,19 +343,18 @@ class DatasetItem(BaseModel):
         """Create a new dataset item based on the selected fields of the original dataset
         item.
 
-        .. note::
+        Note:
             The id and split fields are always included in the sub dataset item.
 
-        .. note::
+        Note:
             The sub dataset item does not have the methods and config of the original
             dataset item.
 
         Args:
-            dataset_item (DatasetItem): The dataset item
-            selected_fields (list[str]): The selected fields
+            selected_fields: The selected fields.
 
         Returns:
-            DatasetItem: The sub dataset item
+            The sub dataset item.
         """
         fields = {}
         for field_name, field in cls.model_fields.items():

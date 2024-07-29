@@ -4,10 +4,11 @@
 # License: CECILL-C
 # =====================================
 
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from pydantic import model_validator
+from typing_extensions import Self
 
 from pixano.datasets.utils import boxes as bbox_utils
 from pixano.datasets.utils import issubclass_strict
@@ -23,10 +24,10 @@ class BBox(Annotation):
     """Bounding box type using coordinates in xyxy or xywh format.
 
     Attributes:
-        coords (list[float]): List of coordinates in given format
-        format (str): Coordinates format, 'xyxy' or 'xywh'
-        is_normalized (bool): True if coordinates are normalized to image size
-        confidence (float, optional): Bounding box confidence if predicted. -1 if not predicted.
+        coords: List of coordinates in given format
+        format: Coordinates format, 'xyxy' or 'xywh'
+        is_normalized: True if coordinates are normalized to image size
+        confidence: Bounding box confidence if predicted. -1 if not predicted.
     """
 
     coords: list[float]
@@ -49,12 +50,12 @@ class BBox(Annotation):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls) -> Self:
         """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
-            BBox: "None" BBox
+            "None" `BBox`.
         """
         return cls(
             id="",
@@ -72,7 +73,7 @@ class BBox(Annotation):
         """Return bounding box xyxy coordinates.
 
         Returns:
-            list[float]: Coordinates in xyxy format
+            Coordinates in xyxy format.
         """
         return self.coords if self.format == "xyxy" else bbox_utils.xywh_to_xyxy(self.coords)
 
@@ -81,7 +82,7 @@ class BBox(Annotation):
         """Return bounding box xywh coordinates.
 
         Returns:
-            list[float]: Coordinates in xywh format
+            Coordinates in xywh format.
         """
         return self.coords if self.format == "xywh" else bbox_utils.xyxy_to_xywh(self.coords)
 
@@ -89,7 +90,7 @@ class BBox(Annotation):
         """Return bounding box in xyxy format.
 
         Returns:
-            BBox: Bounding box in xyxy format
+            Bounding box in xyxy format.
         """
         return BBox(
             coords=self.xyxy_coords,
@@ -102,7 +103,7 @@ class BBox(Annotation):
         """Return bounding box in xywh format.
 
         Returns:
-            BBox: Bounding box in xyxy format
+            Bounding box in xyxy format.
         """
         return BBox(
             coords=self.xywh_coords,
@@ -115,11 +116,11 @@ class BBox(Annotation):
         """Return bounding box with coordinates normalized to image size.
 
         Args:
-            height (int): Image height
-            width (int): Image width
+            height: Image height.
+            width: Image width.
 
         Returns:
-            BBox: Bounding box with coordinates normalized to image size
+            Bounding box with coordinates normalized to image size.
         """
         return BBox(
             coords=bbox_utils.normalize_coords(self.coords, height, width),
@@ -132,11 +133,11 @@ class BBox(Annotation):
         """Return bounding box with coordinates denormalized from image size.
 
         Args:
-            height (int): Image height
-            width (int): Image width
+            height: Image height.
+            width: Image width.
 
         Returns:
-            BBox: Bounding box with coordinates denormalized from image size
+            Bounding box with coordinates denormalized from image size.
         """
         return BBox(
             coords=bbox_utils.denormalize_coords(self.coords, height, width),
@@ -148,16 +149,16 @@ class BBox(Annotation):
     @staticmethod
     def from_xyxy(
         xyxy: list[float],
-        **kwargs,
+        **kwargs: Any,
     ) -> "BBox":
         """Create bounding box using normalized xyxy coordinates.
 
         Args:
-            xyxy (list[float]): List of coordinates in xyxy format
-            kwargs: Additional arguments
+            xyxy: List of coordinates in xyxy format.
+            kwargs: Additional arguments.
 
         Returns:
-            Bbox: Bounding box
+            Bounding box.
         """
         return BBox(
             coords=xyxy,
@@ -168,16 +169,16 @@ class BBox(Annotation):
     @staticmethod
     def from_xywh(
         xywh: list[float],
-        **kwargs,
+        **kwargs: Any,
     ) -> "BBox":
         """Create bounding box using normalized xywh coordinates.
 
         Args:
-            xywh (list[float]): List of coordinates in xywh format
-            kwargs: Additional arguments
+            xywh: List of coordinates in xywh format.
+            kwargs: Additional arguments.
 
         Returns:
-            Bbox: Bounding box
+            Bounding box.
         """
         return BBox(
             coords=xywh,
@@ -186,15 +187,15 @@ class BBox(Annotation):
         )
 
     @staticmethod
-    def from_mask(mask: np.ndarray, **kwargs) -> "BBox":
+    def from_mask(mask: np.ndarray, **kwargs: Any) -> "BBox":
         """Create bounding box using a NumPy array mask.
 
         Args:
-            mask (np.ndarray): NumPy array mask
-            kwargs: Additional arguments
+            mask: NumPy array mask.
+            kwargs: Additional arguments.
 
         Returns:
-            Bbox: Bounding box
+            Bounding box.
         """
         return BBox.from_xywh(
             xywh=bbox_utils.mask_to_bbox(mask),
@@ -205,16 +206,16 @@ class BBox(Annotation):
     @staticmethod
     def from_rle(
         rle: CompressedRLE,
-        **kwargs,
+        **kwargs: Any,
     ) -> "BBox":
         """Create bounding box using a RLE mask.
 
         Args:
-            rle (CompressedRLE): RLE mask
-            kwargs: Additional arguments
+            rle: RLE mask.
+            kwargs: Additional arguments.
 
         Returns:
-            Bbox: Bounding box
+            Bounding box.
         """
         return BBox.from_mask(mask=rle.to_mask(), **kwargs)
 
@@ -224,11 +225,11 @@ class BBox3D(Annotation):
     """A 3D bounding Box.
 
     Attributes:
-        coords (list[float]): List of coordinates in given format.
-        format (str): Coordinates format, 'xyzxyz' or 'xyzwhd'.
-        heading (list[float]): Orientation of the bounding box.
-        is_normalized (bool): True if coordinates are normalized to image size.
-        confidence (float, optional): Bounding box confidence if predicted. -1 if not predicted.
+        coords: List of coordinates in given format.
+        format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
+        heading: Orientation of the bounding box.
+        is_normalized: True if coordinates are normalized to image size.
+        confidence: Bounding box confidence if predicted. -1 if not predicted.
     """
 
     coords: list[float]
@@ -252,12 +253,12 @@ class BBox3D(Annotation):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls) -> Self:
         """Utility function to get a None equivalent.
         Should be removed when Lance could manage None value.
 
         Returns:
-            BBox3D: "None" BBox3D
+            "None" BBox3D.
         """
         return cls(
             id="",
@@ -295,17 +296,17 @@ def create_bbox(
     """Create a BBox instance.
 
     Args:
-        coords (list[float]): List of coordinates in given format
-        format (str): Coordinates format, 'xyxy' or 'xywh'
-        is_normalized (bool): True if coordinates are normalized to image size
-        confidence (float, optional): Bounding box confidence if predicted.
-        id (str, optional): BBox ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        entity_ref (EntityRef, optional): Entity reference.
+        coords: List of coordinates in given format.
+        format: Coordinates format, 'xyxy' or 'xywh'.
+        is_normalized: True if coordinates are normalized to image size.
+        confidence: Bounding box confidence if predicted.
+        id: BBox ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        entity_ref: Entity reference.
 
     Returns:
-        BBox: The created BBox instance.
+        The created BBox instance.
     """
     return BBox(
         id=id,
@@ -333,18 +334,18 @@ def create_bbox3d(
     """Create a BBox3D instance.
 
     Args:
-        coords (list[float]): The 3D position coordinates.
-        format (Literal["xyzxyz", "xyzwhd"]): Coordinates format, 'xyzxyz' or 'xyzwhd'.
-        heading (list[float]): The orientation.
-        is_normalized (bool): True if coordinates are normalized to image size.
-        confidence (float, optional): Bounding box confidence if predicted.
-        id (str, optional): BBox3D ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        entity_ref (EntityRef, optional): Entity reference.
+        coords: The 3D position coordinates.
+        format: Coordinates format, 'xyzxyz' or 'xyzwhd'.
+        heading: The orientation.
+        is_normalized: True if coordinates are normalized to image size.
+        confidence: Bounding box confidence if predicted.
+        id: BBox3D ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        entity_ref: Entity reference.
 
     Returns:
-        BBox3D: The created BBox3D instance.
+        The created BBox3D instance.
     """
     return BBox3D(
         id=id,

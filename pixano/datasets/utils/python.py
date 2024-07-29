@@ -13,10 +13,10 @@ def natural_key(string: str) -> list:
     """Return key for string natural sort.
 
     Args:
-        string (str): Input string
+        string: Input string.
 
     Returns:
-        list: Sort key
+        Sort key.
     """
     return [int(s) if s.isdecimal() else s for s in re.split(r"(\d+)", string)]
 
@@ -25,10 +25,10 @@ def estimate_folder_size(folder_path: Path) -> str:
     """Estimate folder size and return it as a human-readable string.
 
     Args:
-        folder_path (Path): Folder path
+        folder_path: Folder path.
 
     Returns:
-        str: Folder size as a human-readable string
+        Folder size as a human-readable string.
     """
     # Estimate size
     total_size = 0.0
@@ -55,12 +55,12 @@ def issubclass_strict(obj: type, cls: type, strict: bool = False) -> bool:
     """Check if the given object is of the given class type or a subclass of the given class type.
 
     Args:
-        obj (type): The object to check.
-        cls (type): The class to compare against.
-        strict (bool, optional): If True, the object must be of the given class type.
+        obj: The object to check.
+        cls: The class to compare against.
+        strict: If True, the object must be of the given class type.
 
     Returns:
-        bool: True if the object is of the given class type or a subclass of the given class type.
+        True if the object is of the given class type or a subclass of the given class type.
     """
     if strict:
         return obj == cls
