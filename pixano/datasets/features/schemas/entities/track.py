@@ -16,7 +16,7 @@ class Track(Entity):
     """Track Lance Model.
 
     Attributes:
-        name (str): The name of the track.
+        name: The name of the track.
     """
 
     name: str
@@ -34,17 +34,17 @@ def create_track(
     view_ref: ViewRef = ViewRef.none(),
     parent_ref: EntityRef = EntityRef.none(),
 ) -> Track:
-    """Create a TrackObject instance.
+    """Create a `TrackObject` instance.
 
     Args:
-        name (str): The name of the track.
-        id (str, optional): Track ID.
-        item_ref (ItemRef, optional): Item reference.
-        view_ref (ViewRef, optional): View reference.
-        parent_ref (EntityRef, optional): Entity reference.
+        name: The name of the track.
+        id: Track ID.
+        item_ref: Item reference.
+        view_ref: View reference.
+        parent_ref: Entity reference.
 
     Returns:
-        TrackObject: The created TrackObject instance.
+        The created `TrackObject` instance.
     """
     return Track(
         id=id,

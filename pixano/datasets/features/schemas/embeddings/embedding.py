@@ -40,8 +40,8 @@ class Embedding(BaseSchema, ABC):
     """Embedding Lance Model.
 
     Attributes:
-        item_ref (ItemRef, optional): Reference to the embedding's item.
-        vector (Any): The embedding vector that should be defined by the embedding function.
+        item_ref: Reference to the embedding's item.
+        vector: The embedding vector that should be defined by the embedding function.
     """
 
     item_ref: ItemRef = ItemRef.none()
@@ -58,17 +58,17 @@ class Embedding(BaseSchema, ABC):
         remove_vector: bool = False,
         remove_metadata: bool = False,
     ) -> pa.Schema:
-        """Get the pyarrow schema of a ViewEmbedding.
+        """Get the pyarrow schema of a `ViewEmbedding`.
 
         This function allows to remove the vector field and the metadata from the schema which can be useful for adding
         data with auto-vectorization.
 
         Args:
-            remove_vector (bool, optional): Remove the vector field.
-            remove_metadata (bool, optional): Remove the metadata.
+            remove_vector: Remove the vector field.
+            remove_metadata: Remove the metadata.
 
         Returns:
-            pa.Schema: The pyarrow schema
+            The pyarrow schema.
         """
         pa_schema = super().to_arrow_schema()
         if remove_vector:
@@ -80,10 +80,10 @@ class Embedding(BaseSchema, ABC):
 
 @_register_schema_internal
 class ViewEmbedding(Embedding, ABC):
-    """ViewEmbedding Lance Model.
+    """`ViewEmbedding` Lance Model.
 
     Attributes:
-        view_ref (ItemRef, optional): Reference to the embedding's view.
+        view_ref: Reference to the embedding's view.
     """
 
     view_ref: ViewRef = ViewRef.none()
@@ -103,7 +103,7 @@ class ViewEmbedding(Embedding, ABC):
             metadata: The pyarrow metadata of the table.
 
         Returns:
-            EmbeddingFunction: The embedding function.
+            The embedding function.
         """
         registry = get_registry()
 
@@ -125,18 +125,18 @@ class ViewEmbedding(Embedding, ABC):
         embedding_fn: str,
         table_name: str,
         dataset: "Dataset",
-        **embedding_function_kwargs,
+        **embedding_function_kwargs: Any,
     ) -> type["ViewEmbedding"]:
         """Create a ViewEmbedding schema.
 
         Args:
-            embedding_fn (EmbeddingFunction): The embedding function.
-            table_name (str): The name of the table containing the schema.
-            dataset (Dataset): The dataset to which the schema belongs.
+            embedding_fn: The embedding function.
+            table_name: The name of the table containing the schema.
+            dataset: The dataset to which the schema belongs.
             embedding_function_kwargs: The keyword arguments for creating the embedding function.
 
         Returns:
-            type[ViewEmbedding]: The ViewEmbedding schema.
+            The `ViewEmbedding` schema.
         """
         lance_registry = get_registry()
         if not isinstance(embedding_fn, str):

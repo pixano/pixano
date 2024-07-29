@@ -15,14 +15,14 @@ from pycocotools import mask as mask_api
 
 
 def image_to_binary(image: Image.Image, im_format: str = "PNG") -> bytes:
-    """Encode image from Pillow to binary.
+    """Encode an image from Pillow to binary.
 
     Args:
-        image (Image.Image): Image as Pillow
-        im_format (str, optional): Image file extension. Defaults to "PNG".
+        image: Pillow image.
+        im_format: Image file extension.
 
     Returns:
-        bytes: Image as binary
+        Image as binary.
     """
     with BytesIO() as output_bytes:
         image.save(output_bytes, im_format)
@@ -35,10 +35,10 @@ def image_to_thumbnail(image: bytes | Image.Image) -> bytes:
     """Generate image thumbnail.
 
     Args:
-        image (bytes | Image.Image): Image as binary or as Pillow
+        image: Image as binary or as Pillow.
 
     Returns:
-        bytes: Image thumbnail as binary
+        Image thumbnail as binary.
     """
     if isinstance(image, bytes):
         image = Image.open(BytesIO(image))
@@ -51,10 +51,10 @@ def binary_to_url(im_bytes: bytes) -> str:
     """Encode image from binary to base 64 URL.
 
     Args:
-        im_bytes (bytes): Image as binary
+        im_bytes: Image as binary.
 
     Returns:
-        str: Image base 64 URL
+        Image base 64 URL.
     """
     encoded = base64.b64encode(im_bytes).decode("utf-8")
     return f"data:image;base64,{encoded}"
@@ -64,10 +64,10 @@ def depth_file_to_binary(depth_path: str) -> bytes:
     """Encode depth file to RGB image in binary.
 
     Args:
-        depth_path (str): Depth file path
+        depth_path: Depth file path.
 
     Returns:
-        bytes: Depth file as RGB image in binary
+        Depth file as RGB image in binary.
     """
     depth = cv2.imread(depth_path, cv2.IMREAD_ANYDEPTH).astype(np.float32)
     depth = depth_array_to_gray(depth)
@@ -85,13 +85,13 @@ def depth_array_to_gray(
     """Encode depth array to gray levels.
 
     Args:
-        depth (np.ndarray): Depth array
-        valid_start (float, optional): Valid start. Defaults to 0.2.
-        valid_end (float, optional): Valid end. Defaults to 1.
-        scale (float, optional): Scale. Defaults to 1.0.
+        depth: Depth array
+        valid_start: Valid start.
+        valid_end: Valid end.
+        scale: Scale.
 
     Returns:
-        np.ndarray: Depth array in gray levels
+        Depth array in gray levels.
     """
     mask = depth > 1
 
@@ -113,12 +113,12 @@ def encode_rle(mask: list[list] | dict, height: int, width: int) -> dict:
     """Encode mask from polygons / uncompressed RLE / RLE to RLE.
 
     Args:
-        mask (list[list] | dict): Mask as polygons / uncompressed RLE / RLE
-        height (int): Image height
-        width (int): Image width
+        mask: Mask as polygons / uncompressed RLE / RLE.
+        height: Image height.
+        width: Image width.
 
     Returns:
-        dict: Mask as RLE
+        Mask as RLE.
     """
     if isinstance(mask, list):
         return polygons_to_rle(mask, height, width)
@@ -133,10 +133,10 @@ def mask_to_rle(mask: Image.Image | np.ndarray) -> dict:
     """Encode mask from Pillow or NumPy array to RLE.
 
     Args:
-        mask (Image.Image): Mask as Pillow or NumPy array
+        mask: Mask as Pillow or NumPy array.
 
     Returns:
-        dict: Mask as RLE
+        Mask as RLE.
     """
     mask_array = np.asfortranarray(mask)
     return mask_api.encode(mask_array)
@@ -146,10 +146,10 @@ def rle_to_mask(rle: dict[str, list[int] | bytes]) -> np.ndarray:
     """Decode mask from RLE to NumPy array.
 
     Args:
-        rle (dict[str, list[int] | bytes]): Mask as RLE
+        rle: Mask as RLE.
 
     Returns:
-        np.ndarray: Mask as NumPy array
+        Mask as NumPy array.
     """
     return mask_api.decode(rle)
 
@@ -158,12 +158,12 @@ def polygons_to_rle(polygons: list[list], height: int, width: int) -> dict:
     """Encode mask from polygons to RLE.
 
     Args:
-        polygons (list[list]): Mask as polygons
-        height (int): Image height
-        width (int): Image width
+        polygons: Mask as polygons.
+        height: Image height.
+        width: Image width.
 
     Returns:
-        dict: Mask as RLE
+        Mask as RLE.
     """
     rles = mask_api.frPyObjects(polygons, height, width)
     return mask_api.merge(rles)
@@ -173,10 +173,10 @@ def rle_to_polygons(rle: dict[str, list[int] | bytes]) -> list[list]:
     """Encode mask from RLE to polygons.
 
     Args:
-        rle (dict[str, list[int] | bytes]): Mask as RLE
+        rle: Mask as RLE.
 
     Returns:
-        list[list]: Mask as polygons
+        Mask as polygons.
     """
     if "size" not in rle:
         raise ValueError("RLE must have a size")
@@ -195,11 +195,12 @@ def mask_to_polygons(mask: np.ndarray) -> tuple[list[list], bool]:
     """Encode mask from NumPy array to polygons.
 
     Args:
-        mask (np.ndarray): Mask as NumPy array
+        mask: Mask as NumPy array
 
     Returns:
-        list[list]: Mask as polygons
-        bool: True if mask has holes
+        Tuple:
+            - Mask as polygons
+            - True if mask has holes
     """
     # Some versions of cv2 does not support incontiguous arr
     mask = np.ascontiguousarray(mask)
@@ -237,10 +238,10 @@ def urle_to_rle(urle: dict[str, list[int]]) -> dict[str, list[int] | bytes]:
     """Encode mask from uncompressed RLE to RLE.
 
     Args:
-        urle (dict[str, list[int]]): Mask as uncompressed RLE
+        urle: Mask as uncompressed RLE.
 
     Returns:
-        dict[str, list[int] | bytes]: Mask as RLE
+        Mask as RLE.
     """
     height, width = urle["size"]
     return mask_api.frPyObjects(urle, height, width)
@@ -250,10 +251,10 @@ def rle_to_urle(rle: dict[str, list[int] | bytes]) -> dict[str, list[int]]:
     """Encode mask from RLE to uncompressed RLE.
 
     Args:
-        rle (dict[str, list[int] | bytes]): Mask as RLE
+        rle: Mask as RLE.
 
     Returns:
-        dict[str, list[int]]: Mask as uncompressed RLE
+        Mask as uncompressed RLE.
     """
     if "counts" not in rle or rle["counts"] is None:
         raise ValueError("RLE must have counts")

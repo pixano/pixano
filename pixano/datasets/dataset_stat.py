@@ -14,10 +14,10 @@ class DatasetStat(BaseModel):
     """DatasetStat.
 
     Attributes:
-        name (str): Stats name
-        type (str): Stats type ('numerical' or 'categorical')
-        histogram (list[dict[str, float | int | str]]): Stats histogram data
-        range (list[int | float] | None): Stats range.
+        name: Stats name.
+        type: Stats type ('numerical' or 'categorical').
+        histogram: Stats histogram data.
+        range: Stats range.
     """
 
     name: str
@@ -27,13 +27,13 @@ class DatasetStat(BaseModel):
 
     @staticmethod
     def from_json(json_fp: Path) -> list["DatasetStat"]:
-        """Read list of DatasetStats from JSON file.
+        """Read list of `DatasetStats` from JSON file.
 
         Args:
-            json_fp (Path): JSON file path
+            json_fp: JSON file path.
 
         Returns:
-            list[DatasetStats]: List of DatasetStat
+            A list of `DatasetStat`.
         """
         stats_json = json.loads(json_fp.read_text(encoding="utf-8"))
 
@@ -45,7 +45,7 @@ class DatasetStat(BaseModel):
         Replace existing histogram with same name in json_fp.
 
         Args:
-            json_fp (Path): Save directory
+            json_fp: Save directory.
         """
         try:
             stats_json = json.loads(json_fp.read_text(encoding="utf-8"))

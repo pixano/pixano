@@ -25,47 +25,48 @@ class FolderBaseBuilder(DatasetBuilder):
     """This is a class for building datasets based on a folder structure.
 
     The folder structure should be as follows:
-    - source_dir/{split}/{item}.{ext}
-    - source_dir/{split}/metadata.jsonl
+        - source_dir/{split}/{item}.{ext}
+        - source_dir/{split}/metadata.jsonl
 
     The metadata file should be a jsonl file with the following format:
-    .. code-block:: json
-    [
-        {
-            "item": "item1",
-            "metadata1": "value1",
-            "metadata2": "value2",
-            ...
-            "entities": {
-                "attr1": [val1, val2, ...],
-                "attr2": [val1, val2, ...],
+    ```json
+        [
+            {
+                "item": "item1",
+                "metadata1": "value1",
+                "metadata2": "value2",
                 ...
-            }
-        },
-        {
-            "item": "item2",
-            "metadata1": "value1",
-            "metadata2": "value2",
-            ...
-            "entities": {
-                "attr1": [val1, val2, ...],
-                "attr2": [val1, val2, ...],
+                "entities": {
+                    "attr1": [val1, val2, ...],
+                    "attr2": [val1, val2, ...],
+                    ...
+                }
+            },
+            {
+                "item": "item2",
+                "metadata1": "value1",
+                "metadata2": "value2",
                 ...
-            }
-        },
-        ...
-    ]
+                "entities": {
+                    "attr1": [val1, val2, ...],
+                    "attr2": [val1, val2, ...],
+                    ...
+                }
+            },
+            ...
+        ]
+    ```
 
-    .. note:
+    Note:
         Only one view is supported in folder builders.
 
     Attributes:
-        view_name (str): The name of the view schema.
-        view_schema (type[View]): The schema of the view.
-        entity_name (str): The name of the entities schema.
-        entity_schema (type[Entity]): The schema of the entities.
-        METADATA_FILENAME (str): The metadata filename.
-        EXTENSIONS (list[str]): The list of supported extensions.
+        view_name: The name of the view schema.
+        view_schema: The schema of the view.
+        entity_name: The name of the entities schema.
+        entity_schema: The schema of the entities.
+        METADATA_FILENAME: The metadata filename.
+        EXTENSIONS: The list of supported extensions.
     """
 
     METADATA_FILENAME: str = "metadata.jsonl"
@@ -77,11 +78,10 @@ class FolderBaseBuilder(DatasetBuilder):
         """Initialize the FolderBaseBuilder.
 
         Args:
-            source_dir (Path | str): The source directory for the dataset.
-            target_dir (Path | str): The target directory for the dataset.
-            schemas (type[DatasetItem]): The schemas for the dataset tables.
-            info (DatasetInfo): User informations (name, description, ...)
-            for the dataset.
+            source_dir: The source directory for the dataset.
+            target_dir: The target directory for the dataset.
+            schemas: The schemas for the dataset tables.
+            info: User informations (name, description, ...) for the dataset.
         """
         super().__init__(source_dir, target_dir, schemas, info)
         view_name = None
@@ -110,7 +110,7 @@ class FolderBaseBuilder(DatasetBuilder):
         """Generate data from the source directory.
 
         Returns:
-            Iterator[dict[str, Any]]: An iterator over the data following data schema.
+            An iterator over the data following data schema.
         """
         for split in self.source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):

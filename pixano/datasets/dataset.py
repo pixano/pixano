@@ -66,13 +66,13 @@ class Dataset:
     """Dataset.
 
     Attributes:
-        path (Path): Dataset path
-        info (DatasetInfo, optional): Dataset info
-        dataset_schema (DatasetSchema, optional): Dataset schema
-        features_values (DatasetFeaturesValues, optional): Dataset features values
-        stats (list[DatasetStat], optional): Dataset stats
-        thumbnail (str, optional): Dataset thumbnail base 64 URL
-        media_dir (Path): Dataset media directory
+        path: Dataset path.
+        info: Dataset info.
+        dataset_schema: Dataset schema.
+        features_values: Dataset features values.
+        stats: Dataset stats.
+        thumbnail: Dataset thumbnail base 64 URL.
+        media_dir: Dataset media directory.
     """
 
     DB_PATH: str = "db"
@@ -97,8 +97,8 @@ class Dataset:
         """Initialize dataset.
 
         Args:
-            path (Path): Dataset path
-            media_dir (Path | None, optional): Dataset media directory
+            path: Dataset path.
+            media_dir: Dataset media directory.
         """
         info_file = path / self.INFO_FILE
         schema_file = path / self.SCHEMA_FILE
@@ -123,7 +123,7 @@ class Dataset:
         """Return number of rows in dataset.
 
         Returns:
-            int: Number of rows
+            Number of rows.
         """
         # Return number of rows of item table
         return len(self.open_table(_SchemaGroup.ITEM.value))
@@ -133,7 +133,7 @@ class Dataset:
         """Return dataset db path.
 
         Returns:
-            Path: Dataset db path
+            Dataset db path.
         """
         return self.path / self.DB_PATH
 
@@ -141,7 +141,7 @@ class Dataset:
         """Reload schema.
 
         Returns:
-            DatasetSchema: Dataset schema
+            DatasetSchema: Dataset schema.
         """
         self.schema = DatasetSchema.from_json(self.path / "schema.json")
         self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
@@ -150,7 +150,7 @@ class Dataset:
         """Connect to dataset with LanceDB.
 
         Returns:
-            lancedb.db.DBConnection: Dataset LanceDB connection
+            Dataset LanceDB connection.
         """
         return lancedb.connect(self._db_path)
 
@@ -192,17 +192,17 @@ class Dataset:
         """Add table to dataset.
 
         Args:
-            name (str): Table name
-            schema (type[BaseSchema]): Table schema
-            relation_item (SchemaRelation): Relation with item table (table to item)
-            data (DATA | None, optional): Table data
-            mode (str, optional): Table mode
-            exist_ok (bool, optional): Table exist ok
-            on_bad_vectors (str, optional): Table on bad vectors
-            fill_value (float, optional): Table fill value
+            name: Table name.
+            schema: Table schema.
+            relation_item: Relation with item table (table to item).
+            data: Table data.
+            mode: Table mode.
+            exist_ok: Table exist ok.
+            on_bad_vectors: Table on bad vectors.
+            fill_value: Table fill value.
 
         Returns:
-            LanceTable: The table
+            The table.
         """
         table = self._db_connection.create_table(
             name=name,
@@ -223,10 +223,10 @@ class Dataset:
         """Open dataset tables with LanceDB.
 
         Args:
-            names (list[str] | None, optional): Table names to open. If None, open all tables.
+            names: Table names to open. If None, open all tables.
 
         Returns:
-            dict[str, LanceTable]: Dataset tables
+            Dataset tables.
         """
         tables: dict[str, LanceTable] = defaultdict(dict)
 
@@ -239,7 +239,7 @@ class Dataset:
         """Open dataset table with LanceDB.
 
         Returns:
-            LanceTable: Dataset table
+            Dataset table.
         """
         if name not in self.schema.schemas.keys():
             raise ValueError(f"Table {name} not found in dataset")
@@ -268,14 +268,14 @@ class Dataset:
         """Read data from a table.
 
         Args:
-            table_name (str): Table name.
-            ids (list[str]): ids to read.
-            limit (int | None, optional): Limit.
-            offset (int, optional): Offset.
-            item_ids (list[str] | None, optional): Item ids to read.
+            table_name: Table name.
+            ids: ids to read.
+            limit: Amount of items to read.
+            offset: The offset to start reading from.
+            item_ids: Item ids to read.
 
         Returns:
-            list[BaseSchema]: List of values.
+            List of values.
         """
         if table_name == _SchemaGroup.ITEM.value:
             if item_ids is not None:
@@ -328,12 +328,12 @@ class Dataset:
         """Read dataset items.
 
         Args:
-            ids (list[str] | None, optional): Item ids to read.
-            limit (int | None, optional): Limit.
-            offset (int, optional): Offset.
+            ids: Item ids to read.
+            limit: Amount of items to read.
+            offset: The offset to start reading from.
 
         Returns:
-            list[DatasetItem]: List of dataset items.
+            List of dataset items.
         """
         _validate_ids_and_limit_and_offset(ids, limit, offset)
 
@@ -375,10 +375,10 @@ class Dataset:
         """Get all ids from a table.
 
         Args:
-            table_name (str, optional): table to look for ids.
+            table_name: table to look for ids.
 
         Returns:
-            list[str]: list of ids.
+            list of ids.
         """
         query = self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
         return sorted(row.as_py() for row in query["id"])
@@ -387,8 +387,8 @@ class Dataset:
         """Add data to a table.
 
         Args:
-            table_name (str): Table name.
-            data (list[BaseSchema]): Data to add.
+            table_name: Table name.
+            data: Data to add.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
@@ -402,7 +402,7 @@ class Dataset:
         """Add dataset items.
 
         Args:
-            data (list[DatasetItem]): Data to add.
+            data: Data to add.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.dataset_item_model
@@ -427,8 +427,8 @@ class Dataset:
         """Delete data from a table.
 
         Args:
-            table_name (str): Table name.
-            ids (list[str]): Ids to delete.
+            table_name: Table name.
+            ids: Ids to delete.
         """
         table = self.open_table(table_name)
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
@@ -438,7 +438,7 @@ class Dataset:
         """Delete dataset items.
 
         Args:
-            ids (list[str]): Ids to delete.
+            ids: Ids to delete.
         """
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
         for table_name in self.schema.schemas.keys():
@@ -463,8 +463,8 @@ class Dataset:
         """Update data in a table.
 
         Args:
-            table_name (str): Table name.
-            data (list[BaseSchema]): Data to update.
+            table_name: Table name.
+            data: Data to update.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
@@ -481,7 +481,7 @@ class Dataset:
         """Update dataset items.
 
         Args:
-            data (list[DatasetItem]): Data to update.
+            data: Data to update.
         """
         ids = [item.id for item in data]
         self.delete_dataset_items(ids)
@@ -496,12 +496,12 @@ class Dataset:
         """Find Dataset in directory.
 
         Args:
-            id (str): Dataset ID.
-            directory (Path): Directory to search in.
-            media_dir (Path | None, optional): Media directory.
+            id: Dataset ID.
+            directory: Directory to search in.
+            media_dir: Media directory.
 
         Returns:
-            Dataset: The found dataset.
+            The found dataset.
         """
         # Browse directory
         for json_fp in directory.glob("*/info.json"):

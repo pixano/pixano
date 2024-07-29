@@ -16,9 +16,9 @@ class Annotation(BaseSchema):
     """Annotation Lance Model.
 
     Attributes:
-        item_ref (ItemRef, optional): Reference to the annotation's item.
-        view_ref (ViewRef, optional): Reference to the annotation's view.
-        entity_ref (EntityReference, optional): Reference to the annotation's entity.
+        item_ref: Reference to the annotation's item.
+        view_ref: Reference to the annotation's view.
+        entity_ref: Reference to the annotation's entity.
     """
 
     item_ref: ItemRef = ItemRef.none()

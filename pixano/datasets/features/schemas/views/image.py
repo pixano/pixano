@@ -35,11 +35,11 @@ class Image(View):
         """Open image.
 
         Args:
-            media_dir (Path): image path
-            output_type (Literal["base64", "image"], optional): output type.
+            media_dir: image path
+            output_type: output type.
 
         Returns:
-            str: opened image
+            opened image.
         """
         return Image.open_url(self.url, media_dir, output_type)
 
@@ -50,16 +50,16 @@ class Image(View):
         """Open URL image.
 
         Args:
-            url (str): image url
-            media_dir (Path): uri prefix
-            output_type (Literal["base64", "image"], optional): output type.
+            url: image url
+            media_dir: uri prefix
+            output_type: output type.
 
         Raises:
             ValueError: No scheme provided
             ValueError: Incomplete URI
 
         Returns:
-            str: opened image
+            The opened image.
         """
         # URI is incomplete
         if urlparse(url).scheme == "":
@@ -114,20 +114,20 @@ def create_image(
     format: str | None = None,
     other_path: Path | None = None,
 ) -> Image:
-    """Create an Image instance.
+    """Create an `Image` instance.
 
     Args:
-        url (Path): The image URL. If not relative, the URL is converted to a relative path using `other_path`.
-        id (str, optional): Image ID.
-        item_ref (ItemRef, optional): Item reference.
-        parent_ref (ViewRef, optional): Parent view reference.
-        width (int | None, optional): The image width. If None, the width is extracted from the image file.
-        height (int | None, optional): The image height. If None, the height is extracted from the image file.
-        format (str | None, optional): The image format. If None, the format is extracted from the image file.
-        other_path (Path | None, optional): The path to convert the URL to a relative path.
+        url: The image URL. If not relative, the URL is converted to a relative path using `other_path`.
+        id: Image ID.
+        item_ref: Item reference.
+        parent_ref: Parent view reference.
+        width: The image width. If None, the width is extracted from the image file.
+        height: The image height. If None, the height is extracted from the image file.
+        format: The image format. If None, the format is extracted from the image file.
+        other_path: The path to convert the URL to a relative path.
 
     Returns:
-        Image: The created Image instance.
+        The created `Image` instance.
     """
     none_conditions = [width is None, height is None, format is None]
     not_none_conditions = [width is not None, height is not None, format is not None]

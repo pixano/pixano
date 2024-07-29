@@ -21,7 +21,7 @@ async def get_models(
     """Load models.
 
     Returns:
-        list[str]: List of models
+        List of models.
     """
     # Load list of models
     models = []

@@ -18,10 +18,10 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     """Run Pixano app.
 
     Args:
-        settings (Settings): App settings
+        settings: App settings.
 
     Returns:
-        FastAPI: Pixano app
+        Pixano app.
     """
     # Create app
     app = FastAPI()

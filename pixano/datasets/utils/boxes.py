@@ -9,18 +9,17 @@ import numpy as np
 from .image import rle_to_mask, urle_to_rle
 
 
-def denormalize_coords(coord: list[float], height: int, width: int, rounded_int=True) -> list[float]:
+def denormalize_coords(coord: list[float], height: int, width: int, rounded_int: bool = True) -> list[float]:
     """Denormalize coordinates.
 
     Args:
-        coord (list[float]): Normalized coordinates
-        height (int): Height
-        width (int): Width
-        rounded_int (bool): True to round denormalized float to nearest integer.
-            Default to True
+        coord: Normalized coordinates.
+        height: Height.
+        width: Width.
+        rounded_int: True to round denormalized float to nearest integer.
 
     Returns:
-        list[float]: Unnormalized coordinates,
+        Unnormalized coordinates.
     """
     denorm = []
 
@@ -37,12 +36,12 @@ def normalize_coords(coord: list[float], height: int, width: int) -> list[float]
     """Normalize coordinates.
 
     Args:
-        coord (list[float]): Unnormalized coordinates
-        height (int): Height
-        width (int): Width
+        coord: Unnormalized coordinates.
+        height: Height.
+        width: Width.
 
     Returns:
-        list[float]: Normalized coordinates
+        Normalized coordinates.
     """
     norm = []
 
@@ -59,10 +58,10 @@ def mask_to_bbox(mask: np.ndarray) -> list[float]:
     """Return the smallest bounding box containing all the mask pixels.
 
     Args:
-        mask (np.ndarray): Mask as NumPy Array
+        mask: Mask as NumPy Array.
 
     Returns:
-        list[float]: Normalized xywh bounding box
+        Normalized xywh bounding box.
     """
     height, width = mask.shape
     bool_mask = np.array(mask).astype(bool)
@@ -86,10 +85,10 @@ def urle_to_bbox(urle: dict) -> list[float]:
     """Return the smallest bounding box containing all the mask pixels.
 
     Args:
-        urle (dict): Mask as uncompressed RLE
+        urle: Mask as uncompressed RLE.
 
     Returns:
-        list[float]: Normalized xywh bounding box
+        Normalized xywh bounding box.
     """
     return mask_to_bbox(rle_to_mask(urle_to_rle(urle)))
 
@@ -99,10 +98,10 @@ def xywh_to_xyxy(xywh: list[float]) -> list[float]:
     (using top left point as reference) to xyxy.
 
     Args:
-        xywh (list[float]): xywh coordinates
+        xywh: xywh coordinates.
 
     Returns:
-        list[float]: xyxy coordinates
+        xyxy coordinates.
     """
     return [
         float(xywh[0]),
@@ -117,10 +116,10 @@ def xyxy_to_xywh(xyxy: list[float]) -> list[float]:
     (using top left point as reference).
 
     Args:
-        xyxy (list[float]): xyxy coordinates
+        xyxy: xyxy coordinates.
 
     Returns:
-        list[float]: xywh coordinates
+        xywh coordinates.
     """
     return [
         float(xyxy[0]),

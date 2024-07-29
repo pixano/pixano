@@ -39,22 +39,22 @@ def create_sequence_frame(
     format: str | None = None,
     other_path: Path | None = None,
 ) -> SequenceFrame:
-    """Create a SequenceFrame instance.
+    """Create a `SequenceFrame` instance.
 
     Args:
-        url (Path): The frame URL. If not relative, the URL is converted to a relative path using `other_path`.
-        timestamp (float): The timestamp of the frame.
-        frame_index (int): The index of the frame in the sequence.
-        id (str, optional): Point cloud ID.
-        item_ref (ItemRef, optional): Item reference.
-        parent_ref (ViewRef, optional): Parent view reference.
-        width (int | None, optional): The frame width. If None, the width is extracted from the frame file.
-        height (int | None, optional): The frame height. If None, the height is extracted from the frame file.
-        format (str | None, optional): The frame format. If None, the format is extracted from the frame file.
-        other_path (Path | None, optional): The path to convert the URL to a relative path.
+        url: The frame URL. If not relative, the URL is converted to a relative path using `other_path`.
+        timestamp: The timestamp of the frame.
+        frame_index: The index of the frame in the sequence.
+        id: Point cloud ID.
+        item_ref: Item reference.
+        parent_ref: Parent view reference.
+        width: The frame width. If None, the width is extracted from the frame file.
+        height: The frame height. If None, the height is extracted from the frame file.
+        format: The frame format. If None, the format is extracted from the frame file.
+        other_path: The path to convert the URL to a relative path.
 
     Returns:
-        Image: The created Image instance.
+        The created `SequenceFrame` instance.
     """
     image = create_image(url, id, item_ref, parent_ref, width, height, format, other_path)
     return SequenceFrame(

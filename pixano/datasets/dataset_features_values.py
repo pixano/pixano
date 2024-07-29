@@ -14,10 +14,10 @@ class DatasetFeaturesValues(BaseModel):
     """DatasetFeaturesValues.
 
     Attributes:
-        items (dict[str, list]): Dataset tables
-        views (dict[str, list]): Dataset views
-        entities (dict[str, list]): Dataset entities
-        annotations (dict[str, list]): Dataset annotations
+        items: Dataset tables
+        views: Dataset views
+        entities: Dataset entities
+        annotations: Dataset annotations
     """
 
     items: dict[str, list] = {}

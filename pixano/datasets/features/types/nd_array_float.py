@@ -18,8 +18,8 @@ class NDArrayFloat(BaseType):
     """Represents an N-dimensional array of floating-point values.
 
     Attributes:
-        values (list[float]): The list of floating-point values in the array.
-        shape (list[int]): The shape of the array, represented as a list of integers.
+        values: The list of floating-point values in the array.
+        shape: The shape of the array, represented as a list of integers.
     """
 
     values: list[float]
@@ -41,7 +41,7 @@ class NDArrayFloat(BaseType):
         Should be removed when Lance could manage None value.
 
         Returns:
-            NDArrayFloat: "None" NDArrayFloat
+            "None" `NDArrayFloat`.
         """
         return cls(values=[0], shape=[1])
 
@@ -50,10 +50,10 @@ class NDArrayFloat(BaseType):
         """Create an instance of the class from a NumPy array.
 
         Args:
-            arr (np.ndarray): The NumPy array to convert.
+            arr: The NumPy array to convert.
 
         Returns:
-            NDArrayFloat: An instance of the class with values and shape derived from
+            An instance of the class with values and shape derived from
                 the input array.
         """
         return NDArrayFloat(values=arr.reshape(-1).tolist(), shape=list(arr.shape))
@@ -65,13 +65,13 @@ def is_ndarray_float(cls: type, strict: bool = False) -> bool:
 
 
 def create_ndarray_float(values: list[float], shape: list[int]) -> NDArrayFloat:
-    """Create an NDArrayFloat instance.
+    """Create an `NDArrayFloat` instance.
 
     Args:
-        values (list[float]): The list of floating-point values in the array.
-        shape (list[int]): The shape of the array, represented as a list of integers.
+        values: The list of floating-point values in the array.
+        shape: The shape of the array, represented as a list of integers.
 
     Returns:
-        NDArrayFloat: The created NDArrayFloat instance.
+        The created `NDArrayFloat` instance.
     """
     return NDArrayFloat(values=values, shape=shape)

@@ -9,10 +9,10 @@ def coco_ids_80to91(cat_id: int) -> int:
     """Return COCO category ID (80 to 91 classes).
 
     Args:
-        cat_id (int): Category ID (80 classes)
+        cat_id: Category ID (80 classes).
 
     Returns:
-        int: Category ID (91 classes)
+        Category ID (91 classes).
     """
     coco_dict = {
         1: 1,
@@ -104,10 +104,10 @@ def coco_names_80(cat_id: int) -> str:
     """Return COCO category name (80 classes).
 
     Args:
-        cat_id (int): Category ID
+        cat_id: Category ID.
 
     Returns:
-        str: Category name
+        Category name.
     """
     coco_dict = {
         1: "person",
@@ -199,10 +199,10 @@ def coco_names_91(cat_id: int) -> str:
     """Return COCO category name (91 classes).
 
     Args:
-        cat_id (int): Category ID
+        cat_id: Category ID.
 
     Returns:
-        str: Category name
+        Category name.
     """
     coco_dict = {
         1: "person",
@@ -305,10 +305,10 @@ def dota_ids(name: str) -> int:
     """Return DOTAv2 category ID (18 classes).
 
     Args:
-        name (int): Category name
+        name: Category name.
 
     Returns:
-        str: Category ID
+        Category ID.
     """
     dota_dict = {
         "plane": 1,
@@ -338,10 +338,10 @@ def voc_names(cat_id: int) -> str:
     """Return VOC category name (20 classes).
 
     Args:
-        cat_id (int): Category ID
+        cat_id: Category ID.
 
     Returns:
-        str: Category name
+        Category name.
     """
     voc_dict = {
         1: "aeroplane",

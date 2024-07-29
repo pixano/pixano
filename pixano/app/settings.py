@@ -18,16 +18,16 @@ class Settings(BaseSettings):
     """Pixano app settings.
 
     Attributes:
-        library_dir (str): Local or S3 path to dataset library
-        aws_endpoint (str | None): S3 endpoint URL, use 'AWS' if not provided.
+        library_dir: Local or S3 path to dataset library
+        aws_endpoint: S3 endpoint URL, use 'AWS' if not provided.
             Used if library_dir is an S3 path
-        aws_region (str | None): S3 region name, not always required for private storages.
+        aws_region: S3 region name, not always required for private storages.
             Used if library_dir is an S3 path
-        aws_access_key (str | None): S3 AWS access key. Used if library_dir is an S3 path
-        aws_secret_key (str | None): S3 AWS secret key. Used if library_dir is an S3 path
-        local_model_dir (str | None): Local path to models. Used if library_dir is an S3 path
-        data_dir (Path | S3Path): Dataset directory as Path | S3Path
-        model_dir (Path): Model directory as Path
+        aws_access_key: S3 AWS access key. Used if library_dir is an S3 path
+        aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path
+        local_model_dir: Local path to models. Used if library_dir is an S3 path
+        data_dir: Dataset directory as Path | S3Path
+        model_dir: Model directory as Path
     """
 
     library_dir: str = (Path.cwd() / "library").as_posix()

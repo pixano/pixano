@@ -15,7 +15,7 @@ class Item(BaseSchema):
     """Item Lance Model.
 
     Attributes:
-        split (str, optional): Split of the item.
+        split: Split of the item.
     """
 
     split: str = "default"
