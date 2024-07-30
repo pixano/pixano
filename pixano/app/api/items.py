@@ -411,12 +411,10 @@ async def get_dataset_item(  # noqa: D417
                 obj["features"] = features
                 objects.append(obj)
     else:  # video
-        trackid2trackletslist = defaultdict(list) #trackid2trackletslist
-        trackid2entityidlist = defaultdict(list) #trackid2entityidlist
+        trackid2trackletslist = defaultdict(list)  # trackid2trackletslist
+        trackid2entityidlist = defaultdict(list)  # trackid2entityidlist
         entity_id2trackid = {}
-        trackid2annotationidlist = {annotation_group:defaultdict(list) for annotation_group in groups[_SchemaGroup.ANNOTATION]} #trackid2entityidlist
         trackid2track = {}
-        verbose = False
 
         ## Store a cache of references for faster loading
         # gather tracklets for each track
@@ -432,6 +430,7 @@ async def get_dataset_item(  # noqa: D417
                     trackid2track[entity.id] = entity
                 if is_track(type(entity)) and entity.id not in trackid2entityidlist:
                     trackid2entityidlist[entity.id].append(entity.id)
+                    entity_id2trackid[entity.id] = entity.id
                 elif entity.parent_ref.id != "":
                     trackid2entityidlist[entity.parent_ref.id].append(entity.id)
                     entity_id2trackid[entity.id] = entity.parent_ref.id
@@ -443,19 +442,18 @@ async def get_dataset_item(  # noqa: D417
                     continue
                 entity_id = annotation.entity_ref.id
                 track_id = entity_id2trackid[entity_id]
-                trackid2annotationidlist[annotation_group][track_id].append(annotation.id)
 
         # Load all tracks related data
         track_bboxes = defaultdict(list)
         track_keypoints = defaultdict(list)
-        track_features = defaultdict(dict)
+        track_features: dict[str, dict] = defaultdict(dict)
         kept_track_ids = []
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
             for annotation in getattr(item, annotation_group):
                 if is_tracklet(type(annotation)):
                     continue
                 entity_id = annotation.entity_ref.id
-                track_id =  entity_id2trackid[entity_id]
+                track_id = entity_id2trackid[entity_id]
                 frame_index = next(
                     (
                         view["frame_index"]
@@ -474,8 +472,7 @@ async def get_dataset_item(  # noqa: D417
                 kept_track_ids.append(track_id)
 
                 # ann_entity = find_top_entity(annotation) # Slow general approach
-                ann_entity = trackid2track[track_id] # Fast specific approach
-
+                ann_entity = trackid2track[track_id]  # Fast specific approach
 
                 if ann_entity:
                     track_features[track_id].update(get_features(ann_entity, Entity))
@@ -516,34 +513,35 @@ async def get_dataset_item(  # noqa: D417
             bboxes.sort(key=lambda bbox: bbox["frame_index"])
             keypoints.sort(key=lambda kpt: kpt["frame_index"])
             # get tracklets
-            tracklets = trackid2trackletslist[track_id]      
-            # set thumbnail to first bbox    
+            tracklets = trackid2trackletslist[track_id]
+            # set thumbnail to first bbox
             if len(bboxes) > 0:
                 bboxes[0]["is_thumbnail"] = True
-            objects.append({
-                "id": track_id,
-                "datasetItemType": view_type,
-                "item_id": item_id,
-                "source_id": "Ground Truth",
-                "features": features,
-                "track": [
-                    {
-                        "id": tracklet.id,
-                        "start": (
-                            tracklet.start_timestep
-                            if hasattr(tracklet, "start_timestep")
-                            else tracklet.start_timestamp
-                        ),
-                        "end": (
-                            tracklet.end_timestep if hasattr(tracklet, "end_timestep") else tracklet.end_timestamp
-                        ),
-                        "view_id": tracklet.view_ref.name,
-                    }
-                    for tracklet in tracklets
-                ],
-                "boxes": bboxes,
-                "keypoints": keypoints,
-            }
+            objects.append(
+                {
+                    "id": track_id,
+                    "datasetItemType": view_type,
+                    "item_id": item_id,
+                    "source_id": "Ground Truth",
+                    "features": features,
+                    "track": [
+                        {
+                            "id": tracklet.id,
+                            "start": (
+                                tracklet.start_timestep
+                                if hasattr(tracklet, "start_timestep")
+                                else tracklet.start_timestamp
+                            ),
+                            "end": (
+                                tracklet.end_timestep if hasattr(tracklet, "end_timestep") else tracklet.end_timestamp
+                            ),
+                            "view_id": tracklet.view_ref.name,
+                        }
+                        for tracklet in tracklets
+                    ],
+                    "boxes": bboxes,
+                    "keypoints": keypoints,
+                }
             )
             # print("OBJ", objects[-1])
 
