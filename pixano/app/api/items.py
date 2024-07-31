@@ -333,9 +333,9 @@ async def get_dataset_item(  # noqa: D417
     # Objects
     # TMP NOTE : the objects contents may still be subject to change -- WIP
     objects = []
-    NoneBBox = BBox.none()
-    NoneMask = CompressedRLE.none()
-    NoneKeypoints = KeyPoints.none()
+    none_bbox = BBox.none()
+    none_mask = CompressedRLE.none()
+    none_keypoints = KeyPoints.none()
 
     def find_top_entity(ann: Annotation) -> Entity | None:
         """Find top entity of an annotation.
@@ -380,7 +380,7 @@ async def get_dataset_item(  # noqa: D417
                     "item_id": item_id,
                     "source_id": "Ground Truth",  # ??
                 }
-                if is_bbox(type(annotation), False) and annotation != NoneBBox:
+                if is_bbox(type(annotation), False) and annotation != none_bbox:
                     features.update(get_features(annotation, BBox))
                     obj["bbox"] = {
                         "coords": annotation.xywh_coords,
@@ -389,7 +389,7 @@ async def get_dataset_item(  # noqa: D417
                         "confidence": annotation.confidence,
                         "view_id": annotation.view_ref.name,  # danger faux-ami !
                     }
-                if is_compressed_rle(type(annotation), False) and annotation != NoneMask:
+                if is_compressed_rle(type(annotation), False) and annotation != none_mask:
                     features.update(get_features(annotation, CompressedRLE))
                     urle = image_utils.rle_to_urle(
                         {
@@ -401,7 +401,7 @@ async def get_dataset_item(  # noqa: D417
                         **vars(urle),
                         "view_id": annotation.view_ref.name,
                     }
-                if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
+                if is_keypoints(type(annotation), False) and annotation != none_keypoints:
                     features.update(get_features(annotation, KeyPoints))
                     obj["keypoints"] = {
                         "template_id": annotation.template_id,
@@ -411,8 +411,8 @@ async def get_dataset_item(  # noqa: D417
                 obj["features"] = features
                 objects.append(obj)
     else:  # video
-        trackid2trackletslist = defaultdict(list)  # trackid2trackletslist
-        trackid2entityidlist = defaultdict(list)  # trackid2entityidlist
+        trackid_to_tracklets_list = defaultdict(list)  # trackid2trackletslist
+        trackid_to_entityid_list = defaultdict(list)  # trackid2entityidlist
         entity_id2trackid = {}
         trackid2track = {}
 
@@ -421,18 +421,18 @@ async def get_dataset_item(  # noqa: D417
         for annotation_group in groups[_SchemaGroup.ANNOTATION]:
             for annotation in getattr(item, annotation_group):
                 if is_tracklet(type(annotation)):
-                    trackid2trackletslist[annotation.entity_ref.id].append(annotation)
+                    trackid_to_tracklets_list[annotation.entity_ref.id].append(annotation)
 
         # gather entities/track references
         for entity_group in groups[_SchemaGroup.ENTITY]:
             for entity in getattr(item, entity_group):
                 if is_track(type(entity)):
                     trackid2track[entity.id] = entity
-                if is_track(type(entity)) and entity.id not in trackid2entityidlist:
-                    trackid2entityidlist[entity.id].append(entity.id)
+                if is_track(type(entity)) and entity.id not in trackid_to_entityid_list:
+                    trackid_to_entityid_list[entity.id].append(entity.id)
                     entity_id2trackid[entity.id] = entity.id
                 elif entity.parent_ref.id != "":
-                    trackid2entityidlist[entity.parent_ref.id].append(entity.id)
+                    trackid_to_entityid_list[entity.parent_ref.id].append(entity.id)
                     entity_id2trackid[entity.id] = entity.parent_ref.id
 
         # gather annotations/track references
@@ -477,7 +477,7 @@ async def get_dataset_item(  # noqa: D417
                 if ann_entity:
                     track_features[track_id].update(get_features(ann_entity, Entity))
 
-                if is_bbox(type(annotation), False) and annotation != NoneBBox:
+                if is_bbox(type(annotation), False) and annotation != none_bbox:
                     track_bboxes[track_id].append(
                         {
                             "coords": annotation.xywh_coords,
@@ -492,7 +492,7 @@ async def get_dataset_item(  # noqa: D417
                         }
                     )
 
-                if is_keypoints(type(annotation), False) and annotation != NoneKeypoints:
+                if is_keypoints(type(annotation), False) and annotation != none_keypoints:
                     track_keypoints[track_id].append(
                         {
                             "template_id": annotation.template_id,
@@ -513,7 +513,7 @@ async def get_dataset_item(  # noqa: D417
             bboxes.sort(key=lambda bbox: bbox["frame_index"])
             keypoints.sort(key=lambda kpt: kpt["frame_index"])
             # get tracklets
-            tracklets = trackid2trackletslist[track_id]
+            tracklets = trackid_to_tracklets_list[track_id]
             # set thumbnail to first bbox
             if len(bboxes) > 0:
                 bboxes[0]["is_thumbnail"] = True
