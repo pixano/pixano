@@ -63,7 +63,12 @@ def _validate_ids_item_ids_and_limit_and_offset(
 
 
 class Dataset:
-    """Dataset.
+    """A dataset.
+
+    It is a collection of tables that can be queried and manipulated with LanceDB.
+
+    The tables are defined by the dataset schema which allows the dataset to return the data in the form of pydantic
+    models.
 
     Attributes:
         path: Dataset path.

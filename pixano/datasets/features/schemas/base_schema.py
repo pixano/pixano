@@ -24,7 +24,13 @@ if TYPE_CHECKING:
 
 
 class BaseSchema(LanceModel):
-    """Base class for all tables."""
+    """Base class for all tables.
+
+    All tables should inherit from this class and therefore all elements in the dataset contains an id.
+
+    Attributes:
+        id: the id of the manipulated object.
+    """
 
     model_config = ConfigDict(validate_assignment=True)
     id: str = ""

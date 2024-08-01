@@ -28,10 +28,11 @@ class SchemaRelation(Enum):
 
 
 class DatasetSchema(BaseModel):
-    """DatasetSchema.
+    """A dataset schema that defines the tables and the relations between them.
 
     Attributes:
         schemas: The tables.
+        relations: The relations between the item table and the other tables.
     """
 
     schemas: dict[str, type[BaseSchema]]

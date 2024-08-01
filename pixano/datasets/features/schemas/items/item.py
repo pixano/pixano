@@ -12,7 +12,10 @@ from ..registry import _register_schema_internal
 
 @_register_schema_internal
 class Item(BaseSchema):
-    """Item Lance Model.
+    """Item base class.
+
+    Items are used to store information about an item in a dataset. It contains at least a split attribute.
+    It also federates the information about the item's views, entities, annotations, embeddings, etc via its id.
 
     Attributes:
         split: Split of the item.

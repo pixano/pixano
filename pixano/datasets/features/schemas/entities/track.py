@@ -13,7 +13,9 @@ from .entity import Entity
 
 @_register_schema_internal
 class Track(Entity):
-    """Track Lance Model.
+    """A Track entity.
+
+    A track represents an entity that is shared among multiple view across time.
 
     Attributes:
         name: The name of the track.

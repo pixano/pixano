@@ -11,7 +11,11 @@ from pixano.datasets.utils.python import issubclass_strict
 
 
 class BaseType(LanceModel):
-    """Base class for all Pixano types."""
+    """Base class for all Pixano types.
+
+    This class should be inherited by all Pixano types and schemas can only store a primitive type or a
+    BaseType.
+    """
 
     model_config = ConfigDict(validate_assignment=True)
     pass

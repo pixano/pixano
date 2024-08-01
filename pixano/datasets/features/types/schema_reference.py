@@ -14,7 +14,15 @@ from .registry import _register_type_internal
 
 @_register_type_internal
 class SchemaRef(BaseType):
-    """Schema reference class."""
+    """A schema reference.
+
+    A schema reference is used to reference a schema in a dataset. If an id is provided, the reference points to a
+    specific element stored in the dataset.
+
+    Attributes:
+        name: The name of the schema.
+        id: The id of the schema.
+    """
 
     model_config = ConfigDict(validate_assignment=True)
     name: str
@@ -28,7 +36,7 @@ class SchemaRef(BaseType):
 
 @_register_type_internal
 class ItemRef(SchemaRef):
-    """Item reference class."""
+    """Item reference."""
 
     name: str = "item"  # hard coded to avoid circular import
 
@@ -43,28 +51,28 @@ class ItemRef(SchemaRef):
 
 @_register_type_internal
 class ViewRef(SchemaRef):
-    """View reference class."""
+    """View reference."""
 
     pass
 
 
 @_register_type_internal
 class EntityRef(SchemaRef):
-    """Entity reference class."""
+    """Entity reference."""
 
     pass
 
 
 @_register_type_internal
 class AnnotationRef(SchemaRef):
-    """Annotation reference class."""
+    """Annotation reference."""
 
     pass
 
 
 @_register_type_internal
 class EmbeddingRef(SchemaRef):
-    """Embedding reference class."""
+    """Embedding reference."""
 
     pass
 

@@ -16,7 +16,14 @@ from .annotation import Annotation
 
 @_register_schema_internal
 class Tracklet(Annotation):
-    """Tracklet Lance Model."""
+    """A Tracklet is a temporal segment of a video sequence.
+
+    Attributes:
+        start_timestep: The start timestep of the tracklet.
+        end_timestep: The end timestep of the tracklet.
+        start_timestamp: The start timestamp of the tracklet.
+        end_timestamp: The end timestamp of the tracklet.
+    """
 
     start_timestep: int = -1
     end_timestep: int = -1

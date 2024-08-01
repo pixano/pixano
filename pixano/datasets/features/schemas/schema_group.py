@@ -14,7 +14,10 @@ from .views import View
 
 
 class _SchemaGroup(Enum):
-    """Schema group."""
+    """Schema group.
+
+    It defines the different schema groups to which a schema can belong.
+    """
 
     ANNOTATION = "annotations"
     EMBEDDING = "embeddings"
