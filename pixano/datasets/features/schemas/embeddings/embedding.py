@@ -37,7 +37,7 @@ def _from_pixano_name(dataset: "Dataset", table_name: str, pixano_name: str) -> 
 
 @_register_schema_internal
 class Embedding(BaseSchema, ABC):
-    """Embedding Lance Model.
+    """Embeddings are used to define an embedding vector for an item in a dataset.
 
     Attributes:
         item_ref: Reference to the embedding's item.
@@ -80,7 +80,7 @@ class Embedding(BaseSchema, ABC):
 
 @_register_schema_internal
 class ViewEmbedding(Embedding, ABC):
-    """`ViewEmbedding` Lance Model.
+    """ViewEmbeddings are used to define an embedding vector for a view in a dataset.
 
     Attributes:
         view_ref: Reference to the embedding's view.

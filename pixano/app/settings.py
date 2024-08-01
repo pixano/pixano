@@ -14,6 +14,9 @@ from pydantic_settings import BaseSettings
 from s3path import S3Path, register_configuration_parameter
 
 
+UKNOWN_PATH = Path("/_unknown")
+
+
 class Settings(BaseSettings):
     """Pixano app settings.
 
@@ -36,8 +39,8 @@ class Settings(BaseSettings):
     aws_access_key: str | None = None
     aws_secret_key: str | None = None
     local_model_dir: str | None = None
-    data_dir: Path | S3Path = Path()
-    model_dir: Path = Path()
+    data_dir: Path | S3Path = UKNOWN_PATH
+    model_dir: Path = UKNOWN_PATH
     # Change Pydantic protected namespace from "model_" to "settings_"
     # because of model_dir
     model_config = ConfigDict(protected_namespaces=("settings_",))
@@ -80,11 +83,10 @@ class Settings(BaseSettings):
                     "LOCAL_MODEL_DIR."
                 )
             self.model_dir = Path(self.local_model_dir)
-
         else:
             # Local library
-            self.data_dir = Path(self.library_dir)
-            self.model_dir = self.data_dir / "models"
+            self.data_dir = Path(self.library_dir) if self.data_dir == UKNOWN_PATH else self.data_dir
+            self.model_dir = self.data_dir / "models" if self.model_dir == UKNOWN_PATH else self.model_dir
 
 
 @lru_cache

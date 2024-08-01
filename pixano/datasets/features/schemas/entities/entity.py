@@ -13,7 +13,16 @@ from ..registry import _register_schema_internal
 
 @_register_schema_internal
 class Entity(BaseSchema):
-    """Object Lance Model."""
+    """Entity base class.
+
+    Entities are used to define an entity in a dataset such as an object, a track. It can refer to an item, a view,
+    and a parent entity.
+
+    Attributes:
+        item_ref: Reference to the entity's item.
+        view_ref: Reference to the entity's view.
+        parent_ref: Reference to the entity's parent entity.
+    """
 
     item_ref: ItemRef = ItemRef.none()
     view_ref: ViewRef = ViewRef.none()

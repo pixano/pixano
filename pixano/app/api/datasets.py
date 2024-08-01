@@ -35,5 +35,5 @@ async def get_datasets(
         return infos
     raise HTTPException(
         status_code=404,
-        detail=f"No datasets found in {settings.data_dir.absolute()}",
+        detail=f"No datasets found in {settings.data_dir.absolute()}.",
     )

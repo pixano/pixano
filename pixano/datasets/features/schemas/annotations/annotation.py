@@ -13,7 +13,9 @@ from ..registry import _register_schema_internal
 
 @_register_schema_internal
 class Annotation(BaseSchema):
-    """Annotation Lance Model.
+    """Annotations are used to annotate an entity in a dataset.
+
+    It can refer to an entity, an item, and a view.
 
     Attributes:
         item_ref: Reference to the annotation's item.
