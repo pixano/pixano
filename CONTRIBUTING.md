@@ -22,22 +22,26 @@ If you are looking to contribute to Pixano and develop new features, you will ne
 
 #### Backend
 
-You will need `python == 3.10`. Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
+You need a python environment with a supported version (currently 3.10 and 3.11). Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
 
 ```bash
-pip install .
+pip install . -e
 ```
+
+The `-e` argument install the repository in dev mode so that your local changes are taken into account each time you run your environment.
 
 #### Frontend
 
-You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, you will need to run this to install all the pnpm dependencies:
+##### Dependencies
+
+You will need `node ~= 18.17` and `pnpm ~= 8.6`. Then, run this to install all the pnpm dependencies:
 
 ```bash
 cd ui/
 pnpm i
 ```
 
-### Running the server and apps
+##### Running the server and apps
 
 First, you will need to launch the backend server using this command:
 
@@ -60,7 +64,7 @@ Both the backend server and the frontend apps should refresh automatically when 
 
 ### Backend
 
-We test our backend code with Python's built-in `unittest` framework.
+We test our backend code with Python's built-in `pytest` framework.
 
 All our unit testing files are in the `tests/` folder, with a `test_` prefix.
 
@@ -79,7 +83,7 @@ pnpm -r run storybook
 
 We format and lint backend files (Python, Jupyter notebooks) with **Ruff**.
 
-You can install the <a href="https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff" target="_blank">Visual Studio Extension</a> and set it to format files automatically on save with the following configuration in your VSCode `settings.json`:
+You can install the [Visual Studio Extension](https://marketplace.visualstudio.com/items?itemName=charliermarsh.ruff) and set it to format files automatically on save with the following configuration in your VSCode `settings.json`:
 
 ```json
 {
@@ -111,6 +115,8 @@ You can also install the pre-commit hook if you want it to run automatically on 
 ```bash
 pre-commit install
 ```
+
+If this command fails and/or format some files, you need to `git add` the files that you manually fixied and/or were modified by `pre-commit` before trying to commit again.
 
 ### Frontend
 
