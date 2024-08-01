@@ -22,13 +22,13 @@ If you are looking to contribute to Pixano and develop new features, you will ne
 
 #### Backend
 
-You need a python environment with supported versions (currently 3.10 and 3.11). Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
+You need a python environment with a supported version (currently 3.10 and 3.11). Then, inside the root `pixano/` directory, run this command to install all the Python dependencies:
 
 ```bash
 pip install . -e
 ```
 
-The `-e` argument install the repository in dev mode, so that your local changes are taken into account each time you run your environment.
+The `-e` argument install the repository in dev mode so that your local changes are taken into account each time you run your environment.
 
 #### Frontend
 
@@ -116,7 +116,7 @@ You can also install the pre-commit hook if you want it to run automatically on 
 pre-commit install
 ```
 
-If this command fails and/or format some files, you need to `git add` the files that were needed manual fixing and/or modified by `pre-commit` before trying to commit again.
+If this command fails and/or format some files, you need to `git add` the files that you manually fixied and/or were modified by `pre-commit` before trying to commit again.
 
 ### Frontend
 
