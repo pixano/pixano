@@ -113,6 +113,13 @@ export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
 
 export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
 
+export type DatasetItemSave = {
+  id: string;
+  split: string;
+  item_features: Record<string, ItemFeature>;
+  save_data: SaveItem[];
+};
+
 export interface DatasetItems {
   items: Array<DatasetItem>;
   total: number;
@@ -164,6 +171,35 @@ export type TrackletItem = {
   hidden?: boolean;
 };
 
+export type SaveDataAddUpdate =
+  | ItemBBox
+  | VideoItemBBox
+  | Keypoints
+  | VideoKeypoints
+  | ItemRLE
+  | Tracklet
+  | ItemObjectBase;
+
+export interface SaveItemAddUpdate {
+  change_type: "add_or_update";
+  ref_name: string;
+  is_video: boolean;
+  data: SaveDataAddUpdate & {
+    entity_ref?: Record<string, string>;
+  };
+}
+
+export interface SaveItemDelete {
+  change_type: "delete";
+  ref_name: string;
+  is_video: boolean;
+  data: Record<string, string[]> & {
+    entity_ref?: Record<string, string>;
+  };
+}
+
+export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
+
 export type VideoItemBBox = ItemBBox & TrackletItem;
 export type VideoKeypoints = Keypoints & TrackletItem;
 export interface Tracklet {
@@ -196,6 +232,8 @@ export type ImageObject = ItemObjectBase & {
 export type ItemObject = ImageObject | VideoObject;
 
 export interface ItemRLE {
+  id: string;
+  ref_name: string;
   view_id?: string;
   counts: Array<number>;
   size: Array<number>;
@@ -203,6 +241,8 @@ export interface ItemRLE {
 }
 
 export interface ItemBBox {
+  id: string;
+  ref_name: string;
   view_id?: string;
   coords: Array<number>;
   format: string;

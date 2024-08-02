@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@pixano/core": "workspace:^",
+    "nanoid": "^5.0.7",
     "onnxruntime-node": "~1.15.1",
     "onnxruntime-web": "~1.16.3"
   }

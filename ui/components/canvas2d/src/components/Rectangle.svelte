@@ -34,7 +34,7 @@ License: CECILL-C
     const coords = getNewRectangleDimensions(rect, stage, viewId);
     newShape = {
       status: "editing",
-      type: "rectangle",
+      type: "bbox",
       shapeId: bbox.id,
       viewId,
       coords,

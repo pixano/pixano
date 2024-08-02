@@ -109,12 +109,48 @@ License: CECILL-C
     }
     await goto(route);
   };
+
+  //Note: the two following function aims to prevent losing unsaved changes after BROWSER actions
+  //(pixano site internal navigation is already covered)
+  //first one on browser refresh (for this one, we can't (?) customize the message)
+  //second one on browser navigation (back/forward)
+  // parameter is given, but we don't need it -- if we don't take it, tslint warns...
+  // eslint-disable-next-line
+  function preventUnsavedUnload(_: HTMLElement) {
+    function checkNavigation(e: BeforeUnloadEvent) {
+      if (canSaveCurrentItem) {
+        e.preventDefault();
+      }
+    }
+    window.addEventListener("beforeunload", checkNavigation);
+    return {
+      destroy() {
+        window.removeEventListener("beforeunload", checkNavigation);
+      },
+    };
+  }
+
+  // this one is bugged... disabled for now
+  // require:  import { beforeNavigate } from "$app/navigation";
+  //
+  // beforeNavigate(({to, cancel}) => {
+  //   if (to) {
+  //     cancel();
+  //     navigateTo(to.url.toString())
+  //   }
+  //   // if (to && canSaveCurrentItem) {
+  //   //   showConfirmModal = to.url.toString()
+  //   //   console.log("ZAZA", showConfirmModal);
+  //   //   cancel()
+  //   // }
+  // });
 </script>
 
 <header class="w-full fixed z-40 font-Montserrat">
   <div
     class="h-20 p-5 flex justify-between items-center shrink-0
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
+    use:preventUnsavedUnload
   >
     {#if currentDataset}
       <div class="h-10 flex items-center font-semibold text-2xl">

@@ -15,6 +15,7 @@ import {
   type SelectionTool,
   utils,
   type KeypointsTemplate,
+  type SaveItem,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -43,6 +44,8 @@ export const filters = writable<Filters>({
 });
 export const imageSmoothing = writable<boolean>(true);
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
+
+export const saveData = writable<SaveItem[]>([]);
 
 type ColorScale = [Array<string>, (id: string) => string];
 

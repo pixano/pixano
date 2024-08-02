@@ -9,6 +9,7 @@ import type {
   DatasetInfo,
   DatasetItems,
   DatasetItem,
+  DatasetItemSave,
   ExplorerData,
 } from "./lib/types/datasetTypes";
 
@@ -175,7 +176,7 @@ export async function getItemEmbeddings(
   return item;
 }
 
-export async function postDatasetItem(datasetId: string, item: DatasetItem) {
+export async function postDatasetItem(datasetId: string, item: DatasetItemSave) {
   try {
     const response = await fetch(`/datasets/${datasetId}/items/${item.id}`, {
       headers: {

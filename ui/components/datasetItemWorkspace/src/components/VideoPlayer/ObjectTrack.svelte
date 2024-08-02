@@ -14,7 +14,7 @@ License: CECILL-C
     VideoItemBBox,
     VideoObject,
   } from "@pixano/core";
-  import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
@@ -82,45 +82,93 @@ License: CECILL-C
     );
   };
 
-  const onAddKeyItemClick = () => {
-    trackWithItems = addKeyItem(rightClickFrameIndex, $lastFrameIndex, trackWithItems);
+  const onAddKeyItemClick = (tracklet: TrackletWithItems | MouseEvent) => {
+    if ("view_id" in tracklet) {
+      trackWithItems = addKeyItem(
+        rightClickFrameIndex,
+        $lastFrameIndex,
+        trackWithItems,
+        tracklet.view_id,
+      );
+      itemObjects.update((objects) =>
+        objects.map((obj) => {
+          if (obj.id === object.id && obj.datasetItemType === "video") {
+            const { boxes, keypoints } = mapTrackItemsToObject(
+              trackWithItems,
+              object,
+              rightClickFrameIndex,
+            );
+            return { ...obj, track: trackWithItems, boxes, keypoints };
+          }
+          return obj;
+        }),
+      );
+      //svelte hack to detect change in trackWithItems -- it requires a for-in loop
+      // eslint-disable-next-line
+      for (const i in trackWithItems) {
+        trackWithItems[i] = { ...trackWithItems[i] }; //destructuration required, else optimizer(?) remove it...
+      }
+
+      onEditKeyItemClick(rightClickFrameIndex);
+      canSave.set(true);
+    } else {
+      //MouseEvent, need to determine view_id
+      //TODO
+      confirm("Adding a key point outside of a tracklet is forbidden for now");
+    }
+  };
+
+  //like findNeighborItems, but "better" (return existing neighbors)
+  const findPreviousAndNext = (items: TrackletItem[], targetIndex: number): [number, number] => {
+    let low = 0;
+    let high = items.length - 1;
+    let mid;
+    let previousItem: TrackletItem | null = null;
+    let nextItem: TrackletItem | null = null;
+
+    while (low <= high) {
+      mid = Math.floor((low + high) / 2);
+      if (items[mid].frame_index <= targetIndex) {
+        previousItem = items[mid];
+        low = mid + 1;
+      } else {
+        nextItem = items[mid];
+        high = mid - 1;
+      }
+    }
+    return [
+      previousItem ? previousItem.frame_index : targetIndex,
+      nextItem ? nextItem.frame_index : targetIndex + 1,
+    ];
+  };
+
+  const onSplitTrackletClick = (tracklet: TrackletWithItems) => {
+    const [prev, next] = findPreviousAndNext(tracklet.items, rightClickFrameIndex);
+    trackWithItems = splitTrackletInTwo(
+      trackWithItems,
+      tracklet,
+      rightClickFrameIndex,
+      prev,
+      next,
+      object.id,
+    );
     itemObjects.update((objects) =>
       objects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
-          const { boxes, keypoints } = mapTrackItemsToObject(
-            trackWithItems,
-            object,
-            rightClickFrameIndex,
-          );
+          const { boxes, keypoints } = mapSplittedTrackToObject(trackWithItems, object);
           return { ...obj, track: trackWithItems, boxes, keypoints };
         }
         return obj;
       }),
     );
-    onEditKeyItemClick(rightClickFrameIndex);
+    object.track = trackWithItems;
+    canSave.set(true);
   };
 
-  const onSplitTrackletClick = (trackletIndex: number) => {
-    trackWithItems = splitTrackletInTwo(trackWithItems, trackletIndex, rightClickFrameIndex);
-    itemObjects.update((objects) =>
-      objects.map((obj) => {
-        if (obj.id === object.id && obj.datasetItemType === "video") {
-          const { boxes, keypoints } = mapSplittedTrackToObject(
-            trackWithItems,
-            object,
-            rightClickFrameIndex,
-          );
-          return { ...obj, track: trackWithItems, boxes, keypoints };
-        }
-        return obj;
-      }),
-    );
-  };
-
-  const onDeleteTrackletClick = (trackletIndex: number) => {
-    itemObjects.update((objects) =>
-      deleteTracklet(objects, object.id, trackletIndex, trackWithItems),
-    );
+  const onDeleteTrackletClick = (tracklet: TrackletWithItems) => {
+    itemObjects.update((objects) => deleteTracklet(objects, object.id, tracklet));
+    updateTracks();
+    canSave.set(true);
   };
 
   const findNeighborItems = (frameIndex: VideoItemBBox["frame_index"]): [number, number] => {
@@ -152,13 +200,12 @@ License: CECILL-C
   };
 
   const updateTracks = () => {
-    console.log("UpdTrack");
     trackWithItems = [];
     for (const tracklet of object.track) {
       const boxes = object.boxes
         ? object.boxes.filter(
             (box) =>
-              box.view_id == tracklet.view_id &&
+              box.view_id === tracklet.view_id &&
               box.frame_index >= tracklet.start &&
               box.frame_index <= tracklet.end,
           )
@@ -166,7 +213,7 @@ License: CECILL-C
       const keypoints = object.keypoints
         ? object.keypoints.filter(
             (kp) =>
-              kp.view_id == tracklet.view_id &&
+              kp.view_id === tracklet.view_id &&
               kp.frame_index >= tracklet.start &&
               kp.frame_index <= tracklet.end,
           )
@@ -208,21 +255,26 @@ License: CECILL-C
       <ContextMenu.Trigger class="h-full w-full absolute left-0" style={`width: ${totalWidth}%`}>
         <p on:contextmenu|preventDefault={(e) => onContextMenu(e)} class="h-full w-full" />
       </ContextMenu.Trigger>
+      <!--  //TODO we don't allow adding a point outside of a tracklet right now
+            //you can extend tracket to add a point inside, and split if needed
       <ContextMenu.Content>
         <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
       </ContextMenu.Content>
+      -->
     </ContextMenu.Root>
-    {#each trackWithItems as tracklet, i}
+    {#each trackWithItems as tracklet (tracklet)}
       <ObjectTracklet
         {tracklet}
         {object}
         {views}
-        {onAddKeyItemClick}
+        onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
         {onContextMenu}
         {onEditKeyItemClick}
-        onSplitTrackletClick={() => onSplitTrackletClick(i)}
-        onDeleteTrackletClick={() => onDeleteTrackletClick(i)}
+        {getTrackletItem}
+        onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
+        onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
         {findNeighborItems}
+        {updateTracks}
         {updateView}
         {moveCursorToPosition}
       />

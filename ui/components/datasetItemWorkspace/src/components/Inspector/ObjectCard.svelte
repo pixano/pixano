@@ -10,10 +10,11 @@ License: CECILL-C
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
-  import type { DisplayControl, ItemObject, ObjectThumbnail } from "@pixano/core";
+  import type { DisplayControl, ItemObject, ObjectThumbnail, SaveItem } from "@pixano/core";
 
   import {
     canSave,
+    saveData,
     itemObjects,
     selectedTool,
     colorScale,
@@ -26,6 +27,7 @@ License: CECILL-C
     defineObjectThumbnail,
   } from "../../lib/api/objectsApi";
   import { createFeature } from "../../lib/api/featuresApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
@@ -74,10 +76,40 @@ License: CECILL-C
 
   const deleteObject = () => {
     itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
+    let del_ids: Record<string, string[]> = {};
+    if (itemObject.datasetItemType === "video") {
+      if (itemObject.keypoints) {
+        del_ids["keypoints"] = itemObject.keypoints.map((kpt) => kpt.id);
+      }
+      if (itemObject.boxes) {
+        del_ids["bbox"] = itemObject.boxes.map((box) => box.id);
+      }
+      del_ids["tracklet"] = itemObject.track.map((tracklet) => tracklet.id);
+      del_ids["top_entity"] = [itemObject.id];
+    } else {
+      if (itemObject.keypoints) {
+        del_ids["keypoints"] = [itemObject.keypoints.id];
+      }
+      if (itemObject.bbox) {
+        del_ids["bbox"] = [itemObject.bbox.id];
+      }
+      if (itemObject.mask) {
+        del_ids["mask"] = [itemObject.mask.id];
+      }
+      del_ids["top_entity"] = [itemObject.id];
+    }
+    const save_item: SaveItem = {
+      change_type: "delete",
+      ref_name: "", //don't need
+      is_video: itemObject.datasetItemType === "video",
+      data: del_ids,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
     canSave.set(true);
   };
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
+    let changedObj = false;
     itemObjects.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object.id === itemObject.id) {
@@ -88,11 +120,28 @@ License: CECILL-C
               value,
             },
           };
+          const save_item: SaveItem = {
+            change_type: "add_or_update",
+            ref_name: "top_entity",
+            is_video: itemObject.datasetItemType === "video",
+            data: {
+              id: object.id,
+              item_id: object.item_id,
+              source_id: object.source_id,
+              features: object.features,
+              ref_name: "top_entity",
+              entity_ref: { id: "", name: "" },
+            },
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          changedObj = true;
         }
         return object;
       }),
     );
-    canSave.set(true);
+    if (changedObj) {
+      canSave.set(true);
+    }
   };
 
   const onColoredDotClick = () =>

@@ -23,12 +23,12 @@ export type SaveShapeBase = {
 };
 
 export type SaveKeyBoxShape = SaveShapeBase & {
-  type: "keypoint";
+  type: "keypoints";
   keypoints: KeypointsTemplate;
 };
 
 export type SaveRectangleShape = SaveShapeBase & {
-  type: "rectangle";
+  type: "bbox";
   attrs: {
     x: number;
     y: number;
@@ -68,6 +68,7 @@ export type Vertex = {
 };
 
 export type Keypoints = {
+  id: string;
   view_id?: string;
   template_id: string;
   vertices: Vertex[];
@@ -87,7 +88,7 @@ export type KeypointsTemplate = {
 
 export type CreateKeypointShape = {
   status: "creating";
-  type: "keypoint";
+  type: "keypoints";
   viewId: string;
   x: number;
   y: number;
@@ -105,7 +106,7 @@ export type CreateMaskShape = {
 
 export type CreateRectangleShape = {
   status: "creating";
-  type: "rectangle";
+  type: "bbox";
   x: number;
   y: number;
   width: number;
@@ -121,12 +122,12 @@ export type EditMaskShape = {
 };
 
 export type EditRectangleShape = {
-  type: "rectangle";
+  type: "bbox";
   coords: number[];
 };
 
 export type EditKeypointsShape = {
-  type: "keypoint";
+  type: "keypoints";
   vertices: KeypointsTemplate["vertices"];
 };
 

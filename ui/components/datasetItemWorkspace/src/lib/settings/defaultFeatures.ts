@@ -6,13 +6,13 @@ License: CECILL-C
 
 import type { ItemFeature } from "@pixano/core";
 
-export const DEFAULT_FEATURE = "category";
+export const DEFAULT_FEATURE = "name";
 
 export const defaultObjectFeatures = {
   [DEFAULT_FEATURE]: {
-    name: "category",
+    name: "name",
     dtype: "str",
-    label: "category",
+    label: "name",
   },
 };
 

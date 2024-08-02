@@ -82,7 +82,7 @@ License: CECILL-C
       };
       return newMetas;
     });
-    $canSave = true;
+    canSave.set(true);
   };
 </script>
 

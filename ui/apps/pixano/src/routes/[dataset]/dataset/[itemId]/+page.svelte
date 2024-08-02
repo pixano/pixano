@@ -7,7 +7,12 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { page } from "$app/stores";
-  import { type DatasetItem, type DatasetInfo, PrimaryButton } from "@pixano/core/src";
+  import {
+    type DatasetItem,
+    type DatasetInfo,
+    type DatasetItemSave,
+    PrimaryButton,
+  } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
   import {
@@ -78,7 +83,7 @@ License: CECILL-C
     isLoadingNewItem = value;
   });
 
-  async function handleSaveItem(savedItem: DatasetItem) {
+  async function handleSaveItem(savedItem: DatasetItemSave) {
     await api.postDatasetItem(selectedDataset.id, savedItem);
     handleSelectItem(selectedDataset, currentItemId);
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));

@@ -19,15 +19,20 @@ from pydantic import BaseModel
 import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
+from pixano.datasets.dataset_schema import SchemaRelation
 from pixano.datasets.features import (
     Annotation,
     BaseSchema,
     BBox,
     CompressedRLE,
     Entity,
+    EntityRef,
     Image,
+    ItemRef,
     KeyPoints,
     SequenceFrame,
+    Tracklet,
+    ViewRef,
     _SchemaGroup,
     is_bbox,
     is_compressed_rle,
@@ -49,6 +54,15 @@ class FrontDatasetItem(BaseModel):
     views: Optional[dict] = None
     objects: Optional[list] = None
     embeddings: Optional[dict] = None
+
+
+class SaveDatasetItem(BaseModel):
+    """Front format SaveDatasetItem."""
+
+    id: str
+    split: str
+    item_features: Optional[dict] = None
+    save_data: list = []
 
 
 router = APIRouter(tags=["items"], prefix="/datasets/{ds_id}")
@@ -172,7 +186,7 @@ async def get_dataset_explorer(  # noqa: D417
                 name=dataset.info.name,
                 table_data=de.TableData(cols=cols, rows=rows),
                 pagination=de.PaginationInfo(current=start, size=raw_params.limit, total=total),
-                sem_search=[],
+                sem_search=["TOTO"],
             )
         raise HTTPException(
             status_code=404,
@@ -371,11 +385,11 @@ async def get_dataset_item(  # noqa: D417
                 # Entity features
                 features = {}
                 ann_entity = find_top_entity(annotation)
-                if ann_entity is not None:
+                if ann_entity is not None:  # Note: should never be None
                     features.update(get_features(ann_entity, Entity))
 
                 obj = {
-                    "id": annotation.id,
+                    "id": ann_entity.id if ann_entity else annotation.id,
                     "datasetItemType": view_type,
                     "item_id": item_id,
                     "source_id": "Ground Truth",  # ??
@@ -383,9 +397,12 @@ async def get_dataset_item(  # noqa: D417
                 if is_bbox(type(annotation), False) and annotation != none_bbox:
                     features.update(get_features(annotation, BBox))
                     obj["bbox"] = {
+                        "id": annotation.id,
+                        "ref_name": annotation_group,
+                        "entity_ref": {"id": annotation.entity_ref.id, "name": annotation.entity_ref.name},
                         "coords": annotation.xywh_coords,
                         "format": "xywh",
-                        "is_normalised": annotation.is_normalized,
+                        "is_normalized": annotation.is_normalized,
                         "confidence": annotation.confidence,
                         "view_id": annotation.view_ref.name,  # danger faux-ami !
                     }
@@ -399,11 +416,17 @@ async def get_dataset_item(  # noqa: D417
                     )
                     obj["mask"] = {
                         **vars(urle),
+                        "id": annotation.id,
+                        "ref_name": annotation_group,
+                        "entity_ref": {"id": annotation.entity_ref.id, "name": annotation.entity_ref.name},
                         "view_id": annotation.view_ref.name,
                     }
                 if is_keypoints(type(annotation), False) and annotation != none_keypoints:
                     features.update(get_features(annotation, KeyPoints))
                     obj["keypoints"] = {
+                        "id": annotation.id,
+                        "ref_name": annotation_group,
+                        "entity_ref": {"id": annotation.entity_ref.id, "name": annotation.entity_ref.name},
                         "template_id": annotation.template_id,
                         "vertices": annotation.map_back2front_vertices(),
                         "view_id": annotation.view_ref.name,
@@ -469,6 +492,32 @@ async def get_dataset_item(  # noqa: D417
                     )
                     continue
 
+                # find tracklet_id for current annotation
+                # NOTE: not really sure it's usefull... will disappear after front refactor
+                # based on:
+                # - annotation.entity_ref.id
+                # - annotation.view_ref
+                # - frame_index
+                tracklet_id = next(
+                    (
+                        tracklet.id
+                        for tracklet in trackid_to_tracklets_list[entity_id2trackid[annotation.entity_ref.id]]
+                        if (
+                            tracklet.view_ref.name == annotation.view_ref.name
+                            and tracklet.start_timestep <= frame_index
+                            and frame_index <= tracklet.end_timestep
+                        )
+                    ),
+                    None,
+                )
+                if tracklet_id is None:
+                    # if annotation has no associated tracklet, bind it to its entity (should not happens)
+                    print(
+                        "Warning: Annotation found without a tracklet",
+                        annotation,
+                    )
+                    tracklet_id = (annotation.entity_ref.id,)
+
                 kept_track_ids.append(track_id)
 
                 # ann_entity = find_top_entity(annotation) # Slow general approach
@@ -480,27 +529,33 @@ async def get_dataset_item(  # noqa: D417
                 if is_bbox(type(annotation), False) and annotation != none_bbox:
                     track_bboxes[track_id].append(
                         {
+                            "id": annotation.id,
+                            "ref_name": annotation_group,
+                            "entity_ref": {"id": annotation.entity_ref.id, "name": annotation.entity_ref.name},
                             "coords": annotation.xywh_coords,
                             "format": "xywh",
-                            "is_normalised": annotation.is_normalized,
+                            "is_normalized": annotation.is_normalized,
                             "confidence": annotation.confidence,
                             "view_id": annotation.view_ref.name,
                             "frame_index": frame_index,
                             "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
                             "is_thumbnail": False,
-                            "tracklet_id": annotation.entity_ref.id,
+                            "tracklet_id": tracklet_id,
                         }
                     )
 
                 if is_keypoints(type(annotation), False) and annotation != none_keypoints:
                     track_keypoints[track_id].append(
                         {
+                            "id": annotation.id,
+                            "ref_name": annotation_group,
+                            "entity_ref": {"id": annotation.entity_ref.id, "name": annotation.entity_ref.name},
                             "template_id": annotation.template_id,
                             "vertices": annotation.map_back2front_vertices(),
                             "frame_index": frame_index,
                             "view_id": annotation.view_ref.name,
                             "is_key": (annotation.is_key if hasattr(annotation, "is_key") else True),
-                            "tracklet_id": annotation.entity_ref.id,
+                            "tracklet_id": tracklet_id,
                         }
                     )
 
@@ -514,12 +569,14 @@ async def get_dataset_item(  # noqa: D417
             keypoints.sort(key=lambda kpt: kpt["frame_index"])
             # get tracklets
             tracklets = trackid_to_tracklets_list[track_id]
+            tracklets.sort(key=lambda x: (x.view_ref.name, x.start_timestamp))
             # set thumbnail to first bbox
             if len(bboxes) > 0:
                 bboxes[0]["is_thumbnail"] = True
             objects.append(
                 {
                     "id": track_id,
+                    "ref_name": "top_entity",
                     "datasetItemType": view_type,
                     "item_id": item_id,
                     "source_id": "Ground Truth",
@@ -527,6 +584,7 @@ async def get_dataset_item(  # noqa: D417
                     "track": [
                         {
                             "id": tracklet.id,
+                            "ref_name": "tracklet",
                             "start": (
                                 tracklet.start_timestep
                                 if hasattr(tracklet, "start_timestep")
@@ -565,10 +623,10 @@ async def get_dataset_item(  # noqa: D417
     )
 
 
-@router.post("/items/{item_id}", response_model=FrontDatasetItem)
+@router.post("/items/{item_id}", response_model=SaveDatasetItem)
 async def post_dataset_item(  # noqa: D417
     ds_id: str,
-    item: FrontDatasetItem,  # type: ignore
+    item: SaveDatasetItem,  # type: ignore
     settings: Annotated[Settings, Depends(get_settings)],
 ):
     """Save dataset item.
@@ -586,48 +644,6 @@ async def post_dataset_item(  # noqa: D417
             detail=f"Dataset {ds_id} not found in {settings.data_dir.absolute()}",
         )
 
-    # Local utility function to convert objects to pyarrow format
-    # also adapt features to table format
-    def convert_objects_to_pyarrow(table, objs):
-        # Convert objects to PyArrow
-        # adapt features
-        for obj in objs:
-            if "mask" in obj:
-                obj["mask"] = (
-                    image_utils.urle_to_rle(obj["mask"])
-                    if obj["mask"]
-                    and "counts" in obj["mask"]
-                    and "size" in obj["mask"]
-                    and len(obj["mask"]["size"]) == 2
-                    else {"size": [0, 0], "counts": b""}
-                )
-            if "keypoints" in obj:
-                obj["keypoints"] = (
-                    {
-                        "template_id": obj["keypoints"]["template_id"],
-                        "coords": [coord for pt in obj["keypoints"]["vertices"] for coord in (pt["x"], pt["y"])],
-                        "states": [
-                            (pt["features"]["state"] if "features" in pt and "state" in pt["features"] else "visible")
-                            for pt in obj["keypoints"]["vertices"]
-                        ],
-                    }
-                    if obj["keypoints"] and "vertices" in obj["keypoints"]
-                    else {
-                        "template_id": "None",
-                        "coords": [0, 0],
-                        "states": ["invisible"],
-                    }
-                )
-            if "features" in obj:
-                for feat in obj["features"].values():
-                    # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
-                    obj[feat["name"]] = feat["value"]
-
-        return pa.Table.from_pylist(
-            objs,
-            schema=table.schema,
-        )
-
     def convert_item_to_pyarrow(table, item):
         # Convert item to PyArrow
         pyarrow_item = {}
@@ -637,8 +653,8 @@ async def post_dataset_item(  # noqa: D417
         pyarrow_item["split"] = item.split
 
         # Features
-        if item.features is not None:
-            for feat in item.features.values():
+        if item.item_features is not None:
+            for feat in item.item_features.values():
                 # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
                 pyarrow_item[feat["name"]] = feat["value"]
 
@@ -647,84 +663,107 @@ async def post_dataset_item(  # noqa: D417
             schema=table.schema,
         )
 
+    def find_table(ref_name: str) -> tuple[str, type | None]:
+        tclass = None
+        if not ref_name or ref_name == "":
+            return "", None
+        if ref_name == "item":
+            return "item", None
+        if ref_name == "bbox":
+            tclass = BBox
+        if ref_name == "mask":
+            tclass = CompressedRLE
+        if ref_name == "keypoints":
+            tclass = KeyPoints
+        if ref_name == "tracklet":
+            tclass = Tracklet
+        if ref_name == "top_entity":
+            tclass = Entity
+        if tclass is not None:
+            table_name = next((k for k, v in dataset.schema.schemas.items() if issubclass(v, tclass)), None)
+            if table_name:
+                return table_name, tclass
+            # create a table for tclass
+            # a table with name ref_name may already exist (but not in dataset schema)
+            # so we drop table before
+            dataset._db_connection.drop_table(ref_name, ignore_missing=True)
+            dataset.create_table(ref_name, tclass, SchemaRelation.MANY_TO_ONE)
+            return ref_name, tclass
+        return "", None
+
     # items features
     item_table = dataset.open_table("item")
     item_table.delete(f"id in ('{item.id}')")
     item_table.add(convert_item_to_pyarrow(item_table, item))
 
-    # TODO : how to select the correct OBJECT table name ? store it in front ?
-    obj_table = dataset.open_table("objects")
-    obj_table.delete(f"item_id in ('{item.id}')")
+    table_data = defaultdict(list)
+    track_entity_tname, _ = find_table("top_entity")
 
-    # items objects (and tracklets for video)
-    if item.objects:
-        if item.type == "image":
-            obj_table.add(convert_objects_to_pyarrow(obj_table, item.objects))
-        elif item.type == "video":
-            obj_add = []
-            tracklet_add = []
+    for i, save_it in enumerate(item.save_data):
+        if save_it["change_type"] == "add_or_update":
+            table_name, tclass = find_table(save_it["data"]["ref_name"])
+            if table_name == "":
+                continue
+            obj = save_it["data"]
+            if "id" not in obj:
+                obj["id"] = shortuuid.uuid()
+            obj["item_ref"] = ItemRef(id=item.id, name="item")
+            # some annotations (eg. tracklets) doesn't have a view_ref, or at least no frame_index
+            obj["view_ref"] = ViewRef.none()
+            if "view_id" in obj:
+                if save_it["is_video"]:
+                    if save_it["is_video"] and "frame_index" in obj:
+                        images = dataset.get_data(table_name=str(obj["view_id"]), item_ids=[item.id])
+                        view_ref_id = next(im for im in images if im.frame_index == obj["frame_index"]).id
+                        obj["view_ref"] = ViewRef(id=view_ref_id, name=obj["view_id"])
+                    else:
+                        obj["view_ref"] = ViewRef(id="", name=obj["view_id"])
+                else:
+                    images = dataset.get_data(table_name=str(obj["view_id"]), item_ids=[item.id])
+                    if len(images) == 1:
+                        obj["view_ref"] = ViewRef(id=images[0].id, name=obj["view_id"])
+                    else:
+                        obj["view_ref"] = ViewRef(id="", name=obj["view_id"])
+            obj["entity_ref"] = EntityRef(id=obj["entity_ref"]["id"], name=track_entity_tname)
+            if "features" in obj:
+                for feat in obj["features"].values():
+                    # TODO coerce to type feat["dtype"] (need mapping dtype string to type)
+                    obj[feat["name"]] = feat["value"]
 
-            # TODO : how to select the correct TRACKLET table name ? store it in front ?
-            tracklet_table = dataset.open_table("tracklets")
-            tracklet_table.delete(f"item_id in ('{item.id}')")
+            if tclass == BBox:
+                pass
+            if tclass == CompressedRLE:
+                mask = image_utils.urle_to_rle({"counts": obj["counts"], "size": obj["size"]})
+                obj["counts"] = mask["counts"]
+                obj["size"] = mask["size"]
+            if tclass == KeyPoints:
+                obj["coords"] = [coord for pt in obj["vertices"] for coord in (pt["x"], pt["y"])]
+                obj["states"] = [
+                    (pt["features"]["state"] if "features" in pt and "state" in pt["features"] else "visible")
+                    for pt in obj["vertices"]
+                ]
+            if tclass == Entity:
+                obj["parent_ref"] = EntityRef.none()
+            if tclass == Tracklet:
+                obj["start_timestep"] = obj["start"]
+                obj["end_timestep"] = obj["end"]
+                # TODO correct timestamps !
+                obj["start_timestamp"] = -1
+                obj["end_timestamp"] = -1
 
-            for track in item.objects:
-                for tracklet in track["track"]:
-                    tracklet_id = tracklet["id"] if "id" in tracklet else shortuuid.uuid()
-                    tracklet_add.append(
-                        {
-                            "id": tracklet_id,
-                            "item_id": item.id,
-                            "track_id": track["id"],
-                            "start_timestep": tracklet["start"],  # TODO timestamp/timestep, front keep only one... ?
-                            "start_timestamp": tracklet["start"],
-                            "end_timestep": tracklet["end"],
-                            "end_timestamp": tracklet["end"],
-                        }
-                    )
-                if "boxes" in track:
-                    for box in track["boxes"]:
-                        obj_add.append(
-                            {
-                                "id": box["id"] if "id" in box else shortuuid.uuid(),
-                                "item_id": item.id,
-                                "view_id": track["view_id"],
-                                "tracklet_id": box["tracklet_id"],
-                                "frame_idx": box["frame_index"],
-                                "is_key": box["is_key"],
-                                "is_thumbnail": (box["is_thumbnail"] if "is_thumbnail" in box else False),
-                                "bbox": {
-                                    "coords": box["coords"],
-                                    "format": box["format"],
-                                    "is_normalized": box["is_normalized"],
-                                    "confidence": box["confidence"],
-                                },
-                            }
-                        )
-                if "keypoints" in track:
-                    for keypoints in track["keypoints"]:
-                        obj_add.append(
-                            {
-                                "id": (keypoints["id"] if "id" in keypoints else shortuuid.uuid()),
-                                "item_id": item.id,
-                                "view_id": track["view_id"],
-                                "tracklet_id": keypoints["tracklet_id"],
-                                "frame_idx": keypoints["frame_index"],
-                                "is_key": keypoints["is_key"],
-                                "is_thumbnail": (keypoints["is_thumbnail"] if "is_thumbnail" in keypoints else False),
-                                "keypoints": keypoints,
-                            }
-                        )
+            table_data[table_name].append(dataset.schema.schemas[table_name](**obj))
+        if save_it["change_type"] == "delete":
+            for ref, ids in save_it["data"].items():
+                if ref != "" and len(ids) > 0:
+                    table_name, _ = find_table(ref)
+                    if table_name != "":
+                        dataset.delete_data(table_name, ids)
 
-            if tracklet_add:
-                tracklet_table.add(convert_objects_to_pyarrow(tracklet_table, tracklet_add))
-            if obj_add:
-                obj_table.add(convert_objects_to_pyarrow(obj_table, obj_add))
-
-            # tracklet_table.to_lance().cleanup_old_versions()
+    for tname, tdata in table_data.items():
+        dataset.update_data(tname, tdata)
 
     # Clear change history to prevent dataset from becoming too large
-    # obj_table.to_lance().cleanup_old_versions()
+    # tables.to_lance().cleanup_old_versions()
     # TODO: ther is a lancedb utility to "reshape" table after updates, to keep it "clean"
     # Maybe we should use it ?
 

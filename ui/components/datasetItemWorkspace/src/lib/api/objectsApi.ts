@@ -19,8 +19,11 @@ import type {
   VideoItemBBox,
   KeypointsTemplate,
   VideoObject,
+  SaveItem,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
+
+import { saveData } from "../../lib/stores/datasetItemWorkspaceStores";
 
 import {
   HIGHLIGHTED_BOX_STROKE_FACTOR,
@@ -215,6 +218,37 @@ export const toggleObjectDisplayControl = (
   return object;
 };
 
+export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
+  if (newObj["change_type"] == "delete") {
+    for (const ttype in newObj["data"]) {
+      objects = objects.filter(
+        (obj) =>
+          obj.change_type == "add_or_update" &&
+          !(obj.ref_name == ttype && newObj["data"][ttype].includes(obj.data.id)),
+      );
+    }
+  }
+  let index = -1;
+  // annotations in front are (sometime?) created without an id
+  if ("id" in newObj.data) {
+    index = objects.findIndex((obj) => obj.data.id === newObj.data.id);
+  } else if ("frame_index" in newObj.data) {
+    index = objects.findIndex(
+      (obj) =>
+        "frame_index" in obj.data &&
+        "frame_index" in newObj.data && //required by tslint even if tested before
+        obj.data.frame_index === newObj.data.frame_index &&
+        obj.ref_name == newObj.ref_name,
+    );
+  }
+  if (index !== -1) {
+    objects[index] = newObj;
+  } else {
+    objects.push(newObj);
+  }
+  return objects;
+};
+
 export const sortObjectsByModel = (objects: ItemObject[]) =>
   objects.reduce(
     (acc, object) => {
@@ -251,31 +285,55 @@ export const updateExistingObject = (objects: ItemObject[], newShape: Shape): It
     // Check if the object is an ImageObject
     if (object.datasetItemType === "image") {
       if (newShape.type === "mask" && object.mask) {
-        return {
+        const newObject = {
           ...object,
           mask: {
             ...object.mask,
             counts: newShape.counts,
           },
         };
+        const save_item: SaveItem = {
+          change_type: "add_or_update",
+          ref_name: newShape.type,
+          is_video: false,
+          data: { ...newObject.mask, entity_ref: { id: newObject.id, name: "top_entity" } },
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+        return newObject;
       }
-      if (newShape.type === "rectangle" && object.bbox) {
-        return {
+      if (newShape.type === "bbox" && object.bbox) {
+        const newObject = {
           ...object,
           bbox: {
             ...object.bbox,
             coords: newShape.coords,
           },
         };
+        const save_item: SaveItem = {
+          change_type: "add_or_update",
+          ref_name: newShape.type,
+          is_video: false,
+          data: { ...newObject.bbox, entity_ref: { id: newObject.id, name: "top_entity" } },
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+        return newObject;
       }
-      if (newShape.type === "keypoint" && object.keypoints) {
-        return {
+      if (newShape.type === "keypoints" && object.keypoints) {
+        const newObject = {
           ...object,
           keypoints: {
             ...object.keypoints,
             vertices: newShape.vertices,
           },
         };
+        const save_item: SaveItem = {
+          change_type: "add_or_update",
+          ref_name: newShape.type,
+          is_video: false,
+          data: { ...newObject.keypoints, entity_ref: { id: newObject.id, name: "top_entity" } },
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+        return newObject;
       }
     }
 
@@ -366,7 +424,7 @@ export const defineCreatedObject = (
     source_id: GROUND_TRUTH,
     features,
   };
-  if (shape.type === "rectangle") {
+  if (shape.type === "bbox") {
     const { x, y, width, height } = shape.attrs;
     const coords = [
       x / shape.imageWidth,
@@ -375,11 +433,13 @@ export const defineCreatedObject = (
       height / shape.imageHeight,
     ];
     const bbox = {
+      id: nanoid(10),
       coords,
       format: "xywh",
       is_normalized: true,
       confidence: 1,
       view_id: shape.viewId,
+      ref_name: "bbox",
     };
     const isVideo = videoType === "video";
     if (isVideo) {
@@ -400,7 +460,13 @@ export const defineCreatedObject = (
             is_thumbnail: true,
             tracklet_id: id,
           },
-          { ...bbox, frame_index: currentFrameIndex + 5, is_key: true, tracklet_id: id },
+          {
+            ...bbox,
+            id: nanoid(10),
+            frame_index: currentFrameIndex + 5,
+            is_key: true,
+            tracklet_id: id,
+          },
         ],
         track: [
           {
@@ -424,14 +490,17 @@ export const defineCreatedObject = (
       ...baseObject,
       datasetItemType: "image",
       mask: {
+        id: nanoid(10),
         counts: shape.rle.counts,
         size: shape.rle.size,
         view_id: shape.viewId,
+        ref_name: "mask",
       },
     };
   }
-  if (shape.type === "keypoint") {
+  if (shape.type === "keypoints") {
     const keypoints = {
+      id: nanoid(10),
       template_id: shape.keypoints.id,
       vertices: shape.keypoints.vertices.map((vertex) => ({
         ...vertex,
@@ -439,6 +508,7 @@ export const defineCreatedObject = (
         y: vertex.y / shape.imageHeight,
       })),
       view_id: shape.viewId,
+      ref_name: "keypoints",
     };
     if (isVideo) {
       const id = nanoid(5);
@@ -453,7 +523,13 @@ export const defineCreatedObject = (
             is_key: true,
             is_thumbnail: true,
           },
-          { ...keypoints, frame_index: currentFrameIndex + 5, tracklet_id: id, is_key: true },
+          {
+            ...keypoints,
+            id: nanoid(10),
+            frame_index: currentFrameIndex + 5,
+            tracklet_id: id,
+            is_key: true,
+          },
         ],
         track: [
           {
