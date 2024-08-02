@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { ItemObject, DatasetItem, FeaturesValues } from "@pixano/core";
+  import type { ItemObject, DatasetItem, FeaturesValues, DatasetItemSave } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -16,6 +16,7 @@ License: CECILL-C
     itemMetas,
     newShape,
     canSave,
+    saveData,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
@@ -25,7 +26,7 @@ License: CECILL-C
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
-  export let handleSaveItem: (item: DatasetItem) => Promise<void>;
+  export let handleSaveItem: (item: DatasetItemSave) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
@@ -64,15 +65,18 @@ License: CECILL-C
     }
   }
 
+  //$: console.log("Change in SaveData", $saveData);
+
   const onSave = async () => {
     isSaving = true;
-    const objects = $itemObjects;
-    let savedItem = { ...selectedItem, objects } as DatasetItem;
-
-    itemMetas.subscribe((value) => {
-      savedItem.features = value.mainFeatures;
-    });
+    const savedItem: DatasetItemSave = {
+      id: selectedItem.id,
+      split: selectedItem.split,
+      save_data: $saveData,
+      item_features: $itemMetas.mainFeatures
+    }
     await handleSaveItem(savedItem);
+    saveData.set([]);
     canSave.set(false);
     isSaving = false;
   };

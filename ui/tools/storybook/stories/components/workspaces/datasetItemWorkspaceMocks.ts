@@ -117,8 +117,8 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
           dtype: "str",
           value: "Flower",
         },
-        category: {
-          name: "category",
+        name: {
+          name: "name",
           dtype: "str",
           value: "nature",
         },
@@ -188,8 +188,8 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
           dtype: "str",
           value: "Flower",
         },
-        category: {
-          name: "category",
+        name: {
+          name: "name",
           dtype: "str",
           value: "nature",
         },
@@ -256,8 +256,8 @@ export const mockedImageDatasetItem: ImageDatasetItem = {
           dtype: "str",
           value: "Flower",
         },
-        category: {
-          name: "category",
+        name: {
+          name: "name",
           dtype: "str",
           value: "nature",
         },
@@ -632,8 +632,8 @@ export const mockedVideoDatasetItem: VideoDatasetItem = {
           dtype: "str",
           value: "Type",
         },
-        category: {
-          name: "category",
+        name: {
+          name: "na",
           dtype: "str",
           value: "Vehicle",
         },

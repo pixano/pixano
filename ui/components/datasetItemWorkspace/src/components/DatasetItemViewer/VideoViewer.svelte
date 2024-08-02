@@ -26,6 +26,7 @@ License: CECILL-C
     itemKeypoints,
     selectedKeypointsTemplate,
     imageSmoothing,
+    saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
@@ -35,7 +36,7 @@ License: CECILL-C
 
   import { onMount } from "svelte";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
-  import { updateExistingObject } from "../../lib/api/objectsApi";
+  import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import {
     boxLinearInterpolation,
     editKeyItemInTracklet,
@@ -197,10 +198,15 @@ License: CECILL-C
 
   const updateOrCreateBox = (shape: EditShape) => {
     const currentFrame = $currentFrameIndex;
-    if (shape.type === "rectangle" || shape.type === "keypoint") {
-      itemObjects.update((objects) =>
-        editKeyItemInTracklet(objects, shape, currentFrame, $objectIdBeingEdited),
+    if (shape.type === "bbox" || shape.type === "keypoints") {
+      let { objects, save_data } = editKeyItemInTracklet(
+        $itemObjects,
+        shape,
+        currentFrame,
+        $objectIdBeingEdited,
       );
+      $itemObjects = objects;
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
     } else {
       itemObjects.update((objects) => updateExistingObject(objects, shape));

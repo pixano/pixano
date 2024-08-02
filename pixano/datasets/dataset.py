@@ -259,10 +259,17 @@ class Dataset:
 
     @overload
     def get_data(
-        self, table_name: str, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+        self,
+        table_name: str,
+        ids: list[str] | None = None,
+        limit: int | None = None,
+        offset: int = 0,
+        item_ids: list[str] | None = None,
     ) -> list[BaseSchema]: ...
     @overload
-    def get_data(self, table_name: str, ids: str, limit: int | None = None, offset: int = 0) -> BaseSchema | None: ...
+    def get_data(
+        self, table_name: str, ids: str, limit: int | None = None, offset: int = 0, item_ids: None = None
+    ) -> BaseSchema | None: ...
 
     def get_data(
         self,

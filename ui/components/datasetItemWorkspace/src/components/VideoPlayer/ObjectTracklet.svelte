@@ -33,12 +33,14 @@ License: CECILL-C
   export let tracklet: TrackletWithItems;
   export let views: string[];
   export let onContextMenu: (event: MouseEvent) => void;
+  export let getTrackletItem: (ann: TrackletItem) => TrackletItem;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  export let onAddKeyItemClick: () => void;
+  export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborItems: (frameIndex: number) => [number, number];
   export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
+  export let updateTracks: () => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
@@ -80,6 +82,7 @@ License: CECILL-C
     }
     const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
     updateView(newFrameIndex, [newTracklet]);
+    //TODO canSave.set(true); //NO, it's done on dragMe > mouseUp (else too mush calls)
     currentFrameIndex.set(newFrameIndex);
     return true;
   };
@@ -126,6 +129,41 @@ License: CECILL-C
       }),
     );
   };
+
+  const updateTracklet = () => {
+    const boxes = object.boxes
+      ? object.boxes.filter(
+          (box) =>
+            box.view_id === tracklet.view_id &&
+            box.frame_index >= tracklet.start &&
+            box.frame_index <= tracklet.end,
+        )
+      : [];
+    const keypoints = object.keypoints
+      ? object.keypoints.filter(
+          (kp) =>
+            kp.view_id === tracklet.view_id &&
+            kp.frame_index >= tracklet.start &&
+            kp.frame_index <= tracklet.end,
+        )
+      : [];
+    let items: TrackletItem[] = [];
+    for (const ann of boxes) {
+      items.push(getTrackletItem(ann));
+    }
+    for (const ann of keypoints) {
+      const item = getTrackletItem(ann);
+      if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
+    }
+    const new_tracklet = object.track.find((trklet)=>trklet.id === tracklet.id);
+    tracklet = {
+      ...(new_tracklet ? new_tracklet : tracklet),
+      items: items,
+    };
+    console.log("UpdTracklet", object, tracklet);
+    updateTracks();
+  };
+
 </script>
 
 <ContextMenu.Root>
@@ -145,25 +183,24 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={onAddKeyItemClick}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>Add a point</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#key tracklet.items.length}
-  {#each tracklet.items as item}
-    {#if item.is_key}
-      <TrackletKeyItem
-        {item}
-        {color}
-        {height}
-        {top}
-        {oneFrameInPixel}
-        {onEditKeyItemClick}
-        objectId={object.id}
-        {updateTrackletWidth}
-        {filterTracklet}
-      />
-    {/if}
-  {/each}
-{/key}
+{#each tracklet.items as item}
+  {#if item.is_key}
+    <TrackletKeyItem
+      {item}
+      {color}
+      {height}
+      {top}
+      {oneFrameInPixel}
+      {onEditKeyItemClick}
+      objectId={object.id}
+      {updateTrackletWidth}
+      {updateTracklet}
+      {filterTracklet}
+    />
+  {/if}
+{/each}

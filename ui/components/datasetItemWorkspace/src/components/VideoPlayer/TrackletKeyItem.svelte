@@ -7,8 +7,8 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, TrackletItem, VideoItemBBox } from "@pixano/core";
-  import { itemObjects, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import type { ItemObject, TrackletItem, TrackletWithItems, VideoItemBBox } from "@pixano/core";
+  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
@@ -21,6 +21,7 @@ License: CECILL-C
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
+  export let updateTracklet: () => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -38,15 +39,20 @@ License: CECILL-C
       item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
-  const onDeleteItemClick = (item: TrackletItem) => {
+  const onDeleteItemClick = () => {
     itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
+    //TODO ? check if deleting a key has deleted last tracklet of itemObject => delete it (?)
+    updateTracklet();
+    canSave.set(true);
   };
 
-  const getKeyItemLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
-    const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
-    const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
-    return leftPosition;
-  };
+  export const getKeyItemLeftPosition = (
+  frameIndex: VideoItemBBox["frame_index"],
+) => {
+  const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
+  const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
+  return leftPosition;
+};
 
   let left = getKeyItemLeftPosition(item.frame_index);
 
@@ -82,6 +88,7 @@ License: CECILL-C
       moving = false;
       if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, item.frame_index);
       newFrameIndex = undefined;
+      //TODO canSave.set(true);
     });
   };
 </script>
@@ -98,7 +105,7 @@ License: CECILL-C
     <button class="h-full w-full" use:dragMe />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeleteItemClick(item)}>Remove item</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {#if !isItemBeingEdited}
       <ContextMenu.Item inset on:click={() => onEditKeyItemClick(item.frame_index)}
         >Edit item</ContextMenu.Item

@@ -634,13 +634,13 @@ License: CECILL-C
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
       const pos = viewLayer.getRelativePointerPosition();
-      const x = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.x : pos.x;
-      const y = newShape.status === "creating" && newShape.type === "keypoint" ? newShape.y : pos.y;
+      const x = newShape.status === "creating" && newShape.type === "keypoints" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "keypoints" ? newShape.y : pos.y;
       const width = pos.x - x;
       const height = pos.y - y;
       newShape = {
         status: "creating",
-        type: "keypoint",
+        type: "keypoints",
         x,
         y,
         width,
@@ -655,9 +655,9 @@ License: CECILL-C
     if (selectedTool?.type == "KEY_POINT") {
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
-      if (rect && newShape.status === "creating" && newShape.type === "keypoint") {
+      if (rect && newShape.status === "creating" && newShape.type === "keypoints") {
         const vertices = newShape.keypoints.vertices.map((vertex) => {
-          if (newShape.status === "creating" && newShape.type === "keypoint")
+          if (newShape.status === "creating" && newShape.type === "keypoints")
             return {
               ...vertex,
               x: newShape.x + vertex.x * newShape.width,
@@ -666,7 +666,7 @@ License: CECILL-C
         });
         newShape = {
           status: "saving",
-          type: "keypoint",
+          type: "keypoints",
           viewId,
           itemId: selectedItemId,
           imageWidth: getCurrentImage(viewId).width,
@@ -930,13 +930,11 @@ License: CECILL-C
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
       const pos = viewLayer.getRelativePointerPosition();
-      const x =
-        newShape.status === "creating" && newShape.type === "rectangle" ? newShape.x : pos.x;
-      const y =
-        newShape.status === "creating" && newShape.type === "rectangle" ? newShape.y : pos.y;
+      const x = newShape.status === "creating" && newShape.type === "bbox" ? newShape.x : pos.x;
+      const y = newShape.status === "creating" && newShape.type === "bbox" ? newShape.y : pos.y;
       newShape = {
         status: "creating",
-        type: "rectangle",
+        type: "bbox",
         x,
         y,
         width: pos.x - x,
@@ -971,7 +969,7 @@ License: CECILL-C
                 width: correctedRect.width,
                 height: correctedRect.height,
               },
-              type: "rectangle",
+              type: "bbox",
               viewId,
               itemId: selectedItemId,
               imageWidth: getCurrentImage(viewId).width,
@@ -1218,6 +1216,7 @@ License: CECILL-C
       console.log("Canvas2D - Infos");
       console.log("masks", masks);
       console.log("bboxes", bboxes);
+      console.log("keypoints", keypoints);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
       for (const viewId of Object.keys(imagesPerView)) {
@@ -1266,7 +1265,7 @@ License: CECILL-C
         <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "input" }} />
         <Group config={{ id: "bboxes" }}>
-          {#if (newShape.status === "creating" && newShape.type === "rectangle") || (newShape.status === "saving" && newShape.type === "rectangle")}
+          {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
             <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
           {/if}
           {#each bboxes as bbox}
@@ -1308,7 +1307,7 @@ License: CECILL-C
           {/each}
         </Group>
         <Group config={{ id: "keypoints" }}>
-          {#if (newShape.status === "creating" && newShape.type === "keypoint") || (newShape.status === "saving" && newShape.type === "keypoint")}
+          {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
             <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
           {/if}
           <ShowKeypoints

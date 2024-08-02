@@ -40,7 +40,7 @@ License: CECILL-C
     }));
     newShape = {
       status: "editing",
-      type: "keypoint",
+      type: "keypoints",
       vertices: normalizedVertices,
       shapeId: id,
       viewId,

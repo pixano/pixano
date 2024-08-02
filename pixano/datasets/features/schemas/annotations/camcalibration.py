@@ -4,17 +4,20 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import ConfigDict, model_validator
 from typing_extensions import Self
 
 from pixano.datasets.utils import issubclass_strict
 
+from ...types import BaseType
+from ...types.registry import _register_type_internal
 from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal
-from .annotation import Annotation
+from . import Annotation
 
 
-class BaseIntrinsics(BaseModel):
+@_register_type_internal
+class BaseIntrinsics(BaseType):
     """BaseIntrinsics (TODO: description?).
 
     Attributes:
@@ -44,7 +47,8 @@ class BaseIntrinsics(BaseModel):
         return self
 
 
-class Intrinsics(BaseModel):
+@_register_type_internal
+class Intrinsics(BaseType):
     """Intrinsics (TODO: description?).
 
     Attributes:
@@ -76,7 +80,8 @@ class Intrinsics(BaseModel):
         return self
 
 
-class Extrinsics(BaseModel):
+@_register_type_internal
+class Extrinsics(BaseType):
     """Extrinsics (TODO: description?).
 
     Attributes:
@@ -197,6 +202,7 @@ def create_cam_calibration(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    validate: bool = True,
 ) -> CamCalibration:
     """Create a CamCalibration instance.
 
@@ -224,6 +230,7 @@ def create_cam_calibration(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
+        validate: set to False to skip pydantic validation. Defaults to True.
 
     Returns:
         The created `CamCalibration` instance.
@@ -290,35 +297,70 @@ def create_cam_calibration(
             "pixel_aspect_ratio must be defined but not both"
         )
     if any(not_none_field_conditions):
-        base_intrinsics = BaseIntrinsics(
-            cx_offset_px=cx_offset_px,
-            cy_offset_px=cy_offset_px,
-            img_height_px=img_height_px,
-            img_width_px=img_width_px,
-        )
-        extrinsics = Extrinsics(
-            pos_x_m=pos_x_m,
-            pos_y_m=pos_y_m,
-            pos_z_m=pos_z_m,
-            rot_x_deg=rot_x_deg,
-            rot_z1_deg=rot_z1_deg,
-            rot_z2_deg=rot_z2_deg,
-        )
-        intrinsics = Intrinsics(
-            c1=c1,
-            c2=c2,
-            c3=c3,
-            c4=c4,
-            pixel_aspect_ratio=pixel_aspect_ratio,
-        )
+        if validate:
+            base_intrinsics = BaseIntrinsics(
+                cx_offset_px=cx_offset_px,
+                cy_offset_px=cy_offset_px,
+                img_height_px=img_height_px,
+                img_width_px=img_width_px,
+            )
+            extrinsics = Extrinsics(
+                pos_x_m=pos_x_m,
+                pos_y_m=pos_y_m,
+                pos_z_m=pos_z_m,
+                rot_x_deg=rot_x_deg,
+                rot_z1_deg=rot_z1_deg,
+                rot_z2_deg=rot_z2_deg,
+            )
+            intrinsics = Intrinsics(
+                c1=c1,
+                c2=c2,
+                c3=c3,
+                c4=c4,
+                pixel_aspect_ratio=pixel_aspect_ratio,
+            )
+        else:
+            base_intrinsics = BaseIntrinsics.construct(
+                cx_offset_px=cx_offset_px,
+                cy_offset_px=cy_offset_px,
+                img_height_px=img_height_px,
+                img_width_px=img_width_px,
+            )
+            extrinsics = Extrinsics.construct(
+                pos_x_m=pos_x_m,
+                pos_y_m=pos_y_m,
+                pos_z_m=pos_z_m,
+                rot_x_deg=rot_x_deg,
+                rot_z1_deg=rot_z1_deg,
+                rot_z2_deg=rot_z2_deg,
+            )
+            intrinsics = Intrinsics.construct(
+                c1=c1,
+                c2=c2,
+                c3=c3,
+                c4=c4,
+                pixel_aspect_ratio=pixel_aspect_ratio,
+            )
 
-    return CamCalibration(
-        type=type,
-        base_intrinsics=base_intrinsics,
-        extrinsics=extrinsics,
-        intrinsics=intrinsics,
-        id=id,
-        item_ref=item_ref,
-        view_ref=view_ref,
-        entity_ref=entity_ref,
-    )
+    if validate:
+        return CamCalibration(
+            type=type,
+            base_intrinsics=base_intrinsics,
+            extrinsics=extrinsics,
+            intrinsics=intrinsics,
+            id=id,
+            item_ref=item_ref,
+            view_ref=view_ref,
+            entity_ref=entity_ref,
+        )
+    else:
+        return CamCalibration.construct(
+            type=type,
+            base_intrinsics=base_intrinsics,
+            extrinsics=extrinsics,
+            intrinsics=intrinsics,
+            id=id,
+            item_ref=item_ref,
+            view_ref=view_ref,
+            entity_ref=entity_ref,
+        )
