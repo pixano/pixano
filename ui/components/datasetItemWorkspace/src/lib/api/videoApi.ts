@@ -15,6 +15,7 @@ import type {
   VideoKeypoints,
   VideoObject,
   SaveItem,
+  SaveDataAddUpdate,
 } from "@pixano/core";
 import { nanoid } from "nanoid";
 
@@ -130,7 +131,7 @@ export const deleteKeyBoxFromTracklet = (
   objectId: ItemObject["id"],
 ) =>
   objects.map((object) => {
-    const del_data = {};
+    const del_data: Record<string, string[]> = {};
     if (objectId === object.id && object.datasetItemType === "video") {
       const view_id = getViewIdFromTrackletItem(trackletItem, object.track);
       object.boxes = object.boxes?.filter((box) => {
@@ -230,7 +231,7 @@ export const editKeyItemInTracklet = (
   currentFrame: number,
   objectIdBeingEdited: string | null,
 ) => {
-  let saveData: SaveItem;
+  let saveData: SaveItem | null = null;
   return {
     objects: objects.map((object) => {
       if (
@@ -243,7 +244,7 @@ export const editKeyItemInTracklet = (
       const currentTracklet = object.track.find(
         (t) => t.start <= currentFrame && t.end >= currentFrame && t.view_id == shape.viewId,
       );
-      let new_obj;
+      let new_obj: SaveDataAddUpdate | null = null;
       if (shape.type === "keypoints" && object.keypoints) {
         object.keypoints = object.keypoints.map((kp) => {
           if (kp.frame_index === currentFrame) {
@@ -278,7 +279,7 @@ export const editKeyItemInTracklet = (
       }
       if (shape.type === "bbox" && object.boxes) {
         object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
-        if (currentTracklet) {
+        if (currentTracklet && object.boxes && object.boxes.length > 1) {
           new_obj = {
             ...object.boxes[0],
             coords: shape.coords,
@@ -286,8 +287,8 @@ export const editKeyItemInTracklet = (
             is_key: true,
             tracklet_id: currentTracklet.id,
           };
-          if (!object.boxes?.some((b) => b.frame_index === currentFrame)) {
-            object.boxes?.push(new_obj);
+          if (!object.boxes.some((b) => b.frame_index === currentFrame)) {
+            object.boxes.push(new_obj);
           }
         }
         object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
@@ -301,12 +302,14 @@ export const editKeyItemInTracklet = (
           return box;
         });
       }
-      saveData = {
-        change_type: "add_or_update",
-        ref_name: shape.type, //this should represent the annotation table to be refered...
-        is_video: true,
-        data: new_obj,
-      };
+      if (new_obj) {
+        saveData = {
+          change_type: "add_or_update",
+          ref_name: shape.type, //this should represent the annotation table to be refered...
+          is_video: true,
+          data: new_obj,
+        };
+      }
       return object;
     }),
     save_data: saveData,
@@ -351,6 +354,7 @@ export const addKeyItem = (
   const item: TrackletItem = {
     frame_index: frameIndex,
     is_key: true,
+    tracklet_id: "", //field required by tslint
   };
   const tracklet = track.find(
     (tracklet) =>
@@ -436,7 +440,7 @@ export const mapTrackItemsToObject = (
           );
         }
         if (currentKeypoint) {
-          boxes.push({
+          keypoints.push({
             ...item,
             ...currentKeypoint,
           } as VideoKeypoints);
@@ -453,23 +457,27 @@ export const mapSplittedTrackToObject = (
 ) => {
   const boxes: VideoObject["boxes"] = [];
   const keypoints: VideoObject["keypoints"] = [];
-  const selectAnn = (
-    ann: VideoItemBBox | VideoKeypoints,
-    tracklet: TrackletWithItems,
-    arr: VideoItemBBox[] | VideoKeypoints[],
-  ) => {
-    if (
-      ann.view_id == tracklet.view_id &&
-      ann.frame_index >= tracklet.start &&
-      ann.frame_index <= tracklet.end
-    ) {
-      ann.tracklet_id = tracklet.id;
-      arr.push(ann);
-    }
-  };
   trackWithItems.forEach((tracklet) => {
-    object.boxes?.forEach((box) => selectAnn(box, tracklet, boxes));
-    object.keypoints?.forEach((kpt) => selectAnn(kpt, tracklet, keypoints));
+    object.boxes?.forEach((box) => {
+      if (
+        box.view_id == tracklet.view_id &&
+        box.frame_index >= tracklet.start &&
+        box.frame_index <= tracklet.end
+      ) {
+        box.tracklet_id = tracklet.id;
+        boxes.push(box);
+      }
+    });
+    object.keypoints?.forEach((kpt) => {
+      if (
+        kpt.view_id == tracklet.view_id &&
+        kpt.frame_index >= tracklet.start &&
+        kpt.frame_index <= tracklet.end
+      ) {
+        kpt.tracklet_id = tracklet.id;
+        keypoints.push(kpt);
+      }
+    });
   });
   return { boxes, keypoints };
 };

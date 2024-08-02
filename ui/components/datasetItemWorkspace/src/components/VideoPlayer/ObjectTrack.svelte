@@ -103,7 +103,8 @@ License: CECILL-C
           return obj;
         }),
       );
-      //svelte hack to detect change in trackWithItems
+      //svelte hack to detect change in trackWithItems -- it requires a for-in loop
+      // eslint-disable-next-line
       for (const i in trackWithItems) {
         trackWithItems[i] = { ...trackWithItems[i] }; //destructuration required, else optimizer(?) remove it...
       }

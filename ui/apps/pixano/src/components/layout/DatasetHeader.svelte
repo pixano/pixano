@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { goto, beforeNavigate } from "$app/navigation";
+  import { goto } from "$app/navigation";
   import { page } from "$app/stores";
   import { ArrowLeftCircleIcon, ArrowRight, ArrowLeft, Loader2Icon } from "lucide-svelte";
 
@@ -114,6 +114,8 @@ License: CECILL-C
   //(pixano site internal navigation is already covered)
   //first one on browser refresh (for this one, we can't (?) customize the message)
   //second one on browser navigation (back/forward)
+  // parameter is given, but we don't need it -- if we don't take it, tslint warns...
+  // eslint-disable-next-line
   function preventUnsavedUnload(_: HTMLElement) {
     function checkNavigation(e: BeforeUnloadEvent) {
       if (canSaveCurrentItem) {
@@ -129,6 +131,8 @@ License: CECILL-C
   }
 
   // this one is bugged... disabled for now
+  // require:  import { beforeNavigate } from "$app/navigation";
+  //
   // beforeNavigate(({to, cancel}) => {
   //   if (to) {
   //     cancel();

@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, TrackletItem, TrackletWithItems, VideoItemBBox } from "@pixano/core";
+  import type { ItemObject, TrackletItem, VideoItemBBox } from "@pixano/core";
   import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";

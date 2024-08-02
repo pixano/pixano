@@ -171,19 +171,20 @@ export type TrackletItem = {
   hidden?: boolean;
 };
 
+export type SaveDataAddUpdate =
+  | ItemBBox
+  | VideoItemBBox
+  | Keypoints
+  | VideoKeypoints
+  | ItemRLE
+  | Tracklet
+  | ItemObjectBase;
+
 export interface SaveItemAddUpdate {
   change_type: "add_or_update";
   ref_name: string;
   is_video: boolean;
-  data: (
-    | ItemBBox
-    | VideoItemBBox
-    | Keypoints
-    | VideoKeypoints
-    | ItemRLE
-    | Tracklet
-    | ItemObjectBase
-  ) & {
+  data: SaveDataAddUpdate & {
     entity_ref?: Record<string, string>;
   };
 }

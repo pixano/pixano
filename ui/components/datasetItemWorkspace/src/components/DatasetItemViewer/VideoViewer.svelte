@@ -206,7 +206,7 @@ License: CECILL-C
         $objectIdBeingEdited,
       );
       $itemObjects = objects;
-      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
+      if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
     } else {
       itemObjects.update((objects) => updateExistingObject(objects, shape));

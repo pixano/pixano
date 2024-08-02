@@ -32,7 +32,6 @@ License: CECILL-C
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
   import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
-  import { Item } from "@pixano/core/src/components/ui/command";
 
   export let itemObject: ItemObject;
 
@@ -135,6 +134,7 @@ License: CECILL-C
             },
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          changedObj = true;
         }
         return object;
       }),

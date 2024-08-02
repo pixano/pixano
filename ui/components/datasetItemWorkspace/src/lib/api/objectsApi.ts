@@ -223,9 +223,8 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
     for (const ttype in newObj["data"]) {
       objects = objects.filter(
         (obj) =>
-          !(
-            obj.ref_name == ttype && (newObj["data"][ttype] as Array<string>).includes(obj.data.id)
-          ),
+          obj.change_type == "add_or_update" &&
+          !(obj.ref_name == ttype && newObj["data"][ttype].includes(obj.data.id)),
       );
     }
   }
@@ -235,7 +234,11 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
     index = objects.findIndex((obj) => obj.data.id === newObj.data.id);
   } else if ("frame_index" in newObj.data) {
     index = objects.findIndex(
-      (obj) => obj.data.frame_index === newObj.data.frame_index && obj.ref_name == newObj.ref_name,
+      (obj) =>
+        "frame_index" in obj.data &&
+        "frame_index" in newObj.data && //required by tslint even if tested before
+        obj.data.frame_index === newObj.data.frame_index &&
+        obj.ref_name == newObj.ref_name,
     );
   }
   if (index !== -1) {
@@ -471,7 +474,6 @@ export const defineCreatedObject = (
             end: currentFrameIndex + 5,
             id,
             view_id: shape.viewId,
-            ref_name: "tracklet",
           },
         ],
       };
@@ -520,7 +522,6 @@ export const defineCreatedObject = (
             tracklet_id: id,
             is_key: true,
             is_thumbnail: true,
-            ref_name: "keypoints",
           },
           {
             ...keypoints,
@@ -536,7 +537,6 @@ export const defineCreatedObject = (
             end: currentFrameIndex + 5,
             id,
             view_id: shape.viewId,
-            ref_name: "tracklet",
           },
         ],
         displayedMKeypoints: [{ ...keypoints, frame_index: 0, tracklet_id: id }],
