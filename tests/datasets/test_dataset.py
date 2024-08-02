@@ -8,6 +8,7 @@
 from pathlib import Path
 
 import pytest
+from lancedb.embeddings import get_registry
 from lancedb.table import LanceTable
 
 from pixano.datasets import Dataset
@@ -15,6 +16,8 @@ from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.datasets.features import Image, Item
+from pixano.datasets.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
 
 
 class TestDataset:
@@ -49,6 +52,38 @@ class TestDataset:
         assert issubclass(dumb_dataset.schema.schemas["new_table"], Image)
         assert dumb_dataset.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
         assert "new_table" in dumb_dataset.dataset_item_model.model_fields
+
+    def test_compute_embeddings(self, dumb_dataset: Dataset, dumb_embedding_function):
+        registry = get_registry()
+        registry._functions["dumb_embedding_function"] = dumb_embedding_function
+
+        embeddings_schema: type[ViewEmbedding] = ViewEmbedding.create_schema(
+            "dumb_embedding_function", "view_embedding", dumb_dataset
+        )
+        dumb_dataset.create_table("view_embedding", embeddings_schema, SchemaRelation.ONE_TO_MANY)
+        data = []
+        views = dumb_dataset.get_data("image", limit=2)
+        for i, view in enumerate(views):
+            data.append(
+                {
+                    "id": f"embedding_{i}",
+                    "item_ref": {
+                        "id": view.item_ref.id,
+                        "name": view.item_ref.name,
+                    },
+                    "view_ref": {
+                        "id": view.id,
+                        "name": "image",
+                    },
+                }
+            )
+        dumb_dataset.compute_view_embeddings("view_embedding", data)
+        embeddings = dumb_dataset.get_data("view_embedding", limit=2)
+        for i, embedding in enumerate(embeddings):
+            assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
+            assert embedding.item_ref == ItemRef(id=views[i].item_ref.id, name=views[i].item_ref.name)
+            assert embedding.view_ref == ViewRef(id=views[i].id, name="image")
+            assert embedding.id == f"embedding_{i}"
 
     def test_open_table(self, dumb_dataset: Dataset):
         table = dumb_dataset.open_table("item")

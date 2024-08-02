@@ -308,11 +308,12 @@ class DatasetItem(BaseModel):
         return DatasetSchema.from_dataset_item(cls)
 
     @staticmethod
-    def from_dataset_schema(dataset_schema: DatasetSchema) -> type["DatasetItem"]:
+    def from_dataset_schema(dataset_schema: DatasetSchema, exclude_embeddings: bool = False) -> type["DatasetItem"]:
         """Create a dataset item model based on the schema.
 
         Args:
             dataset_schema: The dataset schema.
+            exclude_embeddings: Exclude embeddings from the dataset item model to reduce the size.
 
         Returns:
             The dataset item model
@@ -321,6 +322,8 @@ class DatasetItem(BaseModel):
         fields: dict[str, Any] = {}
 
         for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
+            if exclude_embeddings and schema in dataset_schema._groups[_SchemaGroup.EMBEDDING]:
+                continue
             # Add default value in case an item does not have a specific view or entity.
             schema_type = dataset_schema.schemas[schema]
             if relation == SchemaRelation.ONE_TO_MANY:

@@ -214,8 +214,8 @@ class TestDatasetSchema:
         assert set(schema.schemas.keys()) == set(dataset_schema_1.schemas.keys())
         assert all(schema.schemas[k].serialize() == dataset_schema_1.schemas[k].serialize() for k in schema.schemas)
 
-    def test_from_dataset_item(self, dataset_item_custom_2, custom_item_2):
-        schema = DatasetSchema.from_dataset_item(dataset_item_custom_2)
+    def test_from_dataset_item(self, dataset_item_bboxes_metadata, custom_item_2):
+        schema = DatasetSchema.from_dataset_item(dataset_item_bboxes_metadata)
         assert set(schema.schemas.keys()) == {
             "item",
             "image",
@@ -290,8 +290,8 @@ class TestDatasetSchema:
 
 
 class TestDatasetItem:
-    def test_to_dataset_schema(self, dataset_item_custom_2, custom_item_2):
-        schema = dataset_item_custom_2.to_dataset_schema()
+    def test_to_dataset_schema(self, dataset_item_bboxes_metadata, custom_item_2):
+        schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
             "item",
             "image",
@@ -386,8 +386,32 @@ class TestDatasetItem:
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
 
-    def test_get_sub_dataset_item(self, dataset_item_custom_2):
-        sub_dataset_item = dataset_item_custom_2.get_sub_dataset_item(
+    def test_from_dataset_schema_exclude_embeddings(self, dataset_schema_image_embeddings):
+        # Test with embeddings
+        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_image_embeddings)
+        assert set(type_dataset_item.model_fields.keys()) == {
+            "embeddings",
+            "entity",
+            "other_categories",
+            "split",
+            "image",
+            "categories",
+            "id",
+        }
+
+        # Test without embeddings
+        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_image_embeddings, exclude_embeddings=True)
+        assert set(type_dataset_item.model_fields.keys()) == {
+            "entity",
+            "other_categories",
+            "split",
+            "image",
+            "categories",
+            "id",
+        }
+
+    def test_get_sub_dataset_item(self, dataset_item_bboxes_metadata):
+        sub_dataset_item = dataset_item_bboxes_metadata.get_sub_dataset_item(
             ["categories", "other_categories", "image", "bbox"]
         )
         assert sub_dataset_item.__name__ == "CustomDatasetItem"
@@ -418,9 +442,9 @@ class TestDatasetItem:
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
 
-    def test_to_schemas_data(self, dataset_item_custom_2):
-        dataset_schema = dataset_item_custom_2.to_dataset_schema()
-        my_custom_dataset_item = dataset_item_custom_2(
+    def test_to_schemas_data(self, dataset_item_bboxes_metadata):
+        dataset_schema = dataset_item_bboxes_metadata.to_dataset_schema()
+        my_custom_dataset_item = dataset_item_bboxes_metadata(
             id="id",
             name="name",
             index=0,
