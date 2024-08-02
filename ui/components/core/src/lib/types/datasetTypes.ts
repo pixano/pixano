@@ -118,7 +118,7 @@ export type DatasetItemSave = {
   split: string;
   item_features: Record<string, ItemFeature>;
   save_data: SaveItem[];
-}
+};
 
 export interface DatasetItems {
   items: Array<DatasetItem>;
@@ -171,14 +171,33 @@ export type TrackletItem = {
   hidden?: boolean;
 };
 
-export interface SaveItem {
-  change_type: "add_or_update" | "delete";
+export interface SaveItemAddUpdate {
+  change_type: "add_or_update";
   ref_name: string;
   is_video: boolean;
-  data: (Record<string, string[]> | ItemBBox | VideoItemBBox | Keypoints | VideoKeypoints | ItemRLE | Tracklet | ItemObjectBase) & {
-    entity_ref?: Record<string, string>
+  data: (
+    | ItemBBox
+    | VideoItemBBox
+    | Keypoints
+    | VideoKeypoints
+    | ItemRLE
+    | Tracklet
+    | ItemObjectBase
+  ) & {
+    entity_ref?: Record<string, string>;
   };
 }
+
+export interface SaveItemDelete {
+  change_type: "delete";
+  ref_name: string;
+  is_video: boolean;
+  data: Record<string, string[]> & {
+    entity_ref?: Record<string, string>;
+  };
+}
+
+export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
 
 export type VideoItemBBox = ItemBBox & TrackletItem;
 export type VideoKeypoints = Keypoints & TrackletItem;

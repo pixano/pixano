@@ -110,8 +110,6 @@ License: CECILL-C
     await goto(route);
   };
 
-
-
   //Note: the two following function aims to prevent losing unsaved changes after BROWSER actions
   //(pixano site internal navigation is already covered)
   //first one on browser refresh (for this one, we can't (?) customize the message)
@@ -142,10 +140,6 @@ License: CECILL-C
   //   //   cancel()
   //   // }
   // });
-
-
-
-
 </script>
 
 <header class="w-full fixed z-40 font-Montserrat">

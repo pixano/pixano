@@ -46,13 +46,11 @@ License: CECILL-C
     canSave.set(true);
   };
 
-  export const getKeyItemLeftPosition = (
-  frameIndex: VideoItemBBox["frame_index"],
-) => {
-  const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
-  const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
-  return leftPosition;
-};
+  export const getKeyItemLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+    const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
+    const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
+    return leftPosition;
+  };
 
   let left = getKeyItemLeftPosition(item.frame_index);
 

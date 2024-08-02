@@ -6,7 +6,7 @@ License: CECILL-C
 
 // Imports
 import * as ort from "onnxruntime-web";
-
+import { nanoid } from "nanoid";
 import {
   convertSegmentsToSVG,
   generatePolygonSegments,
@@ -140,7 +140,7 @@ export class SAM implements InteractiveImageSegmenter {
     const masksSVG = convertSegmentsToSVG(maskPolygons);
     return {
       masksImageSVG: masksSVG,
-      rle: { counts: rleMask, size: [imageHeight, imageWidth] },
+      rle: { counts: rleMask, size: [imageHeight, imageWidth], id: nanoid(10), ref_name: "mask" },
       masks: results.mask, //note: actually we don't need this one
     };
   }

@@ -634,8 +634,10 @@ License: CECILL-C
       const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
 
       const pos = viewLayer.getRelativePointerPosition();
-      const x = newShape.status === "creating" && newShape.type === "keypoints" ? newShape.x : pos.x;
-      const y = newShape.status === "creating" && newShape.type === "keypoints" ? newShape.y : pos.y;
+      const x =
+        newShape.status === "creating" && newShape.type === "keypoints" ? newShape.x : pos.x;
+      const y =
+        newShape.status === "creating" && newShape.type === "keypoints" ? newShape.y : pos.y;
       const width = pos.x - x;
       const height = pos.y - y;
       newShape = {

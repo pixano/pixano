@@ -155,7 +155,7 @@ License: CECILL-C
       const item = getTrackletItem(ann);
       if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
     }
-    const new_tracklet = object.track.find((trklet)=>trklet.id === tracklet.id);
+    const new_tracklet = object.track.find((trklet) => trklet.id === tracklet.id);
     tracklet = {
       ...(new_tracklet ? new_tracklet : tracklet),
       items: items,
@@ -163,7 +163,6 @@ License: CECILL-C
     console.log("UpdTracklet", object, tracklet);
     updateTracks();
   };
-
 </script>
 
 <ContextMenu.Root>
@@ -183,7 +182,9 @@ License: CECILL-C
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}>Add a point</ContextMenu.Item>
+    <ContextMenu.Item inset on:click={(event) => onAddKeyItemClick(event)}
+      >Add a point</ContextMenu.Item
+    >
     <ContextMenu.Item inset on:click={onSplitTrackletClick}>Split tracklet</ContextMenu.Item>
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>

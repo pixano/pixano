@@ -73,8 +73,8 @@ License: CECILL-C
       id: selectedItem.id,
       split: selectedItem.split,
       save_data: $saveData,
-      item_features: $itemMetas.mainFeatures
-    }
+      item_features: $itemMetas.mainFeatures,
+    };
     await handleSaveItem(savedItem);
     saveData.set([]);
     canSave.set(false);

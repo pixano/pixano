@@ -105,7 +105,7 @@ License: CECILL-C
       );
       //svelte hack to detect change in trackWithItems
       for (const i in trackWithItems) {
-        trackWithItems[i] = {...trackWithItems[i]};  //destructuration required, else optimizer(?) remove it...
+        trackWithItems[i] = { ...trackWithItems[i] }; //destructuration required, else optimizer(?) remove it...
       }
 
       onEditKeyItemClick(rightClickFrameIndex);

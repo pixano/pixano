@@ -7,7 +7,12 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { page } from "$app/stores";
-  import { type DatasetItem, type DatasetInfo, type DatasetItemSave, PrimaryButton } from "@pixano/core/src";
+  import {
+    type DatasetItem,
+    type DatasetInfo,
+    type DatasetItemSave,
+    PrimaryButton,
+  } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
   import {
