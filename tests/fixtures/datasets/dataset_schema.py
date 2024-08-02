@@ -9,10 +9,12 @@ import pytest
 from pixano.datasets.dataset_schema import DatasetSchema, SchemaRelation
 from pixano.datasets.features.schemas import BBox, Entity, Image
 
+from .features import embedding as fixture_embedding
 from .features import item as fixture_item
 
 
 custom_item_1 = fixture_item.custom_item_1
+embedding_8 = fixture_embedding.embedding_8
 
 
 @pytest.fixture
@@ -100,3 +102,31 @@ def json_dataset_schema_1():
             },
         },
     }
+
+
+@pytest.fixture
+def dataset_schema_image_embeddings(custom_item_1, embedding_8):
+    return DatasetSchema(
+        schemas={
+            "item": custom_item_1,
+            "image": Image,
+            "entity": Entity,
+            "embeddings": embedding_8,
+        },
+        relations={
+            "item": {
+                "image": SchemaRelation.ONE_TO_ONE,
+                "entity": SchemaRelation.ONE_TO_MANY,
+                "embeddings": SchemaRelation.ONE_TO_MANY,
+            },
+            "image": {
+                "item": SchemaRelation.ONE_TO_ONE,
+            },
+            "entity": {
+                "item": SchemaRelation.MANY_TO_ONE,
+            },
+            "embeddings": {
+                "item": SchemaRelation.MANY_TO_ONE,
+            },
+        },
+    )

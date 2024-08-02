@@ -41,7 +41,7 @@ class Embedding(BaseSchema, ABC):
 
     Attributes:
         item_ref: Reference to the embedding's item.
-        vector: The embedding vector that should be defined by the embedding function.
+        vector: The embedding vector that should be defined by subclasses.
     """
 
     item_ref: ItemRef = ItemRef.none()
@@ -58,7 +58,7 @@ class Embedding(BaseSchema, ABC):
         remove_vector: bool = False,
         remove_metadata: bool = False,
     ) -> pa.Schema:
-        """Get the pyarrow schema of a `ViewEmbedding`.
+        """Get the pyarrow schema of an `Embedding`.
 
         This function allows to remove the vector field and the metadata from the schema which can be useful for adding
         data with auto-vectorization.
