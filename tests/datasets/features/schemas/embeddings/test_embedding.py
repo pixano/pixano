@@ -4,13 +4,12 @@
 # License: CECILL-C
 # =====================================
 
-from typing import List
+from unittest.mock import patch
 
 import pyarrow as pa
-import pytest
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry
-from lancedb.pydantic import FixedSizeListMixin, LanceModel, pydantic_to_schema
+from lancedb.pydantic import FixedSizeListMixin, pydantic_to_schema
 from numpy.core.multiarray import array as array
 
 from pixano.datasets.dataset import Dataset
@@ -40,30 +39,41 @@ class TestEmbedding:
         assert embedding.item_ref == ItemRef.none()
         assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
 
-    def test_to_arrow_schema(self, embedding_8: type[Embedding]):
-        LanceModel.to_arrow_schema = mock_super_to_arrow_schema
+    def test_to_arrow_schema(self, embedding_8):
+        with patch("lancedb.pydantic.LanceModel.to_arrow_schema", mock_super_to_arrow_schema):
+            arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=False)
+            assert set(arrow_schema.names) == {"item_ref", "vector", "id"}
+            assert arrow_schema.metadata == {b"test": b"metadata"}
 
-        arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=False)
-        assert set(arrow_schema.names) == {"item_ref", "vector", "id"}
-        assert arrow_schema.metadata == {b"test": b"metadata"}
+            arrow_schema = embedding_8.to_arrow_schema(remove_vector=True, remove_metadata=False)
+            assert set(arrow_schema.names) == {"item_ref", "id"}
+            assert arrow_schema.metadata == {b"test": b"metadata"}
 
-        arrow_schema = embedding_8.to_arrow_schema(remove_vector=True, remove_metadata=False)
-        assert set(arrow_schema.names) == {"item_ref", "id"}
-        assert arrow_schema.metadata == {b"test": b"metadata"}
-
-        arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=True)
-        assert set(arrow_schema.names) == {"vector", "id", "item_ref"}
-        assert arrow_schema.metadata is None
+            arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=True)
+            assert set(arrow_schema.names) == {"vector", "id", "item_ref"}
+            assert arrow_schema.metadata is None
 
     def test_create_shema(self, dumb_embedding_function: type[EmbeddingFunction], dumb_dataset: Dataset):
         registry = get_registry()
-        registry._functions["dumb_embedding_function"] = dumb_embedding_function
+        registry._functions["test_create_shema_dumb_embedding_function"] = dumb_embedding_function
 
-        assert _to_pixano_name(dumb_dataset, "view_embedding", "dumb_embedding_function") not in registry._functions
+        assert (
+            _to_pixano_name(
+                dumb_dataset, "test_create_shema_view_embedding", "test_create_shema_dumb_embedding_function"
+            )
+            not in registry._functions
+        )
 
-        schema = ViewEmbedding.create_schema("dumb_embedding_function", "view_embedding", dumb_dataset)
+        schema = ViewEmbedding.create_schema(
+            "test_create_shema_dumb_embedding_function", "test_create_shema_view_embedding", dumb_dataset
+        )
 
-        assert _to_pixano_name(dumb_dataset, "view_embedding", "dumb_embedding_function") in registry._functions
+        assert (
+            _to_pixano_name(
+                dumb_dataset, "test_create_shema_view_embedding", "test_create_shema_dumb_embedding_function"
+            )
+            in registry._functions
+        )
         assert issubclass(schema, ViewEmbedding)
 
         assert set(schema.model_fields) == {"id", "item_ref", "vector", "view_ref"}
@@ -81,7 +91,9 @@ class TestEmbedding:
         )
 
         # Check that pixano function can be reused
-        schema = ViewEmbedding.create_schema("dumb_embedding_function", "view_embedding", dumb_dataset)
+        schema = ViewEmbedding.create_schema(
+            "test_create_shema_dumb_embedding_function", "test_create_shema_view_embedding", dumb_dataset
+        )
 
 
 class TestViewEmbedding:

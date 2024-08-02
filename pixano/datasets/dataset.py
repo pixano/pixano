@@ -251,6 +251,7 @@ class Dataset:
             raise ValueError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
+        print(table.schema.metadata)
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
