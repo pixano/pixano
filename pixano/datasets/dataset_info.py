@@ -10,8 +10,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from pixano.features import Image
+
 from .dataset_schema import DatasetSchema
-from .features import Image
 
 
 class DatasetInfo(BaseModel):

@@ -33,3 +33,11 @@ repos:
     hooks:
       - id: mypy
         exclude: ^(docs|tests|ui)/
+  - repo: local
+    hooks:
+      - id: check_license_header
+        name: check license header
+        entry: python check_license_header.py
+        language: python
+        files: (\.ts|\.py|\.svelte)$
+        pass_filenames: false

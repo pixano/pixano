@@ -32,4 +32,4 @@ jobs:
         run: pip install pyyaml
 
       - name: Run license header check
-        run: python tests/check_license_header.py
+        run: python check_license_header.py

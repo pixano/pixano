@@ -8,8 +8,8 @@ import pytest
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.pydantic import Vector
 
-from pixano.datasets.features import Embedding, ViewEmbedding
-from pixano.datasets.features.schemas.registry import _SCHEMA_REGISTRY, register_schema
+from pixano.features import Embedding, ViewEmbedding
+from pixano.features.schemas.registry import _SCHEMA_REGISTRY, register_schema
 
 
 @pytest.fixture()

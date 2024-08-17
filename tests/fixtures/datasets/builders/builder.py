@@ -9,8 +9,8 @@ import tempfile
 import pytest
 
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
-from pixano.datasets.features import BBox, Entity, Image
-from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features import BBox, Entity, Image
+from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.fixtures.datasets import dataset_info as fixture_info
 from tests.fixtures.datasets import dataset_item as fixture_dataset_item
 

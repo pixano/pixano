@@ -18,7 +18,7 @@ from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
-from pixano.datasets.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.features import ViewEmbedding, _SchemaGroup, is_view_embedding
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
@@ -28,11 +28,23 @@ from .dataset_schema import (
     SchemaRelation,
 )
 from .dataset_stat import DatasetStat
-from .features import _SchemaGroup, is_view_embedding
 
 
 if TYPE_CHECKING:
-    from .features import BaseSchema, SchemaRef
+    from ..features import (
+        Annotation,
+        AnnotationRef,
+        BaseSchema,
+        Embedding,
+        EmbeddingRef,
+        Entity,
+        EntityRef,
+        Item,
+        ItemRef,
+        SchemaRef,
+        View,
+        ViewRef,
+    )
 
 
 def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
@@ -251,14 +263,27 @@ class Dataset:
             raise ValueError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
-        print(table.schema.metadata)
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
             schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
         return table
 
-    def resolve_ref(self, ref: SchemaRef) -> Any:
+    @overload
+    def resolve_ref(self, ref: ItemRef) -> Item: ...
+    @overload
+    def resolve_ref(self, ref: ViewRef) -> View: ...
+    @overload
+    def resolve_ref(self, ref: EmbeddingRef) -> Embedding: ...
+    @overload
+    def resolve_ref(self, ref: EntityRef) -> Entity: ...
+    @overload
+    def resolve_ref(self, ref: AnnotationRef) -> Annotation: ...
+    @overload
+    def resolve_ref(self, ref: SchemaRef) -> BaseSchema: ...
+    def resolve_ref(
+        self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef
+    ) -> BaseSchema | Item | View | Embedding | Entity | Annotation:
         """Resolve a reference."""
         if ref.id == "" or ref.name == "":
             raise ValueError("Reference should have a name and an id.")
