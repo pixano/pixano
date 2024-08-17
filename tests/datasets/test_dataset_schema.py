@@ -14,9 +14,9 @@ import pytest
 from pydantic import ValidationError
 
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from pixano.datasets.features.schemas import BBox, Embedding, Entity, Image, Item, SequenceFrame, Track
-from pixano.datasets.features.schemas.base_schema import BaseSchema
-from pixano.datasets.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas import BBox, Embedding, Entity, Image, Item, SequenceFrame, Track
+from pixano.features.schemas.base_schema import BaseSchema
+from pixano.features.schemas.schema_group import _SchemaGroup
 
 
 class TestDatasetSchema:

@@ -6,19 +6,18 @@
 
 
 from pathlib import Path
-from time import sleep
 
 import pytest
-from lancedb.embeddings import EmbeddingFunctionRegistry, get_registry
+from lancedb.embeddings import get_registry
 from lancedb.table import LanceTable
 
 from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from pixano.datasets.features import Image, Item
-from pixano.datasets.features.schemas.embeddings.embedding import ViewEmbedding
-from pixano.datasets.features.types.schema_reference import ItemRef, ViewRef
+from pixano.features import Image, Item
+from pixano.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.features.types.schema_reference import ItemRef, ViewRef
 
 
 class TestDataset:
@@ -667,3 +666,12 @@ class TestDataset:
 
         with pytest.raises(FileNotFoundError, match=f"Dataset nonexistent not found in {path}"):
             Dataset.find("nonexistent", path)
+
+    def test_resolve_ref(self, dumb_dataset: Dataset):
+        item = dumb_dataset.get_data("item", ids=["0"])[0]
+        item_ref = ItemRef(id="0", name="item")
+        assert dumb_dataset.resolve_ref(item_ref) == item
+
+        wrong_item_ref = ItemRef(id="", name="item")
+        with pytest.raises(ValueError, match="Reference should have a name and an id."):
+            dumb_dataset.resolve_ref(wrong_item_ref)

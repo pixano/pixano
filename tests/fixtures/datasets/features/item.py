@@ -7,8 +7,8 @@
 
 import pytest
 
-from pixano.datasets.features.schemas import Item
-from pixano.datasets.features.schemas.registry import register_schema
+from pixano.features.schemas import Item
+from pixano.features.schemas.registry import register_schema
 
 
 @pytest.fixture

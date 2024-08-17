@@ -7,14 +7,11 @@
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.features.schemas.annotations.bbox import BBox
-from pixano.datasets.features.schemas.annotations.keypoints import KeyPoints
-from pixano.datasets.features.schemas.base_schema import BaseSchema
-from pixano.datasets.features.schemas.entities.entity import Entity
-from pixano.datasets.features.schemas.registry import register_schema
-from pixano.datasets.features.schemas.views.image import Image
-from pixano.datasets.features.schemas.views.video import Video
-from pixano.datasets.features.types.nd_array_float import NDArrayFloat
+from pixano.features.schemas.annotations.bbox import BBox
+from pixano.features.schemas.annotations.keypoints import KeyPoints
+from pixano.features.schemas.entities.entity import Entity
+from pixano.features.schemas.views.image import Image
+from pixano.features.schemas.views.video import Video
 
 
 class MyEntity(Entity):

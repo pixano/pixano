@@ -7,7 +7,7 @@
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetSchema, SchemaRelation
-from pixano.datasets.features.schemas import BBox, Entity, Image
+from pixano.features.schemas import BBox, Entity, Image
 
 from .features import embedding as fixture_embedding
 from .features import item as fixture_item

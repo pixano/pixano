@@ -13,9 +13,9 @@ from typing import Any
 from pydantic import BaseModel, PrivateAttr, create_model, model_validator
 from typing_extensions import Self
 
-from .features.schemas import BaseSchema, Item
-from .features.schemas.registry import _SCHEMA_REGISTRY
-from .features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
+from pixano.features import BaseSchema, Item
+from pixano.features.schemas.registry import _SCHEMA_REGISTRY
+from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
 
 
 class SchemaRelation(Enum):
