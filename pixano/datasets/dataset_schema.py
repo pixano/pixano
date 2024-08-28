@@ -321,15 +321,16 @@ class DatasetItem(BaseModel):
         item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
         fields: dict[str, Any] = {}
 
-        for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
-            if exclude_embeddings and schema in dataset_schema._groups[_SchemaGroup.EMBEDDING]:
-                continue
-            # Add default value in case an item does not have a specific view or entity.
-            schema_type = dataset_schema.schemas[schema]
-            if relation == SchemaRelation.ONE_TO_MANY:
-                fields[schema] = (list[schema_type], [])  # type: ignore[valid-type]
-            else:
-                fields[schema] = (schema_type, None)
+        if dataset_schema.relations != {} and _SchemaGroup.ITEM.value in dataset_schema.relations:
+            for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
+                if exclude_embeddings and schema in dataset_schema._groups[_SchemaGroup.EMBEDDING]:
+                    continue
+                # Add default value in case an item does not have a specific view or entity.
+                schema_type = dataset_schema.schemas[schema]
+                if relation == SchemaRelation.ONE_TO_MANY:
+                    fields[schema] = (list[schema_type], [])  # type: ignore[valid-type]
+                else:
+                    fields[schema] = (schema_type, None)
 
         for field_name, field in item_type.model_fields.items():
             # No default value as all items metadata should be retrieved.

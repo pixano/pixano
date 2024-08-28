@@ -106,7 +106,7 @@ async def get_dataset_explorer(  # noqa: D417
     Args:
         ds_id: Dataset ID.
         settings: App settings.
-        params: Pagination parameters (offset and limit).
+        params: Pagination parameters (skip and limit).
 
     Returns:
         Dataset explorer page.
@@ -121,8 +121,8 @@ async def get_dataset_explorer(  # noqa: D417
         total = dataset.num_rows
 
         # Check page parameters
-        start = raw_params.offset
-        stop = min(raw_params.offset + raw_params.limit, total)
+        start = raw_params.skip
+        stop = min(raw_params.skip + raw_params.limit, total)
         if start >= stop:
             raise HTTPException(
                 status_code=404,
@@ -131,7 +131,7 @@ async def get_dataset_explorer(  # noqa: D417
 
         # Load dataset items
         all_ids = dataset.get_all_ids()
-        ids = sorted(all_ids)[raw_params.offset : raw_params.offset + raw_params.limit]
+        ids = sorted(all_ids)[raw_params.skip : raw_params.skip + raw_params.limit]
         items = dataset.get_dataset_items(
             ids
         )  # future API: will get only relevant info (ex:  we don't need objects, all frames, etc..)
@@ -211,7 +211,7 @@ async def search_dataset_items(  # noqa: D417
     Args:
         ds_id: Dataset ID.
         query: Search query.
-        params: Pagination parameters (offset and limit).
+        params: Pagination parameters (skip and limit).
 
     Returns:
         Dataset items page.
@@ -226,13 +226,13 @@ async def search_dataset_items(  # noqa: D417
         total = dataset.num_rows
 
         # Check page parameters
-        start = raw_params.offset
-        stop = min(raw_params.offset + raw_params.limit, total)
+        start = raw_params.skip
+        stop = min(raw_params.skip + raw_params.limit, total)
         if start >= stop:
             raise HTTPException(status_code=404, detail="Invalid page parameters")
 
         # Load dataset items
-        items = dataset.search_items(raw_params.limit, raw_params.offset, query)  # type: ignore[attr-defined]
+        items = dataset.search_items(raw_params.limit, raw_params.skip, query)  # type: ignore[attr-defined]
 
         # Return dataset items
         if items:

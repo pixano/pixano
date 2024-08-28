@@ -47,19 +47,19 @@ if TYPE_CHECKING:
     )
 
 
-def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
+def _validate_ids_and_limit_and_skip(ids: list[str] | None, limit: int | None, skip: int = 0) -> None:
     if ids is None and limit is None:
         raise ValueError("limit must be set if ids is None")
     elif ids is not None and limit is not None:
         raise ValueError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
         raise ValueError("ids must be a list of strings")
-    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(offset, int) or offset < 0:
-        raise ValueError("limit and offset must be positive integers")
+    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(skip, int) or skip < 0:
+        raise ValueError("limit and skip must be positive integers")
 
 
-def _validate_ids_item_ids_and_limit_and_offset(
-    ids: list[str] | None, limit: int | None, offset: int = 0, item_ids: list[str] | None = None
+def _validate_ids_item_ids_and_limit_and_skip(
+    ids: list[str] | None, limit: int | None, skip: int = 0, item_ids: list[str] | None = None
 ) -> None:
     if ids is not None and item_ids is not None:
         raise ValueError("ids and item_ids cannot be set at the same time")
@@ -71,8 +71,8 @@ def _validate_ids_item_ids_and_limit_and_offset(
         raise ValueError("ids must be a list of strings")
     elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
         raise ValueError("item_ids must be a list of strings")
-    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(offset, int) or offset < 0:
-        raise ValueError("limit and offset must be positive integers")
+    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(skip, int) or skip < 0:
+        raise ValueError("limit and skip must be positive integers")
 
 
 class Dataset:
@@ -295,12 +295,12 @@ class Dataset:
         table_name: str,
         ids: list[str] | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
-        self, table_name: str, ids: str, limit: int | None = None, offset: int = 0, item_ids: None = None
+        self, table_name: str, ids: str, limit: int | None = None, skip: int = 0, item_ids: None = None
     ) -> BaseSchema | None: ...
 
     def get_data(
@@ -308,7 +308,7 @@ class Dataset:
         table_name: str,
         ids: list[str] | str | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
@@ -317,7 +317,7 @@ class Dataset:
             table_name: Table name.
             ids: ids to read.
             limit: Amount of items to read.
-            offset: The offset to start reading from.
+            skip: The number of data to skip..
             item_ids: Item ids to read.
 
         Returns:
@@ -334,7 +334,7 @@ class Dataset:
         return_list = not isinstance(ids, str)
         ids = [ids] if isinstance(ids, str) else ids
 
-        _validate_ids_item_ids_and_limit_and_offset(ids, limit, offset, item_ids)
+        _validate_ids_item_ids_and_limit_and_skip(ids, limit, skip, item_ids)
 
         if item_ids is not None:
             sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
@@ -345,7 +345,7 @@ class Dataset:
             if item_ids is None:
                 lance_table = table.to_lance()  # noqa: F841
                 item_rows = (
-                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
+                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {skip}")
                     .to_arrow_table()
                     .to_pylist()
                 )
@@ -371,22 +371,22 @@ class Dataset:
 
     @overload
     def get_dataset_items(
-        self, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+        self, ids: list[str] | None = None, limit: int | None = None, skip: int = 0
     ) -> list[DatasetItem]: ...
     @overload
-    def get_dataset_items(self, ids: str, limit: int | None = None, offset: int = 0) -> DatasetItem | None: ...
+    def get_dataset_items(self, ids: str, limit: int | None = None, skip: int = 0) -> DatasetItem | None: ...
     def get_dataset_items(
         self,
         ids: list[str] | str | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
     ) -> list[DatasetItem] | DatasetItem | None:
         """Read dataset items.
 
         Args:
             ids: Item ids to read.
             limit: Amount of items to read.
-            offset: The offset to start reading from.
+            skip: The number of data to skip..
 
         Returns:
             List of dataset items.
@@ -394,9 +394,9 @@ class Dataset:
         return_list = not isinstance(ids, str)
         ids = [ids] if isinstance(ids, str) else ids
 
-        _validate_ids_and_limit_and_offset(ids, limit, offset)
+        _validate_ids_and_limit_and_skip(ids, limit, skip)
 
-        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)
+        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, skip)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
@@ -461,7 +461,7 @@ class Dataset:
         table.add(data)
         return None
 
-    def add_data(self, table_name: str, data: list[BaseSchema]) -> None:
+    def add_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
         """Add data to a table.
 
         Args:
@@ -475,19 +475,20 @@ class Dataset:
 
         table = self.open_table(table_name)
         table.add(data)
+        return data
 
-    def add_dataset_items(self, data: list[DatasetItem]) -> None:
+    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
         """Add dataset items.
 
         Args:
-            data: Data to add.
+            dataset_items: Dataset items to add.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.dataset_item_model
+        if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
+            type(dataset_items[0]), self.dataset_item_model
         ):
             raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
 
-        schemas_data = [item.to_schemas_data(self.schema) for item in data]
+        schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
         for table_name in self.schema.schemas.keys():
             for item in schemas_data:
@@ -500,6 +501,7 @@ class Dataset:
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 self.add_data(table_name, table_data)
+        return dataset_items
 
     def delete_data(self, table_name: str, ids: list[str]) -> None:
         """Delete data from a table.
@@ -537,12 +539,15 @@ class Dataset:
                 table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
                 table.delete(where=f"id in {table_sql_ids}")
 
-    def update_data(self, table_name: str, data: list[BaseSchema]) -> None:
+    def update_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
         """Update data in a table.
 
         Args:
             table_name: Table name.
             data: Data to update.
+
+        Returns:
+            Updated data.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
@@ -554,16 +559,21 @@ class Dataset:
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
         table.delete(where=f"id in {sql_ids}")
         table.add(data)
+        return data
 
-    def update_dataset_items(self, data: list[DatasetItem]) -> None:
+    def update_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
         """Update dataset items.
 
         Args:
-            data: Data to update.
+            dataset_items: Dataset items to update.
+
+        Returns:
+            Updated dataset items.
         """
-        ids = [item.id for item in data]
+        ids = [item.id for item in dataset_items]
         self.delete_dataset_items(ids)
-        self.add_dataset_items(data)
+        self.add_dataset_items(dataset_items)
+        return dataset_items
 
     @staticmethod
     def find(
@@ -586,5 +596,6 @@ class Dataset:
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 # Return dataset
+                print("i will returnnn")
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
