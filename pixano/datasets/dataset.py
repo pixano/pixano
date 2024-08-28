@@ -596,6 +596,5 @@ class Dataset:
             info = DatasetInfo.from_json(json_fp)
             if info.id == id:
                 # Return dataset
-                print("i will returnnn")
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
