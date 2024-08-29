@@ -37,3 +37,7 @@ class TestAnnotationModel:
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Annotation."):
             model.to_row(Item)
+
+        table_info = TableInfo(name="bbox", group="item", base_schema="BBox")
+        with pytest.raises(ValueError, match="Table info group must be annotations."):
+            model.table_info = table_info

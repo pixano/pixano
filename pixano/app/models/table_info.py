@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SchemaGroup
@@ -19,6 +19,7 @@ class TableInfo(BaseModel):
         base_schema: Base pixano schema stored in the registry.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
     name: str
     group: str
     base_schema: str

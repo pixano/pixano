@@ -6,7 +6,7 @@
 
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
 from pixano.features import BaseSchema
@@ -27,6 +27,7 @@ class BaseModelSchema(BaseModel, Generic[T]):
         data: Data.
     """
 
+    model_config = ConfigDict(validate_assignment=True)
     id: str
     table_info: TableInfo
     data: dict[str, Any]

@@ -32,3 +32,7 @@ class TestViewModel:
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of View."):
             model.to_row(Item)
+
+        table_info = TableInfo(name="view", group="item", base_schema="View")
+        with pytest.raises(ValueError, match="Table info group must be views."):
+            model.table_info = table_info

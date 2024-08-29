@@ -33,3 +33,7 @@ class TestEntityModel:
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Entity."):
             model.to_row(Item)
+
+        table_info = TableInfo(name="entity", group="item", base_schema="Entity")
+        with pytest.raises(ValueError, match="Table info group must be entities."):
+            model.table_info = table_info

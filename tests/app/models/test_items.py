@@ -28,3 +28,7 @@ class TestItemModel:
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Item."):
             model.to_row(Entity)
+
+        table_info = TableInfo(name="item", group="views", base_schema="Item")
+        with pytest.raises(ValueError, match="Table info group must be item."):
+            model.table_info = table_info

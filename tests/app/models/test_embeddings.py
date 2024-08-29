@@ -35,3 +35,7 @@ class TestEmbeddingModel:
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Embedding."):
             model.to_row(Item)
+
+        table_info = TableInfo(name="embedding", group="item", base_schema="Embedding")
+        with pytest.raises(ValueError, match="Table info group must be embeddings."):
+            model.table_info = table_info
