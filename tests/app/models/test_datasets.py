@@ -5,7 +5,7 @@
 # =====================================
 
 
-from pixano.app.api.dataset_explorer import ColDesc, DatasetExplorer, PaginationInfo, TableData
+from pixano.app.models.datasets import ColDesc, DatasetExplorer, PaginationInfo, TableData
 
 
 class TestDatasetExplorer:
