@@ -13,7 +13,6 @@ from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
 from pixano.app.main import create_app
-from pixano.app.models.datasets import DatasetModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
