@@ -16,13 +16,11 @@ import shortuuid
 import tqdm
 from lancedb.table import Table
 
-from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
+from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
+from pixano.features import BaseSchema, Item, _SchemaGroup
+from pixano.features.schemas.views import image as image_schema
+from pixano.features.schemas.views import sequence_frame as sequence_frame_schema
 
-from .. import Dataset, DatasetInfo
-from ..dataset_features_values import DatasetFeaturesValues
-from ..features import BaseSchema, Item, _SchemaGroup
-from ..features.schemas.views import image as image_schema
-from ..features.schemas.views import sequence_frame as sequence_frame_schema
 from ..utils import video as video_utils
 
 

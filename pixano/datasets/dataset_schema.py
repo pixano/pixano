@@ -13,9 +13,9 @@ from typing import Any
 from pydantic import BaseModel, PrivateAttr, create_model, model_validator
 from typing_extensions import Self
 
-from .features.schemas import BaseSchema, Item
-from .features.schemas.registry import _SCHEMA_REGISTRY
-from .features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
+from pixano.features import BaseSchema, Item
+from pixano.features.schemas.registry import _SCHEMA_REGISTRY
+from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
 
 
 class SchemaRelation(Enum):
@@ -28,10 +28,11 @@ class SchemaRelation(Enum):
 
 
 class DatasetSchema(BaseModel):
-    """DatasetSchema.
+    """A dataset schema that defines the tables and the relations between them.
 
     Attributes:
         schemas: The tables.
+        relations: The relations between the item table and the other tables.
     """
 
     schemas: dict[str, type[BaseSchema]]
@@ -307,11 +308,12 @@ class DatasetItem(BaseModel):
         return DatasetSchema.from_dataset_item(cls)
 
     @staticmethod
-    def from_dataset_schema(dataset_schema: DatasetSchema) -> type["DatasetItem"]:
+    def from_dataset_schema(dataset_schema: DatasetSchema, exclude_embeddings: bool = False) -> type["DatasetItem"]:
         """Create a dataset item model based on the schema.
 
         Args:
             dataset_schema: The dataset schema.
+            exclude_embeddings: Exclude embeddings from the dataset item model to reduce the size.
 
         Returns:
             The dataset item model
@@ -320,6 +322,8 @@ class DatasetItem(BaseModel):
         fields: dict[str, Any] = {}
 
         for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
+            if exclude_embeddings and schema in dataset_schema._groups[_SchemaGroup.EMBEDDING]:
+                continue
             # Add default value in case an item does not have a specific view or entity.
             schema_type = dataset_schema.schemas[schema]
             if relation == SchemaRelation.ONE_TO_MANY:

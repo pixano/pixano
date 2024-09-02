@@ -16,11 +16,10 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.api import create_page, resolve_params
 from pydantic import BaseModel
 
-import pixano.datasets.dataset_explorer as de
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import Dataset, DatasetItem
 from pixano.datasets.dataset_schema import SchemaRelation
-from pixano.datasets.features import (
+from pixano.features import (
     Annotation,
     BaseSchema,
     BBox,
@@ -40,7 +39,9 @@ from pixano.datasets.features import (
     is_track,
     is_tracklet,
 )
-from pixano.datasets.utils import image as image_utils
+from pixano.features.utils import image as image_utils
+
+from .dataset_explorer import ColDesc, DatasetExplorer, PaginationInfo, TableData
 
 
 class FrontDatasetItem(BaseModel):
@@ -94,12 +95,12 @@ async def get_dataset_item_ids(
     )
 
 
-@router.get("/explorer", response_model=de.DatasetExplorer)
+@router.get("/explorer", response_model=DatasetExplorer)
 async def get_dataset_explorer(  # noqa: D417
     ds_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> de.DatasetExplorer:  # type: ignore
+) -> DatasetExplorer:  # type: ignore
     """## Load dataset items.
 
     Args:
@@ -157,9 +158,9 @@ async def get_dataset_explorer(  # noqa: D417
                 else:
                     print("ERROR: unknown view type", type(view_item), view_item)
                     view_type = type(view_item).__name__
-                cols.append(de.ColDesc(name=feat, type=view_type))
+                cols.append(ColDesc(name=feat, type=view_type))
             for feat in groups[_SchemaGroup.ITEM]:
-                cols.append(de.ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__))
+                cols.append(ColDesc(name=feat, type=type(getattr(items[0], feat)).__name__))
 
             # build rows
             rows = []
@@ -181,11 +182,11 @@ async def get_dataset_explorer(  # noqa: D417
                 rows.append(row)
 
             # Return dataset items
-            return de.DatasetExplorer(
+            return DatasetExplorer(
                 id=ds_id,
                 name=dataset.info.name,
-                table_data=de.TableData(cols=cols, rows=rows),
-                pagination=de.PaginationInfo(current=start, size=raw_params.limit, total=total),
+                table_data=TableData(cols=cols, rows=rows),
+                pagination=PaginationInfo(current=start, size=raw_params.limit, total=total),
                 sem_search=["TOTO"],
             )
         raise HTTPException(

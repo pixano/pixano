@@ -6,7 +6,7 @@
 
 import pytest
 
-from pixano.datasets.features import CompressedRLE
+from pixano.features import CompressedRLE
 
 
 @pytest.fixture()

@@ -12,12 +12,13 @@ from typing import TYPE_CHECKING, Any, cast, overload
 
 import duckdb
 import lancedb
+import pyarrow as pa
 from lancedb.common import DATA
 from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
-from pixano.datasets.features.schemas.embeddings.embedding import ViewEmbedding
+from pixano.features import ViewEmbedding, _SchemaGroup, is_view_embedding
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
@@ -27,11 +28,23 @@ from .dataset_schema import (
     SchemaRelation,
 )
 from .dataset_stat import DatasetStat
-from .features import _SchemaGroup, is_view_embedding
 
 
 if TYPE_CHECKING:
-    from .features import BaseSchema, SchemaRef
+    from ..features import (
+        Annotation,
+        AnnotationRef,
+        BaseSchema,
+        Embedding,
+        EmbeddingRef,
+        Entity,
+        EntityRef,
+        Item,
+        ItemRef,
+        SchemaRef,
+        View,
+        ViewRef,
+    )
 
 
 def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
@@ -63,7 +76,12 @@ def _validate_ids_item_ids_and_limit_and_offset(
 
 
 class Dataset:
-    """Dataset.
+    """A dataset.
+
+    It is a collection of tables that can be queried and manipulated with LanceDB.
+
+    The tables are defined by the dataset schema which allows the dataset to return the data in the form of pydantic
+    models.
 
     Attributes:
         path: Dataset path.
@@ -101,14 +119,12 @@ class Dataset:
             media_dir: Dataset media directory.
         """
         info_file = path / self.INFO_FILE
-        schema_file = path / self.SCHEMA_FILE
         features_values_file = path / self.FEATURES_VALUES_FILE
         stats_file = path / self.STAT_FILE
         thumb_file = path / self.THUMB_FILE
 
         self.path = path
         self.info = DatasetInfo.from_json(info_file)
-        self.schema = DatasetSchema.from_json(schema_file)
         self.features_values = DatasetFeaturesValues.from_json(features_values_file)
         self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
         self.thumbnail = thumb_file
@@ -116,7 +132,7 @@ class Dataset:
 
         self._db_connection = self._connect()
 
-        self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
+        self._reload_schema()
 
     @property
     def num_rows(self) -> int:
@@ -143,8 +159,10 @@ class Dataset:
         Returns:
             DatasetSchema: Dataset schema.
         """
-        self.schema = DatasetSchema.from_json(self.path / "schema.json")
-        self.dataset_item_model = DatasetItem.from_dataset_schema(self.schema)
+        self.schema: DatasetSchema = DatasetSchema.from_json(self.path / self.SCHEMA_FILE)
+        self.dataset_item_model: type[DatasetItem] = DatasetItem.from_dataset_schema(
+            self.schema, exclude_embeddings=True
+        )
 
     def _connect(self) -> lancedb.db.DBConnection:
         """Connect to dataset with LanceDB.
@@ -251,7 +269,21 @@ class Dataset:
             schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
         return table
 
-    def resolve_ref(self, ref: SchemaRef) -> Any:
+    @overload
+    def resolve_ref(self, ref: ItemRef) -> Item: ...
+    @overload
+    def resolve_ref(self, ref: ViewRef) -> View: ...
+    @overload
+    def resolve_ref(self, ref: EmbeddingRef) -> Embedding: ...
+    @overload
+    def resolve_ref(self, ref: EntityRef) -> Entity: ...
+    @overload
+    def resolve_ref(self, ref: AnnotationRef) -> Annotation: ...
+    @overload
+    def resolve_ref(self, ref: SchemaRef) -> BaseSchema: ...
+    def resolve_ref(
+        self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef
+    ) -> BaseSchema | Item | View | Embedding | Entity | Annotation:
         """Resolve a reference."""
         if ref.id == "" or ref.name == "":
             raise ValueError("Reference should have a name and an id.")
@@ -409,6 +441,25 @@ class Dataset:
         """
         query = self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
         return sorted(row.as_py() for row in query["id"])
+
+    def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
+        """Compute view embeddings.
+
+        Args:
+            table_name: Table name containing the view embeddings.
+            data: Data to compute. Dictionary representing a view embedding without the vector field.
+        """
+        table_schema = self.schema.schemas[table_name]
+        if not issubclass(table_schema, ViewEmbedding):
+            raise ValueError(f"Table {table_name} is not a view embedding table")
+        if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
+            raise ValueError("Data must be a list of dictionaries")
+        table = self.open_table(table_name)
+        data = pa.Table.from_pylist(
+            data, schema=table_schema.to_arrow_schema(remove_vector=True, remove_metadata=True)
+        )
+        table.add(data)
+        return None
 
     def add_data(self, table_name: str, data: list[BaseSchema]) -> None:
         """Add data to a table.

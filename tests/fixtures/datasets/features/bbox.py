@@ -6,7 +6,7 @@
 
 import pytest
 
-from pixano.datasets.features.schemas.annotations.bbox import BBox
+from pixano.features.schemas.annotations.bbox import BBox
 
 
 @pytest.fixture()

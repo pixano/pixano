@@ -12,11 +12,11 @@ import shortuuid
 
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
-from pixano.datasets.features.schemas.annotations.annotation import Annotation
-from pixano.datasets.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.datasets.features.types.schema_reference import EntityRef, ItemRef, ViewRef
-from pixano.datasets.utils.creators import create_row
+from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
+from pixano.features.schemas.annotations.annotation import Annotation
+from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
+from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features.utils.creators import create_instance_of_schema
 
 from ..dataset_builder import DatasetBuilder
 
@@ -169,7 +169,7 @@ class FolderBaseBuilder(DatasetBuilder):
                 f"View schema {view_schema} is not supported. You should implement your own _create_view method."
             )
 
-        return create_row(
+        return create_instance_of_schema(
             view_schema, id=shortuuid.uuid(), item_ref=ItemRef(id=item.id), url=view_file, other_path=self.source_dir
         )
 
@@ -215,7 +215,7 @@ class FolderBaseBuilder(DatasetBuilder):
 
                     schema = self.schemas[attr]
                     if isinstance(entities_data[attr][i], Mapping):
-                        annotation = create_row(
+                        annotation = create_instance_of_schema(
                             schema,
                             id=shortuuid.uuid(),
                             item_ref=ItemRef(id=item.id),

@@ -5,7 +5,7 @@
 # =====================================
 
 from .dataset import Dataset
-from .dataset_explorer import DatasetExplorer
+from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
 from .dataset_stat import DatasetStat
@@ -13,8 +13,8 @@ from .dataset_stat import DatasetStat
 
 __all__ = [
     "Dataset",
+    "DatasetFeaturesValues",
     "DatasetInfo",
-    "DatasetExplorer",
     "DatasetItem",
     "DatasetSchema",
     "DatasetStat",

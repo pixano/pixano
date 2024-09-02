@@ -7,11 +7,11 @@
 import pytest
 
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.datasets.features.schemas.annotations.bbox import BBox
-from pixano.datasets.features.schemas.annotations.keypoints import KeyPoints
-from pixano.datasets.features.schemas.entities.entity import Entity
-from pixano.datasets.features.schemas.views.image import Image
-from pixano.datasets.features.schemas.views.video import Video
+from pixano.features.schemas.annotations.bbox import BBox
+from pixano.features.schemas.annotations.keypoints import KeyPoints
+from pixano.features.schemas.entities.entity import Entity
+from pixano.features.schemas.views.image import Image
+from pixano.features.schemas.views.video import Video
 
 
 class MyEntity(Entity):
@@ -55,7 +55,7 @@ def dataset_item_video_bboxes_keypoint():
 
 
 @pytest.fixture
-def dataset_item_custom_2():
+def dataset_item_bboxes_metadata():
     class CustomDatasetItem(DatasetItem):
         categories: tuple[str, ...]
         other_categories: list[int]
@@ -66,3 +66,15 @@ def dataset_item_custom_2():
         index: int
 
     return CustomDatasetItem
+
+
+@pytest.fixture
+def dataset_item_image_embeddings(embedding_8):
+    class Schema(DatasetItem):
+        image: Image
+        categories: tuple[str, ...]
+        other_categories: list[int]
+        entities: list[MyEntity]
+        embeddings: list[embedding_8]
+
+    return Schema
