@@ -67,7 +67,7 @@ def get_rows(
     item_ids: list[str] | None = None,
     limit: int | None = None,
     skip: int = 0,
-) -> list[BaseModelSchema]:
+) -> list[BaseSchema]:
     """Get rows from a table.
 
     Args:
