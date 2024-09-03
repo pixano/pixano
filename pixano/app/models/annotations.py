@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from typing_extensions import TypeVar
 
 from pixano.app.models.table_info import TableInfo
@@ -19,6 +19,30 @@ T = TypeVar("T", bound=Annotation)
 
 class AnnotationModel(BaseModelSchema[Annotation]):
     """Annotation model."""
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "bbox_orange_cat_n1",
+                    "table_info": {"group": "annotations", "name": "bboxes", "base_schema": "BBox"},
+                    "data": {
+                        "item_ref": {"name": "item", "id": "1"},
+                        "view_ref": {"name": "image", "id": "orange_cats"},
+                        "entity_ref": {
+                            "name": "cats",
+                            "id": "cat_n1",
+                        },
+                        "coords": [0, 0, 2, 2],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.8,
+                    },
+                }
+            ]
+        },
+    )
 
     @field_validator("table_info")
     @classmethod

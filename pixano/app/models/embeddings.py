@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from typing_extensions import TypeVar
 
 from pixano.app.models.table_info import TableInfo
@@ -19,6 +19,23 @@ T = TypeVar("T", bound=Embedding)
 
 class EmbeddingModel(BaseModelSchema[Embedding]):
     """Embedding model."""
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "embedding_orange_cats",
+                    "table_info": {"group": "embeddings", "name": "cat_embeddings", "base_schema": "ViewEmbedding"},
+                    "data": {
+                        "item_ref": {"name": "item", "id": "1"},
+                        "view_ref": {"name": "image", "id": "orange_cats"},
+                        "vector": [0.0, 1.0, 2.0, -1.0, -2.0, 0.0],
+                    },
+                }
+            ]
+        },
+    )
 
     @field_validator("table_info")
     @classmethod

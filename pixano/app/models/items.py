@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from typing_extensions import TypeVar
 
 from pixano.app.models.table_info import TableInfo
@@ -19,6 +19,19 @@ T = TypeVar("T", bound=Item)
 
 class ItemModel(BaseModelSchema[Item]):
     """Item model."""
+
+    model_config = ConfigDict(
+        validate_assignment=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "1",
+                    "table_info": {"group": "item", "name": "item", "base_schema": "Item"},
+                    "data": {"split": "train", "source": "source1"},
+                }
+            ]
+        },
+    )
 
     @field_validator("table_info")
     @classmethod

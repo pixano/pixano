@@ -24,7 +24,7 @@ class BaseModelSchema(BaseModel, Generic[T]):
     Attributes:
         id: Identifier.
         table_info: Table information.
-        data: Data.
+        data: Data from the pydantic backend model schema except the id.
     """
 
     model_config = ConfigDict(validate_assignment=True)
