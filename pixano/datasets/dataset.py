@@ -93,13 +93,13 @@ class Dataset:
         media_dir: Dataset media directory.
     """
 
-    DB_PATH: str = "db"
-    PREVIEWS_PATH: str = "previews"
-    INFO_FILE: str = "info.json"
-    SCHEMA_FILE: str = "schema.json"
-    FEATURES_VALUES_FILE: str = "features_values.json"
-    STAT_FILE: str = "stats.json"
-    THUMB_FILE: str = "preview.png"
+    _DB_PATH: str = "db"
+    _PREVIEWS_PATH: str = "previews"
+    _INFO_FILE: str = "info.json"
+    _SCHEMA_FILE: str = "schema.json"
+    _FEATURES_VALUES_FILE: str = "features_values.json"
+    _STAT_FILE: str = "stats.json"
+    _THUMB_FILE: str = "preview.png"
 
     path: Path
     info: DatasetInfo
@@ -118,17 +118,19 @@ class Dataset:
             path: Dataset path.
             media_dir: Dataset media directory.
         """
-        info_file = path / self.INFO_FILE
-        features_values_file = path / self.FEATURES_VALUES_FILE
-        stats_file = path / self.STAT_FILE
-        thumb_file = path / self.THUMB_FILE
-
         self.path = path
-        self.info = DatasetInfo.from_json(info_file)
-        self.features_values = DatasetFeaturesValues.from_json(features_values_file)
-        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
-        self.thumbnail = thumb_file
+
+        self._info_file = self.path / self._INFO_FILE
+        self._schema_file = self.path / self._SCHEMA_FILE
+        self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._stat_file = self.path / self._STAT_FILE
+        self._thumb_file = self.path / self._THUMB_FILE
+
+        self.info = DatasetInfo.from_json(self._info_file)
+        self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
+        self.stats = DatasetStat.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.media_dir = media_dir or self.path / "media"
+        self.thumbnail = self._thumb_file
 
         self._db_connection = self._connect()
 
@@ -151,7 +153,7 @@ class Dataset:
         Returns:
             Dataset db path.
         """
-        return self.path / self.DB_PATH
+        return self.path / self._DB_PATH
 
     def _reload_schema(self) -> None:
         """Reload schema.
@@ -159,7 +161,7 @@ class Dataset:
         Returns:
             DatasetSchema: Dataset schema.
         """
-        self.schema: DatasetSchema = DatasetSchema.from_json(self.path / self.SCHEMA_FILE)
+        self.schema: DatasetSchema = DatasetSchema.from_json(self._schema_file)
         self.dataset_item_model: type[DatasetItem] = DatasetItem.from_dataset_schema(
             self.schema, exclude_embeddings=True
         )
@@ -233,7 +235,7 @@ class Dataset:
             embedding_functions=None,
         )
         self.schema.add_schema(name, schema, relation_item)
-        self.schema.to_json(self.path / self.SCHEMA_FILE)
+        self.schema.to_json(self._schema_file)
         self._reload_schema()
         return table
 

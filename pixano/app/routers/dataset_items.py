@@ -43,7 +43,7 @@ async def get_dataset_items(
     if rows == []:
         raise HTTPException(status_code=404, detail="Dataset items not found")
 
-    return DatasetItemModel.from_dataset_items(rows)
+    return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
 @router.get("/{dataset_id}/{id}", response_model=DatasetItemModel)
@@ -66,7 +66,7 @@ async def get_dataset_item(
     if row is None:
         raise HTTPException(status_code=404, detail="Dataset item not found")
 
-    return DatasetItemModel.from_dataset_item(row)
+    return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
 @router.post("/{dataset_id}/", response_model=DatasetItemModel)
@@ -87,8 +87,8 @@ async def create_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items))
-    return DatasetItemModel.from_dataset_items(rows)
+    rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
 @router.post("/{dataset_id}/{id}", response_model=DatasetItemModel)
@@ -114,8 +114,8 @@ async def create_dataset_item(
 
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    row = dataset.add_dataset_items(DatasetItemModel.to_dataset_item(dataset_item))[0]
-    return DatasetItemModel.from_dataset_item(row)
+    row = dataset.add_dataset_items(DatasetItemModel.to_dataset_item(dataset_item, dataset.schema))[0]
+    return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
 @router.put("/{dataset_id}/", response_model=list[DatasetItemModel])
@@ -136,8 +136,8 @@ async def update_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items))
-    return DatasetItemModel.from_dataset_items(rows)
+    rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
 @router.put("/{dataset_id}/{id}", response_model=DatasetItemModel)
@@ -163,8 +163,8 @@ async def update_dataset_item(
 
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    row = dataset.update_dataset_items(DatasetItemModel.to_dataset_item(dataset_item))[0]
-    return DatasetItemModel.from_dataset_item(row)
+    row = dataset.update_dataset_items(DatasetItemModel.to_dataset_item(dataset_item, dataset.schema))[0]
+    return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
 @router.delete("/{dataset_id}/")
