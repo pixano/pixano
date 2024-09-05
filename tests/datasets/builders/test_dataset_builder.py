@@ -30,7 +30,7 @@ class TestDatasetBuilder:
         builder = DumbDatasetBuilder(5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info)
         assert builder.source_dir == Path(source_dir)
         assert builder.target_dir == Path(target_dir)
-        assert builder.previews_path == Path(target_dir) / Dataset.PREVIEWS_PATH
+        assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info
         assert isinstance(builder.dataset_schema, DatasetSchema)
         assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
@@ -42,7 +42,7 @@ class TestDatasetBuilder:
             assert key1 == key2
             assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db._uri == str(Path(target_dir) / Dataset.DB_PATH)
+        assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
@@ -63,10 +63,10 @@ class TestDatasetBuilder:
         assert dumb_builder.info.description == "test"
         assert dumb_builder.info.num_elements == 5
 
-        assert (dumb_builder.target_dir / Dataset.INFO_FILE).exists()
-        assert (dumb_builder.target_dir / Dataset.DB_PATH).exists()
-        assert (dumb_builder.target_dir / Dataset.FEATURES_VALUES_FILE).exists()
-        assert (dumb_builder.target_dir / Dataset.SCHEMA_FILE).exists()
+        assert (dumb_builder.target_dir / Dataset._INFO_FILE).exists()
+        assert (dumb_builder.target_dir / Dataset._DB_PATH).exists()
+        assert (dumb_builder.target_dir / Dataset._FEATURES_VALUES_FILE).exists()
+        assert (dumb_builder.target_dir / Dataset._SCHEMA_FILE).exists()
 
         assert isinstance(dataset, Dataset)
         assert dataset.info == dumb_builder.info

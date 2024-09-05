@@ -31,7 +31,7 @@ class TestDataset:
         assert dumb_dataset.schema.serialize() == dataset_item_image_bboxes_keypoint.to_dataset_schema().serialize()
         assert dumb_dataset.features_values == DatasetFeaturesValues()
         assert dumb_dataset.stats == []
-        assert dumb_dataset.thumbnail == dumb_dataset.path / Dataset.THUMB_FILE
+        assert dumb_dataset.thumbnail == dumb_dataset.path / Dataset._THUMB_FILE
         assert dumb_dataset.num_rows == 5
         assert dumb_dataset.media_dir == dumb_dataset.path / "media"
 
