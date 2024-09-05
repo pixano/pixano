@@ -43,12 +43,12 @@ class TestDatasetSchema:
                 },
             },
         )
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image", "sequence_frame"],
-            _SchemaGroup.ENTITY: ["entity", "track"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: ["embedding"],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image", "sequence_frame"},
+            _SchemaGroup.ENTITY: {"entity", "track"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: {"embedding"},
         }
 
     # Test 2: invalid schema (invalid table type)
@@ -210,7 +210,7 @@ class TestDatasetSchema:
 
         schema = DatasetSchema.from_json(json_fp)
         assert schema.relations == dataset_schema_1.relations
-        assert schema._groups == dataset_schema_1._groups
+        assert schema.groups == dataset_schema_1.groups
         assert set(schema.schemas.keys()) == set(dataset_schema_1.schemas.keys())
         assert all(schema.schemas[k].serialize() == dataset_schema_1.schemas[k].serialize() for k in schema.schemas)
 
@@ -246,12 +246,12 @@ class TestDatasetSchema:
                 "item": SchemaRelation.MANY_TO_ONE,
             },
         }
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image"],
-            _SchemaGroup.ENTITY: ["entity"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: [],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image"},
+            _SchemaGroup.ENTITY: {"entity"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: set(),
         }
 
     @pytest.mark.parametrize(
@@ -275,7 +275,7 @@ class TestDatasetSchema:
         schema = dataset_schema_1.add_schema("new_table", Image, relation)
         assert schema.schemas["new_table"] == Image
         assert schema.relations["new_table"] == {"item": relation}
-        assert set(schema._groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
+        assert set(schema.groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
         assert schema.relations["item"]["new_table"] == item_relation
 
     def test_add_error(self, dataset_schema_1):
@@ -329,12 +329,12 @@ class TestDatasetItem:
                 "item": SchemaRelation.MANY_TO_ONE,
             },
         }
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image"],
-            _SchemaGroup.ENTITY: ["entity"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: [],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image"},
+            _SchemaGroup.ENTITY: {"entity"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: set(),
         }
 
     def test_from_dataset_schema(self, dataset_schema_1):

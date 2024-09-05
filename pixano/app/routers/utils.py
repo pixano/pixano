@@ -53,7 +53,7 @@ def assert_table_in_group(dataset: Dataset, table: str, group: _SchemaGroup) -> 
         table: Table name.
         group: Group.
     """
-    if table not in dataset.schema._groups[group]:
+    if table not in dataset.schema.groups[group]:
         raise HTTPException(
             status_code=404,
             detail=f"Table {table} is not a {group} table.",

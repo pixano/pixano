@@ -10,7 +10,7 @@ from pathlib import Path
 from types import GenericAlias
 from typing import Any
 
-from pydantic import BaseModel, PrivateAttr, create_model, model_validator
+from pydantic import BaseModel, create_model, model_validator
 from typing_extensions import Self
 
 from pixano.features import BaseSchema, Item
@@ -33,11 +33,12 @@ class DatasetSchema(BaseModel):
     Attributes:
         schemas: The tables.
         relations: The relations between the item table and the other tables.
+        groups: The groups of tables. Is filled on its own.
     """
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
-    _groups: dict[_SchemaGroup, list[str]] = PrivateAttr({key: [] for key in _SchemaGroup})
+    groups: dict[_SchemaGroup, set[str]] = {key: set() for key in _SchemaGroup}
 
     def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> "DatasetSchema":
         """Add a schema to the dataset schema.
@@ -60,7 +61,7 @@ class DatasetSchema(BaseModel):
         found_group = False
         for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
             if issubclass(schema, group_type):
-                self._groups[group].append(table_name)
+                self.groups[group].add(table_name)
                 found_group = True
                 break
         if not found_group:
@@ -103,8 +104,9 @@ class DatasetSchema(BaseModel):
             found_group = False
             for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
                 if issubclass(schema, group_type):
-                    self._groups[group].append(table)
                     found_group = True
+                    if table not in self.groups[group]:
+                        self.groups[group].add(table)
                     break
             if not found_group:
                 raise ValueError(f"Invalid table type {schema}")
@@ -163,6 +165,7 @@ class DatasetSchema(BaseModel):
                 for schema1, relations in self.relations.items()
             },
             "schemas": {},
+            "groups": {group.value: list(schemas) for group, schemas in self.groups.items()},
         }
         for table_name, schema in self.schemas.items():
             dataset_schema_json["schemas"][table_name] = schema.serialize()
@@ -183,6 +186,7 @@ class DatasetSchema(BaseModel):
                 for schema1, relations in dataset_schema_json["relations"].items()
             },
             "schemas": {},
+            "groups": {_SchemaGroup(group): set(schemas) for group, schemas in dataset_schema_json["groups"].items()},
         }
         for table_name, schema in dataset_schema_json["schemas"].items():
             dataset_schema_dict["schemas"][table_name] = BaseSchema.deserialize(schema)
@@ -323,7 +327,7 @@ class DatasetItem(BaseModel):
 
         if dataset_schema.relations != {} and _SchemaGroup.ITEM.value in dataset_schema.relations:
             for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
-                if exclude_embeddings and schema in dataset_schema._groups[_SchemaGroup.EMBEDDING]:
+                if exclude_embeddings and schema in dataset_schema.groups[_SchemaGroup.EMBEDDING]:
                     continue
                 # Add default value in case an item does not have a specific view or entity.
                 schema_type = dataset_schema.schemas[schema]
