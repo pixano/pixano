@@ -18,17 +18,19 @@ class TestBaseSchema:
         base_schema = BaseSchema()
         base_schema.id == ""
 
-    def test_resolve_ref(self, dumb_dataset: Dataset):
+    def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):
         base_schema = BaseSchema()
 
         with pytest.raises(ValueError, match="Dataset is not set."):
             base_schema.resolve_ref(SchemaRef(id="", name=""))
 
-        base_schema.dataset = dumb_dataset
+        base_schema.dataset = dataset_image_bboxes_keypoint
         resolved_item = base_schema.resolve_ref(SchemaRef(id="0", name="item"))
         assert (
             resolved_item.model_dump()
-            == dumb_dataset.schema.schemas["item"](id="0", split="test", metadata="metadata_0").model_dump()
+            == dataset_image_bboxes_keypoint.schema.schemas["item"](
+                id="0", split="test", metadata="metadata_0"
+            ).model_dump()
         )
 
         for id, name in [

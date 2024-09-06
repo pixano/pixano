@@ -8,28 +8,26 @@
 import pytest
 
 from pixano.features.schemas import Item
-from pixano.features.schemas.registry import register_schema
+from tests.utils.schema import register_schema
 
 
-@pytest.fixture
-def custom_item_1():
-    class CustomItem(Item):
+@pytest.fixture()
+def item_categories():
+    class ItemCategories(Item):
         categories: tuple[str, ...]
         other_categories: list[int]
 
-    try:
-        register_schema(CustomItem)
-    except ValueError:
-        pass
-    return CustomItem
+    register_schema(ItemCategories)
+    return ItemCategories
 
 
-@pytest.fixture
-def custom_item_2():
-    class CustomItem(Item):
+@pytest.fixture()
+def item_categories_name_index():
+    class ItemCategoriesNameIndex(Item):
         categories: tuple[str, ...]
         other_categories: list[int]
         name: str
         index: int
 
-    return CustomItem
+    register_schema(ItemCategoriesNameIndex)
+    return ItemCategoriesNameIndex

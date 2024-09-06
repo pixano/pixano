@@ -5,8 +5,10 @@
 # =====================================
 
 
+from typing import Any
+
 from pixano.datasets import DatasetItem, DatasetSchema
-from pixano.features import Annotation, Embedding, Entity, Item, View
+from pixano.features import Annotation, Entity, Item, View
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SchemaGroup
@@ -14,7 +16,6 @@ from pixano.utils.python import get_super_type_from_dict
 
 from .annotations import AnnotationModel
 from .base_schema import BaseModelSchema
-from .embeddings import EmbeddingModel
 from .entities import EntityModel
 from .items import ItemModel
 from .table_info import TableInfo
@@ -27,7 +28,6 @@ class DatasetItemModel(DatasetItem):
     id: str
     item: ItemModel
     entities: dict[str, list[EntityModel] | EntityModel | None] = {}
-    embeddings: dict[str, list[EmbeddingModel] | EmbeddingModel | None] = {}
     annotations: dict[str, list[AnnotationModel] | AnnotationModel | None] = {}
     views: dict[str, list[ViewModel] | ViewModel | None] = {}
 
@@ -39,28 +39,43 @@ class DatasetItemModel(DatasetItem):
             row_or_rows: BaseSchema | list[BaseSchema], name: str, group: _SchemaGroup, model: type[BaseModelSchema]
         ) -> BaseModelSchema | list[BaseModelSchema]:
             base_schema = get_super_type_from_dict(
-                row_or_rows[0] if isinstance(row_or_rows, list) else row_or_rows, _PIXANO_SCHEMA_REGISTRY
+                type(row_or_rows[0]) if isinstance(row_or_rows, list) else type(row_or_rows), _PIXANO_SCHEMA_REGISTRY
             )
-            table_info = TableInfo(name=name, group=group.value, base_schema=base_schema)
+            if base_schema is None:
+                raise ValueError(f"Unsupported schema type {type(row_or_rows)}")
+            table_info = TableInfo(name=name, group=group.value, base_schema=base_schema.__name__)
             if isinstance(row_or_rows, list):
                 return model.from_rows(row_or_rows, table_info=table_info)
             else:
                 return model.from_row(row_or_rows, table_info=table_info)
 
-        model_dict: dict[str, BaseModelSchema | list[BaseModelSchema] | str | None] = {}
+        model_dict: dict[str, Any] = {
+            "entities": {},
+            "annotations": {},
+            "views": {},
+        }
         for key, value in dataset_item.to_schemas_data(dataset_schema).items():
-            if value is None:
-                model_dict[key] = None
+            if value is None or value == []:
+                if issubclass(dataset_schema.schemas[key], View):
+                    model_dict["views"][key] = None if value is None else []
+                elif issubclass(dataset_schema.schemas[key], Entity):
+                    model_dict["entities"][key] = None if value is None else []
+                elif issubclass(dataset_schema.schemas[key], Annotation):
+                    model_dict["annotations"][key] = None if value is None else []
+                else:
+                    raise ValueError(f"Unsupported schema type {type(value)}")
             elif isinstance(value, Item) or isinstance(value, list) and isinstance(value[0], Item):
                 model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.ITEM, ItemModel)
             elif isinstance(value, Annotation) or isinstance(value, list) and isinstance(value[0], Annotation):
-                model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.ANNOTATION, AnnotationModel)
-            elif isinstance(value, Embedding) or isinstance(value, list) and isinstance(value[0], Embedding):
-                model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.EMBEDDING, EmbeddingModel)
+                model_dict["annotations"][key] = _row_or_rows_to_model_or_models(
+                    value, key, _SchemaGroup.ANNOTATION, AnnotationModel
+                )
             elif isinstance(value, Entity) or isinstance(value, list) and isinstance(value[0], Entity):
-                model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.ENTITY, EntityModel)
+                model_dict["entities"][key] = _row_or_rows_to_model_or_models(
+                    value, key, _SchemaGroup.ENTITY, EntityModel
+                )
             elif isinstance(value, View) or isinstance(value, list) and isinstance(value[0], View):
-                model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.VIEW, ViewModel)
+                model_dict["views"][key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.VIEW, ViewModel)
             else:
                 raise ValueError(f"Unsupported schema type {type(value)}")
         model_dict["id"] = dataset_item.id
@@ -75,14 +90,13 @@ class DatasetItemModel(DatasetItem):
 
     def to_dataset_item(self, dataset_schema: DatasetSchema) -> DatasetItem:
         """Create a dataset item from a model."""
-        schema_dict = self.model_dump()
+        schema_dict = {}
 
-        item: ItemModel = schema_dict.pop("item")
-        schema_dict["item"] = item.to_row(dataset_schema.schemas["item"])
+        item = self.item
+        schema_dict.update(item.to_row(dataset_schema.schemas["item"]).model_dump())
 
-        for group in ["annotations", "embeddings", "entities", "views"]:
-            dict_: dict[str, BaseModelSchema | list[BaseModelSchema] | None] = schema_dict.pop(group)
-            for key, value in dict_.items():
+        for group in [self.annotations, self.entities, self.views]:
+            for key, value in group.items():
                 schema = dataset_schema.schemas[key]
                 if isinstance(value, list):
                     schema_dict[key] = [v.to_row(schema) for v in value]

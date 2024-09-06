@@ -53,24 +53,32 @@ class TestEmbedding:
             assert set(arrow_schema.names) == {"vector", "id", "item_ref"}
             assert arrow_schema.metadata is None
 
-    def test_create_shema(self, dumb_embedding_function: type[EmbeddingFunction], dumb_dataset: Dataset):
+    def test_create_shema(
+        self, dumb_embedding_function: type[EmbeddingFunction], dataset_image_bboxes_keypoint: Dataset
+    ):
         registry = get_registry()
         registry._functions["test_create_shema_dumb_embedding_function"] = dumb_embedding_function
 
         assert (
             _to_pixano_name(
-                dumb_dataset, "test_create_shema_view_embedding", "test_create_shema_dumb_embedding_function"
+                dataset_image_bboxes_keypoint,
+                "test_create_shema_view_embedding",
+                "test_create_shema_dumb_embedding_function",
             )
             not in registry._functions
         )
 
         schema = ViewEmbedding.create_schema(
-            "test_create_shema_dumb_embedding_function", "test_create_shema_view_embedding", dumb_dataset
+            "test_create_shema_dumb_embedding_function",
+            "test_create_shema_view_embedding",
+            dataset_image_bboxes_keypoint,
         )
 
         assert (
             _to_pixano_name(
-                dumb_dataset, "test_create_shema_view_embedding", "test_create_shema_dumb_embedding_function"
+                dataset_image_bboxes_keypoint,
+                "test_create_shema_view_embedding",
+                "test_create_shema_dumb_embedding_function",
             )
             in registry._functions
         )
@@ -92,7 +100,9 @@ class TestEmbedding:
 
         # Check that pixano function can be reused
         schema = ViewEmbedding.create_schema(
-            "test_create_shema_dumb_embedding_function", "test_create_shema_view_embedding", dumb_dataset
+            "test_create_shema_dumb_embedding_function",
+            "test_create_shema_view_embedding",
+            dataset_image_bboxes_keypoint,
         )
 
 
@@ -115,24 +125,26 @@ def test_is_view_embedding():
 
 class TestViewEmbeddingFunction:
     def test_create_view_embedding_function(
-        self, dumb_embedding_function: type[EmbeddingFunction], dumb_dataset: Dataset
+        self, dumb_embedding_function: type[EmbeddingFunction], dataset_image_bboxes_keypoint: Dataset
     ):
         registry = get_registry()
         assert "test_view_embedding_fn" not in registry._functions
         view_embedding_fn = create_view_embedding_function(
-            dumb_embedding_function, "test_view_embedding_fn", dumb_dataset
+            dumb_embedding_function, "test_view_embedding_fn", dataset_image_bboxes_keypoint
         )
         assert "test_view_embedding_fn" in registry._functions
 
         assert view_embedding_fn.__name__ == "ViewEmbeddingFunction"
         assert issubclass(view_embedding_fn, dumb_embedding_function)
 
-    def test_compute_source_embeddings(self, dumb_embedding_function: type[EmbeddingFunction], dumb_dataset: Dataset):
+    def test_compute_source_embeddings(
+        self, dumb_embedding_function: type[EmbeddingFunction], dataset_image_bboxes_keypoint: Dataset
+    ):
         view_embedding_fn = create_view_embedding_function(
-            dumb_embedding_function, "test_view_embedding_fn", dumb_dataset
+            dumb_embedding_function, "test_view_embedding_fn", dataset_image_bboxes_keypoint
         )()
 
-        views = dumb_dataset.get_data("image", limit=2)
+        views = dataset_image_bboxes_keypoint.get_data("image", limit=2)
         view_refs = pa.Table.from_pylist([ViewRef(id=view.id, name=view.table_name).model_dump() for view in views])
         embeddings = view_embedding_fn.compute_source_embeddings(view_refs)
         assert embeddings == [[1, 2, 3, 4, 5, 6, 7, 8]] * 2
