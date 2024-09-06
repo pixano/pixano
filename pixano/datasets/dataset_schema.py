@@ -114,6 +114,43 @@ class DatasetSchema(BaseModel):
             raise ValueError("DatasetSchema should contain an item schema.")
         return self
 
+    @model_validator(mode="after")
+    def _check_relations(self) -> Self:
+        for table, relations in self.relations.items():
+            if table not in self.schemas:
+                raise ValueError(f"Relation {table} not found in schemas.")
+            for relation, relation_type in relations.items():
+                if relation not in self.schemas:
+                    raise ValueError(f"Relation {relation} not found in schemas.")
+                if relation not in self.relations:
+                    raise ValueError(f"Relation {relation} not found in relations.")
+                if (
+                    relation_type == SchemaRelation.ONE_TO_ONE
+                    and not self.relations[relation][table] == SchemaRelation.ONE_TO_ONE
+                ):
+                    raise ValueError(f"Relation {table} -> {relation} should be one to one.")
+                elif (
+                    relation_type == SchemaRelation.ONE_TO_MANY
+                    and not self.relations[relation][table] == SchemaRelation.MANY_TO_ONE
+                ):
+                    raise ValueError(f"Relation {table} -> {relation} should be one to many.")
+                elif (
+                    relation_type == SchemaRelation.MANY_TO_ONE
+                    and not self.relations[relation][table] == SchemaRelation.ONE_TO_MANY
+                ):
+                    raise ValueError(f"Relation {table} -> {relation} should be many to one.")
+                elif (
+                    relation_type == SchemaRelation.MANY_TO_MANY
+                    and not self.relations[relation][table] == SchemaRelation.MANY_TO_MANY
+                ):
+                    raise ValueError(f"Relation {table} -> {relation} should be many to many.")
+        if _SchemaGroup.ITEM.value not in self.relations:
+            raise ValueError("Item schema should have relations.")
+        else:
+            if len(self.relations[_SchemaGroup.ITEM.value]) != len(self.schemas) - 1:
+                raise ValueError("Item schema should have relations with all other schemas.")
+        return self
+
     @staticmethod
     def format_table_name(table_name: str) -> str:
         """Format table name.
@@ -334,7 +371,7 @@ class DatasetItem(BaseModel):
                 if relation == SchemaRelation.ONE_TO_MANY:
                     fields[schema] = (list[schema_type], [])  # type: ignore[valid-type]
                 else:
-                    fields[schema] = (schema_type, None)
+                    fields[schema] = (schema_type | None, None)
 
         for field_name, field in item_type.model_fields.items():
             # No default value as all items metadata should be retrieved.

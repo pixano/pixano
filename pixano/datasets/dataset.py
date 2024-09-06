@@ -268,7 +268,10 @@ class Dataset:
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
-            schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
+            try:
+                schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
+            except TypeError:  # no embedding function
+                pass
         return table
 
     @overload
@@ -405,7 +408,14 @@ class Dataset:
         sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
         # Load tables
-        ds_tables = self.open_tables()
+        ds_tables = self.open_tables(
+            [
+                table
+                for group, tables in self.schema.groups.items()
+                for table in tables
+                if group != _SchemaGroup.EMBEDDING.value
+            ]
+        )
 
         # Load items data from the tables
         data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}

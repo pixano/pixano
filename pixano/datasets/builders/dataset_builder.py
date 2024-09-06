@@ -114,7 +114,10 @@ class DatasetBuilder(ABC):
         for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
             # assert that items have keys that are in tables
             for table_name, item_value in items.items():
-                assert table_name in tables, f"Table {table_name} not found in tables"
+                if item_value is None or item_value == []:
+                    continue
+                if table_name not in tables:
+                    raise KeyError(f"Table {table_name} not found in tables")
 
                 for it in item_value if isinstance(item_value, list) else [item_value]:
                     if " " in it.id:
