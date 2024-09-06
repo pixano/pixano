@@ -124,7 +124,7 @@ def get_model_from_row(group: _SchemaGroup, table: str, model_type: type[T], row
     Returns:
         The model.
     """
-    pixano_schema_type = get_super_type_from_dict(row, _PIXANO_SCHEMA_REGISTRY)
+    pixano_schema_type = get_super_type_from_dict(type(row), _PIXANO_SCHEMA_REGISTRY)
     if pixano_schema_type is None:
         raise HTTPException(
             status_code=500,

@@ -22,7 +22,7 @@ class DatasetModel(BaseModel):
     previews_path: Path
     media_dir: Path
     thumbnail: Path
-    schema: DatasetSchema
+    dataset_schema: DatasetSchema
     feature_values: DatasetFeaturesValues
     info: DatasetInfo
 
@@ -37,11 +37,12 @@ class DatasetModel(BaseModel):
             Dataset model.
         """
         raise cls(
+            id=dataset.info.id,
             path=dataset.path,
             previews_path=dataset._PREVIEWS_PATH,
-            media_path=dataset.media_dir,
-            thumb_file=dataset.thumbnail,
-            schema=dataset.schema,
+            media_dir=dataset.media_dir,
+            thumbnail=dataset.thumbnail,
+            dataset_schema=dataset.schema,
             feature_values=dataset.features_values,
             info=dataset.info,
         )
