@@ -17,7 +17,6 @@ from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
-from tests.fixtures.datasets.dataset_item import MyEntity
 
 
 VIDEO_INSTALLED = False
@@ -31,7 +30,7 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_valid_init(self, image_folder_builder, video_folder_builder):
+    def test_valid_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
@@ -44,17 +43,17 @@ class TestFolderBaseBuilder:
         assert video_folder_builder.view_schema == Video
         assert image_folder_builder.entity_name == "entities"
         assert video_folder_builder.entity_name == "entities"
-        assert image_folder_builder.entity_schema == MyEntity
-        assert video_folder_builder.entity_schema == MyEntity
+        assert image_folder_builder.entity_schema == entity_category
+        assert video_folder_builder.entity_schema == entity_category
 
-    def test_error_init(self) -> None:
+    def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
         target_dir = Path(tempfile.mkdtemp())
 
         # test 1: schema without view
         class Schema(DatasetItem):
             metadata: str
-            entities: list[MyEntity]
+            entities: list[entity_category]
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="View and entity schemas must be defined in the schemas argument."):
@@ -74,7 +73,7 @@ class TestFolderBaseBuilder:
             view: Image
             view2: Image
             metadata: str
-            entities: list[MyEntity]
+            entities: list[entity_category]
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="Only one view schema is supported in folder based builders."):
@@ -84,8 +83,8 @@ class TestFolderBaseBuilder:
         class Schema(DatasetItem):
             view: Image
             metadata: str
-            entities: list[MyEntity]
-            entities2: list[MyEntity]
+            entities: list[entity_category]
+            entities2: list[entity_category]
             bbox: list[BBox]
 
         with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
@@ -134,7 +133,7 @@ class TestFolderBaseBuilder:
         assert view.format == "mp4"
         assert round(view.duration, 2) == 6.97
 
-    def test_create_entities(self, image_folder_builder: ImageFolderBuilder):
+    def test_create_entities(self, image_folder_builder: ImageFolderBuilder, entity_category):
         item = image_folder_builder._create_item(
             split="train",
             metadata="metadata",
@@ -146,9 +145,9 @@ class TestFolderBaseBuilder:
         entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
 
         assert len(entities) == 1
-        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == MyEntity(
+        assert entities[0] == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -174,9 +173,9 @@ class TestFolderBaseBuilder:
         }
         entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
         assert len(entities) == 1
-        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == MyEntity(
+        assert entities[0] == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -204,17 +203,17 @@ class TestFolderBaseBuilder:
         }
         entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
         assert len(entities) == 2
-        assert isinstance(entities[0], MyEntity)
-        assert isinstance(entities[1], MyEntity)
+        assert isinstance(entities[0], entity_category)
+        assert isinstance(entities[1], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
         assert isinstance(entities[1].id, str) and len(entities[1].id) == 22
-        assert entities[0] == MyEntity(
+        assert entities[0] == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
         )
-        assert entities[1] == MyEntity(
+        assert entities[1] == entity_category(
             id=entities[1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -257,9 +256,9 @@ class TestFolderBaseBuilder:
         }
         entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
         assert len(entities) == 1
-        assert isinstance(entities[0], MyEntity)
+        assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == MyEntity(
+        assert entities[0] == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -298,7 +297,7 @@ class TestFolderBaseBuilder:
         with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
             entities = image_folder_builder._create_entities(item, view, entities_data)
 
-    def test_generate_items(self, image_folder_builder: ImageFolderBuilder):
+    def test_generate_items(self, image_folder_builder: ImageFolderBuilder, entity_category):
         items = list(image_folder_builder.generate_data())
         assert len(items) == 15
         assert len([item for item in items if item["item"].split == "train"]) == 10
@@ -314,12 +313,12 @@ class TestFolderBaseBuilder:
             assert view.url == f"{actual_item.split}/item_{i}.{'png' if i % 2 else 'jpg'}"
 
             if i % 2:  # has entities
-                entities: list[MyEntity] = item["entities"]
+                entities: list[entity_category] = item["entities"]
                 bboxes: list[BBox] = item["bbox"]
                 assert len(entities) == i
                 for entity, bbox in zip(entities, bboxes, strict=True):
                     item_per_split = 10 if actual_item.split == "train" else 5
-                    assert entity == MyEntity(
+                    assert entity == entity_category(
                         id=entity.id,
                         item_ref=ItemRef(id=actual_item.id),
                         view_ref=ViewRef(id=view.id, name="view"),

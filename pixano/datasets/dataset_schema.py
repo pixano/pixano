@@ -350,7 +350,7 @@ class DatasetItem(BaseModel):
         return DatasetSchema.from_dataset_item(cls)
 
     @staticmethod
-    def from_dataset_schema(dataset_schema: DatasetSchema, exclude_embeddings: bool = False) -> type["DatasetItem"]:
+    def from_dataset_schema(dataset_schema: DatasetSchema, exclude_embeddings: bool = True) -> type["DatasetItem"]:
         """Create a dataset item model based on the schema.
 
         Args:

@@ -14,11 +14,6 @@ from pixano.datasets.builders.folders.image import ImageFolderBuilder
 from pixano.datasets.builders.folders.video import VideoFolderBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
-from tests.fixtures.datasets import dataset_item as fixture_dataset_item
-
-
-dataset_item_image_bboxes_keypoints = fixture_dataset_item.dataset_item_image_bboxes_keypoints
-dataset_item_video_bboxes_keypoint = fixture_dataset_item.dataset_item_video_bboxes_keypoint
 
 
 def _create_metadata_file_image(source_dir: Path, splits: list[str], num_items_per_split: list[int]):
