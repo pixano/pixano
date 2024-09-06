@@ -513,7 +513,7 @@ class TestDatasetItem:
     ):
         # Test with embeddings
         type_dataset_item = DatasetItem.from_dataset_schema(
-            dataset_schema_item_categories_name_index_image_bbox_embedding
+            dataset_schema_item_categories_name_index_image_bbox_embedding, exclude_embeddings=False
         )
         assert set(type_dataset_item.model_fields.keys()) == {
             "embeddings",
