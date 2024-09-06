@@ -10,7 +10,7 @@ from pathlib import Path
 from types import GenericAlias
 from typing import Any
 
-from pydantic import BaseModel, create_model, model_validator
+from pydantic import BaseModel, create_model, model_serializer, model_validator
 from typing_extensions import Self
 
 from pixano.features import BaseSchema, Item
@@ -163,6 +163,7 @@ class DatasetSchema(BaseModel):
         """
         return table_name.lower().replace(" ", "_")
 
+    @model_serializer
     def serialize(self) -> dict[str, dict[str, Any]]:
         """Serialize the dataset schema.
 

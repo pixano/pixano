@@ -36,7 +36,7 @@ class DatasetModel(BaseModel):
         Returns:
             Dataset model.
         """
-        raise cls(
+        return cls(
             id=dataset.info.id,
             path=dataset.path,
             previews_path=dataset._PREVIEWS_PATH,
