@@ -8,24 +8,57 @@
 import tempfile
 from pathlib import Path
 
+import lancedb
 import pytest
 import shortuuid
 
-from pixano.datasets.dataset import Dataset
+from pixano.datasets.dataset import Dataset, DatasetInfo
 from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
+from tests.fixtures.datasets.builders.builder import (
+    DatasetBuilderImageBboxesKeypoint,
+    DatasetBuilderMultiViewTrackingAndImage,
+)
 
 
 LIBRARY_DIR = ASSETS_DIRECTORY / "library"
 
 
 @pytest.fixture(scope="session")
-def dataset_image_bboxes_keypoint() -> Dataset:
-    return Dataset.find("dataset_image_bboxes_keypoint", LIBRARY_DIR)
+def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset:
+    info_dataset_image_bboxes_keypoint = DatasetInfo(
+        id="dataset_image_bboxes_keypoint",
+        name="dataset_image_bboxes_keypoint",
+        description="Description dataset_image_bboxes_keypoint.",
+    )
+    schemas = dataset_item_image_bboxes_keypoint
+    dataset_builder_image_bboxes_keypoint = DatasetBuilderImageBboxesKeypoint(
+        info=info_dataset_image_bboxes_keypoint,
+        source_dir=LIBRARY_DIR,
+        target_dir=LIBRARY_DIR / "dataset_image_bboxes_keypoint",
+        schemas=schemas,
+    )
+    dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
+        dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
+    )
+    return dataset_builder_image_bboxes_keypoint.build(mode="overwrite")
 
 
 @pytest.fixture(scope="session")
-def dataset_multi_view_tracking_and_image() -> Dataset:
-    return Dataset.find("dataset_multi_view_tracking_and_image", LIBRARY_DIR)
+def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_image) -> Dataset:
+    info = DatasetInfo(
+        id="dataset_multi_view_tracking_and_image",
+        name="dataset_multi_view_tracking_and_image",
+        description="Description dataset_multi_view_tracking_and_image.",
+    )
+    schemas = dataset_item_multi_view_tracking_and_image
+
+    dataset_builder_multi_view_tracking_and_image = DatasetBuilderMultiViewTrackingAndImage(
+        info=info,
+        source_dir=LIBRARY_DIR,
+        target_dir=LIBRARY_DIR / "dataset_multi_view_tracking_and_image",
+        schemas=schemas,
+    )
+    return dataset_builder_multi_view_tracking_and_image.build(mode="overwrite")
 
 
 @pytest.fixture(scope="function")
@@ -48,35 +81,3 @@ def dataset_multi_view_tracking_and_image_copy() -> Dataset:
     dataset.info.id = id
     dataset.info.to_json(dataset._info_file)
     return dataset
-
-
-# TODO: extract dataset creation from test but seems easier to do it in the test because of the fixtures
-# def test_create_library_dataset_builder_image_bboxes_keypoint(
-#     dataset_builder_image_bboxes_keypoint,
-#     dataset_builder_multi_view_tracking_and_image,
-# ):
-#     import lancedb
-
-#     from tests.assets.sample_data.metadata import ASSETS_DIRECTORY
-
-#     dataset_builder_image_bboxes_keypoint.info.id = "dataset_image_bboxes_keypoint"
-#     dataset_builder_multi_view_tracking_and_image.info.id = "dataset_multi_view_tracking_and_image"
-#     library_dir = ASSETS_DIRECTORY / "library"
-#     dataset_builder_image_bboxes_keypoint_target_dir = library_dir / "dataset_image_bboxes_keypoint"
-#     dataset_builder_image_bboxes_keypoint_target_dir.mkdir(exist_ok=True)
-#     dataset_builder_image_bboxes_keypoint.target_dir = dataset_builder_image_bboxes_keypoint_target_dir
-#     dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
-#         dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
-#     )
-
-#     dataset_builder_multi_view_tracking_and_image_target_dir = library_dir / "dataset_multi_view_tracking_and_image"
-#     dataset_builder_multi_view_tracking_and_image_target_dir.mkdir(exist_ok=True)
-#     dataset_builder_multi_view_tracking_and_image.target_dir = (
-#         dataset_builder_multi_view_tracking_and_image_target_dir
-#     )
-#     dataset_builder_multi_view_tracking_and_image.db = lancedb.connect(
-#         dataset_builder_multi_view_tracking_and_image.target_dir / Dataset._DB_PATH
-#     )
-
-#     dataset_builder_image_bboxes_keypoint.build(mode="overwrite")
-#     dataset_builder_multi_view_tracking_and_image.build(mode="overwrite")

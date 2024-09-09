@@ -50,4 +50,4 @@ __pycache__
 
 # Dataset files
 *.lance
-!tests/assets/library/**/*.lance
+tests/assets/library/*
