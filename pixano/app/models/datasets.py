@@ -113,7 +113,7 @@ class PaginationInfo(BaseModel):
 
 
 class DatasetBrowser(BaseModel):
-    """Data for Dataset Explorer page.
+    """Data for Dataset Browser page.
 
     Attributes:
         id: dataset id

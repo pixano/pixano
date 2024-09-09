@@ -5,13 +5,13 @@
 # =====================================
 
 
-from pixano.app.models.datasets import DatasetExplorer, DatasetModel, PaginationColumn, PaginationInfo, TableData
+from pixano.app.models.datasets import DatasetBrowser, DatasetModel, PaginationColumn, PaginationInfo, TableData
 from pixano.datasets.dataset import Dataset
 
 
 class TestDatasetExplorer:
     def test_init(self):
-        DatasetExplorer(
+        DatasetBrowser(
             id="voc",
             name="pascal",
             table_data=TableData(cols=[PaginationColumn(name="col", type="col")], rows=[{"metadata": 123}]),
