@@ -12,13 +12,13 @@ from pixano.features.schemas import Item
 from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def item_metadata():
     item_metadata = create_model("Item", metadata=(str, ...), __base__=Item)
     return item_metadata
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def item_categories():
     class ItemCategories(Item):
         categories: tuple[str, ...]
@@ -28,7 +28,7 @@ def item_categories():
     return ItemCategories
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def item_categories_name_index():
     class ItemCategoriesNameIndex(Item):
         categories: tuple[str, ...]

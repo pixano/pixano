@@ -1,0 +1,186 @@
+{
+    "relations": {
+        "item": {
+            "image": "one_to_one",
+            "entities": "one_to_many",
+            "bboxes": "one_to_many",
+            "keypoint": "one_to_one"
+        },
+        "image": {
+            "item": "one_to_one"
+        },
+        "entities": {
+            "item": "many_to_one"
+        },
+        "bboxes": {
+            "item": "many_to_one"
+        },
+        "keypoint": {
+            "item": "one_to_one"
+        }
+    },
+    "schemas": {
+        "image": {
+            "schema": "Image",
+            "base_schema": "Image",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_ref": {
+                    "type": "ItemRef",
+                    "collection": false
+                },
+                "parent_ref": {
+                    "type": "ViewRef",
+                    "collection": false
+                },
+                "url": {
+                    "type": "str",
+                    "collection": false
+                },
+                "width": {
+                    "type": "int",
+                    "collection": false
+                },
+                "height": {
+                    "type": "int",
+                    "collection": false
+                },
+                "format": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        },
+        "entities": {
+            "schema": "Entity",
+            "base_schema": "Entity",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_ref": {
+                    "type": "ItemRef",
+                    "collection": false
+                },
+                "view_ref": {
+                    "type": "ViewRef",
+                    "collection": false
+                },
+                "parent_ref": {
+                    "type": "EntityRef",
+                    "collection": false
+                }
+            }
+        },
+        "bboxes": {
+            "schema": "BBox",
+            "base_schema": "BBox",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_ref": {
+                    "type": "ItemRef",
+                    "collection": false
+                },
+                "view_ref": {
+                    "type": "ViewRef",
+                    "collection": false
+                },
+                "entity_ref": {
+                    "type": "EntityRef",
+                    "collection": false
+                },
+                "coords": {
+                    "type": "float",
+                    "collection": true
+                },
+                "format": {
+                    "type": "str",
+                    "collection": false
+                },
+                "is_normalized": {
+                    "type": "bool",
+                    "collection": false
+                },
+                "confidence": {
+                    "type": "float",
+                    "collection": false
+                }
+            }
+        },
+        "keypoint": {
+            "schema": "KeyPoints",
+            "base_schema": "KeyPoints",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "item_ref": {
+                    "type": "ItemRef",
+                    "collection": false
+                },
+                "view_ref": {
+                    "type": "ViewRef",
+                    "collection": false
+                },
+                "entity_ref": {
+                    "type": "EntityRef",
+                    "collection": false
+                },
+                "template_id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "coords": {
+                    "type": "float",
+                    "collection": true
+                },
+                "states": {
+                    "type": "str",
+                    "collection": true
+                }
+            }
+        },
+        "item": {
+            "schema": "Item",
+            "base_schema": "Item",
+            "fields": {
+                "id": {
+                    "type": "str",
+                    "collection": false
+                },
+                "split": {
+                    "type": "str",
+                    "collection": false
+                },
+                "metadata": {
+                    "type": "str",
+                    "collection": false
+                }
+            }
+        }
+    },
+    "groups": {
+        "annotations": [
+            "bboxes",
+            "keypoint"
+        ],
+        "embeddings": [],
+        "item": [
+            "item"
+        ],
+        "entities": [
+            "entities"
+        ],
+        "views": [
+            "image"
+        ]
+    }
+}

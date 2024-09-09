@@ -43,7 +43,7 @@ def dataset_schema_item_categories_image_bbox(item_categories):
     )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def json_dataset_schema_item_categories_image_bbox():
     return {
         "schemas": {
@@ -154,7 +154,7 @@ def dataset_schema_item_categories_name_index_image_bbox_embedding(item_categori
     )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
     return {
         "relations": {
@@ -319,7 +319,7 @@ def dataset_schema_multi_view_tracking_and_image(
     )
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def json_dataset_schema_multi_view_tracking_and_image():
     return {
         "relations": {
@@ -576,6 +576,7 @@ def dataset_schema_image_bboxes_keypoint(item_metadata):
     )
 
 
+@pytest.fixture(scope="session")
 def json_dataset_image_bboxes_keypoint():
     return {
         "relations": {

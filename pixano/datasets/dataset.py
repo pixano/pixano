@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import shutil
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast, overload
@@ -148,6 +149,26 @@ class Dataset:
             self.media_dir = new_path / "media"
 
         self.path.rename(new_path)
+        self.path = new_path
+
+        self._db_path = self.path / self._DB_PATH
+        self._info_file = self.path / self._INFO_FILE
+        self._schema_file = self.path / self._SCHEMA_FILE
+        self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._stat_file = self.path / self._STAT_FILE
+        self._thumb_file = self.path / self._THUMB_FILE
+        self._db_connection = self._connect()
+
+    def _copy_dataset(self, new_path: Path) -> None:
+        """Copy dataset to a new path.
+
+        Args:
+            new_path: New dataset path.
+        """
+        if self.media_dir == self.path / "media":
+            self.media_dir = new_path / "media"
+
+        shutil.copytree(self.path, new_path, dirs_exist_ok=True)  # Fine
         self.path = new_path
 
         self._db_path = self.path / self._DB_PATH
@@ -498,8 +519,22 @@ class Dataset:
         ):
             raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
 
+        set_ids = {item.id for item in data}
+
+        if len(set_ids) != len(data):
+            raise ValueError("All data must have unique ids")
+
+        ids_found = []
+
+        for id in self.get_all_ids(table_name):
+            if id in set_ids:
+                ids_found.append(id)
+        if ids_found:
+            raise ValueError(f"IDs {ids_found} already exist in the table {table_name}")
+
         table = self.open_table(table_name)
         table.add(data)
+
         return data
 
     def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
@@ -528,27 +563,39 @@ class Dataset:
                 self.add_data(table_name, table_data)
         return dataset_items
 
-    def delete_data(self, table_name: str, ids: list[str]) -> None:
+    def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.
 
         Args:
             table_name: Table name.
             ids: Ids to delete.
         """
+        set_ids = set(ids)
+
         table = self.open_table(table_name)
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set_ids))
+
         table.delete(where=f"id in {sql_ids}")
 
-    def delete_dataset_items(self, ids: list[str]) -> None:
+        ids_not_found = []
+        all_ids = self.get_all_ids(table_name)
+        for id in set_ids:
+            if id not in all_ids:
+                ids_not_found.append(id)
+
+        return ids_not_found
+
+    def delete_dataset_items(self, ids: list[str]) -> list[str]:
         """Delete dataset items.
 
         Args:
             ids: Ids to delete.
         """
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        ids_not_found = []
         for table_name in self.schema.schemas.keys():
             if table_name == _SchemaGroup.ITEM.value:
-                self.delete_data(table_name, ids)
+                ids_not_found = self.delete_data(table_name, ids)
             else:
                 table = self.open_table(table_name)
                 table_ids = (
@@ -563,6 +610,7 @@ class Dataset:
                     continue
                 table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
                 table.delete(where=f"id in {table_sql_ids}")
+        return ids_not_found
 
     def update_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
         """Update data in a table.

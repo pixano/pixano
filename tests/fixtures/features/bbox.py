@@ -10,12 +10,12 @@ from pixano.features.schemas.annotations.bbox import BBox
 from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def height_width():
     return 4, 6
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def coords():
     return {
         "xyxy": [1, 1, 3, 3],
@@ -35,7 +35,7 @@ def bbox_xywh(coords):
     return BBox.from_xywh(coords["xywh"], confidence=0.0, is_normalized=False)
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def bbox_difficult():
     class BBoxDifficult(BBox):
         is_difficult: bool

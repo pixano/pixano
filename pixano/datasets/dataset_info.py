@@ -20,7 +20,6 @@ class DatasetInfo(BaseModel):
         name: Dataset name
         description: Dataset description
         estimated_size: Dataset estimated size
-        num_elements: Number of elements in dataset
         preview: Path to a preview thumbnail
     """
 
@@ -28,7 +27,6 @@ class DatasetInfo(BaseModel):
     name: str = ""
     description: str = ""
     size: str = "Unknown"
-    num_elements: int = 0
     preview: str = ""
 
     def to_json(self, json_fp: Path) -> None:

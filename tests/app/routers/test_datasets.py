@@ -4,9 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-from pathlib import Path
-
-import pytest
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
@@ -16,7 +13,6 @@ from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetSchema
-from pixano.features.schemas.items.item import Item
 
 
 def test_get_datasets_info(
@@ -25,6 +21,9 @@ def test_get_datasets_info(
     info_dataset_multi_view_tracking_and_image: DatasetInfo,
 ):
     app, settings = app_and_settings
+
+    info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
+    info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
 
     infos = [info_dataset_image_bboxes_keypoint, info_dataset_multi_view_tracking_and_image]
 
@@ -46,6 +45,7 @@ def test_get_datasets_info_not_found(empty_app_and_settings: tuple[FastAPI, Sett
 def test_get_dataset_info(app_and_settings: tuple[FastAPI, Settings], info_dataset_image_bboxes_keypoint: DatasetInfo):
     app, settings = app_and_settings
 
+    info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
     client = TestClient(app)
     response = client.get("/datasets/info/dataset_image_bboxes_keypoint")
     assert response.status_code == 200
@@ -58,6 +58,8 @@ def test_get_dataset(
     info_dataset_image_bboxes_keypoint: DatasetInfo,
 ):
     app, settings = app_and_settings
+
+    info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
 
     client = TestClient(app)
     response = client.get("/datasets/dataset_image_bboxes_keypoint")

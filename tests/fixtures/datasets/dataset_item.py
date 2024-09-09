@@ -17,7 +17,7 @@ from pixano.features.schemas.views.image import Image
 from pixano.features.schemas.views.video import Video
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_image_bboxes_keypoint():
     class Schema(DatasetItem):
         image: Image
@@ -29,7 +29,7 @@ def dataset_item_image_bboxes_keypoint():
     return Schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_image_bboxes_keypoints(entity_category):
     class Schema(DatasetItem):
         view: Image
@@ -41,7 +41,7 @@ def dataset_item_image_bboxes_keypoints(entity_category):
     return Schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_video_bboxes_keypoint(entity_category):
     class Schema(DatasetItem):
         view: Video
@@ -53,7 +53,7 @@ def dataset_item_video_bboxes_keypoint(entity_category):
     return Schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_bboxes_metadata():
     class CustomDatasetItem(DatasetItem):
         categories: tuple[str, ...]
@@ -67,7 +67,7 @@ def dataset_item_bboxes_metadata():
     return CustomDatasetItem
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_image_embeddings(entity_category, embedding_8):
     class Schema(DatasetItem):
         image: Image
@@ -79,7 +79,7 @@ def dataset_item_image_embeddings(entity_category, embedding_8):
     return Schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dataset_item_multi_view_tracking_and_image(
     sequence_frame_category, entity_category, bbox_difficult, view_embedding_8
 ):

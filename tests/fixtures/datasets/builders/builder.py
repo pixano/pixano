@@ -5,6 +5,7 @@
 # =====================================
 
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -290,7 +291,7 @@ class DatasetBuilderImageBboxesKeypoint(DatasetBuilder):
 
 
 class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
-    def __init__(self, num_rows: int = 10, *args, **kwargs):
+    def __init__(self, num_rows: int = 5, *args, **kwargs):
         self.num_rows = num_rows
         super().__init__(*args, **kwargs)
 
@@ -300,7 +301,9 @@ class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
 
 @pytest.fixture()
 def dataset_builder_image_bboxes_keypoint(
-    dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, num_rows=5
+    dataset_item_image_bboxes_keypoint,
+    info_dataset_image_bboxes_keypoint,
+    num_rows=5,
 ):
     return DatasetBuilderImageBboxesKeypoint(
         num_rows,
