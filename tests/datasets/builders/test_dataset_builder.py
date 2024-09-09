@@ -26,14 +26,16 @@ class TestDatasetBuilder:
             (tempfile.gettempdir(), Path(tempfile.gettempdir())),
         ],
     )
-    def test_init(self, dataset_item_image_bboxes_keypoint, info, source_dir, target_dir):
+    def test_init(
+        self, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, source_dir, target_dir
+    ):
         builder = DatasetBuilderImageBboxesKeypoint(
-            5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info
+            5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
         )
         assert builder.source_dir == Path(source_dir)
         assert builder.target_dir == Path(target_dir)
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
-        assert builder.info == info
+        assert builder.info == info_dataset_image_bboxes_keypoint
         assert isinstance(builder.dataset_schema, DatasetSchema)
         assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
         for (key1, value1), (key2, value2) in zip(
@@ -63,8 +65,8 @@ class TestDatasetBuilder:
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
         )
-        assert dataset_builder_image_bboxes_keypoint.info.name == "test"
-        assert dataset_builder_image_bboxes_keypoint.info.description == "test"
+        assert dataset_builder_image_bboxes_keypoint.info.id == "dataset_image_bboxes_keypoint"
+        assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
         assert dataset_builder_image_bboxes_keypoint.info.num_elements == 5
 
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._INFO_FILE).exists()

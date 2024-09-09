@@ -125,6 +125,7 @@ class Dataset:
         self._features_values_file = self.path / self._FEATURES_VALUES_FILE
         self._stat_file = self.path / self._STAT_FILE
         self._thumb_file = self.path / self._THUMB_FILE
+        self._db_path = self.path / self._DB_PATH
 
         self.info = DatasetInfo.from_json(self._info_file)
         self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
@@ -137,6 +138,26 @@ class Dataset:
 
         self._reload_schema()
 
+    def _move_dataset(self, new_path: Path) -> None:
+        """Move dataset to a new path.
+
+        Args:
+            new_path: New dataset path.
+        """
+        if self.media_dir == self.path / "media":
+            self.media_dir = new_path / "media"
+
+        self.path.rename(new_path)
+        self.path = new_path
+
+        self._db_path = self.path / self._DB_PATH
+        self._info_file = self.path / self._INFO_FILE
+        self._schema_file = self.path / self._SCHEMA_FILE
+        self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._stat_file = self.path / self._STAT_FILE
+        self._thumb_file = self.path / self._THUMB_FILE
+        self._db_connection = self._connect()
+
     @property
     def num_rows(self) -> int:
         """Return number of rows in dataset.
@@ -146,15 +167,6 @@ class Dataset:
         """
         # Return number of rows of item table
         return len(self.open_table(_SchemaGroup.ITEM.value))
-
-    @property
-    def _db_path(self) -> Path:
-        """Return dataset db path.
-
-        Returns:
-            Dataset db path.
-        """
-        return self.path / self._DB_PATH
 
     def _reload_schema(self) -> None:
         """Reload schema.

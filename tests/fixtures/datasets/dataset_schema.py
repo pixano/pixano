@@ -12,6 +12,7 @@ from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.schemas.annotations.tracklet import Tracklet
 from pixano.features.schemas.entities.track import Track
+from pixano.features.schemas.items.item import Item
 
 
 @pytest.fixture()
@@ -538,5 +539,123 @@ def json_dataset_schema_multi_view_tracking_and_image():
             "item": ["item"],
             "entities": ["entities_video", "entity_image", "tracks"],
             "views": ["video", "image"],
+        },
+    }
+
+
+@pytest.fixture()
+def dataset_schema_image_bboxes_keypoint(item_metadata):
+    return DatasetSchema(
+        schemas={
+            "item": item_metadata,
+            "image": Image,
+            "entities": Entity,
+            "bboxes": BBox,
+            "keypoint": KeyPoints,
+        },
+        relations={
+            "item": {
+                "image": SchemaRelation.ONE_TO_ONE,
+                "entities": SchemaRelation.ONE_TO_MANY,
+                "bboxes": SchemaRelation.ONE_TO_MANY,
+                "keypoint": SchemaRelation.ONE_TO_ONE,
+            },
+            "image": {
+                "item": SchemaRelation.ONE_TO_ONE,
+            },
+            "entities": {
+                "item": SchemaRelation.MANY_TO_ONE,
+            },
+            "bboxes": {
+                "item": SchemaRelation.MANY_TO_ONE,
+            },
+            "keypoint": {
+                "item": SchemaRelation.ONE_TO_ONE,
+            },
+        },
+    )
+
+
+def json_dataset_image_bboxes_keypoint():
+    return {
+        "relations": {
+            "item": {
+                "image": "one_to_one",
+                "entities": "one_to_many",
+                "bboxes": "one_to_many",
+                "keypoint": "one_to_one",
+            },
+            "image": {"item": "one_to_one"},
+            "entities": {"item": "many_to_one"},
+            "bboxes": {"item": "many_to_one"},
+            "keypoint": {"item": "one_to_one"},
+        },
+        "schemas": {
+            "image": {
+                "schema": "Image",
+                "base_schema": "Image",
+                "fields": {
+                    "id": {"type": "str", "collection": False},
+                    "item_ref": {"type": "ItemRef", "collection": False},
+                    "parent_ref": {"type": "ViewRef", "collection": False},
+                    "url": {"type": "str", "collection": False},
+                    "width": {"type": "int", "collection": False},
+                    "height": {"type": "int", "collection": False},
+                    "format": {"type": "str", "collection": False},
+                },
+            },
+            "entities": {
+                "schema": "Entity",
+                "base_schema": "Entity",
+                "fields": {
+                    "id": {"type": "str", "collection": False},
+                    "item_ref": {"type": "ItemRef", "collection": False},
+                    "view_ref": {"type": "ViewRef", "collection": False},
+                    "parent_ref": {"type": "EntityRef", "collection": False},
+                },
+            },
+            "bboxes": {
+                "schema": "BBox",
+                "base_schema": "BBox",
+                "fields": {
+                    "id": {"type": "str", "collection": False},
+                    "item_ref": {"type": "ItemRef", "collection": False},
+                    "view_ref": {"type": "ViewRef", "collection": False},
+                    "entity_ref": {"type": "EntityRef", "collection": False},
+                    "coords": {"type": "float", "collection": True},
+                    "format": {"type": "str", "collection": False},
+                    "is_normalized": {"type": "bool", "collection": False},
+                    "confidence": {"type": "float", "collection": False},
+                },
+            },
+            "keypoint": {
+                "schema": "KeyPoints",
+                "base_schema": "KeyPoints",
+                "fields": {
+                    "id": {"type": "str", "collection": False},
+                    "item_ref": {"type": "ItemRef", "collection": False},
+                    "view_ref": {"type": "ViewRef", "collection": False},
+                    "entity_ref": {"type": "EntityRef", "collection": False},
+                    "template_id": {"type": "str", "collection": False},
+                    "coords": {"type": "float", "collection": True},
+                    "states": {"type": "str", "collection": True},
+                },
+            },
+            "item": {
+                "schema": "Item",
+                "base_schema": "Item",
+                "fields": {
+                    "id": {"type": "str", "collection": False},
+                    "split": {"type": "str", "collection": False},
+                    "metadata": {"type": "str", "collection": False},
+                },
+            },
+        },
+        "groups": {
+            "annotations": ["bboxes", "keypoint"],
+            "embeddings": [],
+            "item": ["item"],
+            "entities": ["entities"],
+            "views": ["image"],
         },
     }

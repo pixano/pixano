@@ -6,9 +6,16 @@
 
 
 import pytest
+from pydantic import create_model
 
 from pixano.features.schemas import Item
 from tests.utils.schema import register_schema
+
+
+@pytest.fixture()
+def item_metadata():
+    item_metadata = create_model("Item", metadata=(str, ...), __base__=Item)
+    return item_metadata
 
 
 @pytest.fixture()

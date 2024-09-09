@@ -47,6 +47,27 @@ class DatasetModel(BaseModel):
             info=dataset.info,
         )
 
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> "DatasetModel":
+        """Create a dataset model from a JSON object.
+
+        Args:
+            data: JSON object.
+
+        Returns:
+            Dataset model.
+        """
+        return cls(
+            id=data["id"],
+            path=Path(data["path"]),
+            previews_path=Path(data["previews_path"]),
+            media_dir=Path(data["media_dir"]),
+            thumbnail=Path(data["thumbnail"]),
+            dataset_schema=DatasetSchema.deserialize(data["dataset_schema"]),
+            feature_values=DatasetFeaturesValues(**data["feature_values"]),
+            info=DatasetInfo(**data["info"]),
+        )
+
     def to_dataset(self) -> Dataset:
         """Create a dataset from a dataset model."""
         return Dataset.find(self.id, self.path.parent, self.media_dir)

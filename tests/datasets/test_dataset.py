@@ -27,8 +27,8 @@ class TestDataset:
         assert isinstance(dataset_image_bboxes_keypoint.info, DatasetInfo)
         assert dataset_image_bboxes_keypoint.info == DatasetInfo(
             id=dataset_image_bboxes_keypoint.info.id,
-            name="test",
-            description="test",
+            name="dataset_image_bboxes_keypoint",
+            description="Description dataset_image_bboxes_keypoint.",
             size="Unknown",
             num_elements=5,
             preview="",

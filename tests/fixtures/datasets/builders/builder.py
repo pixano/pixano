@@ -299,16 +299,28 @@ class DatasetBuilderMultiViewTrackingAndImage(DatasetBuilder):
 
 
 @pytest.fixture()
-def dataset_builder_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint, info, num_rows=5):
+def dataset_builder_image_bboxes_keypoint(
+    dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, num_rows=5
+):
     return DatasetBuilderImageBboxesKeypoint(
-        num_rows, tempfile.mkdtemp(), tempfile.mkdtemp(), dataset_item_image_bboxes_keypoint, info
+        num_rows,
+        tempfile.mkdtemp(),
+        tempfile.mkdtemp(),
+        dataset_item_image_bboxes_keypoint,
+        info_dataset_image_bboxes_keypoint,
     )
 
 
 @pytest.fixture()
 def dataset_builder_multi_view_tracking_and_image(
-    dataset_item_multi_view_tracking_and_image: type[DatasetItem], info: DatasetInfo, num_rows: int = 5
+    dataset_item_multi_view_tracking_and_image: type[DatasetItem],
+    info_dataset_multi_view_tracking_and_image: DatasetInfo,
+    num_rows: int = 5,
 ):
     return DatasetBuilderMultiViewTrackingAndImage(
-        num_rows, tempfile.mkdtemp(), tempfile.mkdtemp(), dataset_item_multi_view_tracking_and_image, info
+        num_rows,
+        tempfile.mkdtemp(),
+        tempfile.mkdtemp(),
+        dataset_item_multi_view_tracking_and_image,
+        info_dataset_multi_view_tracking_and_image,
     )
