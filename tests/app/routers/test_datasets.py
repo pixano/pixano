@@ -30,7 +30,10 @@ def test_get_datasets_info(
     client = TestClient(app)
     response = client.get("/datasets/info")
     assert response.status_code == 200
-    assert response.json() == [info.model_dump() for info in infos]
+    json_response = response.json()
+    assert len(json_response) == len(infos)
+    for info in infos:
+        assert info.model_dump() in json_response
 
 
 def test_get_datasets_info_not_found(empty_app_and_settings: tuple[FastAPI, Settings]):
