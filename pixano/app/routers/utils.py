@@ -56,7 +56,7 @@ def assert_table_in_group(dataset: Dataset, table: str, group: _SchemaGroup) -> 
     if table not in dataset.schema.groups[group]:
         raise HTTPException(
             status_code=404,
-            detail=f"Table {table} is not a {group} table.",
+            detail=f"Table {table} is not in the {group.value} group table.",
         )
 
 
@@ -206,7 +206,13 @@ def update_rows(
     """
     rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
 
-    updated_rows = dataset.update_data(table, rows)
+    try:
+        updated_rows = dataset.update_data(table, rows)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid data.",
+        )
 
     # TODO: return updated rows instead of input rows
     # TODO: check if rows are updated or created whicch change HTTP status code
@@ -249,7 +255,14 @@ def create_rows(
     """
     rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
 
-    created_rows = dataset.add_data(table, rows)
+    try:
+        created_rows = dataset.add_data(table, rows)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid data.",
+        )
+
     return created_rows
 
 
