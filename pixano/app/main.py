@@ -11,6 +11,7 @@ from fastapi_pagination.api import add_pagination
 from s3path import S3Path
 
 from pixano.app.routers.annotations import router as annotations_router
+from pixano.app.routers.browser import router as browser_router
 from pixano.app.routers.dataset_items import router as dataset_items_router
 from pixano.app.routers.datasets import router as datasets_router
 from pixano.app.routers.embeddings import router as embeddings_router
@@ -68,6 +69,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(annotations_router)
     app.include_router(dataset_items_router)
     app.include_router(datasets_router)
+    app.include_router(browser_router)
     app.include_router(embeddings_router)
     app.include_router(entities_router)
     app.include_router(items_router)

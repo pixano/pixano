@@ -112,8 +112,8 @@ class PaginationInfo(BaseModel):
     total: int
 
 
-class DatasetExplorer(BaseModel):
-    """Data for Dataset Explorer page.
+class DatasetBrowser(BaseModel):
+    """Data for Dataset Browser page.
 
     Attributes:
         id: dataset id
