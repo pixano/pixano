@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Params
 from fastapi_pagination.api import resolve_params
 
-from pixano.app.models import DatasetExplorer, PaginationColumn, PaginationInfo, TableData
+from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
 from pixano.features import Image, SequenceFrame
 from pixano.features.schemas.schema_group import _SchemaGroup
@@ -22,12 +22,12 @@ from .utils import get_rows
 router = APIRouter(prefix="/browser", tags=["Browser"])
 
 
-@router.get("/{id}", response_model=DatasetExplorer)
+@router.get("/{id}", response_model=DatasetBrowser)
 async def get_browser(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     params: Params = Depends(),
-) -> DatasetExplorer:  # type: ignore
+) -> DatasetBrowser:  # type: ignore
     """## Load dataset items for Explorer page.
 
     Args:
@@ -96,7 +96,7 @@ async def get_browser(
 
         print("QSQS", len(rows))
         # Return dataset items
-        return DatasetExplorer(
+        return DatasetBrowser(
             id=id,
             name=dataset.info.name,
             table_data=TableData(cols=cols, rows=rows),
