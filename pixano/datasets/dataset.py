@@ -131,6 +131,7 @@ class Dataset:
         self.stats = DatasetStat.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.media_dir = media_dir or self.path / "media"
         self.thumbnail = self._thumb_file
+        self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
 

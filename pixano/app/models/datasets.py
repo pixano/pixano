@@ -36,10 +36,10 @@ class DatasetModel(BaseModel):
         Returns:
             Dataset model.
         """
-        raise cls(
+        return cls(
             id=dataset.info.id,
             path=dataset.path,
-            previews_path=dataset._PREVIEWS_PATH,
+            previews_path=dataset.previews_path,
             media_dir=dataset.media_dir,
             thumbnail=dataset.thumbnail,
             dataset_schema=dataset.schema,
@@ -52,7 +52,7 @@ class DatasetModel(BaseModel):
         return Dataset.find(self.id, self.path.parent, self.media_dir)
 
 
-class ColDesc(BaseModel):
+class PaginationColumn(BaseModel):
     """Column description.
 
     Attributes:
@@ -72,7 +72,7 @@ class TableData(BaseModel):
         rows: rows (actual data).
     """
 
-    cols: list[ColDesc]
+    cols: list[PaginationColumn]
     rows: list[dict[str, Any]]
     # Note: Any is one of the allowed cell types (int, float, str, bool, Image/Video/..., graph, ...)
 
