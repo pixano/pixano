@@ -5,6 +5,7 @@
 # =====================================
 
 
+import re
 from pathlib import Path
 
 import pytest
@@ -609,6 +610,14 @@ class TestDataset:
         ):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['0'] already exist in the table item.")):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
     def test_add_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         new_item = item.model_copy()
@@ -649,42 +658,114 @@ class TestDataset:
         ):
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['image_1'] already exist in the table image.")):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
+
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
+
     def test_delete_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
         dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"])[0]
-        dataset_image_bboxes_keypoint_copy.delete_data("item", ids=["0", "1"])
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_data("item", ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
         assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"]) == []
 
     def test_delete_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
         dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"])
-        dataset_image_bboxes_keypoint_copy.delete_dataset_items(ids=["0", "1"])
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_dataset_items(ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
         assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"]) == []
 
     def test_update_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
 
-        assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].metadata == "metadata_0"
-        updated_data = dataset_image_bboxes_keypoint_copy.update_data("item", [new_item])
+        assert item.metadata == "metadata_0"
+        updated_data = dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item])
         assert (
             dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
-            == new_item.model_dump()
+            == updated_item.model_dump()
             == updated_data[0].model_dump()
         )
 
-    def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
-        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
-        new_item.image.width = 200
-        new_item.entities[0].id = "new_entity"
-        new_item.bboxes[0].id = "new_bbox"
-
-        updated_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items([new_item])
+        added_item = item.model_copy()
+        updated_item.metadata = "new_metadata_2"
+        added_item.id = "new_item"
+        updated_data, added_data = dataset_image_bboxes_keypoint_copy.update_data(
+            "item", [updated_item, added_item], return_separately=True
+        )
+        assert len(updated_data) == 1
+        assert len(added_data) == 1
 
         assert (
-            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0] == new_item == updated_dataset_items[0]
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
+            == updated_data[0].model_dump()
+            == updated_item.model_dump()
         )
+        assert added_item.model_dump() == added_data[0].model_dump()
+
+    def test_update_data_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "1"
+
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
+
+        data = [updated_item, "0"]
+        with pytest.raises(
+            ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
+        ):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+    def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
+        updated_item.image.width = 200
+        updated_item.entities[0].id = "new_entity"
+        updated_item.bboxes[0].id = "new_bbox"
+
+        updated_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item])
+
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+            == updated_item
+            == updated_dataset_items[0]
+        )
+
+        added_item = type(item).model_validate(item.model_dump())
+        added_item.id = "new_item"
+        added_item.image.id = "new_image"
+        added_item.entities[0].id = "new_entity_1"
+        added_item.entities[1].id = "new_entity_2"
+        added_item.bboxes[0].id = "new_bbox_1"
+        added_item.bboxes[1].id = "new_bbox_2"
+        updated_item.metadata = "new_metadata_2"
+        updated_dataset_items, added_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items(
+            [updated_item, added_item], return_separately=True
+        )
+        assert len(updated_dataset_items) == 1
+        assert len(added_dataset_items) == 1
+        assert updated_dataset_items[0] == updated_item
+        assert added_dataset_items[0] == added_item
+
+    def test_update_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "0"
+
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
+
+        data = [updated_item, "0"]
+        with pytest.raises(
+            ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
+        ):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items(data)
 
     def test_find(self, dataset_image_bboxes_keypoint_copy: Dataset):
         path = dataset_image_bboxes_keypoint_copy.path.parent

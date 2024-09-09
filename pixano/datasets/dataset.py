@@ -9,7 +9,7 @@ from __future__ import annotations
 import shutil
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import duckdb
 import lancedb
@@ -229,7 +229,8 @@ class Dataset:
         table: LanceTable,
         limit: int | None = None,
     ) -> LanceQueryBuilder:
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        set_ids = set(ids)
+        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
         return self._search_by_field(table, "id", sql_ids, limit)
 
     def create_table(
@@ -376,7 +377,7 @@ class Dataset:
         _validate_ids_item_ids_and_limit_and_skip(ids, limit, skip, item_ids)
 
         if item_ids is not None:
-            sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
+            sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
 
         table = self.open_table(table_name)
 
@@ -517,20 +518,16 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
-
+            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
         set_ids = {item.id for item in data}
-
         if len(set_ids) != len(data):
-            raise ValueError("All data must have unique ids")
-
+            raise ValueError("All data must have unique ids.")
         ids_found = []
-
         for id in self.get_all_ids(table_name):
             if id in set_ids:
                 ids_found.append(id)
         if ids_found:
-            raise ValueError(f"IDs {ids_found} already exist in the table {table_name}")
+            raise ValueError(f"IDs {ids_found} already exist in the table {table_name}.")
 
         table = self.open_table(table_name)
         table.add(data)
@@ -573,12 +570,13 @@ class Dataset:
         set_ids = set(ids)
 
         table = self.open_table(table_name)
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set_ids))
+        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
+
+        all_ids = self.get_all_ids(table_name)
 
         table.delete(where=f"id in {sql_ids}")
 
         ids_not_found = []
-        all_ids = self.get_all_ids(table_name)
         for id in set_ids:
             if id not in all_ids:
                 ids_not_found.append(id)
@@ -591,7 +589,8 @@ class Dataset:
         Args:
             ids: Ids to delete.
         """
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        set_ids = set(ids)
+        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
         ids_not_found = []
         for table_name in self.schema.schemas.keys():
             if table_name == _SchemaGroup.ITEM.value:
@@ -612,12 +611,23 @@ class Dataset:
                 table.delete(where=f"id in {table_sql_ids}")
         return ids_not_found
 
-    def update_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
+    @overload
+    def update_data(
+        self, table_name: str, data: list[BaseSchema], return_separately: Literal[False] = False
+    ) -> list[BaseSchema]: ...
+    @overload
+    def update_data(
+        self, table_name: str, data: list[BaseSchema], return_separately: Literal[True]
+    ) -> tuple[list[BaseSchema], list[BaseSchema]]: ...
+    def update_data(
+        self, table_name: str, data: list[BaseSchema], return_separately: bool = False
+    ) -> list[BaseSchema] | tuple[list[BaseSchema], list[BaseSchema]]:
         """Update data in a table.
 
         Args:
             table_name: Table name.
             data: Data to update.
+            return_separately: Whether to return separately added and updated data.
 
         Returns:
             Updated data.
@@ -626,27 +636,71 @@ class Dataset:
             type(data[0]), self.schema.schemas[table_name]
         ):
             raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+        ids = [item.id for item in data]
+        set_ids = {item.id for item in data}
+        if len(set_ids) != len(data):
+            raise ValueError("All data must have unique ids.")
+        ids_found = []
+        for id in self.get_all_ids(table_name):
+            if id in set_ids:
+                ids_found.append(id)
 
         table = self.open_table(table_name)
-        ids = [item.id for item in data]
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
+        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set_ids))
         table.delete(where=f"id in {sql_ids}")
-        table.add(data)
-        return data
 
-    def update_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
+        table.add(data)
+
+        if not return_separately:
+            return data
+
+        updated_data, added_data = [], []
+        for d in data:
+            if d.id not in ids_found:
+                added_data.append(d)
+            else:
+                updated_data.append(d)
+
+        return updated_data, added_data
+
+    @overload
+    def update_dataset_items(
+        self, dataset_items: list[DatasetItem], return_separately: Literal[False] = False
+    ) -> list[DatasetItem]: ...
+    @overload
+    def update_dataset_items(
+        self, dataset_items: list[DatasetItem], return_separately: Literal[True]
+    ) -> tuple[list[DatasetItem], list[DatasetItem]]: ...
+    def update_dataset_items(
+        self, dataset_items: list[DatasetItem], return_separately: bool = False
+    ) -> list[DatasetItem] | tuple[list[DatasetItem], list[DatasetItem]]:
         """Update dataset items.
 
         Args:
             dataset_items: Dataset items to update.
+            return_separately: Whether to return separately added and updated dataset items.
 
         Returns:
             Updated dataset items.
         """
+        if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
+            type(dataset_items[0]), self.dataset_item_model
+        ):
+            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
+
         ids = [item.id for item in dataset_items]
-        self.delete_dataset_items(ids)
-        self.add_dataset_items(dataset_items)
-        return dataset_items
+        ids_not_found = self.delete_dataset_items(ids)
+        self.add_dataset_items(dataset_items)  # TODO: If there is an error, the data deleted will not be restored
+        if not return_separately:
+            return dataset_items
+
+        updated_items, added_items = [], []
+        for item in dataset_items:
+            if item.id in ids_not_found:
+                added_items.append(item)
+            else:
+                updated_items.append(item)
+        return updated_items, added_items
 
     @staticmethod
     def find(
