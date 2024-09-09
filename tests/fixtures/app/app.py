@@ -21,7 +21,9 @@ LIBRARY_DIR = ASSETS_DIRECTORY / "library"
 
 
 @pytest.fixture(scope="session")
-def app_and_settings() -> tuple[FastAPI, Settings]:
+def app_and_settings(
+    dataset_image_bboxes_keypoint: Dataset, dataset_multi_view_tracking_and_image: Dataset
+) -> tuple[FastAPI, Settings]:  # args to ensure the fixture is called before the app fixture
     settings = Settings(library_dir=str(LIBRARY_DIR))
 
     @lru_cache
