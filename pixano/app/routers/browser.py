@@ -4,7 +4,6 @@
 # License: CECILL-C
 # =====================================
 
-from collections import defaultdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -56,7 +55,7 @@ async def get_browser(
         # get data (items and views)
         item_rows = get_rows(dataset, table_item, None, None, limit, skip)
         item_ids = [item.id for item in item_rows]
-        item_first_media: dict[str, dict] = defaultdict(dict)
+        item_first_media: dict[str, dict] = {}
         for view in tables_view:
             view_rows = get_rows(dataset, view, None, item_ids)
             item_first_media[view] = {}
