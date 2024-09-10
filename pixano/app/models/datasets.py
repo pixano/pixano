@@ -120,11 +120,11 @@ class DatasetBrowser(BaseModel):
         name: dataset name
         table_data: table data
         pagination: pagination infos
-        sem_search: list of semantic search available models
+        semantic_search: list of semantic search available models
     """
 
     id: str
     name: str
     table_data: TableData
     pagination: PaginationInfo
-    sem_search: list[str]
+    semantic_search: list[str]

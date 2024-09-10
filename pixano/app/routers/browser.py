@@ -100,7 +100,7 @@ async def get_browser(
             name=dataset.info.name,
             table_data=TableData(cols=cols, rows=rows),
             pagination=PaginationInfo(current=skip, size=raw_params.limit, total=total),
-            sem_search=["CLIP", "BLIP2"],
+            semantic_search=["CLIP", "BLIP2"],
         )
         raise HTTPException(
             status_code=404,
