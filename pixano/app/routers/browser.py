@@ -94,7 +94,6 @@ async def get_browser(
 
             rows.append(row)
 
-        print("QSQS", len(rows))
         # Return dataset items
         return DatasetBrowser(
             id=id,
