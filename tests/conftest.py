@@ -21,7 +21,12 @@ from tests.fixtures.datasets.builders.folder import (
     video_folder,
     video_folder_builder,
 )
-from tests.fixtures.datasets.dataset import dataset_image_bboxes_keypoint, dataset_multi_view_tracking_and_image
+from tests.fixtures.datasets.dataset import (
+    dataset_image_bboxes_keypoint,
+    dataset_image_bboxes_keypoint_copy,
+    dataset_multi_view_tracking_and_image,
+    dataset_multi_view_tracking_and_image_copy,
+)
 from tests.fixtures.datasets.dataset_info import (
     info_dataset_image_bboxes_keypoint,
     info_dataset_multi_view_tracking_and_image,

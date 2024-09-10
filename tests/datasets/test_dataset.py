@@ -5,6 +5,7 @@
 # =====================================
 
 
+import re
 from pathlib import Path
 
 import pytest
@@ -26,11 +27,10 @@ class TestDataset:
         assert isinstance(dataset_image_bboxes_keypoint.schema, DatasetSchema)
         assert isinstance(dataset_image_bboxes_keypoint.info, DatasetInfo)
         assert dataset_image_bboxes_keypoint.info == DatasetInfo(
-            id=dataset_image_bboxes_keypoint.info.id,
+            id="dataset_image_bboxes_keypoint",
             name="dataset_image_bboxes_keypoint",
             description="Description dataset_image_bboxes_keypoint.",
             size="Unknown",
-            num_elements=5,
             preview="",
         )
         assert (
@@ -43,7 +43,7 @@ class TestDataset:
         assert dataset_image_bboxes_keypoint.num_rows == 5
         assert dataset_image_bboxes_keypoint.media_dir == dataset_image_bboxes_keypoint.path / "media"
 
-    def test_create_table(self, dataset_image_bboxes_keypoint: Dataset):
+    def test_create_table(self, dataset_image_bboxes_keypoint_copy: Dataset):
         data = [
             Image(
                 id=f"new_image_{i}",
@@ -54,28 +54,30 @@ class TestDataset:
             )
             for i in range(5)
         ]
-        table = dataset_image_bboxes_keypoint.create_table("new_table", Image, SchemaRelation.ONE_TO_MANY, data=data)
+        table = dataset_image_bboxes_keypoint_copy.create_table(
+            "new_table", Image, SchemaRelation.ONE_TO_MANY, data=data
+        )
         assert isinstance(table, LanceTable)
-        assert "new_table" in dataset_image_bboxes_keypoint.schema.schemas
-        assert issubclass(dataset_image_bboxes_keypoint.schema.schemas["new_table"], Image)
-        assert dataset_image_bboxes_keypoint.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
-        assert "new_table" in dataset_image_bboxes_keypoint.dataset_item_model.model_fields
+        assert "new_table" in dataset_image_bboxes_keypoint_copy.schema.schemas
+        assert issubclass(dataset_image_bboxes_keypoint_copy.schema.schemas["new_table"], Image)
+        assert dataset_image_bboxes_keypoint_copy.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
+        assert "new_table" in dataset_image_bboxes_keypoint_copy.dataset_item_model.model_fields
 
-    def test_compute_embeddings(self, dataset_image_bboxes_keypoint: Dataset, dumb_embedding_function):
+    def test_compute_embeddings(self, dataset_image_bboxes_keypoint_copy: Dataset, dumb_embedding_function):
         registry = get_registry()
         registry._functions["test_compute_embeddings_dumb_embedding_function"] = dumb_embedding_function
 
         embeddings_schema: type[ViewEmbedding] = ViewEmbedding.create_schema(
             "test_compute_embeddings_dumb_embedding_function",
             "test_compute_embeddings_view_embedding",
-            dataset_image_bboxes_keypoint,
+            dataset_image_bboxes_keypoint_copy,
         )
-        dataset_image_bboxes_keypoint.create_table(
+        dataset_image_bboxes_keypoint_copy.create_table(
             "test_compute_embeddings_view_embedding", embeddings_schema, SchemaRelation.ONE_TO_MANY
         )
 
         data = []
-        views = dataset_image_bboxes_keypoint.get_data("image", limit=2)
+        views = dataset_image_bboxes_keypoint_copy.get_data("image", limit=2)
         for i, view in enumerate(views):
             data.append(
                 {
@@ -90,8 +92,8 @@ class TestDataset:
                     },
                 }
             )
-        dataset_image_bboxes_keypoint.compute_view_embeddings("test_compute_embeddings_view_embedding", data)
-        embeddings = dataset_image_bboxes_keypoint.get_data("test_compute_embeddings_view_embedding", limit=2)
+        dataset_image_bboxes_keypoint_copy.compute_view_embeddings("test_compute_embeddings_view_embedding", data)
+        embeddings = dataset_image_bboxes_keypoint_copy.get_data("test_compute_embeddings_view_embedding", limit=2)
         for i, embedding in enumerate(embeddings):
             assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
             assert embedding.item_ref == ItemRef(id=views[i].item_ref.id, name=views[i].item_ref.name)
@@ -584,36 +586,44 @@ class TestDataset:
         image_ids = dataset_image_bboxes_keypoint.get_all_ids(table_name="image")
         assert image_ids == ["image_0", "image_1", "image_2", "image_3", "image_4"]
 
-    def test_add_data(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0]
+    def test_add_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
         new_item = item.model_copy()
         new_item.id = "new_item"
 
-        assert dataset_image_bboxes_keypoint.get_data("item", ids=["new_item"]) == []
+        assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["new_item"]) == []
 
-        added_data = dataset_image_bboxes_keypoint.add_data("item", [new_item])
+        added_data = dataset_image_bboxes_keypoint_copy.add_data("item", [new_item])
         assert (
-            dataset_image_bboxes_keypoint.get_data("item", ids=["new_item"])[0].model_dump()
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["new_item"])[0].model_dump()
             == new_item.model_dump()
             == added_data[0].model_dump()
         )
 
-    def test_add_data_error(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0]
+    def test_add_data_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
         new_item = item.model_copy()
 
         data = [new_item, "0"]
         with pytest.raises(
             ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
         ):
-            dataset_image_bboxes_keypoint.add_data("item", data)
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
-    def test_add_dataset_items(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_dataset_items(ids=["1"])[0]
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['0'] already exist in the table item.")):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+    def test_add_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         new_item = item.model_copy()
         new_item.id = "new_item"
 
-        for table_name in dataset_image_bboxes_keypoint.schema.schemas.keys():
+        for table_name in dataset_image_bboxes_keypoint_copy.schema.schemas.keys():
             if table_name == "item":
                 continue
             field_schema = getattr(new_item, table_name)
@@ -621,80 +631,155 @@ class TestDataset:
                 for i, field in enumerate(field_schema):
                     setattr(field, "id", f"new_{table_name}_{i}")
                     setattr(field, "item_ref", {"id": "new_item", "name": "item"})
-                    assert dataset_image_bboxes_keypoint.get_data(table_name, ids=[f"new_{table_name}_{i}"]) == []
+                    assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}_{i}"]) == []
             else:
                 if field_schema is None:
                     continue
                 setattr(field_schema, "id", f"new_{table_name}")
                 setattr(field_schema, "item_ref", {"id": "new_item", "name": "item"})
-                assert dataset_image_bboxes_keypoint.get_data(table_name, ids=[f"new_{table_name}"]) == []
+                assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}"]) == []
 
-        assert dataset_image_bboxes_keypoint.get_dataset_items(ids=["new_item"]) == []
+        assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"]) == []
 
-        dataset_items = dataset_image_bboxes_keypoint.add_dataset_items([new_item])
+        dataset_items = dataset_image_bboxes_keypoint_copy.add_dataset_items([new_item])
         assert (
-            dataset_image_bboxes_keypoint.get_dataset_items(ids=["new_item"])[0].model_dump()
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"])[0].model_dump()
             == new_item.model_dump()
             == dataset_items[0].model_dump()
         )
 
-    def test_add_dataset_items_error(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_dataset_items(ids=["1"])[0]
+    def test_add_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         new_item = item.model_copy()
 
         data = [new_item, "0"]
         with pytest.raises(
             ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
         ):
-            dataset_image_bboxes_keypoint.add_dataset_items(data)
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
-    def test_delete_data(self, dataset_image_bboxes_keypoint: Dataset):
-        dataset_image_bboxes_keypoint.get_data("item", ids=["0", "1"])[0]
-        dataset_image_bboxes_keypoint.delete_data("item", ids=["0", "1"])
-        assert dataset_image_bboxes_keypoint.get_data("item", ids=["0", "1"]) == []
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['image_1'] already exist in the table image.")):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
-    def test_delete_dataset_items(self, dataset_image_bboxes_keypoint: Dataset):
-        dataset_image_bboxes_keypoint.get_dataset_items(ids=["0", "1"])
-        dataset_image_bboxes_keypoint.delete_dataset_items(ids=["0", "1"])
-        assert dataset_image_bboxes_keypoint.get_dataset_items(ids=["0", "1"]) == []
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
-    def test_update_data(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
+    def test_delete_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"])[0]
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_data("item", ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
+        assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"]) == []
 
-        assert dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0].metadata == "metadata_0"
-        updated_data = dataset_image_bboxes_keypoint.update_data("item", [new_item])
+    def test_delete_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"])
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_dataset_items(ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
+        assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"]) == []
+
+    def test_update_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
+
+        assert item.metadata == "metadata_0"
+        updated_data = dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item])
         assert (
-            dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0].model_dump()
-            == new_item.model_dump()
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
+            == updated_item.model_dump()
             == updated_data[0].model_dump()
         )
 
-    def test_update_dataset_items(self, dataset_image_bboxes_keypoint: Dataset):
-        item = dataset_image_bboxes_keypoint.get_dataset_items(ids=["1"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
-        new_item.image.width = 200
-        new_item.entities[0].id = "new_entity"
-        new_item.bboxes[0].id = "new_bbox"
-
-        updated_dataset_items = dataset_image_bboxes_keypoint.update_dataset_items([new_item])
-
-        assert dataset_image_bboxes_keypoint.get_dataset_items(ids=["1"])[0] == new_item == updated_dataset_items[0]
-
-    def test_find(self, dataset_image_bboxes_keypoint: Dataset):
-        path = dataset_image_bboxes_keypoint.path.parent
-
-        dataset_image_bboxes_keypoint_found = Dataset.find(dataset_image_bboxes_keypoint.info.id, path)
-        assert dataset_image_bboxes_keypoint_found.info == dataset_image_bboxes_keypoint.info
-        assert dataset_image_bboxes_keypoint_found.media_dir == dataset_image_bboxes_keypoint.media_dir
-
-        dataset_image_bboxes_keypoint_found = Dataset.find(
-            dataset_image_bboxes_keypoint.info.id, path, Path("/test/media")
+        added_item = item.model_copy()
+        updated_item.metadata = "new_metadata_2"
+        added_item.id = "new_item"
+        updated_data, added_data = dataset_image_bboxes_keypoint_copy.update_data(
+            "item", [updated_item, added_item], return_separately=True
         )
-        assert dataset_image_bboxes_keypoint_found.info == dataset_image_bboxes_keypoint.info
-        assert dataset_image_bboxes_keypoint_found.media_dir == Path("/test/media")
+        assert len(updated_data) == 1
+        assert len(added_data) == 1
+
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
+            == updated_data[0].model_dump()
+            == updated_item.model_dump()
+        )
+        assert added_item.model_dump() == added_data[0].model_dump()
+
+    def test_update_data_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "1"
+
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
+
+        data = [updated_item, "0"]
+        with pytest.raises(
+            ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
+        ):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+    def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
+        updated_item.image.width = 200
+        updated_item.entities[0].id = "new_entity"
+        updated_item.bboxes[0].id = "new_bbox"
+
+        updated_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item])
+
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+            == updated_item
+            == updated_dataset_items[0]
+        )
+
+        added_item = type(item).model_validate(item.model_dump())
+        added_item.id = "new_item"
+        added_item.image.id = "new_image"
+        added_item.entities[0].id = "new_entity_1"
+        added_item.entities[1].id = "new_entity_2"
+        added_item.bboxes[0].id = "new_bbox_1"
+        added_item.bboxes[1].id = "new_bbox_2"
+        updated_item.metadata = "new_metadata_2"
+        updated_dataset_items, added_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items(
+            [updated_item, added_item], return_separately=True
+        )
+        assert len(updated_dataset_items) == 1
+        assert len(added_dataset_items) == 1
+        assert updated_dataset_items[0] == updated_item
+        assert added_dataset_items[0] == added_item
+
+    def test_update_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "0"
+
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
+
+        data = [updated_item, "0"]
+        with pytest.raises(
+            ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
+        ):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items(data)
+
+    def test_find(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        path = dataset_image_bboxes_keypoint_copy.path.parent
+
+        dataset_image_bboxes_keypoint_copy_found = Dataset.find(dataset_image_bboxes_keypoint_copy.info.id, path)
+        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
+        assert dataset_image_bboxes_keypoint_copy_found.path == dataset_image_bboxes_keypoint_copy.path
+        assert dataset_image_bboxes_keypoint_copy_found.media_dir == dataset_image_bboxes_keypoint_copy.media_dir
+
+        dataset_image_bboxes_keypoint_copy_found = Dataset.find(
+            dataset_image_bboxes_keypoint_copy.info.id, path, Path("/test/media")
+        )
+        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
+        assert dataset_image_bboxes_keypoint_copy_found.media_dir == Path("/test/media")
 
         with pytest.raises(FileNotFoundError, match=f"Dataset nonexistent not found in {path}"):
             Dataset.find("nonexistent", path)

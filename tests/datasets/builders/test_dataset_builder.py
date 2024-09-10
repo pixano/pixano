@@ -65,9 +65,7 @@ class TestDatasetBuilder:
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
         )
-        assert dataset_builder_image_bboxes_keypoint.info.id == "dataset_image_bboxes_keypoint"
         assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
-        assert dataset_builder_image_bboxes_keypoint.info.num_elements == 5
 
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._INFO_FILE).exists()
         assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH).exists()

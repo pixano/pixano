@@ -12,7 +12,7 @@ from pixano.features import Embedding, ViewEmbedding
 from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def dumb_embedding_function(vector_size: int = 8):
     class DumbEmbeddingFunction(EmbeddingFunction):
         def compute_query_embeddings(self, queries, *args, **kwargs):
@@ -27,7 +27,7 @@ def dumb_embedding_function(vector_size: int = 8):
     return DumbEmbeddingFunction
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def embedding_8():
     class Embedding8(Embedding):
         vector: Vector(8)  # type: ignore
@@ -37,7 +37,7 @@ def embedding_8():
     return Embedding8
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def view_embedding_8():
     class ViewEmbedding8(ViewEmbedding):
         vector: Vector(8)  # type: ignore

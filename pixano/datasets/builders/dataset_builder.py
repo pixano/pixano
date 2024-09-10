@@ -151,7 +151,6 @@ class DatasetBuilder(ABC):
 
         # save info.json
         self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
-        self.info.num_elements = tables[_SchemaGroup.ITEM.value].count_rows()
         self.info.to_json(self.target_dir / Dataset._INFO_FILE)
 
         # save features_values.json

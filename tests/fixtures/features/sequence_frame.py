@@ -11,7 +11,7 @@ from pixano.features.schemas import SequenceFrame
 from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def sequence_frame_category():
     class SequenceFrameCategory(SequenceFrame):
         category: str

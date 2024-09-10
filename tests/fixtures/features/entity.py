@@ -11,7 +11,7 @@ from pixano.features.schemas import Entity
 from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def entity_category():
     class EntityCategory(Entity):
         category: str = "none"

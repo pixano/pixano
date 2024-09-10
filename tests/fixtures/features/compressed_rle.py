@@ -9,12 +9,12 @@ import pytest
 from pixano.features import CompressedRLE
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def size():
     return [10, 10]
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def counts():
     return bytes(b";37000k1")
 
