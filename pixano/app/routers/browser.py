@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from collections import defaultdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,7 +13,6 @@ from fastapi_pagination.api import resolve_params
 
 from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
-from pixano.features import Image, SequenceFrame
 from pixano.features.schemas.schema_group import _SchemaGroup
 
 from .utils import get_dataset as get_dataset_utils
@@ -56,23 +56,22 @@ async def get_browser(
         # get data (items and views)
         item_rows = get_rows(dataset, table_item, None, None, limit, skip)
         item_ids = [item.id for item in item_rows]
-        view_rows = {}
+        item_first_media: dict[str, dict] = defaultdict(dict)
         for view in tables_view:
-            view_rows[view] = get_rows(dataset, view, None, item_ids)
+            view_rows = get_rows(dataset, view, None, item_ids)
+            item_first_media[view] = {}
+            for item_id in item_ids:
+                # store image or first frame
+                item_first_media[view][item_id] = next(filter(lambda v: v.item_ref.id == item_id, view_rows), None)
 
         # build column headers (PaginationColumn)
         cols = []
         for view in tables_view:
-            first_media = view_rows[view][0]
-            if isinstance(first_media, Image):
-                view_type = "image"
-            elif isinstance(first_media, list) and len(first_media) > 0 and isinstance(first_media[0], SequenceFrame):
-                # TMP (video previews are not generated yet
-                # so we put an image for now ("video"  # or "sequenceframe" ?)
-                view_type = "image"
-            else:
-                print("ERROR: unknown view type", type(first_media), first_media)
-                view_type = type(first_media).__name__
+            view_type = "image"
+            # NOTE: right now for video we use a frame
+            # (first returned by get_rows for each item. May not be the real first frame)
+            # when we'll have thumbnail clip, use instead:
+            # view_type = "video" if isinstance(item_first_media[view][item_ids[0]], SequenceFrame) else "image"
             cols.append(PaginationColumn(name=view, type=view_type))
         for feat in vars(item_rows[0]).keys():
             cols.append(PaginationColumn(name=feat, type=type(getattr(item_rows[0], feat)).__name__))
@@ -83,11 +82,8 @@ async def get_browser(
             row = {}
             # VIEWS -> thumbnails previews
             for view in tables_view:
-                media = next(filter(lambda v: v.item_ref.id == item.id, view_rows[view]), None)
-                if isinstance(media, Image):
-                    row[view] = media.open(dataset.path / "media")
-                elif isinstance(media, list) and len(media) > 0 and isinstance(media[0], SequenceFrame):
-                    row[view] = media[0].open(dataset.path / "media")  # first frame of sequence as thumbnail
+                if item_first_media[view][item.id] is not None:
+                    row[view] = item_first_media[view][item.id].open(dataset.path / "media")
             # ITEM features
             for feat in vars(item).keys():
                 row[feat] = getattr(item, feat)
