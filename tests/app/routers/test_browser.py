@@ -20,8 +20,8 @@ def test_get_browser(
     app_and_settings: tuple[FastAPI, Settings],
     info_dataset_image_bboxes_keypoint: DatasetInfo,
     info_dataset_multi_view_tracking_and_image: DatasetInfo,
-    json_browser_dataset_image_bboxes_keypoint: dict,
-    json_browser_dataset_multi_view_tracking_and_image: dict,
+    browser_dataset_image_bboxes_keypoint: DatasetBrowser,
+    browser_dataset_multi_view_tracking_and_image: DatasetBrowser,
 ):
     app, settings = app_and_settings
 
@@ -29,10 +29,14 @@ def test_get_browser(
     info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
 
     infos = [info_dataset_image_bboxes_keypoint, info_dataset_multi_view_tracking_and_image]
-    outputs = [json_browser_dataset_image_bboxes_keypoint, json_browser_dataset_multi_view_tracking_and_image]
+    outputs = [browser_dataset_image_bboxes_keypoint, browser_dataset_multi_view_tracking_and_image]
 
     client = TestClient(app)
     for info, output in zip(infos, outputs):
         response = client.get(f"/browser/{info.id}")
         assert response.status_code == 200
-        assert response.json() == output
+        browser = DatasetBrowser.model_validate(response.json())
+        # generated dataset doesn't have consistent fields order, so we sort both before comparison
+        browser.table_data.cols.sort(key=lambda x: x.name)
+        output.table_data.cols.sort(key=lambda x: x.name)
+        assert browser == output

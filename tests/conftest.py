@@ -8,8 +8,8 @@ import pytest
 
 from tests.fixtures.app.app import app_and_settings, empty_app_and_settings
 from tests.fixtures.app.routers.browser import (
-    json_browser_dataset_image_bboxes_keypoint,
-    json_browser_dataset_multi_view_tracking_and_image,
+    browser_dataset_image_bboxes_keypoint,
+    browser_dataset_multi_view_tracking_and_image,
 )
 from tests.fixtures.datasets.builders.builder import (
     dataset_builder_image_bboxes_keypoint,
