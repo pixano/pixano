@@ -12,7 +12,6 @@ from pixano.features.schemas.annotations.compressed_rle import CompressedRLE
 from pixano.features.schemas.annotations.keypoints import KeyPoints
 from pixano.features.schemas.annotations.tracklet import Tracklet
 from pixano.features.schemas.entities.track import Track
-from pixano.features.schemas.items.item import Item
 
 
 @pytest.fixture()

@@ -58,7 +58,7 @@ async def get_annotations(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotation_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    annotation_models = get_models_from_rows(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotation_rows)
+    annotation_models = get_models_from_rows(table, AnnotationModel, annotation_rows)
     return annotation_models
 
 
@@ -80,7 +80,7 @@ async def get_annotation(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotation_row = get_row(dataset, table, id)
-    annotation_model = get_model_from_row(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotation_row)
+    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
 
 
@@ -105,7 +105,7 @@ async def create_annotations(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotations_rows = create_rows(dataset, table, annotations)
-    annotations_models = get_models_from_rows(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotations_rows)
+    annotations_models = get_models_from_rows(table, AnnotationModel, annotations_rows)
     return annotations_models
 
 
@@ -134,7 +134,7 @@ async def create_annotation(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotation_row = create_row(dataset, table, annotation)
-    annotation_model = get_model_from_row(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotation_row)
+    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
 
 
@@ -163,7 +163,7 @@ async def update_annotation(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotation_row = update_row(dataset, table, annotation)
-    annotation_model = get_model_from_row(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotation_row)
+    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
 
 
@@ -188,7 +188,7 @@ async def update_annotations(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
     annotation_rows = update_rows(dataset, table, annotations)
-    annotation_models = get_models_from_rows(_SchemaGroup.ANNOTATION, table, AnnotationModel, annotation_rows)
+    annotation_models = get_models_from_rows(table, AnnotationModel, annotation_rows)
     return annotation_models
 
 

@@ -75,7 +75,7 @@ def dataset_image_bboxes_keypoint_copy() -> Dataset:
 @pytest.fixture(scope="function")
 def dataset_multi_view_tracking_and_image_copy() -> Dataset:
     id = shortuuid.uuid()
-    dataset = Dataset.find("dataset_image_bboxes_keypoint", LIBRARY_DIR)
+    dataset = Dataset.find("dataset_multi_view_tracking_and_image", LIBRARY_DIR)
     temp_folder = Path(tempfile.mkdtemp())
     dataset._copy_dataset(temp_folder)
     dataset.info.id = id

@@ -56,7 +56,7 @@ async def get_items(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     item_rows = get_rows(dataset, table, ids, None, limit, skip)
-    item_models = get_models_from_rows(_SchemaGroup.ITEM, table, ItemModel, item_rows)
+    item_models = get_models_from_rows(table, ItemModel, item_rows)
     return item_models
 
 
@@ -76,7 +76,7 @@ async def get_item(dataset_id: str, id: str, settings: Annotated[Settings, Depen
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     item_row = get_row(dataset, table, id)
-    item_model = get_model_from_row(_SchemaGroup.ITEM, table, ItemModel, item_row)
+    item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
 
 
@@ -100,7 +100,7 @@ async def create_items(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     items_rows = create_rows(dataset, table, items)
-    items_models = get_models_from_rows(_SchemaGroup.ITEM, table, ItemModel, items_rows)
+    items_models = get_models_from_rows(table, ItemModel, items_rows)
     return items_models
 
 
@@ -128,7 +128,7 @@ async def create_item(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     item_row = create_row(dataset, table, item)
-    item_model = get_model_from_row(_SchemaGroup.ITEM, table, ItemModel, item_row)
+    item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
 
 
@@ -156,7 +156,7 @@ async def update_item(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     item_row = update_row(dataset, table, item)
-    item_model = get_model_from_row(_SchemaGroup.ITEM, table, ItemModel, item_row)
+    item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
 
 
@@ -180,7 +180,7 @@ async def update_items(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
     item_rows = update_rows(dataset, table, items)
-    item_models = get_models_from_rows(_SchemaGroup.ITEM, table, ItemModel, item_rows)
+    item_models = get_models_from_rows(table, ItemModel, item_rows)
     return item_models
 
 

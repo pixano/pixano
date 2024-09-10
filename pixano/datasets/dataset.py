@@ -567,6 +567,9 @@ class Dataset:
             table_name: Table name.
             ids: Ids to delete.
         """
+        if not isinstance(ids, list) or not all(isinstance(i, str) for i in ids):
+            raise ValueError("ids must be a list of strings")
+
         set_ids = set(ids)
 
         table = self.open_table(table_name)

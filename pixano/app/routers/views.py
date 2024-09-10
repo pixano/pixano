@@ -58,7 +58,7 @@ async def get_views(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     view_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    view_models = get_models_from_rows(_SchemaGroup.VIEW, table, ViewModel, view_rows)
+    view_models = get_models_from_rows(table, ViewModel, view_rows)
     return view_models
 
 
@@ -80,7 +80,7 @@ async def get_view(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     view_row = get_row(dataset, table, id)
-    view_model = get_model_from_row(_SchemaGroup.VIEW, table, ViewModel, view_row)
+    view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
 
 
@@ -105,7 +105,7 @@ async def create_views(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     views_rows = create_rows(dataset, table, views)
-    views_models = get_models_from_rows(_SchemaGroup.VIEW, table, ViewModel, views_rows)
+    views_models = get_models_from_rows(table, ViewModel, views_rows)
     return views_models
 
 
@@ -134,7 +134,7 @@ async def create_view(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     view_row = create_row(dataset, table, view)
-    view_model = get_model_from_row(_SchemaGroup.VIEW, table, ViewModel, view_row)
+    view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
 
 
@@ -163,7 +163,7 @@ async def update_view(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     view_row = update_row(dataset, table, view)
-    view_model = get_model_from_row(_SchemaGroup.VIEW, table, ViewModel, view_row)
+    view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
 
 
@@ -188,7 +188,7 @@ async def update_views(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
     view_rows = update_rows(dataset, table, views)
-    view_models = get_models_from_rows(_SchemaGroup.VIEW, table, ViewModel, view_rows)
+    view_models = get_models_from_rows(table, ViewModel, view_rows)
     return view_models
 
 

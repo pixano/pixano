@@ -58,7 +58,7 @@ async def get_embeddings(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embedding_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    embedding_models = get_models_from_rows(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embedding_rows)
+    embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
     return embedding_models
 
 
@@ -80,7 +80,7 @@ async def get_embedding(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embedding_row = get_row(dataset, table, id)
-    embedding_model = get_model_from_row(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embedding_row)
+    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
 
 
@@ -105,7 +105,7 @@ async def create_embeddings(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embeddings_rows = create_rows(dataset, table, embeddings)
-    embeddings_models = get_models_from_rows(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embeddings_rows)
+    embeddings_models = get_models_from_rows(table, EmbeddingModel, embeddings_rows)
     return embeddings_models
 
 
@@ -134,7 +134,7 @@ async def create_embedding(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embedding_row = create_row(dataset, table, embedding)
-    embedding_model = get_model_from_row(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embedding_row)
+    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
 
 
@@ -163,7 +163,7 @@ async def update_embedding(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embedding_row = update_row(dataset, table, embedding)
-    embedding_model = get_model_from_row(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embedding_row)
+    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
 
 
@@ -188,7 +188,7 @@ async def update_embeddings(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
     embedding_rows = update_rows(dataset, table, embeddings)
-    embedding_models = get_models_from_rows(_SchemaGroup.EMBEDDING, table, EmbeddingModel, embedding_rows)
+    embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
     return embedding_models
 
 

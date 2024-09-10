@@ -58,7 +58,7 @@ async def get_entities(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entity_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    entity_models = get_models_from_rows(_SchemaGroup.ENTITY, table, EntityModel, entity_rows)
+    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
     return entity_models
 
 
@@ -80,7 +80,7 @@ async def get_entity(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entity_row = get_row(dataset, table, id)
-    entity_model = get_model_from_row(_SchemaGroup.ENTITY, table, EntityModel, entity_row)
+    entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
 
 
@@ -105,7 +105,7 @@ async def create_entities(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entities_rows = create_rows(dataset, table, entities)
-    entities_models = get_models_from_rows(_SchemaGroup.ENTITY, table, EntityModel, entities_rows)
+    entities_models = get_models_from_rows(table, EntityModel, entities_rows)
     return entities_models
 
 
@@ -134,7 +134,7 @@ async def create_entity(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entity_row = create_row(dataset, table, entity)
-    entity_model = get_model_from_row(_SchemaGroup.ENTITY, table, EntityModel, entity_row)
+    entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
 
 
@@ -163,7 +163,7 @@ async def update_entity(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entity_row = update_row(dataset, table, entity)
-    entity_model = get_model_from_row(_SchemaGroup.ENTITY, table, EntityModel, entity_row)
+    entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
 
 
@@ -188,7 +188,7 @@ async def update_entities(
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
     entity_rows = update_rows(dataset, table, entities)
-    entity_models = get_models_from_rows(_SchemaGroup.ENTITY, table, EntityModel, entity_rows)
+    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
     return entity_models
 
 

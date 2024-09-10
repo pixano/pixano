@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from typing_extensions import TypeVar
 
-from pixano.app.models.base_schema import BaseModelSchema
+from pixano.app.models import AnnotationModel, BaseModelSchema, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
 from pixano.datasets import Dataset
 from pixano.features import BaseSchema, _SchemaGroup
@@ -112,7 +112,7 @@ def get_row(dataset: Dataset, table: str, id: str) -> BaseSchema:
     return get_rows(dataset, table, [id], None, None, 0)[0]
 
 
-def get_model_from_row(group: _SchemaGroup, table: str, model_type: type[T], row: BaseSchema) -> T:
+def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
     """Get a model from a row.
 
     Args:
@@ -124,11 +124,34 @@ def get_model_from_row(group: _SchemaGroup, table: str, model_type: type[T], row
     Returns:
         The model.
     """
+    try:
+        is_group = issubclass(model_type, BaseModelSchema)
+        if not is_group:
+            raise HTTPException(status_code=500, detail="Model type is not a subclass of BaseModelSchema.")
+    except TypeError:
+        raise HTTPException(status_code=500, detail="Model type is not a subclass of BaseModelSchema.")
+    if issubclass(model_type, AnnotationModel):
+        group = _SchemaGroup.ANNOTATION
+    elif issubclass(model_type, EmbeddingModel):
+        group = _SchemaGroup.EMBEDDING
+    elif issubclass(model_type, EntityModel):
+        group = _SchemaGroup.ENTITY
+    elif issubclass(model_type, ItemModel):
+        group = _SchemaGroup.ITEM
+    elif issubclass(model_type, ViewModel):
+        group = _SchemaGroup.VIEW
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Model type not correct.",
+        )
+
     pixano_schema_type = get_super_type_from_dict(type(row), _PIXANO_SCHEMA_REGISTRY)
+
     if pixano_schema_type is None:
         raise HTTPException(
             status_code=500,
-            detail=f"Schema type not found for {row}.",
+            detail="Schema type not found in registry.",
         )
     table_info = TableInfo(name=table, group=group.value, base_schema=pixano_schema_type.__name__)
     model = model_type.from_row(row, table_info)
@@ -136,7 +159,6 @@ def get_model_from_row(group: _SchemaGroup, table: str, model_type: type[T], row
 
 
 def get_models_from_rows(
-    group: _SchemaGroup,
     table: str,
     model_type: type[T],
     rows: list[BaseSchema],
@@ -144,7 +166,6 @@ def get_models_from_rows(
     """Get models from rows.
 
     Args:
-        group: Group.
         table: Table name.
         model_type: Model type.
         rows: Rows.
@@ -152,41 +173,47 @@ def get_models_from_rows(
     Returns:
         List of models.
     """
-    return [get_model_from_row(group, table, model_type, row) for row in rows]
+    return [get_model_from_row(table, model_type, row) for row in rows]
 
 
 def delete_rows(
     dataset: Dataset,
     table: str,
     ids: list[str],
-) -> None:
+) -> list[str]:
     """Delete rows from a table.
 
     Args:
         dataset: Dataset.
         table: Table name.
         ids: IDs.
+
+    Returns:
+        IDs not found.
     """
     try:
-        dataset.delete_data(table, ids)
+        ids_not_found = dataset.delete_data(table, ids)
     except ValueError:
         raise HTTPException(
             status_code=400,
             detail="Invalid query parameters.",
         )
-    return
+    return ids_not_found
 
 
-def delete_row(dataset: Dataset, table: str, id: str) -> None:
+def delete_row(dataset: Dataset, table: str, id: str) -> bool:
     """Delete a row from a table.
 
     Args:
         dataset: Dataset.
         table: Table name.
         id: ID.
+
+    Returns:
+        Whether the row was found and deleted.
     """
-    delete_rows(dataset, table, [id])
-    return
+    id_not_found = delete_rows(dataset, table, [id])
+    return not (id_not_found == [])
 
 
 def update_rows(
@@ -204,7 +231,13 @@ def update_rows(
     Returns:
         The updated rows.
     """
-    rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+    try:
+        rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid data.",
+        )
 
     try:
         updated_rows = dataset.update_data(table, rows)
@@ -215,7 +248,7 @@ def update_rows(
         )
 
     # TODO: return updated rows instead of input rows
-    # TODO: check if rows are updated or created whicch change HTTP status code
+    # TODO: check if rows are updated or created which change HTTP status code
     return updated_rows
 
 
@@ -253,7 +286,13 @@ def create_rows(
     Returns:
         The added rows.
     """
-    rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+    try:
+        rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid data.",
+        )
 
     try:
         created_rows = dataset.add_data(table, rows)
@@ -282,4 +321,4 @@ def create_row(
         The added row.
     """
     created_row = create_rows(dataset, table, [model])[0]
-    return created_row  # TODO: same as above, return added row and change HTTP status code
+    return created_row
