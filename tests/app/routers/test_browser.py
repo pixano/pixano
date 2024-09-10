@@ -20,10 +20,13 @@ def test_get_browser(
     app_and_settings: tuple[FastAPI, Settings],
     info_dataset_image_bboxes_keypoint: DatasetInfo,
     info_dataset_multi_view_tracking_and_image: DatasetInfo,
-    json_browser_dataset_image_bboxes_keypoint: DatasetBrowser,
-    json_browser_dataset_multi_view_tracking_and_image: DatasetBrowser,
+    json_browser_dataset_image_bboxes_keypoint: dict,
+    json_browser_dataset_multi_view_tracking_and_image: dict,
 ):
     app, settings = app_and_settings
+
+    info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
+    info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
 
     infos = [info_dataset_image_bboxes_keypoint, info_dataset_multi_view_tracking_and_image]
     outputs = [json_browser_dataset_image_bboxes_keypoint, json_browser_dataset_multi_view_tracking_and_image]

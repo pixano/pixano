@@ -39,8 +39,8 @@ def json_browser_dataset_multi_view_tracking_and_image():
         "name": "dataset_multi_view_tracking_and_image",
         "table_data": {
             "cols": [
-                {"name": "image", "type": "image"},
                 {"name": "video", "type": "image"},
+                {"name": "image", "type": "image"},
                 {"name": "id", "type": "str"},
                 {"name": "split", "type": "str"},
                 {"name": "categories", "type": "list"},
@@ -48,24 +48,24 @@ def json_browser_dataset_multi_view_tracking_and_image():
             ],
             "rows": [
                 {
-                    "image": "",
                     "video": "",
+                    "image": "",
                     "id": "0",
                     "split": "train",
                     "categories": ["person"],
                     "other_categories": [1],
                 },
                 {
-                    "image": "",
                     "video": "",
+                    "image": "",
                     "id": "1",
                     "split": "train",
                     "categories": ["cat"],
                     "other_categories": [2],
                 },
                 {
-                    "image": "",
                     "video": "",
+                    "image": "",
                     "id": "2",
                     "split": "train",
                     "categories": ["dog"],
@@ -73,8 +73,8 @@ def json_browser_dataset_multi_view_tracking_and_image():
                 },
                 {"video": "", "id": "3", "split": "test", "categories": ["car"], "other_categories": [4]},
                 {
-                    "image": "",
                     "video": "",
+                    "image": "",
                     "id": "4",
                     "split": "test",
                     "categories": ["person"],
