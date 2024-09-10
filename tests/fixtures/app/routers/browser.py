@@ -7,7 +7,7 @@
 import pytest
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def json_browser_dataset_image_bboxes_keypoint():
     return {
         "id": "dataset_image_bboxes_keypoint",
@@ -32,7 +32,7 @@ def json_browser_dataset_image_bboxes_keypoint():
     }
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def json_browser_dataset_multi_view_tracking_and_image():
     return {
         "id": "dataset_multi_view_tracking_and_image",
