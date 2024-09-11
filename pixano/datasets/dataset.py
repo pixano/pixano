@@ -274,11 +274,12 @@ class Dataset:
         self._reload_schema()
         return table
 
-    def open_tables(self, names: list[str] | None = None) -> dict[str, LanceTable]:
+    def open_tables(self, names: list[str] | None = None, exclude_embeddings: bool = True) -> dict[str, LanceTable]:
         """Open dataset tables with LanceDB.
 
         Args:
             names: Table names to open. If None, open all tables.
+            exclude_embeddings: Whether to exclude embedding tables from the list.
 
         Returns:
             Dataset tables.
@@ -286,6 +287,8 @@ class Dataset:
         tables: dict[str, LanceTable] = defaultdict(dict)
 
         for name in names if names is not None else self.schema.schemas.keys():
+            if exclude_embeddings and name in self.schema.groups[SchemaGroup.EMBEDDING]:
+                continue
             tables[name] = self.open_table(name)
 
         return tables
@@ -443,14 +446,7 @@ class Dataset:
         sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
         # Load tables
-        ds_tables = self.open_tables(
-            [
-                table
-                for group, tables in self.schema.groups.items()
-                for table in tables
-                if group != SchemaGroup.EMBEDDING.value
-            ]
-        )
+        ds_tables = self.open_tables(exclude_embeddings=True)
 
         # Load items data from the tables
         data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}

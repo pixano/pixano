@@ -163,6 +163,20 @@ class DatasetSchema(BaseModel):
         """
         return table_name.lower().replace(" ", "_")
 
+    def get_table_group(self, table_name: str) -> SchemaGroup:
+        """Get the group of a table.
+
+        Args:
+            table_name: Table name.
+
+        Returns:
+            The group of the table.
+        """
+        for group, tables in self.groups.items():
+            if table_name in tables:
+                return group
+        raise ValueError(f"Table {table_name} not found in groups.")
+
     @model_serializer
     def serialize(self) -> dict[str, dict[str, Any]]:
         """Serialize the dataset schema.
