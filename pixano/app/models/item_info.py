@@ -31,5 +31,4 @@ class ItemInfo(ItemModel):
         },
     )
 
-    id: str
     info: dict[str, dict[str, int]]
