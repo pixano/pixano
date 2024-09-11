@@ -50,14 +50,17 @@ async def get_browser(
 
         # Get tables
         table_item = next(iter(dataset.schema.groups[SchemaGroup.ITEM]))
-        tables_view = dataset.schema.groups[SchemaGroup.VIEW]
+        tables_view = sorted(dataset.schema.groups[SchemaGroup.VIEW])
 
         # get data (items and views)
         item_rows = get_rows(dataset, table_item, None, None, limit, skip)
         item_ids = [item.id for item in item_rows]
         item_first_media: dict[str, dict] = {}
         for view in tables_view:
-            view_rows = get_rows(dataset, view, None, item_ids)
+            try:
+                view_rows = get_rows(dataset, view, None, item_ids)
+            except HTTPException:
+                view_rows = []
             item_first_media[view] = {}
             for item_id in item_ids:
                 # store image or first frame
