@@ -22,13 +22,13 @@ from .schemas import (
     KeyPoints,
     KeyPoints3D,
     PointCloud,
+    SchemaGroup,
     SequenceFrame,
     Track,
     Tracklet,
     Video,
     View,
     ViewEmbedding,
-    _SchemaGroup,
     create_bbox,
     create_bbox3d,
     create_cam_calibration,
@@ -91,7 +91,6 @@ from .types import (
 
 
 __all__ = [
-    "_SchemaGroup",
     "DESERIALIZE_PYARROW_DATATYPE",
     "SERIALIZE_PYARROW_DATATYPE",
     "Annotation",
@@ -116,8 +115,9 @@ __all__ = [
     "KeyPoints3D",
     "NDArrayFloat",
     "PointCloud",
-    "SequenceFrame",
+    "SchemaGroup",
     "SchemaRef",
+    "SequenceFrame",
     "Track",
     "Tracklet",
     "Video",

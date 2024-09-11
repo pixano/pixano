@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.items import ItemModel
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
@@ -52,9 +52,9 @@ async def get_items(
     Returns:
         List of items.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     item_rows = get_rows(dataset, table, ids, None, limit, skip)
     item_models = get_models_from_rows(table, ItemModel, item_rows)
     return item_models
@@ -72,9 +72,9 @@ async def get_item(dataset_id: str, id: str, settings: Annotated[Settings, Depen
     Returns:
         The item.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     item_row = get_row(dataset, table, id)
     item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
@@ -96,9 +96,9 @@ async def create_items(
     Returns:
         List of items.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     items_rows = create_rows(dataset, table, items)
     items_models = get_models_from_rows(table, ItemModel, items_rows)
     return items_models
@@ -124,9 +124,9 @@ async def create_item(
     """
     if id != item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     item_row = create_row(dataset, table, item)
     item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
@@ -152,9 +152,9 @@ async def update_item(
     """
     if id != item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     item_row = update_row(dataset, table, item)
     item_model = get_model_from_row(table, ItemModel, item_row)
     return item_model
@@ -176,9 +176,9 @@ async def update_items(
     Returns:
         List of items.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     item_rows = update_rows(dataset, table, items)
     item_models = get_models_from_rows(table, ItemModel, item_rows)
     return item_models
@@ -193,9 +193,9 @@ async def delete_item(dataset_id: str, id: str, settings: Annotated[Settings, De
         id: ID.
         settings: App settings.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     delete_row(dataset, table, id)
     return None
 
@@ -213,8 +213,8 @@ async def delete_items(
         ids: IDs.
         settings: App settings.
     """
-    table = _SchemaGroup.ITEM.value
+    table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ITEM)
+    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     delete_rows(dataset, table, ids)
     return None

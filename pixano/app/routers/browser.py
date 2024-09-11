@@ -12,7 +12,7 @@ from fastapi_pagination.api import resolve_params
 
 from pixano.app.models import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import get_dataset as get_dataset_utils
 from .utils import get_rows
@@ -49,8 +49,8 @@ async def get_browser(
         limit = min(raw_params.limit, total)
 
         # Get tables
-        table_item = next(iter(dataset.schema.groups[_SchemaGroup.ITEM]))
-        tables_view = dataset.schema.groups[_SchemaGroup.VIEW]
+        table_item = next(iter(dataset.schema.groups[SchemaGroup.ITEM]))
+        tables_view = dataset.schema.groups[SchemaGroup.VIEW]
 
         # get data (items and views)
         item_rows = get_rows(dataset, table_item, None, None, limit, skip)

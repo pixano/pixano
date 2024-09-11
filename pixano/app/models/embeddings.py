@@ -9,7 +9,7 @@ from typing_extensions import TypeVar
 
 from pixano.app.models.table_info import TableInfo
 from pixano.features import Embedding
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .base_schema import BaseModelSchema
 
@@ -41,8 +41,8 @@ class EmbeddingModel(BaseModelSchema[Embedding]):
     @classmethod
     def validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
-        if value.group != _SchemaGroup.EMBEDDING.value:
-            raise ValueError(f"Table info group must be {_SchemaGroup.EMBEDDING.value}.")
+        if value.group != SchemaGroup.EMBEDDING.value:
+            raise ValueError(f"Table info group must be {SchemaGroup.EMBEDDING.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:

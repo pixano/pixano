@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.views import ViewModel
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
@@ -56,7 +56,7 @@ async def get_views(
         List of views.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     view_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     view_models = get_models_from_rows(table, ViewModel, view_rows)
     return view_models
@@ -78,7 +78,7 @@ async def get_view(
         The view.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     view_row = get_row(dataset, table, id)
     view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
@@ -103,7 +103,7 @@ async def create_views(
         List of views.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     views_rows = create_rows(dataset, table, views)
     views_models = get_models_from_rows(table, ViewModel, views_rows)
     return views_models
@@ -132,7 +132,7 @@ async def create_view(
     if id != view.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     view_row = create_row(dataset, table, view)
     view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
@@ -161,7 +161,7 @@ async def update_view(
     if id != view.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     view_row = update_row(dataset, table, view)
     view_model = get_model_from_row(table, ViewModel, view_row)
     return view_model
@@ -186,7 +186,7 @@ async def update_views(
         List of views.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     view_rows = update_rows(dataset, table, views)
     view_models = get_models_from_rows(table, ViewModel, view_rows)
     return view_models
@@ -205,7 +205,7 @@ async def delete_view(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     delete_row(dataset, table, id)
     return None
 
@@ -226,6 +226,6 @@ async def delete_views(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.VIEW)
+    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
     delete_rows(dataset, table, ids)
     return None

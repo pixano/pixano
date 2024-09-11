@@ -13,10 +13,17 @@ from .items import Item
 from .views import View
 
 
-class _SchemaGroup(Enum):
+class SchemaGroup(Enum):
     """Schema group.
 
     It defines the different schema groups to which a schema can belong.
+
+    Attributes:
+        ANNOTATION: Annotation schema group.
+        EMBEDDING: Embedding schema group.
+        ITEM: Item schema group.
+        ENTITY: Entity schema group.
+        VIEW: View schema group.
     """
 
     ANNOTATION = "annotations"
@@ -33,9 +40,9 @@ class _SchemaGroup(Enum):
 
 
 _SCHEMA_GROUP_TO_SCHEMA_DICT = {
-    _SchemaGroup.EMBEDDING: Embedding,
-    _SchemaGroup.ITEM: Item,
-    _SchemaGroup.ENTITY: Entity,
-    _SchemaGroup.ANNOTATION: Annotation,
-    _SchemaGroup.VIEW: View,
+    SchemaGroup.EMBEDDING: Embedding,
+    SchemaGroup.ITEM: Item,
+    SchemaGroup.ENTITY: Entity,
+    SchemaGroup.ANNOTATION: Annotation,
+    SchemaGroup.VIEW: View,
 }

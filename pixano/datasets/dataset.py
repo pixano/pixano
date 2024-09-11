@@ -19,7 +19,7 @@ from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
-from pixano.features import ViewEmbedding, _SchemaGroup, is_view_embedding
+from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
@@ -187,7 +187,7 @@ class Dataset:
             Number of rows.
         """
         # Return number of rows of item table
-        return len(self.open_table(_SchemaGroup.ITEM.value))
+        return len(self.open_table(SchemaGroup.ITEM.value))
 
     def _reload_schema(self) -> None:
         """Reload schema.
@@ -363,7 +363,7 @@ class Dataset:
         Returns:
             List of values.
         """
-        if table_name == _SchemaGroup.ITEM.value:
+        if table_name == SchemaGroup.ITEM.value:
             if item_ids is not None:
                 if ids is None:
                     ids = item_ids
@@ -436,7 +436,7 @@ class Dataset:
 
         _validate_ids_and_limit_and_skip(ids, limit, skip)
 
-        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, skip)
+        items = self.get_data(SchemaGroup.ITEM.value, ids, limit, skip)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
@@ -448,16 +448,16 @@ class Dataset:
                 table
                 for group, tables in self.schema.groups.items()
                 for table in tables
-                if group != _SchemaGroup.EMBEDDING.value
+                if group != SchemaGroup.EMBEDDING.value
             ]
         )
 
         # Load items data from the tables
         data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}
         for table_name, table in ds_tables.items():
-            if table_name == _SchemaGroup.ITEM.value:
+            if table_name == SchemaGroup.ITEM.value:
                 continue
-            is_collection = self.schema.relations[_SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
+            is_collection = self.schema.relations[SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
             lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
@@ -477,7 +477,7 @@ class Dataset:
 
         return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
-    def get_all_ids(self, table_name: str = _SchemaGroup.ITEM.value) -> list[str]:
+    def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
         """Get all ids from a table.
 
         Args:
@@ -596,7 +596,7 @@ class Dataset:
         sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
         ids_not_found = []
         for table_name in self.schema.schemas.keys():
-            if table_name == _SchemaGroup.ITEM.value:
+            if table_name == SchemaGroup.ITEM.value:
                 ids_not_found = self.delete_data(table_name, ids)
             else:
                 table = self.open_table(table_name)

@@ -15,7 +15,7 @@ from typing_extensions import Self
 
 from pixano.features import BaseSchema, Item
 from pixano.features.schemas.registry import _SCHEMA_REGISTRY
-from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, _SchemaGroup
+from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
 
 
 class SchemaRelation(Enum):
@@ -38,7 +38,7 @@ class DatasetSchema(BaseModel):
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
-    groups: dict[_SchemaGroup, set[str]] = {key: set() for key in _SchemaGroup}
+    groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup}
 
     def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> "DatasetSchema":
         """Add a schema to the dataset schema.
@@ -68,17 +68,17 @@ class DatasetSchema(BaseModel):
             raise ValueError(f"Invalid table type {schema}")
         self.schemas[table_name] = schema
         if relation_item == SchemaRelation.ONE_TO_ONE:
-            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_ONE
-            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
+            self.relations[SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_ONE
+            self.relations[table_name] = {SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
         elif relation_item == SchemaRelation.ONE_TO_MANY:
-            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_ONE
-            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_MANY}
+            self.relations[SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_ONE
+            self.relations[table_name] = {SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_MANY}
         elif relation_item == SchemaRelation.MANY_TO_ONE:
-            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_MANY
-            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
+            self.relations[SchemaGroup.ITEM.value][table_name] = SchemaRelation.ONE_TO_MANY
+            self.relations[table_name] = {SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE}
         elif relation_item == SchemaRelation.MANY_TO_MANY:
-            self.relations[_SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_MANY
-            self.relations[table_name] = {_SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_MANY}
+            self.relations[SchemaGroup.ITEM.value][table_name] = SchemaRelation.MANY_TO_MANY
+            self.relations[table_name] = {SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_MANY}
         return self
 
     @model_validator(mode="after")
@@ -144,10 +144,10 @@ class DatasetSchema(BaseModel):
                     and not self.relations[relation][table] == SchemaRelation.MANY_TO_MANY
                 ):
                     raise ValueError(f"Relation {table} -> {relation} should be many to many.")
-        if _SchemaGroup.ITEM.value not in self.relations:
+        if SchemaGroup.ITEM.value not in self.relations:
             raise ValueError("Item schema should have relations.")
         else:
-            if len(self.relations[_SchemaGroup.ITEM.value]) != len(self.schemas) - 1:
+            if len(self.relations[SchemaGroup.ITEM.value]) != len(self.schemas) - 1:
                 raise ValueError("Item schema should have relations with all other schemas.")
         return self
 
@@ -224,7 +224,7 @@ class DatasetSchema(BaseModel):
                 for schema1, relations in dataset_schema_json["relations"].items()
             },
             "schemas": {},
-            "groups": {_SchemaGroup(group): set(schemas) for group, schemas in dataset_schema_json["groups"].items()},
+            "groups": {SchemaGroup(group): set(schemas) for group, schemas in dataset_schema_json["groups"].items()},
         }
         for table_name, schema in dataset_schema_json["schemas"].items():
             dataset_schema_dict["schemas"][table_name] = BaseSchema.deserialize(schema)
@@ -277,7 +277,7 @@ class DatasetSchema(BaseModel):
 
         # table schemas
         dataset_schema_dict: dict[str, Any] = {}
-        dataset_schema_dict["relations"] = {_SchemaGroup.ITEM.value: {}}
+        dataset_schema_dict["relations"] = {SchemaGroup.ITEM.value: {}}
         schemas = {}
 
         for field_name, field in dataset_item.model_fields.items():
@@ -291,11 +291,11 @@ class DatasetSchema(BaseModel):
                     # Categorizing list of schemas as schemas and keeping track of the relation
                     if issubclass(args[0], tuple(_SCHEMA_REGISTRY.values())):
                         schemas[field_name] = args[0]
-                        dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = (
+                        dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = (
                             SchemaRelation.ONE_TO_MANY
                         )
                         dataset_schema_dict["relations"][field_name] = {
-                            _SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
+                            SchemaGroup.ITEM.value: SchemaRelation.MANY_TO_ONE
                         }
                     else:
                         item_fields[field_name] = (list[args[0]], ...)  # type: ignore[valid-type]
@@ -305,15 +305,15 @@ class DatasetSchema(BaseModel):
             # Check if field is a schema
             elif issubclass(field.annotation, tuple(_SCHEMA_REGISTRY.values())):
                 schemas[field_name] = field.annotation
-                dataset_schema_dict["relations"][_SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_ONE
-                dataset_schema_dict["relations"][field_name] = {_SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
+                dataset_schema_dict["relations"][SchemaGroup.ITEM.value][field_name] = SchemaRelation.ONE_TO_ONE
+                dataset_schema_dict["relations"][field_name] = {SchemaGroup.ITEM.value: SchemaRelation.ONE_TO_ONE}
             else:
                 # Default case: item attribute
                 item_fields[field_name] = (field.annotation, ...)
 
         CustomItem = create_model("Item", **item_fields, __base__=Item)
 
-        schemas[_SchemaGroup.ITEM.value] = CustomItem
+        schemas[SchemaGroup.ITEM.value] = CustomItem
         dataset_schema_dict["schemas"] = schemas
 
         return DatasetSchema(**dataset_schema_dict)
@@ -341,7 +341,7 @@ class DatasetItem(BaseModel):
                 schemas_data[field_name] = getattr(self, field_name)
             else:
                 item_data[field_name] = getattr(self, field_name)
-        schemas_data[_SchemaGroup.ITEM.value] = dataset_schema.schemas[_SchemaGroup.ITEM.value](**item_data)
+        schemas_data[SchemaGroup.ITEM.value] = dataset_schema.schemas[SchemaGroup.ITEM.value](**item_data)
         return schemas_data
 
     @classmethod
@@ -360,12 +360,12 @@ class DatasetItem(BaseModel):
         Returns:
             The dataset item model
         """
-        item_type = dataset_schema.schemas[_SchemaGroup.ITEM.value]
+        item_type = dataset_schema.schemas[SchemaGroup.ITEM.value]
         fields: dict[str, Any] = {}
 
-        if dataset_schema.relations != {} and _SchemaGroup.ITEM.value in dataset_schema.relations:
-            for schema, relation in dataset_schema.relations[_SchemaGroup.ITEM.value].items():
-                if exclude_embeddings and schema in dataset_schema.groups[_SchemaGroup.EMBEDDING]:
+        if dataset_schema.relations != {} and SchemaGroup.ITEM.value in dataset_schema.relations:
+            for schema, relation in dataset_schema.relations[SchemaGroup.ITEM.value].items():
+                if exclude_embeddings and schema in dataset_schema.groups[SchemaGroup.EMBEDDING]:
                     continue
                 # Add default value in case an item does not have a specific view or entity.
                 schema_type = dataset_schema.schemas[schema]

@@ -11,7 +11,7 @@ from pixano.datasets import DatasetItem, DatasetSchema
 from pixano.features import Annotation, Entity, Item, View
 from pixano.features.schemas.base_schema import BaseSchema
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 from pixano.utils.python import get_super_type_from_dict
 
 from .annotations import AnnotationModel
@@ -36,7 +36,7 @@ class DatasetItemModel(DatasetItem):
         """Create a model from a dataset item."""
 
         def _row_or_rows_to_model_or_models(
-            row_or_rows: BaseSchema | list[BaseSchema], name: str, group: _SchemaGroup, model: type[BaseModelSchema]
+            row_or_rows: BaseSchema | list[BaseSchema], name: str, group: SchemaGroup, model: type[BaseModelSchema]
         ) -> BaseModelSchema | list[BaseModelSchema]:
             base_schema = get_super_type_from_dict(
                 type(row_or_rows[0]) if isinstance(row_or_rows, list) else type(row_or_rows), _PIXANO_SCHEMA_REGISTRY
@@ -65,17 +65,17 @@ class DatasetItemModel(DatasetItem):
                 else:
                     raise ValueError(f"Unsupported schema type {type(value)}")
             elif isinstance(value, Item) or isinstance(value, list) and isinstance(value[0], Item):
-                model_dict[key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.ITEM, ItemModel)
+                model_dict[key] = _row_or_rows_to_model_or_models(value, key, SchemaGroup.ITEM, ItemModel)
             elif isinstance(value, Annotation) or isinstance(value, list) and isinstance(value[0], Annotation):
                 model_dict["annotations"][key] = _row_or_rows_to_model_or_models(
-                    value, key, _SchemaGroup.ANNOTATION, AnnotationModel
+                    value, key, SchemaGroup.ANNOTATION, AnnotationModel
                 )
             elif isinstance(value, Entity) or isinstance(value, list) and isinstance(value[0], Entity):
                 model_dict["entities"][key] = _row_or_rows_to_model_or_models(
-                    value, key, _SchemaGroup.ENTITY, EntityModel
+                    value, key, SchemaGroup.ENTITY, EntityModel
                 )
             elif isinstance(value, View) or isinstance(value, list) and isinstance(value[0], View):
-                model_dict["views"][key] = _row_or_rows_to_model_or_models(value, key, _SchemaGroup.VIEW, ViewModel)
+                model_dict["views"][key] = _row_or_rows_to_model_or_models(value, key, SchemaGroup.VIEW, ViewModel)
             else:
                 raise ValueError(f"Unsupported schema type {type(value)}")
         model_dict["id"] = dataset_item.id

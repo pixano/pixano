@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.entities import EntityModel
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
@@ -56,7 +56,7 @@ async def get_entities(
         List of entities.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entity_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     entity_models = get_models_from_rows(table, EntityModel, entity_rows)
     return entity_models
@@ -78,7 +78,7 @@ async def get_entity(
         The entity.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entity_row = get_row(dataset, table, id)
     entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
@@ -103,7 +103,7 @@ async def create_entities(
         List of entities.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entities_rows = create_rows(dataset, table, entities)
     entities_models = get_models_from_rows(table, EntityModel, entities_rows)
     return entities_models
@@ -132,7 +132,7 @@ async def create_entity(
     if id != entity.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entity_row = create_row(dataset, table, entity)
     entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
@@ -161,7 +161,7 @@ async def update_entity(
     if id != entity.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entity_row = update_row(dataset, table, entity)
     entity_model = get_model_from_row(table, EntityModel, entity_row)
     return entity_model
@@ -186,7 +186,7 @@ async def update_entities(
         List of entities.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     entity_rows = update_rows(dataset, table, entities)
     entity_models = get_models_from_rows(table, EntityModel, entity_rows)
     return entity_models
@@ -205,7 +205,7 @@ async def delete_entity(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     delete_row(dataset, table, id)
     return None
 
@@ -226,6 +226,6 @@ async def delete_entities(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ENTITY)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
     delete_rows(dataset, table, ids)
     return None

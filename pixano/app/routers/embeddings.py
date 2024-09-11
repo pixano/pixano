@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.embeddings import EmbeddingModel
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
@@ -56,7 +56,7 @@ async def get_embeddings(
         List of embeddings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embedding_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
     return embedding_models
@@ -78,7 +78,7 @@ async def get_embedding(
         The embedding.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embedding_row = get_row(dataset, table, id)
     embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
@@ -103,7 +103,7 @@ async def create_embeddings(
         List of embeddings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embeddings_rows = create_rows(dataset, table, embeddings)
     embeddings_models = get_models_from_rows(table, EmbeddingModel, embeddings_rows)
     return embeddings_models
@@ -132,7 +132,7 @@ async def create_embedding(
     if id != embedding.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embedding_row = create_row(dataset, table, embedding)
     embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
@@ -161,7 +161,7 @@ async def update_embedding(
     if id != embedding.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embedding_row = update_row(dataset, table, embedding)
     embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
     return embedding_model
@@ -186,7 +186,7 @@ async def update_embeddings(
         List of embeddings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     embedding_rows = update_rows(dataset, table, embeddings)
     embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
     return embedding_models
@@ -205,7 +205,7 @@ async def delete_embedding(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     delete_row(dataset, table, id)
     return None
 
@@ -226,6 +226,6 @@ async def delete_embeddings(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.EMBEDDING)
+    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
     delete_rows(dataset, table, ids)
     return None

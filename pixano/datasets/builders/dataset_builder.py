@@ -17,7 +17,7 @@ import tqdm
 from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
-from pixano.features import BaseSchema, Item, _SchemaGroup
+from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.views import image as image_schema
 from pixano.features.schemas.views import sequence_frame as sequence_frame_schema
 
@@ -69,12 +69,12 @@ class DatasetBuilder(ABC):
     @property
     def item_schema(self) -> type[Item]:
         """The item schema for the dataset."""
-        return self.dataset_schema.schemas[_SchemaGroup.ITEM.value]
+        return self.dataset_schema.schemas[SchemaGroup.ITEM.value]
 
     @property
     def item_schema_name(self) -> str:
         """The item schema name for the dataset."""
-        return _SchemaGroup.ITEM.value
+        return SchemaGroup.ITEM.value
 
     def build(
         self,

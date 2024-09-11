@@ -16,7 +16,7 @@ from pydantic import ValidationError
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from pixano.features.schemas import BBox, Embedding, Entity, Image, Item, SequenceFrame, Track
 from pixano.features.schemas.base_schema import BaseSchema
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 
 class TestDatasetSchema:
@@ -62,11 +62,11 @@ class TestDatasetSchema:
             },
         )
         assert schema.groups == {
-            _SchemaGroup.ITEM: {"item"},
-            _SchemaGroup.VIEW: {"image", "sequence_frame"},
-            _SchemaGroup.ENTITY: {"entity", "track"},
-            _SchemaGroup.ANNOTATION: {"bbox"},
-            _SchemaGroup.EMBEDDING: {"embedding"},
+            SchemaGroup.ITEM: {"item"},
+            SchemaGroup.VIEW: {"image", "sequence_frame"},
+            SchemaGroup.ENTITY: {"entity", "track"},
+            SchemaGroup.ANNOTATION: {"bbox"},
+            SchemaGroup.EMBEDDING: {"embedding"},
         }
 
     # Test 2: invalid schema (invalid table type)
@@ -369,11 +369,11 @@ class TestDatasetSchema:
             },
         }
         assert schema.groups == {
-            _SchemaGroup.ITEM: {"item"},
-            _SchemaGroup.VIEW: {"image"},
-            _SchemaGroup.ENTITY: {"entity"},
-            _SchemaGroup.ANNOTATION: {"bbox"},
-            _SchemaGroup.EMBEDDING: set(),
+            SchemaGroup.ITEM: {"item"},
+            SchemaGroup.VIEW: {"image"},
+            SchemaGroup.ENTITY: {"entity"},
+            SchemaGroup.ANNOTATION: {"bbox"},
+            SchemaGroup.EMBEDDING: set(),
         }
 
     @pytest.mark.parametrize(
@@ -397,7 +397,7 @@ class TestDatasetSchema:
         schema = dataset_schema_item_categories_image_bbox.add_schema("new_table", Image, relation)
         assert schema.schemas["new_table"] == Image
         assert schema.relations["new_table"] == {"item": relation}
-        assert set(schema.groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
+        assert set(schema.groups[SchemaGroup.VIEW]) == {"image", "new_table"}
         assert schema.relations["item"]["new_table"] == item_relation
 
     def test_add_error(self, dataset_schema_item_categories_image_bbox):
@@ -452,11 +452,11 @@ class TestDatasetItem:
             },
         }
         assert schema.groups == {
-            _SchemaGroup.ITEM: {"item"},
-            _SchemaGroup.VIEW: {"image"},
-            _SchemaGroup.ENTITY: {"entity"},
-            _SchemaGroup.ANNOTATION: {"bbox"},
-            _SchemaGroup.EMBEDDING: set(),
+            SchemaGroup.ITEM: {"item"},
+            SchemaGroup.VIEW: {"image"},
+            SchemaGroup.ENTITY: {"entity"},
+            SchemaGroup.ANNOTATION: {"bbox"},
+            SchemaGroup.EMBEDDING: set(),
         }
 
     def test_from_dataset_schema(self, dataset_schema_item_categories_image_bbox):

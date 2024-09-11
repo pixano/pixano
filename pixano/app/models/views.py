@@ -9,7 +9,7 @@ from typing_extensions import TypeVar
 
 from pixano.app.models.table_info import TableInfo
 from pixano.features import View
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .base_schema import BaseModelSchema
 
@@ -44,8 +44,8 @@ class ViewModel(BaseModelSchema[View]):
     @classmethod
     def validate_table_info(cls, value: TableInfo) -> TableInfo:
         """Validate table info."""
-        if value.group != _SchemaGroup.VIEW.value:
-            raise ValueError(f"Table info group must be {_SchemaGroup.VIEW.value}.")
+        if value.group != SchemaGroup.VIEW.value:
+            raise ValueError(f"Table info group must be {SchemaGroup.VIEW.value}.")
         return value
 
     def to_row(self, schema_type: type[T]) -> T:

@@ -7,7 +7,7 @@
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 
 class TableInfo(BaseModel):
@@ -36,6 +36,6 @@ class TableInfo(BaseModel):
     @classmethod
     def must_be_group(cls, value: str) -> str:
         """Check that the group is valid."""
-        if not any(value == group.value for group in _SchemaGroup):
+        if not any(value == group.value for group in SchemaGroup):
             raise ValueError(f"Group {value} is not valid.")
         return value

@@ -12,7 +12,7 @@ from typing_extensions import TypeVar
 from pixano.app.models import AnnotationModel, BaseModelSchema, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
 from pixano.datasets import Dataset
-from pixano.features import BaseSchema, _SchemaGroup
+from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils import get_super_type_from_dict
 
@@ -43,7 +43,7 @@ def get_dataset(dataset_id: str, dir: Path, media_dir: Path | None = None) -> Da
     return dataset
 
 
-def assert_table_in_group(dataset: Dataset, table: str, group: _SchemaGroup) -> None:
+def assert_table_in_group(dataset: Dataset, table: str, group: SchemaGroup) -> None:
     """Assert that a table belongs to a group.
 
     If the table does not belong to the group, raise a 404 error.
@@ -131,15 +131,15 @@ def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
     except TypeError:
         raise HTTPException(status_code=500, detail="Model type is not a subclass of BaseModelSchema.")
     if issubclass(model_type, AnnotationModel):
-        group = _SchemaGroup.ANNOTATION
+        group = SchemaGroup.ANNOTATION
     elif issubclass(model_type, EmbeddingModel):
-        group = _SchemaGroup.EMBEDDING
+        group = SchemaGroup.EMBEDDING
     elif issubclass(model_type, EntityModel):
-        group = _SchemaGroup.ENTITY
+        group = SchemaGroup.ENTITY
     elif issubclass(model_type, ItemModel):
-        group = _SchemaGroup.ITEM
+        group = SchemaGroup.ITEM
     elif issubclass(model_type, ViewModel):
-        group = _SchemaGroup.VIEW
+        group = SchemaGroup.VIEW
     else:
         raise HTTPException(
             status_code=500,

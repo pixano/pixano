@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.annotations import AnnotationModel
 from pixano.app.settings import Settings, get_settings
-from pixano.features.schemas.schema_group import _SchemaGroup
+from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
@@ -56,7 +56,7 @@ async def get_annotations(
         List of annotations.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotation_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     annotation_models = get_models_from_rows(table, AnnotationModel, annotation_rows)
     return annotation_models
@@ -78,7 +78,7 @@ async def get_annotation(
         The annotation.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotation_row = get_row(dataset, table, id)
     annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
@@ -103,7 +103,7 @@ async def create_annotations(
         List of annotations.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotations_rows = create_rows(dataset, table, annotations)
     annotations_models = get_models_from_rows(table, AnnotationModel, annotations_rows)
     return annotations_models
@@ -132,7 +132,7 @@ async def create_annotation(
     if id != annotation.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotation_row = create_row(dataset, table, annotation)
     annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
@@ -161,7 +161,7 @@ async def update_annotation(
     if id != annotation.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotation_row = update_row(dataset, table, annotation)
     annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
     return annotation_model
@@ -186,7 +186,7 @@ async def update_annotations(
         List of annotations.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     annotation_rows = update_rows(dataset, table, annotations)
     annotation_models = get_models_from_rows(table, AnnotationModel, annotation_rows)
     return annotation_models
@@ -205,7 +205,7 @@ async def delete_annotation(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     delete_row(dataset, table, id)
     return None
 
@@ -226,6 +226,6 @@ async def delete_annotations(
         settings: App settings.
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, _SchemaGroup.ANNOTATION)
+    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
     delete_rows(dataset, table, ids)
     return None
