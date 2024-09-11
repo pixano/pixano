@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.settings import Settings, get_settings
+from pixano.datasets.dataset import DatasetPaginationError, DatasetAccessError
 
 from .utils import get_dataset
 
@@ -39,7 +40,12 @@ async def get_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.get_dataset_items(ids, limit, skip)
+    try:
+        rows = dataset.get_dataset_items(ids, limit, skip)
+    except DatasetPaginationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    except DatasetAccessError as err:
+        raise HTTPException(status_code=500, detail=str(err))
     if rows == []:
         raise HTTPException(status_code=404, detail="Dataset items not found")
 
