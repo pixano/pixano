@@ -43,6 +43,12 @@ EXCLUDE_FILES = {
     "io.test.ts",
 }
 
+# Files to exclude
+EXCLUDE_PATHS = {
+    "node_modules",
+    ".svelte-kit",
+}
+
 
 def check_header(file_path: Path, header: str):
     """Check if the file contains the required header."""
@@ -55,10 +61,11 @@ def main():
     """Check if all files contain the required headers."""
     missing_headers = []
     for file_path in ROOT.rglob("*"):
-        ext = file_path.suffix
-        if ext in HEADERS and file_path.name not in EXCLUDE_FILES:
-            if not check_header(file_path, HEADERS[ext]):
-                missing_headers.append(str(file_path))
+        if not any(part.name in EXCLUDE_PATHS for part in file_path.parents):
+            ext = file_path.suffix
+            if ext in HEADERS and file_path.name not in EXCLUDE_FILES:
+                if not check_header(file_path, HEADERS[ext]):
+                    missing_headers.append(str(file_path))
 
     if missing_headers:
         exit(Exception("The following files are missing the required headers:\n" + "\n- ".join(missing_headers)))

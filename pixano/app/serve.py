@@ -12,7 +12,6 @@ import fastapi
 import pkg_resources  # type: ignore[import-untyped]
 import uvicorn
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from pixano.app.display import display_cli, display_colab, display_ipython
@@ -123,7 +122,7 @@ class App:
         async def item_page(request: fastapi.Request):
             return templates.TemplateResponse("index.html", {"request": request})
 
-        self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
+        #        self.app.mount("/_app", StaticFiles(directory=ASSETS_PATH), name="assets")
         self.config = uvicorn.Config(self.app, host=host, port=port)
         self.server = uvicorn.Server(self.config)
 

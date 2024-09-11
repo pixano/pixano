@@ -35,20 +35,38 @@ class TestDatasetSchema:
             relations={
                 "item": {
                     "image": SchemaRelation.ONE_TO_ONE,
-                    "sequence_frame": SchemaRelation.MANY_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
+                    "bbox": SchemaRelation.ONE_TO_MANY,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
                 },
                 "image": {
-                    "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image", "sequence_frame"],
-            _SchemaGroup.ENTITY: ["entity", "track"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: ["embedding"],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image", "sequence_frame"},
+            _SchemaGroup.ENTITY: {"entity", "track"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: {"embedding"},
         }
 
     # Test 2: invalid schema (invalid table type)
@@ -73,11 +91,29 @@ class TestDatasetSchema:
             relations={
                 "item": {
                     "image": SchemaRelation.ONE_TO_ONE,
-                    "sequence_frame": SchemaRelation.MANY_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
+                    "bbox": SchemaRelation.ONE_TO_MANY,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
                 },
                 "image": {
-                    "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
@@ -97,12 +133,33 @@ class TestDatasetSchema:
             relations={
                 "item": {
                     "image": SchemaRelation.ONE_TO_ONE,
-                    "sequence_frame": SchemaRelation.MANY_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
+                    "bbox": SchemaRelation.ONE_TO_MANY,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
+                    "invalid_table": SchemaRelation.ONE_TO_MANY,
                 },
                 "image": {
-                    "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
-                    "invalid_table": SchemaRelation.ONE_TO_ONE,
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "invalid_table": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
@@ -122,17 +179,35 @@ class TestDatasetSchema:
             relations={
                 "item": {
                     "image": SchemaRelation.ONE_TO_ONE,
-                    "sequence_frame": SchemaRelation.MANY_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
+                    "bbox": SchemaRelation.ONE_TO_MANY,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
                 },
                 "image": {
-                    "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
 
     # Test 5: invalid schema (item not found)
-    with pytest.raises(ValidationError, match="DatasetSchema should contain an item schema."):
+    with pytest.raises(ValidationError, match="Table item not found in schemas."):
         schema = DatasetSchema(
             schemas={
                 "image": Image,
@@ -143,9 +218,31 @@ class TestDatasetSchema:
                 "embedding": Embedding,
             },
             relations={
-                "image": {
+                "item": {
+                    "image": SchemaRelation.ONE_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
                     "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
+                },
+                "image": {
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
@@ -166,11 +263,29 @@ class TestDatasetSchema:
             relations={
                 "item": {
                     "image": SchemaRelation.ONE_TO_ONE,
-                    "sequence_frame": SchemaRelation.MANY_TO_ONE,
+                    "sequence_frame": SchemaRelation.ONE_TO_MANY,
+                    "entity": SchemaRelation.ONE_TO_MANY,
+                    "track": SchemaRelation.ONE_TO_MANY,
+                    "bbox": SchemaRelation.ONE_TO_MANY,
+                    "embedding": SchemaRelation.ONE_TO_MANY,
                 },
                 "image": {
-                    "bbox": SchemaRelation.ONE_TO_MANY,
-                    "embedding": SchemaRelation.ONE_TO_ONE,
+                    "item": SchemaRelation.ONE_TO_ONE,
+                },
+                "sequence_frame": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "entity": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "track": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "bbox": {
+                    "item": SchemaRelation.MANY_TO_ONE,
+                },
+                "embedding": {
+                    "item": SchemaRelation.MANY_TO_ONE,
                 },
             },
         )
@@ -187,34 +302,41 @@ class TestDatasetSchema:
     def test_format_table_name(self, table_name, expected):
         assert DatasetSchema.format_table_name(table_name) == expected
 
-    def test_serialize(self, dataset_schema_1, json_dataset_schema_1):
-        assert dataset_schema_1.serialize() == json_dataset_schema_1
+    def test_serialize(
+        self, dataset_schema_item_categories_image_bbox, json_dataset_schema_item_categories_image_bbox
+    ):
+        assert dataset_schema_item_categories_image_bbox.serialize() == json_dataset_schema_item_categories_image_bbox
 
-    def test_to_json(self, dataset_schema_1, json_dataset_schema_1):
+    def test_to_json(self, dataset_schema_item_categories_image_bbox, json_dataset_schema_item_categories_image_bbox):
         json_fp = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
-        dataset_schema_1.to_json(json_fp)
+        dataset_schema_item_categories_image_bbox.to_json(json_fp)
         json_content = json.load(json_fp.open())
-        assert json_content == json_dataset_schema_1
+        assert json_content == json_dataset_schema_item_categories_image_bbox
 
-        dataset_schema_2 = copy.copy(dataset_schema_1)
+        dataset_schema_2 = copy.copy(dataset_schema_item_categories_image_bbox)
         dataset_schema_2.schemas["item"] == Item  # Reset the custom item schema
 
         dataset_schema_2.to_json(json_fp)
         assert (
-            json.load(json_fp.open()) == json_dataset_schema_1
+            json.load(json_fp.open()) == json_dataset_schema_item_categories_image_bbox
         )  # The content should not have changed for the schema name
 
-    def test_from_json(self, dataset_schema_1, json_dataset_schema_1):
+    def test_from_json(
+        self, dataset_schema_item_categories_image_bbox, json_dataset_schema_item_categories_image_bbox
+    ):
         json_fp = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
-        json_fp.write_text(json.dumps(json_dataset_schema_1))
+        json_fp.write_text(json.dumps(json_dataset_schema_item_categories_image_bbox))
 
         schema = DatasetSchema.from_json(json_fp)
-        assert schema.relations == dataset_schema_1.relations
-        assert schema._groups == dataset_schema_1._groups
-        assert set(schema.schemas.keys()) == set(dataset_schema_1.schemas.keys())
-        assert all(schema.schemas[k].serialize() == dataset_schema_1.schemas[k].serialize() for k in schema.schemas)
+        assert schema.relations == dataset_schema_item_categories_image_bbox.relations
+        assert schema.groups == dataset_schema_item_categories_image_bbox.groups
+        assert set(schema.schemas.keys()) == set(dataset_schema_item_categories_image_bbox.schemas.keys())
+        assert all(
+            schema.schemas[k].serialize() == dataset_schema_item_categories_image_bbox.schemas[k].serialize()
+            for k in schema.schemas
+        )
 
-    def test_from_dataset_item(self, dataset_item_bboxes_metadata, custom_item_2):
+    def test_from_dataset_item(self, dataset_item_bboxes_metadata, item_categories_name_index):
         schema = DatasetSchema.from_dataset_item(dataset_item_bboxes_metadata)
         assert set(schema.schemas.keys()) == {
             "item",
@@ -223,7 +345,7 @@ class TestDatasetSchema:
             "bbox",
         }
 
-        serialized_item = custom_item_2.serialize()
+        serialized_item = item_categories_name_index.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
         assert schema.schemas["image"].serialize() == Image.serialize()
@@ -246,12 +368,12 @@ class TestDatasetSchema:
                 "item": SchemaRelation.MANY_TO_ONE,
             },
         }
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image"],
-            _SchemaGroup.ENTITY: ["entity"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: [],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image"},
+            _SchemaGroup.ENTITY: {"entity"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: set(),
         }
 
     @pytest.mark.parametrize(
@@ -263,7 +385,7 @@ class TestDatasetSchema:
             SchemaRelation.MANY_TO_MANY,
         ],
     )
-    def test_add_schema(self, dataset_schema_1, relation):
+    def test_add_schema(self, dataset_schema_item_categories_image_bbox, relation):
         if relation == SchemaRelation.ONE_TO_ONE:
             item_relation = SchemaRelation.ONE_TO_ONE
         elif relation == SchemaRelation.ONE_TO_MANY:
@@ -272,25 +394,25 @@ class TestDatasetSchema:
             item_relation = SchemaRelation.ONE_TO_MANY
         else:
             item_relation = SchemaRelation.MANY_TO_MANY
-        schema = dataset_schema_1.add_schema("new_table", Image, relation)
+        schema = dataset_schema_item_categories_image_bbox.add_schema("new_table", Image, relation)
         assert schema.schemas["new_table"] == Image
         assert schema.relations["new_table"] == {"item": relation}
-        assert set(schema._groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
+        assert set(schema.groups[_SchemaGroup.VIEW]) == {"image", "new_table"}
         assert schema.relations["item"]["new_table"] == item_relation
 
-    def test_add_error(self, dataset_schema_1):
+    def test_add_error(self, dataset_schema_item_categories_image_bbox):
         with pytest.raises(ValueError, match="Table image already exists in the schemas."):
-            dataset_schema_1.add_schema("image", Image, SchemaRelation.ONE_TO_ONE)
+            dataset_schema_item_categories_image_bbox.add_schema("image", Image, SchemaRelation.ONE_TO_ONE)
 
         with pytest.raises(ValueError, match="Schema <class 'str'> should be a subclass of BaseSchema."):
-            dataset_schema_1.add_schema("new_table", str, SchemaRelation.ONE_TO_ONE)
+            dataset_schema_item_categories_image_bbox.add_schema("new_table", str, SchemaRelation.ONE_TO_ONE)
 
         with pytest.raises(ValueError, match="Invalid relation 1."):
-            dataset_schema_1.add_schema("new_table", Image, 1)
+            dataset_schema_item_categories_image_bbox.add_schema("new_table", Image, 1)
 
 
 class TestDatasetItem:
-    def test_to_dataset_schema(self, dataset_item_bboxes_metadata, custom_item_2):
+    def test_to_dataset_schema(self, dataset_item_bboxes_metadata, item_categories_name_index):
         schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
             "item",
@@ -306,7 +428,7 @@ class TestDatasetItem:
             "bbox",
         }
 
-        serialized_item = custom_item_2.serialize()
+        serialized_item = item_categories_name_index.serialize()
         serialized_item["schema"] = "Item"
         assert schema.schemas["item"].serialize() == serialized_item
         assert schema.schemas["image"].serialize() == Image.serialize()
@@ -329,16 +451,16 @@ class TestDatasetItem:
                 "item": SchemaRelation.MANY_TO_ONE,
             },
         }
-        assert schema._groups == {
-            _SchemaGroup.ITEM: ["item"],
-            _SchemaGroup.VIEW: ["image"],
-            _SchemaGroup.ENTITY: ["entity"],
-            _SchemaGroup.ANNOTATION: ["bbox"],
-            _SchemaGroup.EMBEDDING: [],
+        assert schema.groups == {
+            _SchemaGroup.ITEM: {"item"},
+            _SchemaGroup.VIEW: {"image"},
+            _SchemaGroup.ENTITY: {"entity"},
+            _SchemaGroup.ANNOTATION: {"bbox"},
+            _SchemaGroup.EMBEDDING: set(),
         }
 
-    def test_from_dataset_schema(self, dataset_schema_1):
-        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_1)
+    def test_from_dataset_schema(self, dataset_schema_item_categories_image_bbox):
+        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_item_categories_image_bbox)
         assert type_dataset_item.__name__ == "DatasetItem"
         assert set(type_dataset_item.model_fields.keys()) == {
             "id",
@@ -386,27 +508,39 @@ class TestDatasetItem:
             BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
         ]
 
-    def test_from_dataset_schema_exclude_embeddings(self, dataset_schema_image_embeddings):
+    def test_from_dataset_schema_exclude_embeddings(
+        self, dataset_schema_item_categories_name_index_image_bbox_embedding
+    ):
         # Test with embeddings
-        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_image_embeddings)
+        type_dataset_item = DatasetItem.from_dataset_schema(
+            dataset_schema_item_categories_name_index_image_bbox_embedding, exclude_embeddings=False
+        )
         assert set(type_dataset_item.model_fields.keys()) == {
             "embeddings",
+            "bbox",
             "entity",
             "other_categories",
             "split",
             "image",
             "categories",
+            "index",
+            "name",
             "id",
         }
 
         # Test without embeddings
-        type_dataset_item = DatasetItem.from_dataset_schema(dataset_schema_image_embeddings, exclude_embeddings=True)
+        type_dataset_item = DatasetItem.from_dataset_schema(
+            dataset_schema_item_categories_name_index_image_bbox_embedding, exclude_embeddings=True
+        )
         assert set(type_dataset_item.model_fields.keys()) == {
             "entity",
+            "bbox",
             "other_categories",
             "split",
             "image",
             "categories",
+            "index",
+            "name",
             "id",
         }
 

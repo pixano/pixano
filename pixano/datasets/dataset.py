@@ -46,33 +46,37 @@ if TYPE_CHECKING:
         ViewRef,
     )
 
+class DatasetPaginationError(ValueError): ...
 
-def _validate_ids_and_limit_and_offset(ids: list[str] | None, limit: int | None, offset: int = 0) -> None:
+class DatasetAccessError(ValueError): ...
+
+
+def _validate_ids_and_limit_and_skip(ids: list[str] | None, limit: int | None, skip: int = 0) -> None:
     if ids is None and limit is None:
-        raise ValueError("limit must be set if ids is None")
+        raise DatasetPaginationError("limit must be set if ids is None")
     elif ids is not None and limit is not None:
-        raise ValueError("ids and limit cannot be set at the same time")
+        raise DatasetPaginationError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
-        raise ValueError("ids must be a list of strings")
-    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(offset, int) or offset < 0:
-        raise ValueError("limit and offset must be positive integers")
+        raise DatasetPaginationError("ids must be a list of strings")
+    elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(skip, int) or skip < 0:
+        raise DatasetPaginationError("limit and skip must be positive integers")
 
 
-def _validate_ids_item_ids_and_limit_and_offset(
-    ids: list[str] | None, limit: int | None, offset: int = 0, item_ids: list[str] | None = None
+def _validate_ids_item_ids_and_limit_and_skip(
+    ids: list[str] | None, limit: int | None, skip: int = 0, item_ids: list[str] | None = None
 ) -> None:
     if ids is not None and item_ids is not None:
-        raise ValueError("ids and item_ids cannot be set at the same time")
+        raise DatasetPaginationError("ids and item_ids cannot be set at the same time")
     if ids is None and item_ids is None and limit is None:
-        raise ValueError("limit must be set if ids is None and item_ids is None")
+        raise DatasetPaginationError("limit must be set if ids is None and item_ids is None")
     elif (ids is not None or item_ids is not None) and limit is not None:
-        raise ValueError("ids or item_ids and limit cannot be set at the same time")
+        raise DatasetPaginationError("ids or item_ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
-        raise ValueError("ids must be a list of strings")
+        raise DatasetPaginationError("ids must be a list of strings")
     elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
-        raise ValueError("item_ids must be a list of strings")
-    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(offset, int) or offset < 0:
-        raise ValueError("limit and offset must be positive integers")
+        raise DatasetPaginationError("item_ids must be a list of strings")
+    elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(skip, int) or skip < 0:
+        raise DatasetPaginationError("limit and skip must be positive integers")
 
 
 class Dataset:
@@ -93,13 +97,13 @@ class Dataset:
         media_dir: Dataset media directory.
     """
 
-    DB_PATH: str = "db"
-    PREVIEWS_PATH: str = "previews"
-    INFO_FILE: str = "info.json"
-    SCHEMA_FILE: str = "schema.json"
-    FEATURES_VALUES_FILE: str = "features_values.json"
-    STAT_FILE: str = "stats.json"
-    THUMB_FILE: str = "preview.png"
+    _DB_PATH: str = "db"
+    _PREVIEWS_PATH: str = "previews"
+    _INFO_FILE: str = "info.json"
+    _SCHEMA_FILE: str = "schema.json"
+    _FEATURES_VALUES_FILE: str = "features_values.json"
+    _STAT_FILE: str = "stats.json"
+    _THUMB_FILE: str = "preview.png"
 
     path: Path
     info: DatasetInfo
@@ -118,21 +122,45 @@ class Dataset:
             path: Dataset path.
             media_dir: Dataset media directory.
         """
-        info_file = path / self.INFO_FILE
-        features_values_file = path / self.FEATURES_VALUES_FILE
-        stats_file = path / self.STAT_FILE
-        thumb_file = path / self.THUMB_FILE
-
         self.path = path
-        self.info = DatasetInfo.from_json(info_file)
-        self.features_values = DatasetFeaturesValues.from_json(features_values_file)
-        self.stats = DatasetStat.from_json(stats_file) if stats_file.is_file() else []
-        self.thumbnail = thumb_file
+
+        self._info_file = self.path / self._INFO_FILE
+        self._schema_file = self.path / self._SCHEMA_FILE
+        self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._stat_file = self.path / self._STAT_FILE
+        self._thumb_file = self.path / self._THUMB_FILE
+        self._db_path = self.path / self._DB_PATH
+
+        self.info = DatasetInfo.from_json(self._info_file)
+        self.features_values = DatasetFeaturesValues.from_json(self._features_values_file)
+        self.stats = DatasetStat.from_json(self._stat_file) if self._stat_file.is_file() else []
         self.media_dir = media_dir or self.path / "media"
+        self.thumbnail = self._thumb_file
+        self.previews_path = self.path / self._PREVIEWS_PATH
 
         self._db_connection = self._connect()
 
         self._reload_schema()
+
+    def _move_dataset(self, new_path: Path) -> None:
+        """Move dataset to a new path.
+
+        Args:
+            new_path: New dataset path.
+        """
+        if self.media_dir == self.path / "media":
+            self.media_dir = new_path / "media"
+
+        self.path.rename(new_path)
+        self.path = new_path
+
+        self._db_path = self.path / self._DB_PATH
+        self._info_file = self.path / self._INFO_FILE
+        self._schema_file = self.path / self._SCHEMA_FILE
+        self._features_values_file = self.path / self._FEATURES_VALUES_FILE
+        self._stat_file = self.path / self._STAT_FILE
+        self._thumb_file = self.path / self._THUMB_FILE
+        self._db_connection = self._connect()
 
     @property
     def num_rows(self) -> int:
@@ -144,22 +172,13 @@ class Dataset:
         # Return number of rows of item table
         return len(self.open_table(_SchemaGroup.ITEM.value))
 
-    @property
-    def _db_path(self) -> Path:
-        """Return dataset db path.
-
-        Returns:
-            Dataset db path.
-        """
-        return self.path / self.DB_PATH
-
     def _reload_schema(self) -> None:
         """Reload schema.
 
         Returns:
             DatasetSchema: Dataset schema.
         """
-        self.schema: DatasetSchema = DatasetSchema.from_json(self.path / self.SCHEMA_FILE)
+        self.schema: DatasetSchema = DatasetSchema.from_json(self._schema_file)
         self.dataset_item_model: type[DatasetItem] = DatasetItem.from_dataset_schema(
             self.schema, exclude_embeddings=True
         )
@@ -233,7 +252,7 @@ class Dataset:
             embedding_functions=None,
         )
         self.schema.add_schema(name, schema, relation_item)
-        self.schema.to_json(self.path / self.SCHEMA_FILE)
+        self.schema.to_json(self._schema_file)
         self._reload_schema()
         return table
 
@@ -260,13 +279,16 @@ class Dataset:
             Dataset table.
         """
         if name not in self.schema.schemas.keys():
-            raise ValueError(f"Table {name} not found in dataset")
+            raise DatasetAccessError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
-            schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
+            try:
+                schema_table.get_embedding_fn_from_table(self, name, table.schema.metadata)
+            except TypeError:  # no embedding function
+                pass
         return table
 
     @overload
@@ -286,7 +308,7 @@ class Dataset:
     ) -> BaseSchema | Item | View | Embedding | Entity | Annotation:
         """Resolve a reference."""
         if ref.id == "" or ref.name == "":
-            raise ValueError("Reference should have a name and an id.")
+            raise DatasetAccessError("Reference should have a name and an id.")
         return self.get_data(ref.name, ids=[ref.id])[0]
 
     @overload
@@ -295,20 +317,19 @@ class Dataset:
         table_name: str,
         ids: list[str] | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema]: ...
     @overload
     def get_data(
-        self, table_name: str, ids: str, limit: int | None = None, offset: int = 0, item_ids: None = None
+        self, table_name: str, ids: str, limit: int | None = None, skip: int = 0, item_ids: None = None
     ) -> BaseSchema | None: ...
-
     def get_data(
         self,
         table_name: str,
         ids: list[str] | str | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
         item_ids: list[str] | None = None,
     ) -> list[BaseSchema] | BaseSchema | None:
         """Read data from a table.
@@ -317,7 +338,7 @@ class Dataset:
             table_name: Table name.
             ids: ids to read.
             limit: Amount of items to read.
-            offset: The offset to start reading from.
+            skip: The number of data to skip..
             item_ids: Item ids to read.
 
         Returns:
@@ -328,13 +349,13 @@ class Dataset:
                 if ids is None:
                     ids = item_ids
                 else:
-                    raise ValueError("ids and item_ids cannot be set at the same time")
+                    raise DatasetAccessError("ids and item_ids cannot be set at the same time")
                 item_ids = None
 
         return_list = not isinstance(ids, str)
         ids = [ids] if isinstance(ids, str) else ids
 
-        _validate_ids_item_ids_and_limit_and_offset(ids, limit, offset, item_ids)
+        _validate_ids_item_ids_and_limit_and_skip(ids, limit, skip, item_ids)
 
         if item_ids is not None:
             sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
@@ -345,7 +366,7 @@ class Dataset:
             if item_ids is None:
                 lance_table = table.to_lance()  # noqa: F841
                 item_rows = (
-                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {offset}")
+                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {skip}")
                     .to_arrow_table()
                     .to_pylist()
                 )
@@ -371,22 +392,22 @@ class Dataset:
 
     @overload
     def get_dataset_items(
-        self, ids: list[str] | None = None, limit: int | None = None, offset: int = 0
+        self, ids: list[str] | None = None, limit: int | None = None, skip: int = 0
     ) -> list[DatasetItem]: ...
     @overload
-    def get_dataset_items(self, ids: str, limit: int | None = None, offset: int = 0) -> DatasetItem | None: ...
+    def get_dataset_items(self, ids: str, limit: int | None = None, skip: int = 0) -> DatasetItem | None: ...
     def get_dataset_items(
         self,
         ids: list[str] | str | None = None,
         limit: int | None = None,
-        offset: int = 0,
+        skip: int = 0,
     ) -> list[DatasetItem] | DatasetItem | None:
         """Read dataset items.
 
         Args:
             ids: Item ids to read.
             limit: Amount of items to read.
-            offset: The offset to start reading from.
+            skip: The number of data to skip..
 
         Returns:
             List of dataset items.
@@ -394,16 +415,23 @@ class Dataset:
         return_list = not isinstance(ids, str)
         ids = [ids] if isinstance(ids, str) else ids
 
-        _validate_ids_and_limit_and_offset(ids, limit, offset)
+        _validate_ids_and_limit_and_skip(ids, limit, skip)
 
-        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, offset)
+        items = self.get_data(_SchemaGroup.ITEM.value, ids, limit, skip)
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
         sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
 
         # Load tables
-        ds_tables = self.open_tables()
+        ds_tables = self.open_tables(
+            [
+                table
+                for group, tables in self.schema.groups.items()
+                for table in tables
+                if group != _SchemaGroup.EMBEDDING.value
+            ]
+        )
 
         # Load items data from the tables
         data_dict: dict[str, dict[str, BaseSchema | list[BaseSchema]]] = {item.id: item.model_dump() for item in items}
@@ -451,9 +479,9 @@ class Dataset:
         """
         table_schema = self.schema.schemas[table_name]
         if not issubclass(table_schema, ViewEmbedding):
-            raise ValueError(f"Table {table_name} is not a view embedding table")
+            raise DatasetAccessError(f"Table {table_name} is not a view embedding table")
         if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
-            raise ValueError("Data must be a list of dictionaries")
+            raise DatasetAccessError("Data must be a list of dictionaries")
         table = self.open_table(table_name)
         data = pa.Table.from_pylist(
             data, schema=table_schema.to_arrow_schema(remove_vector=True, remove_metadata=True)
@@ -461,7 +489,7 @@ class Dataset:
         table.add(data)
         return None
 
-    def add_data(self, table_name: str, data: list[BaseSchema]) -> None:
+    def add_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
         """Add data to a table.
 
         Args:
@@ -471,23 +499,24 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
+            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
 
         table = self.open_table(table_name)
         table.add(data)
+        return data
 
-    def add_dataset_items(self, data: list[DatasetItem]) -> None:
+    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
         """Add dataset items.
 
         Args:
-            data: Data to add.
+            dataset_items: Dataset items to add.
         """
-        if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.dataset_item_model
+        if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
+            type(dataset_items[0]), self.dataset_item_model
         ):
-            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
+            raise DatasetAccessError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
 
-        schemas_data = [item.to_schemas_data(self.schema) for item in data]
+        schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
         for table_name in self.schema.schemas.keys():
             for item in schemas_data:
@@ -500,6 +529,7 @@ class Dataset:
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 self.add_data(table_name, table_data)
+        return dataset_items
 
     def delete_data(self, table_name: str, ids: list[str]) -> None:
         """Delete data from a table.
@@ -537,33 +567,41 @@ class Dataset:
                 table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
                 table.delete(where=f"id in {table_sql_ids}")
 
-    def update_data(self, table_name: str, data: list[BaseSchema]) -> None:
+    def update_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
         """Update data in a table.
 
         Args:
             table_name: Table name.
             data: Data to update.
+
+        Returns:
+            Updated data.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
 
         table = self.open_table(table_name)
         ids = [item.id for item in data]
         sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(ids))
         table.delete(where=f"id in {sql_ids}")
         table.add(data)
+        return data
 
-    def update_dataset_items(self, data: list[DatasetItem]) -> None:
+    def update_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
         """Update dataset items.
 
         Args:
-            data: Data to update.
+            dataset_items: Dataset items to update.
+
+        Returns:
+            Updated dataset items.
         """
-        ids = [item.id for item in data]
+        ids = [item.id for item in dataset_items]
         self.delete_dataset_items(ids)
-        self.add_dataset_items(data)
+        self.add_dataset_items(dataset_items)
+        return dataset_items
 
     @staticmethod
     def find(

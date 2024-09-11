@@ -7,12 +7,12 @@
 
 import pytest
 
-from tests.fixtures.datasets.builders import builder as fixture_builder
+
+@pytest.fixture()
+def dataset_image_bboxes_keypoint(dataset_builder_image_bboxes_keypoint):
+    return dataset_builder_image_bboxes_keypoint.build()
 
 
-dumb_builder = fixture_builder.dumb_builder
-
-
-@pytest.fixture
-def dumb_dataset(dumb_builder):
-    return dumb_builder.build()
+@pytest.fixture()
+def dataset_multi_view_tracking_and_image(dataset_builder_multi_view_tracking_and_image):
+    return dataset_builder_multi_view_tracking_and_image.build()
