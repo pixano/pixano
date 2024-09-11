@@ -40,3 +40,7 @@ def test_get_browser(
         browser.table_data.cols.sort(key=lambda x: x.name)
         output.table_data.cols.sort(key=lambda x: x.name)
         assert browser == output
+
+    response = client.get("/browser/wrong_dataset")
+    assert response.status_code == 404
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}

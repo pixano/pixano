@@ -9,7 +9,7 @@ from pixano.app.models.datasets import DatasetBrowser, DatasetModel, PaginationC
 from pixano.datasets.dataset import Dataset
 
 
-class TestDatasetExplorer:
+class TestDatasetBrowser:
     def test_init(self):
         DatasetBrowser(
             id="voc",
