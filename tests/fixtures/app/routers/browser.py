@@ -30,7 +30,7 @@ def browser_dataset_image_bboxes_keypoint() -> DatasetBrowser:
             ],
         ),
         pagination=PaginationInfo(current=0, size=50, total=5),
-        sem_search=["CLIP", "BLIP2"],
+        semantic_search=["CLIP", "BLIP2"],
     )
 
 
@@ -85,5 +85,5 @@ def browser_dataset_multi_view_tracking_and_image() -> DatasetBrowser:
             ],
         ),
         pagination=PaginationInfo(current=0, size=50, total=5),
-        sem_search=["CLIP", "BLIP2"],
+        semantic_search=["CLIP", "BLIP2"],
     )

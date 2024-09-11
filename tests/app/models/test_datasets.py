@@ -16,7 +16,7 @@ class TestDatasetExplorer:
             name="pascal",
             table_data=TableData(cols=[PaginationColumn(name="col", type="col")], rows=[{"metadata": 123}]),
             pagination=PaginationInfo(current=1, size=10, total=20),
-            sem_search=["search1", "search2"],
+            semantic_search=["search1", "search2"],
         )
 
 
