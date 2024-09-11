@@ -46,33 +46,37 @@ if TYPE_CHECKING:
         ViewRef,
     )
 
+class DatasetPaginationError(ValueError): ...
+
+class DatasetAccessError(ValueError): ...
+
 
 def _validate_ids_and_limit_and_skip(ids: list[str] | None, limit: int | None, skip: int = 0) -> None:
     if ids is None and limit is None:
-        raise ValueError("limit must be set if ids is None")
+        raise DatasetPaginationError("limit must be set if ids is None")
     elif ids is not None and limit is not None:
-        raise ValueError("ids and limit cannot be set at the same time")
+        raise DatasetPaginationError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
-        raise ValueError("ids must be a list of strings")
+        raise DatasetPaginationError("ids must be a list of strings")
     elif limit is not None and (not isinstance(limit, int) or limit < 0) or not isinstance(skip, int) or skip < 0:
-        raise ValueError("limit and skip must be positive integers")
+        raise DatasetPaginationError("limit and skip must be positive integers")
 
 
 def _validate_ids_item_ids_and_limit_and_skip(
     ids: list[str] | None, limit: int | None, skip: int = 0, item_ids: list[str] | None = None
 ) -> None:
     if ids is not None and item_ids is not None:
-        raise ValueError("ids and item_ids cannot be set at the same time")
+        raise DatasetPaginationError("ids and item_ids cannot be set at the same time")
     if ids is None and item_ids is None and limit is None:
-        raise ValueError("limit must be set if ids is None and item_ids is None")
+        raise DatasetPaginationError("limit must be set if ids is None and item_ids is None")
     elif (ids is not None or item_ids is not None) and limit is not None:
-        raise ValueError("ids or item_ids and limit cannot be set at the same time")
+        raise DatasetPaginationError("ids or item_ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
-        raise ValueError("ids must be a list of strings")
+        raise DatasetPaginationError("ids must be a list of strings")
     elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
-        raise ValueError("item_ids must be a list of strings")
+        raise DatasetPaginationError("item_ids must be a list of strings")
     elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(skip, int) or skip < 0:
-        raise ValueError("limit and skip must be positive integers")
+        raise DatasetPaginationError("limit and skip must be positive integers")
 
 
 class Dataset:
@@ -275,7 +279,7 @@ class Dataset:
             Dataset table.
         """
         if name not in self.schema.schemas.keys():
-            raise ValueError(f"Table {name} not found in dataset")
+            raise DatasetAccessError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
         schema_table = self.schema.schemas[name]
@@ -304,7 +308,7 @@ class Dataset:
     ) -> BaseSchema | Item | View | Embedding | Entity | Annotation:
         """Resolve a reference."""
         if ref.id == "" or ref.name == "":
-            raise ValueError("Reference should have a name and an id.")
+            raise DatasetAccessError("Reference should have a name and an id.")
         return self.get_data(ref.name, ids=[ref.id])[0]
 
     @overload
@@ -320,7 +324,6 @@ class Dataset:
     def get_data(
         self, table_name: str, ids: str, limit: int | None = None, skip: int = 0, item_ids: None = None
     ) -> BaseSchema | None: ...
-
     def get_data(
         self,
         table_name: str,
@@ -346,7 +349,7 @@ class Dataset:
                 if ids is None:
                     ids = item_ids
                 else:
-                    raise ValueError("ids and item_ids cannot be set at the same time")
+                    raise DatasetAccessError("ids and item_ids cannot be set at the same time")
                 item_ids = None
 
         return_list = not isinstance(ids, str)
@@ -476,9 +479,9 @@ class Dataset:
         """
         table_schema = self.schema.schemas[table_name]
         if not issubclass(table_schema, ViewEmbedding):
-            raise ValueError(f"Table {table_name} is not a view embedding table")
+            raise DatasetAccessError(f"Table {table_name} is not a view embedding table")
         if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
-            raise ValueError("Data must be a list of dictionaries")
+            raise DatasetAccessError("Data must be a list of dictionaries")
         table = self.open_table(table_name)
         data = pa.Table.from_pylist(
             data, schema=table_schema.to_arrow_schema(remove_vector=True, remove_metadata=True)
@@ -496,7 +499,7 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
+            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}")
 
         table = self.open_table(table_name)
         table.add(data)
@@ -511,7 +514,7 @@ class Dataset:
         if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
             type(dataset_items[0]), self.dataset_item_model
         ):
-            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
+            raise DatasetAccessError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
@@ -577,7 +580,7 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise ValueError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
 
         table = self.open_table(table_name)
         ids = [item.id for item in data]
