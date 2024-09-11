@@ -56,10 +56,12 @@ async def get_items_info(
     }
 
     for table_name, table in dataset.open_tables().items():
+        if table_name == SchemaGroup.ITEM.value:
+            continue
         sql_ids = f"('{list(set_ids)[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
         df: pd.DataFrame = table.search().select("item_id").where(f"item_id in {sql_ids}")
         for id, count in df["item_id"].value_counts().to_dict().items():
             infos[id][dataset.schema.get_table_group(table_name).value][table_name] = count
-    items_info = [ItemInfo(id=id, infos=info, data=item_models_identified[id]) for id, info in infos.items()]
+    items_info = [ItemInfo(info=info, **item_models_identified[id]) for id, info in infos.items()]
 
     return items_info
