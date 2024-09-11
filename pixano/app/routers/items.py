@@ -203,7 +203,7 @@ async def delete_item(dataset_id: str, id: str, settings: Annotated[Settings, De
 @router.delete("/{dataset_id}/")
 async def delete_items(
     dataset_id: str,
-    ids: list[str],
+    ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     """Delete items.

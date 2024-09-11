@@ -4,12 +4,13 @@
 # License: CECILL-C
 # =====================================
 
-import pytest
-
-from tests.fixtures.app.app import app_and_settings, empty_app_and_settings
+from tests.fixtures.app.app import app_and_settings, app_and_settings_with_copy, empty_app_and_settings
 from tests.fixtures.app.routers.browser import (
     browser_dataset_image_bboxes_keypoint,
     browser_dataset_multi_view_tracking_and_image,
+)
+from tests.fixtures.app.routers.models.annotations import (
+    two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,
 )
 from tests.fixtures.datasets.builders.builder import (
     dataset_builder_image_bboxes_keypoint,
@@ -49,7 +50,14 @@ from tests.fixtures.datasets.dataset_schema import (
     json_dataset_schema_item_categories_name_index_image_bbox_embedding,
     json_dataset_schema_multi_view_tracking_and_image,
 )
-from tests.fixtures.features.bbox import bbox_difficult, bbox_xywh, bbox_xyxy, coords, height_width
+from tests.fixtures.features.bbox import (
+    bbox_difficult,
+    bbox_xywh,
+    bbox_xyxy,
+    coords,
+    height_width,
+    two_difficult_bboxes_from_dataset_multiview_tracking_and_image,
+)
 from tests.fixtures.features.compressed_rle import counts, rle, size
 from tests.fixtures.features.embedding import dumb_embedding_function, embedding_8, view_embedding_8
 from tests.fixtures.features.entity import entity_category

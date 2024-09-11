@@ -40,7 +40,13 @@ def app_and_settings(
 def app_and_settings_with_copy(
     dataset_image_bboxes_keypoint_copy: Dataset, dataset_multi_view_tracking_and_image_copy: Dataset
 ) -> tuple[FastAPI, Settings]:
-    settings = Settings(library_dir=str(dataset_image_bboxes_keypoint_copy.path.parent))
+    library_dir = Path(tempfile.mkdtemp())
+    settings = Settings(library_dir=str(library_dir))
+
+    for dataset in [dataset_image_bboxes_keypoint_copy, dataset_multi_view_tracking_and_image_copy]:
+        dataset.info.id = dataset.info.name
+        dataset.info.to_json(dataset._info_file)
+        dataset._move_dataset(library_dir / dataset.info.name)
 
     @lru_cache
     def get_settings_override():

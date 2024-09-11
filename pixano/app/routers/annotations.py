@@ -214,7 +214,7 @@ async def delete_annotation(
 async def delete_annotations(
     dataset_id: str,
     table: str,
-    ids: list[str],
+    ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     """Delete annotations.

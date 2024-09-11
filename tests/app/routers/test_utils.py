@@ -24,49 +24,6 @@ from pixano.datasets.dataset import Dataset
 from pixano.features import BBox
 
 
-@pytest.fixture(scope="session")
-def two_difficult_bboxes_from_dataset_multiview_tracking_and_image(dataset_multi_view_tracking_and_image: Dataset):
-    return dataset_multi_view_tracking_and_image.get_data("bbox_image", limit=2)
-
-
-@pytest.fixture(scope="session")
-def two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image():
-    return [
-        AnnotationModel.model_validate(
-            {
-                "id": "bbox_image_0",
-                "table_info": {"name": "bbox_image", "group": "annotations", "base_schema": "BBox"},
-                "data": {
-                    "item_ref": {"name": "item", "id": "0"},
-                    "view_ref": {"name": "image", "id": "image_0"},
-                    "entity_ref": {"name": "entities_image", "id": "entity_image_0"},
-                    "coords": [0.0, 0.0, 0.0, 0.0],
-                    "format": "xywh",
-                    "is_normalized": False,
-                    "confidence": 1.0,
-                    "is_difficult": True,
-                },
-            }
-        ),
-        AnnotationModel.model_validate(
-            {
-                "id": "bbox_image_1",
-                "table_info": {"name": "bbox_image", "group": "annotations", "base_schema": "BBox"},
-                "data": {
-                    "item_ref": {"name": "item", "id": "1"},
-                    "view_ref": {"name": "image", "id": "image_1"},
-                    "entity_ref": {"name": "entities_image", "id": "entity_image_1"},
-                    "coords": [1.0, 1.0, 25.0, 25.0],
-                    "format": "xywh",
-                    "is_normalized": False,
-                    "confidence": 0.8,
-                    "is_difficult": False,
-                },
-            }
-        ),
-    ]
-
-
 @pytest.mark.skip(reason="Already done in test_datasets.py")
 def test_get_dataset(app_and_settings: tuple[FastAPI, Settings]):
     pass

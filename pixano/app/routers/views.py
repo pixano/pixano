@@ -214,7 +214,7 @@ async def delete_view(
 async def delete_views(
     dataset_id: str,
     table: str,
-    ids: list[str],
+    ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     """Delete views.

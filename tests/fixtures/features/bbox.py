@@ -6,6 +6,7 @@
 
 import pytest
 
+from pixano.datasets.dataset import Dataset
 from pixano.features.schemas.annotations.bbox import BBox
 from tests.utils.schema import register_schema
 
@@ -42,3 +43,8 @@ def bbox_difficult():
 
     register_schema(BBoxDifficult)
     return BBoxDifficult
+
+
+@pytest.fixture(scope="session")
+def two_difficult_bboxes_from_dataset_multiview_tracking_and_image(dataset_multi_view_tracking_and_image: Dataset):
+    return dataset_multi_view_tracking_and_image.get_data("bbox_image", limit=2)

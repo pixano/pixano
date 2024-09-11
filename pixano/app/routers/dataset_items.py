@@ -6,7 +6,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.settings import Settings, get_settings
@@ -170,7 +170,7 @@ async def update_dataset_item(
 @router.delete("/{dataset_id}/")
 async def delete_dataset_items(
     dataset_id: str,
-    ids: list[str],
+    ids: Annotated[list[str], Query()],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> None:
     """Delete dataset items.
