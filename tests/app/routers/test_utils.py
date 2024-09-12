@@ -11,9 +11,7 @@ from fastapi.testclient import TestClient
 
 from pixano.app.models import AnnotationModel, BaseSchemaModel
 from pixano.app.routers.utils import (
-    create_row,
     create_rows,
-    delete_row,
     delete_rows,
     get_model_from_row,
     get_models_from_rows,
@@ -55,26 +53,11 @@ def test_get_rows(
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=2&ids=0")
     assert response.status_code == 400
-    assert response.json() == {"detail": "Invalid query parameters."}
+    assert "Invalid query parameters. ids and item_ids cannot be set at the same time." in response.json()["detail"]
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?ids=nothing")
     assert response.status_code == 404
     assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/bbox_image."}
-
-
-def test_get_row(
-    app_and_settings: tuple[FastAPI, Settings], two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image
-):
-    app, settings = app_and_settings
-    client = TestClient(app)
-
-    response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/bbox_image_0")
-    assert response.status_code == 200
-    assert response.json() == two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image[0].model_dump()
-
-    response = client.get("/annotations/dataset_image_bboxes_keypoint/bboxes/nothing")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "No rows found for dataset_image_bboxes_keypoint/bboxes."}
 
 
 def test_get_model_from_row(
@@ -130,19 +113,7 @@ def test_delete_rows(dataset_multi_view_tracking_and_image_copy: Dataset):
     with pytest.raises(HTTPException) as error:
         ids_not_found = delete_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", "wrong_input")
     assert error.value.status_code == 400
-    assert error.value.detail == "Invalid query parameters."
-
-
-def test_delete_row(dataset_multi_view_tracking_and_image_copy: Dataset):
-    id_not_found = delete_row(dataset_multi_view_tracking_and_image_copy, "bbox_image", "bbox_image_0")
-    assert not id_not_found
-    id_not_found = delete_row(dataset_multi_view_tracking_and_image_copy, "bbox_image", "bbox_image_0")
-    assert id_not_found
-
-    with pytest.raises(HTTPException) as error:
-        delete_row(dataset_multi_view_tracking_and_image_copy, "bbox_image", 1)
-    assert error.value.status_code == 400
-    assert error.value.detail == "Invalid query parameters."
+    assert error.value.detail == "Invalid query parameters. ids and item_ids cannot be set at the same time."
 
 
 def test_update_rows(
@@ -180,21 +151,6 @@ def test_update_rows(
         update_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", [new_model, new_model])
 
 
-def test_update_row(
-    dataset_multi_view_tracking_and_image_copy: Dataset,
-    two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,
-):
-    model = two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image[0]
-    model.data["confidence"] = 0.5
-    updated_row = update_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", [model])[0]
-
-    assert AnnotationModel.from_row(updated_row, table_info=model.table_info) == model
-    assert (
-        dataset_multi_view_tracking_and_image_copy.get_data("bbox_image", ["bbox_image_0"])[0].model_dump()
-        == updated_row.model_dump()
-    )
-
-
 def test_create_rows(
     dataset_multi_view_tracking_and_image_copy: Dataset,
     two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,
@@ -229,20 +185,3 @@ def test_create_rows(
     # Test wrong data
     with pytest.raises(HTTPException) as error:
         create_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", [new_models[0], new_models[0]])
-
-
-def test_create_row(
-    dataset_multi_view_tracking_and_image_copy: Dataset,
-    two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,
-):
-    model = two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image[0]
-    new_model = type(model).model_validate(model.model_dump())
-    new_model.id = f"{model.id}_new"
-
-    created_row = create_row(dataset_multi_view_tracking_and_image_copy, "bbox_image", new_model)
-
-    assert AnnotationModel.from_row(created_row, table_info=model.table_info) == new_model
-    assert (
-        dataset_multi_view_tracking_and_image_copy.get_data("bbox_image", [new_model.id])[0].model_dump()
-        == created_row.model_dump()
-    )

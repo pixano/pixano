@@ -121,7 +121,9 @@ def test_get_dataset_items_error(
     ]:
         response = client.get(url + wrong_url_part)
         assert response.status_code == 400
-        assert response.json() == {"detail": "Invalid query parameters."}
+        assert (
+            "Invalid query parameters. ids and item_ids cannot be set at the same time." in response.json()["detail"]
+        )
 
     # No dataset_items found
     url = "/dataset_items/dataset_multi_view_tracking_and_image/?ids=100"

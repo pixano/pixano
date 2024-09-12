@@ -11,7 +11,7 @@ from typing_extensions import TypeVar
 
 from pixano.app.models import AnnotationModel, BaseSchemaModel, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
-from pixano.datasets import Dataset, DatasetPaginationError, DatasetAccessError
+from pixano.datasets import Dataset, DatasetAccessError, DatasetPaginationError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils import get_super_type_from_dict
@@ -84,32 +84,19 @@ def get_rows(
     try:
         rows = dataset.get_data(table, ids, limit, skip, item_ids)
     except DatasetPaginationError as err:
-        raise HTTPException(status_code=400,detail="Invalid query parameters. "+str(err))
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid query parameters. ids and item_ids cannot be set at the same time.. " + str(err),
+        )
     except DatasetAccessError as err:
-        raise HTTPException(status_code=500,detail="Internal server error. "+str(err))
-    
+        raise HTTPException(status_code=500, detail="Internal server error. " + str(err))
+
     if rows == [] or rows is None:
         raise HTTPException(
             status_code=404,
             detail=f"No rows found for {dataset.info.id}/{table}.",
         )
     return rows
-
-
-def get_row(dataset: Dataset, table: str, id: str) -> BaseSchema:
-    """Get a row from a table.
-
-    If the row is not found, raise a 404 error.
-
-    Args:
-        dataset: Dataset.
-        table: Table name.
-        id: ID.
-
-    Returns:
-        The row.
-    """
-    return get_rows(dataset, table, [id], None, None, 0)[0]
 
 
 def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
@@ -196,24 +183,9 @@ def delete_rows(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid query parameters.",
+            detail="Invalid query parameters. ids and item_ids cannot be set at the same time.",
         )
     return ids_not_found
-
-
-def delete_row(dataset: Dataset, table: str, id: str) -> bool:
-    """Delete a row from a table.
-
-    Args:
-        dataset: Dataset.
-        table: Table name.
-        id: ID.
-
-    Returns:
-        Whether the row was found and deleted.
-    """
-    id_not_found = delete_rows(dataset, table, [id])
-    return not (id_not_found == [])
 
 
 def update_rows(
@@ -252,25 +224,6 @@ def update_rows(
     return updated_rows
 
 
-def update_row(
-    dataset: Dataset,
-    table: str,
-    model: BaseSchemaModel,
-) -> BaseSchema:
-    """Update a row in a table.
-
-    Args:
-        dataset: Dataset.
-        table: Table name.
-        model: Model.
-
-    Returns:
-        The updated row.
-    """
-    updated_row = update_rows(dataset, table, [model])[0]
-    return updated_row  # TODO: same as above, return updated row and change HTTP status code
-
-
 def create_rows(
     dataset: Dataset,
     table: str,
@@ -303,22 +256,3 @@ def create_rows(
         )
 
     return created_rows
-
-
-def create_row(
-    dataset: Dataset,
-    table: str,
-    model: BaseSchemaModel,
-) -> BaseSchema:
-    """Add a row to a table.
-
-    Args:
-        dataset: Dataset.
-        table: Table name.
-        model: Model.
-
-    Returns:
-        The added row.
-    """
-    created_row = create_rows(dataset, table, [model])[0]
-    return created_row

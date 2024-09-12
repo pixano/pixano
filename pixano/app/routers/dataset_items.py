@@ -43,11 +43,14 @@ async def get_dataset_items(
     try:
         rows = dataset.get_dataset_items(ids, limit, skip)
     except DatasetPaginationError as err:
-        raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid query parameters. ids and item_ids cannot be set at the same time. " + str(err),
+        )
     except DatasetAccessError as err:
         raise HTTPException(status_code=500, detail="Insternal server error. " + str(err))
     if rows == []:
-        raise HTTPException(status_code=404, detail="Dataset items not found")
+        raise HTTPException(status_code=404, detail="Dataset items not found.")
 
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
