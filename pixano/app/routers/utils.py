@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from typing_extensions import TypeVar
 
-from pixano.app.models import AnnotationModel, BaseModelSchema, EmbeddingModel, EntityModel, ItemModel, ViewModel
+from pixano.app.models import AnnotationModel, BaseSchemaModel, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
 from pixano.datasets import Dataset
 from pixano.features import BaseSchema, SchemaGroup
@@ -17,7 +17,7 @@ from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils import get_super_type_from_dict
 
 
-T = TypeVar("T", bound=BaseModelSchema)
+T = TypeVar("T", bound=BaseSchemaModel)
 
 
 def get_dataset(dataset_id: str, dir: Path, media_dir: Path | None = None) -> Dataset:
@@ -125,7 +125,7 @@ def get_model_from_row(table: str, model_type: type[T], row: BaseSchema) -> T:
         The model.
     """
     try:
-        is_group = issubclass(model_type, BaseModelSchema)
+        is_group = issubclass(model_type, BaseSchemaModel)
         if not is_group:
             raise HTTPException(status_code=500, detail="Model type is not a subclass of BaseModelSchema.")
     except TypeError:
@@ -219,7 +219,7 @@ def delete_row(dataset: Dataset, table: str, id: str) -> bool:
 def update_rows(
     dataset: Dataset,
     table: str,
-    models: list[BaseModelSchema],
+    models: list[BaseSchemaModel],
 ) -> list[BaseSchema]:
     """Update rows in a table.
 
@@ -232,7 +232,7 @@ def update_rows(
         The updated rows.
     """
     try:
-        rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+        rows = BaseSchemaModel.to_rows(models, dataset.schema.schemas[table])
     except Exception:
         raise HTTPException(
             status_code=400,
@@ -255,7 +255,7 @@ def update_rows(
 def update_row(
     dataset: Dataset,
     table: str,
-    model: BaseModelSchema,
+    model: BaseSchemaModel,
 ) -> BaseSchema:
     """Update a row in a table.
 
@@ -274,7 +274,7 @@ def update_row(
 def create_rows(
     dataset: Dataset,
     table: str,
-    models: list[BaseModelSchema],
+    models: list[BaseSchemaModel],
 ) -> list[BaseSchema]:
     """Add rows to a table.
 
@@ -287,7 +287,7 @@ def create_rows(
         The added rows.
     """
     try:
-        rows = BaseModelSchema.to_rows(models, dataset.schema.schemas[table])
+        rows = BaseSchemaModel.to_rows(models, dataset.schema.schemas[table])
     except Exception:
         raise HTTPException(
             status_code=400,
@@ -308,7 +308,7 @@ def create_rows(
 def create_row(
     dataset: Dataset,
     table: str,
-    model: BaseModelSchema,
+    model: BaseSchemaModel,
 ) -> BaseSchema:
     """Add a row to a table.
 

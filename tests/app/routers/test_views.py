@@ -505,3 +505,21 @@ def test_delete_view(
 
     # Check that the view was deleted from the dataset
     assert dataset_multi_view_tracking_and_image.get_data("image", "image_0") is None
+
+
+def test_delete_view_error(
+    app_and_settings_with_copy: tuple[FastAPI, Settings],
+):
+    app, settings = app_and_settings_with_copy
+    # Wrong dataset ID
+    client = TestClient(app)
+    response = client.delete("/views/dataset_multi_view_tracking_and_image_wrong/image/image_0")
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+    }
+
+    # Wrong table name
+    response = client.delete("/views/dataset_multi_view_tracking_and_image/image_wrong/image_0")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}

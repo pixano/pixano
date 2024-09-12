@@ -653,9 +653,7 @@ class TestDataset:
         new_item = item.model_copy()
 
         data = [new_item, "0"]
-        with pytest.raises(
-            ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
-        ):
+        with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
         data = [new_item]
@@ -762,9 +760,7 @@ class TestDataset:
             dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
 
         data = [updated_item, "0"]
-        with pytest.raises(
-            ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
-        ):
+        with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
             dataset_image_bboxes_keypoint_copy.update_dataset_items(data)
 
     def test_find(self, dataset_image_bboxes_keypoint_copy: Dataset):

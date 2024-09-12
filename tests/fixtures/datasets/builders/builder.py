@@ -100,6 +100,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
             num_frames = i % 2 + 1
             sequence_frames = [
                 schemas["video"](
+                    id=f"video_{i}_{j}",
                     category=SEQUENCE_FRAME_CATEGORY[i % 3],
                     timestamp=j / 10,
                     frame_index=j,

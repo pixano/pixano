@@ -11,13 +11,13 @@ from pixano.app.models.table_info import TableInfo
 from pixano.features import Entity
 from pixano.features.schemas.schema_group import SchemaGroup
 
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 
 
 T = TypeVar("T", bound=Entity)
 
 
-class EntityModel(BaseModelSchema[Entity]):
+class EntityModel(BaseSchemaModel[Entity]):
     """Entity model."""
 
     model_config = ConfigDict(

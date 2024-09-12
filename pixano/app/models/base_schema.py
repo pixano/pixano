@@ -18,8 +18,8 @@ T = TypeVar("T", bound=BaseSchema)
 SUB_T = TypeVar("SUB_T", bound=BaseSchema)
 
 
-class BaseModelSchema(BaseModel, Generic[T]):
-    """Base model schema.
+class BaseSchemaModel(BaseModel, Generic[T]):
+    """Base schema model.
 
     Attributes:
         id: Identifier.
@@ -58,6 +58,6 @@ class BaseModelSchema(BaseModel, Generic[T]):
         return schema_type.model_validate({"id": schema_dict["id"], **schema_dict["data"]})
 
     @staticmethod
-    def to_rows(schemas: list["BaseModelSchema"], schema_type: type[SUB_T]) -> list[SUB_T]:
+    def to_rows(schemas: list["BaseSchemaModel"], schema_type: type[SUB_T]) -> list[SUB_T]:
         """Create a list of schemas from a list of models."""
         return [schema.to_row(schema_type) for schema in schemas]

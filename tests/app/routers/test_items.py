@@ -448,3 +448,16 @@ def test_delete_item(
 
     # Check that the item was deleted from the dataset
     assert dataset_multi_view_tracking_and_image.get_data("item", "0") is None
+
+
+def test_delete_item_error(
+    app_and_settings_with_copy: tuple[FastAPI, Settings],
+):
+    app, settings = app_and_settings_with_copy
+    # Wrong dataset ID
+    client = TestClient(app)
+    response = client.delete("/items/dataset_multi_view_tracking_and_image_wrong/0")
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+    }

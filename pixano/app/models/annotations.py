@@ -11,13 +11,13 @@ from pixano.app.models.table_info import TableInfo
 from pixano.features import Annotation
 from pixano.features.schemas.schema_group import SchemaGroup
 
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 
 
 T = TypeVar("T", bound=Annotation)
 
 
-class AnnotationModel(BaseModelSchema[Annotation]):
+class AnnotationModel(BaseSchemaModel[Annotation]):
     """Annotation model."""
 
     model_config = ConfigDict(

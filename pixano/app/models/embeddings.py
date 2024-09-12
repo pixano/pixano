@@ -11,13 +11,13 @@ from pixano.app.models.table_info import TableInfo
 from pixano.features import Embedding
 from pixano.features.schemas.schema_group import SchemaGroup
 
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 
 
 T = TypeVar("T", bound=Embedding)
 
 
-class EmbeddingModel(BaseModelSchema[Embedding]):
+class EmbeddingModel(BaseSchemaModel[Embedding]):
     """Embedding model."""
 
     model_config = ConfigDict(

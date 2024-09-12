@@ -15,7 +15,7 @@ from pixano.features.schemas.schema_group import SchemaGroup
 from pixano.utils.python import get_super_type_from_dict
 
 from .annotations import AnnotationModel
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 from .entities import EntityModel
 from .items import ItemModel
 from .table_info import TableInfo
@@ -36,8 +36,8 @@ class DatasetItemModel(DatasetItem):
         """Create a model from a dataset item."""
 
         def _row_or_rows_to_model_or_models(
-            row_or_rows: BaseSchema | list[BaseSchema], name: str, group: SchemaGroup, model: type[BaseModelSchema]
-        ) -> BaseModelSchema | list[BaseModelSchema]:
+            row_or_rows: BaseSchema | list[BaseSchema], name: str, group: SchemaGroup, model: type[BaseSchemaModel]
+        ) -> BaseSchemaModel | list[BaseSchemaModel]:
             base_schema = get_super_type_from_dict(
                 type(row_or_rows[0]) if isinstance(row_or_rows, list) else type(row_or_rows), _PIXANO_SCHEMA_REGISTRY
             )

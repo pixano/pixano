@@ -11,13 +11,13 @@ from pixano.app.models.table_info import TableInfo
 from pixano.features import Item
 from pixano.features.schemas.schema_group import SchemaGroup
 
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 
 
 T = TypeVar("T", bound=Item)
 
 
-class ItemModel(BaseModelSchema[Item]):
+class ItemModel(BaseSchemaModel[Item]):
     """Item model."""
 
     model_config = ConfigDict(

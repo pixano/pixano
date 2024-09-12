@@ -530,23 +530,33 @@ class Dataset:
 
         return data
 
-    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]:
+    @overload
+    def add_dataset_items(self, dataset_items: DatasetItem) -> DatasetItem: ...
+    @overload
+    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]: ...
+    def add_dataset_items(self, dataset_items: list[DatasetItem] | DatasetItem) -> list[DatasetItem] | DatasetItem:
         """Add dataset items.
 
         Args:
             dataset_items: Dataset items to add.
         """
-        if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
-            type(dataset_items[0]), self.dataset_item_model
+        batch = True
+        if isinstance(dataset_items, DatasetItem):
+            dataset_items = [dataset_items]
+            batch = False
+        fields = self.dataset_item_model.model_fields.keys()
+        if not all(
+            isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
-            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
-
+            raise ValueError("All data must be instances of the same DatasetItem.")
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
         for table_name in self.schema.schemas.keys():
             for item in schemas_data:
                 if table_name not in tables_data:
                     tables_data[table_name] = []
+                if table_name not in item:
+                    continue
                 if isinstance(item[table_name], list):
                     tables_data[table_name].extend(item[table_name])
                 elif item[table_name] is not None:
@@ -554,7 +564,7 @@ class Dataset:
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 self.add_data(table_name, table_data)
-        return dataset_items
+        return dataset_items if batch else dataset_items[0]
 
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
         """Delete data from a table.
@@ -682,10 +692,11 @@ class Dataset:
         Returns:
             Updated dataset items.
         """
-        if not all(isinstance(item, type(dataset_items[0])) for item in dataset_items) or not issubclass(
-            type(dataset_items[0]), self.dataset_item_model
+        fields = self.dataset_item_model.model_fields.keys()
+        if not all(
+            isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
-            raise ValueError(f"All data must be instances of the dataset item type {self.dataset_item_model}")
+            raise ValueError("All data must be instances of the same DatasetItem.")
 
         ids = [item.id for item in dataset_items]
         ids_not_found = self.delete_dataset_items(ids)

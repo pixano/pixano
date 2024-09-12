@@ -11,13 +11,13 @@ from pixano.app.models.table_info import TableInfo
 from pixano.features import View
 from pixano.features.schemas.schema_group import SchemaGroup
 
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 
 
 T = TypeVar("T", bound=View)
 
 
-class ViewModel(BaseModelSchema[View]):
+class ViewModel(BaseSchemaModel[View]):
     """View model."""
 
     model_config = ConfigDict(

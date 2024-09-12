@@ -5,7 +5,7 @@
 # =====================================
 
 from .annotations import AnnotationModel
-from .base_schema import BaseModelSchema
+from .base_schema import BaseSchemaModel
 from .dataset_items import DatasetItemModel
 from .datasets import DatasetBrowser, DatasetModel, PaginationColumn, PaginationInfo, TableData
 from .embeddings import EmbeddingModel
@@ -18,7 +18,7 @@ from .views import ViewModel
 
 __all__ = [
     "AnnotationModel",
-    "BaseModelSchema",
+    "BaseSchemaModel",
     "PaginationColumn",
     "DatasetModel",
     "DatasetBrowser",

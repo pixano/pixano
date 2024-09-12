@@ -514,3 +514,23 @@ def test_delete_embedding(
 
     # Check that the embedding was deleted from the dataset
     assert dataset_multi_view_tracking_and_image.get_data("image_embedding", "image_embedding_0") is None
+
+
+def test_delete_embedding_error(
+    app_and_settings_with_copy: tuple[FastAPI, Settings],
+):
+    app, settings = app_and_settings_with_copy
+    # Wrong dataset ID
+    client = TestClient(app)
+    response = client.delete("/embeddings/dataset_multi_view_tracking_and_image_wrong/bbox_image/image_embedding_0")
+    assert response.status_code == 404
+    assert response.json() == {
+        "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
+    }
+
+    # Wrong table name
+    response = client.delete(
+        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/image_embedding_0"
+    )
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}

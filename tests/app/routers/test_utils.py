@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
-from pixano.app.models import AnnotationModel, BaseModelSchema
+from pixano.app.models import AnnotationModel, BaseSchemaModel
 from pixano.app.routers.utils import (
     create_row,
     create_rows,
@@ -94,7 +94,7 @@ def test_get_model_from_row(
 
     # Test wrong model type
     with pytest.raises(HTTPException) as error:
-        model = get_model_from_row("bbox_image", BaseModelSchema, row)
+        model = get_model_from_row("bbox_image", BaseSchemaModel, row)
     assert error.value.status_code == 500
     assert error.value.detail == "Model type not correct."
 

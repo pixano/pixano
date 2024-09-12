@@ -21,7 +21,7 @@ router = APIRouter(prefix="/dataset_items", tags=["Dataset Items"])
 async def get_dataset_items(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-    ids: list[str] | None = None,
+    ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
 ) -> list[DatasetItemModel]:
@@ -39,9 +39,12 @@ async def get_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.get_dataset_items(ids, limit, skip)
-    if rows == []:
-        raise HTTPException(status_code=404, detail="Dataset items not found")
+    try:
+        rows = dataset.get_dataset_items(ids, limit, skip)
+        if rows == []:
+            raise HTTPException(status_code=404, detail="Dataset items not found.")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid query parameters.")
 
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
@@ -64,12 +67,12 @@ async def get_dataset_item(
 
     row = dataset.get_dataset_items(id)
     if row is None:
-        raise HTTPException(status_code=404, detail="Dataset item not found")
+        raise HTTPException(status_code=404, detail="Dataset item not found.")
 
     return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
-@router.post("/{dataset_id}/", response_model=DatasetItemModel)
+@router.post("/{dataset_id}/", response_model=list[DatasetItemModel])
 async def create_dataset_items(
     dataset_id: str,
     dataset_items: list[DatasetItemModel],
@@ -87,7 +90,11 @@ async def create_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    try:
+        rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid dataset items")
+
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
@@ -114,7 +121,11 @@ async def create_dataset_item(
 
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    row = dataset.add_dataset_items(DatasetItemModel.to_dataset_item(dataset_item, dataset.schema))[0]
+    try:
+        row = dataset.add_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid dataset item")
+
     return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
@@ -136,7 +147,11 @@ async def update_dataset_items(
     """
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    try:
+        rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid dataset items")
+
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
@@ -163,7 +178,11 @@ async def update_dataset_item(
 
     dataset = get_dataset(dataset_id, settings.data_dir, None)
 
-    row = dataset.update_dataset_items(DatasetItemModel.to_dataset_item(dataset_item, dataset.schema))[0]
+    try:
+        row = dataset.update_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid dataset item")
+
     return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
