@@ -84,10 +84,7 @@ def get_rows(
     try:
         rows = dataset.get_data(table, ids, limit, skip, item_ids)
     except DatasetPaginationError as err:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid query parameters. ids and item_ids cannot be set at the same time.. " + str(err),
-        )
+        raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:
         raise HTTPException(status_code=500, detail="Internal server error. " + str(err))
 
