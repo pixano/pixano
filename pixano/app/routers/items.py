@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pixano.app.models.items import ItemModel
 from pixano.app.settings import Settings, get_settings
 from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.datasets.dataset import DatasetPaginationError, DatasetAccessError
 
 from .utils import (
     assert_table_in_group,
@@ -45,7 +46,6 @@ async def get_items(
         dataset_id: Dataset ID.
         settings: App settings.
         ids: IDs.
-        item_ids: Item IDs.
         limit: Limit number of items.
         skip: Skip number of items.
 
@@ -55,13 +55,21 @@ async def get_items(
     table = SchemaGroup.ITEM.value
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, SchemaGroup.ITEM)
-    item_rows = get_rows(dataset, table, ids, None, limit, skip)
+    try:
+        item_rows = get_rows(dataset, table, ids, None, limit, skip)
+    except DatasetPaginationError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    except DatasetAccessError as err:
+        raise HTTPException(status_code=500, detail=str(err))
+    
     item_models = get_models_from_rows(table, ItemModel, item_rows)
     return item_models
 
 
 @router.get("/{dataset_id}/{id}", response_model=ItemModel)
-async def get_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemModel:
+async def get_item(
+    dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
+) -> ItemModel:
     """Get an item.
 
     Args:
@@ -185,7 +193,9 @@ async def update_items(
 
 
 @router.delete("/{dataset_id}/{id}")
-async def delete_item(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> None:
+async def delete_item(
+    dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
+) -> None:
     """Delete an item.
 
     Args:
