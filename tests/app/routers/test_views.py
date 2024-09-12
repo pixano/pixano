@@ -24,6 +24,7 @@ from pixano.datasets.dataset import Dataset
         ("image", None, None, 2, 0),
         ("image", None, None, 2, None),
         ("image", None, None, 10, 2),
+        ("video", None, ["1", "3"], 2, 1),
     ],
 )
 def test_get_views(
@@ -43,6 +44,8 @@ def test_get_views(
     if items_ids is not None:
         url += "&".join(["item_ids=" + id for id in items_ids])
     if limit is not None:
+        if url[-1] not in ["&", "?"]:
+            url += "&"
         url += "limit=" + str(limit)
     if skip is not None:
         url += "&skip=" + str(skip)
@@ -87,14 +90,16 @@ def test_get_views_error(
     url = "/views/dataset_multi_view_tracking_and_image/image/?"
     for wrong_url_part in [
         "ids=image_0&item_ids=0",
-        "ids=image_0&limit=10",
-        "item_ids=0&limit=10",
     ]:
         response = client.get(url + wrong_url_part)
         assert response.status_code == 400
-        assert (
-            "Invalid query parameters. ids and item_ids cannot be set at the same time." in response.json()["detail"]
-        )
+        assert "Invalid query parameters. ids and item_ids cannot be set at the same time" in response.json()["detail"]
+    for wrong_url_part in [
+        "ids=image_0&limit=10",
+    ]:
+        response = client.get(url + wrong_url_part)
+        assert response.status_code == 400
+        assert "Invalid query parameters. ids and limit cannot be set at the same time" in response.json()["detail"]
 
     # No views found
     url = "/views/dataset_multi_view_tracking_and_image/image/?item_ids=100"

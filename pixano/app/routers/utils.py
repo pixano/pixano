@@ -180,7 +180,7 @@ def delete_rows(
     except ValueError:
         raise HTTPException(
             status_code=400,
-            detail="Invalid query parameters. ids and item_ids cannot be set at the same time.",
+            detail="Invalid query parameters. ids and item_ids cannot be set at the same time",
         )
     return ids_not_found
 

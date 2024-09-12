@@ -53,7 +53,7 @@ def test_get_rows(
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=2&ids=0")
     assert response.status_code == 400
-    assert "Invalid query parameters. ids and item_ids cannot be set at the same time." in response.json()["detail"]
+    assert "Invalid query parameters. ids and limit cannot be set at the same time" in response.json()["detail"]
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?ids=nothing")
     assert response.status_code == 404
@@ -113,7 +113,7 @@ def test_delete_rows(dataset_multi_view_tracking_and_image_copy: Dataset):
     with pytest.raises(HTTPException) as error:
         ids_not_found = delete_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", "wrong_input")
     assert error.value.status_code == 400
-    assert error.value.detail == "Invalid query parameters. ids and item_ids cannot be set at the same time."
+    assert error.value.detail == "Invalid query parameters. ids and item_ids cannot be set at the same time"
 
 
 def test_update_rows(

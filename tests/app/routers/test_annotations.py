@@ -24,6 +24,7 @@ from pixano.datasets.dataset import Dataset
         ("bbox_image", None, None, 2, 0),
         ("bbox_image", None, None, 2, None),
         ("bbox_image", None, None, 10, 2),
+        ("bboxes_video", None, ["2"], 2, 1),
     ],
 )
 def test_get_annotations(
@@ -43,6 +44,8 @@ def test_get_annotations(
     if items_ids is not None:
         url += "&".join(["item_ids=" + id for id in items_ids])
     if limit is not None:
+        if url[-1] not in ["&", "?"]:
+            url += "&"
         url += "limit=" + str(limit)
     if skip is not None:
         url += "&skip=" + str(skip)
@@ -87,14 +90,16 @@ def test_get_annotations_error(
     url = "/annotations/dataset_multi_view_tracking_and_image/bbox_image/?"
     for wrong_url_part in [
         "ids=bbox_image_0&item_ids=0",
-        "ids=bbox_image_0&limit=10",
-        "item_ids=0&limit=10",
     ]:
         response = client.get(url + wrong_url_part)
         assert response.status_code == 400
-        assert (
-            "Invalid query parameters. ids and item_ids cannot be set at the same time." in response.json()["detail"]
-        )
+        assert "Invalid query parameters. ids and item_ids cannot be set at the same time" in response.json()["detail"]
+    for wrong_url_part in [
+        "ids=bbox_image_0&limit=10",
+    ]:
+        response = client.get(url + wrong_url_part)
+        assert response.status_code == 400
+        assert "Invalid query parameters. ids and limit cannot be set at the same time" in response.json()["detail"]
 
     # No annotations found
     url = "/annotations/dataset_multi_view_tracking_and_image/bbox_image/?item_ids=100"
