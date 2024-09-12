@@ -14,16 +14,11 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
-    create_row,
     create_rows,
-    delete_row,
     delete_rows,
     get_dataset,
-    get_model_from_row,
     get_models_from_rows,
-    get_row,
     get_rows,
-    update_row,
     update_rows,
 )
 
@@ -77,11 +72,7 @@ async def get_annotation(
     Returns:
         The annotation.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
-    annotation_row = get_row(dataset, table, id)
-    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
-    return annotation_model
+    return (await get_annotations(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[AnnotationModel])
@@ -131,11 +122,9 @@ async def create_annotation(
     """
     if id != annotation.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
-    annotation_row = create_row(dataset, table, annotation)
-    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
-    return annotation_model
+    return (await create_annotations(dataset_id=dataset_id, table=table, annotations=[annotation], settings=settings))[
+        0
+    ]
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=AnnotationModel)
@@ -160,11 +149,9 @@ async def update_annotation(
     """
     if id != annotation.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
-    annotation_row = update_row(dataset, table, annotation)
-    annotation_model = get_model_from_row(table, AnnotationModel, annotation_row)
-    return annotation_model
+    return (await update_annotations(dataset_id=dataset_id, table=table, annotations=[annotation], settings=settings))[
+        0
+    ]
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[AnnotationModel])
@@ -204,10 +191,7 @@ async def delete_annotation(
         id: ID.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ANNOTATION)
-    delete_row(dataset, table, id)
-    return None
+    return await delete_annotations(dataset_id, table, ids=[id], settings=settings)
 
 
 @router.delete("/{dataset_id}/{table}/")

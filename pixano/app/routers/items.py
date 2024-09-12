@@ -14,16 +14,11 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
-    create_row,
     create_rows,
-    delete_row,
     delete_rows,
     get_dataset,
-    get_model_from_row,
     get_models_from_rows,
-    get_row,
     get_rows,
-    update_row,
     update_rows,
 )
 
@@ -72,12 +67,7 @@ async def get_item(dataset_id: str, id: str, settings: Annotated[Settings, Depen
     Returns:
         The item.
     """
-    table = SchemaGroup.ITEM.value
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
-    item_row = get_row(dataset, table, id)
-    item_model = get_model_from_row(table, ItemModel, item_row)
-    return item_model
+    return (await get_items(dataset_id, settings, ids=[id], limit=None, skip=0))[0]
 
 
 @router.post("/{dataset_id}/", response_model=list[ItemModel])
@@ -124,12 +114,7 @@ async def create_item(
     """
     if id != item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    table = SchemaGroup.ITEM.value
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
-    item_row = create_row(dataset, table, item)
-    item_model = get_model_from_row(table, ItemModel, item_row)
-    return item_model
+    return (await create_items(dataset_id=dataset_id, items=[item], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/{id}", response_model=ItemModel)
@@ -152,12 +137,7 @@ async def update_item(
     """
     if id != item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    table = SchemaGroup.ITEM.value
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
-    item_row = update_row(dataset, table, item)
-    item_model = get_model_from_row(table, ItemModel, item_row)
-    return item_model
+    return (await update_items(dataset_id=dataset_id, items=[item], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/", response_model=list[ItemModel])
@@ -193,11 +173,7 @@ async def delete_item(dataset_id: str, id: str, settings: Annotated[Settings, De
         id: ID.
         settings: App settings.
     """
-    table = SchemaGroup.ITEM.value
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ITEM)
-    delete_row(dataset, table, id)
-    return None
+    return await delete_items(dataset_id, ids=[id], settings=settings)
 
 
 @router.delete("/{dataset_id}/")

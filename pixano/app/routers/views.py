@@ -14,16 +14,11 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
-    create_row,
     create_rows,
-    delete_row,
     delete_rows,
     get_dataset,
-    get_model_from_row,
     get_models_from_rows,
-    get_row,
     get_rows,
-    update_row,
     update_rows,
 )
 
@@ -77,11 +72,7 @@ async def get_view(
     Returns:
         The view.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    view_row = get_row(dataset, table, id)
-    view_model = get_model_from_row(table, ViewModel, view_row)
-    return view_model
+    return (await get_views(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[ViewModel])
@@ -131,11 +122,7 @@ async def create_view(
     """
     if id != view.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    view_row = create_row(dataset, table, view)
-    view_model = get_model_from_row(table, ViewModel, view_row)
-    return view_model
+    return (await create_views(dataset_id=dataset_id, table=table, views=[view], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=ViewModel)
@@ -160,11 +147,7 @@ async def update_view(
     """
     if id != view.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    view_row = update_row(dataset, table, view)
-    view_model = get_model_from_row(table, ViewModel, view_row)
-    return view_model
+    return (await update_views(dataset_id=dataset_id, table=table, views=[view], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[ViewModel])
@@ -204,10 +187,7 @@ async def delete_view(
         id: ID.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    delete_row(dataset, table, id)
-    return None
+    return await delete_views(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
 
 
 @router.delete("/{dataset_id}/{table}/")

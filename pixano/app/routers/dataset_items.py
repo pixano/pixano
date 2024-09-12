@@ -63,13 +63,7 @@ async def get_dataset_item(
     Returns:
         Dataset item.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-
-    row = dataset.get_dataset_items(id)
-    if row is None:
-        raise HTTPException(status_code=404, detail="Dataset item not found.")
-
-    return DatasetItemModel.from_dataset_item(row, dataset.schema)
+    return (await get_dataset_items(dataset_id, settings, ids=[id]))[0]
 
 
 @router.post("/{dataset_id}/", response_model=list[DatasetItemModel])
@@ -119,14 +113,7 @@ async def create_dataset_item(
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
 
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-
-    try:
-        row = dataset.add_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid dataset item")
-
-    return DatasetItemModel.from_dataset_item(row, dataset.schema)
+    return (await create_dataset_items(dataset_id, [dataset_item], settings))[0]
 
 
 @router.put("/{dataset_id}/", response_model=list[DatasetItemModel])
@@ -176,14 +163,7 @@ async def update_dataset_item(
     if id != dataset_item.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
 
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-
-    try:
-        row = dataset.update_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid dataset item")
-
-    return DatasetItemModel.from_dataset_item(row, dataset.schema)
+    return (await update_dataset_items(dataset_id, [dataset_item], settings))[0]
 
 
 @router.delete("/{dataset_id}/")
@@ -214,7 +194,4 @@ async def delete_dataset_item(dataset_id: str, id: str, settings: Annotated[Sett
         id: ID.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-
-    dataset.delete_dataset_items([id])
-    return
+    return await delete_dataset_items(dataset_id, ids=[id], settings=settings)

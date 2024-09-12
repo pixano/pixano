@@ -160,7 +160,7 @@ def test_get_dataset_item_error(app_and_settings: tuple[FastAPI, Settings]):
     # Wrong dataset_item ID
     response = client.get("/dataset_items/dataset_multi_view_tracking_and_image/100")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Dataset item not found."}
+    assert response.json() == {"detail": "Dataset items not found."}
 
 
 def test_create_dataset_items(

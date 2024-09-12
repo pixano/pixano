@@ -14,16 +14,11 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
     assert_table_in_group,
-    create_row,
     create_rows,
-    delete_row,
     delete_rows,
     get_dataset,
-    get_model_from_row,
     get_models_from_rows,
-    get_row,
     get_rows,
-    update_row,
     update_rows,
 )
 
@@ -77,11 +72,7 @@ async def get_embedding(
     Returns:
         The embedding.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embedding_row = get_row(dataset, table, id)
-    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
-    return embedding_model
+    return (await get_embeddings(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
@@ -131,11 +122,7 @@ async def create_embedding(
     """
     if id != embedding.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embedding_row = create_row(dataset, table, embedding)
-    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
-    return embedding_model
+    return (await create_embeddings(dataset_id=dataset_id, table=table, embeddings=[embedding], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
@@ -160,11 +147,7 @@ async def update_embedding(
     """
     if id != embedding.id:
         raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embedding_row = update_row(dataset, table, embedding)
-    embedding_model = get_model_from_row(table, EmbeddingModel, embedding_row)
-    return embedding_model
+    return (await update_embeddings(dataset_id=dataset_id, table=table, embeddings=[embedding], settings=settings))[0]
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
@@ -204,10 +187,7 @@ async def delete_embedding(
         id: ID.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    delete_row(dataset, table, id)
-    return None
+    return await delete_embeddings(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
 
 
 @router.delete("/{dataset_id}/{table}/")
