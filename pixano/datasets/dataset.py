@@ -201,7 +201,7 @@ class Dataset:
             Number of rows.
         """
         # Return number of rows of item table
-        return len(self.open_table(SchemaGroup.ITEM.value))
+        return self.open_table(SchemaGroup.ITEM.value).count_rows()
 
     def _reload_schema(self) -> None:
         """Reload schema.
