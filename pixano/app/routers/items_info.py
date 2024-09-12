@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models import ItemInfo, ItemModel
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets.dataset import _validate_ids_item_ids_and_limit_and_skip
 from pixano.features.schemas.schema_group import SchemaGroup
 from pixano.datasets import DatasetPaginationError, DatasetAccessError
 
@@ -50,9 +49,8 @@ async def get_items_info(
     """
 
     dataset = get_dataset(dataset_id, settings.data_dir, None)
-    
-    #_validate_ids_item_ids_and_limit_and_skip(ids, limit, skip, None)
     assert_table_in_group(dataset, SchemaGroup.ITEM.value, SchemaGroup.ITEM)
+    
     try:
         item_rows = get_rows(dataset, SchemaGroup.ITEM.value, ids, None, limit, skip)
     except DatasetPaginationError as err:

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.settings import Settings, get_settings
+from pixano.datasets.dataset import DatasetPaginationError, DatasetAccessError
 
 from .utils import get_dataset
 
@@ -41,10 +42,12 @@ async def get_dataset_items(
 
     try:
         rows = dataset.get_dataset_items(ids, limit, skip)
-        if rows == []:
-            raise HTTPException(status_code=404, detail="Dataset items not found.")
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid query parameters.")
+    except DatasetPaginationError as err:
+        raise HTTPException(status_code=400, detail="Invalid query parameters. "+str(err))
+    except DatasetAccessError as err:
+        raise HTTPException(status_code=500, detail="Insternal server error. "+str(err))
+    if rows == []:
+        raise HTTPException(status_code=404, detail="Dataset items not found")
 
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
@@ -94,7 +97,6 @@ async def create_dataset_items(
         rows = dataset.add_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset items")
-
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
@@ -125,7 +127,6 @@ async def create_dataset_item(
         row = dataset.add_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset item")
-
     return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
@@ -151,7 +152,6 @@ async def update_dataset_items(
         rows = dataset.update_dataset_items(DatasetItemModel.to_dataset_items(dataset_items, dataset.schema))
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset items")
-
     return DatasetItemModel.from_dataset_items(rows, dataset.schema)
 
 
@@ -182,7 +182,6 @@ async def update_dataset_item(
         row = dataset.update_dataset_items([DatasetItemModel.to_dataset_item(dataset_item, dataset.schema)])[0]
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid dataset item")
-
     return DatasetItemModel.from_dataset_item(row, dataset.schema)
 
 
