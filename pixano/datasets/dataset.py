@@ -47,12 +47,23 @@ if TYPE_CHECKING:
         ViewRef,
     )
 
-class DatasetPaginationError(ValueError): ...
 
-class DatasetAccessError(ValueError): ...
+class DatasetPaginationError(ValueError):
+    """Error raised when paginating a dataset."""
 
-class DatasetWriteError(ValueError): ...
+    pass
 
+
+class DatasetAccessError(ValueError):
+    """Error raised when accessing a dataset."""
+
+    pass
+
+
+class DatasetWriteError(ValueError):
+    """Error raised when writing to a dataset."""
+
+    pass
 
 
 def _validate_ids_and_limit_and_skip(ids: list[str] | None, limit: int | None, skip: int = 0) -> None:
@@ -521,7 +532,9 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+            raise DatasetAccessError(
+                f"All data must be instances of the table type {self.schema.schemas[table_name]}."
+            )
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):
             raise DatasetAccessError("All data must have unique ids.")
@@ -652,7 +665,9 @@ class Dataset:
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name]
         ):
-            raise DatasetAccessError(f"All data must be instances of the table type {self.schema.schemas[table_name]}.")
+            raise DatasetAccessError(
+                f"All data must be instances of the table type {self.schema.schemas[table_name]}."
+            )
         ids = [item.id for item in data]
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):

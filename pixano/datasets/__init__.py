@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from .dataset import Dataset, DatasetPaginationError, DatasetAccessError, DatasetWriteError
+from .dataset import Dataset, DatasetAccessError, DatasetPaginationError, DatasetWriteError
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
