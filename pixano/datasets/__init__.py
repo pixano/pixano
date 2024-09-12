@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from .dataset import Dataset
+from .dataset import Dataset, DatasetPaginationError, DatasetAccessError, DatasetWriteError
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
@@ -13,6 +13,9 @@ from .dataset_stat import DatasetStat
 
 __all__ = [
     "Dataset",
+    "DatasetPaginationError",
+    "DatasetAccessError",
+    "DatasetWriteError",
     "DatasetFeaturesValues",
     "DatasetInfo",
     "DatasetItem",
