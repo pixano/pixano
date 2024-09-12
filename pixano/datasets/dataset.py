@@ -23,11 +23,7 @@ from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
-from .dataset_schema import (
-    DatasetItem,
-    DatasetSchema,
-    SchemaRelation,
-)
+from .dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
 from .dataset_stat import DatasetStat
 
 
@@ -84,8 +80,8 @@ def _validate_ids_item_ids_and_limit_and_skip(
         raise DatasetPaginationError("ids and item_ids cannot be set at the same time")
     if ids is None and item_ids is None and limit is None:
         raise DatasetPaginationError("limit must be set if ids is None and item_ids is None")
-    elif (ids is not None or item_ids is not None) and limit is not None:
-        raise DatasetPaginationError("ids or item_ids and limit cannot be set at the same time")
+    elif ids is not None and limit is not None:
+        raise DatasetPaginationError("ids and limit cannot be set at the same time")
     elif ids is not None and (not isinstance(ids, list) or not all(isinstance(i, str) for i in ids)):
         raise DatasetPaginationError("ids must be a list of strings")
     elif item_ids is not None and (not isinstance(item_ids, list) or not all(isinstance(i, str) for i in item_ids)):
@@ -105,7 +101,7 @@ class Dataset:
     Attributes:
         path: Dataset path.
         info: Dataset info.
-        dataset_schema: Dataset schema.
+        schema: Dataset schema.
         features_values: Dataset features values.
         stats: Dataset stats.
         thumbnail: Dataset thumbnail base 64 URL.
@@ -403,6 +399,7 @@ class Dataset:
         table = self.open_table(table_name)
 
         if ids is None:
+            models: list[BaseSchema] = []
             if item_ids is None:
                 lance_table = table.to_lance()  # noqa: F841
                 item_rows = (
@@ -411,7 +408,6 @@ class Dataset:
                     .to_pylist()
                 )
                 table_model = self.schema.schemas[table_name]
-                models: list[BaseSchema] = []
                 for row in item_rows:
                     models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
                     models[-1].dataset = self
@@ -419,7 +415,23 @@ class Dataset:
 
                 return models if return_list else models[0]
 
-            query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
+            if limit:
+                lance_table = table.to_lance()  # noqa: F841
+                # Note: for a paginated read of video, it would be more usefull to sort by timestep.
+                # But it would requires to know media type, and use a JOIN, too costly
+                query_string = f"SELECT * FROM lance_table WHERE item_ref.id IN {sql_item_ids} ORDER BY len(id), id \
+                                 LIMIT {limit} OFFSET {skip}"
+                item_rows = duckdb.query(query_string).to_arrow_table().to_pylist()
+                table_model = self.schema.schemas[table_name]
+                for row in item_rows:
+                    models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
+                    models[-1].dataset = self
+                    models[-1].table_name = table_name
+
+                return models if return_list else models[0]
+            else:
+                query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
+
         else:
             query = self._search_by_ids(ids, table, None)
 

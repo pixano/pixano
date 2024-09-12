@@ -16,7 +16,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from pixano.features import Image, Item
+from pixano.features import BBox, Image, Item
 from pixano.features.schemas.embeddings.embedding import ViewEmbedding
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 
@@ -236,6 +236,78 @@ class TestDataset:
             assert d.dataset == dataset_image_bboxes_keypoint
             assert d.table_name == table_name
 
+    # def test_get_data_item_ids_and_skip_limit(self, dataset_multi_view_tracking_and_image: Dataset):
+    #     data = dataset_multi_view_tracking_and_image.get_data(
+    #         table_name="bboxes_video", ids=None, limit=3, skip=1, item_ids=['2']
+    #     )
+    #     print("SZSZ", [d.model_dump() for d in data])
+    #     assert False
+
+    @pytest.mark.parametrize(
+        "table_name,type,ids,item_ids,limit,skip,expected_output",
+        [
+            (
+                "bboxes_video",
+                BBox,
+                None,
+                ["2"],
+                3,
+                1,
+                [
+                    {
+                        "id": "bbox_2_0_0_1",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_0"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_0_0"},
+                        "coords": [1.0, 1.0, 25.0, 25.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.25,
+                    },
+                    {
+                        "id": "bbox_2_1_0_0",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "coords": [0.0, 0.0, 0.0, 0.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.0,
+                    },
+                    {
+                        "id": "bbox_2_1_0_1",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "coords": [1.0, 1.0, 25.0, 25.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.25,
+                    },
+                ],
+            )
+        ],
+    )
+    def test_get_data_item_ids_and_skip_limit(
+        self,
+        table_name,
+        type,
+        ids,
+        item_ids,
+        limit,
+        skip,
+        expected_output,
+        dataset_multi_view_tracking_and_image: Dataset,
+    ):
+        data = dataset_multi_view_tracking_and_image.get_data(
+            table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+        )
+        assert isinstance(data, list) and all(isinstance(d, type) for d in data)
+        for d, e in zip(data, expected_output, strict=True):
+            assert d.model_dump() == e
+            assert d.dataset == dataset_multi_view_tracking_and_image
+            assert d.table_name == table_name
+
     def test_get_one_data(self, dataset_image_bboxes_keypoint: Dataset):
         data = dataset_image_bboxes_keypoint.get_data(table_name="item", ids="0")
         assert isinstance(data, Item)
@@ -251,8 +323,8 @@ class TestDataset:
             ("item", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
             ("image", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
             ("item", None, None, None, 0, "limit must be set if ids is None and item_ids is None"),
-            ("item", ["0"], None, 1, 0, "ids or item_ids and limit cannot be set at the same time"),
-            ("item", None, ["0"], 1, 0, "ids or item_ids and limit cannot be set at the same time"),
+            ("item", ["0"], None, 1, 0, "ids and limit cannot be set at the same time"),
+            ("item", None, ["0"], 1, 0, "ids and limit cannot be set at the same time"),
             ("item", [0], None, None, 0, "ids must be a list of strings"),
             ("item", 0, None, None, 0, "ids must be a list of strings"),
             ("image", None, [0], None, 0, "item_ids must be a list of strings"),
