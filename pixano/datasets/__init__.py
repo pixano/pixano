@@ -9,6 +9,7 @@ from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
 from .dataset_stat import DatasetStat
+from .queries import TableQueryBuilder
 
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "DatasetItem",
     "DatasetSchema",
     "DatasetStat",
+    "TableQueryBuilder",
 ]

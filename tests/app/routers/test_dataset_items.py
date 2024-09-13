@@ -11,10 +11,10 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from pixano.app.models.dataset_items import DatasetItemModel
-from pixano.app.routers.utils import get_model_from_row, get_models_from_rows
 from pixano.app.settings import Settings
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_schema import DatasetItem
+from pixano.datasets.queries import TableQueryBuilder
 from pixano.features.schemas.schema_group import SchemaGroup
 
 
@@ -467,12 +467,9 @@ def test_delete_dataset_items(
     sql_item_ids = f"('{deleted_ids[0]}')" if len(deleted_ids) == 1 else str(tuple(set(deleted_ids)))
     for table_name, table in dataset_multi_view_tracking_and_image.open_tables(exclude_embeddings=True).items():
         if table_name == SchemaGroup.ITEM.value:
-            assert dataset_multi_view_tracking_and_image._search_by_ids(sql_item_ids, table).to_list() == []
+            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").build().to_list() == []
         else:
-            assert (
-                dataset_multi_view_tracking_and_image._search_by_field(table, "item_ref.id", sql_item_ids).to_list()
-                == []
-            )
+            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").build().to_list() == []
 
 
 def test_delete_dataset_items_error(
@@ -514,12 +511,9 @@ def test_delete_dataset_item(
     sql_item_ids = f"('{dataset_item.id}')"
     for table_name, table in dataset_multi_view_tracking_and_image.open_tables(exclude_embeddings=True).items():
         if table_name == SchemaGroup.ITEM.value:
-            assert dataset_multi_view_tracking_and_image._search_by_ids(sql_item_ids, table).to_list() == []
+            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").build().to_list() == []
         else:
-            assert (
-                dataset_multi_view_tracking_and_image._search_by_field(table, "item_ref.id", sql_item_ids).to_list()
-                == []
-            )
+            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").build().to_list() == []
 
 
 def test_delete_dataset_item_error(

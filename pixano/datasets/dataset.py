@@ -11,14 +11,13 @@ from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
-import duckdb
 import lancedb
 import pyarrow as pa
 from lancedb.common import DATA
-from lancedb.query import LanceQueryBuilder
 from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
+from pixano.datasets.queries import TableQueryBuilder
 from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
 
 from .dataset_features_values import DatasetFeaturesValues
@@ -222,31 +221,6 @@ class Dataset:
         """
         return lancedb.connect(self._db_path)
 
-    def _search_by_field(
-        self,
-        table: lancedb.db.LanceTable,
-        field: str,
-        values: str,
-        limit: int | None = None,
-    ) -> LanceQueryBuilder:
-        return (
-            table.search()
-            .where(
-                f"{field} in {values}",
-            )
-            .limit(limit)
-        )
-
-    def _search_by_ids(
-        self,
-        ids: list[str],
-        table: LanceTable,
-        limit: int | None = None,
-    ) -> LanceQueryBuilder:
-        set_ids = set(ids)
-        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
-        return self._search_by_field(table, "id", sql_ids, limit)
-
     def create_table(
         self,
         name: str,
@@ -374,7 +348,7 @@ class Dataset:
             table_name: Table name.
             ids: ids to read.
             limit: Amount of items to read.
-            skip: The number of data to skip..
+            skip: The number of data to skip.
             item_ids: Item ids to read.
 
         Returns:
@@ -397,43 +371,17 @@ class Dataset:
             sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
 
         table = self.open_table(table_name)
-
         if ids is None:
-            models: list[BaseSchema] = []
             if item_ids is None:
-                lance_table = table.to_lance()  # noqa: F841
-                item_rows = (
-                    duckdb.query(f"SELECT * FROM lance_table ORDER BY len(id)," f"id LIMIT {limit} OFFSET {skip}")
-                    .to_arrow_table()
-                    .to_pylist()
-                )
-                table_model = self.schema.schemas[table_name]
-                for row in item_rows:
-                    models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
-                    models[-1].dataset = self
-                    models[-1].table_name = table_name
-
-                return models if return_list else models[0]
-
-            if limit is not None:
-                lance_table = table.to_lance()  # noqa: F841
-                # Note: for a paginated read of video, it would be more usefull to sort by timestep.
-                # But it would requires to know media type, and use a JOIN, too costly
-                query_string = f"SELECT * FROM lance_table WHERE item_ref.id IN {sql_item_ids} ORDER BY len(id), id \
-                    LIMIT {limit} OFFSET {skip}"
-                item_rows = duckdb.query(query_string).to_arrow_table().to_pylist()
-                table_model = self.schema.schemas[table_name]
-                for row in item_rows:
-                    models.append(table_model(**{k: v for k, v in row.items() if k in table_model.field_names()}))
-                    models[-1].dataset = self
-                    models[-1].table_name = table_name
-
-                return models if return_list else models[0]
+                query = TableQueryBuilder(table).limit(limit).offset(skip).build()
             else:
-                query = self._search_by_field(table, "item_ref.id", sql_item_ids, None)
-
+                sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
+                query = (
+                    TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip).build()
+                )
         else:
-            query = self._search_by_ids(ids, table, None)
+            sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set(ids)))
+            query = TableQueryBuilder(table).where(f"id in {sql_ids}").build()
 
         query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
         for model in query_models:
@@ -486,7 +434,7 @@ class Dataset:
             is_collection = self.schema.relations[SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
-            lance_query = self._search_by_field(table, "item_ref.id", sql_ids)
+            lance_query = TableQueryBuilder(table).where(f"item_ref.id in {sql_ids}").build()
             pydantic_table: list[BaseSchema] = lance_query.to_pydantic(table_schema)
 
             for row in pydantic_table:
