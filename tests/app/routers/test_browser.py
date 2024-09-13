@@ -37,8 +37,8 @@ def test_get_browser(
         assert response.status_code == 200
         browser = DatasetBrowser.model_validate(response.json())
         # generated dataset doesn't have consistent fields order, so we sort both before comparison
-        browser.table_data.cols.sort(key=lambda x: x.name)
-        output.table_data.cols.sort(key=lambda x: x.name)
+        browser.table_data.columns.sort(key=lambda x: x.name)
+        output.table_data.columns.sort(key=lambda x: x.name)
         assert browser == output
 
     response = client.get("/browser/wrong_dataset")

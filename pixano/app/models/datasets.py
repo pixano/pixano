@@ -89,11 +89,11 @@ class TableData(BaseModel):
     """Table data.
 
     Attributes:
-        cols: column descriptions.
+        columns: column descriptions.
         rows: rows (actual data).
     """
 
-    cols: list[PaginationColumn]
+    columns: list[PaginationColumn]
     rows: list[dict[str, Any]]
     # Note: Any is one of the allowed cell types (int, float, str, bool, Image/Video/..., graph, ...)
 
@@ -102,14 +102,14 @@ class PaginationInfo(BaseModel):
     """Pagination info.
 
     Attributes:
-        current: current page.
-        size: number of items per page.
-        total: total number of items.
+        current_page: current page.
+        page_size: number of items per page.
+        total_size: total number of items.
     """
 
-    current: int
-    size: int
-    total: int
+    current_page: int
+    page_size: int
+    total_size: int
 
 
 class DatasetBrowser(BaseModel):

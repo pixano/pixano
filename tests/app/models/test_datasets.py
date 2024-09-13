@@ -14,8 +14,8 @@ class TestDatasetBrowser:
         DatasetBrowser(
             id="voc",
             name="pascal",
-            table_data=TableData(cols=[PaginationColumn(name="col", type="col")], rows=[{"metadata": 123}]),
-            pagination=PaginationInfo(current=1, size=10, total=20),
+            table_data=TableData(columns=[PaginationColumn(name="col", type="col")], rows=[{"metadata": 123}]),
+            pagination=PaginationInfo(current_page=1, page_size=10, total_size=20),
             semantic_search=["search1", "search2"],
         )
 

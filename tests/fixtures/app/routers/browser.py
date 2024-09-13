@@ -15,7 +15,7 @@ def browser_dataset_image_bboxes_keypoint() -> DatasetBrowser:
         id="dataset_image_bboxes_keypoint",
         name="dataset_image_bboxes_keypoint",
         table_data=TableData(
-            cols=[
+            columns=[
                 PaginationColumn(name="image", type="image"),
                 PaginationColumn(name="id", type="str"),
                 PaginationColumn(name="split", type="str"),
@@ -29,7 +29,7 @@ def browser_dataset_image_bboxes_keypoint() -> DatasetBrowser:
                 {"image": "", "id": "4", "split": "test", "metadata": "metadata_4"},
             ],
         ),
-        pagination=PaginationInfo(current=0, size=50, total=5),
+        pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
         semantic_search=["CLIP", "BLIP2"],
     )
 
@@ -40,7 +40,7 @@ def browser_dataset_multi_view_tracking_and_image() -> DatasetBrowser:
         id="dataset_multi_view_tracking_and_image",
         name="dataset_multi_view_tracking_and_image",
         table_data=TableData(
-            cols=[
+            columns=[
                 PaginationColumn(name="video", type="image"),
                 PaginationColumn(name="image", type="image"),
                 PaginationColumn(name="id", type="str"),
@@ -84,6 +84,6 @@ def browser_dataset_multi_view_tracking_and_image() -> DatasetBrowser:
                 },
             ],
         ),
-        pagination=PaginationInfo(current=0, size=50, total=5),
+        pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
         semantic_search=["CLIP", "BLIP2"],
     )

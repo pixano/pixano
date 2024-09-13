@@ -96,8 +96,8 @@ async def get_browser(
         return DatasetBrowser(
             id=id,
             name=dataset.info.name,
-            table_data=TableData(cols=cols, rows=rows),
-            pagination=PaginationInfo(current=skip, size=raw_params.limit, total=total),
+            table_data=TableData(columns=cols, rows=rows),
+            pagination=PaginationInfo(current_page=skip, page_size=raw_params.limit, total_size=total),
             semantic_search=["CLIP", "BLIP2"],
         )
         raise HTTPException(
