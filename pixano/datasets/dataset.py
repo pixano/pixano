@@ -415,12 +415,12 @@ class Dataset:
 
                 return models if return_list else models[0]
 
-            if limit:
+            if limit is not None:
                 lance_table = table.to_lance()  # noqa: F841
                 # Note: for a paginated read of video, it would be more usefull to sort by timestep.
                 # But it would requires to know media type, and use a JOIN, too costly
                 query_string = f"SELECT * FROM lance_table WHERE item_ref.id IN {sql_item_ids} ORDER BY len(id), id \
-                                 LIMIT {limit} OFFSET {skip}"
+                    LIMIT {limit} OFFSET {skip}"
                 item_rows = duckdb.query(query_string).to_arrow_table().to_pylist()
                 table_model = self.schema.schemas[table_name]
                 for row in item_rows:
