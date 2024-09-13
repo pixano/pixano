@@ -70,7 +70,9 @@ async def get_items_info(
         if table_name == SchemaGroup.ITEM.value:
             continue
         sql_ids = f"('{list(set_ids)[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
-        df: pd.DataFrame = table.search().select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_pandas()
+        df: pd.DataFrame = (
+            table.search().select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").limit(None).to_pandas()
+        )
         for id, count in df["item_ref.id"].value_counts().to_dict().items():
             infos[id][group_name][table_name] = {"count": count}
 
