@@ -89,7 +89,7 @@ class TableData(BaseModel):
     """Table data.
 
     Attributes:
-        col: column descriptions.
+        cols: column descriptions.
         rows: rows (actual data).
     """
 
