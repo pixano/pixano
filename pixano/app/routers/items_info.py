@@ -79,7 +79,7 @@ async def get_items_info(
             continue
         sql_ids = to_sql_list(set_ids)
         df: pd.DataFrame = (
-            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").build().to_pandas()
+            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").to_pandas()
         )
         for id, count in df["item_ref.id"].value_counts().to_dict().items():
             infos[id][group_name][table_name] = {"count": count}

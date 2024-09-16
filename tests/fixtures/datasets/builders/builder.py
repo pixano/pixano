@@ -24,8 +24,8 @@ def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, it
             id=f"image_{i}",
             item_ref=ItemRef(id=item_id),
             url=f"image_{i}.jpg",
-            width=100,
-            height=100,
+            width=100 - i,
+            height=100 + i,
             format="jpg",
         )
         entities = []
@@ -259,6 +259,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
             )
         else:
             image = None
+            image_embedding = None
             entity_image = None
             bbox_image = None
             mask_image = None

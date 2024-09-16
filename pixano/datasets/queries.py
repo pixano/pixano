@@ -4,13 +4,22 @@
 # License: CECILL-C
 # =====================================
 
+from functools import partial
+from typing import Any, Literal, TypeVar, overload
+
+import pandas as pd
+import polars as pl
 from lancedb.db import LanceTable
 from lancedb.query import LanceQueryBuilder
 from typing_extensions import Self
 
-from pixano.utils.python import to_sql_list
+from pixano.features.schemas.base_schema import BaseSchema
+from pixano.utils.python import fn_sort_dict, to_sql_list
 
 from .utils import DatasetOffsetLimitError
+
+
+T = TypeVar("T", bound=BaseSchema)
 
 
 class TableQueryBuilder:
@@ -22,6 +31,9 @@ class TableQueryBuilder:
         Args:
             table: The LanceTable to query.
         """
+        if not isinstance(table, LanceTable):
+            raise ValueError("table must be a LanceTable.")
+
         self.table: LanceTable = table
         self._columns: list[str] | dict[str, str] | None = None
         self._where: str | None = None
@@ -47,7 +59,15 @@ class TableQueryBuilder:
         self._function_called[fn_name] = True
 
     def select(self, columns: list[str] | dict[str, str]) -> Self:
-        """Selects columns to include in the query."""
+        """Selects columns to include in the query.
+
+        Note:
+            'id' is always included in the select clause.
+
+        Args:
+            columns: The columns to include in the query. If a list, the columns are selected in the order they are
+            provided. If a dictionary, the keys are the column names and the values are the aliases.
+        """
         self._check_called("select")
         if isinstance(columns, list) or isinstance(columns, dict):
             if isinstance(columns, list) and not all(isinstance(x, str) for x in columns):
@@ -56,6 +76,10 @@ class TableQueryBuilder:
                 isinstance(k, str) and isinstance(v, str) for k, v in columns.items()
             ):
                 raise ValueError("columns must be a dictionary with string keys and values.")
+            if isinstance(columns, list) and "id" not in columns:
+                columns = ["id"] + columns
+            elif isinstance(columns, dict) and "id" not in columns.values():
+                columns["id"] = "id"
             self._columns = columns
         else:
             raise ValueError("columns must be a list or a dictionary.")
@@ -101,7 +125,7 @@ class TableQueryBuilder:
         if isinstance(order_by, str):
             order_by = [order_by]
         elif not isinstance(order_by, list) or not all(isinstance(x, str) for x in order_by):
-            raise ValueError("order_by must be a string or a list of strings")
+            raise ValueError("order_by must be a string or a list of strings.")
         if isinstance(descending, bool):
             descending = [descending] * len(order_by)
         elif (
@@ -115,39 +139,49 @@ class TableQueryBuilder:
         self._descending = descending
         return self
 
-    def build(self) -> LanceQueryBuilder:
+    @overload
+    def build(self, return_ids_sorted: Literal[False] = False) -> LanceQueryBuilder: ...
+    @overload
+    def build(self, return_ids_sorted: Literal[True]) -> tuple[LanceQueryBuilder, list[str] | None]: ...
+    def build(self, return_ids_sorted: bool = False) -> LanceQueryBuilder | tuple[LanceQueryBuilder, list[str] | None]:
         """Builds the LanceQueryBuilder.
 
         If order_by or offset are set, the rows are fetched and sorted before building the query.
 
+        Note:
+            to_pydantic() and to_list() will call this method internally and keep the order of the rows.
+
+        Args:
+            return_ids_sorted: Whether to return the ordered IDs. Necessary for sorting the rows outputed by the
+            built lance query.
+
         Returns:
-            The LanceQueryBuilder instance.
+            The LanceQueryBuilder instance if get_order is False, otherwise a tuple with the query and the ordered IDs.
         """
-        self._check_called("build")
         if all(not self._function_called[fn_name] for fn_name in self._function_called):
             raise ValueError("At least one of select(), where(), limit(), offset(), or order_by() must be called.")
+        self._check_called("build")
         has_order_by_or_offset = self._order_by != [] or self._offset not in [None, 0]
         if has_order_by_or_offset:
             select_order = ["id"] + (self._order_by or [])
-            ordered_rows = (
-                self.table.search().select(select_order).where(self._where, self._prefilter).limit(None).to_list()
-            )
+            query_builder = self.table.search().select(select_order)
+            if self._where is not None:
+                query_builder = query_builder.where(self._where, self._prefilter)
+            rows = query_builder = query_builder.limit(None).to_list()
             if self._order_by != []:
-                ordered_rows.sort(
-                    key=lambda x: tuple(
-                        x.get(col) if not desc else -(x.get(col))
-                        for col, desc in zip(self._order_by, self._descending, strict=True)
-                    ),
+                rows = sorted(
+                    rows,
+                    key=partial(fn_sort_dict, order_by=self._order_by, descending=self._descending),
                     reverse=False,
                 )
             if self._offset is not None:
-                ordered_rows = ordered_rows[self._offset :]
+                rows = rows[self._offset :]
                 if self._limit is not None:
-                    ordered_rows = ordered_rows[: self._limit]
-            if len(ordered_rows) == 0:
+                    rows = rows[: self._limit]
+            if len(rows) == 0:
                 # Have to force empty result to avoid exception
                 raise DatasetOffsetLimitError("No results found at this offset")
-            ordered_ids = [row["id"] for row in ordered_rows]
+            ordered_ids = [row["id"] for row in rows]
             sql_ids = to_sql_list(ordered_ids)
             self._where = f"id in {sql_ids}"
 
@@ -157,4 +191,86 @@ class TableQueryBuilder:
         if self._where is not None:
             query = query.where(self._where, self._prefilter)
         query = query.limit(self._limit)  # Pass None to remove the limit
+
+        if return_ids_sorted:
+            if not has_order_by_or_offset:
+                return query, None
+            return query, ordered_ids
         return query
+
+    def to_pandas(self) -> pd.DataFrame:
+        """Builds the query and returns the result as a pandas DataFrame.
+
+        Note:
+            Cannot be called if build() has already been called.
+
+        Returns:
+            The result as a pandas DataFrame.
+        """
+        query, order = self.build(True)
+        df: pd.DataFrame = query.to_pandas()
+        if order is not None:
+            df.set_index("id", inplace=True)
+            df = df.loc[order]
+            df.reset_index(inplace=True)
+        return df
+
+    def to_list(self) -> list[dict[str, Any]]:
+        """Builds the query and returns the result as a list of dictionaries.
+
+        Note:
+            Cannot be called if build() has already been called.
+
+        Note:
+            Keeps the order of the rows if order_by or offset is set but has to keep 'id' in the select clause.
+
+        Returns:
+            The result as a list of dictionaries.
+        """
+        query, order = self.build(True)
+        rows = query.to_list()
+        if order is not None:
+            ordered_rows = [None for _ in range(len(order))]
+            for row in rows:
+                idx = order.index(row["id"])
+                ordered_rows[idx] = row
+            rows = ordered_rows
+        return rows
+
+    def to_pydantic(self, model: type[T]) -> list[T]:
+        """Builds the query and returns the result as a list of Pydantic models.
+
+        Note:
+            Cannot be called if build() has already been called.
+
+        Note:
+            Keeps the order of the rows if order_by or offset is set but has to keep 'id' in the select clause.
+
+        Returns:
+            The result as a list of Pydantic models.
+        """
+        query, order = self.build(True)
+        rows: list[T] = query.to_pydantic(model)
+        if order is not None:
+            ordered_rows: list[T] = [None for _ in range(len(order))]  # type: ignore[misc]
+            for row in rows:
+                idx = order.index(row.id)
+                ordered_rows[idx] = row
+            rows = ordered_rows
+        return rows
+
+    def to_polar(self) -> pl.DataFrame:
+        """Builds the query and returns the result as a polars DataFrame.
+
+        Note:
+            Cannot be called if build() has already been called.
+
+        Returns:
+            The result as a polars DataFrame.
+        """
+        query, order = self.build(True)
+        df: pl.DataFrame = query.to_polars()
+        if order is not None:
+            order_df = pl.DataFrame({"id": order})
+            df = order_df.join(df, on="id", how="left")
+        return df

@@ -357,15 +357,13 @@ class Dataset:
         table = self.open_table(table_name)
         if ids is None:
             if item_ids is None:
-                query = TableQueryBuilder(table).limit(limit).offset(skip).build()
+                query = TableQueryBuilder(table).limit(limit).offset(skip)
             else:
                 sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
-                query = (
-                    TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip).build()
-                )
+                query = TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip)
         else:
             sql_ids = to_sql_list(ids)
-            query = TableQueryBuilder(table).where(f"id in {sql_ids}").build()
+            query = TableQueryBuilder(table).where(f"id in {sql_ids}")
 
         query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
         for model in query_models:
@@ -418,10 +416,9 @@ class Dataset:
             is_collection = self.schema.relations[SchemaGroup.ITEM.value][table_name] == SchemaRelation.ONE_TO_MANY
             table_schema = self.schema.schemas[table_name]
 
-            lance_query = TableQueryBuilder(table).where(f"item_ref.id in {sql_ids}").build()
-            pydantic_table: list[BaseSchema] = lance_query.to_pydantic(table_schema)
+            rows = TableQueryBuilder(table).where(f"item_ref.id in {sql_ids}").to_pydantic(table_schema)
 
-            for row in pydantic_table:
+            for row in rows:
                 row.dataset = self
                 item_id = row.item_ref.id
                 if is_collection:
