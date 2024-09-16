@@ -76,16 +76,22 @@ class TableQueryBuilder:
         has_order_by_or_offset = self._order_by != [] or self._offset not in [None, 0]
         if has_order_by_or_offset:
             select_order = ["id"] + (self._order_by or [])
-            ordered_rows = self.table.search().select(select_order).where(self._where, self._prefilter).to_list()
+            ordered_rows = (
+                self.table.search().select(select_order).where(self._where, self._prefilter).limit(None).to_list()
+            )
             if self._order_by is not None:
                 ordered_rows.sort(key=lambda x: tuple(x.get(col) for col in self._order_by))
             if self._offset is not None:
                 ordered_rows = ordered_rows[self._offset :]
                 if self._limit is not None:
                     ordered_rows = ordered_rows[: self._limit]
-            ordered_ids = [row["id"] for row in ordered_rows]
-            sql_ids = f"('{ordered_ids[0]}')" if len(ordered_ids) == 1 else str(tuple(ordered_ids))
-            self._where = f"id in {sql_ids}"
+            if len(ordered_rows) == 0:
+                # Have to force empty result to avoid exception
+                self._where = "id != id"
+            else:
+                ordered_ids = [row["id"] for row in ordered_rows]
+                sql_ids = f"('{ordered_ids[0]}')" if len(ordered_ids) == 1 else str(tuple(ordered_ids))
+                self._where = f"id in {sql_ids}"
 
         query: LanceQueryBuilder = self.table.search()
         if self._columns is not None:
@@ -94,4 +100,6 @@ class TableQueryBuilder:
             query = query.where(self._where, self._prefilter)
         if self._limit is not None:
             query = query.limit(self._limit)
+        else:
+            query = query.limit(None)
         return query
