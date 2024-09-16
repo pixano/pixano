@@ -9,7 +9,7 @@ from typing import Annotated
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from pixano.app.models import ItemInfo, ItemModel
+from pixano.app.models import ItemInfoModel, ItemModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils import DatasetAccessError, DatasetOffsetLimitError, DatasetPaginationError
@@ -27,14 +27,14 @@ from .utils import (
 router = APIRouter(prefix="/items_info", tags=["Items"])
 
 
-@router.get("/{dataset_id}/", response_model=list[ItemInfo])
+@router.get("/{dataset_id}/", response_model=list[ItemInfoModel])
 async def get_items_info(
     dataset_id: str,
     settings: Annotated[Settings, Depends(get_settings)],
     ids: list[str] | None = Query(None),
     limit: int | None = None,
     skip: int = 0,
-) -> list[ItemInfo]:
+) -> list[ItemInfoModel]:
     """Get items info.
 
     Args:
@@ -65,13 +65,17 @@ async def get_items_info(
 
     set_ids = {item.id for item in items_models}
     infos = {
-        id: {group.value: {table: {"count": 0} for table in tables} for group, tables in dataset.schema.groups.items()}
+        id: {
+            group.value: {table: {"count": 0} for table in tables}
+            for group, tables in dataset.schema.groups.items()
+            if group.value not in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]
+        }
         for id in set_ids
     }
 
     for table_name, table in dataset.open_tables().items():
         group_name = dataset.schema.get_table_group(table_name).value
-        if table_name == SchemaGroup.ITEM.value:
+        if group_name in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
             continue
         sql_ids = to_sql_list(set_ids)
         df: pd.DataFrame = (
@@ -80,13 +84,15 @@ async def get_items_info(
         for id, count in df["item_ref.id"].value_counts().to_dict().items():
             infos[id][group_name][table_name] = {"count": count}
 
-    items_info = [ItemInfo(info=info, **item_models_identified[id].model_dump()) for id, info in infos.items()]
+    items_info = [ItemInfoModel(info=info, **item_models_identified[id].model_dump()) for id, info in infos.items()]
 
     return items_info
 
 
-@router.get("/{dataset_id}/{id}", response_model=ItemInfo)
-async def get_item_info(dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]) -> ItemInfo:
+@router.get("/{dataset_id}/{id}", response_model=ItemInfoModel)
+async def get_item_info(
+    dataset_id: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
+) -> ItemInfoModel:
     """Get an item info.
 
     Args:
