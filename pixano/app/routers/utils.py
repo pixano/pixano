@@ -12,7 +12,7 @@ from typing_extensions import TypeVar
 from pixano.app.models import AnnotationModel, BaseSchemaModel, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
 from pixano.datasets import Dataset
-from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils import DatasetAccessError, DatasetOffsetLimitError, DatasetPaginationError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils import get_super_type_from_dict
@@ -84,6 +84,8 @@ def get_rows(
     """
     try:
         rows = dataset.get_data(table, ids, limit, skip, item_ids)
+    except DatasetOffsetLimitError as err:
+        raise HTTPException(status_code=404, detail="Invalid query parameters. " + str(err))
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:

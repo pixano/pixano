@@ -10,7 +10,7 @@ from typing_extensions import Self
 
 from pixano.utils.python import to_sql_list
 
-from .utils import DatasetPaginationError
+from .utils import DatasetOffsetLimitError
 
 
 class TableQueryBuilder:
@@ -96,12 +96,9 @@ class TableQueryBuilder:
                 ordered_rows = ordered_rows[self._offset :]
                 if self._limit is not None:
                     ordered_rows = ordered_rows[: self._limit]
-            ordered_ids = [row["id"] for row in ordered_rows]
-            sql_ids = to_sql_list(ordered_ids)
-            self._where = f"id in {sql_ids}"
             if len(ordered_rows) == 0:
                 # Have to force empty result to avoid exception
-                raise DatasetPaginationError("No results found at this offset")
+                raise DatasetOffsetLimitError("No results found at this offset")
             ordered_ids = [row["id"] for row in ordered_rows]
             sql_ids = to_sql_list(ordered_ids)
             self._where = f"id in {sql_ids}"
