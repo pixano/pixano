@@ -29,7 +29,7 @@ class TableQueryBuilder:
         self._limit: int | None = None
         self._offset: int | None = None
         self._order_by: list[str] = []
-        self._descending: bool = False
+        self._descending: list[bool] = []
         self._function_called: dict[str, bool] = {
             "select": False,
             "where": False,
@@ -90,7 +90,7 @@ class TableQueryBuilder:
         self._offset = offset
         return self
 
-    def order_by(self, order_by: str | list[str], descending: bool = False) -> Self:
+    def order_by(self, order_by: str | list[str], descending: bool | list[bool] = False) -> Self:
         """Sets the order_by clause for the query.
 
         Args:
@@ -102,6 +102,15 @@ class TableQueryBuilder:
             order_by = [order_by]
         elif not isinstance(order_by, list) or not all(isinstance(x, str) for x in order_by):
             raise ValueError("order_by must be a string or a list of strings")
+        if isinstance(descending, bool):
+            descending = [descending] * len(order_by)
+        elif (
+            not isinstance(descending, list)
+            or not all(isinstance(x, bool) for x in descending)
+            or len(descending) != len(order_by)
+        ):
+            raise ValueError("descending must be a boolean or a list of booleans with the same length as order_by.")
+
         self._order_by = order_by
         self._descending = descending
         return self
@@ -123,8 +132,14 @@ class TableQueryBuilder:
             ordered_rows = (
                 self.table.search().select(select_order).where(self._where, self._prefilter).limit(None).to_list()
             )
-            if self._order_by is not None:
-                ordered_rows.sort(key=lambda x: tuple(x.get(col) for col in self._order_by), reverse=self._descending)
+            if self._order_by != []:
+                ordered_rows.sort(
+                    key=lambda x: tuple(
+                        x.get(col) if not desc else -(x.get(col))
+                        for col, desc in zip(self._order_by, self._descending, strict=True)
+                    ),
+                    reverse=False,
+                )
             if self._offset is not None:
                 ordered_rows = ordered_rows[self._offset :]
                 if self._limit is not None:
