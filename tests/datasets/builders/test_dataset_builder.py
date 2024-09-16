@@ -15,7 +15,7 @@ from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
-from tests.fixtures.datasets.builders.builder import DumbDatasetBuilder
+from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint
 
 
 class TestDatasetBuilder:
@@ -26,12 +26,16 @@ class TestDatasetBuilder:
             (tempfile.gettempdir(), Path(tempfile.gettempdir())),
         ],
     )
-    def test_init(self, dataset_item_image_bboxes_keypoint, info, source_dir, target_dir):
-        builder = DumbDatasetBuilder(5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info)
+    def test_init(
+        self, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, source_dir, target_dir
+    ):
+        builder = DatasetBuilderImageBboxesKeypoint(
+            5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
+        )
         assert builder.source_dir == Path(source_dir)
         assert builder.target_dir == Path(target_dir)
-        assert builder.previews_path == Path(target_dir) / Dataset.PREVIEWS_PATH
-        assert builder.info == info
+        assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
+        assert builder.info == info_dataset_image_bboxes_keypoint
         assert isinstance(builder.dataset_schema, DatasetSchema)
         assert set(builder.dataset_schema.schemas.keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
         for (key1, value1), (key2, value2) in zip(
@@ -42,34 +46,34 @@ class TestDatasetBuilder:
             assert key1 == key2
             assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
-        assert builder.db._uri == str(Path(target_dir) / Dataset.DB_PATH)
+        assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
     @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
-    def test_build(self, dumb_builder, mode, flush_every_n_samples, compact_every_n_transactions):
+    def test_build(
+        self, dataset_builder_image_bboxes_keypoint, mode, flush_every_n_samples, compact_every_n_transactions
+    ):
         # Mock the compact method to register the call count
         compact_dataset_mock = MagicMock()
         compact_table_mock = MagicMock()
-        dumb_builder.compact_dataset = compact_dataset_mock
-        dumb_builder.compact_table = compact_table_mock
+        dataset_builder_image_bboxes_keypoint.compact_dataset = compact_dataset_mock
+        dataset_builder_image_bboxes_keypoint.compact_table = compact_table_mock
 
-        dataset = dumb_builder.build(
+        dataset = dataset_builder_image_bboxes_keypoint.build(
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
         )
-        assert dumb_builder.info.name == "test"
-        assert dumb_builder.info.description == "test"
-        assert dumb_builder.info.num_elements == 5
+        assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
 
-        assert (dumb_builder.target_dir / Dataset.INFO_FILE).exists()
-        assert (dumb_builder.target_dir / Dataset.DB_PATH).exists()
-        assert (dumb_builder.target_dir / Dataset.FEATURES_VALUES_FILE).exists()
-        assert (dumb_builder.target_dir / Dataset.SCHEMA_FILE).exists()
+        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._INFO_FILE).exists()
+        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH).exists()
+        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._FEATURES_VALUES_FILE).exists()
+        assert (dataset_builder_image_bboxes_keypoint.target_dir / Dataset._SCHEMA_FILE).exists()
 
         assert isinstance(dataset, Dataset)
-        assert dataset.info == dumb_builder.info
+        assert dataset.info == dataset_builder_image_bboxes_keypoint.info
         assert dataset.num_rows == 5
         assert set(dataset.open_tables().keys()) == {"image", "item", "entities", "bboxes", "keypoint"}
 
@@ -78,7 +82,7 @@ class TestDatasetBuilder:
             assert compact_table_mock.call_count == 0
         else:
             if flush_every_n_samples is None:
-                assert compact_table_mock.call_count == 8
+                assert compact_table_mock.call_count == 6
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 0
             else:
@@ -86,7 +90,7 @@ class TestDatasetBuilder:
 
         if mode == "create":
             with pytest.raises(OSError, match="Dataset already exists"):
-                dumb_builder.build(
+                dataset_builder_image_bboxes_keypoint.build(
                     flush_every_n_samples=flush_every_n_samples,
                     compact_every_n_transactions=compact_every_n_transactions,
                     mode=mode,
@@ -99,13 +103,13 @@ class TestDatasetBuilder:
             return self.add(*args, **kwargs)
 
         table_mocks = []
-        for table in dumb_builder.open_tables().values():
+        for table in dataset_builder_image_bboxes_keypoint.open_tables().values():
             table_mock = MagicMock(side_effect=_side_effect_table_add)
             table.add = table_mock
             table_mocks.append(table_mock)
 
-        dumb_builder.num_rows = 6
-        dataset = dumb_builder.build(
+        dataset_builder_image_bboxes_keypoint.num_rows = 6
+        dataset = dataset_builder_image_bboxes_keypoint.build(
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode=mode,
@@ -118,7 +122,7 @@ class TestDatasetBuilder:
             assert compact_table_mock.call_count == 0
         else:
             if flush_every_n_samples is None:
-                assert compact_table_mock.call_count == 18
+                assert compact_table_mock.call_count == 14
             elif flush_every_n_samples == 3:
                 assert compact_table_mock.call_count == 2
             else:
@@ -143,7 +147,7 @@ class TestDatasetBuilder:
                 tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()
 
-        with pytest.raises(AssertionError, match="Table wrong_schema not found in tables"):
+        with pytest.raises(KeyError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
                 tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()

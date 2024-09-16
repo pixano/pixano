@@ -17,7 +17,7 @@ import tqdm
 from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
-from pixano.features import BaseSchema, Item, _SchemaGroup
+from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.views import image as image_schema
 from pixano.features.schemas.views import sequence_frame as sequence_frame_schema
 
@@ -58,23 +58,23 @@ class DatasetBuilder(ABC):
         """
         self.target_dir: Path = Path(target_dir)
         self.source_dir: Path = Path(source_dir)
-        self.previews_path: Path = self.target_dir / Dataset.PREVIEWS_PATH
+        self.previews_path: Path = self.target_dir / Dataset._PREVIEWS_PATH
 
         self.info: DatasetInfo = info
         self.dataset_schema: DatasetSchema = schemas.to_dataset_schema()
         self.schemas: dict[str, type[BaseSchema]] = self.dataset_schema.schemas
 
-        self.db: lancedb.DBConnection = lancedb.connect(self.target_dir / Dataset.DB_PATH)
+        self.db: lancedb.DBConnection = lancedb.connect(self.target_dir / Dataset._DB_PATH)
 
     @property
     def item_schema(self) -> type[Item]:
         """The item schema for the dataset."""
-        return self.dataset_schema.schemas[_SchemaGroup.ITEM.value]
+        return self.dataset_schema.schemas[SchemaGroup.ITEM.value]
 
     @property
     def item_schema_name(self) -> str:
         """The item schema name for the dataset."""
-        return _SchemaGroup.ITEM.value
+        return SchemaGroup.ITEM.value
 
     def build(
         self,
@@ -114,7 +114,10 @@ class DatasetBuilder(ABC):
         for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
             # assert that items have keys that are in tables
             for table_name, item_value in items.items():
-                assert table_name in tables, f"Table {table_name} not found in tables"
+                if item_value is None or item_value == []:
+                    continue
+                if table_name not in tables:
+                    raise KeyError(f"Table {table_name} not found in tables")
 
                 for it in item_value if isinstance(item_value, list) else [item_value]:
                     if " " in it.id:
@@ -147,19 +150,18 @@ class DatasetBuilder(ABC):
         self.compact_dataset()
 
         # save info.json
-        self.info.id = shortuuid.uuid()
-        self.info.num_elements = tables[_SchemaGroup.ITEM.value].count_rows()
-        self.info.to_json(self.target_dir / Dataset.INFO_FILE)
+        self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
+        self.info.to_json(self.target_dir / Dataset._INFO_FILE)
 
         # save features_values.json
         # TMP: empty now
-        DatasetFeaturesValues().to_json(self.target_dir / Dataset.FEATURES_VALUES_FILE)
+        DatasetFeaturesValues().to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
 
         # remove previous schema.json if any
-        if (self.target_dir / Dataset.SCHEMA_FILE).exists():
-            (self.target_dir / Dataset.SCHEMA_FILE).unlink()
+        if (self.target_dir / Dataset._SCHEMA_FILE).exists():
+            (self.target_dir / Dataset._SCHEMA_FILE).unlink()
         # save schema.json
-        self.dataset_schema.to_json(self.target_dir / Dataset.SCHEMA_FILE)
+        self.dataset_schema.to_json(self.target_dir / Dataset._SCHEMA_FILE)
 
         return Dataset(self.target_dir)
 

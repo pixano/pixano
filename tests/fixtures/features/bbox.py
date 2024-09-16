@@ -6,15 +6,17 @@
 
 import pytest
 
+from pixano.datasets.dataset import Dataset
 from pixano.features.schemas.annotations.bbox import BBox
+from tests.utils.schema import register_schema
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def height_width():
     return 4, 6
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def coords():
     return {
         "xyxy": [1, 1, 3, 3],
@@ -32,3 +34,17 @@ def bbox_xyxy(coords):
 @pytest.fixture()
 def bbox_xywh(coords):
     return BBox.from_xywh(coords["xywh"], confidence=0.0, is_normalized=False)
+
+
+@pytest.fixture(scope="session")
+def bbox_difficult():
+    class BBoxDifficult(BBox):
+        is_difficult: bool
+
+    register_schema(BBoxDifficult)
+    return BBoxDifficult
+
+
+@pytest.fixture(scope="session")
+def two_difficult_bboxes_from_dataset_multiview_tracking_and_image(dataset_multi_view_tracking_and_image: Dataset):
+    return dataset_multi_view_tracking_and_image.get_data("bbox_image", limit=2)

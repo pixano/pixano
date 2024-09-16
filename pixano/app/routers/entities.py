@@ -1,0 +1,211 @@
+# =====================================
+# Copyright: CEA-LIST/DIASI/SIALV/LVA
+# Author : pixano@cea.fr
+# License: CECILL-C
+# =====================================
+
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from pixano.app.models.entities import EntityModel
+from pixano.app.settings import Settings, get_settings
+from pixano.features.schemas.schema_group import SchemaGroup
+
+from .utils import (
+    assert_table_in_group,
+    create_rows,
+    delete_rows,
+    get_dataset,
+    get_models_from_rows,
+    get_rows,
+    update_rows,
+)
+
+
+router = APIRouter(prefix="/entities", tags=["Entities"])
+
+
+@router.get("/{dataset_id}/{table}/", response_model=list[EntityModel])
+async def get_entities(
+    dataset_id: str,
+    table: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+    ids: list[str] | None = Query(None),
+    item_ids: list[str] | None = Query(None),
+    limit: int | None = None,
+    skip: int = 0,
+) -> list[EntityModel]:
+    """Get entities.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        settings: App settings.
+        ids: IDs.
+        item_ids: Item IDs.
+        limit: Limit number of entities.
+        skip: Skip number of entities.
+
+    Returns:
+        List of entities.
+    """
+    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
+    entity_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
+    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
+    return entity_models
+
+
+@router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+async def get_entity(
+    dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
+) -> EntityModel:
+    """Get an entity.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        id: ID.
+        settings: App settings.
+
+    Returns:
+        The entity.
+    """
+    return (await get_entities(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
+
+
+@router.post("/{dataset_id}/{table}/", response_model=list[EntityModel])
+async def create_entities(
+    dataset_id: str,
+    table: str,
+    entities: list[EntityModel],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[EntityModel]:
+    """Create entities.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        entities: Entities.
+        settings: App settings.
+
+    Returns:
+        List of entities.
+    """
+    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
+    entities_rows = create_rows(dataset, table, entities)
+    entities_models = get_models_from_rows(table, EntityModel, entities_rows)
+    return entities_models
+
+
+@router.post("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+async def create_entity(
+    dataset_id: str,
+    table: str,
+    id: str,
+    entity: EntityModel,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> EntityModel:
+    """Create an entity.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        id: ID.
+        entity: Entity.
+        settings: App settings.
+
+    Returns:
+        The entity.
+    """
+    if id != entity.id:
+        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
+    return (await create_entities(dataset_id=dataset_id, table=table, entities=[entity], settings=settings))[0]
+
+
+@router.put("/{dataset_id}/{table}/{id}", response_model=EntityModel)
+async def update_entity(
+    dataset_id: str,
+    table: str,
+    id: str,
+    entity: EntityModel,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> EntityModel:
+    """Update an entity.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        id: ID.
+        entity: Entity.
+        settings: App settings.
+
+    Returns:
+        The entity.
+    """
+    if id != entity.id:
+        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
+    return (await update_entities(dataset_id=dataset_id, table=table, entities=[entity], settings=settings))[0]
+
+
+@router.put("/{dataset_id}/{table}/", response_model=list[EntityModel])
+async def update_entities(
+    dataset_id: str,
+    table: str,
+    entities: list[EntityModel],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> list[EntityModel]:
+    """Update entities.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        entities: Entities.
+        settings: App settings.
+
+    Returns:
+        List of entities.
+    """
+    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
+    entity_rows = update_rows(dataset, table, entities)
+    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
+    return entity_models
+
+
+@router.delete("/{dataset_id}/{table}/{id}")
+async def delete_entity(
+    dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
+) -> None:
+    """Delete an entity.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        id: ID.
+        settings: App settings.
+    """
+    return await delete_entities(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
+
+
+@router.delete("/{dataset_id}/{table}/")
+async def delete_entities(
+    dataset_id: str,
+    table: str,
+    ids: Annotated[list[str], Query()],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> None:
+    """Delete entities.
+
+    Args:
+        dataset_id: Dataset ID.
+        table: Table name.
+        ids: IDs.
+        settings: App settings.
+    """
+    dataset = get_dataset(dataset_id, settings.data_dir, None)
+    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
+    delete_rows(dataset, table, ids)
+    return None

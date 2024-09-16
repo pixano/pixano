@@ -7,6 +7,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Any, Sequence
 
 
 def natural_key(string: str) -> list:
@@ -91,3 +92,50 @@ def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> typ
                 break
 
     return sup_type
+
+
+def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
+    """Convert a list of IDs to a SQL-friendly string.
+
+    Args:
+        ids: List of IDs.
+
+    Returns:
+        SQL-friendly string of IDs.
+    """
+    if isinstance(ids, str):
+        return f"('{ids}')"
+    elif len(ids) == 0:
+        raise ValueError("IDs must not be empty.")
+    else:
+        for id in ids:
+            if not isinstance(id, str):
+                raise ValueError("IDs must be strings.")
+    ids = set(ids)
+    if len(ids) == 1:
+        return f"('{ids.pop()}')"
+    return str(tuple(ids))
+
+
+def fn_sort_dict(dict_: dict[str, Any], order_by: list[str], descending: list[bool]) -> tuple[Any, ...]:
+    """Function to sort a dictionary by multiple keys in different orders."""
+    key: list[Any] = []
+    for col, desc in zip(order_by, descending, strict=True):
+        value = dict_.get(col)
+        if desc:
+            if isinstance(value, (int, float)):
+                key.append(-value)
+            elif isinstance(value, str):
+                key.append("".join(chr(255 - ord(c)) for c in value))
+            elif value is bool:
+                key.append(not value)
+            elif value is None:
+                key.append(None)
+            else:
+                raise ValueError(
+                    f"Cannot sort by {type(value)} in descending order. "
+                    "Please use open an issue if you need this feature."
+                )
+        else:
+            key.append(value)
+    return tuple(key)

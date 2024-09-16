@@ -6,13 +6,10 @@
 
 import json
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel
 
 from pixano.features import Image
-
-from .dataset_schema import DatasetSchema
 
 
 class DatasetInfo(BaseModel):
@@ -23,7 +20,6 @@ class DatasetInfo(BaseModel):
         name: Dataset name
         description: Dataset description
         estimated_size: Dataset estimated size
-        num_elements: Number of elements in dataset
         preview: Path to a preview thumbnail
     """
 
@@ -31,7 +27,6 @@ class DatasetInfo(BaseModel):
     name: str = ""
     description: str = ""
     size: str = "Unknown"
-    num_elements: int = 0
     preview: str = ""
 
     def to_json(self, json_fp: Path) -> None:
@@ -72,58 +67,39 @@ class DatasetInfo(BaseModel):
         Returns:
             the list of DatasetInfo.
         """
-        library = []
+        library: list[DatasetInfo] = []
 
         # Browse directory
         for json_fp in sorted(directory.glob("*/info.json")):
             info = DatasetInfo.from_json(json_fp)
-            library.append(
-                DatasetInfo(
-                    id=info.id,
-                    name=info.name,
-                    description=info.description,
-                    size=info.size,
-                    num_elements=info.num_elements,
-                    preview=Image.open_url(
-                        str(json_fp.parent / "previews/dataset_preview.jpg"),
-                        json_fp.parent / "media",
-                    ),  # TODO choose correct preview name / path / extension
-                )
-            )
+            info.preview = Image.open_url(
+                str(json_fp.parent / "previews/dataset_preview.jpg"),
+                json_fp.parent / "media",
+            )  # TODO choose correct preview name / path / extension
+            library.append(info)
+
+        if library == []:
+            raise FileNotFoundError(f"No dataset found in {directory}.")
 
         return library
 
     @staticmethod
-    def tables_from_schema(schema: DatasetSchema) -> dict[str, Any]:
-        """Get tables information from schema.
+    def load_id(id: str, directory: Path) -> "DatasetInfo":
+        """Load a DatasetInfo from directory.
 
         Args:
-            schema: Dataset schema.
+            id: Dataset ID.
+            directory: Directory to load.
 
         Returns:
-            Tables information.
+            the DatasetInfo.
         """
-        tables = {}
-        legacy_mapping = {"item": "main", "views": "media"}
-        for group in schema._groups:
-            gr = legacy_mapping[group.value] if group.value in legacy_mapping else group.value
-            tables[gr] = [
-                {
-                    "name": tname,
-                    "fields": {},
-                    "source": None,
-                    "type": None,
-                }
-                for tname in schema._groups[group]
-            ]
-            gr = legacy_mapping[group.value] if group.value in legacy_mapping else group.value
-            tables[gr] = [
-                {
-                    "name": tname,
-                    "fields": {},
-                    "source": None,
-                    "type": None,
-                }
-                for tname in schema._groups[group]
-            ]
-        return tables
+        for json_fp in sorted(directory.glob("*/info.json")):
+            info = DatasetInfo.from_json(json_fp)
+            if info.id == id:
+                info.preview = Image.open_url(
+                    str(json_fp.parent / "previews/dataset_preview.jpg"),
+                    json_fp.parent / "media",
+                )  # TODO choose correct preview name / path / extension
+                return info
+        raise FileNotFoundError(f"No dataset found with ID {id}")

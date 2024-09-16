@@ -13,9 +13,11 @@ class TestSchemaReference:
     def test_none(self):
         assert SchemaRef.none() == SchemaRef(name="", id="")
 
-    def test_resolve(self, dumb_dataset):
+    def test_resolve(self, dataset_image_bboxes_keypoint):
         schema_ref = SchemaRef(name="item", id="0")
-        assert schema_ref.resolve(dumb_dataset) == dumb_dataset.resolve_ref(schema_ref)
+        assert schema_ref.resolve(dataset_image_bboxes_keypoint) == dataset_image_bboxes_keypoint.resolve_ref(
+            schema_ref
+        )
 
 
 class TestItemRef:

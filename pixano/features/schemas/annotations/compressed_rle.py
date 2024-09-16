@@ -8,7 +8,7 @@ from typing import Any
 
 import numpy as np
 from PIL import Image as pil_image
-from pydantic import model_validator
+from pydantic import field_serializer, field_validator, model_validator
 from typing_extensions import Self
 
 from pixano.features.utils import image as image_utils
@@ -31,6 +31,13 @@ class CompressedRLE(Annotation):
     size: list[int]
     counts: bytes
 
+    @field_validator("counts", mode="before")
+    @classmethod
+    def _validate_counts(cls, value: bytes | str) -> bytes:
+        if isinstance(value, str):
+            value = bytes(value, "utf-8")
+        return value
+
     @model_validator(mode="after")
     def _validate_fields(self):
         if (
@@ -40,6 +47,10 @@ class CompressedRLE(Annotation):
         ):
             raise ValueError("Mask size must have 2 elements and be positive integers or [0, 0] for empty mask.")
         return self
+
+    @field_serializer("counts")
+    def _serialize_counts(self, value: bytes) -> str:
+        return str(value, "utf-8")
 
     @classmethod
     def none(cls) -> Self:

@@ -49,7 +49,7 @@ from .entities import (
 )
 from .items import Item, is_item
 from .registry import register_schema
-from .schema_group import _SchemaGroup
+from .schema_group import SchemaGroup
 from .views import (
     Image,
     PointCloud,
@@ -69,7 +69,6 @@ from .views import (
 
 
 __all__ = [
-    "_SchemaGroup",
     "Annotation",
     "BaseIntrinsics",
     "BaseSchema",
@@ -87,6 +86,7 @@ __all__ = [
     "KeyPoints",
     "KeyPoints3D",
     "PointCloud",
+    "SchemaGroup",
     "SequenceFrame",
     "Track",
     "Tracklet",

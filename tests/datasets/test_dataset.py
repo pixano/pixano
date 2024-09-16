@@ -5,6 +5,7 @@
 # =====================================
 
 
+import re
 from pathlib import Path
 
 import pytest
@@ -15,27 +16,34 @@ from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
-from pixano.features import Image, Item
+from pixano.features import BBox, Image, Item
 from pixano.features.schemas.embeddings.embedding import ViewEmbedding
 from pixano.features.types.schema_reference import ItemRef, ViewRef
 
 
 class TestDataset:
-    def test_dataset(self, dumb_dataset: Dataset, dataset_item_image_bboxes_keypoint: DatasetItem):
-        assert isinstance(dumb_dataset, Dataset)
-        assert isinstance(dumb_dataset.schema, DatasetSchema)
-        assert isinstance(dumb_dataset.info, DatasetInfo)
-        assert dumb_dataset.info == DatasetInfo(
-            id=dumb_dataset.info.id, name="test", description="test", size="Unknown", num_elements=5, preview=""
+    def test_dataset(self, dataset_image_bboxes_keypoint: Dataset, dataset_item_image_bboxes_keypoint: DatasetItem):
+        assert isinstance(dataset_image_bboxes_keypoint, Dataset)
+        assert isinstance(dataset_image_bboxes_keypoint.schema, DatasetSchema)
+        assert isinstance(dataset_image_bboxes_keypoint.info, DatasetInfo)
+        assert dataset_image_bboxes_keypoint.info == DatasetInfo(
+            id="dataset_image_bboxes_keypoint",
+            name="dataset_image_bboxes_keypoint",
+            description="Description dataset_image_bboxes_keypoint.",
+            size="Unknown",
+            preview="",
         )
-        assert dumb_dataset.schema.serialize() == dataset_item_image_bboxes_keypoint.to_dataset_schema().serialize()
-        assert dumb_dataset.features_values == DatasetFeaturesValues()
-        assert dumb_dataset.stats == []
-        assert dumb_dataset.thumbnail == dumb_dataset.path / Dataset.THUMB_FILE
-        assert dumb_dataset.num_rows == 5
-        assert dumb_dataset.media_dir == dumb_dataset.path / "media"
+        assert (
+            dataset_image_bboxes_keypoint.schema.serialize()
+            == dataset_item_image_bboxes_keypoint.to_dataset_schema().serialize()
+        )
+        assert dataset_image_bboxes_keypoint.features_values == DatasetFeaturesValues()
+        assert dataset_image_bboxes_keypoint.stats == []
+        assert dataset_image_bboxes_keypoint.thumbnail == dataset_image_bboxes_keypoint.path / Dataset._THUMB_FILE
+        assert dataset_image_bboxes_keypoint.num_rows == 5
+        assert dataset_image_bboxes_keypoint.media_dir == dataset_image_bboxes_keypoint.path / "media"
 
-    def test_create_table(self, dumb_dataset: Dataset):
+    def test_create_table(self, dataset_image_bboxes_keypoint_copy: Dataset):
         data = [
             Image(
                 id=f"new_image_{i}",
@@ -46,26 +54,30 @@ class TestDataset:
             )
             for i in range(5)
         ]
-        table = dumb_dataset.create_table("new_table", Image, SchemaRelation.ONE_TO_MANY, data=data)
+        table = dataset_image_bboxes_keypoint_copy.create_table(
+            "new_table", Image, SchemaRelation.ONE_TO_MANY, data=data
+        )
         assert isinstance(table, LanceTable)
-        assert "new_table" in dumb_dataset.schema.schemas
-        assert issubclass(dumb_dataset.schema.schemas["new_table"], Image)
-        assert dumb_dataset.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
-        assert "new_table" in dumb_dataset.dataset_item_model.model_fields
+        assert "new_table" in dataset_image_bboxes_keypoint_copy.schema.schemas
+        assert issubclass(dataset_image_bboxes_keypoint_copy.schema.schemas["new_table"], Image)
+        assert dataset_image_bboxes_keypoint_copy.schema.relations["item"]["new_table"] == SchemaRelation.MANY_TO_ONE
+        assert "new_table" in dataset_image_bboxes_keypoint_copy.dataset_item_model.model_fields
 
-    def test_compute_embeddings(self, dumb_dataset: Dataset, dumb_embedding_function):
+    def test_compute_embeddings(self, dataset_image_bboxes_keypoint_copy: Dataset, dumb_embedding_function):
         registry = get_registry()
         registry._functions["test_compute_embeddings_dumb_embedding_function"] = dumb_embedding_function
 
         embeddings_schema: type[ViewEmbedding] = ViewEmbedding.create_schema(
-            "test_compute_embeddings_dumb_embedding_function", "test_compute_embeddings_view_embedding", dumb_dataset
+            "test_compute_embeddings_dumb_embedding_function",
+            "test_compute_embeddings_view_embedding",
+            dataset_image_bboxes_keypoint_copy,
         )
-        dumb_dataset.create_table(
+        dataset_image_bboxes_keypoint_copy.create_table(
             "test_compute_embeddings_view_embedding", embeddings_schema, SchemaRelation.ONE_TO_MANY
         )
 
         data = []
-        views = dumb_dataset.get_data("image", limit=2)
+        views = dataset_image_bboxes_keypoint_copy.get_data("image", limit=2)
         for i, view in enumerate(views):
             data.append(
                 {
@@ -80,29 +92,29 @@ class TestDataset:
                     },
                 }
             )
-        dumb_dataset.compute_view_embeddings("test_compute_embeddings_view_embedding", data)
-        embeddings = dumb_dataset.get_data("test_compute_embeddings_view_embedding", limit=2)
+        dataset_image_bboxes_keypoint_copy.compute_view_embeddings("test_compute_embeddings_view_embedding", data)
+        embeddings = dataset_image_bboxes_keypoint_copy.get_data("test_compute_embeddings_view_embedding", limit=2)
         for i, embedding in enumerate(embeddings):
             assert embedding.vector == [1, 2, 3, 4, 5, 6, 7, 8]
             assert embedding.item_ref == ItemRef(id=views[i].item_ref.id, name=views[i].item_ref.name)
             assert embedding.view_ref == ViewRef(id=views[i].id, name="image")
             assert embedding.id == f"embedding_{i}"
 
-    def test_open_table(self, dumb_dataset: Dataset):
-        table = dumb_dataset.open_table("item")
+    def test_open_table(self, dataset_image_bboxes_keypoint: Dataset):
+        table = dataset_image_bboxes_keypoint.open_table("item")
         assert isinstance(table, LanceTable)
 
         with pytest.raises(ValueError, match="Table nonexistent not found in dataset"):
-            dumb_dataset.open_table("nonexistent")
+            dataset_image_bboxes_keypoint.open_table("nonexistent")
 
-    def test_open_tables(self, dumb_dataset: Dataset):
-        tables = dumb_dataset.open_tables()
+    def test_open_tables(self, dataset_image_bboxes_keypoint: Dataset):
+        tables = dataset_image_bboxes_keypoint.open_tables()
         for table in tables.values():
             assert isinstance(table, LanceTable)
-        assert set(tables.keys()) == set(dumb_dataset.schema.schemas.keys())
+        assert set(tables.keys()) == set(dataset_image_bboxes_keypoint.schema.schemas.keys())
 
     @pytest.mark.parametrize(
-        "table_name,type,ids,item_ids,limit,offset,expected_output",
+        "table_name,type,ids,item_ids,limit,skip,expected_output",
         [
             (
                 "item",
@@ -176,8 +188,8 @@ class TestDataset:
                         "item_ref": {"id": "1", "name": "item"},
                         "parent_ref": {"id": "", "name": ""},
                         "url": "image_1.jpg",
-                        "width": 100,
-                        "height": 100,
+                        "width": 99,
+                        "height": 101,
                         "format": "jpg",
                     },
                 ],
@@ -204,53 +216,126 @@ class TestDataset:
                         "item_ref": {"id": "1", "name": "item"},
                         "parent_ref": {"id": "", "name": ""},
                         "url": "image_1.jpg",
-                        "width": 100,
-                        "height": 100,
+                        "width": 99,
+                        "height": 101,
                         "format": "jpg",
                     },
                 ],
             ),
         ],
     )
-    def test_get_data(self, table_name, type, ids, item_ids, limit, offset, expected_output, dumb_dataset: Dataset):
-        data = dumb_dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
+    def test_get_data(
+        self, table_name, type, ids, item_ids, limit, skip, expected_output, dataset_image_bboxes_keypoint: Dataset
+    ):
+        data = dataset_image_bboxes_keypoint.get_data(
+            table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+        )
         assert isinstance(data, list) and all(isinstance(d, type) for d in data)
         for d, e in zip(data, expected_output, strict=True):
             assert d.model_dump() == e
-            assert d.dataset == dumb_dataset
+            assert d.dataset == dataset_image_bboxes_keypoint
             assert d.table_name == table_name
 
-    def test_get_one_data(self, dumb_dataset: Dataset):
-        data = dumb_dataset.get_data(table_name="item", ids="0")
+    @pytest.mark.parametrize(
+        "table_name,type,ids,item_ids,limit,skip,expected_output",
+        [
+            (
+                "bboxes_video",
+                BBox,
+                None,
+                ["2"],
+                3,
+                1,
+                [
+                    {
+                        "id": "bbox_2_0_0_1",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_0"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_0_0"},
+                        "coords": [1.0, 1.0, 25.0, 25.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.25,
+                    },
+                    {
+                        "id": "bbox_2_1_0_0",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "coords": [0.0, 0.0, 0.0, 0.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.0,
+                    },
+                    {
+                        "id": "bbox_2_1_0_1",
+                        "item_ref": {"name": "item", "id": "2"},
+                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "coords": [1.0, 1.0, 25.0, 25.0],
+                        "format": "xywh",
+                        "is_normalized": False,
+                        "confidence": 0.25,
+                    },
+                ],
+            )
+        ],
+    )
+    def test_get_data_item_ids_and_skip_limit(
+        self,
+        table_name,
+        type,
+        ids,
+        item_ids,
+        limit,
+        skip,
+        expected_output,
+        dataset_multi_view_tracking_and_image: Dataset,
+    ):
+        data = dataset_multi_view_tracking_and_image.get_data(
+            table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+        )
+        assert isinstance(data, list) and all(isinstance(d, type) for d in data)
+        for d, e in zip(data, expected_output, strict=True):
+            assert d.model_dump() == e
+            assert d.dataset == dataset_multi_view_tracking_and_image
+            assert d.table_name == table_name
+
+    def test_get_one_data(self, dataset_image_bboxes_keypoint: Dataset):
+        data = dataset_image_bboxes_keypoint.get_data(table_name="item", ids="0")
         assert isinstance(data, Item)
         assert data.model_dump() == {"id": "0", "metadata": "metadata_0", "split": "test"}
-        assert data.dataset == dumb_dataset
+        assert data.dataset == dataset_image_bboxes_keypoint
 
-        data = dumb_dataset.get_data(table_name="item", ids="-1")
+        data = dataset_image_bboxes_keypoint.get_data(table_name="item", ids="-1")
         assert data is None
 
     @pytest.mark.parametrize(
-        "table_name,ids,item_ids,limit,offset,expected_error",
+        "table_name,ids,item_ids,limit,skip,expected_error",
         [
             ("item", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
             ("image", ["0"], ["0"], None, 0, "ids and item_ids cannot be set at the same time"),
             ("item", None, None, None, 0, "limit must be set if ids is None and item_ids is None"),
-            ("item", ["0"], None, 1, 0, "ids or item_ids and limit cannot be set at the same time"),
-            ("item", None, ["0"], 1, 0, "ids or item_ids and limit cannot be set at the same time"),
+            ("item", ["0"], None, 1, 0, "ids and limit cannot be set at the same time"),
+            ("item", None, ["0"], 1, 0, "ids and limit cannot be set at the same time"),
             ("item", [0], None, None, 0, "ids must be a list of strings"),
             ("item", 0, None, None, 0, "ids must be a list of strings"),
             ("image", None, [0], None, 0, "item_ids must be a list of strings"),
             ("image", None, 0, None, 0, "item_ids must be a list of strings"),
-            ("item", None, None, 0, 0, "limit and offset must be positive integers"),
-            ("item", None, None, 2, -1, "limit and offset must be positive integers"),
+            ("item", None, None, 0, 0, "limit and skip must be positive integers"),
+            ("item", None, None, 2, -1, "limit and skip must be positive integers"),
         ],
     )
-    def test_get_data_error(self, table_name, ids, item_ids, limit, offset, expected_error, dumb_dataset: Dataset):
+    def test_get_data_error(
+        self, table_name, ids, item_ids, limit, skip, expected_error, dataset_image_bboxes_keypoint: Dataset
+    ):
         with pytest.raises(ValueError, match=expected_error):
-            dumb_dataset.get_data(table_name=table_name, ids=ids, limit=limit, offset=offset, item_ids=item_ids)
+            dataset_image_bboxes_keypoint.get_data(
+                table_name=table_name, ids=ids, limit=limit, skip=skip, item_ids=item_ids
+            )
 
     @pytest.mark.parametrize(
-        "ids,limit,offset,expected_output",
+        "ids,limit,skip,expected_output",
         [
             (
                 None,
@@ -283,8 +368,8 @@ class TestDataset:
                             "item_ref": {"id": "1", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_1.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 99,
+                            "height": 101,
                             "format": "jpg",
                         },
                         "entities": [
@@ -334,8 +419,8 @@ class TestDataset:
                             "item_ref": {"id": "2", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_2.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 98,
+                            "height": 102,
                             "format": "jpg",
                         },
                         "entities": [],
@@ -358,8 +443,8 @@ class TestDataset:
                             "item_ref": {"id": "2", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_2.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 98,
+                            "height": 102,
                             "format": "jpg",
                         },
                         "entities": [],
@@ -375,8 +460,8 @@ class TestDataset:
                             "item_ref": {"id": "3", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_3.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 97,
+                            "height": 103,
                             "format": "jpg",
                         },
                         "entities": [
@@ -426,8 +511,8 @@ class TestDataset:
                             "item_ref": {"id": "4", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_4.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 96,
+                            "height": 104,
                             "format": "jpg",
                         },
                         "entities": [],
@@ -467,8 +552,8 @@ class TestDataset:
                             "item_ref": {"id": "1", "name": "item"},
                             "parent_ref": {"id": "", "name": ""},
                             "url": "image_1.jpg",
-                            "width": 100,
-                            "height": 100,
+                            "width": 99,
+                            "height": 101,
                             "format": "jpg",
                         },
                         "entities": [
@@ -513,14 +598,14 @@ class TestDataset:
             ),
         ],
     )
-    def test_get_dataset_items(self, dumb_dataset: Dataset, ids, limit, offset, expected_output):
-        dataset_items = dumb_dataset.get_dataset_items(ids=ids, limit=limit, offset=offset)
+    def test_get_dataset_items(self, dataset_image_bboxes_keypoint: Dataset, ids, limit, skip, expected_output):
+        dataset_items = dataset_image_bboxes_keypoint.get_dataset_items(ids=ids, limit=limit, skip=skip)
         assert isinstance(dataset_items, list) and all(isinstance(d, DatasetItem) for d in dataset_items)
         for item, expected_output in zip(dataset_items, expected_output):
             assert item.model_dump() == expected_output
 
-    def test_get_one_dataset_item(self, dumb_dataset: Dataset):
-        dataset_item = dumb_dataset.get_dataset_items(ids="0")
+    def test_get_one_dataset_item(self, dataset_image_bboxes_keypoint: Dataset):
+        dataset_item = dataset_image_bboxes_keypoint.get_dataset_items(ids="0")
         expected_output = {
             "id": "0",
             "metadata": "metadata_0",
@@ -541,57 +626,69 @@ class TestDataset:
         assert isinstance(dataset_item, DatasetItem)
         assert dataset_item.model_dump() == expected_output
 
-        dataset_item = dumb_dataset.get_dataset_items(ids="-1")
+        dataset_item = dataset_image_bboxes_keypoint.get_dataset_items(ids="-1")
         assert dataset_item is None
 
     @pytest.mark.parametrize(
-        "ids,limit,offset,expected_error",
+        "ids,limit,skip,expected_error",
         [
             (["0"], 1, 0, "ids and limit cannot be set at the same time"),
-            (None, 1, -1, "limit and offset must be positive integers"),
-            (None, 0, 1, "limit and offset must be positive integers"),
+            (None, 1, -1, "limit and skip must be positive integers"),
+            (None, 0, 1, "limit and skip must be positive integers"),
             (1, None, 0, "ids must be a list of strings"),
             ([0], None, 0, "ids must be a list of strings"),
             (None, None, 0, "limit must be set if ids is None"),
         ],
     )
-    def test_get_dataset_item_error(self, dumb_dataset: Dataset, ids, limit, offset, expected_error):
+    def test_get_dataset_item_error(self, dataset_image_bboxes_keypoint: Dataset, ids, limit, skip, expected_error):
         with pytest.raises(ValueError, match=expected_error):
-            dumb_dataset.get_dataset_items(ids=ids, limit=limit, offset=offset)
+            dataset_image_bboxes_keypoint.get_dataset_items(ids=ids, limit=limit, skip=skip)
 
-    def test_get_all_ids(self, dumb_dataset: Dataset):
-        ids = dumb_dataset.get_all_ids()
+    def test_get_all_ids(self, dataset_image_bboxes_keypoint: Dataset):
+        ids = dataset_image_bboxes_keypoint.get_all_ids()
         assert ids == ["0", "1", "2", "3", "4"]
 
-        image_ids = dumb_dataset.get_all_ids(table_name="image")
+        image_ids = dataset_image_bboxes_keypoint.get_all_ids(table_name="image")
         assert image_ids == ["image_0", "image_1", "image_2", "image_3", "image_4"]
 
-    def test_add_data(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_data("item", ids=["0"])[0]
+    def test_add_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
         new_item = item.model_copy()
         new_item.id = "new_item"
 
-        assert dumb_dataset.get_data("item", ids=["new_item"]) == []
+        assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["new_item"]) == []
 
-        dumb_dataset.add_data("item", [new_item])
-        assert dumb_dataset.get_data("item", ids=["new_item"])[0].model_dump() == new_item.model_dump()
+        added_data = dataset_image_bboxes_keypoint_copy.add_data("item", [new_item])
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["new_item"])[0].model_dump()
+            == new_item.model_dump()
+            == added_data[0].model_dump()
+        )
 
-    def test_add_data_error(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_data("item", ids=["0"])[0]
+    def test_add_data_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
         new_item = item.model_copy()
 
         data = [new_item, "0"]
         with pytest.raises(
             ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
         ):
-            dumb_dataset.add_data("item", data)
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
-    def test_add_dataset_items(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_dataset_items(ids=["1"])[0]
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['0'] already exist in the table item.")):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
+
+    def test_add_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         new_item = item.model_copy()
         new_item.id = "new_item"
 
-        for table_name in dumb_dataset.schema.schemas.keys():
+        for table_name in dataset_image_bboxes_keypoint_copy.schema.schemas.keys():
             if table_name == "item":
                 continue
             field_schema = getattr(new_item, table_name)
@@ -599,79 +696,160 @@ class TestDataset:
                 for i, field in enumerate(field_schema):
                     setattr(field, "id", f"new_{table_name}_{i}")
                     setattr(field, "item_ref", {"id": "new_item", "name": "item"})
-                    assert dumb_dataset.get_data(table_name, ids=[f"new_{table_name}_{i}"]) == []
+                    assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}_{i}"]) == []
             else:
                 if field_schema is None:
                     continue
                 setattr(field_schema, "id", f"new_{table_name}")
                 setattr(field_schema, "item_ref", {"id": "new_item", "name": "item"})
-                assert dumb_dataset.get_data(table_name, ids=[f"new_{table_name}"]) == []
+                assert dataset_image_bboxes_keypoint_copy.get_data(table_name, ids=[f"new_{table_name}"]) == []
 
-        assert dumb_dataset.get_dataset_items(ids=["new_item"]) == []
+        assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"]) == []
 
-        dumb_dataset.add_dataset_items([new_item])
-        assert dumb_dataset.get_dataset_items(ids=["new_item"])[0].model_dump() == new_item.model_dump()
+        dataset_items = dataset_image_bboxes_keypoint_copy.add_dataset_items([new_item])
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"])[0].model_dump()
+            == new_item.model_dump()
+            == dataset_items[0].model_dump()
+        )
 
-    def test_add_dataset_items_error(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_dataset_items(ids=["1"])[0]
+    def test_add_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         new_item = item.model_copy()
 
         data = [new_item, "0"]
+        with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
+
+        data = [new_item]
+        with pytest.raises(ValueError, match=re.escape("IDs ['image_1'] already exist in the table image.")):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
+
+        data = [new_item, new_item]
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
+
+    def test_delete_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"])[0]
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_data("item", ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
+        assert dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"]) == []
+
+    def test_delete_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"])
+        ids_not_found = dataset_image_bboxes_keypoint_copy.delete_dataset_items(ids=["0", "1", "-1"])
+        assert ids_not_found == ["-1"]
+        assert dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["0", "1"]) == []
+
+    def test_update_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
+
+        assert item.metadata == "metadata_0"
+        updated_data = dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item])
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
+            == updated_item.model_dump()
+            == updated_data[0].model_dump()
+        )
+
+        added_item = item.model_copy()
+        updated_item.metadata = "new_metadata_2"
+        added_item.id = "new_item"
+        updated_data, added_data = dataset_image_bboxes_keypoint_copy.update_data(
+            "item", [updated_item, added_item], return_separately=True
+        )
+        assert len(updated_data) == 1
+        assert len(added_data) == 1
+
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
+            == updated_data[0].model_dump()
+            == updated_item.model_dump()
+        )
+        assert added_item.model_dump() == added_data[0].model_dump()
+
+    def test_update_data_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "1"
+
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
+
+        data = [updated_item, "0"]
         with pytest.raises(
-            ValueError, match="All data must be instances of the dataset item type <class 'pydantic.main.DatasetItem'>"
+            ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
         ):
-            dumb_dataset.add_dataset_items(data)
+            dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
-    def test_delete_data(self, dumb_dataset: Dataset):
-        dumb_dataset.get_data("item", ids=["0", "1"])[0]
-        dumb_dataset.delete_data("item", ids=["0", "1"])
-        assert dumb_dataset.get_data("item", ids=["0", "1"]) == []
+    def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.metadata = "new_metadata"
+        updated_item.image.width = 200
+        updated_item.entities[0].id = "new_entity"
+        updated_item.bboxes[0].id = "new_bbox"
 
-    def test_delete_dataset_items(self, dumb_dataset: Dataset):
-        dumb_dataset.get_dataset_items(ids=["0", "1"])
-        dumb_dataset.delete_dataset_items(ids=["0", "1"])
-        assert dumb_dataset.get_dataset_items(ids=["0", "1"]) == []
+        updated_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item])
 
-    def test_update_data(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_data("item", ids=["0"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
+        assert (
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+            == updated_item
+            == updated_dataset_items[0]
+        )
 
-        assert dumb_dataset.get_data("item", ids=["0"])[0].metadata == "metadata_0"
-        dumb_dataset.update_data("item", [new_item])
-        assert dumb_dataset.get_data("item", ids=["0"])[0].metadata == "new_metadata"
+        added_item = type(item).model_validate(item.model_dump())
+        added_item.id = "new_item"
+        added_item.image.id = "new_image"
+        added_item.entities[0].id = "new_entity_1"
+        added_item.entities[1].id = "new_entity_2"
+        added_item.bboxes[0].id = "new_bbox_1"
+        added_item.bboxes[1].id = "new_bbox_2"
+        updated_item.metadata = "new_metadata_2"
+        updated_dataset_items, added_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items(
+            [updated_item, added_item], return_separately=True
+        )
+        assert len(updated_dataset_items) == 1
+        assert len(added_dataset_items) == 1
+        assert updated_dataset_items[0] == updated_item
+        assert added_dataset_items[0] == added_item
 
-    def test_update_dataset_items(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_dataset_items(ids=["1"])[0]
-        new_item = item.model_copy()
-        new_item.metadata = "new_metadata"
-        new_item.image.width = 200
-        new_item.entities[0].id = "new_entity"
-        new_item.bboxes[0].id = "new_bbox"
+    def test_update_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
+        updated_item = item.model_copy()
+        updated_item.id = "0"
 
-        dumb_dataset.update_dataset_items([new_item])
+        with pytest.raises(ValueError, match="All data must have unique ids."):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
 
-        assert dumb_dataset.get_dataset_items(ids=["1"])[0] == new_item
+        data = [updated_item, "0"]
+        with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
+            dataset_image_bboxes_keypoint_copy.update_dataset_items(data)
 
-    def test_find(self, dumb_dataset: Dataset):
-        path = dumb_dataset.path.parent
+    def test_find(self, dataset_image_bboxes_keypoint_copy: Dataset):
+        path = dataset_image_bboxes_keypoint_copy.path.parent
 
-        dumb_dataset_found = Dataset.find(dumb_dataset.info.id, path)
-        assert dumb_dataset_found.info == dumb_dataset.info
-        assert dumb_dataset_found.media_dir == dumb_dataset.media_dir
+        dataset_image_bboxes_keypoint_copy_found = Dataset.find(dataset_image_bboxes_keypoint_copy.info.id, path)
+        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
+        assert dataset_image_bboxes_keypoint_copy_found.path == dataset_image_bboxes_keypoint_copy.path
+        assert dataset_image_bboxes_keypoint_copy_found.media_dir == dataset_image_bboxes_keypoint_copy.media_dir
 
-        dumb_dataset_found = Dataset.find(dumb_dataset.info.id, path, Path("/test/media"))
-        assert dumb_dataset_found.info == dumb_dataset.info
-        assert dumb_dataset_found.media_dir == Path("/test/media")
+        dataset_image_bboxes_keypoint_copy_found = Dataset.find(
+            dataset_image_bboxes_keypoint_copy.info.id, path, Path("/test/media")
+        )
+        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
+        assert dataset_image_bboxes_keypoint_copy_found.media_dir == Path("/test/media")
 
         with pytest.raises(FileNotFoundError, match=f"Dataset nonexistent not found in {path}"):
             Dataset.find("nonexistent", path)
 
-    def test_resolve_ref(self, dumb_dataset: Dataset):
-        item = dumb_dataset.get_data("item", ids=["0"])[0]
+    def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):
+        item = dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0]
         item_ref = ItemRef(id="0", name="item")
-        assert dumb_dataset.resolve_ref(item_ref) == item
+        assert dataset_image_bboxes_keypoint.resolve_ref(item_ref) == item
 
         wrong_item_ref = ItemRef(id="", name="item")
         with pytest.raises(ValueError, match="Reference should have a name and an id."):
-            dumb_dataset.resolve_ref(wrong_item_ref)
+            dataset_image_bboxes_keypoint.resolve_ref(wrong_item_ref)
