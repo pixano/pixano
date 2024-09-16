@@ -19,6 +19,7 @@ from pydantic import ConfigDict
 
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
+from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
@@ -380,7 +381,7 @@ class Dataset:
                     TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip).build()
                 )
         else:
-            sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set(ids)))
+            sql_ids = to_sql_list(ids)
             query = TableQueryBuilder(table).where(f"id in {sql_ids}").build()
 
         query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
@@ -421,7 +422,7 @@ class Dataset:
         if items == []:
             return [] if return_list else None
         item_ids: list[str] = [item.id for item in items]
-        sql_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(item_ids))
+        sql_ids = to_sql_list(item_ids)
 
         # Load tables
         ds_tables = self.open_tables(exclude_embeddings=True)
@@ -560,7 +561,7 @@ class Dataset:
         set_ids = set(ids)
 
         table = self.open_table(table_name)
-        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
+        sql_ids = to_sql_list(set_ids)
 
         all_ids = self.get_all_ids(table_name)
 
@@ -579,8 +580,11 @@ class Dataset:
         Args:
             ids: Ids to delete.
         """
-        set_ids = set(ids)
-        sql_ids = f"('{ids[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
+        print(ids, type(ids))
+        sql_ids = to_sql_list(ids)
+        print(sql_ids)
+        print("yo")
+
         ids_not_found = []
         for table_name in self.schema.schemas.keys():
             if table_name == SchemaGroup.ITEM.value:
@@ -597,7 +601,8 @@ class Dataset:
                 )
                 if table_ids == []:
                     continue
-                table_sql_ids = f"('{table_ids[0]}')" if len(table_ids) == 1 else str(tuple(table_ids))
+                table_sql_ids = to_sql_list(table_ids)
+                print(table_sql_ids)
                 table.delete(where=f"id in {table_sql_ids}")
         return ids_not_found
 
@@ -628,7 +633,6 @@ class Dataset:
             raise DatasetAccessError(
                 f"All data must be instances of the table type {self.schema.schemas[table_name]}."
             )
-        ids = [item.id for item in data]
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):
             raise DatasetAccessError("All data must have unique ids.")
@@ -638,7 +642,7 @@ class Dataset:
                 ids_found.append(id)
 
         table = self.open_table(table_name)
-        sql_ids = f"('{ids[0]}')" if len(ids) == 1 else str(tuple(set_ids))
+        sql_ids = to_sql_list(set_ids)
         table.delete(where=f"id in {sql_ids}")
 
         table.add(data)

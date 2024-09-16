@@ -12,7 +12,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pixano.app.models import ItemInfo, ItemModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.queries import TableQueryBuilder
 from pixano.features.schemas.schema_group import SchemaGroup
+from pixano.utils.python import to_sql_list
 
 from .utils import (
     assert_table_in_group,
@@ -69,9 +71,9 @@ async def get_items_info(
         group_name = dataset.schema.get_table_group(table_name).value
         if table_name == SchemaGroup.ITEM.value:
             continue
-        sql_ids = f"('{list(set_ids)[0]}')" if len(set_ids) == 1 else str(tuple(set_ids))
+        sql_ids = to_sql_list(set_ids)
         df: pd.DataFrame = (
-            table.search().select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").limit(None).to_pandas()
+            TableQueryBuilder(table).select(["item_ref.id"]).where(f"item_ref.id in {sql_ids}").build().to_pandas()
         )
         for id, count in df["item_ref.id"].value_counts().to_dict().items():
             infos[id][group_name][table_name] = {"count": count}

@@ -7,6 +7,7 @@
 import os
 import re
 from pathlib import Path
+from typing import Sequence
 
 
 def natural_key(string: str) -> list:
@@ -91,3 +92,26 @@ def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> typ
                 break
 
     return sup_type
+
+
+def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
+    """Convert a list of IDs to a SQL-friendly string.
+
+    Args:
+        ids: List of IDs.
+
+    Returns:
+        SQL-friendly string of IDs.
+    """
+    if isinstance(ids, str):
+        return f"('{ids}')"
+    elif len(ids) == 0:
+        raise ValueError("IDs must not be empty.")
+    else:
+        for id in ids:
+            if not isinstance(id, str):
+                raise ValueError("IDs must be strings.")
+    ids = set(ids)
+    if len(ids) == 1:
+        return f"('{ids.pop()}')"
+    return str(tuple(ids))

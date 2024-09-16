@@ -8,6 +8,8 @@ from lancedb.db import LanceTable
 from lancedb.query import LanceQueryBuilder
 from typing_extensions import Self
 
+from pixano.utils.python import to_sql_list
+
 
 class TableQueryBuilder:
     """Builder for LanceQueryBuilder that handles offset and order_by."""
@@ -18,13 +20,14 @@ class TableQueryBuilder:
         Args:
             table: The LanceTable to query.
         """
-        self.table = table
+        self.table: LanceTable = table
         self._columns: list[str] | dict[str, str] | None = None
         self._where: str | None = None
         self._prefilter: bool = False
         self._limit: int | None = None
         self._offset: int | None = None
         self._order_by: list[str] = []
+        self._descending: bool = False
 
     def select(self, columns: list[str] | dict[str, str]) -> Self:
         """Selects columns to include in the query."""
@@ -56,13 +59,19 @@ class TableQueryBuilder:
         self._offset = offset
         return self
 
-    def order_by(self, order_by: str | list[str]) -> Self:
-        """Sets the order_by clause for the query."""
+    def order_by(self, order_by: str | list[str], descending: bool = False) -> Self:
+        """Sets the order_by clause for the query.
+
+        Args:
+            order_by: The column(s) to sort by.
+            descending: Whether to sort in descending order.
+        """
         if isinstance(order_by, str):
             order_by = [order_by]
         elif not isinstance(order_by, list) or not all(isinstance(x, str) for x in order_by):
             raise ValueError("order_by must be a string or a list of strings")
         self._order_by = order_by
+        self._descending = descending
         return self
 
     def build(self) -> LanceQueryBuilder:
@@ -78,13 +87,13 @@ class TableQueryBuilder:
             select_order = ["id"] + (self._order_by or [])
             ordered_rows = self.table.search().select(select_order).where(self._where, self._prefilter).to_list()
             if self._order_by is not None:
-                ordered_rows.sort(key=lambda x: tuple(x.get(col) for col in self._order_by))
+                ordered_rows.sort(key=lambda x: tuple(x.get(col) for col in self._order_by), reverse=self._descending)
             if self._offset is not None:
                 ordered_rows = ordered_rows[self._offset :]
                 if self._limit is not None:
                     ordered_rows = ordered_rows[: self._limit]
             ordered_ids = [row["id"] for row in ordered_rows]
-            sql_ids = f"('{ordered_ids[0]}')" if len(ordered_ids) == 1 else str(tuple(ordered_ids))
+            sql_ids = to_sql_list(ordered_ids)
             self._where = f"id in {sql_ids}"
 
         query: LanceQueryBuilder = self.table.search()
@@ -92,6 +101,5 @@ class TableQueryBuilder:
             query = query.select(self._columns)
         if self._where is not None:
             query = query.where(self._where, self._prefilter)
-        if self._limit is not None:
-            query = query.limit(self._limit)
+        query = query.limit(self._limit)  # Pass None to remove the limit
         return query
