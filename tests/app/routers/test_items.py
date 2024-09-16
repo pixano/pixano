@@ -87,6 +87,12 @@ def test_get_items_error(
     assert response.status_code == 404
     assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/item."}
 
+    # Offset reached limit
+    url = "/items/dataset_multi_view_tracking_and_image/?limit=10&skip=50"
+    response = client.get(url)
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Invalid query parameters. No results found at this offset"}
+
 
 def test_get_item(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
     app, settings = app_and_settings

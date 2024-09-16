@@ -9,7 +9,7 @@ from pydantic import ConfigDict
 from .items import ItemModel
 
 
-class ItemInfo(ItemModel):
+class ItemInfoModel(ItemModel):
     """Item info."""
 
     model_config = ConfigDict(

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models.items import ItemModel
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets.dataset import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils import DatasetAccessError, DatasetOffsetLimitError, DatasetPaginationError
 from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
@@ -52,6 +52,8 @@ async def get_items(
     assert_table_in_group(dataset, table, SchemaGroup.ITEM)
     try:
         item_rows = get_rows(dataset, table, ids, None, limit, skip)
+    except DatasetOffsetLimitError as err:
+        raise HTTPException(status_code=404, detail="Invalid query parameters. " + str(err))
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except DatasetAccessError as err:
