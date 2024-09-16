@@ -13,35 +13,11 @@ from fastapi.testclient import TestClient
 from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.models.item_info import ItemInfoModel
 from pixano.app.models.items import ItemModel
-from pixano.app.routers.utils import get_model_from_row, get_models_from_rows
+from pixano.app.models.table_info import TableInfo
 from pixano.app.settings import Settings
 from pixano.datasets.dataset import Dataset
-from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
-
-
-def DatasetItem_to_ItemInfo(dataset_item: DatasetItemModel) -> ItemInfoModel:
-    src_obj = dataset_item.model_dump()
-    item = src_obj.pop("item", None)
-    src_obj.pop("split", None)
-    target_obj = dict(src_obj)
-    target_obj.update(item)
-
-    info_dict = {}
-    for schema_group in _SCHEMA_GROUP_TO_SCHEMA_DICT.keys():
-        if schema_group.value in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
-            continue
-        info_dict[schema_group.value] = {}
-        target_obj.pop(schema_group.value, None)
-
-    for schema_group in _SCHEMA_GROUP_TO_SCHEMA_DICT.keys():
-        if schema_group.value in [SchemaGroup.EMBEDDING.value, SchemaGroup.ITEM.value]:
-            continue
-        for schema_name, objects in dataset_item.model_dump()[schema_group.value].items():
-            objects = objects if isinstance(objects, list) else [objects]
-            info_dict[schema_group.value][schema_name] = {"count": len(objects)}
-
-    target_obj.update({"info": info_dict})
-    return ItemInfoModel(**target_obj)
+from pixano.features.schemas.items.item import Item
+from pixano.features.schemas.schema_group import SchemaGroup
 
 
 @pytest.mark.parametrize(
@@ -70,23 +46,39 @@ def test_get_items_info(
     if skip is not None:
         url += "&skip=" + str(skip)
 
-    intermediate_output: list[DatasetItemModel] = DatasetItemModel.from_dataset_items(
-        dataset_multi_view_tracking_and_image.get_dataset_items(ids, limit, skip if skip is not None else 0),
-        dataset_multi_view_tracking_and_image.schema,
+    dataset_items = dataset_multi_view_tracking_and_image.get_dataset_items(
+        ids, limit, skip if skip is not None else 0
     )
-
-    expected_output: list[ItemInfoModel] = []
-    for datasetItem in intermediate_output:
-        itemInfo = DatasetItem_to_ItemInfo(datasetItem)
-        expected_output.append(itemInfo)
+    schemas_data = [
+        dataset_item.to_schemas_data(dataset_multi_view_tracking_and_image.schema) for dataset_item in dataset_items
+    ]
+    expected_output = []
+    for schema_data in schemas_data:
+        item_data = schema_data.pop("item", None)
+        item_model = ItemModel.from_row(
+            item_data, TableInfo(name="item", group=SchemaGroup.ITEM.value, base_schema=Item.__name__)
+        )
+        info_dict = {
+            group.value: {
+                table: {
+                    "count": (len(schema_data[table]) if isinstance(schema_data[table], list) else 1)
+                    if table in schema_data and schema_data[table] is not None
+                    else 0
+                }
+                for table in tables
+            }
+            for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items()
+            if group not in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]
+        }
+        expected_output.append(ItemInfoModel(info=info_dict, **item_model.model_dump()))
 
     client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 200
     for model_json in response.json():
         model = ItemInfoModel.model_validate(model_json)
-
         assert model in expected_output
+
     assert len(response.json()) == len(expected_output)
 
 
@@ -123,21 +115,34 @@ def test_get_items_error(
 def test_get_item_info(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
     app, settings = app_and_settings
 
-    intermediate_output = DatasetItemModel.from_dataset_items(
-        dataset_multi_view_tracking_and_image.get_dataset_items(ids=["0"], limit=None, skip=0),
-        dataset_multi_view_tracking_and_image.schema,
+    dataset_item = dataset_multi_view_tracking_and_image.get_dataset_items("0", None, 0)
+    assert dataset_item is not None
+
+    schemas_data = dataset_item.to_schemas_data(dataset_multi_view_tracking_and_image.schema)
+    item_data = schemas_data.pop("item", None)
+    item_model = ItemModel.from_row(
+        item_data, TableInfo(name="item", group=SchemaGroup.ITEM.value, base_schema=Item.__name__)
     )
-    expected_output: list[ItemInfoModel] = []
-    for datasetItem in intermediate_output:
-        itemInfo = DatasetItem_to_ItemInfo(datasetItem)
-        expected_output.append(itemInfo)
+    info_dict = {
+        group.value: {
+            table: {
+                "count": (len(schemas_data[table]) if isinstance(schemas_data[table], list) else 1)
+                if table in schemas_data and schemas_data[table] is not None
+                else 0
+            }
+            for table in tables
+        }
+        for group, tables in dataset_multi_view_tracking_and_image.schema.groups.items()
+        if group not in [SchemaGroup.ITEM, SchemaGroup.EMBEDDING]
+    }
+    expected_output = ItemInfoModel(info=info_dict, **item_model.model_dump())
 
     client = TestClient(app)
     response = client.get("/items_info/dataset_multi_view_tracking_and_image/0")
     assert response.status_code == 200
     model = ItemInfoModel.model_validate(response.json())
 
-    assert model == expected_output[0]
+    assert model == expected_output
 
 
 def test_get_item_info_error(app_and_settings: tuple[FastAPI, Settings]):
