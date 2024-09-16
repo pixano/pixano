@@ -11,7 +11,8 @@ from typing_extensions import TypeVar
 
 from pixano.app.models import AnnotationModel, BaseSchemaModel, EmbeddingModel, EntityModel, ItemModel, ViewModel
 from pixano.app.models.table_info import TableInfo
-from pixano.datasets import Dataset, DatasetAccessError, DatasetPaginationError
+from pixano.datasets import Dataset
+from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.utils import get_super_type_from_dict

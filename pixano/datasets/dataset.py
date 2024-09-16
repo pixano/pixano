@@ -18,6 +18,7 @@ from lancedb.table import LanceTable
 from pydantic import ConfigDict
 
 from pixano.datasets.queries import TableQueryBuilder
+from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
 from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
 from pixano.utils.python import to_sql_list
 
@@ -42,24 +43,6 @@ if TYPE_CHECKING:
         View,
         ViewRef,
     )
-
-
-class DatasetPaginationError(ValueError):
-    """Error raised when paginating a dataset."""
-
-    pass
-
-
-class DatasetAccessError(ValueError):
-    """Error raised when accessing a dataset."""
-
-    pass
-
-
-class DatasetWriteError(ValueError):
-    """Error raised when writing to a dataset."""
-
-    pass
 
 
 def _validate_ids_and_limit_and_skip(ids: list[str] | None, limit: int | None, skip: int = 0) -> None:

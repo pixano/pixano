@@ -10,7 +10,7 @@ from typing_extensions import Self
 
 from pixano.utils.python import to_sql_list
 
-from .dataset import DatasetPaginationError
+from .utils import DatasetPaginationError
 
 
 class TableQueryBuilder:

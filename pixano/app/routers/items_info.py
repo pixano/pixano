@@ -11,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from pixano.app.models import ItemInfo, ItemModel
 from pixano.app.settings import Settings, get_settings
-from pixano.datasets import DatasetAccessError, DatasetPaginationError
 from pixano.datasets.queries import TableQueryBuilder
+from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
 from pixano.features.schemas.schema_group import SchemaGroup
 from pixano.utils.python import to_sql_list
 

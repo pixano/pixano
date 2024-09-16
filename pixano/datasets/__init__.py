@@ -4,7 +4,7 @@
 # License: CECILL-C
 # =====================================
 
-from .dataset import Dataset, DatasetAccessError, DatasetPaginationError, DatasetWriteError
+from .dataset import Dataset
 from .dataset_features_values import DatasetFeaturesValues
 from .dataset_info import DatasetInfo
 from .dataset_schema import DatasetItem, DatasetSchema
@@ -14,9 +14,6 @@ from .queries import TableQueryBuilder
 
 __all__ = [
     "Dataset",
-    "DatasetPaginationError",
-    "DatasetAccessError",
-    "DatasetWriteError",
     "DatasetFeaturesValues",
     "DatasetInfo",
     "DatasetItem",

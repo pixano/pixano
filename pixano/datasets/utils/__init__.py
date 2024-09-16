@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from .errors import DatasetAccessError, DatasetPaginationError, DatasetWriteError
 from .image import (
     image_to_thumbnail,
 )
@@ -18,6 +19,9 @@ from .video import create_video_preview
 
 
 __all__ = [
+    "DatasetAccessError",
+    "DatasetPaginationError",
+    "DatasetWriteError",
     "create_video_preview",
     "coco_ids_80to91",
     "coco_names_80",
