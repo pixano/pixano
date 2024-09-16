@@ -59,6 +59,10 @@ def test_get_rows(
     assert response.status_code == 404
     assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/bbox_image."}
 
+    response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=10&skip=200")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Invalid query parameters. No results found at this offset"}
+
 
 def test_get_model_from_row(
     two_difficult_bboxes_from_dataset_multiview_tracking_and_image,
