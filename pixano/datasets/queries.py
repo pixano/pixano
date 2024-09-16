@@ -30,34 +30,63 @@ class TableQueryBuilder:
         self._offset: int | None = None
         self._order_by: list[str] = []
         self._descending: bool = False
+        self._function_called: dict[str, bool] = {
+            "select": False,
+            "where": False,
+            "limit": False,
+            "offset": False,
+            "order_by": False,
+            "build": False,
+        }
+
+    def _check_called(self, fn_name: str):
+        if self._function_called[fn_name]:
+            raise ValueError(f"{fn_name}() can only be called once.")
+        elif self._function_called["build"]:
+            raise ValueError("build() has already been called.")
+        self._function_called[fn_name] = True
 
     def select(self, columns: list[str] | dict[str, str]) -> Self:
         """Selects columns to include in the query."""
+        self._check_called("select")
         if isinstance(columns, list) or isinstance(columns, dict):
+            if isinstance(columns, list) and not all(isinstance(x, str) for x in columns):
+                raise ValueError("columns must be a list of strings.")
+            elif isinstance(columns, dict) and not all(
+                isinstance(k, str) and isinstance(v, str) for k, v in columns.items()
+            ):
+                raise ValueError("columns must be a dictionary with string keys and values.")
             self._columns = columns
         else:
-            raise ValueError("columns must be a list or a dictionary")
+            raise ValueError("columns must be a list or a dictionary.")
         return self
 
     def where(self, where: str, prefilter: bool = False) -> Self:
         """Sets the where clause for the query."""
+        self._check_called("where")
+        if not isinstance(where, str):
+            raise ValueError("where must be a string.")
+        elif not isinstance(prefilter, bool):
+            raise ValueError("prefilter must be a boolean.")
         self._where = where
         self._prefilter = prefilter
         return self
 
     def limit(self, limit: int | None) -> Self:
         """Sets the limit for the query."""
+        self._check_called("limit")
         if limit is not None:
             if not isinstance(limit, int) or limit < 0:
-                raise ValueError("limit must be None or a positive integer")
+                raise ValueError("limit must be None or a positive integer.")
         self._limit = limit
         return self
 
     def offset(self, offset: int | None) -> Self:
         """Sets the offset for the query."""
+        self._check_called("offset")
         if offset is not None:
             if not isinstance(offset, int) or offset < 0:
-                raise ValueError("offset must be None or a positive integer")
+                raise ValueError("offset must be None or a positive integer.")
         self._offset = offset
         return self
 
@@ -68,6 +97,7 @@ class TableQueryBuilder:
             order_by: The column(s) to sort by.
             descending: Whether to sort in descending order.
         """
+        self._check_called("order_by")
         if isinstance(order_by, str):
             order_by = [order_by]
         elif not isinstance(order_by, list) or not all(isinstance(x, str) for x in order_by):
@@ -84,6 +114,9 @@ class TableQueryBuilder:
         Returns:
             The LanceQueryBuilder instance.
         """
+        self._check_called("build")
+        if all(not self._function_called[fn_name] for fn_name in self._function_called):
+            raise ValueError("At least one of select(), where(), limit(), offset(), or order_by() must be called.")
         has_order_by_or_offset = self._order_by != [] or self._offset not in [None, 0]
         if has_order_by_or_offset:
             select_order = ["id"] + (self._order_by or [])
