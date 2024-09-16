@@ -670,9 +670,7 @@ class TestDataset:
         new_item = item.model_copy()
 
         data = [new_item, "0"]
-        with pytest.raises(
-            ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
-        ):
+        with pytest.raises(ValueError, match=r"All data must be instances of the table type <class '[\w|\.]+\.Item'>"):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
         data = [new_item]
@@ -779,9 +777,7 @@ class TestDataset:
             dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
 
         data = [updated_item, "0"]
-        with pytest.raises(
-            ValueError, match="All data must be instances of the table type <class 'pydantic.main.Item'>"
-        ):
+        with pytest.raises(ValueError, match=r"All data must be instances of the table type <class '[\w|\.]+\.Item'>"):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
     def test_update_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
