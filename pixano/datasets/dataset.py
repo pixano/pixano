@@ -580,10 +580,7 @@ class Dataset:
         Args:
             ids: Ids to delete.
         """
-        print(ids, type(ids))
         sql_ids = to_sql_list(ids)
-        print(sql_ids)
-        print("yo")
 
         ids_not_found = []
         for table_name in self.schema.schemas.keys():
@@ -602,7 +599,6 @@ class Dataset:
                 if table_ids == []:
                     continue
                 table_sql_ids = to_sql_list(table_ids)
-                print(table_sql_ids)
                 table.delete(where=f"id in {table_sql_ids}")
         return ids_not_found
 

@@ -236,13 +236,6 @@ class TestDataset:
             assert d.dataset == dataset_image_bboxes_keypoint
             assert d.table_name == table_name
 
-    # def test_get_data_item_ids_and_skip_limit(self, dataset_multi_view_tracking_and_image: Dataset):
-    #     data = dataset_multi_view_tracking_and_image.get_data(
-    #         table_name="bboxes_video", ids=None, limit=3, skip=1, item_ids=['2']
-    #     )
-    #     print("SZSZ", [d.model_dump() for d in data])
-    #     assert False
-
     @pytest.mark.parametrize(
         "table_name,type,ids,item_ids,limit,skip,expected_output",
         [
