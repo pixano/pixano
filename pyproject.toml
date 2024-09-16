@@ -50,6 +50,7 @@ dependencies = [
   "shortuuid ~= 1.0.0",
   "tqdm ~= 4.64.0",
   "uvicorn ~= 0.20.0",
+  "polars < 1.8.0"
 ]
 
 [project.optional-dependencies]
