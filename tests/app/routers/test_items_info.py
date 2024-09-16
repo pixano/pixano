@@ -4,13 +4,10 @@
 # License: CECILL-C
 # =====================================
 
-from pathlib import Path
-
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from pixano.app.models.dataset_items import DatasetItemModel
 from pixano.app.models.item_info import ItemInfoModel
 from pixano.app.models.items import ItemModel
 from pixano.app.models.table_info import TableInfo
