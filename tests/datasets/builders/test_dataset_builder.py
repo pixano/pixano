@@ -20,19 +20,16 @@ from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKe
 
 class TestDatasetBuilder:
     @pytest.mark.parametrize(
-        "source_dir, target_dir",
+        "target_dir",
         [
-            (tempfile.gettempdir(), tempfile.gettempdir()),
-            (tempfile.gettempdir(), Path(tempfile.gettempdir())),
+            (tempfile.gettempdir()),
+            (Path(tempfile.gettempdir())),
         ],
     )
-    def test_init(
-        self, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, source_dir, target_dir
-    ):
+    def test_init(self, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint, target_dir):
         builder = DatasetBuilderImageBboxesKeypoint(
-            5, source_dir, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
+            5, target_dir, dataset_item_image_bboxes_keypoint, info_dataset_image_bboxes_keypoint
         )
-        assert builder.source_dir == Path(source_dir)
         assert builder.target_dir == Path(target_dir)
         assert builder.previews_path == Path(target_dir) / Dataset._PREVIEWS_PATH
         assert builder.info == info_dataset_image_bboxes_keypoint
@@ -143,11 +140,9 @@ class TestDatasetBuilder:
                 yield {"wrong_schema": self.item_schema(id="id", metadata="metadata", split="train")}
 
         with pytest.raises(ValueError, match="ids should not contain spaces"):
-            WrongIdBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
-            ).build()
+            WrongIdBuilder(tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")).build()
 
         with pytest.raises(KeyError, match="Table wrong_schema not found in tables"):
             WrongSchemaNameBuilder(
-                tempfile.mkdtemp(), tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
+                tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()

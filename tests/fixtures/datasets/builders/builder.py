@@ -310,7 +310,6 @@ def dataset_builder_image_bboxes_keypoint(
     return DatasetBuilderImageBboxesKeypoint(
         num_rows,
         tempfile.mkdtemp(),
-        tempfile.mkdtemp(),
         dataset_item_image_bboxes_keypoint,
         info_dataset_image_bboxes_keypoint,
     )
@@ -324,7 +323,6 @@ def dataset_builder_multi_view_tracking_and_image(
 ):
     return DatasetBuilderMultiViewTrackingAndImage(
         num_rows,
-        tempfile.mkdtemp(),
         tempfile.mkdtemp(),
         dataset_item_multi_view_tracking_and_image,
         info_dataset_multi_view_tracking_and_image,

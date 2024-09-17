@@ -5,12 +5,10 @@
 # =====================================
 
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import timedelta
 from pathlib import Path
 from typing import Iterator, Literal
 
-import duckdb
 import lancedb
 import shortuuid
 import tqdm
@@ -18,10 +16,6 @@ from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
 from pixano.features import BaseSchema, Item, SchemaGroup
-from pixano.features.schemas.views import image as image_schema
-from pixano.features.schemas.views import sequence_frame as sequence_frame_schema
-
-from ..utils import video as video_utils
 
 
 class DatasetBuilder(ABC):
@@ -32,7 +26,6 @@ class DatasetBuilder(ABC):
 
     Attributes:
         target_dir: The target directory for the dataset.
-        source_dir: The source directory for the dataset.
         previews_path: The path to the previews directory.
         info: Dataset informations (name, description, ...).
         dataset_schema: The dataset schema for the dataset.
@@ -42,7 +35,6 @@ class DatasetBuilder(ABC):
 
     def __init__(
         self,
-        source_dir: Path | str,
         target_dir: Path | str,
         schemas: type[DatasetItem],
         info: DatasetInfo,
@@ -50,14 +42,12 @@ class DatasetBuilder(ABC):
         """Initialize the BaseDatasetBuilder instance.
 
         Args:
-            source_dir: The source directory for the dataset.
             target_dir: The target directory for the dataset.
             schemas: The schemas for the dataset tables.
             info: Dataset informations (name, description, ...)
                 for the dataset.
         """
         self.target_dir: Path = Path(target_dir)
-        self.source_dir: Path = Path(source_dir)
         self.previews_path: Path = self.target_dir / Dataset._PREVIEWS_PATH
 
         self.info: DatasetInfo = info
@@ -191,19 +181,6 @@ class DatasetBuilder(ABC):
         """
         raise NotImplementedError
 
-    def generate_media_previews(self, **kwargs) -> None:
-        """Generate media previews for the dataset."""
-        for table_name, schema in self.schemas.items():
-            print(f"Will generate previews for {table_name}")
-            if image_schema.is_image(schema):
-                self.generate_image_previews(table_name)
-            elif sequence_frame_schema.is_sequence_frame(schema):
-                fps = kwargs.get("fps", 25)
-                scale = kwargs.get("scale", 0.5)
-                self.generate_sequence_frame_previews(table_name, fps, scale)
-            else:
-                continue
-
     def create_tables(
         self,
         mode: Literal["create", "overwrite"] = "create",
@@ -232,49 +209,3 @@ class DatasetBuilder(ABC):
             tables[key] = self.db.open_table(key)
 
         return tables
-
-    def generate_image_previews(self, table_name: str) -> None:
-        """Generate image previews for the dataset."""
-        pass
-
-    def generate_sequence_frame_previews(self, table_name: str, fps: int, scale: float):
-        """Generate video (sequence frames) previews for the dataset."""
-        sequence_table = self.db.open_table(table_name).to_lance()  # noqa: F841
-
-        frames = (
-            duckdb.query(
-                "SELECT sequence_id, LIST(url) as url, LIST(timestamp) as timestamp "
-                "FROM sequence_table GROUP BY sequence_id"
-            )
-            .to_df()
-            .to_dict(orient="records")
-        )
-
-        # store previews in the previews directory
-        # {previews_path}/{table_name}/{item_id}.mp4
-        previews_path = self.previews_path / table_name
-        if not previews_path.exists():
-            previews_path.mkdir(parents=True)
-
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = []
-            for seq in frames:
-                sorted_frames = sorted(zip(seq["url"], seq["timestamp"]), key=lambda x: x[1])
-                im_urls = [self.source_dir / url for url, _ in sorted_frames]
-                output_path = previews_path / f"{seq['sequence_id']}.mp4"
-                futures.append(
-                    executor.submit(
-                        video_utils.create_video_preview,
-                        output_path,
-                        im_urls,
-                        fps=fps,
-                        scale=scale,
-                    )
-                )
-
-            for _ in tqdm.tqdm(
-                as_completed(futures),
-                total=len(futures),
-                desc=f"Generate previews for {table_name}",
-            ):
-                pass

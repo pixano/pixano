@@ -61,6 +61,7 @@ class FolderBaseBuilder(DatasetBuilder):
         Only one view is supported in folder builders.
 
     Attributes:
+        source_dir: The source directory for the dataset.
         view_name: The name of the view schema.
         view_schema: The schema of the view.
         entity_name: The name of the entities schema.
@@ -83,7 +84,9 @@ class FolderBaseBuilder(DatasetBuilder):
             schemas: The schemas for the dataset tables.
             info: User informations (name, description, ...) for the dataset.
         """
-        super().__init__(source_dir, target_dir, schemas, info)
+        super().__init__(target_dir, schemas, info)
+        self.source_dir = Path(source_dir)
+
         view_name = None
         entity_name = None
         for k, s in self.schemas.items():

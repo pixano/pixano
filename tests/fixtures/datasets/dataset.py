@@ -33,7 +33,6 @@ def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset
     schemas = dataset_item_image_bboxes_keypoint
     dataset_builder_image_bboxes_keypoint = DatasetBuilderImageBboxesKeypoint(
         info=info_dataset_image_bboxes_keypoint,
-        source_dir=LIBRARY_DIR,
         target_dir=LIBRARY_DIR / "dataset_image_bboxes_keypoint",
         schemas=schemas,
     )
@@ -54,7 +53,6 @@ def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_i
 
     dataset_builder_multi_view_tracking_and_image = DatasetBuilderMultiViewTrackingAndImage(
         info=info,
-        source_dir=LIBRARY_DIR,
         target_dir=LIBRARY_DIR / "dataset_multi_view_tracking_and_image",
         schemas=schemas,
     )
