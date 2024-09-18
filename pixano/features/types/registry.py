@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 from .base_type import BaseType
 
 
@@ -18,8 +20,8 @@ _ATOMIC_PYTHON_TYPES: list[type] = [
     memoryview,
 ]
 
-_TYPES_REGISTRY: dict[str, type] = {"BaseType": BaseType}
-_PIXANO_TYPES_REGISTRY: dict[str, type[BaseType]] = {"BaseType": BaseType}
+_TYPES_REGISTRY: dict[str, type] = {"BaseType": BaseType, "datetime": datetime}
+_PIXANO_TYPES_REGISTRY: dict[str, type[BaseType]] = _TYPES_REGISTRY.copy()
 
 
 def _add_type_to_registry(cls, registry: dict[str, type[BaseType]]) -> None:
