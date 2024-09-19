@@ -4,15 +4,14 @@
 # License: CECILL-C
 # =====================================
 
-from pathlib import Path
+from unittest.mock import patch
 
-import pytest
+import polars as pl
 from fastapi.applications import FastAPI
 from fastapi.testclient import TestClient
 
 from pixano.app.models.datasets import DatasetBrowser
 from pixano.app.settings import Settings
-from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 
 
@@ -33,13 +32,43 @@ def test_get_browser(
 
     client = TestClient(app)
     for info, output in zip(infos, outputs):
-        response = client.get(f"/browser/{info.id}")
+        response = client.get(f"/browser/{info.id}?limit=50&skip=0")
         assert response.status_code == 200
         browser = DatasetBrowser.model_validate(response.json())
         # generated dataset doesn't have consistent fields order, so we sort both before comparison
         browser.table_data.columns.sort(key=lambda x: x.name)
         output.table_data.columns.sort(key=lambda x: x.name)
         assert browser == output
+
+    response = client.get("/browser/wrong_dataset")
+    assert response.status_code == 404
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+
+
+def test_get_browser_semantic_search(
+    app_and_settings: tuple[FastAPI, Settings],
+    info_dataset_multi_view_tracking_and_image: DatasetInfo,
+    df_semantic_search: pl.DataFrame,
+    browser_dataset_multi_view_tracking_and_image_semantic_search: DatasetBrowser,
+):
+    app, settings = app_and_settings
+
+    info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
+
+    def _mock_to_polars(self):
+        return df_semantic_search
+
+    client = TestClient(app)
+    with patch("lancedb.query.LanceQueryBuilder.to_polars", _mock_to_polars):
+        response = client.get(
+            f"/browser/{info_dataset_multi_view_tracking_and_image.id}?limit=50&skip=0&query=metadata_0&table=image_embedding"
+        )
+    assert response.status_code == 200
+    browser = DatasetBrowser.model_validate(response.json())
+    # generated dataset doesn't have consistent fields order, so we sort both before comparison
+    browser.table_data.columns.sort(key=lambda x: x.name)
+    browser_dataset_multi_view_tracking_and_image_semantic_search.table_data.columns.sort(key=lambda x: x.name)
+    assert browser == browser_dataset_multi_view_tracking_and_image_semantic_search
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404

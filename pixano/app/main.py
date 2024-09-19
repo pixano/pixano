@@ -7,7 +7,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi_pagination.api import add_pagination
 from s3path import S3Path
 
 from pixano.app.routers.annotations import router as annotations_router
@@ -77,5 +76,4 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(items_info_router)
     app.include_router(views_router)
 
-    add_pagination(app)
     return app

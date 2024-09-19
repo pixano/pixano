@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+import polars as pl
 import pytest
 
 from pixano.app.models.datasets import DatasetBrowser, PaginationColumn, PaginationInfo, TableData
@@ -30,7 +31,7 @@ def browser_dataset_image_bboxes_keypoint() -> DatasetBrowser:
             ],
         ),
         pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
-        semantic_search=["CLIP", "BLIP2"],
+        semantic_search=[],
     )
 
 
@@ -85,5 +86,77 @@ def browser_dataset_multi_view_tracking_and_image() -> DatasetBrowser:
             ],
         ),
         pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
-        semantic_search=["CLIP", "BLIP2"],
+        semantic_search=["image_embedding", "video_embeddings"],
+    )
+
+
+@pytest.fixture(scope="session")
+def df_semantic_search():
+    return pl.DataFrame({"item_ref.id": ["0", "1", "2", "3", "4"], "_distance": [0.5, 0.4, 0.1, 0.2, 0.3]})
+
+
+@pytest.fixture(scope="session")
+def browser_dataset_multi_view_tracking_and_image_semantic_search() -> DatasetBrowser:
+    return DatasetBrowser(
+        id="dataset_multi_view_tracking_and_image",
+        name="dataset_multi_view_tracking_and_image",
+        table_data=TableData(
+            columns=[
+                PaginationColumn(name="video", type="image"),
+                PaginationColumn(name="image", type="image"),
+                PaginationColumn(name="id", type="str"),
+                PaginationColumn(name="split", type="str"),
+                PaginationColumn(name="categories", type="list"),
+                PaginationColumn(name="other_categories", type="list"),
+                PaginationColumn(name="distance", type="float"),
+            ],
+            rows=[
+                {
+                    "video": "",
+                    "image": "",
+                    "id": "2",
+                    "split": "train",
+                    "categories": ["dog"],
+                    "other_categories": [3],
+                    "distance": 0.1,
+                },
+                {
+                    "video": "",
+                    "id": "3",
+                    "split": "test",
+                    "categories": ["car"],
+                    "other_categories": [4],
+                    "distance": 0.2,
+                },
+                {
+                    "video": "",
+                    "image": "",
+                    "id": "4",
+                    "split": "test",
+                    "categories": ["person"],
+                    "other_categories": [1],
+                    "distance": 0.3,
+                },
+                {
+                    "video": "",
+                    "image": "",
+                    "id": "1",
+                    "split": "train",
+                    "categories": ["cat"],
+                    "other_categories": [2],
+                    "distance": 0.4,
+                },
+                {
+                    "video": "",
+                    "image": "",
+                    "id": "0",
+                    "split": "train",
+                    "categories": ["person"],
+                    "other_categories": [1],
+                    "distance": 0.5,
+                },
+            ],
+        ),
+        pagination=PaginationInfo(current_page=0, page_size=50, total_size=5),
+        semantic_search=["image_embedding", "video_embeddings"],
     )
