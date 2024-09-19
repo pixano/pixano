@@ -46,14 +46,14 @@ async def get_browser(
 
     semantic_search = False
     if query != "" or table != "":
-        if not query != "" and table != "":
+        if query == "" or table == "":
             raise HTTPException(
                 status_code=400,
                 detail="Both query and model_name should be provided for semantic search.",
             )
     if table != "":
         semantic_search = True
-        if table not in dataset.schema.groups[SchemaGroup.EMBEDDING]:
+        if table not in dataset.schema.schemas:
             raise HTTPException(
                 status_code=400,
                 detail=f"Table {table} not found in dataset {id}.",
