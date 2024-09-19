@@ -76,7 +76,9 @@ async def get_browser(
 
     # get data (items and views)
     if semantic_search:
-        semantic_results: pl.DataFrame = embedding_table.search(query).select(["item_ref.id"]).to_polars()
+        semantic_results: pl.DataFrame = (
+            embedding_table.search(query).select(["item_ref.id"]).limit(1e9).to_polars()
+        )  # TODO: change high limit if lancedb supports it
         item_results = semantic_results.group_by("item_ref.id").agg(pl.min("_distance")).sort("_distance")
         item_ids = item_results["item_ref.id"].to_list()[skip : skip + limit]
 
