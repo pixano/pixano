@@ -8,6 +8,8 @@ from tests.fixtures.app.app import app_and_settings, app_and_settings_with_copy,
 from tests.fixtures.app.routers.browser import (
     browser_dataset_image_bboxes_keypoint,
     browser_dataset_multi_view_tracking_and_image,
+    browser_dataset_multi_view_tracking_and_image_semantic_search,
+    df_semantic_search,
 )
 from tests.fixtures.app.routers.models.annotations import (
     two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,

@@ -6,7 +6,6 @@
 
 from unittest.mock import patch
 
-import lancedb
 import pyarrow as pa
 from lancedb.embeddings import EmbeddingFunction
 from lancedb.embeddings.registry import get_registry
