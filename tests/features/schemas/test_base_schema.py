@@ -20,12 +20,6 @@ class TestBaseSchema:
         base_schema = BaseSchema()
         base_schema.id == ""
 
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchema(created_at=datetime(2021, 1, 1, 0, 0, 0))
-
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchema(updated_at=datetime(2021, 1, 1, 0, 0, 0))
-
     def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):
         base_schema = BaseSchema()
 

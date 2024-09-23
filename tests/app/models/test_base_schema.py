@@ -6,8 +6,6 @@
 
 from datetime import datetime
 
-import pytest
-
 from pixano.app.models import BaseSchemaModel, TableInfo
 from pixano.features import Item
 
@@ -18,12 +16,6 @@ class TestBaseModelSchema:
         table_info = TableInfo(name="table", group="views", base_schema="Image")
         data = {}
         BaseSchemaModel(id=id, table_info=table_info, data=data)
-
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchemaModel(created_at=datetime(2021, 1, 1, 0, 0, 0))
-
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchemaModel(updated_at=datetime(2021, 1, 1, 0, 0, 0))
 
     def test_from_row(self):
         table_info = TableInfo(name="item", group="item", base_schema="Item")

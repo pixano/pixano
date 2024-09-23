@@ -48,6 +48,13 @@ def test_validate_and_init_create_at_and_update_at():
     assert new_created_at == created_at
     assert new_updated_at == updated_at
 
+    # Test when created_at and updated_at are provided as strings
+    created_at = (now - timedelta(days=2)).isoformat()
+    updated_at = (now - timedelta(days=1)).isoformat()
+    new_created_at, new_updated_at = validate_and_init_create_at_and_update_at(created_at, updated_at)
+    assert new_created_at == datetime.fromisoformat(created_at)
+    assert new_updated_at == datetime.fromisoformat(updated_at)
+
     # Test when updated_at is provided but created_at is None
     with pytest.raises(ValueError, match="created_at should be set if updated_at is set."):
         validate_and_init_create_at_and_update_at(None, now)
@@ -60,8 +67,8 @@ def test_validate_and_init_create_at_and_update_at():
 
     # Test when created_at is not a datetime object
     with pytest.raises(ValueError, match="created_at should be a datetime object or None."):
-        validate_and_init_create_at_and_update_at("not a datetime", None)
+        validate_and_init_create_at_and_update_at(1, None)
 
     # Test when updated_at is not a datetime object
     with pytest.raises(ValueError, match="updated_at should be a datetime object or None."):
-        validate_and_init_create_at_and_update_at(now, "not a datetime")
+        validate_and_init_create_at_and_update_at(now, 1)

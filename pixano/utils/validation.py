@@ -24,7 +24,7 @@ def issubclass_strict(obj: type, cls: type, strict: bool = False) -> bool:
 
 
 def validate_and_init_create_at_and_update_at(
-    created_at: datetime | None, updated_at: datetime | None
+    created_at: datetime | str | None, updated_at: datetime | str | None
 ) -> tuple[datetime, datetime]:
     """Validate and initialize created_at and updated_at.
 
@@ -33,6 +33,7 @@ def validate_and_init_create_at_and_update_at(
     - If updated_at is None, it is set to created_at.
     - If updated_at is not None and created_at is None, a ValueError is raised.
     - If updated_at is not None and created_at is not None, updated_at should be greater than created_at.
+    - If created_at and updated_at are provided as strings, they are converted to datetime objects from ISO format.
 
     Args:
         created_at: The creation date of the object.
@@ -42,9 +43,15 @@ def validate_and_init_create_at_and_update_at(
         A tuple containing the created_at and updated_at.
     """
     if created_at is not None and not isinstance(created_at, datetime):
-        raise ValueError("created_at should be a datetime object or None.")
-    elif updated_at is not None and not isinstance(updated_at, datetime):
-        raise ValueError("updated_at should be a datetime object or None.")
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+        else:
+            raise ValueError("created_at should be a datetime object or None.")
+    if updated_at is not None and not isinstance(updated_at, datetime):
+        if isinstance(updated_at, str):
+            updated_at = datetime.fromisoformat(updated_at)
+        else:
+            raise ValueError("updated_at should be a datetime object or None.")
     if updated_at is not None and created_at is None:
         raise ValueError("created_at should be set if updated_at is set.")
     elif created_at is not None:

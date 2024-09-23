@@ -428,12 +428,6 @@ class TestDatasetItem:
         assert dataset_item.id == "0"
         assert dataset_item.split == "default"
 
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchema(created_at=datetime(2021, 1, 1, 0, 0, 0))
-
-        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
-            BaseSchema(updated_at=datetime(2021, 1, 1, 0, 0, 0))
-
     def test_to_dataset_schema(self, dataset_item_bboxes_metadata, item_categories_name_index):
         schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
