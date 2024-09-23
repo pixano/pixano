@@ -10,7 +10,7 @@ from typing import Any
 
 from pydantic import field_validator
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from .base_schema import BaseSchema
 from .registry import _register_schema_internal

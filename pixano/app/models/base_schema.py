@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
 from pixano.features import BaseSchema
+from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
 from .table_info import TableInfo
 
@@ -48,11 +49,7 @@ class BaseSchemaModel(BaseModel, Generic[T]):
             updated_at: The last modification date of the object.
             data: The data of the object validated by Pydantic.
         """
-        if created_at is None or updated_at is None:
-            if updated_at is not None or created_at is not None:
-                raise ValueError("Both 'created_at' and 'updated_at' should be set.")
-            created_at = datetime.now()
-            updated_at = created_at
+        created_at, updated_at = validate_and_init_create_at_and_update_at(created_at, updated_at)
         data.update({"created_at": created_at, "updated_at": updated_at})
         super().__init__(**data)
 

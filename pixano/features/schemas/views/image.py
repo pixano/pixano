@@ -15,7 +15,7 @@ from urllib.request import urlopen
 import PIL
 from PIL import Image as PILImage
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal

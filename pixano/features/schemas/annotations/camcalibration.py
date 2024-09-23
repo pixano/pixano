@@ -7,7 +7,7 @@
 from pydantic import ConfigDict, model_validator
 from typing_extensions import Self
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types import BaseType
 from ...types.registry import _register_type_internal

@@ -7,7 +7,7 @@
 import numpy as np
 from pydantic import model_validator
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from .base_type import BaseType
 from .registry import _register_type_internal

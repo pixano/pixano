@@ -13,7 +13,7 @@ from pydantic import field_serializer, field_validator, model_validator
 from typing_extensions import Self
 
 from pixano.features.utils import image as image_utils
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal

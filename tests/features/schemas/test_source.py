@@ -9,6 +9,7 @@ import json
 import pytest
 
 from pixano.features import Source, is_source
+from pixano.features.schemas.source import create_source
 from tests.features.utils import make_tests_is_sublass_strict
 
 
@@ -34,3 +35,10 @@ class TestSource:
 
 def test_is_source():
     make_tests_is_sublass_strict(is_source, Source)
+
+
+def test_create_source():
+    source = Source(id="source_1", name="source", kind="human", metadata={"key": "value"})
+    assert source.model_dump(exclude_timestamps=True) == create_source(
+        id="source_1", name="source", kind="human", metadata=json.dumps({"key": "value"})
+    ).model_dump(exclude_timestamps=True)

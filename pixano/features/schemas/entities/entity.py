@@ -6,7 +6,7 @@
 
 from typing_extensions import TYPE_CHECKING
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..base_schema import BaseSchema

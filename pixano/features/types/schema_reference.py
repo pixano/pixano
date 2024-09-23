@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, Union
 
 from pydantic import ConfigDict, model_validator
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from . import BaseType
 from .registry import _register_type_internal
