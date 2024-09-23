@@ -54,49 +54,55 @@ from pixano.features.utils.creators import create_instance_of_pixano_type, creat
 
 def test_create_row_image():
     row = create_instance_of_schema(Image, url="image.jpg", width=100, height=100, format="jpg")
-    assert row == create_image(url="image.jpg", width=100, height=100, format="jpg")
+    assert row.model_dump(exclude_timestamps=True) == create_image(
+        url="image.jpg", width=100, height=100, format="jpg"
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_video():
     row = create_instance_of_schema(
         Video, url="video.mp4", width=100, height=100, format="mp4", duration=10, fps=30, num_frames=300
     )
-    assert row == create_video(
+    assert row.model_dump(exclude_timestamps=True) == create_video(
         url="video.mp4", width=100, height=100, format="mp4", duration=10, fps=30, num_frames=300
-    )
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_sequence_frame():
     row = create_instance_of_schema(
         SequenceFrame, url="frame.jpg", width=100, height=100, format="jpg", frame_index=0, timestamp=0.0
     )
-    assert row == create_sequence_frame(
+    assert row.model_dump(exclude_timestamps=True) == create_sequence_frame(
         url="frame.jpg", width=100, height=100, format="jpg", frame_index=0, timestamp=0.0
-    )
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_tracklet():
     row = create_instance_of_schema(Tracklet, start_timestamp=0.0, end_timestamp=1.0)
-    assert row == create_tracklet(start_timestamp=0.0, end_timestamp=1.0)
+    assert row.model_dump(exclude_timestamps=True) == create_tracklet(
+        start_timestamp=0.0, end_timestamp=1.0
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_track():
     row = create_instance_of_schema(Track, name="track1")
-    assert row == create_track(name="track1")
+    assert row.model_dump(exclude_timestamps=True) == create_track(name="track1").model_dump(exclude_timestamps=True)
 
 
 def test_create_row_bbox():
     row = create_instance_of_schema(BBox, coords=[0.4, 0.5, 0.1, 0.1], format="xywh", is_normalized=True)
-    assert row == create_bbox(coords=[0.4, 0.5, 0.1, 0.1], format="xywh", is_normalized=True)
+    assert row.model_dump(exclude_timestamps=True) == create_bbox(
+        coords=[0.4, 0.5, 0.1, 0.1], format="xywh", is_normalized=True
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_bbox3d():
     row = create_instance_of_schema(
         BBox3D, coords=[0.4, 0.5, 0.1, 0.1, 0.2, 0.3], format="xyzwhd", is_normalized=True, heading=[0.0, 0.0, 0.0]
     )
-    assert row == create_bbox3d(
+    assert row.model_dump(exclude_timestamps=True) == create_bbox3d(
         coords=[0.4, 0.5, 0.1, 0.1, 0.2, 0.3], format="xyzwhd", is_normalized=True, heading=[0.0, 0.0, 0.0]
-    )
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_cam_calibration():
@@ -107,38 +113,44 @@ def test_create_row_cam_calibration():
         extrinsics=Extrinsics(pos_x_m=0, pos_y_m=0, pos_z_m=0, rot_x_deg=0, rot_z1_deg=0, rot_z2_deg=0),
         intrinsics=Intrinsics(c1=0, c2=0, c3=0, c4=0, pixel_aspect_ratio=0),
     )
-    assert row == create_cam_calibration(
+    assert row.model_dump(exclude_timestamps=True) == create_cam_calibration(
         type="perspective",
         base_intrinsics=BaseIntrinsics(cx_offset_px=0, cy_offset_px=0, img_height_px=0, img_width_px=0),
         extrinsics=Extrinsics(pos_x_m=0, pos_y_m=0, pos_z_m=0, rot_x_deg=0, rot_z1_deg=0, rot_z2_deg=0),
         intrinsics=Intrinsics(c1=0, c2=0, c3=0, c4=0, pixel_aspect_ratio=0),
-    )
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_compressed_rle():
     row = create_instance_of_schema(CompressedRLE, size=[100], counts=b"1")
-    assert row == create_compressed_rle(size=[100], counts=b"1")
+    assert row.model_dump(exclude_timestamps=True) == create_compressed_rle(size=[100], counts=b"1").model_dump(
+        exclude_timestamps=True
+    )
 
 
 def test_create_row_keypoints():
     row = create_instance_of_schema(
         KeyPoints, template_id="template1", coords=[0.4, 0.5, 0.1, 0.1], states=["visible", "hidden"]
     )
-    assert row == create_keypoints(template_id="template1", coords=[0.4, 0.5, 0.1, 0.1], states=["visible", "hidden"])
+    assert row.model_dump(exclude_timestamps=True) == create_keypoints(
+        template_id="template1", coords=[0.4, 0.5, 0.1, 0.1], states=["visible", "hidden"]
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_row_keypoints3d():
     row = create_instance_of_schema(
         KeyPoints3D, template_id="template1", coords=[0.4, 0.5, 0.1, 0.1, 0.2, 0.3], states=["visible", "hidden"]
     )
-    assert row == create_keypoints3d(
+    assert row.model_dump(exclude_timestamps=True) == create_keypoints3d(
         template_id="template1", coords=[0.4, 0.5, 0.1, 0.1, 0.2, 0.3], states=["visible", "hidden"]
-    )
+    ).model_dump(exclude_timestamps=True)
 
 
 def test_create_point_cloud():
     row = create_instance_of_schema(PointCloud, url="point_cloud.ply")
-    assert row == create_point_cloud(url="point_cloud.ply")
+    assert row.model_dump(exclude_timestamps=True) == create_point_cloud(url="point_cloud.ply").model_dump(
+        exclude_timestamps=True
+    )
 
 
 def test_create_row_custom_schema():
@@ -146,7 +158,7 @@ def test_create_row_custom_schema():
         name: str
 
     obj = create_instance_of_schema(CustomSchema, name="custom")
-    assert obj == CustomSchema(name="custom")
+    assert obj.model_dump(exclude_timestamps=True) == CustomSchema(name="custom").model_dump(exclude_timestamps=True)
 
 
 def test_create_row_unsupported():

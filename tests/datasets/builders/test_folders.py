@@ -147,16 +147,16 @@ class TestFolderBaseBuilder:
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == entity_category(
+        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
-        )
+        ).model_dump(exclude_timestamps=True)
 
         assert set(annotations.keys()) == {"bbox"}
         assert len(annotations["bbox"]) == 1
-        assert annotations["bbox"][0] == BBox(
+        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -165,7 +165,7 @@ class TestFolderBaseBuilder:
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        )
+        ).model_dump(exclude_timestamps=True)
 
         # test 2: one bbox not infered
         entities_data = {
@@ -175,15 +175,15 @@ class TestFolderBaseBuilder:
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == entity_category(
+        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
-        )
+        ).model_dump(exclude_timestamps=True)
         assert set(annotations.keys()) == {"bbox"}
         assert len(annotations["bbox"]) == 1
-        assert annotations["bbox"][0] == BBox(
+        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -192,7 +192,7 @@ class TestFolderBaseBuilder:
             format="xyxy",
             is_normalized=False,
             confidence=0.9,
-        )
+        ).model_dump(exclude_timestamps=True)
 
         # test 3: two bboxes, one infered, one not infered
         entities_data = {
@@ -207,21 +207,21 @@ class TestFolderBaseBuilder:
         assert isinstance(entities[1], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
         assert isinstance(entities[1].id, str) and len(entities[1].id) == 22
-        assert entities[0] == entity_category(
+        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
-        )
-        assert entities[1] == entity_category(
+        ).model_dump(exclude_timestamps=True)
+        assert entities[1].model_dump(exclude_timestamps=True) == entity_category(
             id=entities[1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="none",
-        )
+        ).model_dump(exclude_timestamps=True)
         assert set(annotations.keys()) == {"bbox"}
         assert len(annotations["bbox"]) == 2
-        assert annotations["bbox"][0] == BBox(
+        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -230,8 +230,8 @@ class TestFolderBaseBuilder:
             format="xyxy",
             is_normalized=False,
             confidence=0.5,
-        )
-        assert annotations["bbox"][1] == BBox(
+        ).model_dump(exclude_timestamps=True)
+        assert annotations["bbox"][1].model_dump(exclude_timestamps=True) == BBox(
             id=annotations["bbox"][1].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -240,7 +240,7 @@ class TestFolderBaseBuilder:
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        )
+        ).model_dump(exclude_timestamps=True)
 
         # test 4: one bbox and one keypoint not infered and a category
         entities_data = {
@@ -258,16 +258,16 @@ class TestFolderBaseBuilder:
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
-        assert entities[0] == entity_category(
+        assert entities[0].model_dump(exclude_timestamps=True) == entity_category(
             id=entities[0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             category="person",
-        )
+        ).model_dump(exclude_timestamps=True)
         assert set(annotations.keys()) == {"bbox", "keypoint"}
         assert len(annotations["bbox"]) == 1
         assert len(annotations["keypoint"]) == 1
-        assert annotations["bbox"][0] == BBox(
+        assert annotations["bbox"][0].model_dump(exclude_timestamps=True) == BBox(
             id=annotations["bbox"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -276,8 +276,8 @@ class TestFolderBaseBuilder:
             format="xywh",
             is_normalized=True,
             confidence=1.0,
-        )
-        assert annotations["keypoint"][0] == KeyPoints(
+        ).model_dump(exclude_timestamps=True)
+        assert annotations["keypoint"][0].model_dump(exclude_timestamps=True) == KeyPoints(
             id=annotations["keypoint"][0].id,
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
@@ -285,7 +285,7 @@ class TestFolderBaseBuilder:
             template_id="template_0",
             coords=[10, 10, 20, 20, 30, 30],
             states=["visible", "visible", "visible"],
-        )
+        ).model_dump(exclude_timestamps=True)
 
         # test 5: error infer keypoints
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
@@ -318,13 +318,13 @@ class TestFolderBaseBuilder:
                 assert len(entities) == i
                 for entity, bbox in zip(entities, bboxes, strict=True):
                     item_per_split = 10 if actual_item.split == "train" else 5
-                    assert entity == entity_category(
+                    assert entity.model_dump(exclude_timestamps=True) == entity_category(
                         id=entity.id,
                         item_ref=ItemRef(id=actual_item.id),
                         view_ref=ViewRef(id=view.id, name="view"),
                         category="person" if i % 4 == 0 else "cat",
-                    )
-                    bbox = BBox(
+                    ).model_dump(exclude_timestamps=True)
+                    bbox.model_dump(exclude_timestamps=True) == BBox(
                         id=bbox.id,
                         item_ref=ItemRef(id=actual_item.id),
                         view_ref=ViewRef(id=view.id, name="view"),
@@ -338,7 +338,7 @@ class TestFolderBaseBuilder:
                         format="xywh",
                         is_normalized=True,
                         confidence=1.0,
-                    )
+                    ).model_dump(exclude_timestamps=True)
             else:  # no entities
                 assert "entities" not in item
                 assert "bbox" not in item

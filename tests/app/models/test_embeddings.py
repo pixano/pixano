@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import pytest
 
 from pixano.app.models import EmbeddingModel, TableInfo
@@ -24,6 +26,8 @@ class TestEmbeddingModel:
                 "item_ref": {"id": "", "name": ""},
                 "vector": [0.0, 0.0, 0.0],
             },
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
         embedding = model.to_row(CustomEmbedding)
 
@@ -31,6 +35,8 @@ class TestEmbeddingModel:
             id="id",
             item_ref={"id": "", "name": ""},
             vector=[0.0, 0.0, 0.0],
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Embedding."):

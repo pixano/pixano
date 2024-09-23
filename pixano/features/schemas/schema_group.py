@@ -6,6 +6,8 @@
 
 from enum import Enum
 
+from pixano.features.schemas.source import Source
+
 from .annotations import Annotation
 from .embeddings import Embedding
 from .entities import Entity
@@ -31,6 +33,7 @@ class SchemaGroup(Enum):
     ITEM = "item"
     ENTITY = "entities"
     VIEW = "views"
+    SOURCE = "source"
 
     @classmethod
     def _missing_(cls, name):
@@ -45,4 +48,5 @@ _SCHEMA_GROUP_TO_SCHEMA_DICT = {
     SchemaGroup.ENTITY: Entity,
     SchemaGroup.ANNOTATION: Annotation,
     SchemaGroup.VIEW: View,
+    SchemaGroup.SOURCE: Source,
 }

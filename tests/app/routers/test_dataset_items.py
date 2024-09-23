@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.dataset_items import DatasetItemModel
@@ -177,7 +178,7 @@ def test_create_dataset_items(
     ]
 
     new_dataset_items_models = {
-        model.id: model.model_dump()
+        model.id: model
         for model in DatasetItemModel.from_dataset_items(
             new_dataset_items, dataset_multi_view_tracking_and_image.schema
         )
@@ -185,13 +186,15 @@ def test_create_dataset_items(
     client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
-        json=list(new_dataset_items_models.values()),
+        json=jsonable_encoder(list(new_dataset_items_models.values())),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = DatasetItemModel.model_validate(model_json)
-        assert model.model_dump() == new_dataset_items_models[model.id]
+        assert model.model_dump(exclude_timestamps=True) == new_dataset_items_models[model.id].model_dump(
+            exclude_timestamps=True
+        )
     assert len(response.json()) == len(new_dataset_items_models)
 
     # Check that the dataset_items were added to the dataset
@@ -211,7 +214,7 @@ def test_create_dataset_items_error(
     good_data = DatasetItemModel.from_dataset_items(
         dataset_multi_view_tracking_and_image.get_dataset_items(limit=2), dataset_multi_view_tracking_and_image.schema
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -226,7 +229,7 @@ def test_create_dataset_items_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
         json=json_bad_data,
@@ -252,12 +255,12 @@ def test_create_dataset_item(
     client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image/new_0",
-        json=new_dataset_item_model.model_dump(),
+        json=jsonable_encoder(new_dataset_item_model),
     )
 
     assert response.status_code == 200
     model = DatasetItemModel.model_validate(response.json())
-    assert model == new_dataset_item_model
+    assert model.model_dump(exclude_timestamps=True) == new_dataset_item_model.model_dump(exclude_timestamps=True)
 
     # Check that the dataset_item was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_dataset_items("new_0") is not None
@@ -273,7 +276,7 @@ def test_create_dataset_item_error(
     good_data = DatasetItemModel.from_dataset_item(
         dataset_multi_view_tracking_and_image.get_dataset_items("0"), dataset_multi_view_tracking_and_image.schema
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -324,13 +327,15 @@ def test_update_dataset_items(
     client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
-        json=[model.model_dump() for model in updated_dataset_items_models],
+        json=jsonable_encoder(updated_dataset_items_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = DatasetItemModel.model_validate(model_json)
-        assert model in updated_dataset_items_models
+        for model in updated_dataset_items_models:
+            if model.id == model_json["id"]:
+                assert model.model_dump(exclude_timestamps=True) == model.model_dump(exclude_timestamps=True)
     assert len(response.json()) == len(updated_dataset_items_models)
 
     # Check that the dataset_items were updated in the dataset
@@ -345,7 +350,7 @@ def test_update_dataset_items(
                 cur_dataset_item = updated_dataset_item
                 break
         assert cur_dataset_item is not None
-        assert cur_dataset_item.model_dump() == updated_row.model_dump()
+        assert cur_dataset_item.model_dump(exclude_timestamps=True) == updated_row.model_dump(exclude_timestamps=True)
 
 
 def test_update_dataset_items_error(
@@ -358,7 +363,7 @@ def test_update_dataset_items_error(
     good_data = DatasetItemModel.from_dataset_items(
         dataset_multi_view_tracking_and_image.get_dataset_items(limit=2), dataset_multi_view_tracking_and_image.schema
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -373,7 +378,7 @@ def test_update_dataset_items_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
         json=json_bad_data,
@@ -399,17 +404,17 @@ def test_update_dataset_item(
     client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image/0",
-        json=updated_dataset_item_model.model_dump(),
+        json=jsonable_encoder(updated_dataset_item_model),
     )
 
     assert response.status_code == 200
     model = DatasetItemModel.model_validate(response.json())
-    assert model == updated_dataset_item_model
+    assert model.model_dump(exclude_timestamps=True) == updated_dataset_item_model.model_dump(exclude_timestamps=True)
 
     # Check that the dataset_item was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_dataset_items("0")
     assert updated_row is not None
-    assert updated_row.model_dump() == dataset_item.model_dump()
+    assert updated_row.model_dump(exclude_timestamps=True) == dataset_item.model_dump(exclude_timestamps=True)
 
 
 def test_update_dataset_item_error(
@@ -422,7 +427,7 @@ def test_update_dataset_item_error(
     good_data = DatasetItemModel.from_dataset_item(
         dataset_multi_view_tracking_and_image.get_dataset_items("0"), dataset_multi_view_tracking_and_image.schema
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)

@@ -26,9 +26,13 @@ class TestDatasetItemModel:
     ):
         dataset_items = []
         items_data = []
-        for data in generate_data_multi_view_tracking_and_image(
-            num_rows=5, schemas=dataset_schema_multi_view_tracking_and_image.schemas
+        for i, data in enumerate(
+            generate_data_multi_view_tracking_and_image(
+                num_rows=5, schemas=dataset_schema_multi_view_tracking_and_image.schemas
+            )
         ):
+            if i == 0:
+                continue  # skip the source yield
             dataset_item_multi_view_tracking_and_image = DatasetItem.from_dataset_schema(
                 dataset_schema_multi_view_tracking_and_image
             )
@@ -197,9 +201,13 @@ class TestDatasetItemModel:
     ):
         dataset_items = []
         items_data = []
-        for data in generate_data_multi_view_tracking_and_image(
-            num_rows=5, schemas=dataset_schema_multi_view_tracking_and_image.schemas
+        for i, data in enumerate(
+            generate_data_multi_view_tracking_and_image(
+                num_rows=5, schemas=dataset_schema_multi_view_tracking_and_image.schemas
+            )
         ):
+            if i == 0:
+                continue  # skip the source yield
             dataset_item_multi_view_tracking_and_image = DatasetItem.from_dataset_schema(
                 dataset_schema_multi_view_tracking_and_image
             )

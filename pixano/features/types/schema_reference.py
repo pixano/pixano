@@ -16,10 +16,10 @@ from .registry import _register_type_internal
 
 if TYPE_CHECKING:
     from pixano.datasets import Dataset
-    from pixano.features import Annotation, BaseSchema, Embedding, Entity, Item, View
+    from pixano.features import Annotation, BaseSchema, Embedding, Entity, Item, Source, View
 
 
-T = TypeVar("T", bound=Union["BaseSchema", "Item", "View", "Entity", "Annotation", "Embedding"])
+T = TypeVar("T", bound=Union["BaseSchema", "Item", "View", "Entity", "Annotation", "Embedding", "Source"])
 
 
 class SchemaRef(BaseType, Generic[T]):
@@ -58,7 +58,7 @@ class ItemRef(SchemaRef["Item"]):
         if self.name != "item" and (  # hard coded to avoid circular import
             self.name != "" or self.id != ""
         ):
-            raise ValueError("Schema must be 'item' when not empty.")
+            raise ValueError("name must be 'item' when not empty.")
         return self
 
 
@@ -88,6 +88,21 @@ class EmbeddingRef(SchemaRef["Embedding"]):
     """Embedding reference."""
 
     pass
+
+
+@_register_type_internal
+class SourceRef(SchemaRef["Source"]):
+    """Source reference."""
+
+    name: str = "source"  # hard coded to avoid circular import
+
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if self.name != "source" and (  # hard coded to avoid circular import
+            self.name != "" or self.id != ""
+        ):
+            raise ValueError("name must be 'source' when not empty.")
+        return self
 
 
 def is_schema_ref(cls: type, strict: bool = False) -> bool:
@@ -120,6 +135,11 @@ def is_embedding_ref(cls: type, strict: bool = False) -> bool:
     return issubclass_strict(cls, EmbeddingRef, strict)
 
 
+def is_source_ref(cls: type, strict: bool = False) -> bool:
+    """Check if a class is a SourceRef or subclass of SourceRef."""
+    return issubclass_strict(cls, SourceRef, strict)
+
+
 def create_schema_ref(id: str, name: str) -> SchemaRef:
     """Create a schema reference."""
     return SchemaRef(name=name, id=id)
@@ -148,3 +168,8 @@ def create_annotation_ref(id: str, name: str) -> AnnotationRef:
 def create_embedding_ref(id: str, name: str) -> EmbeddingRef:
     """Create an embedding reference."""
     return EmbeddingRef(name=name, id=id)
+
+
+def create_source_ref(id: str, name: str) -> SourceRef:
+    """Create a source reference."""
+    return SourceRef(name=name, id=id)

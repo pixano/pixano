@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import shutil
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
@@ -40,6 +41,8 @@ if TYPE_CHECKING:
         Item,
         ItemRef,
         SchemaRef,
+        Source,
+        SourceRef,
         View,
         ViewRef,
     )
@@ -271,7 +274,7 @@ class Dataset:
         Returns:
             Dataset table.
         """
-        if name not in self.schema.schemas.keys():
+        if name not in self.schema.schemas.keys() and name != SchemaGroup.SOURCE.value:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
@@ -295,10 +298,12 @@ class Dataset:
     @overload
     def resolve_ref(self, ref: AnnotationRef) -> Annotation: ...
     @overload
+    def resolve_ref(self, ref: SourceRef) -> Source: ...
+    @overload
     def resolve_ref(self, ref: SchemaRef) -> BaseSchema: ...
     def resolve_ref(
-        self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef
-    ) -> BaseSchema | Item | View | Embedding | Entity | Annotation:
+        self, ref: SchemaRef | ItemRef | ViewRef | EmbeddingRef | EntityRef | AnnotationRef | SourceRef
+    ) -> BaseSchema | Item | View | Embedding | Entity | Annotation | Source:
         """Resolve a reference."""
         if ref.id == "" or ref.name == "":
             raise DatasetAccessError("Reference should have a name and an id.")
@@ -428,7 +433,7 @@ class Dataset:
                 else:
                     data_dict[item_id][table_name] = row
 
-        dataset_items = [self.dataset_item_model(**data_dict[item_id]) for item_id in item_ids]
+        dataset_items = [self.dataset_item_model(**data_dict[item_id]) for item_id in item_ids]  # type: ignore[arg-type]
 
         return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
@@ -487,6 +492,9 @@ class Dataset:
             raise DatasetAccessError(f"IDs {ids_found} already exist in the table {table_name}.")
 
         table = self.open_table(table_name)
+        for d in data:
+            d.created_at = datetime.now()
+            d.updated_at = d.created_at
         table.add(data)
 
         return data
@@ -612,15 +620,18 @@ class Dataset:
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):
             raise DatasetAccessError("All data must have unique ids.")
-        ids_found = []
-        for id in self.get_all_ids(table_name):
-            if id in set_ids:
-                ids_found.append(id)
+        ids_found: dict[str, datetime] = {}
+        for row in self.open_table(table_name).search().select(["id", "created_at"]).limit(None).to_list():
+            if row["id"] in set_ids:
+                ids_found[row["id"]] = row["created_at"]
 
         table = self.open_table(table_name)
         sql_ids = to_sql_list(set_ids)
         table.delete(where=f"id in {sql_ids}")
-
+        for d in data:
+            d.updated_at = datetime.now()
+            if d.id not in ids_found:
+                d.created_at = d.updated_at
         table.add(data)
 
         if not return_separately:
@@ -661,15 +672,33 @@ class Dataset:
         ):
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
 
-        ids = [item.id for item in dataset_items]
-        ids_not_found = self.delete_dataset_items(ids)
-        self.add_dataset_items(dataset_items)  # TODO: If there is an error, the data deleted will not be restored
+        schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
+        updated_ids = set()
+        tables_data: dict[str, Any] = {}
+        for table_name in self.schema.schemas.keys():
+            for item in schemas_data:
+                if table_name not in tables_data:
+                    tables_data[table_name] = []
+                if table_name not in item:
+                    continue
+                if isinstance(item[table_name], list):
+                    tables_data[table_name].extend(item[table_name])
+                elif item[table_name] is not None:
+                    tables_data[table_name].append(item[table_name])
+        for table_name, table_data in tables_data.items():
+            if table_data != []:
+                updated, _ = self.update_data(table_name, table_data, return_separately=True)
+                for row in updated:
+                    updated_ids.add(row.item_ref.id if table_name != SchemaGroup.ITEM.value else row.id)
+
+        dataset_items = self.get_dataset_items([item.id for item in dataset_items])
+
         if not return_separately:
             return dataset_items
 
         updated_items, added_items = [], []
         for item in dataset_items:
-            if item.id in ids_not_found:
+            if item.id not in updated_ids:
                 added_items.append(item)
             else:
                 updated_items.append(item)

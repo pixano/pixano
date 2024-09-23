@@ -16,6 +16,7 @@ from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
 from pixano.features import BaseSchema, Item, SchemaGroup
+from pixano.features.schemas.source import Source
 
 
 class DatasetBuilder(ABC):
@@ -195,6 +196,8 @@ class DatasetBuilder(ABC):
             self.db.create_table(key, schema=schema, mode=mode)
 
             tables[key] = self.db.open_table(key)
+        self.db.create_table("source", schema=Source, mode=mode)
+        tables["source"] = self.db.open_table("source")
 
         return tables
 
@@ -207,5 +210,6 @@ class DatasetBuilder(ABC):
         tables = {}
         for key in self.schemas.keys():
             tables[key] = self.db.open_table(key)
+        tables["source"] = self.db.open_table("source")
 
         return tables

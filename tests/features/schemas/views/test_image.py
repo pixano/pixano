@@ -35,7 +35,7 @@ def test_create_image():
         url=IMAGE_JPG_ASSET_URL,
     )
 
-    assert image == Image(
+    assert image.model_dump(exclude_timestamps=True) == Image(
         url=str(IMAGE_JPG_ASSET_URL.as_posix()),
         width=IMAGE_JPG_METADATA["width"],
         height=IMAGE_JPG_METADATA["height"],
@@ -43,7 +43,7 @@ def test_create_image():
         id="",
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)
 
     # Test 2: read url with custom id and other path and custom references
     image = create_image(
@@ -53,7 +53,7 @@ def test_create_image():
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
     )
-    assert image == Image(
+    assert image.model_dump(exclude_timestamps=True) == Image(
         url="sample_data/image_jpg.jpg",
         width=IMAGE_JPG_METADATA["width"],
         height=IMAGE_JPG_METADATA["height"],
@@ -61,10 +61,10 @@ def test_create_image():
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
-    )
+    ).model_dump(exclude_timestamps=True)
     # Test 3: no read
     image = create_image(url=IMAGE_JPG_ASSET_URL, width=100, height=100, format="PNG")
-    assert image == Image(
+    assert image.model_dump(exclude_timestamps=True) == Image(
         url=str(IMAGE_JPG_ASSET_URL.as_posix()),
         width=100,
         height=100,
@@ -72,4 +72,4 @@ def test_create_image():
         id="",
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)

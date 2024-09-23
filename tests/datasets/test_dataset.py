@@ -6,6 +6,7 @@
 
 
 import re
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -124,9 +125,27 @@ class TestDataset:
                 3,
                 0,
                 [
-                    {"id": "0", "metadata": "metadata_0", "split": "test"},
-                    {"id": "1", "metadata": "metadata_1", "split": "train"},
-                    {"id": "2", "metadata": "metadata_2", "split": "test"},
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "1",
+                        "metadata": "metadata_1",
+                        "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "2",
+                        "metadata": "metadata_2",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
                 ],
             ),
             (
@@ -137,9 +156,27 @@ class TestDataset:
                 3,
                 2,
                 [
-                    {"id": "2", "metadata": "metadata_2", "split": "test"},
-                    {"id": "3", "metadata": "metadata_3", "split": "train"},
-                    {"id": "4", "metadata": "metadata_4", "split": "test"},
+                    {
+                        "id": "2",
+                        "metadata": "metadata_2",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "3",
+                        "metadata": "metadata_3",
+                        "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "4",
+                        "metadata": "metadata_4",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
                 ],
             ),
             (
@@ -150,8 +187,20 @@ class TestDataset:
                 None,
                 0,
                 [
-                    {"id": "0", "metadata": "metadata_0", "split": "test"},
-                    {"id": "1", "metadata": "metadata_1", "split": "train"},
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "1",
+                        "metadata": "metadata_1",
+                        "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
                 ],
             ),
             (
@@ -162,8 +211,20 @@ class TestDataset:
                 None,
                 0,
                 [
-                    {"id": "0", "metadata": "metadata_0", "split": "test"},
-                    {"id": "1", "metadata": "metadata_1", "split": "train"},
+                    {
+                        "id": "0",
+                        "metadata": "metadata_0",
+                        "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
+                    {
+                        "id": "1",
+                        "metadata": "metadata_1",
+                        "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
+                    },
                 ],
             ),
             (
@@ -182,6 +243,8 @@ class TestDataset:
                         "width": 100,
                         "height": 100,
                         "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                     {
                         "id": "image_1",
@@ -191,6 +254,8 @@ class TestDataset:
                         "width": 99,
                         "height": 101,
                         "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                 ],
             ),
@@ -210,6 +275,8 @@ class TestDataset:
                         "width": 100,
                         "height": 100,
                         "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                     {
                         "id": "image_1",
@@ -219,6 +286,8 @@ class TestDataset:
                         "width": 99,
                         "height": 101,
                         "format": "jpg",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                 ],
             ),
@@ -252,30 +321,39 @@ class TestDataset:
                         "item_ref": {"name": "item", "id": "2"},
                         "view_ref": {"name": "video", "id": "video_2_0"},
                         "entity_ref": {"name": "entities_video", "id": "entity_video_2_0_0"},
+                        "source_ref": {"id": "source_0", "name": "source"},
                         "coords": [1.0, 1.0, 25.0, 25.0],
                         "format": "xywh",
                         "is_normalized": False,
                         "confidence": 0.25,
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                     {
                         "id": "bbox_2_1_0_0",
                         "item_ref": {"name": "item", "id": "2"},
                         "view_ref": {"name": "video", "id": "video_2_1"},
                         "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "source_ref": {"id": "source_0", "name": "source"},
                         "coords": [0.0, 0.0, 0.0, 0.0],
                         "format": "xywh",
                         "is_normalized": False,
                         "confidence": 0.0,
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                     {
                         "id": "bbox_2_1_0_1",
                         "item_ref": {"name": "item", "id": "2"},
                         "view_ref": {"name": "video", "id": "video_2_1"},
                         "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
+                        "source_ref": {"id": "source_0", "name": "source"},
                         "coords": [1.0, 1.0, 25.0, 25.0],
                         "format": "xywh",
                         "is_normalized": False,
                         "confidence": 0.25,
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                     },
                 ],
             )
@@ -304,7 +382,13 @@ class TestDataset:
     def test_get_one_data(self, dataset_image_bboxes_keypoint: Dataset):
         data = dataset_image_bboxes_keypoint.get_data(table_name="item", ids="0")
         assert isinstance(data, Item)
-        assert data.model_dump() == {"id": "0", "metadata": "metadata_0", "split": "test"}
+        assert data.model_dump() == {
+            "id": "0",
+            "metadata": "metadata_0",
+            "split": "test",
+            "created_at": datetime(2021, 1, 1, 0, 0),
+            "updated_at": datetime(2021, 1, 1, 0, 0),
+        }
         assert data.dataset == dataset_image_bboxes_keypoint
 
         data = dataset_image_bboxes_keypoint.get_data(table_name="item", ids="-1")
@@ -346,6 +430,8 @@ class TestDataset:
                         "id": "0",
                         "metadata": "metadata_0",
                         "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_0",
                             "item_ref": {"id": "0", "name": "item"},
@@ -354,6 +440,8 @@ class TestDataset:
                             "width": 100,
                             "height": 100,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [],
                         "bboxes": [],
@@ -363,6 +451,8 @@ class TestDataset:
                         "id": "1",
                         "metadata": "metadata_1",
                         "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_1",
                             "item_ref": {"id": "1", "name": "item"},
@@ -371,6 +461,8 @@ class TestDataset:
                             "width": 99,
                             "height": 101,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [
                             {
@@ -378,12 +470,16 @@ class TestDataset:
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "entity_1_1",
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "bboxes": [
@@ -396,6 +492,9 @@ class TestDataset:
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "source_ref": {"id": "source_0", "name": "source"},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "bbox_1_1",
@@ -406,6 +505,9 @@ class TestDataset:
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "source_ref": {"id": "source_1", "name": "source"},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "keypoint": None,
@@ -414,6 +516,8 @@ class TestDataset:
                         "id": "2",
                         "metadata": "metadata_2",
                         "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_2",
                             "item_ref": {"id": "2", "name": "item"},
@@ -422,6 +526,8 @@ class TestDataset:
                             "width": 98,
                             "height": 102,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [],
                         "bboxes": [],
@@ -438,6 +544,8 @@ class TestDataset:
                         "id": "2",
                         "metadata": "metadata_2",
                         "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_2",
                             "item_ref": {"id": "2", "name": "item"},
@@ -446,6 +554,8 @@ class TestDataset:
                             "width": 98,
                             "height": 102,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [],
                         "bboxes": [],
@@ -455,6 +565,8 @@ class TestDataset:
                         "id": "3",
                         "metadata": "metadata_3",
                         "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_3",
                             "item_ref": {"id": "3", "name": "item"},
@@ -463,6 +575,8 @@ class TestDataset:
                             "width": 97,
                             "height": 103,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [
                             {
@@ -470,12 +584,16 @@ class TestDataset:
                                 "item_ref": {"id": "3", "name": "item"},
                                 "view_ref": {"id": "image_3", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "entity_3_1",
                                 "item_ref": {"id": "3", "name": "item"},
                                 "view_ref": {"id": "image_3", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "bboxes": [
@@ -484,20 +602,26 @@ class TestDataset:
                                 "item_ref": {"id": "3", "name": "item"},
                                 "view_ref": {"id": "image_3", "name": "image"},
                                 "entity_ref": {"id": "entity_3_0", "name": "entities"},
+                                "source_ref": {"id": "source_0", "name": "source"},
                                 "coords": [0.0, 0.0, 100.0, 100.0],
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "bbox_3_1",
                                 "item_ref": {"id": "3", "name": "item"},
                                 "view_ref": {"id": "image_3", "name": "image"},
                                 "entity_ref": {"id": "entity_3_1", "name": "entities"},
+                                "source_ref": {"id": "source_1", "name": "source"},
                                 "coords": [0.0, 0.0, 100.0, 100.0],
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "keypoint": None,
@@ -506,6 +630,8 @@ class TestDataset:
                         "id": "4",
                         "metadata": "metadata_4",
                         "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_4",
                             "item_ref": {"id": "4", "name": "item"},
@@ -514,6 +640,8 @@ class TestDataset:
                             "width": 96,
                             "height": 104,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [],
                         "bboxes": [],
@@ -530,6 +658,8 @@ class TestDataset:
                         "id": "0",
                         "metadata": "metadata_0",
                         "split": "test",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_0",
                             "item_ref": {"id": "0", "name": "item"},
@@ -538,6 +668,8 @@ class TestDataset:
                             "width": 100,
                             "height": 100,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [],
                         "bboxes": [],
@@ -547,6 +679,8 @@ class TestDataset:
                         "id": "1",
                         "metadata": "metadata_1",
                         "split": "train",
+                        "created_at": datetime(2021, 1, 1, 0, 0),
+                        "updated_at": datetime(2021, 1, 1, 0, 0),
                         "image": {
                             "id": "image_1",
                             "item_ref": {"id": "1", "name": "item"},
@@ -555,6 +689,8 @@ class TestDataset:
                             "width": 99,
                             "height": 101,
                             "format": "jpg",
+                            "created_at": datetime(2021, 1, 1, 0, 0),
+                            "updated_at": datetime(2021, 1, 1, 0, 0),
                         },
                         "entities": [
                             {
@@ -562,12 +698,16 @@ class TestDataset:
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "entity_1_1",
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "parent_ref": {"id": "", "name": ""},
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "bboxes": [
@@ -576,20 +716,26 @@ class TestDataset:
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "entity_ref": {"id": "entity_1_0", "name": "entities"},
+                                "source_ref": {"id": "source_0", "name": "source"},
                                 "coords": [0.0, 0.0, 100.0, 100.0],
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                             {
                                 "id": "bbox_1_1",
                                 "item_ref": {"id": "1", "name": "item"},
                                 "view_ref": {"id": "image_1", "name": "image"},
                                 "entity_ref": {"id": "entity_1_1", "name": "entities"},
+                                "source_ref": {"id": "source_1", "name": "source"},
                                 "coords": [0.0, 0.0, 100.0, 100.0],
                                 "format": "xywh",
                                 "is_normalized": False,
                                 "confidence": 0.9,
+                                "created_at": datetime(2021, 1, 1, 0, 0),
+                                "updated_at": datetime(2021, 1, 1, 0, 0),
                             },
                         ],
                         "keypoint": None,
@@ -610,6 +756,8 @@ class TestDataset:
             "id": "0",
             "metadata": "metadata_0",
             "split": "test",
+            "created_at": datetime(2021, 1, 1, 0, 0),
+            "updated_at": datetime(2021, 1, 1, 0, 0),
             "image": {
                 "id": "image_0",
                 "item_ref": {"id": "0", "name": "item"},
@@ -618,6 +766,8 @@ class TestDataset:
                 "width": 100,
                 "height": 100,
                 "format": "jpg",
+                "created_at": datetime(2021, 1, 1, 0, 0),
+                "updated_at": datetime(2021, 1, 1, 0, 0),
             },
             "entities": [],
             "bboxes": [],
@@ -706,9 +856,11 @@ class TestDataset:
 
         dataset_items = dataset_image_bboxes_keypoint_copy.add_dataset_items([new_item])
         assert (
-            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"])[0].model_dump()
-            == new_item.model_dump()
-            == dataset_items[0].model_dump()
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["new_item"])[0].model_dump(
+                exclude_timestamps=True
+            )
+            == new_item.model_dump(exclude_timestamps=True)
+            == dataset_items[0].model_dump(exclude_timestamps=True)
         )
 
     def test_add_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
@@ -751,6 +903,8 @@ class TestDataset:
             == updated_item.model_dump()
             == updated_data[0].model_dump()
         )
+        assert updated_data[0].created_at == item.created_at
+        assert updated_data[0].updated_at > item.updated_at
 
         added_item = item.model_copy()
         updated_item.metadata = "new_metadata_2"
@@ -760,6 +914,11 @@ class TestDataset:
         )
         assert len(updated_data) == 1
         assert len(added_data) == 1
+        assert updated_data[0].created_at == item.created_at
+        assert updated_data[0].updated_at > item.updated_at
+
+        assert added_data[0].created_at > item.created_at
+        assert added_data[0].updated_at == added_data[0].created_at
 
         assert (
             dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0"])[0].model_dump()
@@ -785,32 +944,47 @@ class TestDataset:
         updated_item = item.model_copy()
         updated_item.metadata = "new_metadata"
         updated_item.image.width = 200
-        updated_item.entities[0].id = "new_entity"
-        updated_item.bboxes[0].id = "new_bbox"
+        updated_item.bboxes[0].coords = [1, 1, 25, 25]
 
         updated_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item])
+        assert updated_dataset_items[0].created_at == item.created_at
+        assert updated_dataset_items[0].updated_at > item.updated_at
 
         assert (
-            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
-            == updated_item
-            == updated_dataset_items[0]
+            dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0].model_dump(exclude_timestamps=True)
+            == updated_item.model_dump(exclude_timestamps=True)
+            == updated_dataset_items[0].model_dump(exclude_timestamps=True)
         )
 
         added_item = type(item).model_validate(item.model_dump())
         added_item.id = "new_item"
         added_item.image.id = "new_image"
+        added_item.image.item_ref.id = "new_item"
         added_item.entities[0].id = "new_entity_1"
+        added_item.entities[0].item_ref.id = "new_item"
         added_item.entities[1].id = "new_entity_2"
+        added_item.entities[1].item_ref.id = "new_item"
         added_item.bboxes[0].id = "new_bbox_1"
+        added_item.bboxes[0].item_ref.id = "new_item"
         added_item.bboxes[1].id = "new_bbox_2"
+        added_item.bboxes[1].item_ref.id = "new_item"
         updated_item.metadata = "new_metadata_2"
         updated_dataset_items, added_dataset_items = dataset_image_bboxes_keypoint_copy.update_dataset_items(
             [updated_item, added_item], return_separately=True
         )
         assert len(updated_dataset_items) == 1
         assert len(added_dataset_items) == 1
-        assert updated_dataset_items[0] == updated_item
-        assert added_dataset_items[0] == added_item
+        assert updated_dataset_items[0].model_dump(exclude_timestamps=True) == updated_item.model_dump(
+            exclude_timestamps=True
+        )
+        assert added_dataset_items[0].model_dump(exclude_timestamps=True) == added_item.model_dump(
+            exclude_timestamps=True
+        )
+        assert updated_dataset_items[0].created_at == item.created_at
+        assert updated_dataset_items[0].updated_at > item.updated_at
+        assert updated_dataset_items[0].image.updated_at == item.image.updated_at
+        assert added_dataset_items[0].created_at > item.created_at
+        assert added_dataset_items[0].updated_at == added_dataset_items[0].created_at
 
     def test_update_dataset_items_error(self, dataset_image_bboxes_keypoint_copy: Dataset):
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]

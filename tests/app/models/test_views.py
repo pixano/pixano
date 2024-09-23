@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import pytest
 
 from pixano.app.models import TableInfo, ViewModel
@@ -20,6 +22,8 @@ class TestViewModel:
                 "item_ref": {"id": "", "name": ""},
                 "parent_ref": {"id": "", "name": ""},
             },
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
         view = model.to_row(View)
 
@@ -28,6 +32,8 @@ class TestViewModel:
             item_ref={"id": "", "name": ""},
             view_ref={"id": "", "name": ""},
             parent_ref={"id": "", "name": ""},
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of View."):

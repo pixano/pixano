@@ -54,6 +54,8 @@ def json_dataset_schema_item_categories_image_bbox():
                     "split": {"type": "str", "collection": False},
                     "categories": {"type": "str", "collection": True},
                     "other_categories": {"type": "int", "collection": True},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "image": {
@@ -67,6 +69,8 @@ def json_dataset_schema_item_categories_image_bbox():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "entity": {
@@ -77,6 +81,8 @@ def json_dataset_schema_item_categories_image_bbox():
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "view_ref": {"type": "ViewRef", "collection": False},
                     "parent_ref": {"type": "EntityRef", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "bbox": {
@@ -91,6 +97,9 @@ def json_dataset_schema_item_categories_image_bbox():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
         },
@@ -179,6 +188,8 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "other_categories": {"type": "int", "collection": True},
                     "name": {"type": "str", "collection": False},
                     "index": {"type": "int", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "image": {
@@ -192,6 +203,8 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "entity": {
@@ -202,6 +215,8 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "view_ref": {"type": "ViewRef", "collection": False},
                     "parent_ref": {"type": "EntityRef", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "bbox": {
@@ -216,6 +231,9 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "embeddings": {
@@ -225,6 +243,8 @@ def json_dataset_schema_item_categories_name_index_image_bbox_embedding():
                     "id": {"type": "str", "collection": False},
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "vector": {"type": "FixedSizeList", "collection": False, "dim": 8, "value_type": "float"},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
         },
@@ -360,6 +380,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "split": {"type": "str", "collection": False},
                     "categories": {"type": "str", "collection": True},
                     "other_categories": {"type": "int", "collection": True},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "video": {
@@ -376,6 +398,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "timestamp": {"type": "float", "collection": False},
                     "frame_index": {"type": "int", "collection": False},
                     "category": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "image": {
@@ -389,6 +413,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "width": {"type": "int", "collection": False},
                     "height": {"type": "int", "collection": False},
                     "format": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "entity_image": {
@@ -400,6 +426,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "view_ref": {"type": "ViewRef", "collection": False},
                     "parent_ref": {"type": "EntityRef", "collection": False},
                     "category": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "entities_video": {
@@ -410,6 +438,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "view_ref": {"type": "ViewRef", "collection": False},
                     "parent_ref": {"type": "EntityRef", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "tracks": {
@@ -421,6 +451,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "view_ref": {"type": "ViewRef", "collection": False},
                     "parent_ref": {"type": "EntityRef", "collection": False},
                     "name": {"type": "str", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "bbox_image": {
@@ -436,6 +468,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
                     "is_difficult": {"type": "bool", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "mask_image": {
@@ -448,6 +483,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "entity_ref": {"type": "EntityRef", "collection": False},
                     "size": {"type": "int", "collection": True},
                     "counts": {"type": "bytes", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "keypoints_image": {
@@ -461,6 +499,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "template_id": {"type": "str", "collection": False},
                     "coords": {"type": "float", "collection": True},
                     "states": {"type": "str", "collection": True},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "bboxes_video": {
@@ -475,6 +516,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "format": {"type": "str", "collection": False},
                     "is_normalized": {"type": "bool", "collection": False},
                     "confidence": {"type": "float", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "keypoints_video": {
@@ -488,6 +532,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "template_id": {"type": "str", "collection": False},
                     "coords": {"type": "float", "collection": True},
                     "states": {"type": "str", "collection": True},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "tracklets": {
@@ -502,6 +549,9 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "end_timestep": {"type": "int", "collection": False},
                     "start_timestamp": {"type": "float", "collection": False},
                     "end_timestamp": {"type": "float", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
+                    "source_ref": {"type": "SourceRef", "collection": False},
                 },
             },
             "image_embedding": {
@@ -512,6 +562,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "vector": {"type": "FixedSizeList", "collection": False, "dim": 8, "value_type": "float"},
                     "view_ref": {"type": "ViewRef", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
             "video_embeddings": {
@@ -522,6 +574,8 @@ def json_dataset_schema_multi_view_tracking_and_image():
                     "item_ref": {"type": "ItemRef", "collection": False},
                     "vector": {"type": "FixedSizeList", "collection": False, "dim": 8, "value_type": "float"},
                     "view_ref": {"type": "ViewRef", "collection": False},
+                    "created_at": {"type": "datetime", "collection": False},
+                    "updated_at": {"type": "datetime", "collection": False},
                 },
             },
         },

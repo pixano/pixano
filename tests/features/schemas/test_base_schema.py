@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import pytest
 
 from pixano.datasets.dataset import Dataset
@@ -29,7 +31,11 @@ class TestBaseSchema:
         assert (
             resolved_item.model_dump()
             == dataset_image_bboxes_keypoint.schema.schemas["item"](
-                id="0", split="test", metadata="metadata_0"
+                id="0",
+                split="test",
+                metadata="metadata_0",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             ).model_dump()
         )
 
@@ -63,6 +69,8 @@ class TestBaseSchema:
                 "list_of_strings": {"type": "str", "collection": True},
                 "nd_array": {"type": "NDArrayFloat", "collection": False},
                 "list_of_nd_arrays": {"type": "NDArrayFloat", "collection": True},
+                "created_at": {"type": "datetime", "collection": False},
+                "updated_at": {"type": "datetime", "collection": False},
             },
         }
 
@@ -77,6 +85,8 @@ class TestBaseSchema:
                 "list_of_strings": {"type": "str", "collection": True},
                 "nd_array": {"type": "NDArrayFloat", "collection": False},
                 "list_of_nd_arrays": {"type": "NDArrayFloat", "collection": True},
+                "created_at": {"type": "datetime", "collection": False},
+                "updated_at": {"type": "datetime", "collection": False},
             },
         }
         custom_schema = BaseSchema.deserialize(json)
@@ -89,6 +99,8 @@ class TestBaseSchema:
             "list_of_strings",
             "nd_array",
             "list_of_nd_arrays",
+            "created_at",
+            "updated_at",
         }
 
         custom_schema(
@@ -98,6 +110,8 @@ class TestBaseSchema:
             list_of_strings=["yolo"],
             nd_array=NDArrayFloat(values=[0.1], shape=[1, 1]),
             list_of_nd_arrays=[NDArrayFloat(values=[0.1], shape=[1, 1]), NDArrayFloat(values=[0.1], shape=[1, 1])],
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
 

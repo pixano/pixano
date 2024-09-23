@@ -50,6 +50,7 @@ from .entities import (
 from .items import Item, is_item
 from .registry import register_schema
 from .schema_group import SchemaGroup
+from .source import Source, create_source, is_source
 from .views import (
     Image,
     PointCloud,
@@ -88,6 +89,7 @@ __all__ = [
     "PointCloud",
     "SchemaGroup",
     "SequenceFrame",
+    "Source",
     "Track",
     "Tracklet",
     "Video",
@@ -103,6 +105,7 @@ __all__ = [
     "create_keypoints3d",
     "create_point_cloud",
     "create_sequence_frame",
+    "create_source",
     "create_track",
     "create_tracklet",
     "create_video",
@@ -121,6 +124,7 @@ __all__ = [
     "is_keypoints3d",
     "is_point_cloud",
     "is_sequence_frame",
+    "is_source",
     "is_track",
     "is_tracklet",
     "is_view",
