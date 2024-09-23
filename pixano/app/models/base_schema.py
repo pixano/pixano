@@ -8,7 +8,6 @@ from datetime import datetime
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, ConfigDict
-from pydantic_core import ValidationError
 from typing_extensions import Self
 
 from pixano.features import BaseSchema
@@ -51,7 +50,7 @@ class BaseSchemaModel(BaseModel, Generic[T]):
         """
         if created_at is None or updated_at is None:
             if updated_at is not None or created_at is not None:
-                raise ValidationError("Both 'created_at' and 'updated_at' should be set.")
+                raise ValueError("Both 'created_at' and 'updated_at' should be set.")
             created_at = datetime.now()
             updated_at = created_at
         data.update({"created_at": created_at, "updated_at": updated_at})

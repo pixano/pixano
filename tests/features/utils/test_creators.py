@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+import json
+
 import pytest
 
 from pixano.features import (
@@ -49,6 +51,8 @@ from pixano.features import (
 )
 from pixano.features.schemas.annotations.camcalibration import BaseIntrinsics, Extrinsics, Intrinsics
 from pixano.features.schemas.base_schema import BaseSchema
+from pixano.features.schemas.source import create_source
+from pixano.features.types.schema_reference import SourceRef, create_source_ref
 from pixano.features.utils.creators import create_instance_of_pixano_type, create_instance_of_schema
 
 
@@ -203,6 +207,11 @@ def test_create_pixano_object_item_ref():
 def test_create_pixano_object_schema_ref():
     schema_ref = create_instance_of_pixano_type(SchemaRef, id="schema1", name="schema")
     assert schema_ref == create_schema_ref(id="schema1", name="schema")
+
+
+def test_create_pixano_object_source_ref():
+    schema_ref = create_instance_of_pixano_type(SourceRef, id="source1")
+    assert schema_ref == create_source_ref(id="source1")
 
 
 def test_create_pixano_object_view_ref():

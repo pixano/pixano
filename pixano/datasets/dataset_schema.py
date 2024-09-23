@@ -12,7 +12,6 @@ from types import GenericAlias
 from typing import Any
 
 from pydantic import BaseModel, create_model, model_serializer, model_validator
-from pydantic_core import ValidationError
 from typing_extensions import Self
 
 from pixano.features import BaseSchema, Item
@@ -360,7 +359,7 @@ class DatasetItem(BaseModel):
         """
         if created_at is None or updated_at is None:
             if updated_at is not None or created_at is not None:
-                raise ValidationError("Both 'created_at' and 'updated_at' should be set.")
+                raise ValueError("Both 'created_at' and 'updated_at' should be set.")
             created_at = datetime.now()
             updated_at = created_at
         data.update({"created_at": created_at, "updated_at": updated_at})
@@ -410,24 +409,6 @@ class DatasetItem(BaseModel):
                             item.pop("created_at", None)
                             item.pop("updated_at", None)
         return model_dump
-
-    @classmethod
-    def from_schemas_data(cls, schemas_data=dict[str, BaseSchema | list[BaseSchema] | None]) -> "DatasetItem":
-        """Convert schemas data to DatasetItem.
-
-        Args:
-            schemas_data: Schemas data.
-
-        Returns:
-            DatasetItem.
-        """
-        item_data = {}
-        for field_name, field_value in schemas_data[SchemaGroup.ITEM.value].dict().items():
-            item_data[field_name] = field_value
-        for field_name, field_value in schemas_data.items():
-            if field_name != SchemaGroup.ITEM.value:
-                item_data[field_name] = field_value
-        return cls(**item_data)
 
     @classmethod
     def to_dataset_schema(cls) -> DatasetSchema:

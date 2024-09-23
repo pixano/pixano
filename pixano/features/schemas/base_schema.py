@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, overload
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import ConfigDict, PrivateAttr, create_model
-from pydantic_core import ValidationError
 
 from pixano.utils.python import get_super_type_from_dict, issubclass_strict
 
@@ -75,7 +74,7 @@ class BaseSchema(LanceModel):
         """
         if created_at is None or updated_at is None:
             if updated_at is not None or created_at is not None:
-                raise ValidationError("Both 'created_at' and 'updated_at' should be set.")
+                raise ValueError("Both 'created_at' and 'updated_at' should be set.")
             created_at = datetime.now()
             updated_at = created_at
         data.update({"created_at": created_at, "updated_at": updated_at})

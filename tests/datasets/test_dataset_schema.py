@@ -411,8 +411,29 @@ class TestDatasetSchema:
         with pytest.raises(ValueError, match="Invalid relation 1."):
             dataset_schema_item_categories_image_bbox.add_schema("new_table", Image, 1)
 
+        class UnknownSchema(BaseSchema):
+            pass
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid table type <class 'tests.datasets.test_dataset_schema.TestDatasetSchema."
+            "test_add_error.<locals>.UnknownSchema'>",
+        ):
+            dataset_schema_item_categories_image_bbox.add_schema("new_table", UnknownSchema, SchemaRelation.ONE_TO_ONE)
+
 
 class TestDatasetItem:
+    def test_init(self):
+        dataset_item = DatasetItem(id="0")
+        assert dataset_item.id == "0"
+        assert dataset_item.split == "default"
+
+        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
+            BaseSchema(created_at=datetime(2021, 1, 1, 0, 0, 0))
+
+        with pytest.raises(ValueError, match="Both 'created_at' and 'updated_at' should be set."):
+            BaseSchema(updated_at=datetime(2021, 1, 1, 0, 0, 0))
+
     def test_to_dataset_schema(self, dataset_item_bboxes_metadata, item_categories_name_index):
         schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {

@@ -170,6 +170,6 @@ def create_embedding_ref(id: str, name: str) -> EmbeddingRef:
     return EmbeddingRef(name=name, id=id)
 
 
-def create_source_ref(id: str, name: str) -> SourceRef:
+def create_source_ref(id: str) -> SourceRef:
     """Create a source reference."""
-    return SourceRef(name=name, id=id)
+    return SourceRef(id=id)

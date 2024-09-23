@@ -72,10 +72,11 @@ def is_source(cls: type, strict: bool = False) -> bool:
     return issubclass_strict(cls, Source, strict)
 
 
-def create_source(name: str, kind: str, metadata: str) -> Source:
+def create_source(id: str, name: str, kind: str, metadata: str | dict[str, Any]) -> Source:
     """Create a `Source` instance.
 
     Args:
+        id: Identifier of the source.
         name: Name of the source.
         kind: Kind of source.
         metadata: Metadata of the source.
@@ -83,4 +84,4 @@ def create_source(name: str, kind: str, metadata: str) -> Source:
     Returns:
         The created `Source` instance.
     """
-    return Source(name=name, kind=kind, metadata=metadata)
+    return Source(id=id, name=name, kind=kind, metadata=metadata)
