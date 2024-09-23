@@ -6,7 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { ItemObject, DatasetItem, FeaturesValues, DatasetItemSave } from "@pixano/core";
+  import type {
+    ItemObject,
+    DatasetItem,
+    FeaturesValues,
+    DatasetItemSave,
+    ImageObject,
+    VideoObject,
+  } from "@pixano/core";
 
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
@@ -37,19 +44,71 @@ License: CECILL-C
   let embeddings: Embeddings = {};
 
   $: itemObjects.update(
-    (oldObjects) =>
-      selectedItem?.objects?.map((object) => {
-        const oldObject = oldObjects.find((o) => o.id === object.id);
-        if (oldObject) {
-          return { ...oldObject, ...object } as ItemObject;
-        }
-        return object;
-      }) || ([] as ItemObject[]),
+    (oldObjects) => {
+      const newObjects: ItemObject[] = [];
+      for (const anns of Object.values(selectedItem.annotations)) {
+        newObjects.push(
+          ...anns.map((ann) => {
+            const oldObject = oldObjects.find((o) => o.id === ann.id);
+            if (oldObject) {
+              return { ...oldObject, ...ann } as ItemObject;
+            }
+            //TMP before UI datamodel rework, we map back datamodel to front datamodel
+
+            //add item_id & features & source_id & datasetItemType
+            ann.item_id = ann.data.item_ref.id;
+            ann.source_id = "Ground Truth";
+            ann.id = ann.data.entity_ref.id;
+            ann.data.id = ann.id;
+            ann.data.ref_name = "TODO--BR1809";
+            ann.data.view_id = ann.data.view_ref.id;
+            //find corresponding entity
+            Object.values(selectedItem.entities).forEach((entities) => {
+              for (const entity of entities) {
+                if (entity.id === ann.data.entity_ref.id) {
+                  ann.features = {
+                    name: { name: "name", dtype: "str", value: entity.data["name"] },
+                  };
+                }
+              }
+            });
+
+            //put type and data in corresponding field (aka bbox, keypoiints or mask)
+            if (selectedItem.type === "image") {
+              ann.datasetItemType = "image";
+              if (ann.table_info.base_schema === "BBox") (ann as ImageObject).bbox = ann.data;
+              else if (ann.table_info.base_schema === "KeyPoints")
+                (ann as ImageObject).keypoints = ann.data;
+              else if (ann.table_info.base_schema === "CompressedRLE")
+                (ann as ImageObject).mask = ann.data;
+            } else {
+              ann.datasetItemType = "video";
+              if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes = ann.data;
+              else if (ann.table_info.base_schema === "KeyPoints")
+                (ann as VideoObject).keypoints = ann.data;
+              //else if (ann.table_info.base_schema === "CompressedRLE") (ann as VideoObject).mask = ann.data;
+            }
+            delete ann.data;
+            console.log("ANN", ann);
+            return ann;
+          }),
+        );
+      }
+      return newObjects;
+    },
+
+    // return selectedItem?.annotations?.map((object) => {
+    //   const oldObject = oldObjects.find((o) => o.id === object.id);
+    //   if (oldObject) {
+    //     return { ...oldObject, ...object } as ItemObject;
+    //   }
+    //   return object;
+    // }) || ([] as ItemObject[])},
   );
 
   $: itemMetas.set({
     mainFeatures: selectedItem.features,
-    objectFeatures: Object.values(selectedItem.objects || {})[0]?.features,
+    objectFeatures: Object.values(selectedItem.annotations || {})[0]?.features,
     featuresList: featureValues || { main: {}, objects: {} },
     views: selectedItem.views,
     id: selectedItem.id,

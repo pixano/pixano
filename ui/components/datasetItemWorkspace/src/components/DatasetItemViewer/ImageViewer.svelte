@@ -83,8 +83,7 @@ License: CECILL-C
   const loadImages = async (views: Record<string, ItemView>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
-      const img: ImageJS = await ImageJS.load(`/${value.uri}`);
-
+      const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";

@@ -9,6 +9,7 @@ License: CECILL-C
   import { page } from "$app/stores";
   import {
     type DatasetItem,
+    type ItemView,
     type DatasetInfo,
     type DatasetItemSave,
     PrimaryButton,
@@ -46,18 +47,42 @@ License: CECILL-C
 
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
-    api
-      .getDatasetItem(dataset.id, encodeURIComponent(id))
-      .then((item) => {
-        selectedItem = item;
-        if (Object.keys(item).length === 0) {
-          noItemFound = true;
-        } else {
-          noItemFound = false;
-        }
-      })
-      .then(() => isLoadingNewItemStore.set(false))
-      .catch((err) => console.error(err));
+    api.getDataset(dataset.id).then((ds) => {
+      api
+        .getDatasetItem(dataset.id, encodeURIComponent(id))
+        .then((item) => {
+          let item_type: "image"|"video"|"3d" = "image";
+          //append /data/<dataset_path>/media url to all urls
+          //NOTE: slice(-2) is not very safe, it suppose we respect the ""<dataset_path>/media" rule
+          //but as ds.media_dir is an absolute path, we need to make this assumption...
+          //Note2: we will need to revert this when we POST/PUT views !!
+          const media_dir = "data/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
+          Object.values(item.views).map((view: ItemView | ItemView[]) => {
+            if (Array.isArray(view)) {
+              view.forEach((v)=> {
+                v.data.url = media_dir + v.data.url;
+                v.data.type = "video";
+              });
+              view.sort((a, b)=> (a.data.frame_index! - b.data.frame_index!));
+              item_type = "video"
+            } else {
+              view.data.url = media_dir + view.data.url;
+              view.data.type = "image";
+            }
+            return view;
+          });
+          selectedItem = item;
+          selectedItem.type = item_type;
+          if (Object.keys(item).length === 0) {
+            noItemFound = true;
+          } else {
+            noItemFound = false;
+          }
+          console.log("ITEM", selectedItem)
+        })
+        .then(() => isLoadingNewItemStore.set(false))
+        .catch((err) => console.error(err));
+    });
   };
 
   page.subscribe((value) => {

@@ -62,7 +62,7 @@ License: CECILL-C
 
   let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
     (acc, [key, value]) => {
-      acc[key] = value.map((view) => view.uri);
+      acc[key] = value.map((view) => view.data.url);
       return acc;
     },
     {} as Record<string, string[]>,

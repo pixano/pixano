@@ -9,14 +9,14 @@ License: CECILL-C
   import { goto } from "$app/navigation";
   import { page } from "$app/stores";
 
-  import type { ExplorerData } from "@pixano/core/src";
+  import type { DatasetBrowser } from "@pixano/core/src";
 
   import DatasetExplorer from "../../../components/dataset/DatasetExplorer.svelte";
-  import { getDatasetItems } from "@pixano/core/src/api";
+  import { getBrowser } from "@pixano/core/src/api";
   import { datasetTableStore } from "$lib/stores/datasetStores";
 
   let selectedDatasetId: string;
-  let selectedDataset: ExplorerData;
+  let selectedDataset: DatasetBrowser;
 
   $: page.subscribe((value) => (selectedDatasetId = value.params.dataset));
 
@@ -27,12 +27,12 @@ License: CECILL-C
         // NOTE: WEIRD BUG(?) HERE, this got called more and more often, each time we go back to library
         // number of call increases (when going to a page > 1)
         console.log("BUGLOG 'not once' - datasetTableStore subscribe");
-        getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize)
+        getBrowser(selectedDatasetId, pagination.currentPage, pagination.pageSize, pagination.query)
           .then((datasetItems) => (selectedDataset = datasetItems))
           .catch((err) => console.log("ERROR: Couldn't get dataset items", err));
       }
       // currentDatasetStore.subscribe((currentDataset) => {
-      //   getDatasetItems(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
+      //   getBrowser(selectedDatasetId, pagination.currentPage, pagination.pageSize).then(
       //     (datasetItems) => (selectedDataset = datasetItems),
       //   );
       // });

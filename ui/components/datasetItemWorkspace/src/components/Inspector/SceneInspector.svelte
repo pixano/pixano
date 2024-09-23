@@ -44,10 +44,10 @@ License: CECILL-C
       const image: ItemView = Array.isArray(view) ? view[0] : view;
       itemType = metas.type;
       return {
-        fileName: image.uri.split("/").at(-1) as string,
-        width: image.features.width.value as number,
-        height: image.features.height.value as number,
-        format: image.uri.split(".").at(-1)?.toUpperCase() as string,
+        fileName: image.data.url.split("/").at(-1) as string,
+        width: image.data.width as number,
+        height: image.data.height as number,
+        format: image.data.format as string,
         id: image.id,
       };
     });
