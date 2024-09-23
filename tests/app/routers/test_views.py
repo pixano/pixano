@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.views import ViewModel
@@ -24,7 +25,7 @@ from pixano.datasets.dataset import Dataset
         ("image", None, None, 2, 0),
         ("image", None, None, 2, None),
         ("image", None, None, 10, 2),
-        ("video", None, ["1", "3"], 2, 1),
+        ("image", None, ["0", "1", "2"], 10, 1),
     ],
 )
 def test_get_views(
@@ -80,11 +81,11 @@ def test_get_views_error(
     }
 
     # Wrong table name
-    url = "/views/dataset_multi_view_tracking_and_image/image_wrong/"
+    url = "/views/dataset_multi_view_tracking_and_image/view_wrong/"
     client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong query parameters
     url = "/views/dataset_multi_view_tracking_and_image/image/?"
@@ -112,7 +113,9 @@ def test_get_view(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view
     app, settings = app_and_settings
 
     expected_output = get_model_from_row(
-        "image", ViewModel, dataset_multi_view_tracking_and_image.get_data("image", "image_0")
+        "image",
+        ViewModel,
+        dataset_multi_view_tracking_and_image.get_data("image", "image_0"),
     )
 
     client = TestClient(app)
@@ -135,9 +138,9 @@ def test_get_view_error(app_and_settings: tuple[FastAPI, Settings]):
     }
 
     # Wrong table name
-    response = client.get("/views/dataset_multi_view_tracking_and_image/image_wrong/image_0")
+    response = client.get("/views/dataset_multi_view_tracking_and_image/view_wrong/image_0")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong view ID
     response = client.get("/views/dataset_multi_view_tracking_and_image/image/image_100")
@@ -158,17 +161,19 @@ def test_create_views(
     for new_view in new_views:
         new_view.id = "new_" + new_view.id
 
-    new_views_models = get_models_from_rows("image", ViewModel, new_views)
+    new_views_models = [
+        model.model_dump(exclude_timestamps=True) for model in get_models_from_rows("image", ViewModel, new_views)
+    ]
 
     client = TestClient(app)
     response = client.post(
         "/views/dataset_multi_view_tracking_and_image/image/",
-        json=[model.model_dump() for model in new_views_models],
+        json=jsonable_encoder(new_views_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
-        model = ViewModel.model_validate(model_json)
+        model = ViewModel.model_validate(model_json).model_dump(exclude_timestamps=True)
         assert model in new_views_models
     assert len(response.json()) == len(new_views_models)
 
@@ -189,7 +194,7 @@ def test_create_views_error(
     good_data = get_models_from_rows(
         "image", ViewModel, dataset_multi_view_tracking_and_image.get_data("image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -204,15 +209,15 @@ def test_create_views_error(
 
     # Wrong table name
     response = client.post(
-        "/views/dataset_multi_view_tracking_and_image/image_wrong/",
+        "/views/dataset_multi_view_tracking_and_image/view_wrong/",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/views/dataset_multi_view_tracking_and_image/image/",
         json=json_bad_data,
@@ -237,12 +242,12 @@ def test_create_view(
     client = TestClient(app)
     response = client.post(
         "/views/dataset_multi_view_tracking_and_image/image/new_image_0",
-        json=new_view_model.model_dump(),
+        json=jsonable_encoder(new_view_model),
     )
 
     assert response.status_code == 200
     model = ViewModel.model_validate(response.json())
-    assert model == new_view_model
+    assert model.model_dump(exclude_timestamps=True) == new_view_model.model_dump(exclude_timestamps=True)
 
     # Check that the view was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_data("image", "new_image_0") is not None
@@ -260,7 +265,7 @@ def test_create_view_error(
         ViewModel,
         dataset_multi_view_tracking_and_image.get_data("image", "image_0"),
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -275,11 +280,11 @@ def test_create_view_error(
 
     # Wrong table name
     response = client.post(
-        "/views/dataset_multi_view_tracking_and_image/image_wrong/image_0",
+        "/views/dataset_multi_view_tracking_and_image/view_wrong/image_0",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong view ID
     response = client.post(
@@ -302,20 +307,22 @@ def test_update_views(
     for i, updated_view in enumerate(updated_views):
         if i % 2:
             updated_view.id = "new_" + updated_view.id
-        updated_view.width += i + 1
+        updated_view.width = i + 1
 
     updated_views_models = get_models_from_rows("image", ViewModel, updated_views)
 
     client = TestClient(app)
     response = client.put(
         "/views/dataset_multi_view_tracking_and_image/image/",
-        json=[model.model_dump() for model in updated_views_models],
+        json=jsonable_encoder(updated_views_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = ViewModel.model_validate(model_json)
-        assert model in updated_views_models
+        assert model.model_dump(exclude_timestamps=True) in [
+            u_model.model_dump(exclude_timestamps=True) for u_model in updated_views_models
+        ]
     assert len(response.json()) == len(updated_views_models)
 
     # Check that the views were updated in the dataset
@@ -330,7 +337,10 @@ def test_update_views(
                 cur_view = updated_view
                 break
         assert cur_view is not None
-        assert cur_view.model_dump() == updated_row.model_dump()
+        if cur_view.id.startswith("new_"):
+            assert cur_view.model_dump(exclude_timestamps=True) == updated_row.model_dump(exclude_timestamps=True)
+        else:
+            assert cur_view.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
 
 def test_update_views_error(
@@ -343,7 +353,7 @@ def test_update_views_error(
     good_data = get_models_from_rows(
         "image", ViewModel, dataset_multi_view_tracking_and_image.get_data("image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -358,15 +368,15 @@ def test_update_views_error(
 
     # Wrong table name
     response = client.put(
-        "/views/dataset_multi_view_tracking_and_image/image_wrong/",
+        "/views/dataset_multi_view_tracking_and_image/view_wrong/",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/views/dataset_multi_view_tracking_and_image/image/",
         json=json_bad_data,
@@ -384,24 +394,24 @@ def test_update_view(
 
     view = dataset_multi_view_tracking_and_image.get_data("image", "image_0")
     updated_view = view.model_copy(deep=True)
-    updated_view.width = 10000
+    updated_view.width = 10
 
     updated_view_model = get_model_from_row("image", ViewModel, updated_view)
 
     client = TestClient(app)
     response = client.put(
         "/views/dataset_multi_view_tracking_and_image/image/image_0",
-        json=updated_view_model.model_dump(),
+        json=jsonable_encoder(updated_view_model),
     )
 
     assert response.status_code == 200
     model = ViewModel.model_validate(response.json())
-    assert model == updated_view_model
+    assert model.model_dump(exclude="updated_at") == updated_view_model.model_dump(exclude="updated_at")
 
     # Check that the view was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_data("image", updated_view.id)
     assert updated_row is not None
-    assert updated_row.model_dump() == updated_view.model_dump()
+    assert updated_row.model_dump(exclude="updated_at") == updated_view.model_dump(exclude="updated_at")
 
 
 def test_update_view_error(
@@ -416,7 +426,7 @@ def test_update_view_error(
         ViewModel,
         dataset_multi_view_tracking_and_image.get_data("image", "image_0"),
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -431,11 +441,11 @@ def test_update_view_error(
 
     # Wrong table name
     response = client.put(
-        "/views/dataset_multi_view_tracking_and_image/image_wrong/image_0",
+        "/views/dataset_multi_view_tracking_and_image/view_wrong/image_0",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
     # Wrong view ID
     response = client.put(
@@ -490,9 +500,9 @@ def test_delete_views_error(
     }
 
     # Wrong table name
-    response = client.delete(f"/views/dataset_multi_view_tracking_and_image/image_wrong/{delete_ids_url}")
+    response = client.delete(f"/views/dataset_multi_view_tracking_and_image/view_wrong/{delete_ids_url}")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}
 
 
 def test_delete_view(
@@ -527,6 +537,6 @@ def test_delete_view_error(
     }
 
     # Wrong table name
-    response = client.delete("/views/dataset_multi_view_tracking_and_image/image_wrong/image_0")
+    response = client.delete("/views/dataset_multi_view_tracking_and_image/view_wrong/image_0")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_wrong is not in the views group table."}
+    assert response.json() == {"detail": "Table view_wrong is not in the views group table."}

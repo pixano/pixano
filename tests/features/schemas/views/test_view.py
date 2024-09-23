@@ -12,11 +12,11 @@ from tests.features.utils import make_tests_is_sublass_strict
 class TestView:
     def test_init(self):
         view = View()
-        assert view == View(
+        assert view.model_dump(exclude_timestamps=True) == View(
             id="",
             item_ref=ItemRef.none(),
             parent_ref=ViewRef.none(),
-        )
+        ).model_dump(exclude_timestamps=True)
 
 
 def test_is_view():

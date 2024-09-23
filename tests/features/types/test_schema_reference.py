@@ -6,7 +6,15 @@
 
 import pytest
 
-from pixano.features.types.schema_reference import AnnotationRef, EmbeddingRef, EntityRef, ItemRef, SchemaRef, ViewRef
+from pixano.features.types.schema_reference import (
+    AnnotationRef,
+    EmbeddingRef,
+    EntityRef,
+    ItemRef,
+    SchemaRef,
+    SourceRef,
+    ViewRef,
+)
 
 
 class TestSchemaReference:
@@ -27,7 +35,7 @@ class TestItemRef:
         assert item_ref.id == ""
 
     def test_validate_fields(self):
-        with pytest.raises(ValueError, match="Schema must be 'item' when not empty."):
+        with pytest.raises(ValueError, match="name must be 'item' when not empty."):
             ItemRef(name="yolo", id="")
 
 
@@ -49,3 +57,14 @@ class TestAnnotationRef:
 class TestEmbeddingRef:
     def test_init(self):
         EmbeddingRef(name="embedding", id="4")
+
+
+class TestSourceRef:
+    def test_init(self):
+        source_ref = SourceRef()
+        assert source_ref.name == "source"
+        assert source_ref.id == ""
+
+    def test_validate_fields(self):
+        with pytest.raises(ValueError, match="name must be 'source' when not empty."):
+            SourceRef(name="yolo", id="")

@@ -23,7 +23,7 @@ def test_create_video():
     assert VIDEO_MP4_METADATA["fps"] == round(video.fps, 2)
     video.duration = VIDEO_MP4_METADATA["duration"]
     video.fps = VIDEO_MP4_METADATA["fps"]
-    assert video == Video(
+    assert video.model_dump(exclude_timestamps=True) == Video(
         url=str(VIDEO_MP4_ASSET_URL.as_posix()),
         width=320,
         height=240,
@@ -34,7 +34,7 @@ def test_create_video():
         id="",
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)
 
     # Test 2: read url with custom id and other path and custom references
     video = create_video(
@@ -48,7 +48,7 @@ def test_create_video():
     assert VIDEO_MP4_METADATA["fps"] == round(video.fps, 2)
     video.duration = VIDEO_MP4_METADATA["duration"]
     video.fps = VIDEO_MP4_METADATA["fps"]
-    assert video == Video(
+    assert video.model_dump(exclude_timestamps=True) == Video(
         url="sample_data/video_mp4.mp4",
         width=VIDEO_MP4_METADATA["width"],
         height=VIDEO_MP4_METADATA["height"],
@@ -59,7 +59,7 @@ def test_create_video():
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
-    )
+    ).model_dump(exclude_timestamps=True)
 
     # Test 3: no read
     video = create_video(
@@ -71,7 +71,7 @@ def test_create_video():
         fps=30,
         duration=3.33,
     )
-    assert video == Video(
+    assert video.model_dump(exclude_timestamps=True) == Video(
         url=str(VIDEO_MP4_ASSET_URL.as_posix()),
         width=100,
         height=100,
@@ -82,4 +82,4 @@ def test_create_video():
         id="",
         item_ref=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)

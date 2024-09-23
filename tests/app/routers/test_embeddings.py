@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.embeddings import EmbeddingModel
@@ -80,11 +81,11 @@ def test_get_embeddings_error(
     }
 
     # Wrong table name
-    url = "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/"
+    url = "/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/"
     client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong query parameters
     url = "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/?"
@@ -137,9 +138,9 @@ def test_get_embedding_error(app_and_settings: tuple[FastAPI, Settings]):
     }
 
     # Wrong table name
-    response = client.get("/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/image_embedding_0")
+    response = client.get("/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/image_embedding_0")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong embedding ID
     response = client.get("/embeddings/dataset_multi_view_tracking_and_image/image_embedding/image_embedding_100")
@@ -160,17 +161,20 @@ def test_create_embeddings(
     for new_embedding in new_embeddings:
         new_embedding.id = "new_" + new_embedding.id
 
-    new_embeddings_models = get_models_from_rows("image_embedding", EmbeddingModel, new_embeddings)
+    new_embeddings_models = [
+        model.model_dump(exclude_timestamps=True)
+        for model in get_models_from_rows("image_embedding", EmbeddingModel, new_embeddings)
+    ]
 
     client = TestClient(app)
     response = client.post(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/",
-        json=[model.model_dump() for model in new_embeddings_models],
+        json=jsonable_encoder(new_embeddings_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
-        model = EmbeddingModel.model_validate(model_json)
+        model = EmbeddingModel.model_validate(model_json).model_dump(exclude_timestamps=True)
         assert model in new_embeddings_models
     assert len(response.json()) == len(new_embeddings_models)
 
@@ -193,7 +197,7 @@ def test_create_embeddings_error(
     good_data = get_models_from_rows(
         "image_embedding", EmbeddingModel, dataset_multi_view_tracking_and_image.get_data("image_embedding", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -208,15 +212,15 @@ def test_create_embeddings_error(
 
     # Wrong table name
     response = client.post(
-        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/",
+        "/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/",
         json=json_bad_data,
@@ -241,12 +245,12 @@ def test_create_embedding(
     client = TestClient(app)
     response = client.post(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/new_image_embedding_0",
-        json=new_embedding_model.model_dump(),
+        json=jsonable_encoder(new_embedding_model),
     )
 
     assert response.status_code == 200
     model = EmbeddingModel.model_validate(response.json())
-    assert model == new_embedding_model
+    assert model.model_dump(exclude_timestamps=True) == new_embedding_model.model_dump(exclude_timestamps=True)
 
     # Check that the embedding was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_data("image_embedding", "new_image_embedding_0") is not None
@@ -264,7 +268,7 @@ def test_create_embedding_error(
         EmbeddingModel,
         dataset_multi_view_tracking_and_image.get_data("image_embedding", "image_embedding_0"),
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -279,11 +283,11 @@ def test_create_embedding_error(
 
     # Wrong table name
     response = client.post(
-        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/image_embedding_0",
+        "/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/image_embedding_0",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong embedding ID
     response = client.post(
@@ -306,20 +310,22 @@ def test_update_embeddings(
     for i, updated_embedding in enumerate(updated_embeddings):
         if i % 2:
             updated_embedding.id = "new_" + updated_embedding.id
-        updated_embedding.vector[0] = i + 1
+        updated_embedding.vector = [i + 1 for i in range(8)]
 
     updated_embeddings_models = get_models_from_rows("image_embedding", EmbeddingModel, updated_embeddings)
 
     client = TestClient(app)
     response = client.put(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/",
-        json=[model.model_dump() for model in updated_embeddings_models],
+        json=jsonable_encoder(updated_embeddings_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = EmbeddingModel.model_validate(model_json)
-        assert model in updated_embeddings_models
+        assert model.model_dump(exclude_timestamps=True) in [
+            u_model.model_dump(exclude_timestamps=True) for u_model in updated_embeddings_models
+        ]
     assert len(response.json()) == len(updated_embeddings_models)
 
     # Check that the embeddings were updated in the dataset
@@ -334,7 +340,10 @@ def test_update_embeddings(
                 cur_embedding = updated_embedding
                 break
         assert cur_embedding is not None
-        assert cur_embedding.model_dump() == updated_row.model_dump()
+        if cur_embedding.id.startswith("new_"):
+            assert cur_embedding.model_dump(exclude_timestamps=True) == updated_row.model_dump(exclude_timestamps=True)
+        else:
+            assert cur_embedding.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
 
 def test_update_embeddings_error(
@@ -347,7 +356,7 @@ def test_update_embeddings_error(
     good_data = get_models_from_rows(
         "image_embedding", EmbeddingModel, dataset_multi_view_tracking_and_image.get_data("image_embedding", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -362,15 +371,15 @@ def test_update_embeddings_error(
 
     # Wrong table name
     response = client.put(
-        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/",
+        "/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/",
         json=json_bad_data,
@@ -388,24 +397,24 @@ def test_update_embedding(
 
     embedding = dataset_multi_view_tracking_and_image.get_data("image_embedding", "image_embedding_0")
     updated_embedding = embedding.model_copy(deep=True)
-    updated_embedding.vector[0] = 100
+    updated_embedding.vector = [10 + i for i in range(8)]
 
     updated_embedding_model = get_model_from_row("image_embedding", EmbeddingModel, updated_embedding)
 
     client = TestClient(app)
     response = client.put(
         "/embeddings/dataset_multi_view_tracking_and_image/image_embedding/image_embedding_0",
-        json=updated_embedding_model.model_dump(),
+        json=jsonable_encoder(updated_embedding_model),
     )
 
     assert response.status_code == 200
     model = EmbeddingModel.model_validate(response.json())
-    assert model == updated_embedding_model
+    assert model.model_dump(exclude="updated_at") == updated_embedding_model.model_dump(exclude="updated_at")
 
     # Check that the embedding was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_data("image_embedding", updated_embedding.id)
     assert updated_row is not None
-    assert updated_row.model_dump() == updated_embedding.model_dump()
+    assert updated_row.model_dump(exclude="updated_at") == updated_embedding.model_dump(exclude="updated_at")
 
 
 def test_update_embedding_error(
@@ -420,7 +429,7 @@ def test_update_embedding_error(
         EmbeddingModel,
         dataset_multi_view_tracking_and_image.get_data("image_embedding", "image_embedding_0"),
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -435,11 +444,11 @@ def test_update_embedding_error(
 
     # Wrong table name
     response = client.put(
-        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/image_embedding_0",
+        "/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/image_embedding_0",
         json=json_data,
     )
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
     # Wrong embedding ID
     response = client.put(
@@ -497,11 +506,9 @@ def test_delete_embeddings_error(
     }
 
     # Wrong table name
-    response = client.delete(
-        f"/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/{delete_ids_url}"
-    )
+    response = client.delete(f"/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/{delete_ids_url}")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}
 
 
 def test_delete_embedding(
@@ -529,15 +536,15 @@ def test_delete_embedding_error(
     app, settings = app_and_settings_with_copy
     # Wrong dataset ID
     client = TestClient(app)
-    response = client.delete("/embeddings/dataset_multi_view_tracking_and_image_wrong/bbox_image/image_embedding_0")
+    response = client.delete(
+        "/embeddings/dataset_multi_view_tracking_and_image_wrong/image_embedding/image_embedding_0"
+    )
     assert response.status_code == 404
     assert response.json() == {
         "detail": f"Dataset dataset_multi_view_tracking_and_image_wrong not found in {settings.data_dir}."
     }
 
     # Wrong table name
-    response = client.delete(
-        "/embeddings/dataset_multi_view_tracking_and_image/image_embedding_wrong/image_embedding_0"
-    )
+    response = client.delete("/embeddings/dataset_multi_view_tracking_and_image/embedding_wrong/image_embedding_0")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Table image_embedding_wrong is not in the embeddings group table."}
+    assert response.json() == {"detail": "Table embedding_wrong is not in the embeddings group table."}

@@ -7,6 +7,8 @@
 
 from typing import Any
 
+from pydantic import BaseModel
+
 from pixano.datasets import DatasetItem, DatasetSchema
 from pixano.features import Annotation, Entity, Item, View
 from pixano.features.schemas.base_schema import BaseSchema
@@ -22,7 +24,7 @@ from .table_info import TableInfo
 from .views import ViewModel
 
 
-class DatasetItemModel(DatasetItem):
+class DatasetItemModel(BaseModel):
     """DatasetItem model."""
 
     id: str
@@ -30,6 +32,34 @@ class DatasetItemModel(DatasetItem):
     entities: dict[str, list[EntityModel] | EntityModel | None] = {}
     annotations: dict[str, list[AnnotationModel] | AnnotationModel | None] = {}
     views: dict[str, list[ViewModel] | ViewModel | None] = {}
+
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+        """Dump the model to a dictionary.
+
+        Args:
+            exclude_timestamps: Exclude timestamps "created_at" and "updated_at" from the model dump. Useful for
+                comparing models without timestamps.
+            kwargs: Arguments for pydantic `BaseModel.model_dump()`.
+
+        Returns:
+            The model dump.
+        """
+        model_dump = super().model_dump(**kwargs)
+        if exclude_timestamps:
+            model_dump["item"].pop("created_at", None)
+            model_dump["item"].pop("updated_at", None)
+            for k in ["entities", "annotations", "views"]:
+                for model in model_dump[k].values():
+                    if model is None:
+                        continue
+                    elif isinstance(model, list):  # Only one level deep.
+                        for item in model:
+                            item.pop("created_at", None)
+                            item.pop("updated_at", None)
+                    else:
+                        model.pop("created_at", None)
+                        model.pop("updated_at", None)
+        return model_dump
 
     @classmethod
     def from_dataset_item(cls, dataset_item: DatasetItem, dataset_schema: DatasetSchema) -> "DatasetItemModel":

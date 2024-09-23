@@ -7,6 +7,7 @@
 import pytest
 from fastapi import HTTPException
 from fastapi.applications import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models import AnnotationModel, BaseSchemaModel
@@ -47,9 +48,7 @@ def test_get_rows(
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=2")
     assert response.status_code == 200
-    assert response.json() == [
-        bbox.model_dump() for bbox in two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image
-    ]
+    assert response.json() == jsonable_encoder(two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image)
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=2&ids=0")
     assert response.status_code == 400
@@ -134,14 +133,23 @@ def test_update_rows(
     updated_rows = update_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", models)
 
     for model, row in zip(models, updated_rows):
-        assert AnnotationModel.from_row(row, table_info=model.table_info) == model
-
+        if row.id.endswith("_new"):
+            assert AnnotationModel.from_row(row, table_info=model.table_info).model_dump(
+                exclude_timestamps=True
+            ) == model.model_dump(exclude_timestamps=True)
+        else:
+            assert AnnotationModel.from_row(row, table_info=model.table_info).model_dump(
+                exclude="updated_at"
+            ) == model.model_dump(exclude="updated_at")
     assert [
-        row.model_dump()
+        row.model_dump(exclude_timestamps=True) if row.id.endswith("_new") else row.model_dump(exclude="updated_at")
         for row in dataset_multi_view_tracking_and_image_copy.get_data(
             "bbox_image", ["bbox_image_0", "bbox_image_1", "bbox_image_new"]
         )
-    ] == [row.model_dump() for row in updated_rows]
+    ] == [
+        row.model_dump(exclude_timestamps=True) if row.id.endswith("_new") else row.model_dump(exclude="updated_at")
+        for row in updated_rows
+    ]
 
     ## Test exceptions
     # Test wrong input
@@ -167,17 +175,17 @@ def test_create_rows(
 
     created_rows = create_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", new_models)
 
-    assert [model.model_dump() for model in new_models] == [
-        AnnotationModel.from_row(row, table_info=model.table_info).model_dump()
+    assert [model.model_dump(exclude_timestamps=True) for model in new_models] == [
+        AnnotationModel.from_row(row, table_info=model.table_info).model_dump(exclude_timestamps=True)
         for model, row in zip(new_models, created_rows)
     ]
 
     assert [
-        row.model_dump()
+        row.model_dump(exclude_timestamps=True)
         for row in dataset_multi_view_tracking_and_image_copy.get_data(
             "bbox_image", [model.id for model in new_models]
         )
-    ] == [row.model_dump() for row in created_rows]
+    ] == [row.model_dump(exclude_timestamps=True) for row in created_rows]
 
     ## Test exceptions
     # Test wrong input

@@ -7,7 +7,7 @@
 
 from pathlib import Path
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import ItemRef, ViewRef
 from ..registry import _register_schema_internal

@@ -6,13 +6,15 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from types import GenericAlias
 from typing import TYPE_CHECKING, Any, overload
 
 from lancedb.pydantic import FixedSizeListMixin, LanceModel, Vector
 from pydantic import ConfigDict, PrivateAttr, create_model
 
-from pixano.utils.python import get_super_type_from_dict, issubclass_strict
+from pixano.utils import get_super_type_from_dict, issubclass_strict
+from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
 from ..pyarrow_utils import DESERIALIZE_PYARROW_DATATYPE, SERIALIZE_PYARROW_DATATYPE
 from ..types.registry import _TYPES_REGISTRY
@@ -30,6 +32,8 @@ if TYPE_CHECKING:
         Item,
         ItemRef,
         SchemaRef,
+        Source,
+        SourceRef,
         View,
         ViewRef,
     )
@@ -42,12 +46,36 @@ class BaseSchema(LanceModel):
 
     Attributes:
         id: the id of the manipulated object.
+        created_at: the creation date of the object.
+        updated_at: the last modification date of the object.
+
+    Note:
+        If the `created_at` and `updated_at` fields are not provided, they are set to the current date and time.
     """
 
     model_config = ConfigDict(validate_assignment=True)
     id: str = ""
+    created_at: datetime
+    updated_at: datetime
     _dataset: Dataset | None = PrivateAttr(None)
     _table_name: str = PrivateAttr("")
+
+    def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
+        """Create a new model by parsing and validating input data from keyword arguments.
+
+        Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be
+        validated to form a valid model.
+
+        `self` is explicitly positional-only to allow `self` as a field name.
+
+        Args:
+            created_at: The creation date of the object.
+            updated_at: The last modification date of the object.
+            data: The data of the object validated by Pydantic.
+        """
+        created_at, updated_at = validate_and_init_create_at_and_update_at(created_at, updated_at)
+        data.update({"created_at": created_at, "updated_at": updated_at})
+        super().__init__(**data)
 
     @property
     def dataset(self) -> Dataset:
@@ -73,6 +101,23 @@ class BaseSchema(LanceModel):
         """Set the table name."""
         self._table_name = table_name
 
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+        """Dump the model to a dictionary.
+
+        Args:
+            exclude_timestamps: Exclude timestamps "created_at" and "updated_at" from the model dump. Useful for
+                comparing models without timestamps.
+            kwargs: Arguments for pydantic `BaseModel.model_dump()`.
+
+        Returns:
+            The model dump.
+        """
+        model_dump = super().model_dump(**kwargs)
+        if exclude_timestamps:
+            model_dump.pop("created_at", None)
+            model_dump.pop("updated_at", None)
+        return model_dump
+
     @overload
     def resolve_ref(self, ref: "ItemRef") -> "Item": ...
     @overload
@@ -84,10 +129,12 @@ class BaseSchema(LanceModel):
     @overload
     def resolve_ref(self, ref: "AnnotationRef") -> "Annotation": ...
     @overload
+    def resolve_ref(self, ref: "SourceRef") -> "Source": ...
+    @overload
     def resolve_ref(self, ref: "SchemaRef") -> "BaseSchema": ...
     def resolve_ref(
-        self, ref: "SchemaRef" | "ItemRef" | "ViewRef" | "EmbeddingRef" | "EntityRef" | "AnnotationRef"
-    ) -> "BaseSchema" | "Item" | "View" | "Embedding" | "Entity" | "Annotation":
+        self, ref: "SchemaRef" | "ItemRef" | "ViewRef" | "EmbeddingRef" | "EntityRef" | "AnnotationRef" | "SourceRef"
+    ) -> "BaseSchema" | "Item" | "View" | "Embedding" | "Entity" | "Annotation" | "Source":
         """Resolve a reference."""
         return self.dataset.resolve_ref(ref)
 

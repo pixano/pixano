@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.entities import EntityModel
@@ -158,17 +159,20 @@ def test_create_entities(
     for new_entity in new_entities:
         new_entity.id = "new_" + new_entity.id
 
-    new_entities_models = get_models_from_rows("entity_image", EntityModel, new_entities)
+    new_entities_models = [
+        model.model_dump(exclude_timestamps=True)
+        for model in get_models_from_rows("entity_image", EntityModel, new_entities)
+    ]
 
     client = TestClient(app)
     response = client.post(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/",
-        json=[model.model_dump() for model in new_entities_models],
+        json=jsonable_encoder(new_entities_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
-        model = EntityModel.model_validate(model_json)
+        model = EntityModel.model_validate(model_json).model_dump(exclude_timestamps=True)
         assert model in new_entities_models
     assert len(response.json()) == len(new_entities_models)
 
@@ -189,7 +193,7 @@ def test_create_entities_error(
     good_data = get_models_from_rows(
         "entity_image", EntityModel, dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -212,7 +216,7 @@ def test_create_entities_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/",
         json=json_bad_data,
@@ -237,12 +241,12 @@ def test_create_entity(
     client = TestClient(app)
     response = client.post(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/new_entity_image_0",
-        json=new_entity_model.model_dump(),
+        json=jsonable_encoder(new_entity_model),
     )
 
     assert response.status_code == 200
     model = EntityModel.model_validate(response.json())
-    assert model == new_entity_model
+    assert model.model_dump(exclude_timestamps=True) == new_entity_model.model_dump(exclude_timestamps=True)
 
     # Check that the entity was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_data("entity_image", "new_entity_image_0") is not None
@@ -260,7 +264,7 @@ def test_create_entity_error(
         EntityModel,
         dataset_multi_view_tracking_and_image.get_data("entity_image", "entity_image_0"),
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -302,20 +306,22 @@ def test_update_entities(
     for i, updated_entity in enumerate(updated_entities):
         if i % 2:
             updated_entity.id = "new_" + updated_entity.id
-        updated_entity.category += "i + 1"
+        updated_entity.category = "new_" + updated_entity.category
 
     updated_entities_models = get_models_from_rows("entity_image", EntityModel, updated_entities)
 
     client = TestClient(app)
     response = client.put(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/",
-        json=[model.model_dump() for model in updated_entities_models],
+        json=jsonable_encoder(updated_entities_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = EntityModel.model_validate(model_json)
-        assert model in updated_entities_models
+        assert model.model_dump(exclude_timestamps=True) in [
+            u_model.model_dump(exclude_timestamps=True) for u_model in updated_entities_models
+        ]
     assert len(response.json()) == len(updated_entities_models)
 
     # Check that the entities were updated in the dataset
@@ -330,7 +336,10 @@ def test_update_entities(
                 cur_entity = updated_entity
                 break
         assert cur_entity is not None
-        assert cur_entity.model_dump() == updated_row.model_dump()
+        if cur_entity.id.startswith("new_"):
+            assert cur_entity.model_dump(exclude_timestamps=True) == updated_row.model_dump(exclude_timestamps=True)
+        else:
+            assert cur_entity.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
 
 def test_update_entities_error(
@@ -343,7 +352,7 @@ def test_update_entities_error(
     good_data = get_models_from_rows(
         "entity_image", EntityModel, dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -366,7 +375,7 @@ def test_update_entities_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/",
         json=json_bad_data,
@@ -384,24 +393,24 @@ def test_update_entity(
 
     entity = dataset_multi_view_tracking_and_image.get_data("entity_image", "entity_image_0")
     updated_entity = entity.model_copy(deep=True)
-    updated_entity.category += "1"
+    updated_entity.category = "new_" + updated_entity.category
 
     updated_entity_model = get_model_from_row("entity_image", EntityModel, updated_entity)
 
     client = TestClient(app)
     response = client.put(
         "/entities/dataset_multi_view_tracking_and_image/entity_image/entity_image_0",
-        json=updated_entity_model.model_dump(),
+        json=jsonable_encoder(updated_entity_model),
     )
 
     assert response.status_code == 200
     model = EntityModel.model_validate(response.json())
-    assert model == updated_entity_model
+    assert model.model_dump(exclude="updated_at") == updated_entity_model.model_dump(exclude="updated_at")
 
     # Check that the entity was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_data("entity_image", updated_entity.id)
     assert updated_row is not None
-    assert updated_row.model_dump() == updated_entity.model_dump()
+    assert updated_row.model_dump(exclude="updated_at") == updated_entity.model_dump(exclude="updated_at")
 
 
 def test_update_entity_error(
@@ -416,7 +425,7 @@ def test_update_entity_error(
         EntityModel,
         dataset_multi_view_tracking_and_image.get_data("entity_image", "entity_image_0"),
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)

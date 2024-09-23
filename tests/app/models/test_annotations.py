@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import pytest
 
 from pixano.app.models import AnnotationModel, TableInfo
@@ -16,6 +18,8 @@ class TestAnnotationModel:
         model = AnnotationModel(
             id="id",
             table_info=table_info,
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
             data={
                 "item_ref": {"id": "", "name": ""},
                 "view_ref": {"id": "", "name": ""},
@@ -33,6 +37,8 @@ class TestAnnotationModel:
             coords=[0, 0, 0, 0],
             format="xywh",
             is_normalized=False,
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Annotation."):
