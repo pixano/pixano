@@ -75,8 +75,8 @@ export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): B
     if (!box.view_id) continue;
     const view = views?.[box.view_id];
     const image: ItemView = Array.isArray(view) ? view[0] : view;
-    const imageHeight = (image.height.value as number) || 1;
-    const imageWidth = (image.width.value as number) || 1;
+    const imageHeight = image.data.height || 1;
+    const imageWidth = image.data.width || 1;
     const [x, y, width, height] = box.coords;
     const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
 
@@ -603,8 +603,8 @@ export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
   const coords = box.coords;
   return {
     baseImageDimensions: {
-      width: view?.features.width.value as number,
-      height: view?.features.height.value as number,
+      width: view?.data.width,
+      height: view?.data.height,
     },
     coords,
     url: view?.url,

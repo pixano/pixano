@@ -33,8 +33,9 @@ License: CECILL-C
   let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
-    models = await api.getModels();
-    modelsStore.set(models);
+    //models = await api.getModels();
+    //modelsStore.set(models);
+    modelsStore.set([]);
   }
 
   async function handleGetDatasets() {

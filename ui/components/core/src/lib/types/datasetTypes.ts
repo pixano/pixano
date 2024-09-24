@@ -23,36 +23,39 @@ const tableInfoSchema = z
   .strict();
 export type TableInfo = z.infer<typeof tableInfoSchema>;
 
-const baseDataFieldsSchema = z
+//note: this one is needed only to parse in BaseData<T> constructor
+//because I can't find a way to parse with the generic typed version
+const refDataFieldsSchema = z
   .object({
     id: z.string(),
     table_info: tableInfoSchema,
     data: z.any(),
   })
   .strict();
-type BaseDataFields = z.infer<typeof baseDataFieldsSchema>;
-
-class BaseData implements BaseDataFields {
-  id: string;
-  table_info: TableInfo;
-  data: Record<string, unknown>;
-
-  constructor(obj: BaseDataFields) {
-    baseDataFieldsSchema.parse(obj);
-    this.id = obj.id;
-    this.table_info = obj.table_info;
-    this.data = obj.data as Record<string, unknown>;
-  }
-}
-const zDataSchema = (kind: z.AnyZodObject) => {
+const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
   return z
     .object({
       id: z.string(),
       table_info: tableInfoSchema,
-      data: kind,
+      data: schema,
     })
     .strict();
 };
+type BaseDataFieldsType<T extends z.ZodType> = ReturnType<typeof baseDataFieldsSchema<T>>;
+type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
+
+class BaseData<T> implements BaseDataFields<T> {
+  id: string;
+  table_info: TableInfo;
+  data: BaseDataFields<T>;
+
+  constructor(obj: BaseDataFields<T>) {
+    refDataFieldsSchema.parse(obj);
+    this.id = obj.id;
+    this.table_info = obj.table_info;
+    this.data = obj.data as T;
+  }
+}
 
 const viewSchema = z
   .object({
@@ -60,14 +63,14 @@ const viewSchema = z
     parent_ref: referenceSchema,
   })
   .passthrough();
-//type ViewType = z.infer<typeof viewSchema>;  //export if needed
+type ViewType = z.infer<typeof viewSchema>;  //export if needed
 
-export class View extends BaseData {
-  constructor(obj: BaseDataFields) {
+export class View extends BaseData<ViewType> {
+  constructor(obj: BaseDataFields<ViewType>) {
     viewSchema.parse(obj.data);
     super(obj);
   }
-  static createInstance(obj: BaseDataFields) {
+  static createInstance(obj: BaseDataFields<ViewType>) {
     if (obj.table_info.base_schema === "Image") return new Image(obj);
     if (obj.table_info.base_schema === "SequenceFrame")
       return new SequenceFrame(obj);
@@ -75,7 +78,7 @@ export class View extends BaseData {
   }
 
   static deepCreateInstanceArrayOrPlain(
-    objs: Record<string, BaseDataFields | BaseDataFields[]>
+    objs: Record<string, BaseDataFields<ViewType> | BaseDataFields<ViewType>[]>
   ): Record<string, View | View[]> {
     const newObj: Record<string, View | View[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -101,9 +104,9 @@ const imageSchema = z
     format: z.string(),
   })
   .passthrough();
-//type ImageType = z.infer<typeof imageSchema>;  //export if needed
+type ImageType = z.infer<typeof imageSchema>;  //export if needed
 export class Image extends View {
-  constructor(obj: BaseDataFields) {
+  constructor(obj: BaseDataFields<ImageType>) {
     // an Image can be a SequenceFrame
     if (!["Image", "SequenceFrame"].includes(obj.table_info.base_schema))
       throw new Error("Not an Image");
@@ -118,9 +121,9 @@ const sequenceFrameSchema = z
     frame_index: z.number(),
   })
   .passthrough();
-//type SequenceFrameType = z.infer<typeof sequenceFrameSchema>;  //export if needed
+type SequenceFrameType = z.infer<typeof sequenceFrameSchema>;  //export if needed
 export class SequenceFrame extends Image {
-  constructor(obj: BaseDataFields) {
+  constructor(obj: BaseDataFields<SequenceFrameType>) {
     if (obj.table_info.base_schema !== "SequenceFrame")
       throw new Error("Not a SequenceFrame");
     sequenceFrameSchema.parse(obj.data);
@@ -135,21 +138,21 @@ const entitySchema = z
     parent_ref: referenceSchema,
   })
   .passthrough();
-//type EntityType = z.infer<typeof entitySchema>;  //export if needed
+type EntityType = z.infer<typeof entitySchema>;  //export if needed
 
-export class Entity extends BaseData {
-  constructor(obj: BaseDataFields) {
+export class Entity extends BaseData<EntityType> {
+  constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
     super(obj);
   }
 
-  static createInstance(obj: BaseDataFields) {
+  static createInstance(obj: BaseDataFields<EntityType>) {
     if (obj.table_info.base_schema === "Track") return new Track(obj);
     return new Entity(obj);
   }
 
   static deepCreateInstanceArray(
-    objs: Record<string, BaseDataFields[]>
+    objs: Record<string, BaseDataFields<EntityType>[]>
   ): Record<string, Entity[]> {
     const newObj: Record<string, Entity[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -167,10 +170,10 @@ const trackSchema = z
     name: z.string(),
   })
   .passthrough();
-//type TrackType = z.infer<typeof trackSchema>;  //export if needed
+type TrackType = z.infer<typeof trackSchema>;  //export if needed
 
 export class Track extends Entity {
-  constructor(obj: BaseDataFields) {
+  constructor(obj: BaseDataFields<TrackType>) {
     trackSchema.parse(obj.data);
     super(obj);
   }
@@ -183,22 +186,22 @@ const annotationSchema = z
     entity_ref: referenceSchema,
   })
   .passthrough();
-//type AnnotationType = z.infer<typeof annotationSchema>;  //export if needed
+type AnnotationType = z.infer<typeof annotationSchema>;  //export if needed
 
-export class Annotation extends BaseData {
-  constructor(obj: BaseDataFields) {
+export class Annotation extends BaseData<AnnotationType> {
+  constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
     super(obj);
   }
 
-  static createInstance(obj: BaseDataFields) {
+  static createInstance(obj: BaseDataFields<AnnotationType>) {
     if (obj.table_info.base_schema === "BBox") return new BBox(obj);
     if (obj.table_info.base_schema === "Keypoints") return new Keypoints(obj);
     return new Annotation(obj);
   }
 
   static deepCreateInstanceArray(
-    objs: Record<string, BaseDataFields[]>
+    objs: Record<string, BaseDataFields<AnnotationType>[]>
   ): Record<string, Annotation[]> {
     const newObj: Record<string, Annotation[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -219,10 +222,10 @@ const bboxSchema = z
     is_normalized: z.boolean(),
   })
   .passthrough();
-//type BBoxType = z.infer<typeof bboxSchema>;  //export if needed
+type BBoxType = z.infer<typeof bboxSchema>;  //export if needed
 
 export class BBox extends Annotation {
-  constructor(obj: BaseDataFields) {
+  constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
     bboxSchema.parse(obj.data);
     super(obj);
@@ -236,10 +239,10 @@ const keypointsSchema = z
     states: z.array(z.string()),
   })
   .passthrough();
-//type KeypointsType = z.infer<typeof keypointsSchema>;  //export if needed
+type KeypointsType = z.infer<typeof keypointsSchema>;  //export if needed
 
 export class Keypoints extends Annotation {
-  constructor(obj: BaseDataFields) {
+  constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== "Keypoints")
       throw new Error("Not a Keypoints");
     keypointsSchema.parse(obj.data);
@@ -247,8 +250,12 @@ export class Keypoints extends Annotation {
   }
 }
 
-export class Item extends BaseData {
-  constructor(obj: BaseDataFields) {
+const itemSchema = z
+  .object({}).passthrough();
+type ItemType = z.infer<typeof itemSchema>;
+
+export class Item extends BaseData<ItemType> {
+  constructor(obj: BaseDataFields<ItemType>) {
     if (obj.table_info.base_schema !== "Item") throw new Error("Not an Item");
     super(obj);
   }
@@ -365,12 +372,12 @@ export class DatasetBrowser implements DatasetBrowserType {
 // DATASET ITEM
 const datasetItemSchema = z.object({
   id: z.string(),
-  item: baseDataFieldsSchema, //we could make a type schema for Item, but it's the same...
-  entities: z.record(z.string(), z.array(zDataSchema(entitySchema))),
-  annotations: z.record(z.string(), z.array(zDataSchema(annotationSchema))),
+  item: baseDataFieldsSchema(itemSchema), //we could make a type schema for Item, but it's the same...
+  entities: z.record(z.string(), z.array(baseDataFieldsSchema(entitySchema))),
+  annotations: z.record(z.string(), z.array(baseDataFieldsSchema(annotationSchema))),
   views: z.record(
     z.string(),
-    zDataSchema(viewSchema).or(z.array(zDataSchema(viewSchema)))
+    baseDataFieldsSchema(viewSchema).or(z.array(baseDataFieldsSchema(viewSchema)))
   ),
 }); //passthrough cause a compile error... may be an issue for UI fields
 export type DatasetItemType = z.infer<typeof datasetItemSchema>;
@@ -394,13 +401,39 @@ export class DatasetItem implements DatasetItemType {
   }
 }
 
-//-------------OLD
-//import type { Keypoints } from "./objectTypes";
+//-------------OLD & WIP
 
-// Exports
+export type ImageAnnotation = Annotation & {
+  datasetItemType: "image";
+}
+
+export type VideoAnnotation = Annotation & {
+  datasetItemType: "video";
+}
+
+//////////WIP
+
+export type ImageDatasetItem = DatasetItem & {
+  type: "image";
+  // annotations: Record<string, ImageObject[]>;
+  // entities: Record<string, ImageObject[]>;
+  views: Record<string, View>;
+};
+
+export type VideoDatasetItem = DatasetItem & {
+  type: "video";
+  // annotations: Record<string, VideoObject[]>;
+  // entities: Record<string, VideoObject[]>;
+  views: Record<string, View[]>;
+};
+
+export type ThreeDimensionsDatasetItem = DatasetItem & {
+  type: "3d";
+  views: Record<string, View[]>;
+};
+
 
 // DATASET
-
 export interface Dataset {
   id: string;
   path: string;
@@ -417,82 +450,6 @@ export interface Dataset {
   info: DatasetInfo;
 }
 
-// DATASET ITEM
-// export interface DatasetItem {
-//   id: string;
-//   item: Item;
-//   entities: Record<string, Entity[]>;
-//   annotations: Record<string, Annotation[]>;
-//   views: Record<string, View | View[]>;
-// }
-
-/////TMP WIP
-//export type View = ItemView;
-export type BaseDatasetItem = DatasetItem;
-//////
-//export type DatasetItem = ImageDatasetItem | VideoDatasetItem | ThreeDimensionsDatasetItem;
-
-// type AnnotationBase = {
-//   item_ref: Reference;
-//   view_ref: Reference;
-//   entity_ref: Reference;
-// };
-
-// type BBoxBase = AnnotationBase & {
-//   coords: Array<number>;
-//   format: string;
-//   is_normalized: boolean;
-//   confidence: number;
-// };
-
-// type KeypointsBase = AnnotationBase & {
-//   template_id: string;
-//   coords: Array<number>;
-//   states: Array<string>;
-// };
-
-// type MaskBase = AnnotationBase & {
-//   size: Array<number>;
-//   counts: ArrayBuffer; //TODO : need testing
-// };
-
-// export type BBox = BaseSchemaModel<BBoxBase & Record<string, Any>>;
-// export type Mask = BaseSchemaModel<MaskBase & Record<string, Any>>;
-// export type Keypoints = BaseSchemaModel<KeypointsBase & Record<string, Any>>;
-// export type Annotation = BBox | Keypoints | Mask;
-
-// type EntityBase = {
-//   item_ref: Reference;
-//   view_ref: Reference;
-//   parent_ref: Reference;
-// };
-
-// type TrackBase = EntityBase & {
-//   name: string;
-// };
-
-// export type Track = BaseSchemaModel<TrackBase>;
-// export type Entity = BaseSchemaModel<EntityBase> | Track;
-
-export type ImageDatasetItem = BaseDatasetItem & {
-  type: "image";
-  // annotations: Record<string, ImageObject[]>;
-  // entities: Record<string, ImageObject[]>;
-  views: Record<string, View>;
-};
-
-export type VideoDatasetItem = BaseDatasetItem & {
-  type: "video";
-  // annotations: Record<string, VideoObject[]>;
-  // entities: Record<string, VideoObject[]>;
-  views: Record<string, View[]>;
-};
-
-export type ThreeDimensionsDatasetItem = BaseDatasetItem & {
-  type: "3d";
-  views: Record<string, View[]>;
-};
-
 export type DatasetItemSave = {
   id: string;
   split: string;
@@ -505,11 +462,11 @@ export interface DatasetItems {
   total: number;
 }
 
-export interface TableInfo {
-  name: string;
-  group: string;
-  base_schema: string;
-}
+// export interface TableInfo {
+//   name: string;
+//   group: string;
+//   base_schema: string;
+// }
 
 // ITEM DATA
 
@@ -635,16 +592,17 @@ export interface ItemRLE {
   displayControl?: DisplayControl;
 }
 
-export interface ItemBBox {
-  id: string;
-  ref_name: string;
-  view_id?: string;
-  coords: Array<number>;
-  format: string;
-  is_normalized: boolean;
-  confidence: number;
-  displayControl?: DisplayControl;
-}
+export type ItemBBox = BBox;
+// export interface ItemBBox {
+//   id: string;
+//   ref_name: string;
+//   view_id?: string;
+//   coords: Array<number>;
+//   format: string;
+//   is_normalized: boolean;
+//   confidence: number;
+//   displayControl?: DisplayControl;
+// }
 
 // ITEM EMBEDDING
 export interface ItemEmbedding {

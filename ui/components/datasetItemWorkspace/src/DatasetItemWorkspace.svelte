@@ -61,7 +61,7 @@ License: CECILL-C
             ann.id = ann.data.entity_ref.id;
             ann.data.id = ann.id;
             ann.data.ref_name = "TODO--BR1809";
-            ann.data.view_id = ann.data.view_ref.id;
+            ann.data.view_id = ann.data.view_ref.name;
             //find corresponding entity
             Object.values(selectedItem.entities).forEach((entities) => {
               for (const entity of entities) {
