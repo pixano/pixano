@@ -5,19 +5,25 @@
 # =====================================
 
 import tempfile
-from pathlib import Path
+from datetime import datetime
 
 import pytest
 
 from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem
-from pixano.features import BBox, Entity, Image
+from pixano.features import BBox, Entity, Image, Source
 from pixano.features.schemas.base_schema import BaseSchema
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 
 
 def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, item_schema):
+    yield {
+        "source": [
+            Source(id="source_0", name="source_0", kind="model", metadata={"key_0": "value_0"}),
+            Source(id="source_1", name="source_1", kind="human", metadata={"key_1": "value_1"}),
+        ],
+    }
     for i in range(num_rows):
         item_id = str(i)
         image = Image(
@@ -27,6 +33,8 @@ def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, it
             width=100 - i,
             height=100 + i,
             format="jpg",
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
         entities = []
         bboxes = []
@@ -36,6 +44,8 @@ def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, it
                     id=f"entity_{i}_{j}",
                     item_ref=ItemRef(id=item_id),
                     view_ref=ViewRef(id=f"image_{i}", name="image"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
                 )
             )
             bboxes.append(
@@ -48,12 +58,21 @@ def generate_data_item_image_bboxes_keypoint(num_rows: int, item_schema_name, it
                     item_ref=ItemRef(id=item_id),
                     view_ref=ViewRef(id=f"image_{i}", name="image"),
                     entity_ref=EntityRef(id=f"entity_{i}_{j}", name="entities"),
+                    source_ref=SourceRef(id=f"source_{j % 2}", name="source"),
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
                 )
             )
 
         yield {
             "image": image,
-            item_schema_name: item_schema(id=item_id, metadata=f"metadata_{i}", split="train" if i % 2 else "test"),
+            item_schema_name: item_schema(
+                id=item_id,
+                metadata=f"metadata_{i}",
+                split="train" if i % 2 else "test",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
             "entities": entities,
             "bboxes": bboxes,
         }
@@ -73,6 +92,13 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
         "blue_car",
     ]
     SEQUENCE_FRAME_CATEGORY = ["RGB", "Depth", "IR"]
+    yield {
+        "source": [
+            Source(id="source_0", name="source_0", kind="model", metadata={"key_0": "value_0"}),
+            Source(id="source_1", name="source_1", kind="human", metadata={"key_1": "value_1"}),
+            Source(id="source_2", name="source_2", kind="ground_truth", metadata={"key_2": "value_2"}),
+        ],
+    }
     for i in range(num_rows):
         ## Item
         item_id = str(i)
@@ -85,6 +111,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
             categories=categories,
             other_categories=other_categories,
             split=split,
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
         has_video = (i % 5 > 0) or i == 0
@@ -109,6 +137,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                     width=100 * i,
                     height=50 * i,
                     format="JPEG",
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
                 )
                 for j in range(num_frames)
             ]
@@ -128,6 +158,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         0.7 * i * j,
                         0.8 * i * j,
                     ],
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
                 )
                 for j in range(num_frames)
             ]
@@ -139,6 +171,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         id=f"track_{i}_{j}",
                         name=f"track_{i}_{j}",
                         item_ref=ItemRef(id=item_id),
+                        created_at=datetime(2021, 1, 1, 0, 0, 0),
+                        updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
                 tracklets.append(
@@ -151,6 +185,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         end_timestep=j * 4,
                         start_timestamp=j * 0.1,
                         end_timestamp=j * 4 * 0.1,
+                        created_at=datetime(2021, 1, 1, 0, 0, 0),
+                        updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
                 for k in range(num_frames):
@@ -161,6 +197,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                             item_ref=ItemRef(id=item_id),
                             view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
                             parent_ref=EntityRef(id=f"track_{i}_{j}", name="tracks"),
+                            created_at=datetime(2021, 1, 1, 0, 0, 0),
+                            updated_at=datetime(2021, 1, 1, 0, 0, 0),
                         )
                     )
                     num_bboxes_and_keypoints = i % 4
@@ -176,6 +214,9 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                                 item_ref=ItemRef(id=item_id),
                                 view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
                                 entity_ref=EntityRef(id=f"entity_video_{i}_{j}_{k}", name="entities_video"),
+                                source_ref=SourceRef(id="source_0"),
+                                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                                updated_at=datetime(2021, 1, 1, 0, 0, 0),
                             )
                         )
                         ## Keypoints video
@@ -188,6 +229,9 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                                 item_ref=ItemRef(id=item_id),
                                 view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
                                 entity_ref=EntityRef(id=f"entity_video_{i}_{j}_{k}", name="entities_video"),
+                                source_ref=SourceRef(id="source_1"),
+                                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                                updated_at=datetime(2021, 1, 1, 0, 0, 0),
                             )
                         )
 
@@ -201,6 +245,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 width=100,
                 height=100,
                 format="jpg",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
             ## Entity image
@@ -209,6 +255,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
                 category=ENTITY_CATEGORY[i % 4 * 2 + i % 2],
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
             ## Bbox image
@@ -222,6 +270,9 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
                 entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
+                source_ref=SourceRef(id=f"source_{i % 3}"),
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
             ## Mask image
@@ -232,6 +283,9 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
                 size=[100 * i, 100 * i],
                 counts=b"\x01\x02\x03",
+                source_ref=SourceRef(id=f"source_{i % 3}"),
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
 
             ## Keypoints image
@@ -247,6 +301,9 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         item_ref=ItemRef(id=item_id),
                         view_ref=ViewRef(id=f"image_{i}", name="image"),
                         entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
+                        source_ref=SourceRef(id=f"source_{i % 3}"),
+                        created_at=datetime(2021, 1, 1, 0, 0, 0),
+                        updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
 
@@ -256,6 +313,8 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 item_ref=ItemRef(id=item_id),
                 image=image,
                 vector=[0.1 * i, 0.2 * i, 0.3 * i, 0.4 * i, 0.5 * i, 0.6 * i, 0.7 * i, 0.8 * i],
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
         else:
             image = None

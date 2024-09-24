@@ -5,9 +5,11 @@
 # =====================================
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.annotations import AnnotationModel
@@ -158,17 +160,20 @@ def test_create_annotations(
     for new_annotation in new_annotations:
         new_annotation.id = "new_" + new_annotation.id
 
-    new_annotations_models = get_models_from_rows("bbox_image", AnnotationModel, new_annotations)
+    new_annotations_models = [
+        model.model_dump(exclude_timestamps=True)
+        for model in get_models_from_rows("bbox_image", AnnotationModel, new_annotations)
+    ]
 
     client = TestClient(app)
     response = client.post(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/",
-        json=[model.model_dump() for model in new_annotations_models],
+        json=jsonable_encoder(new_annotations_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
-        model = AnnotationModel.model_validate(model_json)
+        model = AnnotationModel.model_validate(model_json).model_dump(exclude_timestamps=True)
         assert model in new_annotations_models
     assert len(response.json()) == len(new_annotations_models)
 
@@ -191,7 +196,7 @@ def test_create_annotations_error(
     good_data = get_models_from_rows(
         "bbox_image", AnnotationModel, dataset_multi_view_tracking_and_image.get_data("bbox_image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -214,7 +219,7 @@ def test_create_annotations_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/",
         json=json_bad_data,
@@ -239,12 +244,12 @@ def test_create_annotation(
     client = TestClient(app)
     response = client.post(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/new_bbox_image_0",
-        json=new_annotation_model.model_dump(),
+        json=jsonable_encoder(new_annotation_model),
     )
 
     assert response.status_code == 200
     model = AnnotationModel.model_validate(response.json())
-    assert model == new_annotation_model
+    assert model.model_dump(exclude_timestamps=True) == new_annotation_model.model_dump(exclude_timestamps=True)
 
     # Check that the annotation was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_data("bbox_image", "new_bbox_image_0") is not None
@@ -262,7 +267,7 @@ def test_create_annotation_error(
         AnnotationModel,
         dataset_multi_view_tracking_and_image.get_data("bbox_image", "bbox_image_0"),
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -311,13 +316,15 @@ def test_update_annotations(
     client = TestClient(app)
     response = client.put(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/",
-        json=[model.model_dump() for model in updated_annotations_models],
+        json=jsonable_encoder(updated_annotations_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = AnnotationModel.model_validate(model_json)
-        assert model in updated_annotations_models
+        assert model.model_dump(exclude_timestamps=True) in [
+            u_model.model_dump(exclude_timestamps=True) for u_model in updated_annotations_models
+        ]
     assert len(response.json()) == len(updated_annotations_models)
 
     # Check that the annotations were updated in the dataset
@@ -332,7 +339,12 @@ def test_update_annotations(
                 cur_annotation = updated_annotation
                 break
         assert cur_annotation is not None
-        assert cur_annotation.model_dump() == updated_row.model_dump()
+        if cur_annotation.id.startswith("new_"):
+            assert cur_annotation.model_dump(exclude_timestamps=True) == updated_row.model_dump(
+                exclude_timestamps=True
+            )
+        else:
+            assert cur_annotation.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
 
 def test_update_annotations_error(
@@ -345,7 +357,7 @@ def test_update_annotations_error(
     good_data = get_models_from_rows(
         "bbox_image", AnnotationModel, dataset_multi_view_tracking_and_image.get_data("bbox_image", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -368,7 +380,7 @@ def test_update_annotations_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/",
         json=json_bad_data,
@@ -393,17 +405,17 @@ def test_update_annotation(
     client = TestClient(app)
     response = client.put(
         "/annotations/dataset_multi_view_tracking_and_image/bbox_image/bbox_image_0",
-        json=updated_annotation_model.model_dump(),
+        json=jsonable_encoder(updated_annotation_model),
     )
 
     assert response.status_code == 200
     model = AnnotationModel.model_validate(response.json())
-    assert model == updated_annotation_model
+    assert model.model_dump(exclude="updated_at") == updated_annotation_model.model_dump(exclude="updated_at")
 
     # Check that the annotation was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_data("bbox_image", updated_annotation.id)
     assert updated_row is not None
-    assert updated_row.model_dump() == updated_annotation.model_dump()
+    assert updated_row.model_dump(exclude="updated_at") == updated_annotation.model_dump(exclude="updated_at")
 
 
 def test_update_annotation_error(
@@ -418,7 +430,7 @@ def test_update_annotation_error(
         AnnotationModel,
         dataset_multi_view_tracking_and_image.get_data("bbox_image", "bbox_image_0"),
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)

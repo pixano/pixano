@@ -52,22 +52,6 @@ def estimate_folder_size(folder_path: Path) -> str:
     return readable_size
 
 
-def issubclass_strict(obj: type, cls: type, strict: bool = False) -> bool:
-    """Check if the given object is of the given class type or a subclass of the given class type.
-
-    Args:
-        obj: The object to check.
-        cls: The class to compare against.
-        strict: If True, the object must be of the given class type.
-
-    Returns:
-        True if the object is of the given class type or a subclass of the given class type.
-    """
-    if strict:
-        return obj == cls
-    return issubclass(obj, cls)
-
-
 def get_super_type_from_dict(sub_type: type, dict_types: dict[str, type]) -> type | None:
     """Get the first super type in a dictionary of types for the given type."""
     if sub_type in dict_types.values():

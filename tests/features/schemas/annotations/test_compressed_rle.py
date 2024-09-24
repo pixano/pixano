@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import numpy as np
 
 from pixano.features import CompressedRLE, create_compressed_rle, is_compressed_rle
@@ -30,6 +32,8 @@ class TestCompressedRLE:
             item_ref=ItemRef.none(),
             view_ref=ViewRef.none(),
             entity_ref=EntityRef.none(),
+            created_at=datetime(1970, 1, 1),
+            updated_at=datetime(1970, 1, 1),
         )
 
     def test_to_mask(self, rle):

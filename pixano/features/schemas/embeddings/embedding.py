@@ -16,7 +16,7 @@ from pydantic import create_model
 
 from pixano.features.schemas.views.image import Image, is_image
 from pixano.features.schemas.views.sequence_frame import is_sequence_frame
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import ItemRef, ViewRef
 from ..base_schema import BaseSchema

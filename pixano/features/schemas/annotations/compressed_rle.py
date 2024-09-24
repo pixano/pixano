@@ -4,6 +4,7 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -12,7 +13,7 @@ from pydantic import field_serializer, field_validator, model_validator
 from typing_extensions import Self
 
 from pixano.features.utils import image as image_utils
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 from ...types.schema_reference import EntityRef, ItemRef, ViewRef
 from ..registry import _register_schema_internal
@@ -67,6 +68,8 @@ class CompressedRLE(Annotation):
             entity=EntityRef.none(),
             size=[0, 0],
             counts=b"",
+            created_at=datetime(1970, 1, 1),
+            updated_at=datetime(1970, 1, 1),
         )
 
     def to_mask(self) -> np.ndarray:
@@ -118,7 +121,7 @@ class CompressedRLE(Annotation):
         Returns:
             Compressed RLE mask.
         """
-        return CompressedRLE(**image_utils.urle_to_rle(urle), **kwargs)
+        return CompressedRLE(**image_utils.urle_to_rle(urle), **kwargs)  #  type: ignore[arg-type]
 
     @staticmethod
     def from_polygons(

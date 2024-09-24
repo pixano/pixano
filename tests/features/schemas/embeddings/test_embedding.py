@@ -43,15 +43,15 @@ class TestEmbedding:
     def test_to_arrow_schema(self, embedding_8):
         with patch("lancedb.pydantic.LanceModel.to_arrow_schema", mock_super_to_arrow_schema):
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "vector", "id"}
+            assert set(arrow_schema.names) == {"item_ref", "vector", "id", "created_at", "updated_at"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=True, remove_metadata=False)
-            assert set(arrow_schema.names) == {"item_ref", "id"}
+            assert set(arrow_schema.names) == {"item_ref", "id", "created_at", "updated_at"}
             assert arrow_schema.metadata == {b"test": b"metadata"}
 
             arrow_schema = embedding_8.to_arrow_schema(remove_vector=False, remove_metadata=True)
-            assert set(arrow_schema.names) == {"vector", "id", "item_ref"}
+            assert set(arrow_schema.names) == {"vector", "id", "item_ref", "created_at", "updated_at"}
             assert arrow_schema.metadata is None
 
     def test_create_shema(
@@ -85,7 +85,7 @@ class TestEmbedding:
         )
         assert issubclass(schema, ViewEmbedding)
 
-        assert set(schema.model_fields) == {"id", "item_ref", "vector", "view_ref"}
+        assert set(schema.model_fields) == {"id", "item_ref", "vector", "view_ref", "created_at", "updated_at"}
         assert schema.model_fields["id"].annotation is str
         assert schema.model_fields["id"].default == ""
         assert schema.model_fields["item_ref"].annotation == ItemRef

@@ -34,7 +34,7 @@ def test_is_sequence_frame():
 def test_create_sequence_frame():
     # Test 1: read url and default referneces
     sequence_frame = create_sequence_frame(url=IMAGE_JPG_ASSET_URL, timestamp=1.0, frame_index=1)
-    assert sequence_frame == SequenceFrame(
+    assert sequence_frame.model_dump(exclude_timestamps=True) == SequenceFrame(
         url=str(IMAGE_JPG_ASSET_URL.as_posix()),
         timestamp=1.0,
         frame_index=1,
@@ -44,7 +44,7 @@ def test_create_sequence_frame():
         id="",
         item=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)
 
     # Test 2: read url with custom id and other path and custom references
     sequence_frame = create_sequence_frame(
@@ -56,7 +56,7 @@ def test_create_sequence_frame():
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
     )
-    assert sequence_frame == SequenceFrame(
+    assert sequence_frame.model_dump(exclude_timestamps=True) == SequenceFrame(
         url="sample_data/image_jpg.jpg",
         timestamp=1.0,
         frame_index=1,
@@ -66,7 +66,7 @@ def test_create_sequence_frame():
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),
-    )
+    ).model_dump(exclude_timestamps=True)
 
     # Test 3: no read
     sequence_frame = create_sequence_frame(
@@ -77,7 +77,7 @@ def test_create_sequence_frame():
         height=100,
         format="PNG",
     )
-    assert sequence_frame == SequenceFrame(
+    assert sequence_frame.model_dump(exclude_timestamps=True) == SequenceFrame(
         url=str(IMAGE_JPG_ASSET_URL.as_posix()),
         timestamp=1.0,
         frame_index=1,
@@ -87,4 +87,4 @@ def test_create_sequence_frame():
         id="",
         item=ItemRef.none(),
         parent_ref=ViewRef.none(),
-    )
+    ).model_dump(exclude_timestamps=True)

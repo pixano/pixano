@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 
 from pixano.app.models.items import ItemModel
@@ -144,13 +145,16 @@ def test_create_items(
     client = TestClient(app)
     response = client.post(
         "/items/dataset_multi_view_tracking_and_image/",
-        json=[model.model_dump() for model in new_items_models],
+        json=jsonable_encoder(new_items_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = ItemModel.model_validate(model_json)
-        assert model in new_items_models
+        for new_model in new_items_models:
+            if model.id == new_model.id:
+                assert model.model_dump(exclude_timestamps=True) == new_model.model_dump(exclude_timestamps=True)
+                break
     assert len(response.json()) == len(new_items_models)
 
     # Check that the items were added to the dataset
@@ -170,7 +174,7 @@ def test_create_items_error(
     good_data = get_models_from_rows(
         "item", ItemModel, dataset_multi_view_tracking_and_image.get_data("item", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -185,7 +189,7 @@ def test_create_items_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.post(
         "/items/dataset_multi_view_tracking_and_image/",
         json=json_bad_data,
@@ -210,12 +214,12 @@ def test_create_item(
     client = TestClient(app)
     response = client.post(
         "/items/dataset_multi_view_tracking_and_image/new_0",
-        json=new_item_model.model_dump(),
+        json=jsonable_encoder(new_item_model),
     )
 
     assert response.status_code == 200
     model = ItemModel.model_validate(response.json())
-    assert model == new_item_model
+    assert model.model_dump(exclude_timestamps=True) == new_item_model.model_dump(exclude_timestamps=True)
 
     # Check that the item was added to the dataset
     assert dataset_multi_view_tracking_and_image.get_data("item", "new_0") is not None
@@ -233,7 +237,7 @@ def test_create_item_error(
         ItemModel,
         dataset_multi_view_tracking_and_image.get_data("item", "0"),
     )  # actually it is not good because id already exists but we look for errors so it is fine
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -274,13 +278,22 @@ def test_update_items(
     client = TestClient(app)
     response = client.put(
         "/items/dataset_multi_view_tracking_and_image/",
-        json=[model.model_dump() for model in updated_items_models],
+        json=jsonable_encoder(updated_items_models),
     )
 
     assert response.status_code == 200
     for model_json in response.json():
         model = ItemModel.model_validate(model_json)
-        assert model in updated_items_models
+        for updated_model in updated_items_models:
+            if model.id != updated_model.id:
+                continue
+            else:
+                if model.id.startswith("new_"):
+                    assert model.model_dump(exclude_timestamps=True) == updated_model.model_dump(
+                        exclude_timestamps=True
+                    )
+                else:
+                    assert model.model_dump(exclude="updated_at") == updated_model.model_dump(exclude="updated_at")
     assert len(response.json()) == len(updated_items_models)
 
     # Check that the items were updated in the dataset
@@ -295,7 +308,10 @@ def test_update_items(
                 cur_item = updated_item
                 break
         assert cur_item is not None
-        assert cur_item.model_dump() == updated_row.model_dump()
+        if cur_item.id.startswith("new_"):
+            assert cur_item.model_dump(exclude_timestamps=True) == updated_row.model_dump(exclude_timestamps=True)
+        else:
+            assert cur_item.model_dump(exclude="updated_at") == updated_row.model_dump(exclude="updated_at")
 
 
 def test_update_items_error(
@@ -308,7 +324,7 @@ def test_update_items_error(
     good_data = get_models_from_rows(
         "item", ItemModel, dataset_multi_view_tracking_and_image.get_data("item", limit=2)
     )
-    json_data = [model.model_dump() for model in good_data]
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)
@@ -323,7 +339,7 @@ def test_update_items_error(
 
     # Wrong data
     bad_data = dataset_multi_view_tracking_and_image.get_data("entity_image", limit=2)
-    json_bad_data = [model.model_dump() for model in bad_data]
+    json_bad_data = jsonable_encoder(bad_data)
     response = client.put(
         "/items/dataset_multi_view_tracking_and_image/",
         json=json_bad_data,
@@ -348,17 +364,18 @@ def test_update_item(
     client = TestClient(app)
     response = client.put(
         "/items/dataset_multi_view_tracking_and_image/0",
-        json=updated_item_model.model_dump(),
+        json=jsonable_encoder(updated_item_model),
     )
 
     assert response.status_code == 200
     model = ItemModel.model_validate(response.json())
-    assert model == updated_item_model
+    assert model.model_dump(exclude="updated_at") == updated_item_model.model_dump(exclude="updated_at")
 
     # Check that the item was updated in the dataset
     updated_row = dataset_multi_view_tracking_and_image.get_data("item", updated_item.id)
     assert updated_row is not None
-    assert updated_row.model_dump() == updated_item.model_dump()
+    assert updated_row.model_dump(exclude="updated_at") == updated_item.model_dump(exclude="updated_at")
+    assert updated_row.updated_at > item.updated_at
 
 
 def test_update_item_error(
@@ -373,7 +390,7 @@ def test_update_item_error(
         ItemModel,
         dataset_multi_view_tracking_and_image.get_data("item", "0"),
     )
-    json_data = good_data.model_dump()
+    json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
     client = TestClient(app)

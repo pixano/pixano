@@ -169,7 +169,17 @@ class TestTableQueryBuilder:
         rows = query.to_list()
         assert len(rows) == 2
         for row in rows:
-            assert set(row.keys()) == {"id", "item_ref", "parent_ref", "url", "width", "format", "height"}
+            assert set(row.keys()) == {
+                "id",
+                "item_ref",
+                "parent_ref",
+                "url",
+                "width",
+                "format",
+                "height",
+                "created_at",
+                "updated_at",
+            }
 
         # Test with where
         builder = TableQueryBuilder(image_table)

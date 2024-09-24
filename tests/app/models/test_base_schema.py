@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 from pixano.app.models import BaseSchemaModel, TableInfo
 from pixano.features import Item
 
@@ -17,37 +19,100 @@ class TestBaseModelSchema:
 
     def test_from_row(self):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
-        item = Item(id="id", split="train")
+        item = Item(
+            id="id", split="train", created_at=datetime(2021, 1, 1, 0, 0, 0), updated_at=datetime(2021, 1, 1, 0, 0, 0)
+        )
         model = BaseSchemaModel.from_row(item, table_info)
 
-        assert model == BaseSchemaModel(id="id", table_info=table_info, data={"split": "train"})
+        assert model == BaseSchemaModel(
+            id="id",
+            table_info=table_info,
+            data={"split": "train"},
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
 
     def test_from_rows(self):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
-        items = [Item(id="id1", split="train"), Item(id="id2", split="test")]
+        items = [
+            Item(
+                id="id1",
+                split="train",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            Item(
+                id="id2",
+                split="test",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+        ]
         models = BaseSchemaModel.from_rows(items, table_info)
 
         assert models == [
-            BaseSchemaModel(id="id1", table_info=table_info, data={"split": "train"}),
-            BaseSchemaModel(id="id2", table_info=table_info, data={"split": "test"}),
+            BaseSchemaModel(
+                id="id1",
+                table_info=table_info,
+                data={"split": "train"},
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            BaseSchemaModel(
+                id="id2",
+                table_info=table_info,
+                data={"split": "test"},
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
         ]
 
     def test_to_row(self):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
-        model = BaseSchemaModel(id="id", table_info=table_info, data={"split": "train"})
+        model = BaseSchemaModel(
+            id="id",
+            table_info=table_info,
+            data={"split": "train"},
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
         item = model.to_row(Item)
 
-        assert item == Item(id="id", split="train")
+        assert item == Item(
+            id="id", split="train", created_at=datetime(2021, 1, 1, 0, 0, 0), updated_at=datetime(2021, 1, 1, 0, 0, 0)
+        )
 
     def test_to_rows(self):
         table_info = TableInfo(name="item", group="item", base_schema="Item")
         models = [
-            BaseSchemaModel(id="id1", table_info=table_info, data={"split": "train"}),
-            BaseSchemaModel(id="id2", table_info=table_info, data={"split": "test"}),
+            BaseSchemaModel(
+                id="id1",
+                table_info=table_info,
+                data={"split": "train"},
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            BaseSchemaModel(
+                id="id2",
+                table_info=table_info,
+                data={"split": "test"},
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
         ]
         items = BaseSchemaModel.to_rows(models, Item)
 
         assert items == [
-            Item(id="id1", split="train"),
-            Item(id="id2", split="test"),
+            Item(
+                id="id1",
+                split="train",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            Item(
+                id="id2",
+                split="test",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
         ]

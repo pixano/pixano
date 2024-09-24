@@ -8,6 +8,7 @@
 import copy
 import json
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -410,8 +411,23 @@ class TestDatasetSchema:
         with pytest.raises(ValueError, match="Invalid relation 1."):
             dataset_schema_item_categories_image_bbox.add_schema("new_table", Image, 1)
 
+        class UnknownSchema(BaseSchema):
+            pass
+
+        with pytest.raises(
+            ValueError,
+            match="Invalid table type <class 'tests.datasets.test_dataset_schema.TestDatasetSchema."
+            "test_add_error.<locals>.UnknownSchema'>",
+        ):
+            dataset_schema_item_categories_image_bbox.add_schema("new_table", UnknownSchema, SchemaRelation.ONE_TO_ONE)
+
 
 class TestDatasetItem:
+    def test_init(self):
+        dataset_item = DatasetItem(id="0")
+        assert dataset_item.id == "0"
+        assert dataset_item.split == "default"
+
     def test_to_dataset_schema(self, dataset_item_bboxes_metadata, item_categories_name_index):
         schema = dataset_item_bboxes_metadata.to_dataset_schema()
         assert set(schema.schemas.keys()) == {
@@ -470,6 +486,8 @@ class TestDatasetItem:
             "image",
             "entity",
             "bbox",
+            "created_at",
+            "updated_at",
         }
 
         # Default values
@@ -502,10 +520,16 @@ class TestDatasetItem:
         assert dataset_item.id == "id"
         assert dataset_item.split == "default"
         assert dataset_item.categories == ("cat1", "cat2")
-        assert dataset_item.image == Image(id="image_id", url="url", width=100, height=100, format="png")
-        assert dataset_item.entity == Entity(id="entity_id")
-        assert dataset_item.bbox == [
-            BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
+        assert dataset_item.image.model_dump(exclude_timestamps=True) == Image(
+            id="image_id", url="url", width=100, height=100, format="png"
+        ).model_dump(exclude_timestamps=True)
+        assert dataset_item.entity.model_dump(exclude_timestamps=True) == Entity(id="entity_id").model_dump(
+            exclude_timestamps=True
+        )
+        assert [dataset_item.bbox[0].model_dump(exclude_timestamps=True)] == [
+            BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5).model_dump(
+                exclude_timestamps=True
+            )
         ]
 
     def test_from_dataset_schema_exclude_embeddings(
@@ -526,6 +550,8 @@ class TestDatasetItem:
             "index",
             "name",
             "id",
+            "created_at",
+            "updated_at",
         }
 
         # Test without embeddings
@@ -542,6 +568,8 @@ class TestDatasetItem:
             "index",
             "name",
             "id",
+            "created_at",
+            "updated_at",
         }
 
     def test_get_sub_dataset_item(self, dataset_item_bboxes_metadata):
@@ -556,6 +584,8 @@ class TestDatasetItem:
             "other_categories",
             "image",
             "bbox",
+            "created_at",
+            "updated_at",
         }
 
         dataset_item = sub_dataset_item(
@@ -563,17 +593,51 @@ class TestDatasetItem:
             split="default",
             categories=("cat1", "cat2"),
             other_categories=[1, 2, 3],
-            image=Image(id="image_id", url="url", width=100, height=100, format="png"),
-            bbox=[BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)],
+            image=Image(
+                id="image_id",
+                url="url",
+                width=100,
+                height=100,
+                format="png",
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            ),
+            bbox=[
+                BBox(
+                    id="bbox_id",
+                    coords=[0, 0, 1, 1],
+                    format="xywh",
+                    is_normalized=False,
+                    confidence=0.5,
+                    created_at=datetime(2021, 1, 1, 0, 0, 0),
+                    updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                )
+            ],
         )
 
         assert dataset_item.id == "id"
         assert dataset_item.split == "default"
         assert dataset_item.categories == ("cat1", "cat2")
         assert dataset_item.other_categories == [1, 2, 3]
-        assert dataset_item.image == Image(id="image_id", url="url", width=100, height=100, format="png")
+        assert dataset_item.image == Image(
+            id="image_id",
+            url="url",
+            width=100,
+            height=100,
+            format="png",
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+        )
         assert dataset_item.bbox == [
-            BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)
+            BBox(
+                id="bbox_id",
+                coords=[0, 0, 1, 1],
+                format="xywh",
+                is_normalized=False,
+                confidence=0.5,
+                created_at=datetime(2021, 1, 1, 0, 0, 0),
+                updated_at=datetime(2021, 1, 1, 0, 0, 0),
+            )
         ]
 
     def test_to_schemas_data(self, dataset_item_bboxes_metadata):
@@ -590,7 +654,7 @@ class TestDatasetItem:
             bbox=[BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)],
         )
         schemas_data = my_custom_dataset_item.to_schemas_data(dataset_schema)
-        assert schemas_data == {
+        expected_schemas_data = {
             "item": dataset_schema.schemas["item"](
                 id="id",
                 split="default",
@@ -598,8 +662,21 @@ class TestDatasetItem:
                 other_categories=[1, 2, 3],
                 name="name",
                 index=0,
+            ).model_dump(exclude_timestamps=True),
+            "image": Image(id="image_id", url="url", width=100, height=100, format="png").model_dump(
+                exclude_timestamps=True
             ),
-            "image": Image(id="image_id", url="url", width=100, height=100, format="png"),
-            "entity": Entity(id="entity_id"),
-            "bbox": [BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5)],
+            "entity": Entity(id="entity_id").model_dump(exclude_timestamps=True),
+            "bbox": [
+                BBox(id="bbox_id", coords=[0, 0, 1, 1], format="xywh", is_normalized=False, confidence=0.5).model_dump(
+                    exclude_timestamps=True
+                )
+            ],
         }
+        for key, value in schemas_data.items():
+            if isinstance(value, list):
+                assert len(value) == len(expected_schemas_data[key])
+                for v, expected_v in zip(value, expected_schemas_data[key]):
+                    assert v.model_dump(exclude_timestamps=True) == expected_v
+            else:
+                assert value.model_dump(exclude_timestamps=True) == expected_schemas_data[key]

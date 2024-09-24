@@ -4,6 +4,8 @@
 # License: CECILL-C
 # =====================================
 
+from datetime import datetime
+
 import pytest
 
 from pixano.app.models import EntityModel, TableInfo
@@ -21,6 +23,8 @@ class TestEntityModel:
                 "view_ref": {"id": "", "name": ""},
                 "parent_ref": {"id": "", "name": ""},
             },
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
         entity = model.to_row(Entity)
 
@@ -29,6 +33,8 @@ class TestEntityModel:
             item_ref={"id": "", "name": ""},
             view_ref={"id": "", "name": ""},
             parent_ref={"id": "", "name": ""},
+            created_at=datetime(2021, 1, 1, 0, 0, 0),
+            updated_at=datetime(2021, 1, 1, 0, 0, 0),
         )
 
         with pytest.raises(ValueError, match="Schema type must be a subclass of Entity."):

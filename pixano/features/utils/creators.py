@@ -90,6 +90,7 @@ def create_instance_of_pixano_type(pix_type: type["BaseType"], **data) -> "BaseT
         create_item_ref,
         create_ndarray_float,
         create_schema_ref,
+        create_source_ref,
         create_view_ref,
         is_annotation_ref,
         is_base_type,
@@ -98,6 +99,7 @@ def create_instance_of_pixano_type(pix_type: type["BaseType"], **data) -> "BaseT
         is_item_ref,
         is_ndarray_float,
         is_schema_ref,
+        is_source_ref,
         is_view_ref,
     )
 
@@ -121,6 +123,9 @@ def create_instance_of_pixano_type(pix_type: type["BaseType"], **data) -> "BaseT
 
     elif is_embedding_ref(pix_type, True):
         return create_embedding_ref(**data)
+
+    elif is_source_ref(pix_type, True):
+        return create_source_ref(**data)
 
     elif is_base_type(pix_type, False):
         return pix_type(**data)

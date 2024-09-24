@@ -5,6 +5,7 @@
 # =====================================
 
 import json
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from types import GenericAlias
@@ -16,6 +17,7 @@ from typing_extensions import Self
 from pixano.features import BaseSchema, Item
 from pixano.features.schemas.registry import _SCHEMA_REGISTRY
 from pixano.features.schemas.schema_group import _SCHEMA_GROUP_TO_SCHEMA_DICT, SchemaGroup
+from pixano.utils.validation import validate_and_init_create_at_and_update_at
 
 
 class SchemaRelation(Enum):
@@ -38,7 +40,7 @@ class DatasetSchema(BaseModel):
 
     schemas: dict[str, type[BaseSchema]]
     relations: dict[str, dict[str, SchemaRelation]]
-    groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup}
+    groups: dict[SchemaGroup, set[str]] = {key: set() for key in SchemaGroup if key != SchemaGroup.SOURCE}
 
     def add_schema(self, table_name: str, schema: type[BaseSchema], relation_item: SchemaRelation) -> "DatasetSchema":
         """Add a schema to the dataset schema.
@@ -103,6 +105,8 @@ class DatasetSchema(BaseModel):
                 item_found = True
             found_group = False
             for group, group_type in _SCHEMA_GROUP_TO_SCHEMA_DICT.items():
+                if group == SchemaGroup.SOURCE:
+                    continue
                 if issubclass(schema, group_type):
                     found_group = True
                     if table not in self.groups[group]:
@@ -338,6 +342,25 @@ class DatasetItem(BaseModel):
 
     id: str
     split: str = "default"
+    created_at: datetime
+    updated_at: datetime
+
+    def __init__(self, /, created_at: datetime | None = None, updated_at: datetime | None = None, **data: Any):
+        """Create a new model by parsing and validating input data from keyword arguments.
+
+        Raises [`ValidationError`][pydantic_core.ValidationError] if the input data cannot be
+        validated to form a valid model.
+
+        `self` is explicitly positional-only to allow `self` as a field name.
+
+        Args:
+            created_at: The creation date of the object.
+            updated_at: The last modification date of the object.
+            data: The data of the object validated by Pydantic.
+        """
+        created_at, updated_at = validate_and_init_create_at_and_update_at(created_at, updated_at)
+        data.update({"created_at": created_at, "updated_at": updated_at})
+        super().__init__(**data)
 
     def to_schemas_data(self, dataset_schema: DatasetSchema) -> dict[str, BaseSchema | list[BaseSchema] | None]:
         """Convert DatasetItem to schemas data.
@@ -357,6 +380,32 @@ class DatasetItem(BaseModel):
                 item_data[field_name] = getattr(self, field_name)
         schemas_data[SchemaGroup.ITEM.value] = dataset_schema.schemas[SchemaGroup.ITEM.value](**item_data)
         return schemas_data
+
+    def model_dump(self, exclude_timestamps: bool = False, **kwargs):
+        """Dump the model to a dictionary.
+
+        Args:
+            exclude_timestamps: Exclude timestamps "created_at" and "updated_at" from the model dump. Useful for
+                comparing models without timestamps.
+            kwargs: Arguments for pydantic `BaseModel.model_dump()`.
+
+        Returns:
+            The model dump.
+        """
+        model_dump = super().model_dump(**kwargs)
+        if exclude_timestamps:
+            model_dump.pop("created_at", None)
+            model_dump.pop("updated_at", None)
+            for k, value in model_dump.items():
+                if isinstance(value, dict):
+                    value.pop("created_at", None)
+                    value.pop("updated_at", None)
+                elif isinstance(value, list):  # Only one level deep.
+                    for item in value:
+                        if isinstance(item, dict):
+                            item.pop("created_at", None)
+                            item.pop("updated_at", None)
+        return model_dump
 
     @classmethod
     def to_dataset_schema(cls) -> DatasetSchema:

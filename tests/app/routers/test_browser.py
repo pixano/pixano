@@ -38,7 +38,7 @@ def test_get_browser(
         # generated dataset doesn't have consistent fields order, so we sort both before comparison
         browser.table_data.columns.sort(key=lambda x: x.name)
         output.table_data.columns.sort(key=lambda x: x.name)
-        assert browser == output
+        assert browser.model_dump() == output.model_dump()
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404

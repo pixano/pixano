@@ -7,7 +7,7 @@
 from lancedb.pydantic import LanceModel
 from pydantic import ConfigDict
 
-from pixano.utils.python import issubclass_strict
+from pixano.utils import issubclass_strict
 
 
 class BaseType(LanceModel):

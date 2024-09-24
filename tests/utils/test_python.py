@@ -6,7 +6,7 @@
 
 import pytest
 
-from pixano.utils.python import estimate_folder_size, get_super_type_from_dict, issubclass_strict, natural_key
+from pixano.utils.python import get_super_type_from_dict, natural_key
 
 
 def test_natural_key():
@@ -20,20 +20,6 @@ def test_natural_key():
 @pytest.mark.skip("Not implemented")
 def test_estimate_folder_size():
     pass
-
-
-def test_issubclass_strict():
-    class Class_:
-        pass
-
-    class SubClass(Class_):
-        pass
-
-    assert issubclass_strict(SubClass, Class_, strict=False)
-    assert not issubclass_strict(SubClass, Class_, strict=True)
-
-    assert issubclass_strict(Class_, Class_, strict=False)
-    assert issubclass_strict(Class_, Class_, strict=True)
 
 
 def test_get_super_type_from_dict():
