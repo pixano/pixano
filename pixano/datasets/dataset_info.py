@@ -79,10 +79,10 @@ class DatasetInfo(BaseModel):
 
         Args:
             directory: Directory to load.
-            return_path: Return the path of the directory.
+            return_path: Return the paths of the datasets.
 
         Returns:
-            the list of DatasetInfo and the path of the directory.
+            the list of DatasetInfo and the paths of the datasets.
         """
         library: list[DatasetInfo] | list[tuple[DatasetInfo, Path]] = []
 
@@ -116,7 +116,7 @@ class DatasetInfo(BaseModel):
         Args:
             id: Dataset ID.
             directory: Directory to load.
-            return_path: Return the path of the directory
+            return_path: Return the path of the dataset.
 
         Returns:
             the DatasetInfo.
