@@ -57,12 +57,12 @@ def validate_group(
         group = SchemaGroup(group)
     except ValueError:
         raise HTTPException(
-            status_code=404,
+            status_code=400,
             detail=f"Group {group} is not a SchemaGroup.",
         )
     if group not in valid_groups:
         raise HTTPException(
-            status_code=404,
+            status_code=400,
             detail=f"Group {group.value} is not valid.",
         )
     return group
@@ -316,14 +316,7 @@ async def get_rows_handler(
     group = validate_group(group)
     dataset = get_dataset(dataset_id, settings.data_dir, None)
     assert_table_in_group(dataset, table, group)
-    try:
-        rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    except DatasetOffsetLimitError as err:
-        raise HTTPException(status_code=404, detail="Invalid query parameters. " + str(err))
-    except DatasetPaginationError as err:
-        raise HTTPException(status_code=400, detail=str(err))
-    except DatasetAccessError as err:
-        raise HTTPException(status_code=500, detail=str(err))
+    rows = get_rows(dataset, table, ids, item_ids, limit, skip)
     models = get_models_from_rows(table, _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group], rows)
     return models
 
