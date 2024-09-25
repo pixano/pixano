@@ -17,6 +17,7 @@ from pixano.app.routers.embeddings import router as embeddings_router
 from pixano.app.routers.entities import router as entities_router
 from pixano.app.routers.items import router as items_router
 from pixano.app.routers.items_info import router as items_info_router
+from pixano.app.routers.sources import router as sources_router
 from pixano.app.routers.views import router as views_router
 from pixano.app.settings import Settings
 
@@ -74,6 +75,7 @@ def create_app(settings: Settings = Settings()) -> FastAPI:
     app.include_router(entities_router)
     app.include_router(items_router)
     app.include_router(items_info_router)
+    app.include_router(sources_router)
     app.include_router(views_router)
 
     return app
