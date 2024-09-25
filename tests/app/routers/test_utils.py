@@ -17,10 +17,12 @@ from pixano.app.routers.utils import (
     get_model_from_row,
     get_models_from_rows,
     update_rows,
+    validate_group,
 )
 from pixano.app.settings import Settings
 from pixano.datasets.dataset import Dataset
 from pixano.features import BBox
+from pixano.features.schemas.schema_group import SchemaGroup
 
 
 @pytest.mark.skip(reason="Already done in test_datasets.py")
@@ -38,6 +40,22 @@ def test_assert_table_in_group(app_and_settings: tuple[FastAPI, Settings]):
     response = client.get("/annotations/dataset_image_bboxes_keypoint/keypoints/?limit=1")
     assert response.status_code == 404
     assert response.json() == {"detail": "Table keypoints is not in the annotations group table."}
+
+
+def test_validate_group():
+    assert validate_group("annotations") == SchemaGroup.ANNOTATION
+    assert validate_group(SchemaGroup.ANNOTATION) == SchemaGroup.ANNOTATION
+    assert validate_group(SchemaGroup.ANNOTATION, {SchemaGroup.ANNOTATION}) == SchemaGroup.ANNOTATION
+
+    with pytest.raises(HTTPException) as error:
+        validate_group("wrong_input")
+    assert error.value.status_code == 400
+    assert error.value.detail == "Group wrong_input is not a SchemaGroup."
+
+    with pytest.raises(HTTPException) as error:
+        validate_group(SchemaGroup.ANNOTATION, {SchemaGroup.VIEW})
+    assert error.value.status_code == 400
+    assert error.value.detail == f"Group {SchemaGroup.ANNOTATION.value} is not valid."
 
 
 def test_get_rows(

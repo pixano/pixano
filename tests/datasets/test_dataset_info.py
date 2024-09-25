@@ -66,6 +66,8 @@ class TestDatasetInfo:
                 preview="/preview",
             )
             info.to_json(info_dir / "info.json")
+
+        # Without return_path
         library = DatasetInfo.load_directory(temp_dir)
         assert len(library) == 3
         for i, info in enumerate(library):
@@ -76,6 +78,19 @@ class TestDatasetInfo:
                 size="8GB",
                 preview=info.preview,  # TODO: remove hard coded value
             )
+
+        # With return_path
+        library_and_paths = DatasetInfo.load_directory(temp_dir, return_path=True)
+        assert len(library_and_paths) == 3
+        for i, (info, path) in enumerate(library_and_paths):
+            assert info == DatasetInfo(
+                id=f"id_{i}",
+                name=f"pascal_{i}",
+                description=f"PASCAL VOC 2007_{i}",
+                size="8GB",
+                preview=info.preview,  # TODO: remove hard coded value
+            )
+            assert path == temp_dir / f"info_{i}"
 
         temp_dir = Path(tempfile.TemporaryDirectory().name)
         with pytest.raises(FileNotFoundError):
@@ -93,6 +108,8 @@ class TestDatasetInfo:
             preview="/preview",
         )
         info.to_json(info_dir / "info.json")
+
+        # Without return_path
         loaded_info = DatasetInfo.load_id("id", temp_dir)
         assert loaded_info == DatasetInfo(
             id="id",
@@ -101,6 +118,17 @@ class TestDatasetInfo:
             size="8GB",
             preview=loaded_info.preview,  # TODO: remove hard coded value
         )
+
+        # With return_path
+        loaded_info, path = DatasetInfo.load_id("id", temp_dir, return_path=True)
+        assert loaded_info == DatasetInfo(
+            id="id",
+            name="pascal",
+            description="PASCAL VOC 2007",
+            size="8GB",
+            preview=loaded_info.preview,  # TODO: remove hard coded value
+        )
+        assert path == temp_dir / "info"
 
         with pytest.raises(FileNotFoundError):
             DatasetInfo.load_id("unknown", temp_dir)

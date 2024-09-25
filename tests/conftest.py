@@ -5,6 +5,10 @@
 # =====================================
 
 from tests.fixtures.app.app import app_and_settings, app_and_settings_with_copy, empty_app_and_settings
+from tests.fixtures.app.models.dataset_info import (
+    info_model_dataset_image_bboxes_keypoint,
+    info_model_dataset_multi_view_tracking_and_image,
+)
 from tests.fixtures.app.routers.browser import (
     browser_dataset_image_bboxes_keypoint,
     browser_dataset_multi_view_tracking_and_image,
