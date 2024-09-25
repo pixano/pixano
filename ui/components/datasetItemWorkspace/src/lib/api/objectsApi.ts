@@ -607,6 +607,6 @@ export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
       height: view?.data.height,
     },
     coords,
-    url: view?.url,
+    uri: view?.data.url,
   };
 };

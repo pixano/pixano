@@ -279,6 +279,7 @@ const datasetInfoSchema = z
     num_elements: z.optional(z.number()), // optional or remove ?
     size: z.string(),
     preview: z.string(),
+    num_items: z.number(),
     isFiltered: z.optional(z.boolean()),
   })
   .strict();
