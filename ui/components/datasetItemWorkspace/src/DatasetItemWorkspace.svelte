@@ -48,7 +48,8 @@ License: CECILL-C
       const newObjects: ItemObject[] = [];
       for (const anns of Object.values(selectedItem.annotations)) {
         newObjects.push(
-          ...anns.map((ann) => {
+          ...anns.map((ann_ann) => {
+            const ann = ann_ann as unknown as ItemObject; //TMP tant que adaptations data model pas finalisée
             const oldObject = oldObjects.find((o) => o.id === ann.id);
             if (oldObject) {
               return { ...oldObject, ...ann } as ItemObject;
@@ -57,11 +58,12 @@ License: CECILL-C
 
             //add item_id & features & source_id & datasetItemType
             ann.item_id = ann.data.item_ref.id;
-            ann.source_id = "Ground Truth";
+            ann.source_id =
+              ann.data.source_ref.name == "" ? "Ground Truth" : ann.data.source_ref.name; //TMP
             ann.id = ann.data.entity_ref.id;
             ann.data.id = ann.id;
-            ann.data.ref_name = "TODO--BR1809";
-            ann.data.view_id = ann.data.view_ref.name;
+            ann.data.ref_name = ann.table_info.name; //should not be used anymore...
+            ann.data.view_id = ann.data.view_ref.name; //should not be used anymore...
             //find corresponding entity
             Object.values(selectedItem.entities).forEach((entities) => {
               for (const entity of entities) {
@@ -77,19 +79,29 @@ License: CECILL-C
             if (selectedItem.type === "image") {
               ann.datasetItemType = "image";
               if (ann.table_info.base_schema === "BBox") (ann as ImageObject).bbox = ann.data;
-              else if (ann.table_info.base_schema === "KeyPoints")
+              else if (ann.table_info.base_schema === "KeyPoints") {
+                ann.data.vertices = [];
+                for (let i = 0; i < ann.data.coords.length / 2; i++) {
+                  const x = ann.data.coords[i * 2];
+                  const y = ann.data.coords[i * 2 + 1];
+                  const features = { state: ann.data.states[i] };
+                  ann.data.vertices.push({ x, y, features });
+                }
+                delete ann.data.coords;
+                delete ann.data.states;
                 (ann as ImageObject).keypoints = ann.data;
-              else if (ann.table_info.base_schema === "CompressedRLE")
+              } else if (ann.table_info.base_schema === "CompressedRLE")
                 (ann as ImageObject).mask = ann.data;
             } else {
               ann.datasetItemType = "video";
-              if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes = ann.data;
-              else if (ann.table_info.base_schema === "KeyPoints")
-                (ann as VideoObject).keypoints = ann.data;
+              // if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes = ann.data;
+              // else if (ann.table_info.base_schema === "KeyPoints")
+              //   (ann as VideoObject).keypoints = ann.data;
               //else if (ann.table_info.base_schema === "CompressedRLE") (ann as VideoObject).mask = ann.data;
+              //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
+              (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
             }
             delete ann.data;
-            console.log("ANN", ann);
             return ann;
           }),
         );
@@ -130,7 +142,7 @@ License: CECILL-C
     isSaving = true;
     const savedItem: DatasetItemSave = {
       id: selectedItem.id,
-      split: selectedItem.split,
+      split: "split" in selectedItem ? (selectedItem.split as string) : "undefined",
       save_data: $saveData,
       item_features: $itemMetas.mainFeatures,
     };

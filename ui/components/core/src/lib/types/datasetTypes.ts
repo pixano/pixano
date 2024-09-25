@@ -5,6 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
+import type { ItemKeypoints } from "./objectTypes";
 
 const referenceSchema = z
   .object({
@@ -29,6 +30,8 @@ const refDataFieldsSchema = z
   .object({
     id: z.string(),
     table_info: tableInfoSchema,
+    created_at: z.string(),
+    updated_at: z.string(),
     data: z.any(),
   })
   .strict();
@@ -37,6 +40,8 @@ const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
     .object({
       id: z.string(),
       table_info: tableInfoSchema,
+      created_at: z.string(),
+      updated_at: z.string(),
       data: schema,
     })
     .strict();
@@ -44,16 +49,20 @@ const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
 type BaseDataFieldsType<T extends z.ZodType> = ReturnType<typeof baseDataFieldsSchema<T>>;
 type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
 
-class BaseData<T> implements BaseDataFields<T> {
+class BaseData<T> {
   id: string;
   table_info: TableInfo;
-  data: BaseDataFields<T>;
+  created_at: string;
+  updated_at: string;
+  data: T;
 
   constructor(obj: BaseDataFields<T>) {
     refDataFieldsSchema.parse(obj);
     this.id = obj.id;
     this.table_info = obj.table_info;
-    this.data = obj.data as T;
+    this.created_at = obj.created_at;
+    this.updated_at = obj.updated_at;
+    this.data = obj.data;
   }
 }
 
@@ -61,9 +70,8 @@ const viewSchema = z
   .object({
     item_ref: referenceSchema,
     parent_ref: referenceSchema,
-  })
-  .passthrough();
-type ViewType = z.infer<typeof viewSchema>;  //export if needed
+  }).passthrough();
+type ViewType = z.infer<typeof viewSchema>; //export if needed
 
 export class View extends BaseData<ViewType> {
   constructor(obj: BaseDataFields<ViewType>) {
@@ -72,13 +80,12 @@ export class View extends BaseData<ViewType> {
   }
   static createInstance(obj: BaseDataFields<ViewType>) {
     if (obj.table_info.base_schema === "Image") return new Image(obj);
-    if (obj.table_info.base_schema === "SequenceFrame")
-      return new SequenceFrame(obj);
+    if (obj.table_info.base_schema === "SequenceFrame") return new SequenceFrame(obj);
     return new View(obj);
   }
 
   static deepCreateInstanceArrayOrPlain(
-    objs: Record<string, BaseDataFields<ViewType> | BaseDataFields<ViewType>[]>
+    objs: Record<string, BaseDataFields<ViewType> | BaseDataFields<ViewType>[]>,
   ): Record<string, View | View[]> {
     const newObj: Record<string, View | View[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -102,16 +109,18 @@ const imageSchema = z
     width: z.number(),
     height: z.number(),
     format: z.string(),
-  })
-  .passthrough();
-type ImageType = z.infer<typeof imageSchema>;  //export if needed
+  }).passthrough();
+type ImageType = z.infer<typeof imageSchema>; //export if needed
 export class Image extends View {
+  data: ImageType & ViewType;
+
   constructor(obj: BaseDataFields<ImageType>) {
     // an Image can be a SequenceFrame
     if (!["Image", "SequenceFrame"].includes(obj.table_info.base_schema))
       throw new Error("Not an Image");
     imageSchema.parse(obj.data);
     super(obj);
+    this.data = obj.data;
   }
 }
 
@@ -121,13 +130,15 @@ const sequenceFrameSchema = z
     frame_index: z.number(),
   })
   .passthrough();
-type SequenceFrameType = z.infer<typeof sequenceFrameSchema>;  //export if needed
+type SequenceFrameType = z.infer<typeof sequenceFrameSchema>; //export if needed
 export class SequenceFrame extends Image {
+  data: SequenceFrameType & ImageType & ViewType;
+
   constructor(obj: BaseDataFields<SequenceFrameType>) {
-    if (obj.table_info.base_schema !== "SequenceFrame")
-      throw new Error("Not a SequenceFrame");
+    if (obj.table_info.base_schema !== "SequenceFrame") throw new Error("Not a SequenceFrame");
     sequenceFrameSchema.parse(obj.data);
     super(obj);
+    this.data = obj.data;
   }
 }
 
@@ -138,7 +149,7 @@ const entitySchema = z
     parent_ref: referenceSchema,
   })
   .passthrough();
-type EntityType = z.infer<typeof entitySchema>;  //export if needed
+type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export class Entity extends BaseData<EntityType> {
   constructor(obj: BaseDataFields<EntityType>) {
@@ -152,7 +163,7 @@ export class Entity extends BaseData<EntityType> {
   }
 
   static deepCreateInstanceArray(
-    objs: Record<string, BaseDataFields<EntityType>[]>
+    objs: Record<string, BaseDataFields<EntityType>[]>,
   ): Record<string, Entity[]> {
     const newObj: Record<string, Entity[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -170,7 +181,7 @@ const trackSchema = z
     name: z.string(),
   })
   .passthrough();
-type TrackType = z.infer<typeof trackSchema>;  //export if needed
+type TrackType = z.infer<typeof trackSchema>; //export if needed
 
 export class Track extends Entity {
   constructor(obj: BaseDataFields<TrackType>) {
@@ -184,9 +195,10 @@ const annotationSchema = z
     item_ref: referenceSchema,
     view_ref: referenceSchema,
     entity_ref: referenceSchema,
+    source_ref: referenceSchema,
   })
   .passthrough();
-type AnnotationType = z.infer<typeof annotationSchema>;  //export if needed
+type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 
 export class Annotation extends BaseData<AnnotationType> {
   constructor(obj: BaseDataFields<AnnotationType>) {
@@ -201,7 +213,7 @@ export class Annotation extends BaseData<AnnotationType> {
   }
 
   static deepCreateInstanceArray(
-    objs: Record<string, BaseDataFields<AnnotationType>[]>
+    objs: Record<string, BaseDataFields<AnnotationType>[]>,
   ): Record<string, Annotation[]> {
     const newObj: Record<string, Annotation[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
@@ -222,7 +234,7 @@ const bboxSchema = z
     is_normalized: z.boolean(),
   })
   .passthrough();
-type BBoxType = z.infer<typeof bboxSchema>;  //export if needed
+type BBoxType = z.infer<typeof bboxSchema>; //export if needed
 
 export class BBox extends Annotation {
   constructor(obj: BaseDataFields<BBoxType>) {
@@ -239,19 +251,17 @@ const keypointsSchema = z
     states: z.array(z.string()),
   })
   .passthrough();
-type KeypointsType = z.infer<typeof keypointsSchema>;  //export if needed
+type KeypointsType = z.infer<typeof keypointsSchema>; //export if needed
 
 export class Keypoints extends Annotation {
   constructor(obj: BaseDataFields<KeypointsType>) {
-    if (obj.table_info.base_schema !== "Keypoints")
-      throw new Error("Not a Keypoints");
+    if (obj.table_info.base_schema !== "Keypoints") throw new Error("Not a Keypoints");
     keypointsSchema.parse(obj.data);
     super(obj);
   }
 }
 
-const itemSchema = z
-  .object({}).passthrough();
+const itemSchema = z.object({}).passthrough();
 type ItemType = z.infer<typeof itemSchema>;
 
 export class Item extends BaseData<ItemType> {
@@ -299,9 +309,7 @@ const datasetStatSchema = z
   .object({
     name: z.string(),
     type: z.string(),
-    histogram: z.array(
-      z.record(z.string(), z.union([z.number(), z.string(), z.boolean()]))
-    ),
+    histogram: z.array(z.record(z.string(), z.union([z.number(), z.string(), z.boolean()]))),
     range: z.optional(z.array(z.number())),
   })
   .strict();
@@ -309,7 +317,7 @@ export type DatasetStat = z.infer<typeof datasetStatSchema>;
 
 const tableRowSchema = z.record(
   z.string(),
-  z.union([z.string(), z.number(), z.boolean(), datasetStatSchema])
+  z.union([z.string(), z.number(), z.boolean(), datasetStatSchema]),
 );
 export type TableRow = z.infer<typeof tableRowSchema>;
 
@@ -377,9 +385,9 @@ const datasetItemSchema = z.object({
   annotations: z.record(z.string(), z.array(baseDataFieldsSchema(annotationSchema))),
   views: z.record(
     z.string(),
-    baseDataFieldsSchema(viewSchema).or(z.array(baseDataFieldsSchema(viewSchema)))
+    baseDataFieldsSchema(viewSchema).or(z.array(baseDataFieldsSchema(viewSchema))),
   ),
-}); //passthrough cause a compile error... may be an issue for UI fields
+});
 export type DatasetItemType = z.infer<typeof datasetItemSchema>;
 
 export class DatasetItem implements DatasetItemType {
@@ -389,8 +397,11 @@ export class DatasetItem implements DatasetItemType {
   annotations: Record<string, Annotation[]>;
   views: Record<string, View | View[]>;
 
+  //UI only fields
+  datasetId: string;
+  type: string;
+
   constructor(obj: DatasetItemType) {
-    console.log("I'm Here!!");
     datasetItemSchema.parse(obj);
     this.id = obj.id;
     this.item = new Item(obj.item);
@@ -402,14 +413,6 @@ export class DatasetItem implements DatasetItemType {
 }
 
 //-------------OLD & WIP
-
-export type ImageAnnotation = Annotation & {
-  datasetItemType: "image";
-}
-
-export type VideoAnnotation = Annotation & {
-  datasetItemType: "video";
-}
 
 //////////WIP
 
@@ -431,7 +434,6 @@ export type ThreeDimensionsDatasetItem = DatasetItem & {
   type: "3d";
   views: Record<string, View[]>;
 };
-
 
 // DATASET
 export interface Dataset {
@@ -553,7 +555,7 @@ export interface SaveItemDelete {
 export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
 
 export type VideoItemBBox = ItemBBox & TrackletItem;
-export type VideoKeypoints = Keypoints & TrackletItem;
+export type VideoKeypoints = ItemKeypoints & TrackletItem;
 export interface Tracklet {
   start: number;
   end: number;
@@ -578,7 +580,7 @@ export type ImageObject = ItemObjectBase & {
   datasetItemType: "image";
   bbox?: ItemBBox;
   mask?: ItemRLE;
-  keypoints?: Keypoints;
+  keypoints?: ItemKeypoints;
 };
 
 export type ItemObject = ImageObject | VideoObject;
@@ -592,17 +594,17 @@ export interface ItemRLE {
   displayControl?: DisplayControl;
 }
 
-export type ItemBBox = BBox;
-// export interface ItemBBox {
-//   id: string;
-//   ref_name: string;
-//   view_id?: string;
-//   coords: Array<number>;
-//   format: string;
-//   is_normalized: boolean;
-//   confidence: number;
-//   displayControl?: DisplayControl;
-// }
+//export type ItemBBox = BBox;
+export interface ItemBBox {
+  id: string;
+  ref_name: string;
+  view_id: string;
+  coords: Array<number>;
+  format: string;
+  is_normalized: boolean;
+  confidence: number;
+  displayControl?: DisplayControl;
+}
 
 // ITEM EMBEDDING
 export interface ItemEmbedding {

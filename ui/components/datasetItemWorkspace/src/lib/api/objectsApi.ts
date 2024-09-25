@@ -65,8 +65,8 @@ const defineTooltip = (object: ItemObject): string | null => {
   return tooltip;
 };
 
-export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox[] => {
-  const res_bboxes: BBox[] = [];
+export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): ItemBBox[] => {
+  const res_bboxes: ItemBBox[] = [];
   const boxes = obj.datasetItemType === "video" ? obj.displayedMBox : [obj.bbox];
   if (!boxes) return res_bboxes;
   for (const box of boxes) {
@@ -147,8 +147,8 @@ export const mapObjectToKeypoints = (
     if (!template) continue;
     const view = views?.[keypoints.view_id];
     const image: ItemView = Array.isArray(view) ? view[0] : view;
-    const imageHeight = (image.features.height.value as number) || 1;
-    const imageWidth = (image.features.width.value as number) || 1;
+    const imageHeight = image.data.height || 1;
+    const imageWidth = image.data.width || 1;
     const vertices = keypoints.vertices.map((vertex, i) => ({
       ...vertex,
       x: vertex.x * imageWidth,

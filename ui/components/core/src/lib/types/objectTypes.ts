@@ -67,7 +67,7 @@ export type Vertex = {
   };
 };
 
-export type Keypoints = {
+export type ItemKeypoints = {
   id: string;
   view_id?: string;
   template_id: string;
