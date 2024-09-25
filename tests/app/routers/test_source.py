@@ -34,15 +34,13 @@ from .utils import (
 @pytest.mark.parametrize(
     "table, ids, item_ids, limit, skip",
     [
-        ("image", ["image_0", "image_1"], None, None, 0),
-        ("image", None, ["0", "1"], None, 0),
-        ("image", None, None, 2, 0),
-        ("image", None, None, 2, None),
-        ("image", None, None, 10, 2),
-        ("video", None, ["1"], 2, 1),
+        ("source", ["source_0", "source_1"], None, None, 0),
+        ("source", None, None, 2, 0),
+        ("source", None, None, 2, None),
+        ("source", None, None, 10, 2),
     ],
 )
-def test_get_views(
+def test_get_sources(
     table: str,
     ids: list[str] | None,
     item_ids: list[str] | None,
@@ -53,7 +51,7 @@ def test_get_views(
 ):
     _test_get_rows_handler(
         dataset=dataset_multi_view_tracking_and_image,
-        group=SchemaGroup.VIEW,
+        group=SchemaGroup.SOURCE,
         table=table,
         ids=ids,
         item_ids=item_ids,
@@ -63,176 +61,176 @@ def test_get_views(
     )
 
 
-def test_get_views_error(
+def test_get_sources_error(
     app_and_settings: tuple[FastAPI, Settings],
 ):
     _test_get_rows_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        ids=["image_0", "image_1"],
-        item_ids=["0", "1"],
+        group=SchemaGroup.SOURCE,
+        table="source",
+        ids=["source_0", "source_1"],
+        item_ids=None,
         app_and_settings=app_and_settings,
     )
 
 
-def test_get_view(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
+def test_get_source(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
     _test_get_row_handler(
         dataset=dataset_multi_view_tracking_and_image,
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings,
     )
 
 
-def test_get_view_error(app_and_settings: tuple[FastAPI, Settings]):
+def test_get_source_error(app_and_settings: tuple[FastAPI, Settings]):
     _test_get_row_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings,
     )
 
 
-def test_create_views(
+def test_create_sources(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_create_rows_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
+        group=SchemaGroup.SOURCE,
+        table="source",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_create_views_error(
+def test_create_sources_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_create_rows_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
+        group=SchemaGroup.SOURCE,
+        table="source",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_create_view(
+def test_create_source(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_create_row_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_create_view_error(
+def test_create_source_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_create_row_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_update_views(
+def test_update_sources(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_update_rows_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        field_to_update="width",
-        values=[1000 + i for i in range(2)],
+        group=SchemaGroup.SOURCE,
+        table="source",
+        field_to_update="name",
+        values=["name_source_0", "name_source_1"],
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_update_views_error(
+def test_update_sources_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_update_rows_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
+        group=SchemaGroup.SOURCE,
+        table="source",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_update_view(
+def test_update_source(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_update_row_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
-        field_to_update="width",
-        value=1000,
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
+        field_to_update="name",
+        value="name_source_0",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_update_view_error(
+def test_update_source_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_update_row_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_delete_views(
+def test_delete_sources(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_delete_rows_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
+        group=SchemaGroup.SOURCE,
+        table="source",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_delete_views_error(
+def test_delete_sources_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_delete_rows_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
+        group=SchemaGroup.SOURCE,
+        table="source",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_delete_view(
+def test_delete_source(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_delete_row_handler(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings_with_copy,
     )
 
 
-def test_delete_view_error(
+def test_delete_source_error(
     app_and_settings_with_copy: tuple[FastAPI, Settings],
 ):
     _test_delete_row_handler_error(
         dataset_id="dataset_multi_view_tracking_and_image",
-        group=SchemaGroup.VIEW,
-        table="image",
-        id="image_0",
+        group=SchemaGroup.SOURCE,
+        table="source",
+        id="source_0",
         app_and_settings=app_and_settings_with_copy,
     )

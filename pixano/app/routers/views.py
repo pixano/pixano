@@ -6,20 +6,21 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from pixano.app.models.views import ViewModel
 from pixano.app.settings import Settings, get_settings
 from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
-    assert_table_in_group,
-    create_rows,
-    delete_rows,
-    get_dataset,
-    get_models_from_rows,
-    get_rows,
-    update_rows,
+    create_row_handler,
+    create_rows_handler,
+    delete_row_handler,
+    delete_rows_handler,
+    get_row_handler,
+    get_rows_handler,
+    update_row_handler,
+    update_rows_handler,
 )
 
 
@@ -50,18 +51,14 @@ async def get_views(
     Returns:
         List of views.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    view_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    view_models = get_models_from_rows(table, ViewModel, view_rows)
-    return view_models
+    return await get_rows_handler(dataset_id, SchemaGroup.VIEW, table, settings, ids, item_ids, limit, skip)
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=ViewModel)
 async def get_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> ViewModel:
-    """Get an view.
+    """Get a view.
 
     Args:
         dataset_id: Dataset ID.
@@ -72,7 +69,7 @@ async def get_view(
     Returns:
         The view.
     """
-    return (await get_views(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
+    return await get_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[ViewModel])
@@ -93,11 +90,7 @@ async def create_views(
     Returns:
         List of views.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    views_rows = create_rows(dataset, table, views)
-    views_models = get_models_from_rows(table, ViewModel, views_rows)
-    return views_models
+    return await create_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=ViewModel)
@@ -108,7 +101,7 @@ async def create_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Create an view.
+    """Create a view.
 
     Args:
         dataset_id: Dataset ID.
@@ -120,9 +113,7 @@ async def create_view(
     Returns:
         The view.
     """
-    if id != view.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await create_views(dataset_id=dataset_id, table=table, views=[view], settings=settings))[0]
+    return await create_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=ViewModel)
@@ -133,7 +124,7 @@ async def update_view(
     view: ViewModel,
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> ViewModel:
-    """Update an view.
+    """Update a view.
 
     Args:
         dataset_id: Dataset ID.
@@ -145,9 +136,7 @@ async def update_view(
     Returns:
         The view.
     """
-    if id != view.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await update_views(dataset_id=dataset_id, table=table, views=[view], settings=settings))[0]
+    return await update_row_handler(dataset_id, SchemaGroup.VIEW, table, id, view, settings)
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[ViewModel])
@@ -168,18 +157,14 @@ async def update_views(
     Returns:
         List of views.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    view_rows = update_rows(dataset, table, views)
-    view_models = get_models_from_rows(table, ViewModel, view_rows)
-    return view_models
+    return await update_rows_handler(dataset_id, SchemaGroup.VIEW, table, views, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
 async def delete_view(
     dataset_id: str, table: str, id: str, settings: Annotated[Settings, Depends(get_settings)]
 ) -> None:
-    """Delete an view.
+    """Delete a view.
 
     Args:
         dataset_id: Dataset ID.
@@ -187,7 +172,7 @@ async def delete_view(
         id: ID.
         settings: App settings.
     """
-    return await delete_views(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
+    return await delete_row_handler(dataset_id, SchemaGroup.VIEW, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}/")
@@ -205,7 +190,4 @@ async def delete_views(
         ids: IDs.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.VIEW)
-    delete_rows(dataset, table, ids)
-    return None
+    return await delete_rows_handler(dataset_id, SchemaGroup.VIEW, table, ids, settings)

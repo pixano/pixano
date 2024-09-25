@@ -6,24 +6,25 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from pixano.app.models.entities import EntityModel
 from pixano.app.settings import Settings, get_settings
 from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
-    assert_table_in_group,
-    create_rows,
-    delete_rows,
-    get_dataset,
-    get_models_from_rows,
-    get_rows,
-    update_rows,
+    create_row_handler,
+    create_rows_handler,
+    delete_row_handler,
+    delete_rows_handler,
+    get_row_handler,
+    get_rows_handler,
+    update_row_handler,
+    update_rows_handler,
 )
 
 
-router = APIRouter(prefix="/entities", tags=["Entities"])
+router = APIRouter(prefix="/entities", tags=["Entitys"])
 
 
 @router.get("/{dataset_id}/{table}/", response_model=list[EntityModel])
@@ -50,11 +51,7 @@ async def get_entities(
     Returns:
         List of entities.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
-    entity_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
-    return entity_models
+    return await get_rows_handler(dataset_id, SchemaGroup.ENTITY, table, settings, ids, item_ids, limit, skip)
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=EntityModel)
@@ -72,7 +69,7 @@ async def get_entity(
     Returns:
         The entity.
     """
-    return (await get_entities(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
+    return await get_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[EntityModel])
@@ -87,17 +84,13 @@ async def create_entities(
     Args:
         dataset_id: Dataset ID.
         table: Table name.
-        entities: Entities.
+        entities: Entitys.
         settings: App settings.
 
     Returns:
         List of entities.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
-    entities_rows = create_rows(dataset, table, entities)
-    entities_models = get_models_from_rows(table, EntityModel, entities_rows)
-    return entities_models
+    return await create_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=EntityModel)
@@ -120,9 +113,7 @@ async def create_entity(
     Returns:
         The entity.
     """
-    if id != entity.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await create_entities(dataset_id=dataset_id, table=table, entities=[entity], settings=settings))[0]
+    return await create_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=EntityModel)
@@ -145,9 +136,7 @@ async def update_entity(
     Returns:
         The entity.
     """
-    if id != entity.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await update_entities(dataset_id=dataset_id, table=table, entities=[entity], settings=settings))[0]
+    return await update_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, entity, settings)
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[EntityModel])
@@ -162,17 +151,13 @@ async def update_entities(
     Args:
         dataset_id: Dataset ID.
         table: Table name.
-        entities: Entities.
+        entities: Entitys.
         settings: App settings.
 
     Returns:
         List of entities.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
-    entity_rows = update_rows(dataset, table, entities)
-    entity_models = get_models_from_rows(table, EntityModel, entity_rows)
-    return entity_models
+    return await update_rows_handler(dataset_id, SchemaGroup.ENTITY, table, entities, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
@@ -187,7 +172,7 @@ async def delete_entity(
         id: ID.
         settings: App settings.
     """
-    return await delete_entities(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
+    return await delete_row_handler(dataset_id, SchemaGroup.ENTITY, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}/")
@@ -205,7 +190,4 @@ async def delete_entities(
         ids: IDs.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.ENTITY)
-    delete_rows(dataset, table, ids)
-    return None
+    return await delete_rows_handler(dataset_id, SchemaGroup.ENTITY, table, ids, settings)

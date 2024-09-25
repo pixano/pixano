@@ -20,7 +20,7 @@ from pydantic import ConfigDict
 
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
-from pixano.features import SchemaGroup, ViewEmbedding, is_view_embedding
+from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
 from pixano.utils.python import to_sql_list
 
 from .dataset_features_values import DatasetFeaturesValues
@@ -41,7 +41,6 @@ if TYPE_CHECKING:
         Item,
         ItemRef,
         SchemaRef,
-        Source,
         SourceRef,
         View,
         ViewRef,
@@ -180,6 +179,11 @@ class Dataset:
         self._db_connection = self._connect()
 
     @property
+    def id(self) -> str:
+        """Return dataset ID."""
+        return self.info.id
+
+    @property
     def num_rows(self) -> int:
         """Return number of rows in dataset.
 
@@ -278,6 +282,9 @@ class Dataset:
             raise DatasetAccessError(f"Table {name} not found in dataset")
 
         table = self._db_connection.open_table(name)
+        if name == SchemaGroup.SOURCE.value:
+            return table
+
         schema_table = self.schema.schemas[name]
         if is_view_embedding(schema_table):
             schema_table = cast(type[ViewEmbedding], schema_table)
@@ -370,7 +377,9 @@ class Dataset:
             sql_ids = to_sql_list(ids)
             query = TableQueryBuilder(table).where(f"id in {sql_ids}")
 
-        query_models: list[BaseSchema] = query.to_pydantic(self.schema.schemas[table_name])
+        schema = self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
+
+        query_models: list[BaseSchema] = query.to_pydantic(schema)
         for model in query_models:
             model.dataset = self  # type: ignore[attr-defined]
             model.table_name = table_name
@@ -476,10 +485,11 @@ class Dataset:
             data: Data to add.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name]
+            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
         ):
             raise DatasetAccessError(
-                f"All data must be instances of the table type {self.schema.schemas[table_name]}."
+                "All data must be instances of the table type "
+                f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
             )
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):
@@ -612,10 +622,11 @@ class Dataset:
             Updated data.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
-            type(data[0]), self.schema.schemas[table_name]
+            type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
         ):
             raise DatasetAccessError(
-                f"All data must be instances of the table type {self.schema.schemas[table_name]}."
+                "All data must be instances of the table type "
+                f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
             )
         set_ids = {item.id for item in data}
         if len(set_ids) != len(data):
@@ -727,3 +738,18 @@ class Dataset:
                 # Return dataset
                 return Dataset(json_fp.parent, media_dir)
         raise FileNotFoundError(f"Dataset {id} not found in {directory}")
+
+    @staticmethod
+    def list(directory: Path) -> list[DatasetInfo]:
+        """List datasets information in directory.
+
+        Args:
+            directory: Directory to search in.
+
+        Returns:
+            List of dataset infos.
+        """
+        dataset_infos = []
+        for json_fp in directory.glob("*/info.json"):
+            dataset_infos.append(DatasetInfo.from_json(json_fp))
+        return dataset_infos

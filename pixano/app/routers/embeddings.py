@@ -6,20 +6,21 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 
 from pixano.app.models.embeddings import EmbeddingModel
 from pixano.app.settings import Settings, get_settings
 from pixano.features.schemas.schema_group import SchemaGroup
 
 from .utils import (
-    assert_table_in_group,
-    create_rows,
-    delete_rows,
-    get_dataset,
-    get_models_from_rows,
-    get_rows,
-    update_rows,
+    create_row_handler,
+    create_rows_handler,
+    delete_row_handler,
+    delete_rows_handler,
+    get_row_handler,
+    get_rows_handler,
+    update_row_handler,
+    update_rows_handler,
 )
 
 
@@ -50,11 +51,7 @@ async def get_embeddings(
     Returns:
         List of embeddings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embedding_rows = get_rows(dataset, table, ids, item_ids, limit, skip)
-    embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
-    return embedding_models
+    return await get_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, settings, ids, item_ids, limit, skip)
 
 
 @router.get("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
@@ -72,7 +69,7 @@ async def get_embedding(
     Returns:
         The embedding.
     """
-    return (await get_embeddings(dataset_id, table, settings, ids=[id], item_ids=None, limit=None, skip=0))[0]
+    return await get_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
 @router.post("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
@@ -93,11 +90,7 @@ async def create_embeddings(
     Returns:
         List of embeddings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embeddings_rows = create_rows(dataset, table, embeddings)
-    embeddings_models = get_models_from_rows(table, EmbeddingModel, embeddings_rows)
-    return embeddings_models
+    return await create_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
 
 @router.post("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
@@ -120,9 +113,7 @@ async def create_embedding(
     Returns:
         The embedding.
     """
-    if id != embedding.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await create_embeddings(dataset_id=dataset_id, table=table, embeddings=[embedding], settings=settings))[0]
+    return await create_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
 
 @router.put("/{dataset_id}/{table}/{id}", response_model=EmbeddingModel)
@@ -145,9 +136,7 @@ async def update_embedding(
     Returns:
         The embedding.
     """
-    if id != embedding.id:
-        raise HTTPException(status_code=400, detail="ID in path and body do not match.")
-    return (await update_embeddings(dataset_id=dataset_id, table=table, embeddings=[embedding], settings=settings))[0]
+    return await update_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, embedding, settings)
 
 
 @router.put("/{dataset_id}/{table}/", response_model=list[EmbeddingModel])
@@ -168,11 +157,7 @@ async def update_embeddings(
     Returns:
         List of embeddings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    embedding_rows = update_rows(dataset, table, embeddings)
-    embedding_models = get_models_from_rows(table, EmbeddingModel, embedding_rows)
-    return embedding_models
+    return await update_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, embeddings, settings)
 
 
 @router.delete("/{dataset_id}/{table}/{id}")
@@ -187,7 +172,7 @@ async def delete_embedding(
         id: ID.
         settings: App settings.
     """
-    return await delete_embeddings(dataset_id=dataset_id, table=table, ids=[id], settings=settings)
+    return await delete_row_handler(dataset_id, SchemaGroup.EMBEDDING, table, id, settings)
 
 
 @router.delete("/{dataset_id}/{table}/")
@@ -205,7 +190,4 @@ async def delete_embeddings(
         ids: IDs.
         settings: App settings.
     """
-    dataset = get_dataset(dataset_id, settings.data_dir, None)
-    assert_table_in_group(dataset, table, SchemaGroup.EMBEDDING)
-    delete_rows(dataset, table, ids)
-    return None
+    return await delete_rows_handler(dataset_id, SchemaGroup.EMBEDDING, table, ids, settings)

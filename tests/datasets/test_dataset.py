@@ -43,6 +43,7 @@ class TestDataset:
         assert dataset_image_bboxes_keypoint.thumbnail == dataset_image_bboxes_keypoint.path / Dataset._THUMB_FILE
         assert dataset_image_bboxes_keypoint.num_rows == 5
         assert dataset_image_bboxes_keypoint.media_dir == dataset_image_bboxes_keypoint.path / "media"
+        assert dataset_image_bboxes_keypoint.id == "dataset_image_bboxes_keypoint"
 
     def test_create_table(self, dataset_image_bboxes_keypoint_copy: Dataset):
         data = [
@@ -998,22 +999,29 @@ class TestDataset:
         with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
             dataset_image_bboxes_keypoint_copy.update_dataset_items(data)
 
-    def test_find(self, dataset_image_bboxes_keypoint_copy: Dataset):
-        path = dataset_image_bboxes_keypoint_copy.path.parent
+    def test_find(self, dataset_image_bboxes_keypoint: Dataset):
+        path = dataset_image_bboxes_keypoint.path.parent
 
-        dataset_image_bboxes_keypoint_copy_found = Dataset.find(dataset_image_bboxes_keypoint_copy.info.id, path)
-        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
-        assert dataset_image_bboxes_keypoint_copy_found.path == dataset_image_bboxes_keypoint_copy.path
-        assert dataset_image_bboxes_keypoint_copy_found.media_dir == dataset_image_bboxes_keypoint_copy.media_dir
+        dataset_image_bboxes_keypoint_found = Dataset.find(dataset_image_bboxes_keypoint.info.id, path)
+        assert dataset_image_bboxes_keypoint_found.info == dataset_image_bboxes_keypoint.info
+        assert dataset_image_bboxes_keypoint_found.path == dataset_image_bboxes_keypoint.path
+        assert dataset_image_bboxes_keypoint_found.media_dir == dataset_image_bboxes_keypoint.media_dir
 
-        dataset_image_bboxes_keypoint_copy_found = Dataset.find(
-            dataset_image_bboxes_keypoint_copy.info.id, path, Path("/test/media")
+        dataset_image_bboxes_keypoint_found = Dataset.find(
+            dataset_image_bboxes_keypoint.info.id, path, Path("/test/media")
         )
-        assert dataset_image_bboxes_keypoint_copy_found.info == dataset_image_bboxes_keypoint_copy.info
-        assert dataset_image_bboxes_keypoint_copy_found.media_dir == Path("/test/media")
+        assert dataset_image_bboxes_keypoint_found.info == dataset_image_bboxes_keypoint.info
+        assert dataset_image_bboxes_keypoint_found.media_dir == Path("/test/media")
 
         with pytest.raises(FileNotFoundError, match=f"Dataset nonexistent not found in {path}"):
             Dataset.find("nonexistent", path)
+
+    def test_list(self, dataset_image_bboxes_keypoint: Dataset):
+        path = dataset_image_bboxes_keypoint.path.parent
+
+        datasets_info = Dataset.list(path)
+        assert len(datasets_info) == 2
+        assert dataset_image_bboxes_keypoint.info in datasets_info
 
     def test_resolve_ref(self, dataset_image_bboxes_keypoint: Dataset):
         item = dataset_image_bboxes_keypoint.get_data("item", ids=["0"])[0]

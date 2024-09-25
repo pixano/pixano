@@ -4,13 +4,16 @@
 # License: CECILL-C
 # =====================================
 
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from pixano.app.models import DatasetModel
+from pixano.app.models.dataset_info import DatasetInfoModel
 from pixano.app.settings import Settings, get_settings
 from pixano.datasets import DatasetInfo
+from pixano.datasets.utils.errors import DatasetAccessError
 
 from .utils import get_dataset as get_dataset_utils
 
@@ -18,10 +21,10 @@ from .utils import get_dataset as get_dataset_utils
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
-@router.get("/info", response_model=list[DatasetInfo])
+@router.get("/info", response_model=list[DatasetInfoModel])
 async def get_datasets_info(
     settings: Annotated[Settings, Depends(get_settings)],
-) -> list[DatasetInfo]:
+) -> list[DatasetInfoModel]:
     """Load dataset list.
 
     Args:
@@ -31,26 +34,28 @@ async def get_datasets_info(
         List of dataset infos.
     """
     try:
-        infos = DatasetInfo.load_directory(directory=settings.data_dir)
+        infos_and_paths: list[tuple[DatasetInfo, Path]] = DatasetInfo.load_directory(
+            directory=settings.data_dir, return_path=True
+        )
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
             detail=f"No datasets found in {settings.data_dir.absolute()}.",
         )
 
-    if infos != []:
-        return infos
+    if len(infos_and_paths) > 0:
+        return [DatasetInfoModel.from_dataset_info(info, path) for info, path in infos_and_paths]
     raise HTTPException(
         status_code=404,
         detail=f"No datasets found in {settings.data_dir.absolute()}.",
     )
 
 
-@router.get("/info/{id}", response_model=DatasetInfo)
+@router.get("/info/{id}", response_model=DatasetInfoModel)
 async def get_dataset_info(
     id: str,
     settings: Annotated[Settings, Depends(get_settings)],
-) -> list[DatasetInfo]:
+) -> list[DatasetInfoModel]:
     """Load dataset list.
 
     Args:
@@ -61,14 +66,14 @@ async def get_dataset_info(
         List of dataset infos.
     """
     try:
-        infos = DatasetInfo.load_id(id, directory=settings.data_dir)
+        info, path = DatasetInfo.load_id(id, settings.data_dir, return_path=True)
     except FileNotFoundError:
         raise HTTPException(
             status_code=404,
             detail=f"Dataset {id} not found in {settings.data_dir.absolute()}.",
         )
 
-    return infos
+    return DatasetInfoModel.from_dataset_info(info, path)
 
 
 @router.get("/{id}", response_model=DatasetModel)
@@ -86,3 +91,30 @@ async def get_dataset(
         Dataset.
     """
     return DatasetModel.from_dataset(get_dataset_utils(id, settings.data_dir, None))
+
+
+@router.get("/{id}/{table}/count", response_model=int)
+async def get_table_count(
+    id: str,
+    table: str,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> int:
+    """Get number of rows in a table.
+
+    Args:
+        id: Dataset ID
+        table: Table name
+        settings: App settings
+
+    Returns:
+        The number of rows in the table.
+    """
+    dataset = get_dataset_utils(id, settings.data_dir, None)
+    try:
+        db_table = dataset.open_table(table)
+    except DatasetAccessError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
+    return db_table.count_rows()
