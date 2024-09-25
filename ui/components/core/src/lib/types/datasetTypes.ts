@@ -276,7 +276,6 @@ const datasetInfoSchema = z
     id: z.string(),
     name: z.string(),
     description: z.string(),
-    num_elements: z.optional(z.number()), // optional or remove ?
     size: z.string(),
     preview: z.string(),
     num_items: z.number(),
@@ -289,7 +288,7 @@ export class DatasetInfo implements DatasetInfoType {
   id: string;
   name: string;
   description: string;
-  num_elements?: number;
+  num_items: number;
   size: string;
   preview: string;
   isFiltered?: boolean;
@@ -299,7 +298,7 @@ export class DatasetInfo implements DatasetInfoType {
     this.id = obj.id;
     this.name = obj.name;
     this.description = obj.description;
-    this.num_elements = obj.num_elements;
+    this.num_items = obj.num_items;
     this.size = obj.size;
     this.preview = obj.preview;
     this.isFiltered = obj.isFiltered;

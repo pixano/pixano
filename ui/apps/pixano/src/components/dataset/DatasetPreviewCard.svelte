@@ -39,7 +39,7 @@ License: CECILL-C
     </div>
 
     <p class="text-sm text-slate-500 font-medium">
-      {dataset.num_elements} items {dataset.size && dataset.size != "N/A"
+      {dataset.num_items} items {dataset.size && dataset.size != "N/A"
         ? " - " + dataset.size
         : ""}
     </p>

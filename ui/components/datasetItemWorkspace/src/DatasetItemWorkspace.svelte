@@ -69,7 +69,7 @@ License: CECILL-C
               for (const entity of entities) {
                 if (entity.id === ann.data.entity_ref.id) {
                   ann.features = {
-                    name: { name: "name", dtype: "str", value: entity.data["name"] },
+                    name: { name: "name", dtype: "str", value: entity.data["name"] as string },
                   };
                 }
               }
@@ -93,10 +93,10 @@ License: CECILL-C
               } else if (ann.table_info.base_schema === "CompressedRLE")
                 (ann as ImageObject).mask = ann.data;
             } else {
-              ann.datasetItemType = "video";
-              // if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes = ann.data;
+              // ann.datasetItemType = "video";
+              // if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes?.push(ann.data);
               // else if (ann.table_info.base_schema === "KeyPoints")
-              //   (ann as VideoObject).keypoints = ann.data;
+              //   (ann as VideoObject).keypoints?.push(ann.data);
               //else if (ann.table_info.base_schema === "CompressedRLE") (ann as VideoObject).mask = ann.data;
               //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
               (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
