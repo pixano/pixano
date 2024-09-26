@@ -675,7 +675,6 @@ License: CECILL-C
           imageHeight: getCurrentImage(viewId).height,
           keypoints: { ...newShape.keypoints, vertices },
         };
-        rect.destroy();
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
       }
@@ -1225,11 +1224,14 @@ License: CECILL-C
         const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
         const maskGroup: Konva.Group = viewLayer.findOne("#masks");
         const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
+        const kptGroup: Konva.Group = viewLayer.findOne("#keypoints");
         console.log("view:", viewId);
         console.log("--masks Konva group:", maskGroup);
         console.log("--masks children length:", maskGroup.children?.length);
         console.log("--bboxes Konva group:", bboxGroup);
         console.log("--bboxes children length:", bboxGroup.children?.length);
+        console.log("--keypoints Konva group:", kptGroup);
+        console.log("--keypoints children length:", kptGroup.children?.length);
       }
     }
   }

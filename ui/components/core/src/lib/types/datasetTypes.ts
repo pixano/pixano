@@ -70,7 +70,8 @@ const viewSchema = z
   .object({
     item_ref: referenceSchema,
     parent_ref: referenceSchema,
-  }).passthrough();
+  })
+  .passthrough();
 type ViewType = z.infer<typeof viewSchema>; //export if needed
 
 export class View extends BaseData<ViewType> {
@@ -109,7 +110,8 @@ const imageSchema = z
     width: z.number(),
     height: z.number(),
     format: z.string(),
-  }).passthrough();
+  })
+  .passthrough();
 type ImageType = z.infer<typeof imageSchema>; //export if needed
 export class Image extends View {
   data: ImageType & ViewType;
@@ -528,8 +530,8 @@ export type TrackletItem = {
 export type SaveDataAddUpdate =
   | ItemBBox
   | VideoItemBBox
-  | Keypoints
-  | VideoKeypoints
+  | ItemKeypoints
+  | VideoItemKeypoints
   | ItemRLE
   | Tracklet
   | ItemObjectBase;
@@ -555,7 +557,7 @@ export interface SaveItemDelete {
 export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
 
 export type VideoItemBBox = ItemBBox & TrackletItem;
-export type VideoKeypoints = ItemKeypoints & TrackletItem;
+export type VideoItemKeypoints = ItemKeypoints & TrackletItem;
 export interface Tracklet {
   start: number;
   end: number;
@@ -571,9 +573,9 @@ export type VideoObject = ItemObjectBase & {
   datasetItemType: "video";
   track: Tracklet[];
   boxes?: VideoItemBBox[];
-  keypoints?: VideoKeypoints[];
+  keypoints?: VideoItemKeypoints[];
   displayedMBox?: VideoItemBBox[]; //list for multiview
-  displayedMKeypoints?: VideoKeypoints[]; //list for multiview
+  displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
 };
 
 export type ImageObject = ItemObjectBase & {

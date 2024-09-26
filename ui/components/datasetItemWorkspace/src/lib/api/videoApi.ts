@@ -12,7 +12,7 @@ import type {
   TrackletItem,
   TrackletWithItems,
   VideoItemBBox,
-  VideoKeypoints,
+  VideoItemKeypoints,
   VideoObject,
   SaveItem,
   SaveDataAddUpdate,
@@ -443,7 +443,7 @@ export const mapTrackItemsToObject = (
           keypoints.push({
             ...item,
             ...currentKeypoint,
-          } as VideoKeypoints);
+          } as VideoItemKeypoints);
         }
       });
     }
