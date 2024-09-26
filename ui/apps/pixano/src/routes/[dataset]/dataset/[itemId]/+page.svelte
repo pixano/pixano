@@ -82,7 +82,7 @@ License: CECILL-C
           } else {
             noItemFound = false;
           }
-          console.log("handleSelectIem - selectedItem:", selectedItem);
+          console.log("XXX handleSelectIem - selectedItem:", selectedItem);
         })
         .then(() => isLoadingNewItemStore.set(false))
         .catch((err) => console.error(err));

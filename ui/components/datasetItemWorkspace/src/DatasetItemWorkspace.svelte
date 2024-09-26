@@ -15,6 +15,7 @@ License: CECILL-C
     VideoObject,
   } from "@pixano/core";
 
+  import { rleFrString } from "../../canvas2d/src/api/maskApi"
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
@@ -75,11 +76,13 @@ License: CECILL-C
               }
             });
 
-            //put type and data in corresponding field (aka bbox, keypoiints or mask)
+            // put type and data in corresponding field (aka bbox, keypoiints or mask)
+            // adapt data model from back to front
             if (selectedItem.type === "image") {
               ann.datasetItemType = "image";
-              if (ann.table_info.base_schema === "BBox") (ann as ImageObject).bbox = ann.data;
-              else if (ann.table_info.base_schema === "KeyPoints") {
+              if (ann.table_info.base_schema === "BBox") {
+                (ann as ImageObject).bbox = ann.data;
+              } else if (ann.table_info.base_schema === "KeyPoints") {
                 ann.data.vertices = [];
                 for (let i = 0; i < ann.data.coords.length / 2; i++) {
                   const x = ann.data.coords[i * 2];
@@ -90,8 +93,10 @@ License: CECILL-C
                 delete ann.data.coords;
                 delete ann.data.states;
                 (ann as ImageObject).keypoints = ann.data;
-              } else if (ann.table_info.base_schema === "CompressedRLE")
+              } else if (ann.table_info.base_schema === "CompressedRLE") {
+                ann.data.counts = rleFrString(ann.data.counts);
                 (ann as ImageObject).mask = ann.data;
+              }
             } else {
               // ann.datasetItemType = "video";
               // if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes?.push(ann.data);

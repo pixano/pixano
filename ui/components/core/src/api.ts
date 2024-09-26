@@ -182,7 +182,6 @@ export async function getDatasetItem(datasetId: string, itemId: string): Promise
 
     if (response.ok) {
       item_raw = (await response.json()) as DatasetItem;
-      console.dir(item_raw)
       item = new DatasetItem(item_raw);
     } else {
       item = {} as DatasetItem;
