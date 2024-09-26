@@ -74,10 +74,9 @@ export const sceneFunc = (ctx: Konva.Context, shape: Konva.Shape, svg: string[])
   ctx.fillStrokeShape(shape);
 };
 
-
 // Fonction de conversion RLE vers chaîne de caractères
 export function rleToString(cnts: number[]): string {
-  let result = '';
+  let result = "";
   for (let i = 0; i < cnts.length; i++) {
     let x = cnts[i];
     // Si c'est au-delà du deuxième élément, on applique la différence avec cnts[i-2]
@@ -88,10 +87,10 @@ export function rleToString(cnts: number[]): string {
     // Encodage en utilisant 6 bits par caractère
     while (more) {
       let c = x & 0x1f; // Extraire les 5 bits de poids faible
-      x >>= 5;          // Décaler les bits de 5 positions vers la droite
+      x >>= 5; // Décaler les bits de 5 positions vers la droite
 
       // Déterminer s'il y a plus de chiffres à traiter
-      more = (c & 0x10) ? x !== -1 : x !== 0;
+      more = c & 0x10 ? x !== -1 : x !== 0;
       if (more) {
         c |= 0x20; // Ajouter un indicateur de continuation
       }
@@ -131,8 +130,6 @@ export function rleFrString(s: string): number[] {
   }
   return cnts;
 }
-
-
 
 // Function to parse SVG path (as provided in the previous response)
 function svgPathToBitmap(svgPath, width: number, height: number): number[] {

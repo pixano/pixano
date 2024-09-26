@@ -52,7 +52,7 @@ License: CECILL-C
       api
         .getDatasetItem(dataset.id, encodeURIComponent(id))
         .then((item) => {
-          let item_type: "image"|"video"|"3d" = "image";
+          let item_type: "image" | "video" | "3d" = "image";
           //append /data/<dataset_path>/media url to all urls
           //NOTE: slice(-2) is not very safe, it suppose we respect the ""<dataset_path>/media" rule
           //but as ds.media_dir is an absolute path, we need to make this assumption...
@@ -61,12 +61,12 @@ License: CECILL-C
           Object.values(item.views).map((view) => {
             if (Array.isArray(view)) {
               const video = view as SequenceFrame[];
-              item_type = "video"
-              video.forEach((sf)=> {
+              item_type = "video";
+              video.forEach((sf) => {
                 sf.data.type = "video";
                 sf.data.url = media_dir + sf.data.url;
               });
-              video.sort((a, b)=> (a.data.frame_index - b.data.frame_index));
+              video.sort((a, b) => a.data.frame_index - b.data.frame_index);
             } else {
               const image = view as Image;
               image.data.type = "image";

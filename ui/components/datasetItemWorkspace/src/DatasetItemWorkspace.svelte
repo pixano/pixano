@@ -15,7 +15,7 @@ License: CECILL-C
     VideoObject,
   } from "@pixano/core";
 
-  import { rleFrString } from "../../canvas2d/src/api/maskApi"
+  import { rleFrString } from "../../canvas2d/src/api/maskApi";
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";

@@ -78,7 +78,6 @@ License: CECILL-C
   $: {
     fill = defineFill(vertex.features);
   }
-
 </script>
 
 <div
