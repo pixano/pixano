@@ -7,7 +7,7 @@
 import base64
 import io
 from pathlib import Path
-from typing import Literal
+from typing import Literal, overload
 from urllib.error import URLError
 from urllib.parse import urlparse
 from urllib.request import urlopen
@@ -31,6 +31,10 @@ class Image(View):
     height: int
     format: str
 
+    @overload
+    def open(self, media_dir: Path, output_type: Literal["base64"]) -> str: ...
+    @overload
+    def open(self, media_dir: Path, output_type: Literal["image"]) -> PILImage.Image: ...
     def open(self, media_dir: Path, output_type: Literal["base64", "image"] = "base64") -> str | PILImage.Image:
         """Open image.
 
