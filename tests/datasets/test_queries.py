@@ -6,7 +6,6 @@
 
 import pytest
 from lancedb.db import LanceTable
-from lancedb.query import LanceQueryBuilder
 
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.queries import TableQueryBuilder
