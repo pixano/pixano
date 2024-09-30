@@ -16,13 +16,13 @@ from pixano.datasets.dataset_info import DatasetInfo
 
 
 def test_get_browser(
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     info_dataset_image_bboxes_keypoint: DatasetInfo,
     info_dataset_multi_view_tracking_and_image: DatasetInfo,
     browser_dataset_image_bboxes_keypoint: DatasetBrowser,
     browser_dataset_multi_view_tracking_and_image: DatasetBrowser,
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     info_dataset_image_bboxes_keypoint.id = "dataset_image_bboxes_keypoint"
     info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
@@ -30,7 +30,6 @@ def test_get_browser(
     infos = [info_dataset_image_bboxes_keypoint, info_dataset_multi_view_tracking_and_image]
     outputs = [browser_dataset_image_bboxes_keypoint, browser_dataset_multi_view_tracking_and_image]
 
-    client = TestClient(app)
     for info, output in zip(infos, outputs):
         response = client.get(f"/browser/{info.id}?limit=50&skip=0")
         assert response.status_code == 200
@@ -46,19 +45,18 @@ def test_get_browser(
 
 
 def test_get_browser_semantic_search(
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     info_dataset_multi_view_tracking_and_image: DatasetInfo,
     df_semantic_search: pl.DataFrame,
     browser_dataset_multi_view_tracking_and_image_semantic_search: DatasetBrowser,
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     info_dataset_multi_view_tracking_and_image.id = "dataset_multi_view_tracking_and_image"
 
     def _mock_to_polars(self):
         return df_semantic_search
 
-    client = TestClient(app)
     with patch("lancedb.query.LanceQueryBuilder.to_polars", _mock_to_polars):
         response = client.get(
             f"/browser/{info_dataset_multi_view_tracking_and_image.id}?limit=50&skip=0&query=metadata_0&table=image_embedding"

@@ -30,10 +30,10 @@ def test_get_items_info(
     ids: list[str] | None,
     limit: int | None,
     skip: int | None,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     dataset_multi_view_tracking_and_image: Dataset,
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     url = "/items_info/dataset_multi_view_tracking_and_image/?"
     if ids is not None:
@@ -69,7 +69,6 @@ def test_get_items_info(
         }
         expected_output.append(ItemInfoModel(info=info_dict, **item_model.model_dump()))
 
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 200
     for model_json in response.json():
@@ -80,13 +79,12 @@ def test_get_items_info(
 
 
 def test_get_items_error(
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
     url = "/items_info/dataset_multi_view_tracking_and_image_wrong/"
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 404
     assert response.json() == {
@@ -109,8 +107,10 @@ def test_get_items_error(
     assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/item."}
 
 
-def test_get_item_info(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
-    app, settings = app_and_settings
+def test_get_item_info(
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient], dataset_multi_view_tracking_and_image: Dataset
+):
+    app, settings, client = app_and_settings_with_client
 
     dataset_item = dataset_multi_view_tracking_and_image.get_dataset_items("0", None, 0)
     assert dataset_item is not None
@@ -134,7 +134,6 @@ def test_get_item_info(app_and_settings: tuple[FastAPI, Settings], dataset_multi
     }
     expected_output = ItemInfoModel(info=info_dict, **item_model.model_dump())
 
-    client = TestClient(app)
     response = client.get("/items_info/dataset_multi_view_tracking_and_image/0")
     assert response.status_code == 200
     model = ItemInfoModel.model_validate(response.json())
@@ -142,11 +141,10 @@ def test_get_item_info(app_and_settings: tuple[FastAPI, Settings], dataset_multi
     assert model == expected_output
 
 
-def test_get_item_info_error(app_and_settings: tuple[FastAPI, Settings]):
-    app, settings = app_and_settings
+def test_get_item_info_error(app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.get("/items/dataset_multi_view_tracking_and_image_wrong/0")
     assert response.status_code == 404
     assert response.json() == {
