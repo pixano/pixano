@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.applications import FastAPI
+from fastapi.testclient import TestClient
 
 from pixano.app.main import create_app
 from pixano.app.settings import Settings, get_settings
@@ -36,8 +37,13 @@ def app_and_settings(
     return app, settings
 
 
+@pytest.fixture(scope="session")
+def app_and_settings_with_client(app_and_settings):
+    return *app_and_settings, TestClient(app_and_settings[0])
+
+
 @pytest.fixture()
-def app_and_settings_with_copy(
+def app_and_settings_copy(
     dataset_image_bboxes_keypoint_copy: Dataset, dataset_multi_view_tracking_and_image_copy: Dataset
 ) -> tuple[FastAPI, Settings]:
     library_dir = Path(tempfile.mkdtemp())
@@ -59,6 +65,11 @@ def app_and_settings_with_copy(
 
 
 @pytest.fixture()
+def app_and_settings_with_client_copy(app_and_settings_copy):
+    return *app_and_settings_copy, TestClient(app_and_settings_copy[0])
+
+
+@pytest.fixture()
 def empty_app_and_settings() -> tuple[FastAPI, Settings]:
     temp_dir = Path(tempfile.mkdtemp())
     settings = Settings(library_dir=str(temp_dir))
@@ -71,3 +82,8 @@ def empty_app_and_settings() -> tuple[FastAPI, Settings]:
     app.dependency_overrides[get_settings] = get_settings_override
 
     return app, settings
+
+
+@pytest.fixture()
+def empty_app_and_settings_with_client(empty_app_and_settings):
+    return *empty_app_and_settings, TestClient(empty_app_and_settings[0])

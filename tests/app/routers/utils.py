@@ -32,9 +32,9 @@ def _test_get_rows_handler(
     item_ids: list[str] | None,
     limit: int | None,
     skip: int | None,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     url = base_url(group, dataset.info.id, table) + "?"
 
@@ -57,7 +57,6 @@ def _test_get_rows_handler(
         dataset.get_data(table, ids, limit, skip if skip is not None else 0, item_ids),
     )
 
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 200
     for model_json in response.json():
@@ -72,13 +71,12 @@ def _test_get_rows_handler_error(
     table: str,
     ids: list[str],
     item_ids: list[str],
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
     url = base_url(group, "wrong_dataset", table)
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 404
     assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
@@ -86,7 +84,6 @@ def _test_get_rows_handler_error(
     # Wrong table name
     if group not in [SchemaGroup.ITEM, SchemaGroup.SOURCE]:
         url = base_url(group, dataset_id, "wrong_table")
-        client = TestClient(app)
         response = client.get(url)
         assert response.status_code == 404
         assert response.json() == {"detail": f"Table wrong_table is not in the {group.value} group table."}
@@ -116,15 +113,14 @@ def _test_get_row_handler(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
 
     expected_output = get_model_from_row(table, model_type, dataset.get_data(table, id))
 
-    client = TestClient(app)
     response = client.get(base_url(group, dataset.info.id, table, id))
     assert response.status_code == 200
     model = model_type.model_validate(response.json())
@@ -133,12 +129,15 @@ def _test_get_row_handler(
 
 
 def _test_get_row_handler_error(
-    dataset_id: str, group: SchemaGroup, table: str, id: str, app_and_settings: tuple[FastAPI, Settings]
+    dataset_id: str,
+    group: SchemaGroup,
+    table: str,
+    id: str,
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.get(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
     assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
@@ -159,9 +158,9 @@ def _test_create_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -175,7 +174,6 @@ def _test_create_rows_handler(
         model.model_dump(exclude_timestamps=True) for model in get_models_from_rows(table, model_type, new_rows)
     ]
 
-    client = TestClient(app)
     response = client.post(
         base_url(group, dataset_id, table),
         json=jsonable_encoder(new_rows_models),
@@ -195,9 +193,9 @@ def _test_create_rows_handler_error(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -206,7 +204,6 @@ def _test_create_rows_handler_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.post(
         base_url(group, "wrong_dataset", table),
         json=json_data,
@@ -238,9 +235,9 @@ def _test_create_row_handler(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -251,7 +248,6 @@ def _test_create_row_handler(
 
     new_row_model = get_model_from_row(table, model_type, new_row)
 
-    client = TestClient(app)
     response = client.post(
         base_url(group, dataset_id, table, new_row.id),
         json=jsonable_encoder(new_row_model),
@@ -270,9 +266,9 @@ def _test_create_row_handler_error(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -285,7 +281,6 @@ def _test_create_row_handler_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.post(
         base_url(group, "wrong_dataset", table, id),
         json=json_data,
@@ -317,9 +312,9 @@ def _test_update_rows_handler(
     table: str,
     field_to_update: str,
     values: list,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -333,7 +328,6 @@ def _test_update_rows_handler(
 
     updated_rows_models = get_models_from_rows(table, model_type, updated_rows)
 
-    client = TestClient(app)
     response = client.put(
         base_url(group, dataset_id, table),
         json=jsonable_encoder(updated_rows_models),
@@ -369,9 +363,9 @@ def _test_update_rows_handler_error(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -380,7 +374,6 @@ def _test_update_rows_handler_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.put(
         base_url(group, "wrong_dataset", table),
         json=json_data,
@@ -414,9 +407,9 @@ def _test_update_row_handler(
     id: str,
     field_to_update: str,
     value: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -427,7 +420,6 @@ def _test_update_row_handler(
 
     updated_row_model = get_model_from_row(table, model_type, updated_row)
 
-    client = TestClient(app)
     response = client.put(
         base_url(group, dataset_id, table, id),
         json=jsonable_encoder(updated_row_model),
@@ -448,9 +440,9 @@ def _test_update_row_handler_error(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
 
     model_type = _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT[group]
@@ -463,7 +455,6 @@ def _test_update_row_handler_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.put(
         base_url(group, "wrong_dataset", table, id),
         json=json_data,
@@ -493,15 +484,14 @@ def _test_delete_rows_handler(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
     rows = dataset.get_data(table, limit=2)
     assert len(rows) > 0
     deleted_ids = [row.id for row in rows]
 
-    client = TestClient(app)
     delete_url = base_url(group, dataset_id, table) + f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
     response = client.delete(delete_url)
 
@@ -515,9 +505,9 @@ def _test_delete_rows_handler_error(
     dataset_id: str,
     group: SchemaGroup,
     table: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
     rows = dataset.get_data(table, limit=2)
     deleted_ids = [row.id for row in rows]
@@ -525,7 +515,6 @@ def _test_delete_rows_handler_error(
     delete_ids_url = f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.delete(base_url(group, "wrong_dataset", table) + delete_ids_url)
     assert response.status_code == 404
     assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}
@@ -542,14 +531,13 @@ def _test_delete_row_handler(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     dataset = Dataset.find(dataset_id, Path(settings.library_dir))
     row = dataset.get_data(table, id)
     assert row is not None
 
-    client = TestClient(app)
     response = client.delete(base_url(group, dataset_id, table, id))
 
     assert response.status_code == 200
@@ -563,11 +551,10 @@ def _test_delete_row_handler_error(
     group: SchemaGroup,
     table: str,
     id: str,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.delete(base_url(group, "wrong_dataset", table, id))
     assert response.status_code == 404
     assert response.json() == {"detail": f"Dataset wrong_dataset not found in {settings.data_dir}."}

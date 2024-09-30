@@ -26,13 +26,12 @@ from pixano.features.schemas.schema_group import SchemaGroup
 
 
 @pytest.mark.skip(reason="Already done in test_datasets.py")
-def test_get_dataset(app_and_settings: tuple[FastAPI, Settings]):
+def test_get_dataset(app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
     pass
 
 
-def test_assert_table_in_group(app_and_settings: tuple[FastAPI, Settings]):
-    app, settings = app_and_settings
-    client = TestClient(app)
+def test_assert_table_in_group(app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
+    app, settings, client = app_and_settings_with_client
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=1")
     assert response.status_code == 200
@@ -59,10 +58,10 @@ def test_validate_group():
 
 
 def test_get_rows(
-    app_and_settings: tuple[FastAPI, Settings], two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
+    two_difficult_bboxes_models_from_dataset_multiview_tracking_and_image,
 ):
-    app, settings = app_and_settings
-    client = TestClient(app)
+    app, settings, client = app_and_settings_with_client
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=2")
     assert response.status_code == 200
@@ -78,7 +77,7 @@ def test_get_rows(
 
     response = client.get("/annotations/dataset_multi_view_tracking_and_image/bbox_image/?limit=10&skip=200")
     assert response.status_code == 404
-    assert response.json() == {"detail": "Invalid query parameters. No results found at this offset"}
+    assert response.json() == {"detail": "No rows found for dataset_multi_view_tracking_and_image/bbox_image."}
 
 
 def test_get_model_from_row(

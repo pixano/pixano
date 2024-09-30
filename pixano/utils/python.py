@@ -95,7 +95,7 @@ def to_sql_list(ids: str | Sequence[str] | set[str]) -> str:
         for id in ids:
             if not isinstance(id, str):
                 raise ValueError("IDs must be strings.")
-    ids = set(ids)
+    ids = list(dict.fromkeys(ids))  # Keep order and remove duplicates
     if len(ids) == 1:
         return f"('{ids.pop()}')"
     return str(tuple(ids))

@@ -364,14 +364,13 @@ class Dataset:
         _validate_ids_item_ids_and_limit_and_skip(ids, limit, skip, item_ids)
 
         if item_ids is not None:
-            sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
-
+            sql_item_ids = to_sql_list(item_ids)
         table = self.open_table(table_name)
         if ids is None:
             if item_ids is None:
                 query = TableQueryBuilder(table).limit(limit).offset(skip)
             else:
-                sql_item_ids = f"('{item_ids[0]}')" if len(item_ids) == 1 else str(tuple(set(item_ids)))
+                sql_item_ids = to_sql_list(item_ids)
                 query = TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").limit(limit).offset(skip)
         else:
             sql_ids = to_sql_list(ids)
@@ -455,8 +454,7 @@ class Dataset:
         Returns:
             list of ids.
         """
-        query = self.open_table(table_name).search().select(["id"]).limit(None).to_arrow()
-        return sorted(row.as_py() for row in query["id"])
+        return [row["id"] for row in TableQueryBuilder(self.open_table(table_name)).select(["id"]).to_list()]
 
     def compute_view_embeddings(self, table_name: str, data: list[dict]) -> None:
         """Compute view embeddings.

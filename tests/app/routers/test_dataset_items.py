@@ -71,10 +71,10 @@ def test_get_dataset_items(
     ids: list[str] | None,
     limit: int | None,
     skip: int | None,
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
     dataset_multi_view_tracking_and_image: Dataset,
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     url = "/dataset_items/dataset_multi_view_tracking_and_image/?"
     if ids is not None:
@@ -92,7 +92,6 @@ def test_get_dataset_items(
         )
     }
 
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 200
     assert len(response.json()) == len(expected_output)
@@ -102,13 +101,12 @@ def test_get_dataset_items(
 
 
 def test_get_dataset_items_error(
-    app_and_settings: tuple[FastAPI, Settings],
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient],
 ):
-    app, settings = app_and_settings
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
     url = "/dataset_items/dataset_multi_view_tracking_and_image_wrong/"
-    client = TestClient(app)
     response = client.get(url)
     assert response.status_code == 404
     assert response.json() == {
@@ -131,15 +129,16 @@ def test_get_dataset_items_error(
     assert response.json() == {"detail": "Dataset items not found."}
 
 
-def test_get_dataset_item(app_and_settings: tuple[FastAPI, Settings], dataset_multi_view_tracking_and_image: Dataset):
-    app, settings = app_and_settings
+def test_get_dataset_item(
+    app_and_settings_with_client: tuple[FastAPI, Settings, TestClient], dataset_multi_view_tracking_and_image: Dataset
+):
+    app, settings, client = app_and_settings_with_client
 
     expected_output = DatasetItemModel.from_dataset_item(
         dataset_multi_view_tracking_and_image.get_dataset_items("0"),
         dataset_multi_view_tracking_and_image.schema,
     ).model_dump()
 
-    client = TestClient(app)
     response = client.get("/dataset_items/dataset_multi_view_tracking_and_image/0")
     assert response.status_code == 200
     model = DatasetItemModel.model_validate(response.json()).model_dump()
@@ -147,11 +146,10 @@ def test_get_dataset_item(app_and_settings: tuple[FastAPI, Settings], dataset_mu
     assert model == expected_output
 
 
-def test_get_dataset_item_error(app_and_settings: tuple[FastAPI, Settings]):
-    app, settings = app_and_settings
+def test_get_dataset_item_error(app_and_settings_with_client: tuple[FastAPI, Settings, TestClient]):
+    app, settings, client = app_and_settings_with_client
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.get("/dataset_items/dataset_multi_view_tracking_and_image_wrong/0")
     assert response.status_code == 404
     assert response.json() == {
@@ -165,9 +163,9 @@ def test_get_dataset_item_error(app_and_settings: tuple[FastAPI, Settings]):
 
 
 def test_create_dataset_items(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -183,7 +181,6 @@ def test_create_dataset_items(
             new_dataset_items, dataset_multi_view_tracking_and_image.schema
         )
     }
-    client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
         json=jsonable_encoder(list(new_dataset_items_models.values())),
@@ -204,9 +201,9 @@ def test_create_dataset_items(
 
 
 def test_create_dataset_items_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -217,7 +214,6 @@ def test_create_dataset_items_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image_wrong/",
         json=json_data,
@@ -238,9 +234,9 @@ def test_create_dataset_items_error(
 
 
 def test_create_dataset_item(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -252,7 +248,6 @@ def test_create_dataset_item(
         new_dataset_item, dataset_multi_view_tracking_and_image.schema
     )
 
-    client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image/new_0",
         json=jsonable_encoder(new_dataset_item_model),
@@ -267,9 +262,9 @@ def test_create_dataset_item(
 
 
 def test_create_dataset_item_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -279,7 +274,6 @@ def test_create_dataset_item_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.post(
         "/dataset_items/dataset_multi_view_tracking_and_image_wrong/0",
         json=json_data,
@@ -299,9 +293,9 @@ def test_create_dataset_item_error(
 
 
 def test_update_dataset_items(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -324,7 +318,6 @@ def test_update_dataset_items(
         updated_dataset_items, dataset_multi_view_tracking_and_image.schema
     )
 
-    client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image/",
         json=jsonable_encoder(updated_dataset_items_models),
@@ -354,9 +347,9 @@ def test_update_dataset_items(
 
 
 def test_update_dataset_items_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -366,7 +359,6 @@ def test_update_dataset_items_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image_wrong/",
         json=json_data,
@@ -387,9 +379,9 @@ def test_update_dataset_items_error(
 
 
 def test_update_dataset_item(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -401,7 +393,6 @@ def test_update_dataset_item(
         dataset_item, dataset_multi_view_tracking_and_image.schema
     )
 
-    client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image/0",
         json=jsonable_encoder(updated_dataset_item_model),
@@ -418,9 +409,9 @@ def test_update_dataset_item(
 
 
 def test_update_dataset_item_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -430,7 +421,6 @@ def test_update_dataset_item_error(
     json_data = jsonable_encoder(good_data)
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.put(
         "/dataset_items/dataset_multi_view_tracking_and_image_wrong/0",
         json=json_data,
@@ -450,9 +440,9 @@ def test_update_dataset_item_error(
 
 
 def test_delete_dataset_items(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -460,7 +450,6 @@ def test_delete_dataset_items(
     assert len(dataset_items) > 0
     deleted_ids = [dataset_item.id for dataset_item in dataset_items]
 
-    client = TestClient(app)
     delete_url = (
         "/dataset_items/dataset_multi_view_tracking_and_image/" f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
     )
@@ -472,15 +461,15 @@ def test_delete_dataset_items(
     sql_item_ids = f"('{deleted_ids[0]}')" if len(deleted_ids) == 1 else str(tuple(set(deleted_ids)))
     for table_name, table in dataset_multi_view_tracking_and_image.open_tables(exclude_embeddings=True).items():
         if table_name == SchemaGroup.ITEM.value:
-            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").build().to_list() == []
+            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").to_list() == []
         else:
-            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").build().to_list() == []
+            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").to_list() == []
 
 
 def test_delete_dataset_items_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
@@ -490,7 +479,6 @@ def test_delete_dataset_items_error(
     delete_ids_url = f"?{'&'.join([f'ids={id}' for id in deleted_ids])}"
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.delete(f"/dataset_items/dataset_multi_view_tracking_and_image_wrong/{delete_ids_url}")
     assert response.status_code == 404
     assert response.json() == {
@@ -499,15 +487,14 @@ def test_delete_dataset_items_error(
 
 
 def test_delete_dataset_item(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
     dataset_multi_view_tracking_and_image = Dataset.find(
         "dataset_multi_view_tracking_and_image", Path(settings.library_dir)
     )
     dataset_item = dataset_multi_view_tracking_and_image.get_dataset_items("0")
 
-    client = TestClient(app)
     response = client.delete("/dataset_items/dataset_multi_view_tracking_and_image/0")
 
     assert response.status_code == 200
@@ -516,18 +503,17 @@ def test_delete_dataset_item(
     sql_item_ids = f"('{dataset_item.id}')"
     for table_name, table in dataset_multi_view_tracking_and_image.open_tables(exclude_embeddings=True).items():
         if table_name == SchemaGroup.ITEM.value:
-            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").build().to_list() == []
+            assert TableQueryBuilder(table).where(f"id in {sql_item_ids}").to_list() == []
         else:
-            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").build().to_list() == []
+            assert TableQueryBuilder(table).where(f"item_ref.id in {sql_item_ids}").to_list() == []
 
 
 def test_delete_dataset_item_error(
-    app_and_settings_with_copy: tuple[FastAPI, Settings],
+    app_and_settings_with_client_copy: tuple[FastAPI, Settings],
 ):
-    app, settings = app_and_settings_with_copy
+    app, settings, client = app_and_settings_with_client_copy
 
     # Wrong dataset ID
-    client = TestClient(app)
     response = client.delete("/dataset_items/dataset_multi_view_tracking_and_image_wrong/0")
     assert response.status_code == 404
     assert response.json() == {
