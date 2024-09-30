@@ -24,7 +24,6 @@ class TestTableQueryBuilder:
         assert builder.table == image_table
         assert builder._columns is None
         assert builder._where is None
-        assert builder._prefilter is False
         assert builder._limit is None
         assert builder._offset is None
         assert builder._order_by == []
@@ -64,9 +63,8 @@ class TestTableQueryBuilder:
 
     def test_where(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        builder.where("column1 = 'value'", True)
+        builder.where("column1 = 'value'")
         assert builder._where == "column1 = 'value'"
-        assert builder._prefilter is True
         assert builder._function_called["where"] is True
 
         with pytest.raises(ValueError, match=r"where\(\) can only be called once."):
@@ -75,10 +73,6 @@ class TestTableQueryBuilder:
         with pytest.raises(ValueError, match="where must be a string."):
             builder = TableQueryBuilder(image_table)
             builder.where(123)
-
-        with pytest.raises(ValueError, match="prefilter must be a boolean."):
-            builder = TableQueryBuilder(image_table)
-            builder.where("column1 = 'value'", "not_a_boolean")
 
     def test_limit(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
@@ -150,23 +144,18 @@ class TestTableQueryBuilder:
         with pytest.raises(ValueError):
             builder.order_by(123)
 
-    def test_build_no_order_and_no_offset(self, image_table: LanceTable):
+    def test_execute_no_order_and_no_offset(self, image_table: LanceTable):
         # Test with select
         builder = TableQueryBuilder(image_table)
-        query = builder.select(["url"]).build(False)
-        assert isinstance(query, LanceQueryBuilder)
+        rows = builder.select(["url"]).to_list()
         assert builder._function_called["build"] is True
-
-        rows = query.to_list()
         for row in rows:
             assert set(row.keys()) == {"id", "url"}
         assert len(rows) == 4
 
         # Test with limit
         builder = TableQueryBuilder(image_table)
-        query = builder.limit(2).build(False)
-
-        rows = query.to_list()
+        rows = builder.limit(2).to_list()
         assert len(rows) == 2
         for row in rows:
             assert set(row.keys()) == {
@@ -183,9 +172,7 @@ class TestTableQueryBuilder:
 
         # Test with where
         builder = TableQueryBuilder(image_table)
-        query = builder.where("url = 'image_1.jpg'").build(False)
-
-        rows = query.to_list()
+        rows = builder.where("url = 'image_1.jpg'").to_list()
         assert len(rows) == 1
         for row in rows:
             assert row["id"] == "image_1"
@@ -193,9 +180,7 @@ class TestTableQueryBuilder:
 
         # Test without order or offset and get_order=True
         builder = TableQueryBuilder(image_table)
-        query, order = builder.where("url = 'image_1.jpg'").build(True)
-        assert order is None
-        rows = query.to_list()
+        rows = builder.where("url = 'image_1.jpg'").to_list()
         assert len(rows) == 1
         for row in rows:
             assert row["id"] == "image_1"
@@ -203,40 +188,39 @@ class TestTableQueryBuilder:
 
         # Test cannot call build twice
         with pytest.raises(ValueError, match=r"build\(\) can only be called once."):
-            builder.build()
+            builder._execute()
 
         with pytest.raises(
             ValueError,
             match=r"At least one of select\(\), where\(\), limit\(\), offset\(\), or order_by\(\) " r"must be called.",
         ):
             builder = TableQueryBuilder(image_table)
-            builder.build()
+            builder._execute()
 
-    def test_build_with_order_without_offset(self, image_table: LanceTable):
+    def test_execute_with_order_without_offset(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        query, order = builder.order_by("url", descending=True).build(True)
-        assert order == ["image_4", "image_2", "image_1", "image_0"]
-
-        builder = TableQueryBuilder(image_table)
-        query, order = builder.order_by("url").build(True)
-        assert order == ["image_0", "image_1", "image_2", "image_4"]
+        rows = builder.order_by("url", descending=True).to_list()
+        assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
 
         builder = TableQueryBuilder(image_table)
-        query, order = builder.order_by(["url", "width"], descending=[True, False]).build(True)
-        assert order == ["image_4", "image_2", "image_1", "image_0"]
+        rows = builder.order_by("url").to_list()
+        assert [row["id"] for row in rows] == ["image_0", "image_1", "image_2", "image_4"]
 
-    def test_build_with_offset(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        query = builder.offset(2).build(False)
-        rows = query.to_list()
+        rows = builder.order_by(["url", "width"], descending=[True, False]).to_list()
+        assert [row["id"] for row in rows] == ["image_4", "image_2", "image_1", "image_0"]
+
+    def test_execute_with_offset(self, image_table: LanceTable):
+        builder = TableQueryBuilder(image_table)
+        rows = builder.offset(2).to_list()
         assert len(rows) == 2
         assert rows[0]["id"] == "image_2"
         assert rows[1]["id"] == "image_4"
 
-    def test_build_with_order_and_offset(self, image_table: LanceTable):
+    def test_execute_with_order_and_offset(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
-        query, order = builder.order_by("url", descending=True).offset(1).build(True)
-        assert order == ["image_2", "image_1", "image_0"]
+        rows = builder.order_by("url", descending=True).offset(1).to_list()
+        assert [row["id"] for row in rows] == ["image_2", "image_1", "image_0"]
 
     def test_to_pandas(self, image_table: LanceTable):
         builder = TableQueryBuilder(image_table)
@@ -260,9 +244,9 @@ class TestTableQueryBuilder:
             assert row["url"] == f"image_{2 - i}.jpg"
             assert row["id"] == f"image_{2 - i}"
 
-    def test_to_polar(self, image_table):
+    def test_to_polars(self, image_table):
         builder = TableQueryBuilder(image_table)
-        df = builder.order_by("item_ref.id", descending=True).offset(1).to_polar()
+        df = builder.order_by("item_ref.id", descending=True).offset(1).to_polars()
         for i, row in enumerate(df.rows(named=True)):
             assert row["url"] == f"image_{2 - i}.jpg"
             assert row["id"] == f"image_{2 - i}"
