@@ -11,7 +11,7 @@ import pandas as pd
 import polars as pl
 import pyarrow as pa
 from lancedb.db import LanceTable
-from lancedb.query import LanceQueryBuilder
+from lancedb.query import LanceEmptyQueryBuilder
 from typing_extensions import Self
 
 from pixano.features.schemas.base_schema import BaseSchema
@@ -20,7 +20,7 @@ from pixano.features.schemas.base_schema import BaseSchema
 T = TypeVar("T", bound=BaseSchema)
 
 
-class _HackedLanceQueryBuilder(LanceQueryBuilder):
+class _PixanoEmptyQueryBuilder(LanceEmptyQueryBuilder):
     def __init__(self, arrow_table):
         self._arrow_table = arrow_table
 
@@ -193,7 +193,7 @@ class TableQueryBuilder:
         Returns:
             The result as a pandas DataFrame.
         """
-        return _HackedLanceQueryBuilder(self._execute()).to_pandas()
+        return _PixanoEmptyQueryBuilder(self._execute()).to_pandas()
 
     def to_list(self) -> list[dict[str, Any]]:
         """Builds the query and returns the result as a list of dictionaries.
@@ -204,7 +204,7 @@ class TableQueryBuilder:
         Returns:
             The result as a list of dictionaries.
         """
-        return _HackedLanceQueryBuilder(self._execute()).to_list()
+        return _PixanoEmptyQueryBuilder(self._execute()).to_list()
 
     def to_pydantic(self, model: type[T]) -> list[T]:
         """Builds the query and returns the result as a list of Pydantic models.
@@ -215,7 +215,7 @@ class TableQueryBuilder:
         Returns:
             The result as a list of Pydantic models.
         """
-        return _HackedLanceQueryBuilder(self._execute()).to_pydantic(model)
+        return _PixanoEmptyQueryBuilder(self._execute()).to_pydantic(model)
 
     def to_polars(self) -> pl.DataFrame:
         """Builds the query and returns the result as a polars DataFrame.
@@ -223,4 +223,4 @@ class TableQueryBuilder:
         Returns:
             The result as a polars DataFrame.
         """
-        return _HackedLanceQueryBuilder(self._execute()).to_polars()
+        return _PixanoEmptyQueryBuilder(self._execute()).to_polars()
