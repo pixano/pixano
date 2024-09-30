@@ -17,6 +17,7 @@ from pixano.datasets import Dataset
 from pixano.datasets.dataset_features_values import DatasetFeaturesValues
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema, SchemaRelation
+from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.features import BBox, Image, Item
 from pixano.features.schemas.embeddings.embedding import ViewEmbedding
 from pixano.features.types.schema_reference import ItemRef, ViewRef
@@ -333,7 +334,7 @@ class TestDataset:
                     {
                         "id": "bbox_2_1_0_0",
                         "item_ref": {"name": "item", "id": "2"},
-                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "view_ref": {"name": "video", "id": "video_2_0"},
                         "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
                         "source_ref": {"id": "source_0", "name": "source"},
                         "coords": [0.0, 0.0, 0.0, 0.0],
@@ -346,7 +347,7 @@ class TestDataset:
                     {
                         "id": "bbox_2_1_0_1",
                         "item_ref": {"name": "item", "id": "2"},
-                        "view_ref": {"name": "video", "id": "video_2_1"},
+                        "view_ref": {"name": "video", "id": "video_2_0"},
                         "entity_ref": {"name": "entities_video", "id": "entity_video_2_1_0"},
                         "source_ref": {"id": "source_0", "name": "source"},
                         "coords": [1.0, 1.0, 25.0, 25.0],
@@ -825,11 +826,20 @@ class TestDataset:
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
         data = [new_item]
-        with pytest.raises(ValueError, match=re.escape("IDs ['0'] already exist in the table item.")):
+        with pytest.raises(
+            DatasetIntegrityError,
+            match=re.escape("Integrity check errors:\n- The id 0 is not unique in table item.\n"),
+        ):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
         data = [new_item, new_item]
-        with pytest.raises(ValueError, match="All data must have unique ids."):
+        with pytest.raises(
+            DatasetIntegrityError,
+            match=(
+                "Integrity check errors:\n- The id 0 is not unique in table item.\n- The id 0 is not unique in "
+                "table item.\n"
+            ),
+        ):
             dataset_image_bboxes_keypoint_copy.add_data("item", data)
 
     def test_add_dataset_items(self, dataset_image_bboxes_keypoint_copy: Dataset):
@@ -873,11 +883,20 @@ class TestDataset:
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
         data = [new_item]
-        with pytest.raises(ValueError, match=re.escape("IDs ['image_1'] already exist in the table image.")):
+        with pytest.raises(
+            DatasetIntegrityError,
+            match=re.escape("Integrity check errors:\n- The id image_1 is not unique in table image.\n"),
+        ):
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
         data = [new_item, new_item]
-        with pytest.raises(ValueError, match="All data must have unique ids."):
+        with pytest.raises(
+            DatasetIntegrityError,
+            match=(
+                "Integrity check errors:\n- The id image_1 is not unique in table image.\n- The id image_1 "
+                "is not unique in table image.\n"
+            ),
+        ):
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
     def test_delete_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
@@ -933,7 +952,13 @@ class TestDataset:
         updated_item = item.model_copy()
         updated_item.id = "1"
 
-        with pytest.raises(ValueError, match="All data must have unique ids."):
+        with pytest.raises(
+            ValueError,
+            match=(
+                "Integrity check errors:\n- The id 1 is not unique in table item.\n- The "
+                "id 1 is not unique in table item.\n"
+            ),
+        ):
             dataset_image_bboxes_keypoint_copy.update_data("item", [updated_item, updated_item])
 
         data = [updated_item, "0"]
@@ -992,7 +1017,13 @@ class TestDataset:
         updated_item = item.model_copy()
         updated_item.id = "0"
 
-        with pytest.raises(ValueError, match="All data must have unique ids."):
+        with pytest.raises(
+            ValueError,
+            match=(
+                "Integrity check errors:\n- The id image_1 is not unique in table image.\n- The id image_1 "
+                "is not unique in table image.\n"
+            ),
+        ):
             dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
 
         data = [updated_item, "0"]

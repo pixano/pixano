@@ -15,7 +15,8 @@ from pixano.app.models.table_info import TableInfo
 from pixano.app.models.utils import _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT
 from pixano.app.settings import Settings
 from pixano.datasets import Dataset
-from pixano.datasets.utils import DatasetAccessError, DatasetOffsetLimitError, DatasetPaginationError
+from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.source import Source
@@ -110,8 +111,6 @@ def get_rows(
     """
     try:
         rows = dataset.get_data(table, ids, limit, skip, item_ids)
-    except DatasetOffsetLimitError as err:
-        raise HTTPException(status_code=404, detail="Invalid query parameters. " + str(err))
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:
@@ -242,6 +241,8 @@ def update_rows(
 
     try:
         updated_rows = dataset.update_data(table, rows)
+    except DatasetIntegrityError as err:
+        raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
     except ValueError:
         raise HTTPException(
             status_code=400,
@@ -279,6 +280,8 @@ def create_rows(
 
     try:
         created_rows = dataset.add_data(table, rows)
+    except DatasetIntegrityError as err:
+        raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
     except ValueError:
         raise HTTPException(
             status_code=400,

@@ -20,6 +20,7 @@ from pydantic import ConfigDict
 
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_errors
 from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
 from pixano.utils.python import to_sql_list
 
@@ -73,6 +74,11 @@ def _validate_ids_item_ids_and_limit_and_skip(
         raise DatasetPaginationError("item_ids must be a list of strings")
     elif limit is not None and (not isinstance(limit, int) or limit < 1) or not isinstance(skip, int) or skip < 0:
         raise DatasetPaginationError("limit and skip must be positive integers")
+
+
+def _validate_raise_or_warn(raise_or_warn: Literal["raise", "warn", "none"]):
+    if raise_or_warn not in ["raise", "warn", "none"]:
+        raise ValueError("raise_or_warn must be 'raise', 'warn' or 'none'")
 
 
 class Dataset:
@@ -475,12 +481,20 @@ class Dataset:
         table.add(data)
         return None
 
-    def add_data(self, table_name: str, data: list[BaseSchema]) -> list[BaseSchema]:
+    def add_data(
+        self,
+        table_name: str,
+        data: list[BaseSchema],
+        ignore_integrity_checks: list[IntegrityCheck] | None = None,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
+    ) -> list[BaseSchema]:
         """Add data to a table.
 
         Args:
             table_name: Table name.
             data: Data to add.
+            ignore_integrity_checks: List of integrity checks to ignore.
+            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
         if not all(isinstance(item, type(data[0])) for item in data) or not issubclass(
             type(data[0]), self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source
@@ -489,17 +503,13 @@ class Dataset:
                 "All data must be instances of the table type "
                 f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
             )
-        set_ids = {item.id for item in data}
-        if len(set_ids) != len(data):
-            raise DatasetAccessError("All data must have unique ids.")
-        ids_found = []
-        for id in self.get_all_ids(table_name):
-            if id in set_ids:
-                ids_found.append(id)
-        if ids_found:
-            raise DatasetAccessError(f"IDs {ids_found} already exist in the table {table_name}.")
+        _validate_raise_or_warn(raise_or_warn)
 
         table = self.open_table(table_name)
+        if raise_or_warn != "none":
+            handle_errors(
+                check_table_integrity(table, table_name, self, data, False, ignore_integrity_checks), raise_or_warn
+            )
         for d in data:
             d.created_at = datetime.now()
             d.updated_at = d.created_at
@@ -508,14 +518,24 @@ class Dataset:
         return data
 
     @overload
-    def add_dataset_items(self, dataset_items: DatasetItem) -> DatasetItem: ...
+    def add_dataset_items(
+        self, dataset_items: DatasetItem, raise_or_warn: Literal["raise", "warn", "none"] = "raise"
+    ) -> DatasetItem: ...
     @overload
-    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]: ...
-    def add_dataset_items(self, dataset_items: list[DatasetItem] | DatasetItem) -> list[DatasetItem] | DatasetItem:
+    def add_dataset_items(
+        self, dataset_items: list[DatasetItem], raise_or_warn: Literal["raise", "warn", "none"] = "raise"
+    ) -> list[DatasetItem]: ...
+    def add_dataset_items(
+        self, dataset_items: list[DatasetItem] | DatasetItem, raise_or_warn: Literal["raise", "warn", "none"] = "raise"
+    ) -> list[DatasetItem] | DatasetItem:
         """Add dataset items.
+
+        .. warning::
+            Does not test for integrity of the data.
 
         Args:
             dataset_items: Dataset items to add.
+            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
         batch = True
         if isinstance(dataset_items, DatasetItem):
@@ -526,6 +546,7 @@ class Dataset:
             isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
+        _validate_raise_or_warn(raise_or_warn)
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
@@ -541,7 +562,12 @@ class Dataset:
                     tables_data[table_name].append(item[table_name])
         for table_name, table_data in tables_data.items():
             if table_data != []:
-                self.add_data(table_name, table_data)
+                self.add_data(
+                    table_name,
+                    table_data,
+                    [IntegrityCheck.REF_ID, IntegrityCheck.REF_NAME, IntegrityCheck.REF_TYPE],
+                    raise_or_warn,
+                )
         return dataset_items if batch else dataset_items[0]
 
     def delete_data(self, table_name: str, ids: list[str]) -> list[str]:
@@ -600,14 +626,29 @@ class Dataset:
 
     @overload
     def update_data(
-        self, table_name: str, data: list[BaseSchema], return_separately: Literal[False] = False
+        self,
+        table_name: str,
+        data: list[BaseSchema],
+        return_separately: Literal[False] = False,
+        ignore_integrity_checks: list[IntegrityCheck] | None = None,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[BaseSchema]: ...
     @overload
     def update_data(
-        self, table_name: str, data: list[BaseSchema], return_separately: Literal[True]
+        self,
+        table_name: str,
+        data: list[BaseSchema],
+        return_separately: Literal[True],
+        ignore_integrity_checks: list[IntegrityCheck] | None = None,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> tuple[list[BaseSchema], list[BaseSchema]]: ...
     def update_data(
-        self, table_name: str, data: list[BaseSchema], return_separately: bool = False
+        self,
+        table_name: str,
+        data: list[BaseSchema],
+        return_separately: bool = False,
+        ignore_integrity_checks: list[IntegrityCheck] | None = None,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[BaseSchema] | tuple[list[BaseSchema], list[BaseSchema]]:
         """Update data in a table.
 
@@ -615,6 +656,8 @@ class Dataset:
             table_name: Table name.
             data: Data to update.
             return_separately: Whether to return separately added and updated data.
+            ignore_integrity_checks: List of integrity checks to ignore.
+            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
             Updated data.
@@ -626,15 +669,18 @@ class Dataset:
                 "All data must be instances of the table type "
                 f"{self.schema.schemas[table_name] if table_name != SchemaGroup.SOURCE.value else Source}."
             )
+        _validate_raise_or_warn(raise_or_warn)
+
+        table = self.open_table(table_name)
+        if raise_or_warn != "none":
+            handle_errors(
+                check_table_integrity(table, table_name, self, data, True, ignore_integrity_checks), raise_or_warn
+            )
         set_ids = {item.id for item in data}
-        if len(set_ids) != len(data):
-            raise DatasetAccessError("All data must have unique ids.")
         ids_found: dict[str, datetime] = {}
         for row in self.open_table(table_name).search().select(["id", "created_at"]).limit(None).to_list():
             if row["id"] in set_ids:
                 ids_found[row["id"]] = row["created_at"]
-
-        table = self.open_table(table_name)
         sql_ids = to_sql_list(set_ids)
         table.delete(where=f"id in {sql_ids}")
         for d in data:
@@ -657,20 +703,33 @@ class Dataset:
 
     @overload
     def update_dataset_items(
-        self, dataset_items: list[DatasetItem], return_separately: Literal[False] = False
+        self,
+        dataset_items: list[DatasetItem],
+        return_separately: Literal[False] = False,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[DatasetItem]: ...
     @overload
     def update_dataset_items(
-        self, dataset_items: list[DatasetItem], return_separately: Literal[True]
+        self,
+        dataset_items: list[DatasetItem],
+        return_separately: Literal[True],
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> tuple[list[DatasetItem], list[DatasetItem]]: ...
     def update_dataset_items(
-        self, dataset_items: list[DatasetItem], return_separately: bool = False
+        self,
+        dataset_items: list[DatasetItem],
+        return_separately: bool = False,
+        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[DatasetItem] | tuple[list[DatasetItem], list[DatasetItem]]:
         """Update dataset items.
+
+        .. warning::
+            Does not test for integrity of the data.
 
         Args:
             dataset_items: Dataset items to update.
             return_separately: Whether to return separately added and updated dataset items.
+            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
 
         Returns:
             Updated dataset items.
@@ -680,6 +739,7 @@ class Dataset:
             isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
+        _validate_raise_or_warn(raise_or_warn)
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         updated_ids = set()
@@ -696,7 +756,13 @@ class Dataset:
                     tables_data[table_name].append(item[table_name])
         for table_name, table_data in tables_data.items():
             if table_data != []:
-                updated, _ = self.update_data(table_name, table_data, return_separately=True)
+                updated, _ = self.update_data(
+                    table_name,
+                    table_data,
+                    return_separately=True,
+                    ignore_integrity_checks=[IntegrityCheck.REF_ID, IntegrityCheck.REF_NAME, IntegrityCheck.REF_TYPE],
+                    raise_or_warn=raise_or_warn,
+                )
                 for row in updated:
                     updated_ids.add(row.item_ref.id if table_name != SchemaGroup.ITEM.value else row.id)
 
