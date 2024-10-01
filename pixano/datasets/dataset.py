@@ -451,6 +451,24 @@ class Dataset:
 
         return dataset_items if return_list else (dataset_items[0] if dataset_items != [] else None)
 
+    def find_ids_in_table(self, table_name: str, ids: set[str]) -> dict[str, bool]:
+        """Find ids in a table.
+
+        Args:
+            table_name: Table name.
+            ids: Ids to find.
+
+        Returns:
+            Dictionary of ids found. Keys are the ids and values are True if the id is found, False otherwise.
+        """
+        if len(ids) == 0:
+            return {}
+        table = self.open_table(table_name)
+        ids_found = [
+            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
+        ]
+        return {id: id in ids_found for id in ids}
+
     def get_all_ids(self, table_name: str = SchemaGroup.ITEM.value) -> list[str]:
         """Get all ids from a table.
 
@@ -585,14 +603,12 @@ class Dataset:
         table = self.open_table(table_name)
         sql_ids = to_sql_list(set_ids)
 
-        all_ids = self.get_all_ids(table_name)
+        ids_found = {
+            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
+        }
+        ids_not_found = [id for id in set_ids if id not in ids_found]
 
         table.delete(where=f"id in {sql_ids}")
-
-        ids_not_found = []
-        for id in set_ids:
-            if id not in all_ids:
-                ids_not_found.append(id)
 
         return ids_not_found
 
@@ -678,9 +694,15 @@ class Dataset:
             )
         set_ids = {item.id for item in data}
         ids_found: dict[str, datetime] = {}
-        for row in self.open_table(table_name).search().select(["id", "created_at"]).limit(None).to_list():
-            if row["id"] in set_ids:
-                ids_found[row["id"]] = row["created_at"]
+
+        ids_found = {
+            row["id"]: row["created_at"]
+            for row in TableQueryBuilder(table)
+            .select(["id", "created_at"])
+            .where(f"id in {to_sql_list(set_ids)}")
+            .to_list()
+        }
+
         sql_ids = to_sql_list(set_ids)
         table.delete(where=f"id in {sql_ids}")
         for d in data:

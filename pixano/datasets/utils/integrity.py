@@ -33,7 +33,6 @@ from pixano.features import (
     is_source_ref,
     is_view_ref,
 )
-from pixano.utils.python import to_sql_list
 
 
 if TYPE_CHECKING:
@@ -218,17 +217,8 @@ def check_table_integrity(
                     schemas_refs_to_check[field.name] = []
                 schemas_refs_to_check[field.name].append((check_id, schema_id, field, field_name))
 
-    def _find_ids_in_table(table_name: str, ids: set[str]) -> dict[str, bool]:
-        if len(ids) == 0:
-            return {}
-        table = dataset.open_table(table_name)
-        ids_found = [
-            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
-        ]
-        return {id: id in ids_found for id in ids}
-
     if not checking_table and not updating and len(ids_to_check) > 0:
-        for id, found in _find_ids_in_table(table_name, set(ids_to_check.keys())).items():
+        for id, found in dataset.find_ids_in_table(table_name, set(ids_to_check.keys())).items():
             if found:
                 check_errors[ids_to_check[id]] = (IntegrityCheck.UNIQUE_ID, table_name, "id", id, id)
 
@@ -241,7 +231,7 @@ def check_table_integrity(
         if ref_schema_name == "":
             continue
         ref_ids_to_check = {field_ref.id for check_id, _, field_ref, _ in refs if check_id not in check_errors}
-        found_ref_ids = _find_ids_in_table(ref_schema_name, ref_ids_to_check)
+        found_ref_ids = dataset.find_ids_in_table(ref_schema_name, ref_ids_to_check)
         for check_id, schema_id, field_ref, field_name in refs:
             if check_id in check_errors:
                 continue
