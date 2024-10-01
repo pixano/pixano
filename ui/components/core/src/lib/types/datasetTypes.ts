@@ -201,8 +201,13 @@ const annotationSchema = z
   })
   .passthrough();
 type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
-
 export class Annotation extends BaseData<AnnotationType> {
+  //UI only fields
+  datasetItemType: string;
+  //features: Record<string, ItemFeature>;
+  displayControl: DisplayControl;
+  highlighted: "none" | "self" | "all";
+
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
     super(obj);
@@ -210,7 +215,8 @@ export class Annotation extends BaseData<AnnotationType> {
 
   static createInstance(obj: BaseDataFields<AnnotationType>) {
     if (obj.table_info.base_schema === "BBox") return new BBox(obj);
-    if (obj.table_info.base_schema === "Keypoints") return new Keypoints(obj);
+    if (obj.table_info.base_schema === "KeyPoints") return new Keypoints(obj);
+    if (obj.table_info.base_schema === "CompressedRLE") return new Mask(obj);
     return new Annotation(obj);
   }
 
@@ -226,6 +232,16 @@ export class Annotation extends BaseData<AnnotationType> {
     }
     return newObj;
   }
+
+  get is_bbox(): boolean {
+    return this.table_info.base_schema === "BBox";
+  }
+  get is_keypoints(): boolean {
+    return this.table_info.base_schema === "KeyPoints";
+  }
+  get is_mask(): boolean {
+    return this.table_info.base_schema === "CompressedRLE";
+  }
 }
 
 const bboxSchema = z
@@ -236,13 +252,23 @@ const bboxSchema = z
     is_normalized: z.boolean(),
   })
   .passthrough();
-type BBoxType = z.infer<typeof bboxSchema>; //export if needed
+export type BBoxType = z.infer<typeof bboxSchema>; //export if needed
 
 export class BBox extends Annotation {
+  data: BBoxType & AnnotationType;
+
+  //UI only fields
+  opacity?: number;
+  visible?: boolean;
+  editing?: boolean;
+  strokeFactor?: number;
+  tooltip?: string;
+
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
     bboxSchema.parse(obj.data);
     super(obj);
+    this.data = obj.data;
   }
 }
 
@@ -256,10 +282,44 @@ const keypointsSchema = z
 type KeypointsType = z.infer<typeof keypointsSchema>; //export if needed
 
 export class Keypoints extends Annotation {
+  data: KeypointsType & AnnotationType;
+
+  //UI only fields
+  //opacity?: number;
+  visible?: boolean;
+  editing?: boolean;
+  //strokeFactor?: number;
+
   constructor(obj: BaseDataFields<KeypointsType>) {
-    if (obj.table_info.base_schema !== "Keypoints") throw new Error("Not a Keypoints");
+    if (obj.table_info.base_schema !== "KeyPoints") throw new Error("Not a Keypoints");
     keypointsSchema.parse(obj.data);
     super(obj);
+    this.data = obj.data;
+  }
+}
+
+const maskSchema = z
+  .object({
+    size: z.array(z.number()).length(2),
+    counts: z.array(z.number()).or(z.string()),
+  })
+  .passthrough();
+export type MaskType = z.infer<typeof maskSchema>; //export if needed
+
+export class Mask extends Annotation {
+  data: MaskType & AnnotationType;
+
+  //UI only fields
+  //opacity?: number;
+  visible?: boolean;
+  editing?: boolean;
+  //strokeFactor?: number;
+
+  constructor(obj: BaseDataFields<MaskType>) {
+    if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
+    maskSchema.parse(obj.data);
+    super(obj);
+    this.data = obj.data;
   }
 }
 
@@ -474,23 +534,47 @@ export interface DatasetItems {
 
 // ITEM DATA
 
-export interface ItemView {
+export interface Base {
   id: string;
-  data: {
-    type: string;
-    url: string;
-    item_ref: Reference;
-    parent_ref: Reference;
-    format: string;
-    height: number;
-    width: number;
-    thumbnail?: string;
-    frame_index?: number;
-    total_frames?: number;
-    features: Record<string, ItemFeature>;
-  };
   table_info: TableInfo;
+  created_at: string;
+  updated_at: string;
+  data: object;
 }
+
+interface ViewData extends Base["data"] {
+  type: string;
+  url: string;
+  parent_ref: Reference;
+  format: string;
+  height: number;
+  width: number;
+  thumbnail?: string;
+  frame_index?: number;
+  total_frames?: number;
+  features: Record<string, ItemFeature>;
+}
+
+export type ItemView = Base & {
+  data: ViewData;
+};
+// export interface ItemView {
+//   id: string;
+//   data: {
+//     type: string;
+//     url: string;
+//     item_ref: Reference;
+//     parent_ref: Reference;
+//     format: string;
+//     height: number;
+//     width: number;
+//     thumbnail?: string;
+//     frame_index?: number;
+//     total_frames?: number;
+//     features: Record<string, ItemFeature>;
+//   };
+//   table_info: TableInfo;
+// }
 
 // ITEM OBJECT
 export interface DisplayControl {
@@ -507,17 +591,18 @@ export interface ObjectThumbnail {
   coords: Array<number>;
 }
 
-export type ItemObjectBase = {
-  id: string;
+export interface ItemObjectBase extends Base["data"] {
+  item_ref: Reference;
+  entity_ref: Reference;
+  source_ref: Reference; //here or only in ItemAnnotation?
+  view_ref: Reference;
   item_id: string;
-  source_id: string;
+  //source_id: string;
   features: Record<string, ItemFeature>;
-  data: Any;
-  table_info: TableInfo;
   displayControl?: DisplayControl;
   highlighted?: "none" | "self" | "all";
   review_state?: "accepted" | "rejected";
-};
+}
 
 export type TrackletItem = {
   frame_index: number;
@@ -527,36 +612,36 @@ export type TrackletItem = {
   hidden?: boolean;
 };
 
-export type SaveDataAddUpdate =
-  | ItemBBox
-  | VideoItemBBox
-  | ItemKeypoints
-  | VideoItemKeypoints
-  | ItemRLE
-  | Tracklet
-  | ItemObjectBase;
+// export type SaveDataAddUpdate =
+//   | BBox
+//   | VideoItemBBox
+//   | ItemKeypoints
+//   | VideoItemKeypoints
+//   | Mask
+//   | Tracklet
+//   | ItemObjectBase;
 
 export interface SaveItemAddUpdate {
   change_type: "add_or_update";
-  ref_name: string;
+  //ref_name: string;
+  kind: "annotation" | "item" | "entity";
   is_video: boolean;
-  data: SaveDataAddUpdate & {
-    entity_ref?: Record<string, string>;
-  };
+  id: string;
+  // data: SaveDataAddUpdate & {
+  //   entity_ref?: Record<string, string>;
+  // };
 }
 
 export interface SaveItemDelete {
   change_type: "delete";
-  ref_name: string;
+  kind: "annotation" | "item" | "entity";
   is_video: boolean;
-  data: Record<string, string[]> & {
-    entity_ref?: Record<string, string>;
-  };
+  id: string;
 }
 
 export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
 
-export type VideoItemBBox = ItemBBox & TrackletItem;
+export type VideoItemBBox = BBox & TrackletItem;
 export type VideoItemKeypoints = ItemKeypoints & TrackletItem;
 export interface Tracklet {
   start: number;
@@ -578,35 +663,37 @@ export type VideoObject = ItemObjectBase & {
   displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
 };
 
-export type ImageObject = ItemObjectBase & {
-  datasetItemType: "image";
-  bbox?: ItemBBox;
-  mask?: ItemRLE;
-  keypoints?: ItemKeypoints;
-};
+// export type ImageObject = ItemObjectBase & {
+//   datasetItemType: "image";
+//   // bbox?: ItemBBox;
+//   // mask?: ItemRLE;
+//   // keypoints?: ItemKeypoints;
+// };
 
-export type ItemObject = ImageObject | VideoObject;
+export type ImageObject = BBox | Mask | Keypoints;
 
-export interface ItemRLE {
-  id: string;
-  ref_name: string;
-  view_id?: string;
-  counts: Array<number>;
-  size: Array<number>;
-  displayControl?: DisplayControl;
-}
+//export type ItemObject = ImageObject | VideoObject;
 
-//export type ItemBBox = BBox;
-export interface ItemBBox {
-  id: string;
-  ref_name: string;
-  view_id: string;
-  coords: Array<number>;
-  format: string;
-  is_normalized: boolean;
-  confidence: number;
-  displayControl?: DisplayControl;
-}
+// export interface ItemRLE {
+//   id: string;
+//   ref_name: string;
+//   view_id?: string;
+//   counts: Array<number>;
+//   size: Array<number>;
+//   displayControl?: DisplayControl;
+// }
+
+// export type ItemBBox = BBox;
+// export interface ItemBBox {
+//   id: string;
+//   ref_name: string;
+//   view_id: string;
+//   coords: Array<number>;
+//   format: string;
+//   is_normalized: boolean;
+//   confidence: number;
+//   displayControl?: DisplayControl;
+// }
 
 // ITEM EMBEDDING
 export interface ItemEmbedding {
@@ -635,11 +722,12 @@ export interface FeaturesValues {
 
 // UI DATA
 
-export interface Mask {
+//not used anymore...
+export interface CanvasMask {
   id: string;
   viewId: string;
   svg: MaskSVG;
-  rle?: ItemRLE;
+  rle?: MaskType;
   catId: number;
   visible: boolean;
   editing: boolean;

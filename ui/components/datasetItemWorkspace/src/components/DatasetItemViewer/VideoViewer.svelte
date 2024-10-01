@@ -19,7 +19,7 @@ License: CECILL-C
   import {
     itemBboxes,
     itemMasks,
-    itemObjects,
+    annotations,
     newShape,
     selectedTool,
     colorScale,
@@ -102,7 +102,7 @@ License: CECILL-C
       };
     });
 
-    itemObjects.update((objects) => {
+    annotations.update((objects) => {
       objects = objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedMBox, displayedMKeypoints } = object;
@@ -200,16 +200,16 @@ License: CECILL-C
     const currentFrame = $currentFrameIndex;
     if (shape.type === "bbox" || shape.type === "keypoints") {
       let { objects, save_data } = editKeyItemInTracklet(
-        $itemObjects,
+        $annotations,
         shape,
         currentFrame,
         $objectIdBeingEdited,
       );
-      $itemObjects = objects;
+      $annotations = objects;
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
     } else {
-      itemObjects.update((objects) => updateExistingObject(objects, shape));
+      annotations.update((objects) => updateExistingObject(objects, shape));
       if (shape.highlighted === "self") {
         objectIdBeingEdited.set(shape.shapeId);
       }

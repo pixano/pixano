@@ -9,13 +9,14 @@ import { writable, derived } from "svelte/store";
 import {
   type Shape,
   type InteractiveImageSegmenter,
-  type ItemObject,
   type Mask,
   type BBox,
   type SelectionTool,
   utils,
   type KeypointsTemplate,
   type SaveItem,
+  Annotation,
+  Entity,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -24,7 +25,8 @@ import type { Filters, ItemsMeta, ModelSelection } from "../types/datasetItemWor
 // Exports
 export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
-export const itemObjects = writable<ItemObject[]>([]);
+export const annotations = writable<Annotation[]>([]);
+export const entities = writable<Entity[]>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const canSave = writable<boolean>(false);
@@ -52,10 +54,10 @@ type ColorScale = [Array<string>, (id: string) => string];
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
 
 export const colorScale = derived(
-  itemObjects,
-  ($itemObjects, _, update) => {
+  annotations,
+  ($annotations, _, update) => {
     update((old) => {
-      let allIds = $itemObjects.map((obj) => obj.id);
+      let allIds = $annotations.map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
         allIds = [...new Set(allIds)];
@@ -66,30 +68,38 @@ export const colorScale = derived(
   initialColorScale,
 );
 
-export const itemBboxes = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) =>
-  $itemObjects.reduce((acc, object) => {
-    const boxes = mapObjectToBBox(object, $itemMetas?.views);
-    for (const box of boxes) {
-      if (box) acc.push(box);
+export const itemBboxes = derived(
+  [annotations, itemMetas, entities],
+  ([$annotations, $itemMetas, $entities]) => {
+    const bboxes: BBox[] = [];
+    for (const ann of $annotations) {
+      if (ann.is_bbox) {
+        //maybe we should not cycle on this, but mapObjectToBBox return BBox[] for now...
+        const item_boxes = mapObjectToBBox(ann, $itemMetas?.views, $entities);
+        for (const box of item_boxes) bboxes.push(box);
+      }
     }
-    return acc;
-  }, [] as BBox[]),
+    return bboxes;
+  },
 );
 
-export const itemMasks = derived(itemObjects, ($itemObjects) =>
-  $itemObjects.reduce((acc, object) => {
-    const mask = mapObjectToMasks(object);
-    if (mask) acc.push(mask);
-    return acc;
-  }, [] as Mask[]),
-);
-
-export const itemKeypoints = derived([itemObjects, itemMetas], ([$itemObjects, $itemMetas]) => {
-  return $itemObjects.reduce((acc, object) => {
-    const m_keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
-    for (const keypoints of m_keypoints) {
-      if (keypoints) acc.push(keypoints);
+export const itemMasks = derived(annotations, ($annotations) => {
+  const masks: Mask[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_mask) {
+      masks.push(mapObjectToMasks(ann));
     }
-    return acc;
-  }, [] as KeypointsTemplate[]);
+  }
+  return masks;
+});
+
+export const itemKeypoints = derived([annotations, itemMetas], ([$annotations, $itemMetas]) => {
+  const m_keypoints: KeypointsTemplate[] = [];
+  for (const ann of $annotations) {
+    if (ann.is_keypoints) {
+      const item_keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
+      for (const keypoints of item_keypoints) m_keypoints.push(keypoints);
+    }
+  }
+  return m_keypoints;
 });

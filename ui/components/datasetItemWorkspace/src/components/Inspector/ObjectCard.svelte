@@ -10,17 +10,19 @@ License: CECILL-C
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
-  import type { DisplayControl, ItemObject, ObjectThumbnail, SaveItem } from "@pixano/core";
+  import type { DisplayControl, Annotation, ObjectThumbnail, SaveItem } from "@pixano/core";
 
   import {
     canSave,
     saveData,
-    itemObjects,
+    annotations,
+    entities,
     selectedTool,
     colorScale,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
+    getObjectEntity,
     createObjectCardId,
     toggleObjectDisplayControl,
     highlightCurrentObject,
@@ -33,39 +35,47 @@ License: CECILL-C
   import { panTool } from "../../lib/settings/selectionTools";
   import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
-  export let itemObject: ItemObject;
+  export let annotation: Annotation;
+
+  const entity = getObjectEntity(annotation, $entities);
 
   let open: boolean = false;
   let showIcons: boolean = false;
 
-  $: features = createFeature(itemObject.features);
-  $: isEditing = itemObject.displayControl?.editing || false;
-  $: isVisible = !itemObject.displayControl?.hidden;
+  $: features = createFeature(entity);
+  $: isEditing = annotation.displayControl?.editing || false;
+  $: isVisible = !annotation.displayControl?.hidden;
   $: boxIsVisible =
-    itemObject.datasetItemType === "image" && !itemObject.bbox?.displayControl?.hidden;
+    annotation.datasetItemType === "image" &&
+    annotation.is_bbox &&
+    !annotation.displayControl?.hidden;
   $: maskIsVisible =
-    itemObject.datasetItemType === "image" && !itemObject.mask?.displayControl?.hidden;
+    annotation.datasetItemType === "image" &&
+    annotation.is_mask &&
+    !annotation.displayControl?.hidden;
   $: keypointsIsVisible =
-    itemObject.datasetItemType === "image" && !itemObject.keypoints?.displayControl?.hidden;
+    annotation.datasetItemType === "image" &&
+    annotation.is_keypoints &&
+    !annotation.displayControl?.hidden;
 
-  $: color = $colorScale[1](itemObject.id);
+  $: color = $colorScale[1](annotation.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
     value: boolean,
     properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
   ) => {
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       objects.map((object) => {
         if (displayControlProperty === "editing") {
-          object.highlighted = object.id === itemObject.id ? "self" : "none";
+          object.highlighted = object.id === annotation.id ? "self" : "none";
           object.highlighted = value ? object.highlighted : "all";
           object.displayControl = {
             ...object.displayControl,
             editing: false,
           };
         }
-        if (object.id === itemObject.id) {
+        if (object.id === annotation.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
           objectIdBeingEdited.set(value ? object.id : null);
         }
@@ -75,44 +85,44 @@ License: CECILL-C
   };
 
   const deleteObject = () => {
-    itemObjects.update((oldObjects) => oldObjects.filter((object) => object.id !== itemObject.id));
-    let del_ids: Record<string, string[]> = {};
-    if (itemObject.datasetItemType === "video") {
-      if (itemObject.keypoints) {
-        del_ids["keypoints"] = itemObject.keypoints.map((kpt) => kpt.id);
-      }
-      if (itemObject.boxes) {
-        del_ids["bbox"] = itemObject.boxes.map((box) => box.id);
-      }
-      del_ids["tracklet"] = itemObject.track.map((tracklet) => tracklet.id);
-      del_ids["top_entity"] = [itemObject.id];
-    } else {
-      if (itemObject.keypoints) {
-        del_ids["keypoints"] = [itemObject.keypoints.id];
-      }
-      if (itemObject.bbox) {
-        del_ids["bbox"] = [itemObject.bbox.id];
-      }
-      if (itemObject.mask) {
-        del_ids["mask"] = [itemObject.mask.id];
-      }
-      del_ids["top_entity"] = [itemObject.id];
-    }
-    const save_item: SaveItem = {
-      change_type: "delete",
-      ref_name: "", //don't need
-      is_video: itemObject.datasetItemType === "video",
-      data: del_ids,
-    };
-    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    annotations.update((oldObjects) => oldObjects.filter((object) => object.id !== annotation.id));
+    // let del_ids: Record<string, string[]> = {};
+    // if (annotation.datasetItemType === "video") {
+    //   if (annotation.is_keypoints) {
+    //     del_ids["keypoints"] = (annotation as Keypoints).map((kpt) => kpt.id);
+    //   }
+    //   if (annotation.is_bbox) {
+    //     del_ids["bbox"] = annotation.boxes.map((box) => box.id);
+    //   }
+    //   del_ids["tracklet"] = annotation.track.map((tracklet) => tracklet.id);
+    //   del_ids["top_entity"] = [annotation.id];
+    // } else {
+    //   if (annotation.is_keypoints) {
+    //     del_ids["keypoints"] = [annotation.keypoints.id];
+    //   }
+    //   if (annotation.is_bbox) {
+    //     del_ids["bbox"] = [annotation.bbox.id];
+    //   }
+    //   if (annotation.is_mask) {
+    //     del_ids["mask"] = [annotation.mask.id];
+    //   }
+    //   del_ids["top_entity"] = [annotation.id];
+    // }
+    // const save_item: SaveItem = {
+    //   change_type: "delete",
+    //   ref_name: "", //don't need
+    //   is_video: annotation.datasetItemType === "video",
+    //   data: del_ids,
+    // };
+    // saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
     canSave.set(true);
   };
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     let changedObj = false;
-    itemObjects.update((oldObjects) =>
+    annotations.update((oldObjects) =>
       oldObjects.map((object) => {
-        if (object.id === itemObject.id) {
+        if (object.id === annotation.id) {
           object.features = {
             ...object.features,
             [propertyName]: {
@@ -122,16 +132,17 @@ License: CECILL-C
           };
           const save_item: SaveItem = {
             change_type: "add_or_update",
-            ref_name: "top_entity",
-            is_video: itemObject.datasetItemType === "video",
-            data: {
-              id: object.id,
-              item_id: object.item_id,
-              source_id: object.source_id,
-              features: object.features,
-              ref_name: "top_entity",
-              entity_ref: { id: "", name: "" },
-            },
+            kind: "entity",
+            is_video: annotation.datasetItemType === "video",
+            id: object.id,
+            // data: {
+            //   id: object.id,
+            //   item_id: object.item_id,
+            //   //source_id: object.source_id,
+            //   features: object.features,
+            //   ref_name: "top_entity",
+            //   entity_ref: { id: "", name: "" },
+            // },
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
           changedObj = true;
@@ -145,24 +156,24 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () =>
-    itemObjects.update((objects) => highlightCurrentObject(objects, itemObject));
+    annotations.update((objects) => highlightCurrentObject(objects, annotation));
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, itemObject);
+  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, annotation);
 </script>
 
 <article
   on:mouseenter={() => (showIcons = true)}
   on:mouseleave={() => (showIcons = open)}
-  id={createObjectCardId(itemObject)}
+  id={createObjectCardId(annotation)}
 >
   <div
     class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
-    style="border-color:{itemObject.highlighted === 'self' ? color : 'transparent'}"
+    style="border-color:{annotation.highlighted === 'self' ? color : 'transparent'}"
   >
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton
@@ -181,7 +192,7 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{itemObject.id}</span>
+      <span class="truncate w-max flex-auto">{annotation.id}</span>
     </div>
     <div class="flex items-center">
       {#if showIcons || isEditing}
@@ -207,11 +218,11 @@ License: CECILL-C
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          {#if itemObject.datasetItemType === "image"}
+          {#if annotation.datasetItemType === "image"}
             <div>
               <p class="font-medium first-letter:uppercase">display</p>
               <div class="flex gap-4">
-                {#if itemObject.bbox}
+                {#if annotation.is_bbox}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
@@ -222,7 +233,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if itemObject.mask}
+                {#if annotation.is_mask}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
@@ -233,7 +244,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if itemObject.keypoints}
+                {#if annotation.is_keypoints}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox

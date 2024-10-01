@@ -7,7 +7,7 @@ License: CECILL-C
 // Imports
 import type { Tensor } from "onnxruntime-web";
 
-import type { ItemRLE, MaskSVG } from "./datasetTypes";
+import type { MaskType, MaskSVG } from "./datasetTypes";
 
 // Exports
 export interface LabeledClick {
@@ -38,7 +38,7 @@ export interface InteractiveImageSegmenterInput {
 
 export interface SegmentationResult {
   masksImageSVG: MaskSVG;
-  rle: ItemRLE;
+  rle: MaskType;
   masks?: Tensor;
 }
 

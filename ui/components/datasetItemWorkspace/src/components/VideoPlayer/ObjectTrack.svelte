@@ -14,7 +14,7 @@ License: CECILL-C
     VideoItemBBox,
     VideoObject,
   } from "@pixano/core";
-  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
@@ -62,7 +62,7 @@ License: CECILL-C
   };
 
   const onContextMenu = (event: MouseEvent) => {
-    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object));
+    annotations.update((oldObjects) => highlightCurrentObject(oldObjects, object));
     moveCursorToPosition(event.clientX);
     selectedTool.set(panTool);
   };
@@ -70,7 +70,7 @@ License: CECILL-C
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
     onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
     objectIdBeingEdited.set(object.id);
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
         obj.displayControl = {
@@ -90,7 +90,7 @@ License: CECILL-C
         trackWithItems,
         tracklet.view_id,
       );
-      itemObjects.update((objects) =>
+      annotations.update((objects) =>
         objects.map((obj) => {
           if (obj.id === object.id && obj.datasetItemType === "video") {
             const { boxes, keypoints } = mapTrackItemsToObject(
@@ -152,7 +152,7 @@ License: CECILL-C
       next,
       object.id,
     );
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       objects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
           const { boxes, keypoints } = mapSplittedTrackToObject(trackWithItems, object);
@@ -166,7 +166,7 @@ License: CECILL-C
   };
 
   const onDeleteTrackletClick = (tracklet: TrackletWithItems) => {
-    itemObjects.update((objects) => deleteTracklet(objects, object.id, tracklet));
+    annotations.update((objects) => deleteTracklet(objects, object.id, tracklet));
     updateTracks();
     canSave.set(true);
   };

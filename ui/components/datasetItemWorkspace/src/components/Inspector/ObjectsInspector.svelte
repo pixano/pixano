@@ -12,7 +12,7 @@ License: CECILL-C
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import {
-    itemObjects,
+    annotations,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -32,7 +32,7 @@ License: CECILL-C
 
   let thumbnail: ObjectThumbnail | null = null;
 
-  itemObjects.subscribe((objects) => {
+  annotations.subscribe((objects) => {
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (highlightedObject) {
       thumbnail = defineObjectThumbnail($itemMetas, highlightedObject);
@@ -41,7 +41,7 @@ License: CECILL-C
     }
   });
 
-  itemObjects.subscribe((objects) => {
+  annotations.subscribe((objects) => {
     allItemsSortedByModel = sortObjectsByModel(objects);
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (!highlightedObject) return;
@@ -85,8 +85,8 @@ License: CECILL-C
         modelName={GROUND_TRUTH}
         numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
       >
-        {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-          <ObjectCard bind:itemObject />
+        {#each allItemsSortedByModel[GROUND_TRUTH] as annotation}
+          <ObjectCard bind:annotation />
         {/each}
       </ObjectsModelSection>
       {#if selectedModel}
@@ -104,8 +104,8 @@ License: CECILL-C
               label: model,
             }))}
           />
-          {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-            <ObjectCard bind:itemObject />
+          {#each allItemsSortedByModel[selectedModel] || [] as annotation}
+            <ObjectCard bind:annotation />
           {/each}
         </ObjectsModelSection>
       {/if}

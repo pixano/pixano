@@ -1273,7 +1273,7 @@ License: CECILL-C
             <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
           {/if}
           {#each bboxes as bbox}
-            {#if bbox.viewId === viewId}
+            {#if bbox.data.view_ref.name === viewId}
               <Rectangle
                 {bbox}
                 {colorScale}

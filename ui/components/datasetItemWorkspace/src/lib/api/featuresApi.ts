@@ -5,12 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
-import type {
-  DatasetItem,
-  FeatureValues,
-  ItemFeature,
-  FeaturesValues,
-  FeatureList,
+import {
+  Entity,
+  type FeatureValues,
+  type ItemFeature,
+  type FeaturesValues,
+  type FeatureList,
 } from "@pixano/core";
 import type {
   CheckboxFeature,
@@ -22,7 +22,14 @@ import type {
   TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
-export const createFeature = (features: DatasetItem["features"]): Feature[] => {
+export const createFeature = (entity: Entity): Feature[] => {
+  //filter features from entity.data (without *_ref)
+  //Note: it's kinda complex to extract base keys from type... so let's make it simple and static
+  const standardEntityKeys = ["item_ref", "view_ref", "parent_ref"];
+  const extraFields = Object.keys(entity.data).filter(key => !standardEntityKeys.includes(key));
+  const features: ItemFeature[] = [];
+  //TODO : extract correct dtype from value...
+  for (const field of extraFields) features.push({name: field, dtype: "str", value: entity.data[field]});
   const parsedFeatures = createObjectInputsSchema.parse(
     Object.values(features).map((feature) => ({
       ...feature,
@@ -32,7 +39,7 @@ export const createFeature = (features: DatasetItem["features"]): Feature[] => {
     })),
   );
   return parsedFeatures.map((feature) => {
-    const value = features[feature.name]?.value;
+    const value = entity.data[feature.name];
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
     return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;

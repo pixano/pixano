@@ -20,7 +20,7 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     selectedTool,
-    itemObjects,
+    annotations,
     preAnnotationIsActive,
     colorScale,
     filters,
@@ -128,7 +128,7 @@ License: CECILL-C
 
   // Reactive statement to update item objects when new shape is being edited and pre-annotation is not active
   $: if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-    itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+    annotations.update((objects) => updateExistingObject(objects, $newShape));
   }
 
   // Reactive statement to set the selected tool

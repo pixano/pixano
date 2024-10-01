@@ -114,10 +114,10 @@ License: CECILL-C
   <Rect
     config={{
       id: `rect${bbox.id}`,
-      x: bbox.bbox[0] || 0,
-      y: bbox.bbox[1] || 0,
-      width: bbox.bbox[2] || 0,
-      height: bbox.bbox[3] || 0,
+      x: bbox.data.coords[0] || 0,
+      y: bbox.data.coords[1] || 0,
+      width: bbox.data.coords[2] || 0,
+      height: bbox.data.coords[3] || 0,
       stroke: colorScale(bbox.id),
       strokeWidth: bbox.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.opacity,
@@ -127,8 +127,8 @@ License: CECILL-C
   />
   <LabelTag
     id={bbox.id}
-    x={bbox.bbox[0]}
-    y={bbox.bbox[1]}
+    x={bbox.data.coords[0]}
+    y={bbox.data.coords[1]}
     visible={bbox.visible}
     {zoomFactor}
     opacity={bbox.opacity}

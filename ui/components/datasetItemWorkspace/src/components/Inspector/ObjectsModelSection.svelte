@@ -12,7 +12,7 @@ License: CECILL-C
 
   import { toggleObjectDisplayControl } from "../../lib/api/objectsApi";
   import { EXISTING_SOURCE_IDS, GROUND_TRUTH } from "../../lib/constants";
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
 
   export let sectionTitle: string;
   export let modelName: string;
@@ -22,9 +22,11 @@ License: CECILL-C
   $: tooltipContent =
     visibilityStatus === "hidden" ? `Show ${modelName} objects` : `Hide ${modelName} objects`;
 
-  itemObjects.subscribe((items) => {
+  annotations.subscribe((items) => {
     if (!items.length) return;
-    const allObjectsOfCurrentModel = items.filter((item) => item.source_id === modelName);
+    const allObjectsOfCurrentModel = items.filter(
+      (item) => item.data.source_ref.name === modelName,
+    );
     const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
       (item) => item.displayControl?.hidden,
     );
@@ -39,18 +41,18 @@ License: CECILL-C
     }
   });
 
-  $: itemObjects.update((objects) => {
+  $: annotations.update((objects) => {
     return objects.map((object) => {
       const isHidden = visibilityStatus === "hidden";
       if (modelName === GROUND_TRUTH) {
-        if (object.source_id === modelName) {
+        if (object.data.source_ref.name === modelName) {
           return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
         } else {
           return object;
         }
       }
-      if (!EXISTING_SOURCE_IDS.includes(object.source_id)) {
-        if (object.source_id === modelName) {
+      if (!EXISTING_SOURCE_IDS.includes(object.data.source_ref.name)) {
+        if (object.data.source_ref.name === modelName) {
           return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], isHidden);
         } else {
           return toggleObjectDisplayControl(object, "hidden", ["bbox", "mask"], true);

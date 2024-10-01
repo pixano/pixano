@@ -6,30 +6,33 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type {
-    ItemObject,
+  import type { FeaturesValues, DatasetItemSave, VideoObject } from "@pixano/core";
+  import {
+    Annotation,
+    // BBox,
+    // Keypoints,
+    Mask,
+    Entity,
     DatasetItem,
-    FeaturesValues,
-    DatasetItemSave,
-    ImageObject,
-    VideoObject,
   } from "@pixano/core";
 
-  import { rleFrString } from "../../canvas2d/src/api/maskApi";
+  import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
   import {
-    itemObjects,
+    annotations,
     itemMetas,
     newShape,
     canSave,
     saveData,
+    entities,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
+  import Keypoint from "@pixano/canvas2d/src/components/keypoints/Keypoint.svelte";
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
@@ -44,84 +47,85 @@ License: CECILL-C
 
   let embeddings: Embeddings = {};
 
-  $: itemObjects.update(
-    (oldObjects) => {
-      const newObjects: ItemObject[] = [];
-      for (const anns of Object.values(selectedItem.annotations)) {
-        newObjects.push(
-          ...anns.map((ann_ann) => {
-            const ann = ann_ann as unknown as ItemObject; //TMP tant que adaptations data model pas finalisée
-            const oldObject = oldObjects.find((o) => o.id === ann.id);
-            if (oldObject) {
-              return { ...oldObject, ...ann } as ItemObject;
-            }
-            //TMP before UI datamodel rework, we map back datamodel to front datamodel
-
-            //add item_id & features & source_id & datasetItemType
-            ann.item_id = ann.data.item_ref.id;
-            ann.source_id =
-              ann.data.source_ref.name == "" ? "Ground Truth" : ann.data.source_ref.name; //TMP
-            ann.id = ann.data.entity_ref.id;
-            ann.data.id = ann.id;
-            ann.data.ref_name = ann.table_info.name; //should not be used anymore...
-            ann.data.view_id = ann.data.view_ref.name; //should not be used anymore...
-            //find corresponding entity
-            Object.values(selectedItem.entities).forEach((entities) => {
-              for (const entity of entities) {
-                if (entity.id === ann.data.entity_ref.id) {
-                  ann.features = {
-                    name: { name: "name", dtype: "str", value: entity.data["name"] as string },
-                  };
-                }
-              }
-            });
-
-            // put type and data in corresponding field (aka bbox, keypoiints or mask)
-            // adapt data model from back to front
-            if (selectedItem.type === "image") {
-              ann.datasetItemType = "image";
-              if (ann.table_info.base_schema === "BBox") {
-                (ann as ImageObject).bbox = ann.data;
-              } else if (ann.table_info.base_schema === "KeyPoints") {
-                ann.data.vertices = [];
-                for (let i = 0; i < ann.data.coords.length / 2; i++) {
-                  const x = ann.data.coords[i * 2];
-                  const y = ann.data.coords[i * 2 + 1];
-                  const features = { state: ann.data.states[i] };
-                  ann.data.vertices.push({ x, y, features });
-                }
-                delete ann.data.coords;
-                delete ann.data.states;
-                (ann as ImageObject).keypoints = ann.data;
-              } else if (ann.table_info.base_schema === "CompressedRLE") {
-                ann.data.counts = rleFrString(ann.data.counts);
-                (ann as ImageObject).mask = ann.data;
-              }
-            } else {
-              // ann.datasetItemType = "video";
-              // if (ann.table_info.base_schema === "BBox") (ann as VideoObject).boxes?.push(ann.data);
-              // else if (ann.table_info.base_schema === "KeyPoints")
-              //   (ann as VideoObject).keypoints?.push(ann.data);
-              //else if (ann.table_info.base_schema === "CompressedRLE") (ann as VideoObject).mask = ann.data;
-              //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
-              (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
-            }
-            delete ann.data;
-            return ann;
-          }),
-        );
-      }
-      return newObjects;
-    },
-
-    // return selectedItem?.annotations?.map((object) => {
-    //   const oldObject = oldObjects.find((o) => o.id === object.id);
-    //   if (oldObject) {
-    //     return { ...oldObject, ...object } as ItemObject;
+  const backToFrontAdapt = (ann: Annotation): Annotation => {
+    //find corresponding entity
+    // Object.values(selectedItem.entities).forEach((entities) => {
+    //   for (const entity of entities) {
+    //     if (entity.id === ann.data.entity_ref.id) {
+    //       ann.features = {
+    //         name: { name: "name", dtype: "str", value: entity.data["name"] as string },
+    //       };
+    //     }
     //   }
-    //   return object;
-    // }) || ([] as ItemObject[])},
-  );
+    // });
+    //TMP: my dataset doesn't have source name yet...
+    if (ann.data.source_ref.name == "") ann.data.source_ref.name = "Ground Truth"; //TMP
+
+    // put type and data in corresponding field (aka bbox, keypoiints or mask)
+    // adapt data model from back to front
+    if (selectedItem.type === "image") {
+      ann.datasetItemType = "image";
+      if (ann.table_info.base_schema === "BBox") {
+        //const bbox: BBox = ann as BBox;
+        //nothing to do  ... (COOL!!)
+      } else if (ann.table_info.base_schema === "KeyPoints") {
+        //const kpt: Keypoints = ann as Keypoints;
+        //nothing to do  ... (COOL!!)
+      } else if (ann.table_info.base_schema === "CompressedRLE") {
+        const mask: Mask = ann as Mask;
+        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+      }
+    } else {
+      ann.datasetItemType = "video";
+      // if (ann.is_bbox) (ann as VideoObject).boxes?.push(ann.data);
+      // else if (ann.is_keypoints)
+      //   (ann as VideoObject).keypoints?.push(ann.data);
+      //else if (ann.is_mask) (ann as VideoObject).mask = ann.data;
+      //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
+      (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
+    }
+    //delete ann.data;
+
+    console.log("XXX backToFront", ann);
+
+    return ann;
+  };
+
+  $: annotations.update((oldObjects) => {
+    const newObjects: Annotation[] = [];
+    for (const anns of Object.values(selectedItem.annotations)) {
+      newObjects.push(
+        ...anns.map((ann) => {
+          const oldObject = oldObjects.find((o) => o.id === ann.id);
+          if (oldObject) {
+            return { ...oldObject, ...ann } as Annotation;
+          }
+          //if not already in annotations, it's a new object from back
+          //TMP before UI datamodel rework, we map back datamodel to front datamodel
+          return backToFrontAdapt(ann);
+        }),
+      );
+    }
+    return newObjects;
+  });
+
+  $: entities.update((oldObjects) => {
+    const newObjects: Entity[] = [];
+    for (const sel_entities of Object.values(selectedItem.entities)) {
+      newObjects.push(
+        ...sel_entities.map((entity) => {
+          const oldObject = oldObjects.find((o) => o.id === entity.id);
+          if (oldObject) {
+            return { ...oldObject, ...entity } as Entity;
+          }
+          return entity;
+        }),
+      );
+    }
+    return newObjects;
+  });
+
+  $: console.log("XXX entities", $entities);
 
   $: itemMetas.set({
     mainFeatures: selectedItem.features,

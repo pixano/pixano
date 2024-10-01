@@ -8,11 +8,11 @@ License: CECILL-C
   // Imports
   import { Button } from "@pixano/core/src";
 
-  import type { ItemObject, Shape, SaveItem } from "@pixano/core";
+  import type { Annotation, Shape, SaveItem } from "@pixano/core";
 
   import {
     newShape,
-    itemObjects,
+    annotations,
     itemMetas,
     canSave,
     saveData,
@@ -40,26 +40,26 @@ License: CECILL-C
 
   const handleFormSubmit = () => {
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
-    let newObject: ItemObject | null = null;
-    itemObjects.update((oldObjects) => {
+    let newObject: Annotation | null = null;
+    annotations.update((oldObjects) => {
       if (shape.status !== "saving") return oldObjects;
       newObject = defineCreatedObject(shape, $itemMetas.type, features, $currentFrameIndex);
       objectIdBeingEdited.set(newObject?.id || null);
-      const objectsWithoutHighlighted: ItemObject[] = oldObjects.map((object) => ({
-        ...object,
-        highlighted: "none",
-        displayControl: { ...object.displayControl, editing: false },
-      }));
+      const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
+        object.highlighted = "none";
+        object.displayControl = { ...object.displayControl, editing: false };
+        return object;
+      });
 
       if (newObject) {
-        console.log("FormSubmit newObject:", newObject);
+        console.log("ToSave (creation):", newObject, shape);
         if (newObject.datasetItemType === "video") {
           // for video, there is 2 bbox|keypoints, 1 track, 1 tracklet
-          if (shape.type === "bbox" && newObject.boxes) {
-            for (let box of newObject.boxes) {
+          if (shape.type === "bbox" && newObject.is_bbox) {
+            for (let box of newObject.data) {
               const save_item: SaveItem = {
                 change_type: "add_or_update",
-                ref_name: shape.type, //this should represent the annotation table to be refered...?
+                kind: shape.type, //TODO correct kind //this should represent the annotation table to be refered...?
                 is_video: true,
                 data: { ...box, entity_ref: { id: newObject.id, name: "top_entity" } },
               };
@@ -95,8 +95,8 @@ License: CECILL-C
             is_video: true,
             data: {
               id: newObject.id,
-              item_id: newObject.item_id,
-              source_id: newObject.source_id,
+              //item_id: newObject.item_id,
+              source_ref: newObject.source_ref,
               features: newObject.features,
               view_id: newObject.track[0].view_id,
               entity_ref: { id: "", name: "" }, //no parent for track
@@ -106,17 +106,18 @@ License: CECILL-C
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_track));
           //TODO Note: we may have to manage "spatial object" entity too...
         } else {
-          if (shape.type === "bbox" && newObject.bbox) {
+          if (shape.type === "bbox" && newObject.is_bbox) {
             const save_item: SaveItem = {
               change_type: "add_or_update",
-              ref_name: shape.type, //this should represent the annotation table to be refered...?
+              kind: "annotation", //TODO kind //this should represent the annotation table to be refered...?
               is_video: false,
-              data: { ...newObject.bbox, entity_ref: { id: newObject.id, name: "top_entity" } },
+              id: newObject.id,
+              //data: { ...newObject.bbox, entity_ref: { id: newObject.id, name: "top_entity" } },
             };
             saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
             const save_item_entity: SaveItem = {
               change_type: "add_or_update",
-              ref_name: "top_entity", //this should represent the annotation table to be refered...?
+              kind: "entity",
               is_video: false,
               data: {
                 id: newObject.id,
@@ -157,7 +158,6 @@ License: CECILL-C
           }
         }
       }
-
       return [...objectsWithoutHighlighted, ...(newObject ? [newObject] : [])];
     });
 

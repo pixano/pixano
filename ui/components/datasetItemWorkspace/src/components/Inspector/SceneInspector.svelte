@@ -54,7 +54,7 @@ License: CECILL-C
     const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures || {}).length
       ? metas.mainFeatures
       : defaultSceneFeatures;
-    features = createFeature(mainFeatures);
+    //features = createFeature(mainFeatures); //XXX TODO
   });
 
   /**

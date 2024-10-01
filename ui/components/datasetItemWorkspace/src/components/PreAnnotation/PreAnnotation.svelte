@@ -10,11 +10,11 @@ License: CECILL-C
   import { nanoid } from "nanoid";
 
   import { PrimaryButton, SliderWithValue, IconButton, Switch, cn } from "@pixano/core";
-  import type { ItemObject } from "@pixano/core";
+  import { Annotation } from "@pixano/core";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import {
     canSave,
-    itemObjects,
+    annotations,
     preAnnotationIsActive,
     colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -27,8 +27,8 @@ License: CECILL-C
   import * as Tooltip from "@pixano/core/src/components/ui/tooltip";
   import type { ObjectProperties } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let objectsToAnnotate: ItemObject[] = [];
-  let filteredObjectsToAnnotate: ItemObject[] = [];
+  let objectsToAnnotate: Annotation[] = [];
+  let filteredObjectsToAnnotate: Annotation[] = [];
   let isFormValid: boolean = false;
   let confidenceFilterValue = [0];
   let color: string;
@@ -37,7 +37,7 @@ License: CECILL-C
   $: objectToAnnotate = filteredObjectsToAnnotate[0];
   $: color = $colorScale[1](objectToAnnotate?.id || "");
 
-  itemObjects.subscribe((objects) => {
+  annotations.subscribe((objects) => {
     objectsToAnnotate = getObjectsToPreAnnotate(objects);
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
@@ -48,7 +48,7 @@ License: CECILL-C
   $: {
     if ($preAnnotationIsActive && objectsToAnnotate.length === 0) {
       preAnnotationIsActive.set(false);
-      itemObjects.update((objects) =>
+      annotations.update((objects) =>
         objects.map((object) => {
           object.highlighted = "all";
           return object;
@@ -58,12 +58,12 @@ License: CECILL-C
   }
 
   const onAcceptItem = () => {
-    itemObjects.update((objects) => [
+    annotations.update((objects) => [
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
       {
         ...objectToAnnotate,
         review_state: "accepted",
-        source_id: GROUND_TRUTH,
+        //source_id: GROUND_TRUTH,  //TODO...
         id: nanoid(10),
         highlighted: "none",
       },
@@ -72,7 +72,7 @@ License: CECILL-C
   };
 
   const onRejectItem = () => {
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "rejected"),
     );
     canSave.set(true);
@@ -80,7 +80,7 @@ License: CECILL-C
 
   const onSwitchChange = (checked: boolean | undefined) => {
     $preAnnotationIsActive = checked || false;
-    itemObjects.update((objects) => {
+    annotations.update((objects) => {
       const objectsToPreAnnotate = getObjectsToPreAnnotate(objects);
       const tempObjects = sortAndFilterObjectsToAnnotate(
         objectsToPreAnnotate,

@@ -4,7 +4,7 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
-import type { BBox } from "@pixano/core";
+import { BBox } from "@pixano/core";
 import Konva from "konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 
