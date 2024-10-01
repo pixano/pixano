@@ -233,20 +233,20 @@ def update_rows(
     try:
         schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
         rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
-    except Exception:
+    except Exception as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     try:
         updated_rows = dataset.update_data(table, rows)
     except DatasetIntegrityError as err:
         raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
-    except ValueError:
+    except ValueError as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     # TODO: return updated rows instead of input rows
@@ -272,20 +272,20 @@ def create_rows(
     try:
         schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
         rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
-    except Exception:
+    except Exception as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     try:
         created_rows = dataset.add_data(table, rows)
     except DatasetIntegrityError as err:
         raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
-    except ValueError:
+    except ValueError as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     return created_rows

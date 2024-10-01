@@ -34,6 +34,7 @@ from pixano.features import (
     is_source_ref,
     is_view_ref,
 )
+from pixano.utils.python import to_sql_list
 
 
 if TYPE_CHECKING:
@@ -109,7 +110,7 @@ def check_table_integrity(
     schemas: list[BaseSchema] | None = None,
     updating: bool = False,
     ignore_checks: list[IntegrityCheck] | None = None,
-) -> dict[str, tuple[IntegrityCheck, str, str, str, Any]]:
+) -> list[tuple[IntegrityCheck, str, str, str, Any]]:
     """Check the integrity of a table.
 
     Args:
@@ -121,8 +122,7 @@ def check_table_integrity(
         ignore_checks: List of integrity checks to ignore.
 
     Returns:
-        Dictionary with the integrity check errors as values and the check id as key. The errors are tuples with the
-        following values:
+        List of errors as tuples with the following values:
         - check_type: Check type.
         - table: Table name.
         - field_name: Field name.
@@ -135,6 +135,7 @@ def check_table_integrity(
         ignore_checks_set = set()
     table_schema = Source if table_name == "source" else dataset.schema.schemas[table_name]
 
+    checking_table = schemas is None
     if schemas is None:
         if updating:
             raise ValueError("schemas must be provided when updating a table.")
@@ -152,19 +153,14 @@ def check_table_integrity(
             **{field_name: (table_schema.model_fields[field_name].annotation, ...) for field_name in fields_to_check},
         )
         schemas = TableQueryBuilder(table).select(fields_to_check).to_pydantic(model)
-        table_ids = [schema.id for schema in schemas]
-    else:
-        if updating:
-            table_ids = [schema.id for schema in schemas]
-        else:
-            table_ids = [row["id"] for row in TableQueryBuilder(table).select(["id"]).to_list()] + [
-                schema.id for schema in schemas
-            ]
+
+    table_ids = [schema.id for schema in schemas]
     count_ids: dict[str, int] = {}
     for id in table_ids:
         count_ids[id] = count_ids.get(id, 0) + 1
     integrity_checks = get_integry_checks_from_schemas(schemas, table_name)
     check_errors: dict[str, tuple[IntegrityCheck, str, str, str, Any]] = {}
+    ids_to_check: dict[str, str] = {}
     schemas_refs_to_check: dict[str, list[tuple[str, str, SchemaRef, str]]] = {}
 
     for check_type_id, checks in enumerate(integrity_checks):
@@ -176,8 +172,11 @@ def check_table_integrity(
                 continue
             if check_type == IntegrityCheck.DEFINED_ID and field == "":  # id is not defined
                 check_errors[check_id] = (check_type, table_name, field_name, schema_id, field)
-            elif check_type == IntegrityCheck.UNIQUE_ID and count_ids[schema_id] > 1:  # id is not unique
-                check_errors[check_id] = (check_type, table_name, field_name, schema_id, field)
+            elif check_type == IntegrityCheck.UNIQUE_ID:
+                if count_ids[schema_id] > 1:  # id is not unique
+                    check_errors[check_id] = (check_type, table_name, field_name, schema_id, field)
+                elif not checking_table:
+                    ids_to_check[schema_id] = check_id
             elif check_type == IntegrityCheck.REF_NAME:
                 field = cast(SchemaRef, field)
                 if field.name != "" and field.name not in (
@@ -219,17 +218,34 @@ def check_table_integrity(
                     schemas_refs_to_check[field.name] = []
                 schemas_refs_to_check[field.name].append((check_id, schema_id, field, field_name))
 
+    def _find_ids_in_table(table_name: str, ids: set[str]) -> dict[str, bool]:
+        if len(ids) == 0:
+            return {}
+        table = dataset.open_table(table_name)
+        ids_found = [
+            row["id"] for row in TableQueryBuilder(table).select(["id"]).where(f"id in {to_sql_list(ids)}").to_list()
+        ]
+        return {id: id in ids_found for id in ids}
+
+    if not checking_table and not updating and len(ids_to_check) > 0:
+        for id, found in _find_ids_in_table(table_name, set(ids_to_check.keys())).items():
+            if found:
+                check_errors[ids_to_check[id]] = (IntegrityCheck.UNIQUE_ID, table_name, "id", id, id)
+
     if len(check_errors) == len(
         {check_id for check_id, *_ in integrity_checks[IntegrityCheck.REF_ID.value]}
     ):  # all checks failed, no need to check later checks that are costly
-        return check_errors
+        return list(check_errors.values())
 
     for ref_schema_name, refs in schemas_refs_to_check.items():
         if ref_schema_name == "":
             continue
-        ref_all_ids = set(dataset.get_all_ids(ref_schema_name))
+        ref_ids_to_check = {field_ref.id for check_id, _, field_ref, _ in refs if check_id not in check_errors}
+        found_ref_ids = _find_ids_in_table(ref_schema_name, ref_ids_to_check)
         for check_id, schema_id, field_ref, field_name in refs:
-            if field_ref.id not in ref_all_ids:
+            if check_id in check_errors:
+                continue
+            if not found_ref_ids[field_ref.id]:
                 check_errors[check_id] = (
                     IntegrityCheck.REF_ID,
                     table_name,
@@ -238,44 +254,43 @@ def check_table_integrity(
                     field_ref,
                 )
 
-    return check_errors
+    return list(check_errors.values())
 
 
-def check_dataset_integrity(dataset: "Dataset") -> dict[str, tuple[IntegrityCheck, str, str, str, Any]]:
+def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, str, str, str, Any]]:
     """Check the integrity of a dataset.
 
     Args:
         dataset: Dataset.
 
     Returns:
-        Dictionary with the integrity check errors as values and the check id as key. The errors are tuples with the
-        following values:
+        List of errors as tuples with the following values:
         - check_type: Check type.
         - table: Table name.
         - field_name: Field name.
         - schema_id: Schema id.
         - field: Field value.
     """
-    check_errors: dict[str, tuple[IntegrityCheck, str, str, str, Any]] = {}
+    check_errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
     for table_name, table in dataset.open_tables(names=None, exclude_embeddings=False).items():
-        check_errors.update(check_table_integrity(table, table_name, dataset))
+        check_errors.extend(check_table_integrity(table, table_name, dataset))
     return check_errors
 
 
 def handle_errors(
-    check_errors: dict[str, tuple[IntegrityCheck, str, str, str, Any]],
+    check_errors: list[tuple[IntegrityCheck, str, str, str, Any]],
     raise_or_warn: Literal["raise", "warn"] = "raise",
 ):
     """Handle integrity check errors.
 
     Args:
-        check_errors: Dictionary with the integrity check errors as values and the check id as key.
+        check_errors: List of errors.
         raise_or_warn: If "raise", raise a ValueError with the errors. If "warn", warns a UserWarning with the errors.
     """
     if len(check_errors) == 0:
         return
     message = "Integrity check errors:\n"
-    for check_id, (check_type, table_name, field_name, schema_id, field) in check_errors.items():
+    for check_type, table_name, field_name, schema_id, field in check_errors:
         message += "- "
         if check_type == IntegrityCheck.DEFINED_ID:
             message += f"An id is not defined in table {table_name}.\n"
