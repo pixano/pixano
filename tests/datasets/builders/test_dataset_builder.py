@@ -48,8 +48,14 @@ class TestDatasetBuilder:
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
     @pytest.mark.parametrize("compact_every_n_transactions", [None, 2])
+    @pytest.mark.parametrize("check_integrity", ["raise", "warn", "none"])
     def test_build(
-        self, dataset_builder_image_bboxes_keypoint, mode, flush_every_n_samples, compact_every_n_transactions
+        self,
+        dataset_builder_image_bboxes_keypoint,
+        mode,
+        flush_every_n_samples,
+        compact_every_n_transactions,
+        check_integrity,
     ):
         # Mock the compact method to register the call count
         compact_dataset_mock = MagicMock()
@@ -61,6 +67,7 @@ class TestDatasetBuilder:
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
+            check_integrity=check_integrity,
         )
         assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
 
@@ -91,6 +98,7 @@ class TestDatasetBuilder:
                     flush_every_n_samples=flush_every_n_samples,
                     compact_every_n_transactions=compact_every_n_transactions,
                     mode=mode,
+                    check_integrity=check_integrity,
                 )
             return
 
@@ -110,6 +118,7 @@ class TestDatasetBuilder:
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode=mode,
+            check_integrity="none",
         )
 
         assert dataset.num_rows == 6 if mode == "overwrite" else 11
@@ -128,7 +137,7 @@ class TestDatasetBuilder:
         for mock in table_mocks:
             mock.call_count == 2 if flush_every_n_samples is None else 1
 
-    def test_build_error(self):
+    def test_build_error(self, dataset_builder_image_bboxes_keypoint):
         class WrongIdBuilder(DatasetBuilder):
             def generate_data(self):
                 yield {
@@ -146,3 +155,17 @@ class TestDatasetBuilder:
             WrongSchemaNameBuilder(
                 tempfile.mkdtemp(), DatasetItem, DatasetInfo(name="test", description="test")
             ).build()
+
+        with pytest.raises(ValueError, match="mode should be 'add', 'create' or 'overwrite' but got wrong_mode"):
+            dataset_builder_image_bboxes_keypoint.build(mode="wrong_mode")
+
+        with pytest.raises(
+            ValueError, match="check_integrity should be 'raise', 'warn' or 'none' but got wrong_check_integrity"
+        ):
+            dataset_builder_image_bboxes_keypoint.build(check_integrity="wrong_check_integrity")
+
+        with pytest.raises(ValueError, match="flush_every_n_samples should be greater than 0 but got -1"):
+            dataset_builder_image_bboxes_keypoint.build(flush_every_n_samples=-1)
+
+        with pytest.raises(ValueError, match="compact_every_n_transactions should be greater than 0 but got -1"):
+            dataset_builder_image_bboxes_keypoint.build(compact_every_n_transactions=-1)

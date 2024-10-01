@@ -73,6 +73,9 @@ from tests.fixtures.features.bbox import (
 )
 from tests.fixtures.features.compressed_rle import counts, rle, size
 from tests.fixtures.features.embedding import dumb_embedding_function, embedding_8, view_embedding_8
-from tests.fixtures.features.entity import entity_category
+from tests.fixtures.features.entity import (
+    entity_category,
+    two_image_entities_from_dataset_multiview_tracking_and_image,
+)
 from tests.fixtures.features.item import item_categories, item_categories_name_index, item_metadata
 from tests.fixtures.features.sequence_frame import sequence_frame_category

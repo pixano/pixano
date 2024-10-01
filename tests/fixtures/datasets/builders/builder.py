@@ -175,27 +175,27 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )
                 )
-                tracklets.append(
-                    schemas["tracklets"](
-                        id=f"tracklet_{i}_{j}",
-                        item_ref=ItemRef(id=item_id),
-                        parent_ref=ViewRef(id=f"track_{i}_{j}", name="tracks"),
-                        view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
-                        start_timestep=j,
-                        end_timestep=j * 4,
-                        start_timestamp=j * 0.1,
-                        end_timestamp=j * 4 * 0.1,
-                        created_at=datetime(2021, 1, 1, 0, 0, 0),
-                        updated_at=datetime(2021, 1, 1, 0, 0, 0),
-                    )
-                )
                 for k in range(num_frames):
+                    tracklets.append(
+                        schemas["tracklets"](
+                            id=f"tracklet_{i}_{j}_{k}",
+                            item_ref=ItemRef(id=item_id),
+                            parent_ref=ViewRef(id=f"track_{i}_{j}", name="tracks"),
+                            view_ref=ViewRef(id=f"video_{i}_{k}", name="video"),
+                            start_timestep=j,
+                            end_timestep=j * 4,
+                            start_timestamp=j * 0.1,
+                            end_timestamp=j * 4 * 0.1,
+                            created_at=datetime(2021, 1, 1, 0, 0, 0),
+                            updated_at=datetime(2021, 1, 1, 0, 0, 0),
+                        )
+                    )
                     ## Entity video
                     entities_video.append(
                         schemas["entities_video"](
                             id=f"entity_video_{i}_{j}_{k}",
                             item_ref=ItemRef(id=item_id),
-                            view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
+                            view_ref=ViewRef(id=f"video_{i}_{k}", name="video"),
                             parent_ref=EntityRef(id=f"track_{i}_{j}", name="tracks"),
                             created_at=datetime(2021, 1, 1, 0, 0, 0),
                             updated_at=datetime(2021, 1, 1, 0, 0, 0),
@@ -212,7 +212,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                                 confidence=0.25 * m,
                                 id=f"bbox_{i}_{j}_{k}_{m}",
                                 item_ref=ItemRef(id=item_id),
-                                view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
+                                view_ref=ViewRef(id=f"video_{i}_{k}", name="video"),
                                 entity_ref=EntityRef(id=f"entity_video_{i}_{j}_{k}", name="entities_video"),
                                 source_ref=SourceRef(id="source_0"),
                                 created_at=datetime(2021, 1, 1, 0, 0, 0),
@@ -227,7 +227,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                                 states=["visible" if m % 2 == 0 else "invisible"],
                                 id=f"keypoints_video_{i}_{j}_{k}_{m}",
                                 item_ref=ItemRef(id=item_id),
-                                view_ref=ViewRef(id=f"video_{i}_{j}", name="video"),
+                                view_ref=ViewRef(id=f"video_{i}_{k}", name="video"),
                                 entity_ref=EntityRef(id=f"entity_video_{i}_{j}_{k}", name="entities_video"),
                                 source_ref=SourceRef(id="source_1"),
                                 created_at=datetime(2021, 1, 1, 0, 0, 0),
@@ -269,7 +269,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 id=f"bbox_image_{i}",
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
-                entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
+                entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
                 source_ref=SourceRef(id=f"source_{i % 3}"),
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
@@ -280,7 +280,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 id=f"mask_image_{i}",
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
-                entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
+                entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
                 size=[100 * i, 100 * i],
                 counts=b"\x01\x02\x03",
                 source_ref=SourceRef(id=f"source_{i % 3}"),
@@ -300,7 +300,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         id=f"keypoints_image_{i}_{j}",
                         item_ref=ItemRef(id=item_id),
                         view_ref=ViewRef(id=f"image_{i}", name="image"),
-                        entity_ref=EntityRef(id=f"entity_image_{i}", name="entities_image"),
+                        entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
                         source_ref=SourceRef(id=f"source_{i % 3}"),
                         created_at=datetime(2021, 1, 1, 0, 0, 0),
                         updated_at=datetime(2021, 1, 1, 0, 0, 0),

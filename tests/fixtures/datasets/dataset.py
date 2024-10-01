@@ -39,7 +39,7 @@ def dataset_image_bboxes_keypoint(dataset_item_image_bboxes_keypoint) -> Dataset
     dataset_builder_image_bboxes_keypoint.db = lancedb.connect(
         dataset_builder_image_bboxes_keypoint.target_dir / Dataset._DB_PATH
     )
-    return dataset_builder_image_bboxes_keypoint.build(mode="overwrite")
+    return dataset_builder_image_bboxes_keypoint.build(mode="overwrite", check_integrity="none")
 
 
 @pytest.fixture(scope="session")
@@ -56,7 +56,7 @@ def dataset_multi_view_tracking_and_image(dataset_item_multi_view_tracking_and_i
         target_dir=LIBRARY_DIR / "dataset_multi_view_tracking_and_image",
         schemas=schemas,
     )
-    return dataset_builder_multi_view_tracking_and_image.build(mode="overwrite")
+    return dataset_builder_multi_view_tracking_and_image.build(mode="overwrite", check_integrity="none")
 
 
 @pytest.fixture(scope="function")

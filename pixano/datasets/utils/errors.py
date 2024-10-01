@@ -11,12 +11,6 @@ class DatasetPaginationError(ValueError):
     pass
 
 
-class DatasetOffsetLimitError(DatasetPaginationError):
-    """Error raised when offset reached the limit while paginating a dataset."""
-
-    pass
-
-
 class DatasetAccessError(ValueError):
     """Error raised when accessing a dataset."""
 
@@ -25,5 +19,11 @@ class DatasetAccessError(ValueError):
 
 class DatasetWriteError(ValueError):
     """Error raised when writing to a dataset."""
+
+    pass
+
+
+class DatasetIntegrityError(ValueError):
+    """Error raised when dataset integrity is compromised."""
 
     pass
