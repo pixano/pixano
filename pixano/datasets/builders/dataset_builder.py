@@ -15,6 +15,7 @@ import tqdm
 from lancedb.table import Table
 
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
+from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
 from pixano.features.schemas.source import Source
 
@@ -72,6 +73,7 @@ class DatasetBuilder(ABC):
         mode: Literal["add", "create", "overwrite"] = "create",
         flush_every_n_samples: int | None = None,
         compact_every_n_transactions: int | None = None,
+        check_integrity: Literal["raise", "warn", "none"] = "raise",
     ) -> Dataset:
         """Build the dataset.
 
@@ -87,11 +89,26 @@ class DatasetBuilder(ABC):
                 flush in tables. If None, data are inserted at each iteration.
             compact_every_n_transactions: The number of transactions before compacting the dataset.
                 If None, the dataset is compacted only at the end.
-
+            check_integrity: The integrity check to perform after building the dataset. It can be "raise",
+                "warn" or "none":
+                    - "raise": Raise an error if integrity errors are found.
+                    - "warn": Print a warning if integrity errors are found.
+                    - "none": Do not check integrity.
 
         Returns:
             The built dataset.
         """
+        if mode not in ["add", "create", "overwrite"]:
+            raise ValueError(f"mode should be 'add', 'create' or 'overwrite' but got {mode}")
+        if check_integrity not in ["raise", "warn", "none"]:
+            raise ValueError(f"check_integrity should be 'raise', 'warn' or 'none' but got {check_integrity}")
+        if flush_every_n_samples is not None and flush_every_n_samples <= 0:
+            raise ValueError(f"flush_every_n_samples should be greater than 0 but got {flush_every_n_samples}")
+        if compact_every_n_transactions is not None and compact_every_n_transactions <= 0:
+            raise ValueError(
+                f"compact_every_n_transactions should be greater than 0 but got {compact_every_n_transactions}"
+            )
+
         if mode == "add":
             tables = self.open_tables()
         else:
@@ -154,7 +171,12 @@ class DatasetBuilder(ABC):
         # save schema.json
         self.dataset_schema.to_json(self.target_dir / Dataset._SCHEMA_FILE)
 
-        return Dataset(self.target_dir)
+        dataset = Dataset(self.target_dir)
+
+        if check_integrity != "none":
+            handle_integrity_errors(check_dataset_integrity(dataset), raise_or_warn=check_integrity)
+
+        return dataset
 
     def compact_table(self, table_name: str) -> None:
         """Compact a table in the database by cleaning up old versions and compacting files.

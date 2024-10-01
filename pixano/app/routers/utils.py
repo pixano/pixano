@@ -15,7 +15,8 @@ from pixano.app.models.table_info import TableInfo
 from pixano.app.models.utils import _SCHEMA_GROUP_TO_SCHEMA_MODEL_DICT
 from pixano.app.settings import Settings
 from pixano.datasets import Dataset
-from pixano.datasets.utils import DatasetAccessError, DatasetOffsetLimitError, DatasetPaginationError
+from pixano.datasets.utils import DatasetAccessError, DatasetPaginationError
+from pixano.datasets.utils.errors import DatasetIntegrityError
 from pixano.features import BaseSchema, SchemaGroup
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
 from pixano.features.schemas.source import Source
@@ -110,8 +111,6 @@ def get_rows(
     """
     try:
         rows = dataset.get_data(table, ids, limit, skip, item_ids)
-    except DatasetOffsetLimitError as err:
-        raise HTTPException(status_code=404, detail="Invalid query parameters. " + str(err))
     except DatasetPaginationError as err:
         raise HTTPException(status_code=400, detail="Invalid query parameters. " + str(err))
     except DatasetAccessError as err:
@@ -234,18 +233,20 @@ def update_rows(
     try:
         schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
         rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
-    except Exception:
+    except Exception as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     try:
         updated_rows = dataset.update_data(table, rows)
-    except ValueError:
+    except DatasetIntegrityError as err:
+        raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
+    except ValueError as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     # TODO: return updated rows instead of input rows
@@ -271,18 +272,20 @@ def create_rows(
     try:
         schema: type[BaseSchema] = dataset.schema.schemas[table] if table != SchemaGroup.SOURCE.value else Source
         rows: list[BaseSchema] = BaseSchemaModel.to_rows(models, schema)
-    except Exception:
+    except Exception as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     try:
         created_rows = dataset.add_data(table, rows)
-    except ValueError:
+    except DatasetIntegrityError as err:
+        raise HTTPException(status_code=400, detail="Dataset integrity compromised.\n" + str(err))
+    except ValueError as err:
         raise HTTPException(
             status_code=400,
-            detail="Invalid data.",
+            detail="Invalid data.\n" + str(err),
         )
 
     return created_rows

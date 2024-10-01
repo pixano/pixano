@@ -173,7 +173,7 @@ def test_update_rows(
     with pytest.raises(HTTPException) as error:
         update_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", ["wrong_input"])
     assert error.value.status_code == 400
-    assert error.value.detail == "Invalid data."
+    assert error.value.detail == "Invalid data.\n'str' object has no attribute 'to_row'"
 
     # Test wrong data
     with pytest.raises(HTTPException) as error:
@@ -209,7 +209,7 @@ def test_create_rows(
     with pytest.raises(HTTPException) as error:
         create_rows(dataset_multi_view_tracking_and_image_copy, "bbox_image", ["wrong_input"])
     assert error.value.status_code == 400
-    assert error.value.detail == "Invalid data."
+    assert error.value.detail == "Invalid data.\n'str' object has no attribute 'to_row'"
 
     # Test wrong data
     with pytest.raises(HTTPException) as error:
