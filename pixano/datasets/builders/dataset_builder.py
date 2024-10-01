@@ -73,7 +73,7 @@ class DatasetBuilder(ABC):
         mode: Literal["add", "create", "overwrite"] = "create",
         flush_every_n_samples: int | None = None,
         compact_every_n_transactions: int | None = None,
-        check_integrity: Literal["raise", "warn", "none"] = "none",
+        check_integrity: Literal["raise", "warn", "none"] = "raise",
     ) -> Dataset:
         """Build the dataset.
 

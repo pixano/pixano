@@ -67,6 +67,7 @@ class TestDatasetBuilder:
             flush_every_n_samples=flush_every_n_samples,
             compact_every_n_transactions=compact_every_n_transactions,
             mode="create",
+            check_integrity=check_integrity,
         )
         assert dataset_builder_image_bboxes_keypoint.info.description == "Description dataset_image_bboxes_keypoint."
 
