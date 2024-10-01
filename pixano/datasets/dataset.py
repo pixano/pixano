@@ -20,7 +20,7 @@ from pydantic import ConfigDict
 
 from pixano.datasets.queries import TableQueryBuilder
 from pixano.datasets.utils.errors import DatasetAccessError, DatasetPaginationError
-from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_errors
+from pixano.datasets.utils.integrity import IntegrityCheck, check_table_integrity, handle_integrity_errors
 from pixano.features import SchemaGroup, Source, ViewEmbedding, is_view_embedding
 from pixano.utils.python import to_sql_list
 
@@ -507,7 +507,7 @@ class Dataset:
 
         table = self.open_table(table_name)
         if raise_or_warn != "none":
-            handle_errors(
+            handle_integrity_errors(
                 check_table_integrity(table, table_name, self, data, False, ignore_integrity_checks), raise_or_warn
             )
         for d in data:
@@ -673,7 +673,7 @@ class Dataset:
 
         table = self.open_table(table_name)
         if raise_or_warn != "none":
-            handle_errors(
+            handle_integrity_errors(
                 check_table_integrity(table, table_name, self, data, True, ignore_integrity_checks), raise_or_warn
             )
         set_ids = {item.id for item in data}

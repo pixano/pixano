@@ -277,7 +277,7 @@ def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, st
     return check_errors
 
 
-def handle_errors(
+def handle_integrity_errors(
     check_errors: list[tuple[IntegrityCheck, str, str, str, Any]],
     raise_or_warn: Literal["raise", "warn"] = "raise",
 ):
