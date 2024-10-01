@@ -99,14 +99,13 @@ def test_get_integrity_checks_from_schemas(two_difficult_bboxes_from_dataset_mul
 def test_check_table_integrity_defined_id(
     dataset_multi_view_tracking_and_image, two_difficult_bboxes_from_dataset_multiview_tracking_and_image
 ):
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
     bboxes[0].id = ""
     bboxes[1].id = "unique_id"
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 1
     assert errors[0] == (IntegrityCheck.DEFINED_ID, "bbox_image", "id", "", "")
 
@@ -114,15 +113,14 @@ def test_check_table_integrity_defined_id(
 def test_check_table_integrity_defined_ref_ignore(
     dataset_multi_view_tracking_and_image, two_difficult_bboxes_from_dataset_multiview_tracking_and_image
 ):
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
     bboxes[0].id = ""
     bboxes[1].id = "unique_id"
     errors = check_table_integrity(
-        table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes, ignore_checks=[IntegrityCheck.DEFINED_ID]
+        "bbox_image", dataset_multi_view_tracking_and_image, bboxes, ignore_checks=[IntegrityCheck.DEFINED_ID]
     )
     assert errors == []
 
@@ -131,26 +129,25 @@ def test_check_table_integrity_unique_id(
     dataset_multi_view_tracking_and_image, two_difficult_bboxes_from_dataset_multiview_tracking_and_image
 ):
     # Test no error
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     # Test one error with updating is False
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
     bboxes[1].id = "unique_id"
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 1
     assert errors[0] == (IntegrityCheck.UNIQUE_ID, "bbox_image", "id", "bbox_image_0", "bbox_image_0")
 
     # Test updating is True
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes, True)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes, True)
     assert errors == []
 
     # Test two errors
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
     bboxes[0].id = "not_unique_id"
     bboxes[1].id = "not_unique_id"
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 2
     assert errors == [
         (IntegrityCheck.UNIQUE_ID, "bbox_image", "id", "not_unique_id", "not_unique_id"),
@@ -161,15 +158,14 @@ def test_check_table_integrity_unique_id(
 def test_check_table_integrity_ref_name(
     dataset_multi_view_tracking_and_image, two_difficult_bboxes_from_dataset_multiview_tracking_and_image
 ):
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
     bboxes[0].id = "unique_id_0"
     bboxes[1].id = "unique_id_1"
     bboxes[0].view_ref.name = "not_image"
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 1
     assert errors[0] == (
         IntegrityCheck.REF_NAME,
@@ -187,8 +183,7 @@ def test_check_table_integrity_ref_type(
     ref_attribute,
     ref_name,
 ):
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
@@ -197,7 +192,7 @@ def test_check_table_integrity_ref_type(
     ref_attr = getattr(bboxes[0], ref_attribute)
     ref_attr.name = ref_name
     setattr(bboxes[0], ref_attribute, ref_attr)
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 1
     assert errors[0] == (
         IntegrityCheck.REF_TYPE,
@@ -212,8 +207,7 @@ def test_check_table_integrity_ref_id(
     dataset_multi_view_tracking_and_image,
     two_difficult_bboxes_from_dataset_multiview_tracking_and_image,
 ):
-    table = dataset_multi_view_tracking_and_image.open_table("bbox_image")
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, None)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, None)
     assert errors == []
 
     bboxes = [bbox.model_copy(deep=True) for bbox in two_difficult_bboxes_from_dataset_multiview_tracking_and_image]
@@ -221,7 +215,7 @@ def test_check_table_integrity_ref_id(
     bboxes[1].id = "unique_id_1"
     bboxes[0].view_ref.id = "not_image_id"
     bboxes[1].source_ref.id = "not_source_id"
-    errors = check_table_integrity(table, "bbox_image", dataset_multi_view_tracking_and_image, bboxes)
+    errors = check_table_integrity("bbox_image", dataset_multi_view_tracking_and_image, bboxes)
     assert len(errors) == 2
     assert errors == [
         (

@@ -508,7 +508,7 @@ class Dataset:
         table = self.open_table(table_name)
         if raise_or_warn != "none":
             handle_integrity_errors(
-                check_table_integrity(table, table_name, self, data, False, ignore_integrity_checks), raise_or_warn
+                check_table_integrity(table_name, self, data, False, ignore_integrity_checks), raise_or_warn
             )
         for d in data:
             d.created_at = datetime.now()
@@ -530,7 +530,7 @@ class Dataset:
     ) -> list[DatasetItem] | DatasetItem:
         """Add dataset items.
 
-        .. warning::
+        Warn:
             Does not test for integrity of the data.
 
         Args:
@@ -565,8 +565,8 @@ class Dataset:
                 self.add_data(
                     table_name,
                     table_data,
-                    [IntegrityCheck.REF_ID, IntegrityCheck.REF_NAME, IntegrityCheck.REF_TYPE],
-                    raise_or_warn,
+                    [],
+                    "none",
                 )
         return dataset_items if batch else dataset_items[0]
 
@@ -674,7 +674,7 @@ class Dataset:
         table = self.open_table(table_name)
         if raise_or_warn != "none":
             handle_integrity_errors(
-                check_table_integrity(table, table_name, self, data, True, ignore_integrity_checks), raise_or_warn
+                check_table_integrity(table_name, self, data, True, ignore_integrity_checks), raise_or_warn
             )
         set_ids = {item.id for item in data}
         ids_found: dict[str, datetime] = {}
@@ -723,7 +723,7 @@ class Dataset:
     ) -> list[DatasetItem] | tuple[list[DatasetItem], list[DatasetItem]]:
         """Update dataset items.
 
-        .. warning::
+        Warn:
             Does not test for integrity of the data.
 
         Args:
@@ -760,8 +760,8 @@ class Dataset:
                     table_name,
                     table_data,
                     return_separately=True,
-                    ignore_integrity_checks=[IntegrityCheck.REF_ID, IntegrityCheck.REF_NAME, IntegrityCheck.REF_TYPE],
-                    raise_or_warn=raise_or_warn,
+                    ignore_integrity_checks=[],
+                    raise_or_warn="none",
                 )
                 for row in updated:
                     updated_ids.add(row.item_ref.id if table_name != SchemaGroup.ITEM.value else row.id)

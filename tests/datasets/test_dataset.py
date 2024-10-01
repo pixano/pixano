@@ -882,23 +882,6 @@ class TestDataset:
         with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):
             dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
 
-        data = [new_item]
-        with pytest.raises(
-            DatasetIntegrityError,
-            match=re.escape("Integrity check errors:\n- The id image_1 is not unique in table image.\n"),
-        ):
-            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
-
-        data = [new_item, new_item]
-        with pytest.raises(
-            DatasetIntegrityError,
-            match=(
-                "Integrity check errors:\n- The id image_1 is not unique in table image.\n- The id image_1 "
-                "is not unique in table image.\n"
-            ),
-        ):
-            dataset_image_bboxes_keypoint_copy.add_dataset_items(data)
-
     def test_delete_data(self, dataset_image_bboxes_keypoint_copy: Dataset):
         dataset_image_bboxes_keypoint_copy.get_data("item", ids=["0", "1"])[0]
         ids_not_found = dataset_image_bboxes_keypoint_copy.delete_data("item", ids=["0", "1", "-1"])
@@ -1016,15 +999,6 @@ class TestDataset:
         item = dataset_image_bboxes_keypoint_copy.get_dataset_items(ids=["1"])[0]
         updated_item = item.model_copy()
         updated_item.id = "0"
-
-        with pytest.raises(
-            ValueError,
-            match=(
-                "Integrity check errors:\n- The id image_1 is not unique in table image.\n- The id image_1 "
-                "is not unique in table image.\n"
-            ),
-        ):
-            dataset_image_bboxes_keypoint_copy.update_dataset_items([updated_item, updated_item])
 
         data = [updated_item, "0"]
         with pytest.raises(ValueError, match="All data must be instances of the same DatasetItem."):

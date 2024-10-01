@@ -11,7 +11,6 @@ from typing import Any, Literal, cast
 
 import shortuuid
 from lancedb.pydantic import LanceModel
-from lancedb.table import LanceTable
 from pydantic import create_model
 from typing_extensions import TYPE_CHECKING
 
@@ -77,7 +76,7 @@ def get_integry_checks_from_schemas(
         - field_name: Field name.
         - field: Field value.
     """
-    checks: list[list[tuple[str, str, str, str, Any]]] = [[] for check in IntegrityCheck]
+    checks: list[list[tuple[str, str, str, str, Any]]] = [[] for _ in IntegrityCheck]
     for schema in schemas:
         schema_id = schema.id
         check_id = shortuuid.uuid()
@@ -104,20 +103,19 @@ def get_integry_checks_from_schemas(
 
 
 def check_table_integrity(
-    table: LanceTable,
     table_name: str,
     dataset: "Dataset",
     schemas: list[BaseSchema] | None = None,
     updating: bool = False,
     ignore_checks: list[IntegrityCheck] | None = None,
 ) -> list[tuple[IntegrityCheck, str, str, str, Any]]:
-    """Check the integrity of a table.
+    """Check the integrity of schemas against a table.
 
     Args:
-        table: Table to check.
         table_name: Table name.
         dataset: Dataset.
-        schemas: List of schemas to insert in table. If None, the schemas are extracted from the table.
+        schemas: List of schemas to insert in table. If None, the table is checked, otherwise the schemas are checked
+            against the table.
         updating: If True, the table is being updated.
         ignore_checks: List of integrity checks to ignore.
 
@@ -129,6 +127,8 @@ def check_table_integrity(
         - schema_id: Schema id.
         - field: Field value.
     """
+    table = dataset.open_table(table_name)
+
     if ignore_checks is not None:
         ignore_checks_set: set[IntegrityCheck] = {IntegrityCheck(check) for check in ignore_checks}
     else:
@@ -272,8 +272,8 @@ def check_dataset_integrity(dataset: "Dataset") -> list[tuple[IntegrityCheck, st
         - field: Field value.
     """
     check_errors: list[tuple[IntegrityCheck, str, str, str, Any]] = []
-    for table_name, table in dataset.open_tables(names=None, exclude_embeddings=False).items():
-        check_errors.extend(check_table_integrity(table, table_name, dataset))
+    for table_name in dataset.schema.schemas.keys():
+        check_errors.extend(check_table_integrity(table_name, dataset))
     return check_errors
 
 
