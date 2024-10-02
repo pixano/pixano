@@ -213,6 +213,9 @@ def check_table_integrity(
                 field = cast(SchemaRef, field)
                 if field_name == "":
                     continue
+                # If the field is empty, the reference is to the table itself so no need to check
+                if field.id == "":
+                    continue
                 if field.name not in schemas_refs_to_check:
                     schemas_refs_to_check[field.name] = []
                 schemas_refs_to_check[field.name].append((check_id, schema_id, field, field_name))
