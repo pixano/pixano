@@ -93,7 +93,7 @@ License: CECILL-C
 
       const image: HTMLImageElement = new Image();
       image.src = img.toDataURL();
-      images[key] = [{id: value.id, element: image}];
+      images[key] = [{ id: value.id, element: image }];
     });
 
     await Promise.all(promises);

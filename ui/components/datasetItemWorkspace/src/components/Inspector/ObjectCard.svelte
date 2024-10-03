@@ -111,7 +111,7 @@ License: CECILL-C
           };
           const save_item: SaveItem = {
             change_type: "update",
-            object,   //TODO should be entity ?
+            object, //TODO should be entity ?
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
           changedObj = true;
