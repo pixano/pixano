@@ -10,7 +10,7 @@ License: CECILL-C
   import {
     type DatasetItem,
     type DatasetInfo,
-    type DatasetItemSave,
+    type SaveItem,
     Image,
     PrimaryButton,
     SequenceFrame,
@@ -19,6 +19,7 @@ License: CECILL-C
   import { api } from "@pixano/core/src";
   import {
     datasetsStore,
+    datasetSchema,
     isLoadingNewItemStore,
     modelsStore,
     saveCurrentItemStore,
@@ -49,6 +50,7 @@ License: CECILL-C
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
     api.getDataset(dataset.id).then((ds) => {
+      datasetSchema.set(ds.dataset_schema);
       api
         .getDatasetItem(dataset.id, encodeURIComponent(id))
         .then((item) => {
@@ -112,9 +114,35 @@ License: CECILL-C
     isLoadingNewItem = value;
   });
 
-  async function handleSaveItem(savedItem: DatasetItemSave) {
-    await api.postDatasetItem(selectedDataset.id, savedItem);
-    handleSelectItem(selectedDataset, currentItemId);
+  async function handleSaveItem(data: SaveItem[]) {
+    //entities first to avoid database consistency checks issues
+    data.sort((a, b) => {
+      if (
+        a.object.table_info.base_schema === "Entity" &&
+        b.object.table_info.base_schema !== "Entity"
+      )
+        return -1;
+      else if (
+        a.object.table_info.base_schema !== "Entity" &&
+        b.object.table_info.base_schema === "Entity"
+      )
+        return 1;
+      else return 0;
+    });
+    for (const savedItem of data) {
+      let route = savedItem.object.table_info.group;
+      if (route === "item") route = "items";
+      if (savedItem.change_type === "delete") {
+        await api.deleteSchema(route, selectedDataset.id, savedItem.object);
+      }
+      if (savedItem.change_type === "add") {
+        await api.addSchema(route, selectedDataset.id, savedItem.object);
+      }
+      if (savedItem.change_type === "update") {
+        await api.updateSchema(route, selectedDataset.id, savedItem.object);
+      }
+    }
+    //handleSelectItem(selectedDataset, currentItemId); //--> not necessary, but there is a bug when uncommented... need to invstigate
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

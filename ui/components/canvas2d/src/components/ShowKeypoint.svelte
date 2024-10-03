@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import type Konva from "konva";
   import { Rect } from "svelte-konva";
-  import type { KeypointsTemplate, Shape } from "@pixano/core";
+  import type { KeypointsTemplate, Shape, Reference } from "@pixano/core";
 
   import KeyPoints from "./keypoints/Keypoint.svelte";
   import { findRectBoundaries } from "../api/keypointsApi";
@@ -18,20 +18,20 @@ License: CECILL-C
   export let newShape: Shape;
   export let zoomFactor: number;
   export let colorScale: (id: string) => string;
-  export let viewId: string;
+  export let viewRef: Reference;
 
   const onDoubleClick = (keyPointsId: string) => {
     newShape = {
       status: "editing",
       shapeId: keyPointsId,
-      viewId,
+      viewRef,
       highlighted: "self",
       type: "none",
     };
   };
 
   const onKeypointsChange = (vertices: KeypointsTemplate["vertices"], id: string) => {
-    const image = stage.findOne(`#image-${viewId}`);
+    const image = stage.findOne(`#image-${viewRef.name}`);
     const imageSize = image.getSize();
     const normalizedVertices = vertices.map((point) => ({
       ...point,
@@ -43,14 +43,14 @@ License: CECILL-C
       type: "keypoints",
       vertices: normalizedVertices,
       shapeId: id,
-      viewId,
+      viewRef,
     };
   };
 </script>
 
 {#if keypoints}
   {#each keypoints as keypointStructure}
-    {#if keypointStructure.visible && keypointStructure.view_id == viewId}
+    {#if keypointStructure.visible && keypointStructure.viewRef.name == viewRef.name}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}

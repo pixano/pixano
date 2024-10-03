@@ -7,7 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type { DatasetItem, FeaturesValues, FeatureValues, ItemFeature } from "@pixano/core";
+import type { DatasetItem, FeaturesValues, FeatureValues } from "@pixano/core";
 import { Annotation } from "@pixano/core";
 
 import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";

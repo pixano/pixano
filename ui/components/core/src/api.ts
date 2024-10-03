@@ -12,7 +12,6 @@ import {
   //type DatasetItems,
   DatasetItem,
   type DatasetItemType,
-  type DatasetItemSave,
   DatasetBrowser,
   type DatasetBrowserType,
 } from "./lib/types/datasetTypes";
@@ -227,26 +226,85 @@ export async function getItemEmbeddings(
   return item;
 }
 
-export async function postDatasetItem(datasetId: string, item: DatasetItemSave) {
+// export async function postDatasetItem(datasetId: string, item: DatasetItemSave) {
+//   try {
+//     const response = await fetch(`/datasets/${datasetId}/items/${item.id}`, {
+//       headers: {
+//         Accept: "application/json",
+//         "Content-Type": "application/json",
+//       },
+//       body: JSON.stringify(item),
+//       method: "POST",
+//     });
+//     if (response.ok) {
+//       console.log(
+//         "api.postDatasetItem -",
+//         response.status,
+//         response.statusText,
+//         await response.text(),
+//       );
+//     }
+//   } catch (e) {
+//     console.log("api.postDatasetItem -", e);
+//   }
+// }
+
+export async function deleteSchema(route: string, ds_id: string, sch: Schema) {
   try {
-    const response = await fetch(`/datasets/${datasetId}/items/${item.id}`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(item),
-      method: "POST",
+    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+      method: "DELETE",
     });
-    if (response.ok) {
+    if (!response.ok) {
       console.log(
-        "api.postDatasetItem -",
+        "api.deleteSchema -",
         response.status,
         response.statusText,
         await response.text(),
       );
     }
   } catch (e) {
-    console.log("api.postDatasetItem -", e);
+    console.log("api.deleteSchema -", e);
+  }
+}
+
+export async function addSchema(route: string, ds_id: string, sch: Schema) {
+  try {
+    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      body: JSON.stringify(sch),
+    });
+    if (!response.ok) {
+      console.log("api.addSchema -", response.status, response.statusText, await response.text());
+    }
+  } catch (e) {
+    console.log("api.addSchema -", e);
+  }
+}
+
+export async function updateSchema(route: string, ds_id: string, sch: Schema) {
+  try {
+    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      method: "PUT",
+      body: JSON.stringify(sch),
+    });
+    if (!response.ok) {
+      console.log(
+        "api.updateSchema -",
+        response.status,
+        response.statusText,
+        await response.text(),
+      );
+    }
+  } catch (e) {
+    console.log("api.updateSchema -", e);
   }
 }
 

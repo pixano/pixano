@@ -9,7 +9,7 @@ License: CECILL-C
   import { afterUpdate, onDestroy, tick } from "svelte";
   import Konva from "konva";
   import { Rect, Group } from "svelte-konva";
-  import type { BBox, SelectionTool, Shape } from "@pixano/core";
+  import type { BBox, SelectionTool, Shape, Reference } from "@pixano/core";
 
   import { BBOX_STROKEWIDTH } from "../lib/constants";
   import {
@@ -24,25 +24,25 @@ License: CECILL-C
   export let bbox: BBox;
   export let colorScale: (id: string) => string;
   export let zoomFactor: number;
-  export let viewId: string;
+  export let viewRef: Reference;
   export let newShape: Shape;
   export let selectedTool: SelectionTool;
 
   let currentRect: Konva.Rect = stage.findOne(`#rect${bbox.id}`);
 
   const updateDimensions = (rect: Konva.Rect) => {
-    const coords = getNewRectangleDimensions(rect, stage, viewId);
+    const coords = getNewRectangleDimensions(rect, stage, viewRef);
     newShape = {
       status: "editing",
       type: "bbox",
       shapeId: bbox.id,
-      viewId,
+      viewRef,
       coords,
     };
   };
 
   const resizeStroke = () => {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     const correctedRect = currentRect.getClientRect({
       skipTransform: false,
       skipShadow: true,
@@ -66,7 +66,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: bbox.id,
-      viewId,
+      viewRef,
       highlighted: "self",
       type: "none",
     };
@@ -77,7 +77,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: bbox.id,
-        viewId,
+        viewRef,
         highlighted: "all",
         type: "none",
       };
@@ -94,10 +94,10 @@ License: CECILL-C
   afterUpdate(async () => {
     await tick();
     toggleIsEditingBBox(bbox.editing ? "on" : "off", stage, bbox.id);
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     currentRect = viewLayer.findOne(`#rect${bbox.id}`);
     if (currentRect) {
-      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewId, currentRect, bbox.id));
+      currentRect.on("dragmove", (e) => onDragMove(e, stage, viewRef, currentRect, bbox.id));
       currentRect.on("transform", () => resizeStroke());
       currentRect.on("transformend dragend", () => {
         updateDimensions(currentRect);

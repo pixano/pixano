@@ -12,7 +12,7 @@ License: CECILL-C
     type EditShape,
     type Tracklet,
     type VideoDatasetItem,
-    type ItemObject,
+    type ImagesPerView,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
@@ -58,14 +58,18 @@ License: CECILL-C
   let expanding = false;
   let currentFrame: number = 0;
 
-  let imagesPerView: Record<string, HTMLImageElement[]> = {};
+  let imagesPerView: ImagesPerView = {};
 
-  let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
+  let imagesFilesUrls: Record<string, Record<string, string>[]> = Object.entries(
+    selectedItem.views,
+  ).reduce(
     (acc, [key, value]) => {
-      acc[key] = value.map((view) => view.data.url);
+      acc[key] = value.map((view) => {
+        return { id: view.id, url: view.data.url as string };
+      });
       return acc;
     },
-    {} as Record<string, string[]>,
+    {} as Record<string, Record<string, string>[]>,
   );
 
   let isLoaded = false;
@@ -73,10 +77,10 @@ License: CECILL-C
   onMount(() => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      image.src = `/${urls[0]}`;
+      image.src = `/${urls[0].url}`;
       imagesPerView = {
         ...imagesPerView,
-        [key]: [image],
+        [key]: [{ id: urls[0].id, element: image }],
       };
     });
 
@@ -93,12 +97,14 @@ License: CECILL-C
   const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      const src = `/${urls[imageIndex]}`;
+      const src = `/${urls[imageIndex].url}`;
       if (!src) return;
       image.src = src;
       imagesPerView = {
         ...imagesPerView,
-        [key]: [...(imagesPerView[key] || []), image].slice(-2),
+        [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
+          -2,
+        ),
       };
     });
 

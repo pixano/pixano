@@ -252,7 +252,7 @@ const bboxSchema = z
     is_normalized: z.boolean(),
   })
   .passthrough();
-export type BBoxType = z.infer<typeof bboxSchema>; //export if needed
+export type BBoxType = z.infer<typeof bboxSchema>;
 
 export class BBox extends Annotation {
   data: BBoxType & AnnotationType;
@@ -310,10 +310,12 @@ export class Mask extends Annotation {
   data: MaskType & AnnotationType;
 
   //UI only fields
-  //opacity?: number;
+  opacity?: number;
   visible?: boolean;
   editing?: boolean;
-  //strokeFactor?: number;
+  strokeFactor?: number;
+  svg: string[];
+  catId?: number;  //really needed ??
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
@@ -457,7 +459,7 @@ export class DatasetItem implements DatasetItemType {
   item: Item;
   entities: Record<string, Entity[]>;
   annotations: Record<string, Annotation[]>;
-  views: Record<string, View | View[]>;
+  views: Record<string, Image | SequenceFrame[]>;
 
   //UI only fields
   datasetId: string;
@@ -498,28 +500,45 @@ export type ThreeDimensionsDatasetItem = DatasetItem & {
 };
 
 // DATASET
+
+export interface FieldInfo {
+  type: string;
+  collection: boolean;
+}
+export interface DS_Schema {
+  base_schema: string;
+  fields: Record<string, FieldInfo>;
+  schema: string;
+}
+export interface DatasetSchema {
+  relations: Record<string, string[]>;
+  schemas: Record<string, DS_Schema>;
+  groups: {
+    annotations: string[];
+    entities: string[];
+    item: string[];
+    views: string[];
+    embeddings: string[];
+  };
+}
+
 export interface Dataset {
   id: string;
   path: string;
   previews_path: string;
   media_dir: string;
   thumbnail: string;
-  dataset_schema: {
-    //not used right now, maybe we will make a real type if needed
-    relations: object;
-    schemas: object;
-    group: object;
-  };
+  dataset_schema: DatasetSchema;
   features_values: object; //not used right now, maybe we will make a real type if needed
   info: DatasetInfo;
 }
 
-export type DatasetItemSave = {
-  id: string;
-  split: string;
-  item_features: Record<string, ItemFeature>;
-  save_data: SaveItem[];
-};
+// export type DatasetItemSave = {
+//   id: string;
+//   split: string;
+//   item_features: Record<string, ItemFeature>;
+//   save_data: SaveItem[];
+// };
 
 export interface DatasetItems {
   items: Array<DatasetItem>;
@@ -558,6 +577,12 @@ interface ViewData extends Base["data"] {
 export type ItemView = Base & {
   data: ViewData;
 };
+
+export type HTMLImage = {
+  id: string;
+  element: HTMLImageElement
+}
+export type ImagesPerView = Record<string, HTMLImage[]>
 // export interface ItemView {
 //   id: string;
 //   data: {
@@ -621,25 +646,22 @@ export type TrackletItem = {
 //   | Tracklet
 //   | ItemObjectBase;
 
-export interface SaveItemAddUpdate {
-  change_type: "add_or_update";
-  //ref_name: string;
-  kind: "annotation" | "item" | "entity";
-  is_video: boolean;
-  id: string;
-  // data: SaveDataAddUpdate & {
-  //   entity_ref?: Record<string, string>;
-  // };
-}
+export type Schema = Annotation | Entity | Item | View;
 
-export interface SaveItemDelete {
+interface SaveBase {
+  object: Annotation | Entity | Item;
+}
+export type SaveAdd = SaveBase & {
+  change_type: "add";
+  kind: "annotations" | "items" | "entities";
+};
+export type SaveUpdate = SaveBase & {
+  change_type: "update";
+};
+export type SaveDelete = SaveBase & {
   change_type: "delete";
-  kind: "annotation" | "item" | "entity";
-  is_video: boolean;
-  id: string;
-}
-
-export type SaveItem = SaveItemAddUpdate | SaveItemDelete;
+};
+export type SaveItem = SaveAdd | SaveUpdate | SaveDelete;
 
 export type VideoItemBBox = BBox & TrackletItem;
 export type VideoItemKeypoints = ItemKeypoints & TrackletItem;
@@ -725,7 +747,7 @@ export interface FeaturesValues {
 //not used anymore...
 export interface CanvasMask {
   id: string;
-  viewId: string;
+  viewRef: Reference;
   svg: MaskSVG;
   rle?: MaskType;
   catId: number;
@@ -742,7 +764,7 @@ export type MaskSVG = string[];
 // Need to be reworker vs back BBox
 // export interface BBox {
 //   id: string;
-//   viewId: string;
+//   viewRef: Reference;
 //   bbox: Array<number>; // should be rename - current coordinate
 //   tooltip: string;
 //   catId: number;
@@ -786,7 +808,7 @@ export interface Label {
   categoryId: number;
   categoryName: string;
   sourceId: string;
-  viewId: string;
+  viewRef: Reference;
   confidence?: number;
   bboxOpacity: number;
   maskOpacity: number;

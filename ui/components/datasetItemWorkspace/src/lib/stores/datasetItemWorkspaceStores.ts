@@ -97,7 +97,7 @@ export const itemKeypoints = derived([annotations, itemMetas], ([$annotations, $
   const m_keypoints: KeypointsTemplate[] = [];
   for (const ann of $annotations) {
     if (ann.is_keypoints) {
-      const item_keypoints = mapObjectToKeypoints(object, $itemMetas?.views);
+      const item_keypoints = mapObjectToKeypoints(ann, $itemMetas?.views);
       for (const keypoints of item_keypoints) m_keypoints.push(keypoints);
     }
   }

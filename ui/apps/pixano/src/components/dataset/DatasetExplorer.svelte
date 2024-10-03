@@ -138,7 +138,7 @@ License: CECILL-C
   //   tableItem.push({ name: "id", dtype: "int", value: item.id });
   //   tableItem.push({ name: "split", dtype: "str", value: item.split });
 
-  //   Object.values(item.views).forEach((view: ItemView) => {
+  //   Object.values(item.views).forEach((view: View) => {
   //     tableItem.push({
   //       name: view.id,
   //       dtype: "image",

@@ -8,16 +8,17 @@ License: CECILL-C
   // Imports
   import { Button } from "@pixano/core/src";
 
-  import type { Annotation, Shape, SaveItem } from "@pixano/core";
+  import { Annotation, Entity, type Shape, type SaveItem } from "@pixano/core";
 
   import {
     newShape,
     annotations,
+    entities,
     itemMetas,
     canSave,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
   import type {
     CreateObjectInputs,
     ObjectProperties,
@@ -25,7 +26,11 @@ License: CECILL-C
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import { currentFrameIndex, objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
-  import { defineCreatedObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import {
+    defineCreatedObject,
+    defineCreatedEntity,
+    addOrUpdateSaveItem,
+  } from "../../lib/api/objectsApi";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -41,9 +46,21 @@ License: CECILL-C
   const handleFormSubmit = () => {
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     let newObject: Annotation | null = null;
+    let newEntity: Entity | null = null;
     annotations.update((oldObjects) => {
       if (shape.status !== "saving") return oldObjects;
-      newObject = defineCreatedObject(shape, $itemMetas.type, features, $currentFrameIndex);
+      newEntity = defineCreatedEntity(shape, features, $datasetSchema);
+      entities.update((ents) => {
+        if (newEntity) ents.push(newEntity);
+        return ents;
+      });
+      newObject = defineCreatedObject(
+        newEntity,
+        shape,
+        $itemMetas.type,
+        features,
+        $currentFrameIndex,
+      );
       objectIdBeingEdited.set(newObject?.id || null);
       const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
         object.highlighted = "none";
@@ -60,7 +77,6 @@ License: CECILL-C
               const save_item: SaveItem = {
                 change_type: "add_or_update",
                 kind: shape.type, //TODO correct kind //this should represent the annotation table to be refered...?
-                is_video: true,
                 data: { ...box, entity_ref: { id: newObject.id, name: "top_entity" } },
               };
               saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
@@ -71,7 +87,6 @@ License: CECILL-C
               const save_item: SaveItem = {
                 change_type: "add_or_update",
                 ref_name: shape.type, //this should represent the annotation table to be refered...?
-                is_video: true,
                 data: { ...kpt, entity_ref: { id: newObject.id, name: "top_entity" } },
               };
               saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
@@ -81,7 +96,6 @@ License: CECILL-C
           const save_item_tracklet: SaveItem = {
             change_type: "add_or_update",
             ref_name: "tracklet",
-            is_video: true,
             data: {
               ...newObject.track[0],
               entity_ref: { id: newObject.id, name: "top_entity" },
@@ -92,7 +106,6 @@ License: CECILL-C
           const save_item_track: SaveItem = {
             change_type: "add_or_update",
             ref_name: "top_entity",
-            is_video: true,
             data: {
               id: newObject.id,
               //item_id: newObject.item_id,
@@ -106,56 +119,18 @@ License: CECILL-C
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_track));
           //TODO Note: we may have to manage "spatial object" entity too...
         } else {
-          if (shape.type === "bbox" && newObject.is_bbox) {
-            const save_item: SaveItem = {
-              change_type: "add_or_update",
-              kind: "annotation", //TODO kind //this should represent the annotation table to be refered...?
-              is_video: false,
-              id: newObject.id,
-              //data: { ...newObject.bbox, entity_ref: { id: newObject.id, name: "top_entity" } },
-            };
-            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-            const save_item_entity: SaveItem = {
-              change_type: "add_or_update",
-              kind: "entity",
-              is_video: false,
-              data: {
-                id: newObject.id,
-                item_id: newObject.item_id,
-                source_id: newObject.source_id,
-                features: newObject.features,
-                ref_name: "top_entity",
-                entity_ref: { id: "", name: "" },
-              },
-            };
-            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
-          }
-          if (shape.type === "keypoints" && newObject.keypoints) {
-            const save_item: SaveItem = {
-              change_type: "add_or_update",
-              ref_name: shape.type, //this should represent the annotation table to be refered...?
-              is_video: false,
-              data: {
-                ...newObject.keypoints,
-                entity_ref: { id: newObject.id, name: "top_entity" },
-              },
-            };
-            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-            const save_item_entity: SaveItem = {
-              change_type: "add_or_update",
-              ref_name: "top_entity", //this should represent the annotation table to be refered...?
-              is_video: false,
-              data: {
-                id: newObject.id,
-                item_id: newObject.item_id,
-                source_id: newObject.source_id,
-                features: newObject.features,
-                ref_name: "top_entity",
-                entity_ref: { id: "", name: "" },
-              },
-            };
-            saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
-          }
+          const save_item: SaveItem = {
+            change_type: "add",
+            kind: "annotations",
+            object: newObject,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+          const save_item_entity: SaveItem = {
+            change_type: "add",
+            kind: "entities",
+            object: newEntity,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
         }
       }
       return [...objectsWithoutHighlighted, ...(newObject ? [newObject] : [])];

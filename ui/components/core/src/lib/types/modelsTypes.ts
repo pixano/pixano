@@ -7,7 +7,7 @@ License: CECILL-C
 // Imports
 import type { Tensor } from "onnxruntime-web";
 
-import type { MaskType, MaskSVG } from "./datasetTypes";
+import type { MaskType, MaskSVG, Reference } from "./datasetTypes";
 
 // Exports
 export interface LabeledClick {
@@ -49,7 +49,7 @@ export interface InteractiveImageSegmenter {
 
 export interface InteractiveImageSegmenterOutput {
   id: string;
-  viewId: string;
+  viewRef: Reference;
   label: string;
   catId: number;
   output: SegmentationResult; //??? or already transformed polygon ????

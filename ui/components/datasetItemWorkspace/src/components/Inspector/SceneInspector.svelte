@@ -10,7 +10,8 @@ License: CECILL-C
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
-  import { IconButton, Switch, type ItemFeature, type ItemView } from "@pixano/core/src";
+  import { IconButton, Switch, type ItemFeature } from "@pixano/core/src";
+  import { View, Image, SequenceFrame } from "@pixano/core";
 
   // Local imports
   import {
@@ -25,7 +26,7 @@ License: CECILL-C
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ItemMeta = {
-    fileName: string;
+    fileName: string | undefined;
     width: number;
     height: number;
     format: string;
@@ -40,14 +41,14 @@ License: CECILL-C
   let itemMeta: ItemMeta[] = [];
 
   itemMetas.subscribe((metas) => {
-    itemMeta = Object.values(metas.views || {}).map((view: ItemView | ItemView[]) => {
-      const image: ItemView = Array.isArray(view) ? view[0] : view;
+    itemMeta = Object.values(metas.views || {}).map((view: Image | SequenceFrame[]) => {
+      const image: Image = Array.isArray(view) ? view[0] : view;
       itemType = metas.type;
       return {
-        fileName: image.data.url.split("/").at(-1) as string,
-        width: image.data.width as number,
-        height: image.data.height as number,
-        format: image.data.format as string,
+        fileName: image.data.url.split("/").at(-1),
+        width: image.data.width,
+        height: image.data.height,
+        format: image.data.format,
         id: image.id,
       };
     });

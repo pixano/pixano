@@ -86,35 +86,14 @@ License: CECILL-C
 
   const deleteObject = () => {
     annotations.update((oldObjects) => oldObjects.filter((object) => object.id !== annotation.id));
-    // let del_ids: Record<string, string[]> = {};
-    // if (annotation.datasetItemType === "video") {
-    //   if (annotation.is_keypoints) {
-    //     del_ids["keypoints"] = (annotation as Keypoints).map((kpt) => kpt.id);
-    //   }
-    //   if (annotation.is_bbox) {
-    //     del_ids["bbox"] = annotation.boxes.map((box) => box.id);
-    //   }
-    //   del_ids["tracklet"] = annotation.track.map((tracklet) => tracklet.id);
-    //   del_ids["top_entity"] = [annotation.id];
-    // } else {
-    //   if (annotation.is_keypoints) {
-    //     del_ids["keypoints"] = [annotation.keypoints.id];
-    //   }
-    //   if (annotation.is_bbox) {
-    //     del_ids["bbox"] = [annotation.bbox.id];
-    //   }
-    //   if (annotation.is_mask) {
-    //     del_ids["mask"] = [annotation.mask.id];
-    //   }
-    //   del_ids["top_entity"] = [annotation.id];
-    // }
-    // const save_item: SaveItem = {
-    //   change_type: "delete",
-    //   ref_name: "", //don't need
-    //   is_video: annotation.datasetItemType === "video",
-    //   data: del_ids,
-    // };
-    // saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    const save_item: SaveItem = {
+      change_type: "delete",
+      object: annotation,
+    };
+    //TODO remove entities associated with ?
+    //...but here annotation should be entity in fact.
+    // So we have to found child annotations/entities of this entity, end delete them too
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
     canSave.set(true);
   };
 
@@ -131,18 +110,8 @@ License: CECILL-C
             },
           };
           const save_item: SaveItem = {
-            change_type: "add_or_update",
-            kind: "entity",
-            is_video: annotation.datasetItemType === "video",
-            id: object.id,
-            // data: {
-            //   id: object.id,
-            //   item_id: object.item_id,
-            //   //source_id: object.source_id,
-            //   features: object.features,
-            //   ref_name: "top_entity",
-            //   entity_ref: { id: "", name: "" },
-            // },
+            change_type: "update",
+            object,   //TODO should be entity ?
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
           changedObj = true;

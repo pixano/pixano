@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { FeaturesValues, DatasetItemSave, VideoObject } from "@pixano/core";
+  import type { FeaturesValues, VideoObject } from "@pixano/core";
   import {
     Annotation,
     // BBox,
@@ -14,6 +14,8 @@ License: CECILL-C
     Mask,
     Entity,
     DatasetItem,
+    type SaveItem,
+    type Schema,
   } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
@@ -37,7 +39,7 @@ License: CECILL-C
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
   export let models: string[] = [];
-  export let handleSaveItem: (item: DatasetItemSave) => Promise<void>;
+  export let handleSaveItem: (data: SaveItem[]) => Promise<void>;
   export let isLoading: boolean;
   export let canSaveCurrentItem: boolean;
   export let shouldSaveCurrentItem: boolean;
@@ -47,7 +49,7 @@ License: CECILL-C
 
   let embeddings: Embeddings = {};
 
-  const backToFrontAdapt = (ann: Annotation): Annotation => {
+  const back2front = (ann: Annotation): Annotation => {
     //find corresponding entity
     // Object.values(selectedItem.entities).forEach((entities) => {
     //   for (const entity of entities) {
@@ -59,7 +61,8 @@ License: CECILL-C
     //   }
     // });
     //TMP: my dataset doesn't have source name yet...
-    if (ann.data.source_ref.name == "") ann.data.source_ref.name = "Ground Truth"; //TMP
+    if (ann.data.source_ref.name == "" || ann.data.source_ref.name == "source")
+      ann.data.source_ref.name = "Ground Truth"; //TMP
 
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
@@ -84,9 +87,7 @@ License: CECILL-C
       //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
       (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
     }
-    //delete ann.data;
-
-    console.log("XXX backToFront", ann);
+    console.log("XXX back2front", ann);
 
     return ann;
   };
@@ -102,7 +103,7 @@ License: CECILL-C
           }
           //if not already in annotations, it's a new object from back
           //TMP before UI datamodel rework, we map back datamodel to front datamodel
-          return backToFrontAdapt(ann);
+          return back2front(ann);
         }),
       );
     }
@@ -145,17 +146,39 @@ License: CECILL-C
     }
   }
 
-  //$: console.log("Change in SaveData", $saveData);
+  export const front2back = (objs: SaveItem[]): SaveItem[] => {
+    const backObjs: SaveItem[] = [];
+    for (const obj of objs) {
+      const schema = structuredClone(obj.object);
+      //source_ref
+      schema.data.source_ref = { name: "source", id: "" };
+      //mask: URLE to CompressedRLE
+      if (
+        (obj.change_type === "add" || obj.change_type === "update") &&
+        schema.table_info.group === "annotations" &&
+        schema.table_info.base_schema === "CompressedRLE" &&
+        Array.isArray((schema as Mask).data.counts)
+      ) {
+        const mask = schema as Mask;
+        mask.data.counts = rleToString(mask.data.counts as number[]);
+      }
+
+      backObjs.push({ ...obj, object: schema });
+    }
+    return backObjs;
+  };
+
+  $: console.log("Change in SaveData", $saveData);
 
   const onSave = async () => {
     isSaving = true;
-    const savedItem: DatasetItemSave = {
-      id: selectedItem.id,
-      split: "split" in selectedItem ? (selectedItem.split as string) : "undefined",
-      save_data: $saveData,
-      item_features: $itemMetas.mainFeatures,
-    };
-    await handleSaveItem(savedItem);
+    // const savedItem: DatasetItemSave = {
+    //   id: selectedItem.id,
+    //   split: "split" in selectedItem ? (selectedItem.split as string) : "undefined",
+    //   save_data: $saveData,
+    //   item_features: $itemMetas.mainFeatures,
+    // };
+    await handleSaveItem(front2back($saveData));
     saveData.set([]);
     canSave.set(false);
     isSaving = false;

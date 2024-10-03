@@ -12,20 +12,20 @@ License: CECILL-C
   import { afterUpdate, onMount, onDestroy } from "svelte";
   import { Group, Image as KonvaImage, Layer, Stage } from "svelte-konva";
   import { writable, type Writable } from "svelte/store";
-  import { WarningModal } from "@pixano/core";
+  import { WarningModal, type ImagesPerView } from "@pixano/core";
 
   import { cn } from "@pixano/core/src";
   import type { LabeledClick, Box, InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type {
+  import {
     Mask,
     BBox,
     DatasetItem,
-    ItemView,
-    SelectionTool,
-    LabeledPointTool,
-    Shape,
-    KeypointsTemplate,
-    Vertex,
+    type SelectionTool,
+    type LabeledPointTool,
+    type Shape,
+    type KeypointsTemplate,
+    type Vertex,
+    type Reference,
   } from "@pixano/core";
 
   import {
@@ -55,7 +55,7 @@ License: CECILL-C
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let selectedTool: SelectionTool;
   export let newShape: Shape;
-  export let imagesPerView: Record<string, HTMLImageElement[]>;
+  export let imagesPerView: ImagesPerView;
   export let colorScale: (value: string) => string;
   export let isVideo: boolean = false;
   export let imageSmoothing: boolean = true;
@@ -70,7 +70,7 @@ License: CECILL-C
   let viewWithoutEmbeddings = "";
   let numberOfBBoxes: number;
   let prevSelectedTool: SelectionTool;
-  let zoomFactor: Record<string, number> = {}; // {viewId: zoomFactor}
+  let zoomFactor: Record<string, number> = {}; // {view_name: zoomFactor}
 
   $: {
     if (
@@ -85,8 +85,8 @@ License: CECILL-C
 
   $: {
     if (canvasSize && isReady) {
-      for (const viewId of Object.keys(imagesPerView)) {
-        scaleView(viewId);
+      for (const view_name of Object.keys(imagesPerView)) {
+        scaleView(view_name);
       }
       canvasSize = 0;
     }
@@ -170,8 +170,8 @@ License: CECILL-C
   // ********** INIT ********** //
 
   onMount(() => {
-    Object.keys(imagesPerView).forEach((viewId) => {
-      zoomFactor[viewId] = 1;
+    Object.keys(imagesPerView).forEach((view_name) => {
+      zoomFactor[view_name] = 1;
     });
     loadItem();
     // Fire stage events observers
@@ -196,8 +196,8 @@ License: CECILL-C
     }
 
     // Add transformer to view layers
-    Object.keys(imagesPerView).forEach((viewId) => {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    Object.keys(imagesPerView).forEach((view_name) => {
+      const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
       if (viewLayer) viewLayer.add(transformer);
     });
 
@@ -208,14 +208,14 @@ License: CECILL-C
 
   let scaleOnFirstLoad = {};
   let viewReady = {};
-  Object.keys(imagesPerView).forEach((viewId) => {
+  Object.keys(imagesPerView).forEach((view_name) => {
     //we need a first scaleView for image only. If video, the scale is done elsewhere
-    scaleOnFirstLoad[viewId] = !isVideo;
-    viewReady[viewId] = false;
+    scaleOnFirstLoad[view_name] = !isVideo;
+    viewReady[view_name] = false;
   });
 
-  const getCurrentImage = (viewId: string) =>
-    imagesPerView[viewId][imagesPerView[viewId].length - 1];
+  const getCurrentImage = (view_name: string) =>
+    imagesPerView[view_name][imagesPerView[view_name].length - 1].element;
 
   function loadItem() {
     const keys = Object.keys(imagesPerView);
@@ -228,16 +228,16 @@ License: CECILL-C
     // Clear annotations in case a previous item was already loaded
     if (currentId) clearAnnotationAndInputs();
 
-    keys.forEach((viewId) => {
-      const currentImage = getCurrentImage(viewId);
+    keys.forEach((view_name) => {
+      const currentImage = getCurrentImage(view_name);
 
       currentImage.onload = () => {
-        if (scaleOnFirstLoad[viewId]) {
-          scaleView(viewId);
-          scaleOnFirstLoad[viewId] = false;
+        if (scaleOnFirstLoad[view_name]) {
+          scaleView(view_name);
+          scaleOnFirstLoad[view_name] = false;
         }
-        //scaleElements(viewId);
-        viewReady[viewId] = true;
+        //scaleElements(view_name);
+        viewReady[view_name] = true;
         if (Object.values(viewReady).every(Boolean)) {
           isReady = true;
         }
@@ -248,8 +248,8 @@ License: CECILL-C
     currentId = selectedItemId;
   }
 
-  function scaleView(viewId: ItemView["id"]) {
-    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+  function scaleView(view_name: string) {
+    const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
     if (!viewLayer) {
       console.log("Canvas2D.scaleView - Error: Cannot scale");
       return;
@@ -260,7 +260,7 @@ License: CECILL-C
 
     // Get view index
     const keys = Object.keys(imagesPerView);
-    const i = keys.findIndex((view) => view === viewId);
+    const i = keys.findIndex((view) => view === view_name);
 
     // Calculate view position in grid
     const grid_pos = {
@@ -269,13 +269,13 @@ License: CECILL-C
     };
 
     // Fit stage
-    const currentImage = getCurrentImage(viewId);
+    const currentImage = getCurrentImage(view_name);
     const scaleByHeight = maxHeight / currentImage.height;
     const scaleByWidth = maxWidth / currentImage.width;
     const scale = Math.min(scaleByWidth, scaleByHeight);
 
     // Set zoomFactor for view
-    zoomFactor[viewId] = scale;
+    zoomFactor[view_name] = scale;
     viewLayer.scale({ x: scale, y: scale });
 
     // Center view
@@ -286,14 +286,14 @@ License: CECILL-C
   }
 
   // Unused ... We could remove ?
-  // function scaleElements(viewId: ItemView["id"]) {
-  //   const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  // function scaleElements(view_name: string) {
+  //   const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
   //   if (!viewLayer) {
   //     console.log("Canvas2D.scaleElements - Error: Cannot scale");
   //     return;
   //   }
 
-  //   const zoom = zoomFactor[viewId];
+  //   const zoom = zoomFactor[view_name];
 
   //   const scaleCircle = (circle: Konva.Circle) => {
   //     circle.radius(INPUTPOINT_RADIUS / zoom);
@@ -349,7 +349,7 @@ License: CECILL-C
   //     scaleMaskGroup(maskGroup);
   //   }
 
-  //   const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
+  //   const currentMaskGroup = findOrCreateCurrentMask(view_name, stage);
   //   if (currentMaskGroup) {
   //     scaleMaskGroup(currentMaskGroup);
   //   }
@@ -477,33 +477,33 @@ License: CECILL-C
     });
   };
 
-  function findViewId(shape: Konva.Shape): string {
-    let viewId: string;
+  function findViewName(shape: Konva.Shape): string {
+    let view_name: string;
     shape.getAncestors().forEach((node) => {
       if (node instanceof Konva.Layer) {
-        viewId = node.id();
+        view_name = node.id();
       }
     });
-    return viewId;
+    return view_name;
   }
 
   // ********** BOUNDING BOXES AND MASKS ********** //
 
-  async function updateCurrentMask(viewId: string) {
-    const points = getInputPoints(viewId);
-    const box = getInputRect(viewId);
+  async function updateCurrentMask(viewRef: Reference) {
+    const points = getInputPoints(viewRef.name);
+    const box = getInputRect(viewRef.name);
     const input = {
-      image: getCurrentImage(viewId),
-      embedding: viewId in embeddings ? embeddings[viewId] : null,
+      image: getCurrentImage(viewRef.name),
+      embedding: viewRef.name in embeddings ? embeddings[viewRef.name] : null,
       points: points,
       box: box,
     };
 
     if (selectedTool.postProcessor == null) {
       clearAnnotationAndInputs();
-    } else if (embeddings[viewId] == null) {
+    } else if (embeddings[viewRef.name] == null) {
       viewEmbeddingModal = true;
-      viewWithoutEmbeddings = viewId;
+      viewWithoutEmbeddings = viewRef.name;
       clearAnnotationAndInputs();
     } else {
       const results = await selectedTool.postProcessor.segmentImage(input);
@@ -512,23 +512,23 @@ License: CECILL-C
           masksImageSVG: results.masksImageSVG,
           rle: results.rle,
           type: "mask",
-          viewId,
+          viewRef,
           itemId: selectedItemId,
-          imageWidth: getCurrentImage(viewId).width,
-          imageHeight: getCurrentImage(viewId).height,
+          imageWidth: getCurrentImage(viewRef.name).width,
+          imageHeight: getCurrentImage(viewRef.name).height,
           status: "saving",
         };
 
-        const currentMaskGroup = findOrCreateCurrentMask(viewId, stage);
-        const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-        const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
+        const currentMaskGroup = findOrCreateCurrentMask(viewRef.name, stage);
+        const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+        const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
 
         // always clean existing masks before adding a new currentAnn
         currentMaskGroup.removeChildren();
 
         currentAnn = {
           id: nanoid(10),
-          viewId: viewId,
+          viewRef,
           label: "",
           catId: -1,
           output: results,
@@ -536,17 +536,26 @@ License: CECILL-C
           input_box: box,
           validated: false,
         };
-        const currentMask = <Mask>{
+        const now = new Date(Date.now()).toISOString();
+        //TODO: need to think about this...
+        const currentMask: Mask = new Mask({
           id: currentAnn.id,
-          viewId: viewId,
-          svg: currentAnn.output.masksImageSVG,
-          rle: currentAnn.output.rle,
-          catId: currentAnn.catId,
-          visible: true,
-          opacity: 1.0,
-        };
+          created_at: now,
+          updated_at: now,
+          table_info: { name: "mask???", group: "annotations", base_schema: "CompressedRLE" }, //TODO name
+          data: {
+            //TODO entity_ref, item_ref
+            view_ref: viewRef,
+            counts: currentAnn.output.rle.counts,
+            size: currentAnn.output.rle.size,
+          },
+        });
+        currentMask.svg = currentAnn.output.masksImageSVG;
+        currentMask.catId = currentAnn.catId;
+        currentMask.visible = true;
+        currentMask.opacity = 1.0;
 
-        addMask(currentMask, "#008000", currentMaskGroup, image, viewId, stage, zoomFactor);
+        addMask(currentMask, "#008000", currentMaskGroup, image, viewRef.name, stage, zoomFactor);
       }
     }
   }
@@ -555,10 +564,10 @@ License: CECILL-C
 
   function validateCurrentAnn() {
     if (currentAnn.validated) {
-      const currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewId, stage);
+      const currentMaskGroup = findOrCreateCurrentMask(currentAnn.viewRef.name, stage);
       if (currentMaskGroup) currentMaskGroup.destroyChildren();
       if (highlighted_point) unhighlightInputPoint(highlighted_point);
-      clearInputs(currentAnn.viewId);
+      clearInputs(currentAnn.viewRef.name);
       currentAnn = null;
     }
   }
@@ -600,8 +609,8 @@ License: CECILL-C
     }
   }
 
-  function clearInputs(viewId: string) {
-    const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+  function clearInputs(view_name: string) {
+    const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
     if (viewLayer) {
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.destroyChildren();
@@ -610,9 +619,9 @@ License: CECILL-C
 
   // ********** POLYGON TOOL ********** //
 
-  function drawPolygonPoints(viewId: string) {
+  function drawPolygonPoints(viewRef: Reference) {
     if (newShape?.status === "saving") return;
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     const cursorPositionOnImage = viewLayer.getRelativePointerPosition();
     const x = Math.round(cursorPositionOnImage.x);
     const y = Math.round(cursorPositionOnImage.y);
@@ -623,15 +632,15 @@ License: CECILL-C
       status: "creating",
       type: "mask",
       points: [...oldPoints, { x, y, id: oldPoints.length || 0 }],
-      viewId,
+      viewRef,
     };
   }
 
   // ********** KEY_POINT TOOL ********** //
 
-  function dragInputKeyPointRectMove(viewId: string) {
+  function dragInputKeyPointRectMove(viewRef: Reference) {
     if (selectedTool?.type === "KEY_POINT" && newShape.status !== "saving") {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
       const x =
@@ -647,15 +656,15 @@ License: CECILL-C
         y,
         width,
         height,
-        viewId,
+        viewRef,
         keypoints: selectedKeypointTemplate,
       };
     }
   }
 
-  function dragKeyPointInputRectEnd(viewId: string) {
+  function dragKeyPointInputRectEnd(viewRef: Reference) {
     if (selectedTool?.type == "KEY_POINT") {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#move-keyPoints-group");
       if (rect && newShape.status === "creating" && newShape.type === "keypoints") {
         const vertices = newShape.keypoints.vertices.map((vertex) => {
@@ -669,10 +678,10 @@ License: CECILL-C
         newShape = {
           status: "saving",
           type: "keypoints",
-          viewId,
+          viewRef,
           itemId: selectedItemId,
-          imageWidth: getCurrentImage(viewId).width,
-          imageHeight: getCurrentImage(viewId).height,
+          imageWidth: getCurrentImage(viewRef.name).width,
+          imageHeight: getCurrentImage(viewRef.name).height,
           keypoints: { ...newShape.keypoints, vertices },
         };
         viewLayer.off("pointermove");
@@ -747,11 +756,11 @@ License: CECILL-C
     pointer.y(mousePos.y + 1);
   }
 
-  function findOrCreateInputPointPointer(id: string, viewId: string = null): Konva.Circle {
+  function findOrCreateInputPointPointer(id: string, view_name: string = null): Konva.Circle {
     let pointer: Konva.Circle = stage.findOne(`#${id}`);
     if (!pointer) {
       let zoomF = 1.0; // in some cases we aren't in a view, so we use default scaling
-      if (viewId) zoomF = zoomFactor[viewId];
+      if (view_name) zoomF = zoomFactor[view_name];
       pointer = new Konva.Circle({
         id,
         x: 0,
@@ -768,10 +777,10 @@ License: CECILL-C
     return pointer;
   }
 
-  function getInputPoints(viewId: string): Array<LabeledClick> {
+  function getInputPoints(view_name: string): Array<LabeledClick> {
     //get points as Array<LabeledClick>
     const points: Array<LabeledClick> = [];
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
     const inputGroup: Konva.Group = viewLayer.findOne("#input");
     for (const pt of inputGroup.children) {
       if (pt instanceof Konva.Circle) {
@@ -801,11 +810,11 @@ License: CECILL-C
     stage.container().style.cursor = "grab";
   }
 
-  function dragInputPointMove(drag_point: Konva.Circle, viewId: string) {
+  function dragInputPointMove(drag_point: Konva.Circle, viewRef: Reference) {
     stage.container().style.cursor = "grabbing";
 
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-    const image: Konva.Image = viewLayer.findOne(`#image-${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
+    const image: Konva.Image = viewLayer.findOne(`#image-${viewRef.name}`);
     const img_size = image.getSize();
     if (drag_point.x() < 0) {
       drag_point.x(0);
@@ -821,24 +830,24 @@ License: CECILL-C
     // new currentAnn on new location
     clearTimeout(timerId); // reinit timer on each move move
     // eslint-disable-next-line @typescript-eslint/no-misused-promises
-    timerId = setTimeout(() => updateCurrentMask(viewId), 50); // delay before predict to spare CPU
+    timerId = setTimeout(() => updateCurrentMask(viewRef), 50); // delay before predict to spare CPU
   }
 
-  function highlightInputPoint(hl_point: Konva.Circle, viewId: string) {
-    const pointer = findOrCreateInputPointPointer(selectedTool.type, viewId);
+  function highlightInputPoint(hl_point: Konva.Circle, view_name: string) {
+    const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
     pointer.hide();
-    hl_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[viewId]);
+    hl_point.radius((1.5 * INPUTPOINT_RADIUS) / zoomFactor[view_name]);
     highlighted_point = hl_point;
     stage.container().style.cursor = "grab";
   }
 
-  function unhighlightInputPoint(hl_point: Konva.Circle, viewId: string = null) {
-    const pointer = findOrCreateInputPointPointer(selectedTool.type, viewId);
+  function unhighlightInputPoint(hl_point: Konva.Circle, view_name: string = null) {
+    const pointer = findOrCreateInputPointPointer(selectedTool.type, view_name);
     pointer.show();
-    if (!viewId) {
-      viewId = findViewId(hl_point);
+    if (!view_name) {
+      view_name = findViewName(hl_point);
     }
-    hl_point.radius(INPUTPOINT_RADIUS / zoomFactor[viewId]);
+    hl_point.radius(INPUTPOINT_RADIUS / zoomFactor[view_name]);
     highlighted_point = null;
     stage.container().style.cursor = selectedTool.cursor;
     stage.batchDraw();
@@ -907,10 +916,10 @@ License: CECILL-C
     return [xLimit, yLimit];
   }
 
-  function getInputRect(viewId: string): Box {
+  function getInputRect(view_name: string): Box {
     //get box as Box
     let box: Box = null;
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
     const rect: Konva.Rect = viewLayer.findOne("#drag-rect");
     if (rect) {
       //need to convert rect pos / size to topleft/bottomright
@@ -926,9 +935,9 @@ License: CECILL-C
     return box;
   }
 
-  function dragInputRectMove(viewId: string) {
+  function dragInputRectMove(viewRef: Reference) {
     if (selectedTool?.type === "RECTANGLE") {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
       const pos = viewLayer.getRelativePointerPosition();
       const x = newShape.status === "creating" && newShape.type === "bbox" ? newShape.x : pos.x;
@@ -940,14 +949,14 @@ License: CECILL-C
         y,
         width: pos.x - x,
         height: pos.y - y,
-        viewId,
+        viewRef,
       };
     }
   }
 
-  async function dragInputRectEnd(viewId: string) {
+  async function dragInputRectEnd(viewRef: Reference) {
     if (selectedTool?.type == "RECTANGLE") {
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
       const rect: Konva.Rect = stage.findOne("#drag-rect");
       if (rect) {
         const { width, height } = rect.size();
@@ -971,13 +980,13 @@ License: CECILL-C
                 height: correctedRect.height,
               },
               type: "bbox",
-              viewId,
+              viewRef,
               itemId: selectedItemId,
-              imageWidth: getCurrentImage(viewId).width,
-              imageHeight: getCurrentImage(viewId).height,
+              imageWidth: getCurrentImage(viewRef.name).width,
+              imageHeight: getCurrentImage(viewRef.name).height,
             };
           }
-          selectedTool.isSmart && (await updateCurrentMask(viewId));
+          selectedTool.isSmart && (await updateCurrentMask(viewRef));
         }
         viewLayer.off("pointermove");
         viewLayer.off("pointerup");
@@ -1009,9 +1018,9 @@ License: CECILL-C
 
   function clearAnnotationAndInputs() {
     if (!stage) return;
-    for (const viewId of Object.keys(imagesPerView)) {
-      clearInputs(viewId);
-      clearCurrentAnn(viewId, stage, selectedTool);
+    for (const view_name of Object.keys(imagesPerView)) {
+      clearInputs(view_name);
+      clearCurrentAnn(view_name, stage, selectedTool);
     }
     if (selectedTool) {
       stage.container().style.cursor = selectedTool.cursor;
@@ -1050,18 +1059,18 @@ License: CECILL-C
     }
   }
 
-  function handleDragEndOnView(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  function handleDragEndOnView(view_name: string) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
   }
 
-  function handlePointerUpOnImage(viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  function handlePointerUpOnImage(viewRef: Reference) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     viewLayer.draggable(false);
     viewLayer.off("dragend dragmove");
     if (selectedTool?.type === "POLYGON") {
-      drawPolygonPoints(viewId);
+      drawPolygonPoints(viewRef);
     }
 
     if (highlighted_point) {
@@ -1071,25 +1080,25 @@ License: CECILL-C
       const pos = viewLayer.getRelativePointerPosition();
       const hl_pos = highlighted_point.position();
       if (pos.x !== hl_pos.x || pos.y !== hl_pos.y)
-        unhighlightInputPoint(highlighted_point, viewId);
+        unhighlightInputPoint(highlighted_point, viewRef.name);
     }
   }
 
-  function handleDoubleClickOnImage(viewId: string) {
+  function handleDoubleClickOnImage(view_name: string) {
     // put double-clickd view on top of views
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
     viewLayer.moveToTop();
     //keeps tools on top
     toolsLayer.moveToTop();
   }
 
-  async function handleClickOnImage(event: PointerEvent, viewId: string) {
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+  async function handleClickOnImage(event: PointerEvent, viewRef: Reference) {
+    const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
 
     if (newShape.status === "none" || newShape.status == "editing") {
       newShape = {
         status: "editing",
-        viewId,
+        viewRef,
         type: "none",
         shapeId: null,
         highlighted: "all",
@@ -1100,7 +1109,7 @@ License: CECILL-C
     if (selectedTool?.type == "PAN" || event.button == 1) {
       viewLayer.draggable(true);
       viewLayer.on("dragmove", handleMouseMoveStage);
-      viewLayer.on("dragend", () => handleDragEndOnView(viewId));
+      viewLayer.on("dragend", () => handleDragEndOnView(viewRef.name));
     } else if (selectedTool?.type == "POINT_SELECTION") {
       const clickOnViewPos = viewLayer.getRelativePointerPosition();
 
@@ -1109,44 +1118,44 @@ License: CECILL-C
         name: `${selectedTool.label}`,
         x: clickOnViewPos.x,
         y: clickOnViewPos.y,
-        radius: INPUTPOINT_RADIUS / zoomFactor[viewId],
+        radius: INPUTPOINT_RADIUS / zoomFactor[viewRef.name],
         stroke: "white",
         fill: selectedTool.label === 1 ? "green" : "red",
-        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewId],
+        strokeWidth: INPUTPOINT_STROKEWIDTH / zoomFactor[viewRef.name],
         visible: true,
         listening: true,
         opacity: 0.75,
         draggable: true,
       });
       input_point.on("pointerenter", (event) =>
-        highlightInputPoint(event.target as Konva.Circle, viewId),
+        highlightInputPoint(event.target as Konva.Circle, viewRef.name),
       );
       input_point.on("pointerout", (event) =>
-        unhighlightInputPoint(event.target as Konva.Circle, viewId),
+        unhighlightInputPoint(event.target as Konva.Circle, viewRef.name),
       );
       input_point.on(
         "dragmove",
-        (event) => void dragInputPointMove(event.target as Konva.Circle, viewId),
+        (event) => void dragInputPointMove(event.target as Konva.Circle, viewRef),
       );
       input_point.on("dragend", () => dragInputPointEnd());
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       inputGroup.add(input_point);
-      highlightInputPoint(input_point, viewId);
-      await updateCurrentMask(viewId);
+      highlightInputPoint(input_point, viewRef.name);
+      await updateCurrentMask(viewRef);
     } else if (selectedTool?.type == "RECTANGLE") {
-      viewLayer.on("pointermove", () => dragInputRectMove(viewId));
-      viewLayer.on("pointerup", () => void dragInputRectEnd(viewId));
+      viewLayer.on("pointermove", () => dragInputRectMove(viewRef));
+      viewLayer.on("pointerup", () => void dragInputRectEnd(viewRef));
     } else if (selectedTool?.type === "KEY_POINT") {
-      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewId));
-      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewId));
+      viewLayer.on("pointermove", () => dragInputKeyPointRectMove(viewRef));
+      viewLayer.on("pointerup", () => void dragKeyPointInputRectEnd(viewRef));
     }
   }
 
-  function zoom(stage: Konva.Stage, direction: number, viewId: string): number {
+  function zoom(stage: Konva.Stage, direction: number, view_name: string): number {
     // Defines zoom speed
     const zoomScale = 1.05;
 
-    const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+    const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
 
     // Get old scaling
     const oldScale = viewLayer.scaleX();
@@ -1174,7 +1183,7 @@ License: CECILL-C
     return newScale;
   }
 
-  function handleWheelOnImage(event: WheelEvent, viewId: ItemView["id"]) {
+  function handleWheelOnImage(event: WheelEvent, view_name: string) {
     // Prevent default scrolling
     event.preventDefault();
 
@@ -1185,32 +1194,34 @@ License: CECILL-C
     if (event.ctrlKey) direction = -direction;
 
     // Zoom
-    zoomFactor[viewId] = zoom(stage, direction, viewId);
-    //scaleElements(viewId);
+    zoomFactor[view_name] = zoom(stage, direction, view_name);
+    //scaleElements(view_name);
 
     // Keep highlighted point scaling
-    if (highlighted_point) highlightInputPoint(highlighted_point, viewId);
+    if (highlighted_point) highlightInputPoint(highlighted_point, view_name);
   }
 
   // ********** KEY EVENTS ********** //
 
   async function handleKeyDown(event: KeyboardEvent) {
     if (event.key == "Delete" && highlighted_point != null) {
-      //get viewId of highlighted_point
-      const viewId = findViewId(highlighted_point);
+      //get view_name of highlighted_point
+      const view_name = findViewName(highlighted_point);
       const to_destroy_hl_point = highlighted_point;
-      unhighlightInputPoint(highlighted_point, viewId);
+      unhighlightInputPoint(highlighted_point, view_name);
       //remove Konva Circle
       to_destroy_hl_point.destroy();
 
       //if existing construct (points, box, ...)
-      const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+      const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
       const inputGroup: Konva.Group = viewLayer.findOne("#input");
       if (inputGroup.children.length > 0) {
         //trigger a currentAnn with existing constructs
-        await updateCurrentMask(viewId);
+        //we do not have view id here, so get it from Konva image "name" field (TODO is it OK for video??)
+        const imageKonva: Konva.Image = viewLayer.findOne(`#image-${view_name}`);
+        await updateCurrentMask({ id: imageKonva.attrs.name, name: view_name });
       } else {
-        clearCurrentAnn(viewId, stage, selectedTool);
+        clearCurrentAnn(view_name, stage, selectedTool);
       }
     }
     if (event.key == "i") {
@@ -1220,12 +1231,12 @@ License: CECILL-C
       console.log("keypoints", keypoints);
       console.log("currentAnn", currentAnn);
       console.log("stage", stage);
-      for (const viewId of Object.keys(imagesPerView)) {
-        const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
-        const maskGroup: Konva.Group = viewLayer.findOne("#masks");
-        const bboxGroup: Konva.Group = viewLayer.findOne("#bboxes");
-        const kptGroup: Konva.Group = viewLayer.findOne("#keypoints");
-        console.log("view:", viewId);
+      for (const view_name of Object.keys(imagesPerView)) {
+        const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
+        const maskGroup: Konva.Group = viewLayer.findOne(`#masks-${view_name}`);
+        const bboxGroup: Konva.Group = viewLayer.findOne(`#bboxes-${view_name}`);
+        const kptGroup: Konva.Group = viewLayer.findOne(`#keypoints-${view_name}`);
+        console.log("view:", view_name);
         console.log("--masks Konva group:", maskGroup);
         console.log("--masks children length:", maskGroup.children?.length);
         console.log("--bboxes Konva group:", bboxGroup);
@@ -1250,79 +1261,81 @@ License: CECILL-C
     on:mouseenter={handleMouseEnterStage}
     on:mouseleave={handleMouseLeaveStage}
   >
-    {#each Object.entries(imagesPerView) as [viewId, images]}
+    {#each Object.entries(imagesPerView) as [view_name, images]}
       <Layer
-        config={{ id: viewId, imageSmoothingEnabled: imageSmoothing }}
-        on:wheel={(event) => handleWheelOnImage(event.detail.evt, viewId)}
+        config={{ id: view_name, imageSmoothingEnabled: imageSmoothing }}
+        on:wheel={(event) => handleWheelOnImage(event.detail.evt, view_name)}
       >
         {#each images as image}
+          {@const viewRef = { id: image.id, name: view_name }}
           <KonvaImage
             config={{
-              image,
-              id: `image-${viewId}`,
+              image: image.element,
+              name: image.id, //we use this to keep view id when there is no better way to get it
+              id: `image-${view_name}`,
             }}
-            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewId)}
-            on:pointerup={() => handlePointerUpOnImage(viewId)}
-            on:dblclick={() => handleDoubleClickOnImage(viewId)}
+            on:pointerdown={(event) => handleClickOnImage(event.detail.evt, viewRef)}
+            on:pointerup={() => handlePointerUpOnImage(viewRef)}
+            on:dblclick={() => handleDoubleClickOnImage(view_name)}
           />
+          <Group config={{ id: `bboxes-${view_name}` }}>
+            {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
+              <CreateRectangle zoomFactor={zoomFactor[view_name]} {newShape} {stage} {viewRef} />
+            {/if}
+            {#each bboxes as bbox}
+              {#if bbox.data.view_ref.name === view_name}
+                <Rectangle
+                  {bbox}
+                  {colorScale}
+                  zoomFactor={zoomFactor[view_name]}
+                  {stage}
+                  {viewRef}
+                  bind:newShape
+                  {selectedTool}
+                />
+              {/if}
+            {/each}
+          </Group>
+          <Group config={{ id: `masks-${view_name}` }}>
+            <CreatePolygon
+              {viewRef}
+              {stage}
+              currentImage={getCurrentImage(view_name)}
+              {zoomFactor}
+              {selectedItemId}
+              bind:newShape
+            />
+            {#each masks as mask (mask.id)}
+              {#if mask.data.view_ref.name === view_name}
+                <PolygonGroup
+                  {viewRef}
+                  bind:newShape
+                  {stage}
+                  currentImage={getCurrentImage(view_name)}
+                  {zoomFactor}
+                  {mask}
+                  color={colorScale(mask.id)}
+                  {selectedTool}
+                />
+              {/if}
+            {/each}
+          </Group>
+          <Group config={{ id: `keypoints-${view_name}` }}>
+            {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
+              <CreateKeypoint zoomFactor={zoomFactor[view_name]} bind:newShape {stage} {viewRef} />
+            {/if}
+            <ShowKeypoints
+              {colorScale}
+              {stage}
+              {viewRef}
+              {keypoints}
+              zoomFactor={zoomFactor[view_name]}
+              bind:newShape
+            />
+          </Group>
         {/each}
         <Group config={{ id: "currentAnnotation" }} />
         <Group config={{ id: "input" }} />
-        <Group config={{ id: "bboxes" }}>
-          {#if (newShape.status === "creating" && newShape.type === "bbox") || (newShape.status === "saving" && newShape.type === "bbox")}
-            <CreateRectangle zoomFactor={zoomFactor[viewId]} {newShape} {stage} {viewId} />
-          {/if}
-          {#each bboxes as bbox}
-            {#if bbox.data.view_ref.name === viewId}
-              <Rectangle
-                {bbox}
-                {colorScale}
-                zoomFactor={zoomFactor[viewId]}
-                {stage}
-                {viewId}
-                bind:newShape
-                {selectedTool}
-              />
-            {/if}
-          {/each}
-        </Group>
-        <Group config={{ id: "masks" }}>
-          <CreatePolygon
-            {viewId}
-            {stage}
-            currentImage={getCurrentImage(viewId)}
-            {zoomFactor}
-            {selectedItemId}
-            bind:newShape
-          />
-          {#each masks as mask (mask.id)}
-            {#if mask.viewId === viewId}
-              <PolygonGroup
-                {viewId}
-                bind:newShape
-                {stage}
-                currentImage={getCurrentImage(viewId)}
-                {zoomFactor}
-                {mask}
-                color={colorScale(mask.id)}
-                {selectedTool}
-              />
-            {/if}
-          {/each}
-        </Group>
-        <Group config={{ id: "keypoints" }}>
-          {#if (newShape.status === "creating" && newShape.type === "keypoints") || (newShape.status === "saving" && newShape.type === "keypoints")}
-            <CreateKeypoint zoomFactor={zoomFactor[viewId]} bind:newShape {stage} {viewId} />
-          {/if}
-          <ShowKeypoints
-            {colorScale}
-            {stage}
-            {viewId}
-            {keypoints}
-            zoomFactor={zoomFactor[viewId]}
-            bind:newShape
-          />
-        </Group>
       </Layer>
     {/each}
 

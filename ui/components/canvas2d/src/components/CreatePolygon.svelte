@@ -9,14 +9,14 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Line } from "svelte-konva";
 
-  import type { DatasetItem, Shape } from "@pixano/core";
+  import type { DatasetItem, Shape, Reference } from "@pixano/core";
   import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
   import { runLengthEncode, convertPointToSvg } from "../api/maskApi";
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
-  export let viewId: string;
+  export let viewRef: Reference;
   export let selectedItemId: DatasetItem["id"];
   export let newShape: Shape;
   export let stage: Konva.Stage;
@@ -45,7 +45,7 @@ License: CECILL-C
     }
   }
 
-  function handlePolygonPointsClick(i: number, viewId: string) {
+  function handlePolygonPointsClick(i: number, viewRef: Reference) {
     if (i === 0) {
       const svg = polygonPoints.map((point) => convertPointToSvg(point));
       const counts = runLengthEncode(svg, currentImage.width, currentImage.height);
@@ -57,7 +57,7 @@ License: CECILL-C
           size: [currentImage.height, currentImage.width],
         },
         type: "mask",
-        viewId: viewId,
+        viewRef,
         itemId: selectedItemId,
         imageWidth: currentImage.width,
         imageHeight: currentImage.height,
@@ -79,19 +79,19 @@ License: CECILL-C
   $: flatPoints = polygonPoints[0]?.reduce((acc, val) => [...acc, val.x, val.y], [] as number[]);
 </script>
 
-{#if "viewId" in newShape && newShape.viewId === viewId}
+{#if "viewRef" in newShape && newShape.viewRef.name === viewRef.name}
   <Group config={{ id: "polygon", draggable: true }}>
     <Line
       config={{
         points: flatPoints,
         stroke: "hsl(316deg 60% 29.41%)",
-        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewId],
+        strokeWidth: INPUTRECT_STROKEWIDTH / zoomFactor[viewRef.name],
         fill: "#f9f4f773",
         closed: isClosed,
       }}
     />
     <PolygonPoints
-      {viewId}
+      {viewRef}
       {stage}
       {zoomFactor}
       polygonId={POLYGON_ID}
