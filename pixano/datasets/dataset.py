@@ -703,13 +703,11 @@ class Dataset:
             .to_list()
         }
 
-        sql_ids = to_sql_list(set_ids)
-        table.delete(where=f"id in {sql_ids}")
         for d in data:
             d.updated_at = datetime.now()
             if d.id not in ids_found:
                 d.created_at = d.updated_at
-        table.add(data)
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
 
         if not return_separately:
             return data
