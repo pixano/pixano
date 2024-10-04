@@ -37,11 +37,11 @@ class TestSource:
         with pytest.raises(ValueError):
             source = Source(name="source", kind="ground-truth", metadata=12345)
 
-        with pytest.raises(ValueError):
-            source = Source(name="Ground Truth", kind="ground_truth", metadata=12345)
+        with pytest.raises(ValueError, match="Ground truth source must have id 'ground_truth'."):
+            source = Source(name="Ground Truth", kind="ground_truth", metadata={})
 
-        with pytest.raises(ValueError):
-            source = Source(id="ground_truth", name="Ground", kind="ground_truth", metadata=12345)
+        with pytest.raises(ValueError, match="Ground truth source must have name 'Ground Truth'."):
+            source = Source(id="ground_truth", name="Ground", kind="ground_truth", metadata={})
 
     def test_create_ground_truth(self):
         metadata = json.dumps({"key": "value"})
