@@ -9,7 +9,7 @@ from typing_extensions import Self
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
+from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -75,6 +75,7 @@ def create_tracklet(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
     start_timestep: int = -1,
     end_timestep: int = -1,
     start_timestamp: float = -1.0,
@@ -87,6 +88,7 @@ def create_tracklet(
         item_ref: The item reference.
         view_ref: The view reference.
         entity_ref: The parent track reference.
+        source_ref: The source reference.
         start_timestep: The start timestep of the tracklet.
         end_timestep: The end timestep of the tracklet.
         start_timestamp: The start timestamp of the tracklet.
@@ -100,6 +102,7 @@ def create_tracklet(
         item_ref=item_ref,
         view_ref=view_ref,
         entity_ref=entity_ref,
+        source_ref=source_ref,
         start_timestep=start_timestep,
         end_timestep=end_timestep,
         start_timestamp=start_timestamp,

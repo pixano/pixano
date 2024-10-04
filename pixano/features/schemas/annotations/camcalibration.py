@@ -11,7 +11,7 @@ from pixano.utils import issubclass_strict
 
 from ...types import BaseType
 from ...types.registry import _register_type_internal
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
+from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from . import Annotation
 
@@ -202,6 +202,7 @@ def create_cam_calibration(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
     validate: bool = True,
 ) -> CamCalibration:
     """Create a CamCalibration instance.
@@ -230,7 +231,8 @@ def create_cam_calibration(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
-        validate: set to False to skip pydantic validation. Defaults to True.
+        source_ref: Source reference.
+        validate: Set to False to skip pydantic validation.
 
     Returns:
         The created `CamCalibration` instance.
@@ -352,6 +354,7 @@ def create_cam_calibration(
             item_ref=item_ref,
             view_ref=view_ref,
             entity_ref=entity_ref,
+            source_ref=source_ref,
         )
     else:
         return CamCalibration.construct(
@@ -363,4 +366,5 @@ def create_cam_calibration(
             item_ref=item_ref,
             view_ref=view_ref,
             entity_ref=entity_ref,
+            source_ref=source_ref,
         )

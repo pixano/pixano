@@ -13,7 +13,7 @@ from typing_extensions import Self
 from pixano.features.utils import boxes as bbox_utils
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
+from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 from .compressed_rle import CompressedRLE
@@ -292,6 +292,7 @@ def create_bbox(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
 ) -> BBox:
     """Create a BBox instance.
 
@@ -304,6 +305,7 @@ def create_bbox(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
+        source_ref: Source reference.
 
     Returns:
         The created BBox instance.
@@ -313,6 +315,7 @@ def create_bbox(
         item_ref=item_ref,
         view_ref=view_ref,
         entity_ref=entity_ref,
+        source_ref=source_ref,
         coords=coords,
         format=format,
         is_normalized=is_normalized,
@@ -330,6 +333,7 @@ def create_bbox3d(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
 ) -> BBox3D:
     """Create a BBox3D instance.
 
@@ -343,6 +347,7 @@ def create_bbox3d(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
+        source_ref: Source reference.
 
     Returns:
         The created BBox3D instance.
@@ -352,6 +357,7 @@ def create_bbox3d(
         item_ref=item_ref,
         view_ref=view_ref,
         entity_ref=entity_ref,
+        source_ref=source_ref,
         coords=coords,
         format=format,
         heading=heading,
