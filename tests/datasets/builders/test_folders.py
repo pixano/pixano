@@ -6,6 +6,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -15,7 +16,7 @@ from pixano.datasets.dataset_schema import DatasetItem
 from pixano.features import Image, Item, Video
 from pixano.features.schemas.annotations.bbox import BBox
 from pixano.features.schemas.annotations.keypoints import KeyPoints
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from tests.assets.sample_data.metadata import SAMPLE_DATA_PATHS
 
 
@@ -142,7 +143,7 @@ class TestFolderBaseBuilder:
 
         # test 1: one bbox infered
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]]}
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
 
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
@@ -161,6 +162,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
@@ -171,7 +173,7 @@ class TestFolderBaseBuilder:
         entities_data = {
             "bbox": {"coords": [0, 0, 100, 100], "format": "xyxy", "is_normalized": False, "confidence": 0.9}
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
@@ -188,6 +190,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
             is_normalized=False,
@@ -201,7 +204,7 @@ class TestFolderBaseBuilder:
                 [0.1, 0.1, 0.2, 0.2],
             ]
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
         assert len(entities) == 2
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[1], entity_category)
@@ -226,6 +229,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 100, 100],
             format="xyxy",
             is_normalized=False,
@@ -236,6 +240,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[1].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             coords=[0.1, 0.1, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
@@ -254,7 +259,7 @@ class TestFolderBaseBuilder:
             ],
             "category": "person",
         }
-        entities, annotations = image_folder_builder._create_entities(item, view, entities_data)
+        entities, annotations = image_folder_builder._create_entities(item, view, entities_data, "source_id")
         assert len(entities) == 1
         assert isinstance(entities[0], entity_category)
         assert isinstance(entities[0].id, str) and len(entities[0].id) == 22
@@ -272,6 +277,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             coords=[0, 0, 0.2, 0.2],
             format="xywh",
             is_normalized=True,
@@ -282,6 +288,7 @@ class TestFolderBaseBuilder:
             item_ref=ItemRef(id=item.id),
             view_ref=ViewRef(id=view.id, name="view"),
             entity_ref=EntityRef(id=entities[0].id, name="entities"),
+            source_ref=SourceRef(id="source_id"),
             template_id="template_0",
             coords=[10, 10, 20, 20, 30, 30],
             states=["visible", "visible", "visible"],
@@ -290,15 +297,18 @@ class TestFolderBaseBuilder:
         # test 5: error infer keypoints
         entities_data = {"keypoint": [[10, 10, 20, 20, 30, 30]]}
         with pytest.raises(ValueError, match="not supported for infered entity creation."):
-            entities = image_folder_builder._create_entities(item, view, entities_data)
+            entities = image_folder_builder._create_entities(item, view, entities_data, "source_id")
 
         # test 6: error attribute not found in entity schema
         entities_data = {"bbox": [[0, 0, 0.2, 0.2]], "unknown": [0]}
         with pytest.raises(ValueError, match="Attribute unknown not found in entity schema."):
-            entities = image_folder_builder._create_entities(item, view, entities_data)
+            entities = image_folder_builder._create_entities(item, view, entities_data, "source_id")
 
     def test_generate_items(self, image_folder_builder: ImageFolderBuilder, entity_category):
-        items = list(image_folder_builder.generate_data())
+        with patch(
+            "pixano.datasets.builders.folders.ImageFolderBuilder.add_source", lambda *args, **kwargs: "source_id"
+        ):
+            items = list(image_folder_builder.generate_data())
         assert len(items) == 15
         assert len([item for item in items if item["item"].split == "train"]) == 10
         assert len([item for item in items if item["item"].split == "val"]) == 5
@@ -329,6 +339,7 @@ class TestFolderBaseBuilder:
                         item_ref=ItemRef(id=actual_item.id),
                         view_ref=ViewRef(id=view.id, name="view"),
                         entity_ref=EntityRef(id=entity.id, name="entities"),
+                        source_ref=SourceRef(id="source_id"),
                         coords=[
                             0 + i / item_per_split,
                             0 + i / item_per_split,

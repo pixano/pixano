@@ -15,7 +15,8 @@ from pixano.datasets.dataset_schema import DatasetItem
 from pixano.features import BaseSchema, Entity, Item, View, create_bbox, is_bbox
 from pixano.features.schemas.annotations.annotation import Annotation
 from pixano.features.schemas.registry import _PIXANO_SCHEMA_REGISTRY
-from pixano.features.types.schema_reference import EntityRef, ItemRef, ViewRef
+from pixano.features.schemas.source import SourceKind
+from pixano.features.types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from pixano.features.utils.creators import create_instance_of_schema
 
 from ..dataset_builder import DatasetBuilder
@@ -115,6 +116,7 @@ class FolderBaseBuilder(DatasetBuilder):
         Returns:
             An iterator over the data following data schema.
         """
+        source_id = None
         for split in self.source_dir.glob("*"):
             if split.is_dir() and not split.name.startswith("."):
                 metadata = self._read_metadata(split / self.METADATA_FILENAME)
@@ -146,9 +148,11 @@ class FolderBaseBuilder(DatasetBuilder):
                                 self.view_name: view,
                             }
                             continue
+                        elif source_id is None:
+                            source_id = self.add_source("Builder", SourceKind.OTHER)
 
                         # create entities and their annotations
-                        entities, annotations = self._create_entities(item, view, entities_data)
+                        entities, annotations = self._create_entities(item, view, entities_data, source_id)
 
                         yield {
                             self.item_schema_name: item,
@@ -177,7 +181,7 @@ class FolderBaseBuilder(DatasetBuilder):
         )
 
     def _create_entities(
-        self, item: Item, view: View, entities_data: dict[str, Any]
+        self, item: Item, view: View, entities_data: dict[str, Any], source_id: str
     ) -> tuple[list[Entity], dict[str, list[Annotation]]]:
         entities: list[Entity] = []
         annotations: dict[str, list[Annotation]] = {}
@@ -224,6 +228,7 @@ class FolderBaseBuilder(DatasetBuilder):
                             item_ref=ItemRef(id=item.id),
                             view_ref=ViewRef(id=view.id, name=self.view_name),
                             entity_ref=EntityRef(id=entity_id, name=self.entity_name),
+                            source_ref=SourceRef(id=source_id),
                             **entities_data[attr][i],
                         )
                     else:
@@ -234,6 +239,7 @@ class FolderBaseBuilder(DatasetBuilder):
                                 item_ref=ItemRef(id=item.id),
                                 view_ref=ViewRef(id=view.id, name=self.view_name),
                                 entity_ref=EntityRef(id=entity_id, name=self.entity_name),
+                                source_ref=SourceRef(id=source_id),
                                 coords=entities_data[attr][i],
                                 format="xywh",
                                 is_normalized=True,

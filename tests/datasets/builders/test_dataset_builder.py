@@ -15,6 +15,7 @@ from pixano.datasets.builders.dataset_builder import DatasetBuilder
 from pixano.datasets.dataset import Dataset
 from pixano.datasets.dataset_info import DatasetInfo
 from pixano.datasets.dataset_schema import DatasetItem, DatasetSchema
+from pixano.features.schemas.source import Source, SourceKind
 from tests.fixtures.datasets.builders.builder import DatasetBuilderImageBboxesKeypoint
 
 
@@ -44,6 +45,22 @@ class TestDatasetBuilder:
             assert type(value1) is type(value2)
         assert isinstance(builder.db, lancedb.DBConnection)
         assert builder.db._uri == str(Path(target_dir) / Dataset._DB_PATH)
+
+    def test_add_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
+        source_table = dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
+
+        id = dataset_builder_image_bboxes_keypoint.add_source("source", "model", {"model_id": "model_0"})
+        assert len(id) == 22
+        id = dataset_builder_image_bboxes_keypoint.add_source("source_2", SourceKind.OTHER, {}, "my_id")
+        assert id == "my_id"
+
+        assert source_table.count_rows() == 2
+
+    def test_add_ground_truth_source(self, dataset_builder_image_bboxes_keypoint: DatasetBuilderImageBboxesKeypoint):
+        source_table = dataset_builder_image_bboxes_keypoint.db.create_table("source", schema=Source, mode="create")
+        id = dataset_builder_image_bboxes_keypoint.add_ground_truth_source({"model_id": "model_0"})
+        assert id == "ground_truth"
+        assert source_table.count_rows() == 1
 
     @pytest.mark.parametrize("mode", ["create", "overwrite", "add"])
     @pytest.mark.parametrize("flush_every_n_samples", [None, 3])
