@@ -25,7 +25,7 @@ License: CECILL-C
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
   import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
-  type ItemMeta = {
+  type ViewMeta = {
     fileName: string | undefined;
     width: number;
     height: number;
@@ -38,10 +38,10 @@ License: CECILL-C
   let isEditing: boolean = false;
   let itemType: string = "";
   let combineChannels: boolean = false;
-  let itemMeta: ItemMeta[] = [];
+  let viewMeta: ViewMeta[] = [];
 
   itemMetas.subscribe((metas) => {
-    itemMeta = Object.values(metas.views || {}).map((view: Image | SequenceFrame[]) => {
+    viewMeta = Object.values(metas.views || {}).map((view: Image | SequenceFrame[]) => {
       const image: Image = Array.isArray(view) ? view[0] : view;
       itemType = metas.type;
       return {
@@ -52,10 +52,7 @@ License: CECILL-C
         id: image.id,
       };
     });
-    const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures || {}).length
-      ? metas.mainFeatures
-      : defaultSceneFeatures;
-    //features = createFeature(mainFeatures); //XXX TODO
+    features = createFeature(metas.item); //, defaultSceneFeatures); //XXX TODO default ?
   });
 
   /**
@@ -111,7 +108,7 @@ License: CECILL-C
 
 <!-- Item Meta Information Section -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
-  {#each itemMeta as meta}
+  {#each viewMeta as meta}
     <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
     <div class="mx-4 mb-4">
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">

@@ -49,7 +49,7 @@ const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
 type BaseDataFieldsType<T extends z.ZodType> = ReturnType<typeof baseDataFieldsSchema<T>>;
 type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
 
-class BaseData<T> {
+export class BaseData<T> {
   id: string;
   table_info: TableInfo;
   created_at: string;
@@ -63,6 +63,15 @@ class BaseData<T> {
     this.created_at = obj.created_at;
     this.updated_at = obj.updated_at;
     this.data = obj.data;
+  }
+
+  nonFeaturesFields(): string[] {
+    return [];
+  }
+
+  getDynamicFields(): string[] {
+    const instanceKeys = Object.keys(this.data);
+    return instanceKeys.filter(key => !this.nonFeaturesFields().includes(key));
   }
 }
 
@@ -79,6 +88,11 @@ export class View extends BaseData<ViewType> {
     viewSchema.parse(obj.data);
     super(obj);
   }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["item_ref", "parent_ref"]);
+  }
+
   static createInstance(obj: BaseDataFields<ViewType>) {
     if (obj.table_info.base_schema === "Image") return new Image(obj);
     if (obj.table_info.base_schema === "SequenceFrame") return new SequenceFrame(obj);
@@ -124,6 +138,11 @@ export class Image extends View {
     super(obj);
     this.data = obj.data;
   }
+
+  nonFeaturesFields(): string[] {
+    //return super.nonFeaturesFields().concat(["url", "width", "height", "format"]);
+    return super.nonFeaturesFields().concat(["url"]);
+  }
 }
 
 const sequenceFrameSchema = z
@@ -142,6 +161,10 @@ export class SequenceFrame extends Image {
     super(obj);
     this.data = obj.data;
   }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["timestamp", "frame_index"]);
+  }
 }
 
 const entitySchema = z
@@ -157,6 +180,10 @@ export class Entity extends BaseData<EntityType> {
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
     super(obj);
+  }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "parent_ref"]);
   }
 
   static createInstance(obj: BaseDataFields<EntityType>) {
@@ -190,6 +217,11 @@ export class Track extends Entity {
     trackSchema.parse(obj.data);
     super(obj);
   }
+
+  nonFeaturesFields(): string[] {
+    //return super.nonFeaturesFields().concat(["name"]);
+    return super.nonFeaturesFields(); //name is a feature indeed !
+  }
 }
 
 const annotationSchema = z
@@ -211,6 +243,10 @@ export class Annotation extends BaseData<AnnotationType> {
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
     super(obj);
+  }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref"]);
   }
 
   static createInstance(obj: BaseDataFields<AnnotationType>) {
@@ -270,6 +306,10 @@ export class BBox extends Annotation {
     super(obj);
     this.data = obj.data;
   }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["confidence", "coords", "format", "is_normalized"]);
+  }
 }
 
 const keypointsSchema = z
@@ -296,6 +336,10 @@ export class Keypoints extends Annotation {
     super(obj);
     this.data = obj.data;
   }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["template_id", "coords", "states"]);
+  }
 }
 
 const maskSchema = z
@@ -315,13 +359,17 @@ export class Mask extends Annotation {
   editing?: boolean;
   strokeFactor?: number;
   svg: string[];
-  catId?: number;  //really needed ??
+  catId?: number; //really needed ??
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
     maskSchema.parse(obj.data);
     super(obj);
     this.data = obj.data;
+  }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields().concat(["size", "counts"]);
   }
 }
 
@@ -332,6 +380,10 @@ export class Item extends BaseData<ItemType> {
   constructor(obj: BaseDataFields<ItemType>) {
     if (obj.table_info.base_schema !== "Item") throw new Error("Not an Item");
     super(obj);
+  }
+
+  nonFeaturesFields(): string[] {
+    return super.nonFeaturesFields();
   }
 }
 
@@ -580,9 +632,9 @@ export type ItemView = Base & {
 
 export type HTMLImage = {
   id: string;
-  element: HTMLImageElement
-}
-export type ImagesPerView = Record<string, HTMLImage[]>
+  element: HTMLImageElement;
+};
+export type ImagesPerView = Record<string, HTMLImage[]>;
 // export interface ItemView {
 //   id: string;
 //   data: {

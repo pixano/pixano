@@ -11,6 +11,8 @@ import {
   type DatasetInfoType,
   //type DatasetItems,
   DatasetItem,
+  Item,
+  type Schema,
   type DatasetItemType,
   DatasetBrowser,
   type DatasetBrowserType,
@@ -122,8 +124,8 @@ export async function getDatasetItemsIds(datasetId: string): Promise<Array<strin
     try {
       const response = await fetch(`/items/${datasetId}/?limit=${page_size}&skip=${skip}`);
       if (response.ok) {
-        const res = (await response.json()) as Any[];
-        datasetItemsIds.push(...res.map((item) => item.id as string));
+        const res = (await response.json()) as Item[];
+        datasetItemsIds.push(...res.map((item) => item.id));
         if (res && res.length < page_size) {
           break; //just to avoid 404 error log (will still appear if num items % page_size == 0)
         }

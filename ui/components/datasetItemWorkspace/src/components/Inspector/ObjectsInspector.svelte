@@ -13,6 +13,7 @@ License: CECILL-C
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import {
     annotations,
+    entities,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -50,6 +51,18 @@ License: CECILL-C
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
+
+  //TODO: use entities instead of annotations in inspector (annotations as childrens of entity)
+  // But it means some rework for many sub functions here...
+  // entities.subscribe((objects) => {
+  //   allItemsSortedByModel = sortObjectsByModel(objects);
+  //   const highlightedObject = objects.find((item) => item.highlighted === "self");
+  //   if (!highlightedObject) return;
+  //   const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
+  //   if (element) {
+  //     element.scrollIntoView({ behavior: "smooth", block: "start" });
+  //   }
+  // });
 
   let allModels = Object.keys(allItemsSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,

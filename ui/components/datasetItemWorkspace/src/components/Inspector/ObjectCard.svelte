@@ -10,7 +10,13 @@ License: CECILL-C
 
   import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
-  import type { DisplayControl, Annotation, ObjectThumbnail, SaveItem } from "@pixano/core";
+  import {
+    type DisplayControl,
+    Annotation,
+    Entity,
+    type ObjectThumbnail,
+    type SaveItem,
+  } from "@pixano/core";
 
   import {
     canSave,
@@ -99,15 +105,12 @@ License: CECILL-C
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
     let changedObj = false;
-    annotations.update((oldObjects) =>
+    entities.update((oldObjects) =>
       oldObjects.map((object) => {
-        if (object.id === annotation.id) {
-          object.features = {
-            ...object.features,
-            [propertyName]: {
-              ...object.features[propertyName],
-              value,
-            },
+        if (object.id === entity.id) {
+          object.data = {
+            ...object.data,
+            [propertyName]: value,
           };
           const save_item: SaveItem = {
             change_type: "update",
@@ -161,7 +164,7 @@ License: CECILL-C
         title="Highlight object"
         on:click={onColoredDotClick}
       />
-      <span class="truncate w-max flex-auto">{annotation.id}</span>
+      <span class="truncate w-max flex-auto">{entity.id}</span>
     </div>
     <div class="flex items-center">
       {#if showIcons || isEditing}

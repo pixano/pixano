@@ -14,6 +14,8 @@ License: CECILL-C
     Mask,
     Entity,
     DatasetItem,
+    Item,
+    BaseData,
     type SaveItem,
     type Schema,
   } from "@pixano/core";
@@ -127,11 +129,11 @@ License: CECILL-C
   });
 
   $: console.log("XXX entities", $entities);
+  $: console.log("XXX annotations", $annotations);
 
   $: itemMetas.set({
-    mainFeatures: selectedItem.features,
-    objectFeatures: Object.values(selectedItem.annotations || {})[0]?.features,
     featuresList: featureValues || { main: {}, objects: {} },
+    item: selectedItem.item,
     views: selectedItem.views,
     id: selectedItem.id,
     type: selectedItem.type,

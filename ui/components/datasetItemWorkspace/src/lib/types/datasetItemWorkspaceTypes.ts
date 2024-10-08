@@ -70,9 +70,10 @@ export type ModelSelection = {
 };
 
 export type ItemsMeta = {
-  mainFeatures: DatasetItem["features"]; // feature;
+  //mainFeatures: DatasetItem["features"]; // feature;
   //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
+  item: DatasetItem["item"];
   views: DatasetItem["views"];
   id: DatasetItem["id"];
   type: DatasetItem["type"];
