@@ -7,13 +7,13 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, TrackletItem, VideoItemBBox } from "@pixano/core";
-  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { Annotation, type TrackletItem, type VideoItemBBox } from "@pixano/core";
+  import { annotations, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
 
-  export let objectId: ItemObject["id"];
+  export let objectId: Annotation["id"];
 
   export let item: TrackletItem;
   export let color: string;
@@ -34,14 +34,14 @@ License: CECILL-C
   let isItemBeingEdited = false;
 
   $: {
-    const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
+    const currentObjectBeingEdited = $annotations.find((object) => object.displayControl?.editing);
     isItemBeingEdited =
       item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
   const onDeleteItemClick = () => {
-    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
-    //TODO ? check if deleting a key has deleted last tracklet of itemObject => delete it (?)
+    annotations.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
+    //TODO ? check if deleting a key has deleted last tracklet of annotation => delete it (?)
     updateTracklet();
     canSave.set(true);
   };

@@ -40,7 +40,7 @@ License: CECILL-C
       </div>
       <div class="my-4 mr-8 p-4 pr-8 border rounded-lg border-primary-foreground">
         <span class="mr-2 text-4xl font-medium">
-          {datasets.reduce((sum, dataset) => sum + dataset.num_elements, 0)}
+          {datasets.reduce((sum, dataset) => sum + dataset.num_items, 0)}
         </span>
         <span class="text-xl font-medium"> items </span>
       </div>

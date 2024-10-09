@@ -18,7 +18,7 @@ License: CECILL-C
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
   import {
     colorScale,
-    itemObjects,
+    annotations,
     selectedTool,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
@@ -92,7 +92,7 @@ License: CECILL-C
     draggedFrameIndex: VideoItemBBox["frame_index"],
   ) => {
     tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
-    itemObjects.update((oldObjects) =>
+    annotations.update((oldObjects) =>
       oldObjects.map((obj) => {
         if (obj.id === object.id && obj.datasetItemType === "video") {
           obj.track = obj.track.map((trackItem) => {
@@ -113,12 +113,12 @@ License: CECILL-C
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    itemObjects.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
+    annotations.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
   };
 
   const onDoubleClick = () => {
     selectedTool.set(panTool);
-    itemObjects.update((objects) =>
+    annotations.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === object.id ? "self" : "none";
         obj.displayControl = {

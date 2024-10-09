@@ -27,19 +27,22 @@ License: CECILL-C
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
-  let models: Array<string>;
+  //let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
-    models = await api.getModels();
-    modelsStore.set(models);
+    //TMP for lint
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    //models = await api.getModels();
+    //modelsStore.set(models);
+    modelsStore.set([]);
   }
 
   async function handleGetDatasets() {
     try {
-      const loadedDatasets = await api.getDatasets();
+      const loadedDatasets = await api.getDatasetsInfo();
       datasets = loadedDatasets;
       datasetsStore.set(loadedDatasets);
     } catch (err) {
@@ -61,13 +64,13 @@ License: CECILL-C
   };
 
   // UNUSED ??
-  // const getDatasetItems = async (
+  // const getBrowser = async (
   //   datasetId: string,
   //   page?: number,
   //   size?: number,
   //   query?: DatasetTableStore["query"],
   // ) => {
-  //   let datasetItems: ExplorerData = {
+  //   let datasetItems: DatasetBrowser = {
   //     id: "",
   //     name: "",
   //     table_data: { cols: [], rows: [] },
@@ -83,7 +86,7 @@ License: CECILL-C
   //     // }
   //   } else {
   //     try {
-  //       datasetItems = await api.getDatasetItems(datasetId, page, size);
+  //       datasetItems = await api.getBrowser(datasetId, page, size);
   //       //datasetWithFeats = await api.getDataset(datasetId);
   //     } catch (err) {
   //       isErrored = true;
@@ -132,7 +135,7 @@ License: CECILL-C
   //     if (currentDataset && value) {
   //       console.log("found!");
   //       currentDatasetStore.set(currentDataset);
-  //       getDatasetItems(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
+  //       getBrowser(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
   //         (err) => console.error(err),
   //       );
   //     } else {

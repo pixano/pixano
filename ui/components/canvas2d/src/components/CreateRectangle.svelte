@@ -11,13 +11,13 @@ License: CECILL-C
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
 
   import LabelTag from "./LabelTag.svelte";
-  import type { CreateRectangleShape, SaveRectangleShape } from "@pixano/core";
+  import type { CreateRectangleShape, SaveRectangleShape, Reference } from "@pixano/core";
   import type Konva from "konva";
 
   export let zoomFactor: number;
   export let newShape: CreateRectangleShape | SaveRectangleShape;
   export let stage: Konva.Stage;
-  export let viewId: string;
+  export let viewRef: Reference;
 
   let rectangleGroup: Konva.Group;
 
@@ -32,7 +32,7 @@ License: CECILL-C
     if (newShape.status === "creating") {
       const rect = rectangleGroup?.findOne("#drag-rect");
       if (rect) {
-        const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+        const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
         const correctedRect = rect.getClientRect({
           skipTransform: false,
           skipShadow: true,
@@ -50,7 +50,7 @@ License: CECILL-C
   }
 </script>
 
-{#if newShape.viewId === viewId}
+{#if newShape.viewRef.name === viewRef.name}
   <Group bind:handle={rectangleGroup} config={{ id: "drag-rect-group" }}>
     <Rect
       config={{

@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { itemObjects } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -33,7 +33,7 @@ License: CECILL-C
     updateView($currentFrameIndex);
   };
 
-  itemObjects.subscribe((value) => {
+  annotations.subscribe((value) => {
     const highlightedObject = value.find((item) => item.highlighted === "self");
     if (!highlightedObject) return;
     const element = document.querySelector(`#video-object-${highlightedObject.id}`);
@@ -51,7 +51,7 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each Object.values($itemObjects) as object}
+      {#each Object.values($annotations) as object}
         {#if object.datasetItemType === "video"}
           <VideoPlayerRow>
             <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView} />
