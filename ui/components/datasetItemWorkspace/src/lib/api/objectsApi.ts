@@ -28,7 +28,6 @@ import type {
   SaveItem,
   SaveUpdate,
   DatasetSchema,
-  SequenceFrame,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -50,7 +49,8 @@ import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
 import { templates } from "../settings/keyPointsTemplates";
 
-export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity => {
+export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
+  //NOTE: it may be usefull to have a map (derived store) of annotation2entities & entities2annotations, for optimization
   const entity = entities.find((entity) => entity.id === ann.data.entity_ref.id);
   if (entity) {
     //add child
@@ -113,7 +113,7 @@ export const mapObjectToBBox = (
     const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
 
     const entity = getObjectEntity(obj, entities);
-    const tooltip = defineTooltip(obj, entity);
+    const tooltip = entity ? defineTooltip(obj, entity) : "";
 
     res_bboxes.push({
       ...obj,

@@ -28,7 +28,7 @@ export function createFeature(obj: BaseData<any>, defaultFeats: Feature[] = []):
   if (extraFields.length > 0) {
     //TODO : extract correct dtype from value... (or better: from schema)
     for (const field of extraFields)
-      features.push({ name: field, dtype: "str", value: obj.data[field]}); //TODO type
+      features.push({ name: field, dtype: "str", value: obj.data[field] }); //TODO type
   } else {
     features = defaultFeats;
   }

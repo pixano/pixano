@@ -45,12 +45,11 @@ License: CECILL-C
 
   annotations.subscribe((objects) => {
     const allAnnotationsSortedByModel = sortObjectsByModel(objects);
-    //map allItems.. as Annotation to correspnding entities
-    //allEntitiesSortedByModel = fct(allAnnotationsSortedByModel);
+    //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
     for (const model in allAnnotationsSortedByModel) {
-      allEntitiesSortedByModel[model] = allAnnotationsSortedByModel[model].map((ann) =>
-        getObjectEntity(ann, $entities),
-      );
+      allEntitiesSortedByModel[model] = allAnnotationsSortedByModel[model]
+        .map((ann) => getObjectEntity(ann, $entities))
+        .filter((x) => x !== undefined);
     }
 
     const highlightedObject = objects.find((item) => item.highlighted === "self");
