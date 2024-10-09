@@ -27,12 +27,14 @@ License: CECILL-C
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
-  let models: Array<string>;
+  //let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
+    //TMP for lint
+    await new Promise((resolve) => setTimeout(resolve, 1));
     //models = await api.getModels();
     //modelsStore.set(models);
     modelsStore.set([]);

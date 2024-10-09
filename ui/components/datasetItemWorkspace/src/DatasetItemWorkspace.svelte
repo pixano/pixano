@@ -77,7 +77,7 @@ License: CECILL-C
       //   (ann as VideoObject).keypoints?.push(ann.data);
       //else if (ann.is_mask) (ann as VideoObject).mask = ann.data;
       //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
-      (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
+      //(ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
     }
     return ann;
   };

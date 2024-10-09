@@ -716,7 +716,7 @@ export type TrackletWithItems = Tracklet & {
 //   displayedMBox?: VideoItemBBox[]; //list for multiview
 //   displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
 // };
-export type VideoObject = any; //TMP
+export type VideoObject = object; //TMP
 
 // export type ImageObject = ItemObjectBase & {
 //   datasetItemType: "image";

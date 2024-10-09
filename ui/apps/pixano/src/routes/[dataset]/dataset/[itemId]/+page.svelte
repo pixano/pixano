@@ -11,9 +11,7 @@ License: CECILL-C
     type DatasetItem,
     type DatasetInfo,
     type SaveItem,
-    Image,
     PrimaryButton,
-    SequenceFrame,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
@@ -49,46 +47,49 @@ License: CECILL-C
 
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
-    api.getDataset(dataset.id).then((ds) => {
-      datasetSchema.set(ds.dataset_schema);
-      api
-        .getDatasetItem(dataset.id, encodeURIComponent(id))
-        .then((item) => {
-          let item_type: "image" | "video" | "3d" = "image";
-          //append /data/<dataset_path>/media url to all urls
-          //NOTE: slice(-2) is not very safe, it suppose we respect the ""<dataset_path>/media" rule
-          //but as ds.media_dir is an absolute path, we need to make this assumption...
-          //Note2: we will need to revert this when we POST/PUT views !!
-          const media_dir = "data/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
-          Object.values(item.views).map((view) => {
-            if (Array.isArray(view)) {
-              const video = view as SequenceFrame[];
-              item_type = "video";
-              video.forEach((sf) => {
-                sf.data.type = "video";
-                sf.data.url = media_dir + sf.data.url;
-              });
-              video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+    api
+      .getDataset(dataset.id)
+      .then((ds) => {
+        datasetSchema.set(ds.dataset_schema);
+        api
+          .getDatasetItem(dataset.id, encodeURIComponent(id))
+          .then((item) => {
+            let item_type: "image" | "video" | "3d" = "image";
+            //append /data/<dataset_path>/media url to all urls
+            //NOTE: slice(-2) is not very safe, it suppose we respect the ""<dataset_path>/media" rule
+            //but as ds.media_dir is an absolute path, we need to make this assumption...
+            //Note2: we will need to revert this when we POST/PUT views !!
+            const media_dir = "data/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
+            Object.values(item.views).map((view) => {
+              if (Array.isArray(view)) {
+                const video = view;
+                item_type = "video";
+                video.forEach((sf) => {
+                  sf.data.type = "video";
+                  sf.data.url = media_dir + sf.data.url;
+                });
+                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+              } else {
+                const image = view;
+                image.data.type = "image";
+                image.data.url = media_dir + image.data.url;
+              }
+              return view;
+            });
+            selectedItem = item;
+            selectedItem.type = item_type;
+            selectedItem.datasetId = dataset.id;
+            if (Object.keys(item).length === 0) {
+              noItemFound = true;
             } else {
-              const image = view as Image;
-              image.data.type = "image";
-              image.data.url = media_dir + image.data.url;
+              noItemFound = false;
             }
-            return view;
-          });
-          selectedItem = item;
-          selectedItem.type = item_type;
-          selectedItem.datasetId = dataset.id;
-          if (Object.keys(item).length === 0) {
-            noItemFound = true;
-          } else {
-            noItemFound = false;
-          }
-          console.log("XXX handleSelectIem - selectedItem:", selectedItem);
-        })
-        .then(() => isLoadingNewItemStore.set(false))
-        .catch((err) => console.error(err));
-    });
+            console.log("XXX handleSelectIem - selectedItem:", selectedItem);
+          })
+          .then(() => isLoadingNewItemStore.set(false))
+          .catch((err) => console.error(err));
+      })
+      .catch((err) => console.error(err));
   };
 
   page.subscribe((value) => {
