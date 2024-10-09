@@ -28,7 +28,7 @@ export function createFeature(obj: BaseData<Any>, defaultFeats: Feature[] = []):
   if (extraFields.length > 0) {
     //TODO : extract correct dtype from value... (or better: from schema)
     for (const field of extraFields)
-      features.push({ name: field, dtype: "str", value: obj.data[field] as string });  //TODO type
+      features.push({ name: field, dtype: "str", value: obj.data[field] as string }); //TODO type
   } else {
     features = defaultFeats;
   }
@@ -41,12 +41,12 @@ export function createFeature(obj: BaseData<Any>, defaultFeats: Feature[] = []):
     })),
   );
   return parsedFeatures.map((feature) => {
-    const value = obj.data[feature.name] as string;  //TODO type
+    const value = obj.data[feature.name] as string; //TODO type
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
     return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
   });
-};
+}
 
 export const mapShapeInputsToFeatures = (
   shapeInputs: { [key: string]: FeatureValues },

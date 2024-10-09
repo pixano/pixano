@@ -49,7 +49,7 @@ const baseDataFieldsSchema = <T extends z.ZodType>(schema: T) => {
 type BaseDataFieldsType<T extends z.ZodType> = ReturnType<typeof baseDataFieldsSchema<T>>;
 type BaseDataFields<T> = z.infer<BaseDataFieldsType<z.ZodType<T>>>;
 
-export class BaseData<T> {
+export class BaseData<T extends object> {
   id: string;
   table_info: TableInfo;
   created_at: string;
@@ -62,7 +62,7 @@ export class BaseData<T> {
     this.table_info = obj.table_info;
     this.created_at = obj.created_at;
     this.updated_at = obj.updated_at;
-    this.data = obj.data;
+    this.data = obj.data as T;
   }
 
   nonFeaturesFields(): string[] {
@@ -71,7 +71,7 @@ export class BaseData<T> {
 
   getDynamicFields(): string[] {
     const instanceKeys = Object.keys(this.data);
-    return instanceKeys.filter(key => !this.nonFeaturesFields().includes(key));
+    return instanceKeys.filter((key) => !this.nonFeaturesFields().includes(key));
   }
 }
 
@@ -94,24 +94,26 @@ export class View extends BaseData<ViewType> {
   }
 
   static createInstance(obj: BaseDataFields<ViewType>) {
-    if (obj.table_info.base_schema === "Image") return new Image(obj);
-    if (obj.table_info.base_schema === "SequenceFrame") return new SequenceFrame(obj);
+    if (obj.table_info.base_schema === "Image")
+      return new Image(obj as unknown as BaseDataFields<ImageType>);
+    if (obj.table_info.base_schema === "SequenceFrame")
+      return new SequenceFrame(obj as unknown as BaseDataFields<SequenceFrameType>);
     return new View(obj);
   }
 
   static deepCreateInstanceArrayOrPlain(
-    objs: Record<string, BaseDataFields<ViewType> | BaseDataFields<ViewType>[]>,
-  ): Record<string, View | View[]> {
-    const newObj: Record<string, View | View[]> = {};
+    objs: Record<string, BaseDataFields<ImageType> | BaseDataFields<SequenceFrameType>[]>,
+  ): Record<string, Image | SequenceFrame[]> {
+    const newObj: Record<string, Image | SequenceFrame[]> = {};
     for (const [k, vs] of Object.entries(objs)) {
       if (Array.isArray(vs)) {
-        const temp = [];
+        const temp: SequenceFrame[] = [];
         for (const v of vs) {
-          temp.push(View.createInstance(v));
+          temp.push(View.createInstance(v as unknown as BaseDataFields<ViewType>) as SequenceFrame);
         }
         newObj[k] = temp;
       } else {
-        newObj[k] = View.createInstance(vs);
+        newObj[k] = View.createInstance(vs as unknown as BaseDataFields<ViewType>) as Image;
       }
     }
     return newObj;
@@ -135,8 +137,8 @@ export class Image extends View {
     if (!["Image", "SequenceFrame"].includes(obj.table_info.base_schema))
       throw new Error("Not an Image");
     imageSchema.parse(obj.data);
-    super(obj);
-    this.data = obj.data;
+    super(obj as unknown as BaseDataFields<ViewType>);
+    this.data = obj.data as ImageType & ViewType;
   }
 
   nonFeaturesFields(): string[] {
@@ -158,8 +160,8 @@ export class SequenceFrame extends Image {
   constructor(obj: BaseDataFields<SequenceFrameType>) {
     if (obj.table_info.base_schema !== "SequenceFrame") throw new Error("Not a SequenceFrame");
     sequenceFrameSchema.parse(obj.data);
-    super(obj);
-    this.data = obj.data;
+    super(obj as unknown as BaseDataFields<ImageType>);
+    this.data = obj.data as SequenceFrameType & ImageType & ViewType;
   }
 
   nonFeaturesFields(): string[] {
@@ -190,7 +192,8 @@ export class Entity extends BaseData<EntityType> {
   }
 
   static createInstance(obj: BaseDataFields<EntityType>) {
-    if (obj.table_info.base_schema === "Track") return new Track(obj);
+    if (obj.table_info.base_schema === "Track")
+      return new Track(obj as unknown as BaseDataFields<TrackType>);
     return new Entity(obj);
   }
 
@@ -218,7 +221,7 @@ type TrackType = z.infer<typeof trackSchema>; //export if needed
 export class Track extends Entity {
   constructor(obj: BaseDataFields<TrackType>) {
     trackSchema.parse(obj.data);
-    super(obj);
+    super(obj as unknown as BaseDataFields<EntityType>);
   }
 
   nonFeaturesFields(): string[] {
@@ -238,10 +241,10 @@ const annotationSchema = z
 type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
 export class Annotation extends BaseData<AnnotationType> {
   //UI only fields
-  datasetItemType: string;
+  datasetItemType: string = "image";
   //features: Record<string, ItemFeature>;
-  displayControl: DisplayControl;
-  highlighted: "none" | "self" | "all";
+  displayControl: DisplayControl = {};
+  highlighted: "none" | "self" | "all" = "all";
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
@@ -253,9 +256,12 @@ export class Annotation extends BaseData<AnnotationType> {
   }
 
   static createInstance(obj: BaseDataFields<AnnotationType>) {
-    if (obj.table_info.base_schema === "BBox") return new BBox(obj);
-    if (obj.table_info.base_schema === "KeyPoints") return new Keypoints(obj);
-    if (obj.table_info.base_schema === "CompressedRLE") return new Mask(obj);
+    if (obj.table_info.base_schema === "BBox")
+      return new BBox(obj as unknown as BaseDataFields<BBoxType>);
+    if (obj.table_info.base_schema === "KeyPoints")
+      return new Keypoints(obj as unknown as BaseDataFields<KeypointsType>);
+    if (obj.table_info.base_schema === "CompressedRLE")
+      return new Mask(obj as unknown as BaseDataFields<MaskType>);
     return new Annotation(obj);
   }
 
@@ -306,8 +312,8 @@ export class BBox extends Annotation {
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
     bboxSchema.parse(obj.data);
-    super(obj);
-    this.data = obj.data;
+    super(obj as unknown as BaseDataFields<AnnotationType>);
+    this.data = obj.data as BBoxType & AnnotationType;
   }
 
   nonFeaturesFields(): string[] {
@@ -336,8 +342,8 @@ export class Keypoints extends Annotation {
   constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== "KeyPoints") throw new Error("Not a Keypoints");
     keypointsSchema.parse(obj.data);
-    super(obj);
-    this.data = obj.data;
+    super(obj as unknown as BaseDataFields<AnnotationType>);
+    this.data = obj.data as KeypointsType & AnnotationType;
   }
 
   nonFeaturesFields(): string[] {
@@ -361,14 +367,14 @@ export class Mask extends Annotation {
   visible?: boolean;
   editing?: boolean;
   strokeFactor?: number;
-  svg: string[];
+  svg?: string[];
   catId?: number; //really needed ??
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
     maskSchema.parse(obj.data);
-    super(obj);
-    this.data = obj.data;
+    super(obj as unknown as BaseDataFields<AnnotationType>);
+    this.data = obj.data as MaskType & AnnotationType;
   }
 
   nonFeaturesFields(): string[] {
@@ -517,8 +523,8 @@ export class DatasetItem implements DatasetItemType {
   views: Record<string, Image | SequenceFrame[]>;
 
   //UI only fields
-  datasetId: string;
-  type: string;
+  datasetId: string = "";
+  type: string = "image";
 
   constructor(obj: DatasetItemType) {
     datasetItemSchema.parse(obj);
@@ -527,7 +533,12 @@ export class DatasetItem implements DatasetItemType {
 
     this.entities = Entity.deepCreateInstanceArray(obj.entities);
     this.annotations = Annotation.deepCreateInstanceArray(obj.annotations);
-    this.views = View.deepCreateInstanceArrayOrPlain(obj.views);
+    this.views = View.deepCreateInstanceArrayOrPlain(
+      obj.views as unknown as Record<
+        string,
+        BaseDataFields<ImageType> | BaseDataFields<SequenceFrameType>[]
+      >,
+    );
   }
 }
 
@@ -616,45 +627,11 @@ export interface Base {
   data: object;
 }
 
-interface ViewData extends Base["data"] {
-  type: string;
-  url: string;
-  parent_ref: Reference;
-  format: string;
-  height: number;
-  width: number;
-  thumbnail?: string;
-  frame_index?: number;
-  total_frames?: number;
-  features: Record<string, ItemFeature>;
-}
-
-export type ItemView = Base & {
-  data: ViewData;
-};
-
 export type HTMLImage = {
   id: string;
   element: HTMLImageElement;
 };
 export type ImagesPerView = Record<string, HTMLImage[]>;
-// export interface ItemView {
-//   id: string;
-//   data: {
-//     type: string;
-//     url: string;
-//     item_ref: Reference;
-//     parent_ref: Reference;
-//     format: string;
-//     height: number;
-//     width: number;
-//     thumbnail?: string;
-//     frame_index?: number;
-//     total_frames?: number;
-//     features: Record<string, ItemFeature>;
-//   };
-//   table_info: TableInfo;
-// }
 
 // ITEM OBJECT
 export interface DisplayControl {
@@ -671,18 +648,18 @@ export interface ObjectThumbnail {
   coords: Array<number>;
 }
 
-export interface ItemObjectBase extends Base["data"] {
-  item_ref: Reference;
-  entity_ref: Reference;
-  source_ref: Reference; //here or only in ItemAnnotation?
-  view_ref: Reference;
-  item_id: string;
-  //source_id: string;
-  features: Record<string, ItemFeature>;
-  displayControl?: DisplayControl;
-  highlighted?: "none" | "self" | "all";
-  review_state?: "accepted" | "rejected";
-}
+// export interface ItemObjectBase extends Base["data"] {
+//   item_ref: Reference;
+//   entity_ref: Reference;
+//   source_ref: Reference; //here or only in ItemAnnotation?
+//   view_ref: Reference;
+//   item_id: string;
+//   //source_id: string;
+//   features: Record<string, ItemFeature>;
+//   displayControl?: DisplayControl;
+//   highlighted?: "none" | "self" | "all";
+//   review_state?: "accepted" | "rejected";
+// }
 
 export type TrackletItem = {
   frame_index: number;
@@ -731,14 +708,15 @@ export type TrackletWithItems = Tracklet & {
   items: TrackletItem[];
 };
 
-export type VideoObject = ItemObjectBase & {
-  datasetItemType: "video";
-  track: Tracklet[];
-  boxes?: VideoItemBBox[];
-  keypoints?: VideoItemKeypoints[];
-  displayedMBox?: VideoItemBBox[]; //list for multiview
-  displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
-};
+// export type VideoObject = ItemObjectBase & {
+//   datasetItemType: "video";
+//   track: Tracklet[];
+//   boxes?: VideoItemBBox[];
+//   keypoints?: VideoItemKeypoints[];
+//   displayedMBox?: VideoItemBBox[]; //list for multiview
+//   displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
+// };
+export type VideoObject = any; //TMP
 
 // export type ImageObject = ItemObjectBase & {
 //   datasetItemType: "image";

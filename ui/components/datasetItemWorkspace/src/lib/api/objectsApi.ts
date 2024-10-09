@@ -22,7 +22,6 @@ import type {
   BBoxType,
   MaskType,
   SaveShape,
-  ItemObjectBase,
   VideoItemBBox,
   KeypointsTemplate,
   VideoObject,
@@ -394,7 +393,7 @@ export const createObjectCardId = (object: Annotation | Entity): string => `obje
 
 export const defineCreatedEntity = (
   shape: SaveShape,
-  features: ItemObjectBase["features"],
+  features: Record<string, ItemFeature>,
   //currentFrameIndex: number,
   dataset_schema: DatasetSchema,
 ): Entity => {
@@ -429,7 +428,7 @@ export const defineCreatedObject = (
   entity: Entity,
   shape: SaveShape,
   videoType: DatasetItem["type"],
-  features: ItemObjectBase["features"],
+  features: Record<string, ItemFeature>,
   currentFrameIndex: number,
 ): Annotation => {
   const isVideo = videoType === "video";
