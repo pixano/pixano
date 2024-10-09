@@ -130,16 +130,20 @@ License: CECILL-C
       else return 0;
     });
     for (const savedItem of data) {
+      let no_table = false;
       let route = savedItem.object.table_info.group;
-      if (route === "item") route = "items";
+      if (route === "item") {
+        route = "items";
+        no_table = true;
+      }
       if (savedItem.change_type === "delete") {
-        await api.deleteSchema(route, selectedDataset.id, savedItem.object);
+        await api.deleteSchema(route, selectedDataset.id, savedItem.object, no_table);
       }
       if (savedItem.change_type === "add") {
-        await api.addSchema(route, selectedDataset.id, savedItem.object);
+        await api.addSchema(route, selectedDataset.id, savedItem.object, no_table);
       }
       if (savedItem.change_type === "update") {
-        await api.updateSchema(route, selectedDataset.id, savedItem.object);
+        await api.updateSchema(route, selectedDataset.id, savedItem.object, no_table);
       }
     }
     //handleSelectItem(selectedDataset, currentItemId); //--> not necessary, but there is a bug when uncommented... need to invstigate

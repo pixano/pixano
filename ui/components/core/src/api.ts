@@ -251,9 +251,12 @@ export async function getItemEmbeddings(
 //   }
 // }
 
-export async function deleteSchema(route: string, ds_id: string, sch: Schema) {
+export async function deleteSchema(route: string, ds_id: string, sch: Schema, no_table: boolean) {
+  const url = no_table
+    ? `/${route}/${ds_id}/${sch.id}`
+    : `/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`;
   try {
-    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+    const response = await fetch(url, {
       method: "DELETE",
     });
     if (!response.ok) {
@@ -269,9 +272,12 @@ export async function deleteSchema(route: string, ds_id: string, sch: Schema) {
   }
 }
 
-export async function addSchema(route: string, ds_id: string, sch: Schema) {
+export async function addSchema(route: string, ds_id: string, sch: Schema, no_table: boolean) {
+  const url = no_table
+    ? `/${route}/${ds_id}/${sch.id}`
+    : `/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`;
   try {
-    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+    const response = await fetch(url, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -287,9 +293,12 @@ export async function addSchema(route: string, ds_id: string, sch: Schema) {
   }
 }
 
-export async function updateSchema(route: string, ds_id: string, sch: Schema) {
+export async function updateSchema(route: string, ds_id: string, sch: Schema, no_table: boolean) {
+  const url = no_table
+    ? `/${route}/${ds_id}/${sch.id}`
+    : `/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`;
   try {
-    const response = await fetch(`/${route}/${ds_id}/${sch.table_info.name}/${sch.id}`, {
+    const response = await fetch(url, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",

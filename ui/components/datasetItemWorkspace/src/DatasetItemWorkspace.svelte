@@ -52,16 +52,6 @@ License: CECILL-C
   let embeddings: Embeddings = {};
 
   const back2front = (ann: Annotation): Annotation => {
-    //find corresponding entity
-    // Object.values(selectedItem.entities).forEach((entities) => {
-    //   for (const entity of entities) {
-    //     if (entity.id === ann.data.entity_ref.id) {
-    //       ann.features = {
-    //         name: { name: "name", dtype: "str", value: entity.data["name"] as string },
-    //       };
-    //     }
-    //   }
-    // });
     //TMP: my dataset doesn't have source name yet...
     if (ann.data.source_ref.name == "" || ann.data.source_ref.name == "source")
       ann.data.source_ref.name = "Ground Truth"; //TMP
@@ -89,8 +79,6 @@ License: CECILL-C
       //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
       (ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
     }
-    console.log("XXX back2front", ann);
-
     return ann;
   };
 
@@ -174,12 +162,6 @@ License: CECILL-C
 
   const onSave = async () => {
     isSaving = true;
-    // const savedItem: DatasetItemSave = {
-    //   id: selectedItem.id,
-    //   split: "split" in selectedItem ? (selectedItem.split as string) : "undefined",
-    //   save_data: $saveData,
-    //   item_features: $itemMetas.mainFeatures,
-    // };
     await handleSaveItem(front2back($saveData));
     saveData.set([]);
     canSave.set(false);

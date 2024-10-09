@@ -10,20 +10,21 @@ License: CECILL-C
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
-  import { IconButton, Switch, type ItemFeature } from "@pixano/core/src";
-  import { View, Image, SequenceFrame } from "@pixano/core";
+  import { IconButton, Switch } from "@pixano/core/src";
+  import { Image, SequenceFrame, type SaveItem } from "@pixano/core";
 
   // Local imports
   import {
     canSave,
+    saveData,
     itemMetas,
     filters,
     imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { createFeature } from "../../lib/api/featuresApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
 
   type ViewMeta = {
     fileName: string | undefined;
@@ -71,13 +72,12 @@ License: CECILL-C
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas: ItemsMeta = { ...oldMetas };
-      newMetas.mainFeatures = {
-        ...newMetas.mainFeatures,
-        [propertyName]: {
-          ...(newMetas.mainFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
-          value,
-        },
+      newMetas.item.data[propertyName] = value;
+      const save_item: SaveItem = {
+        change_type: "update",
+        object: newMetas.item,
       };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       return newMetas;
     });
     canSave.set(true);
