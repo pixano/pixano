@@ -118,7 +118,7 @@ License: CECILL-C
       y: bbox.data.coords[1] || 0,
       width: bbox.data.coords[2] || 0,
       height: bbox.data.coords[3] || 0,
-      stroke: colorScale(bbox.id),
+      stroke: colorScale(bbox.data.entity_ref.id),
       strokeWidth: bbox.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.opacity,
       visible: bbox.visible,
@@ -133,6 +133,6 @@ License: CECILL-C
     {zoomFactor}
     opacity={bbox.opacity}
     tooltip={bbox.tooltip}
-    color={colorScale(bbox.id)}
+    color={colorScale(bbox.data.entity_ref.id)}
   />
 </Group>

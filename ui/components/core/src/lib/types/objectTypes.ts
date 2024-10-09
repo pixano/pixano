@@ -67,17 +67,10 @@ export type Vertex = {
   };
 };
 
-export type ItemKeypoints = {
-  id: string;
-  viewRef: Reference;
-  template_id: string;
-  vertices: Vertex[];
-  displayControl?: DisplayControl;
-};
-
 export type KeypointsTemplate = {
   id: string;
-  viewRef: Reference;
+  viewRef?: Reference;
+  entityRef?: Reference;
   edges: [number, number][];
   vertices: Required<Vertex>[];
   editing?: boolean;

@@ -197,6 +197,7 @@ export const mapObjectToKeypoints = (
     res_m_keypoints.push({
       id: object.id,
       viewRef: keypoints.data.view_ref,
+      entityRef: keypoints.data.entity_ref,
       vertices,
       edges: template.edges,
       editing: object.displayControl?.editing,

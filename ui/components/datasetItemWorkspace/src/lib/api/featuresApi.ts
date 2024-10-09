@@ -22,13 +22,13 @@ import type {
   TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
-export function createFeature(obj: BaseData<Any>, defaultFeats: Feature[] = []): Feature[] {
+export function createFeature(obj: BaseData<any>, defaultFeats: Feature[] = []): Feature[] {
   const extraFields = obj.getDynamicFields();
-  let features: Feature[] = [];
+  let features = [];
   if (extraFields.length > 0) {
     //TODO : extract correct dtype from value... (or better: from schema)
     for (const field of extraFields)
-      features.push({ name: field, dtype: "str", value: obj.data[field] as string }); //TODO type
+      features.push({ name: field, dtype: "str", value: obj.data[field]}); //TODO type
   } else {
     features = defaultFeats;
   }

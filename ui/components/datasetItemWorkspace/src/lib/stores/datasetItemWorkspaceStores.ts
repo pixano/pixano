@@ -54,10 +54,10 @@ type ColorScale = [Array<string>, (id: string) => string];
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
 
 export const colorScale = derived(
-  annotations,
-  ($annotations, _, update) => {
+  entities,
+  ($entities, _, update) => {
     update((old) => {
-      let allIds = $annotations.map((obj) => obj.id);
+      let allIds = $entities.map((obj) => obj.id);
       if (old) {
         allIds = [...old[0], ...allIds];
         allIds = [...new Set(allIds)];

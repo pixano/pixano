@@ -1314,7 +1314,7 @@ License: CECILL-C
                   currentImage={getCurrentImage(view_name)}
                   {zoomFactor}
                   {mask}
-                  color={colorScale(mask.id)}
+                  color={colorScale(mask.data.entity_ref.id)}
                   {selectedTool}
                 />
               {/if}

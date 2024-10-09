@@ -5,7 +5,6 @@ License: CECILL-C
 -------------------------------------*/
 
 import { z } from "zod";
-import type { ItemKeypoints } from "./objectTypes";
 
 const referenceSchema = z
   .object({
@@ -130,7 +129,7 @@ const imageSchema = z
   .passthrough();
 type ImageType = z.infer<typeof imageSchema>; //export if needed
 export class Image extends View {
-  data: ImageType & ViewType;
+  declare data: ImageType & ViewType;
 
   constructor(obj: BaseDataFields<ImageType>) {
     // an Image can be a SequenceFrame
@@ -155,7 +154,7 @@ const sequenceFrameSchema = z
   .passthrough();
 type SequenceFrameType = z.infer<typeof sequenceFrameSchema>; //export if needed
 export class SequenceFrame extends Image {
-  data: SequenceFrameType & ImageType & ViewType;
+  declare data: SequenceFrameType & ImageType & ViewType;
 
   constructor(obj: BaseDataFields<SequenceFrameType>) {
     if (obj.table_info.base_schema !== "SequenceFrame") throw new Error("Not a SequenceFrame");
@@ -300,7 +299,7 @@ const bboxSchema = z
 export type BBoxType = z.infer<typeof bboxSchema>;
 
 export class BBox extends Annotation {
-  data: BBoxType & AnnotationType;
+  declare data: BBoxType & AnnotationType;
 
   //UI only fields
   opacity?: number;
@@ -331,7 +330,7 @@ const keypointsSchema = z
 type KeypointsType = z.infer<typeof keypointsSchema>; //export if needed
 
 export class Keypoints extends Annotation {
-  data: KeypointsType & AnnotationType;
+  declare data: KeypointsType & AnnotationType;
 
   //UI only fields
   //opacity?: number;
@@ -360,7 +359,7 @@ const maskSchema = z
 export type MaskType = z.infer<typeof maskSchema>; //export if needed
 
 export class Mask extends Annotation {
-  data: MaskType & AnnotationType;
+  declare data: MaskType & AnnotationType;
 
   //UI only fields
   opacity?: number;
@@ -599,23 +598,10 @@ export interface Dataset {
   info: DatasetInfo;
 }
 
-// export type DatasetItemSave = {
-//   id: string;
-//   split: string;
-//   item_features: Record<string, ItemFeature>;
-//   save_data: SaveItem[];
-// };
-
 export interface DatasetItems {
   items: Array<DatasetItem>;
   total: number;
 }
-
-// export interface TableInfo {
-//   name: string;
-//   group: string;
-//   base_schema: string;
-// }
 
 // ITEM DATA
 
@@ -648,19 +634,6 @@ export interface ObjectThumbnail {
   coords: Array<number>;
 }
 
-// export interface ItemObjectBase extends Base["data"] {
-//   item_ref: Reference;
-//   entity_ref: Reference;
-//   source_ref: Reference; //here or only in ItemAnnotation?
-//   view_ref: Reference;
-//   item_id: string;
-//   //source_id: string;
-//   features: Record<string, ItemFeature>;
-//   displayControl?: DisplayControl;
-//   highlighted?: "none" | "self" | "all";
-//   review_state?: "accepted" | "rejected";
-// }
-
 export type TrackletItem = {
   frame_index: number;
   tracklet_id: string;
@@ -668,15 +641,6 @@ export type TrackletItem = {
   is_thumbnail?: boolean;
   hidden?: boolean;
 };
-
-// export type SaveDataAddUpdate =
-//   | BBox
-//   | VideoItemBBox
-//   | ItemKeypoints
-//   | VideoItemKeypoints
-//   | Mask
-//   | Tracklet
-//   | ItemObjectBase;
 
 export type Schema = Annotation | Entity | Item | View;
 
@@ -696,7 +660,7 @@ export type SaveDelete = SaveBase & {
 export type SaveItem = SaveAdd | SaveUpdate | SaveDelete;
 
 export type VideoItemBBox = BBox & TrackletItem;
-export type VideoItemKeypoints = ItemKeypoints & TrackletItem;
+export type VideoItemKeypoints = Keypoints & TrackletItem;
 export interface Tracklet {
   start: number;
   end: number;
@@ -718,37 +682,7 @@ export type TrackletWithItems = Tracklet & {
 // };
 export type VideoObject = object; //TMP
 
-// export type ImageObject = ItemObjectBase & {
-//   datasetItemType: "image";
-//   // bbox?: ItemBBox;
-//   // mask?: ItemRLE;
-//   // keypoints?: ItemKeypoints;
-// };
-
 export type ImageObject = BBox | Mask | Keypoints;
-
-//export type ItemObject = ImageObject | VideoObject;
-
-// export interface ItemRLE {
-//   id: string;
-//   ref_name: string;
-//   view_id?: string;
-//   counts: Array<number>;
-//   size: Array<number>;
-//   displayControl?: DisplayControl;
-// }
-
-// export type ItemBBox = BBox;
-// export interface ItemBBox {
-//   id: string;
-//   ref_name: string;
-//   view_id: string;
-//   coords: Array<number>;
-//   format: string;
-//   is_normalized: boolean;
-//   confidence: number;
-//   displayControl?: DisplayControl;
-// }
 
 // ITEM EMBEDDING
 export interface ItemEmbedding {
@@ -777,36 +711,7 @@ export interface FeaturesValues {
 
 // UI DATA
 
-//not used anymore...
-export interface CanvasMask {
-  id: string;
-  viewRef: Reference;
-  svg: MaskSVG;
-  rle?: MaskType;
-  catId: number;
-  visible: boolean;
-  editing: boolean;
-  opacity: number;
-  coordinates?: number[];
-  strokeFactor?: number;
-  highlighted?: "none" | "self" | "all";
-}
-
 export type MaskSVG = string[];
-
-// Need to be reworker vs back BBox
-// export interface BBox {
-//   id: string;
-//   viewRef: Reference;
-//   bbox: Array<number>; // should be rename - current coordinate
-//   tooltip: string;
-//   catId: number;
-//   visible: boolean;
-//   opacity: number;
-//   editing?: boolean;
-//   strokeFactor?: number;
-//   highlighted?: "none" | "self" | "all";
-// }
 
 // LABELS DATA
 
