@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Combobox, cn, type ObjectThumbnail } from "@pixano/core";
+  import { Combobox, cn, type ObjectThumbnail, Entity } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
   import ObjectCard from "./ObjectCard.svelte";
@@ -22,11 +22,12 @@ License: CECILL-C
     createObjectCardId,
     defineObjectThumbnail,
     sortObjectsByModel,
+    getObjectEntity,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
   import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allItemsSortedByModel: ObjectsSortedByModelType = {
+  let allEntitiesSortedByModel: ObjectsSortedByModelType<Entity> = {
     [GROUND_TRUTH]: [],
     [PRE_ANNOTATION]: [],
   };
@@ -43,7 +44,15 @@ License: CECILL-C
   });
 
   annotations.subscribe((objects) => {
-    allItemsSortedByModel = sortObjectsByModel(objects);
+    const allAnnotationsSortedByModel = sortObjectsByModel(objects);
+    //map allItems.. as Annotation to correspnding entities
+    //allEntitiesSortedByModel = fct(allAnnotationsSortedByModel);
+    for (const model in allAnnotationsSortedByModel) {
+      allEntitiesSortedByModel[model] = allAnnotationsSortedByModel[model].map((ann) =>
+        getObjectEntity(ann, $entities),
+      );
+    }
+
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (!highlightedObject) return;
     const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
@@ -52,23 +61,11 @@ License: CECILL-C
     }
   });
 
-  //TODO: use entities instead of annotations in inspector (annotations as childrens of entity)
-  // But it means some rework for many sub functions here...
-  // entities.subscribe((objects) => {
-  //   allItemsSortedByModel = sortObjectsByModel(objects);
-  //   const highlightedObject = objects.find((item) => item.highlighted === "self");
-  //   if (!highlightedObject) return;
-  //   const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
-  //   if (element) {
-  //     element.scrollIntoView({ behavior: "smooth", block: "start" });
-  //   }
-  // });
-
-  let allModels = Object.keys(allItemsSortedByModel).filter(
+  let allModels = Object.keys(allEntitiesSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   );
 
-  let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
+  let selectedModel: string = Object.keys(allEntitiesSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   )[0];
 </script>
@@ -96,17 +93,17 @@ License: CECILL-C
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}
-        numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
+        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].length}
       >
-        {#each allItemsSortedByModel[GROUND_TRUTH] as annotation}
-          <ObjectCard bind:annotation />
+        {#each allEntitiesSortedByModel[GROUND_TRUTH] as entity}
+          <ObjectCard bind:entity />
         {/each}
       </ObjectsModelSection>
       {#if selectedModel}
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allItemsSortedByModel[selectedModel]?.length || 0}
+          numberOfItem={allEntitiesSortedByModel[selectedModel]?.length || 0}
         >
           <Combobox
             slot="modelSelection"
@@ -117,8 +114,8 @@ License: CECILL-C
               label: model,
             }))}
           />
-          {#each allItemsSortedByModel[selectedModel] || [] as annotation}
-            <ObjectCard bind:annotation />
+          {#each allEntitiesSortedByModel[selectedModel] || [] as entity}
+            <ObjectCard bind:entity />
           {/each}
         </ObjectsModelSection>
       {/if}

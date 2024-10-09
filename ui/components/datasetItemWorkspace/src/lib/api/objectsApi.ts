@@ -51,8 +51,19 @@ import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
 import { templates } from "../settings/keyPointsTemplates";
 
-export const getObjectEntity = (obj: Annotation, entities: Entity[]): Entity => {
-  return entities.find((entity) => entity.id === obj.data.entity_ref.id);
+export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity => {
+  const entity = entities.find((entity) => entity.id === ann.data.entity_ref.id);
+  if (entity) {
+    //add child
+    if (entity?.childs) {
+      if (!entity.childs.find((existing_ann) => existing_ann.id === ann.id)) {
+        entity.childs.push(ann);
+      }
+    } else {
+      entity.childs = [ann];
+    }
+  }
+  return entity;
 };
 
 const defineTooltip = (object: Annotation, entity: Entity): string | null => {
@@ -203,45 +214,10 @@ export const toggleObjectDisplayControl = (
   properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
 ): Annotation => {
-  // Check if the object is an ImageObject
-  if (object.datasetItemType === "image") {
-    if (object.is_bbox) {
-      object.displayControl = {
-        ...object.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-    if (object.is_mask) {
-      object.displayControl = {
-        ...object.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-    if (object.is_keypoints) {
-      object.displayControl = {
-        ...(object.displayControl || {}),
-        [displayControlProperty]: value,
-      };
-    }
-    // irrevelant with new datamodel ... need to use entities for this
-    if (properties.includes("bbox") && properties.includes("mask")) {
-      object.displayControl = {
-        ...object.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-  }
-
-  // Check if the object is a VideoObject
-  if (object.datasetItemType === "video") {
-    if (properties.includes("bbox")) {
-      object.displayControl = {
-        ...(object.displayControl || {}),
-        [displayControlProperty]: value,
-      };
-    }
-  }
-
+  object.displayControl = {
+    ...(object.displayControl || {}),
+    [displayControlProperty]: value,
+  };
   return object;
 };
 
@@ -273,17 +249,17 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
   return objects;
 };
 
-export const sortObjectsByModel = (objects: Annotation[]) =>
-  objects.reduce(
-    (acc, object) => {
-      if (object.data.source_ref.name === PRE_ANNOTATION) {
-        if (!object.review_state) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
+export const sortObjectsByModel = (anns: Annotation[]) =>
+  anns.reduce(
+    (acc, ann) => {
+      if (ann.data.source_ref.name === PRE_ANNOTATION) {
+        if (!ann.review_state) acc[PRE_ANNOTATION] = [ann, ...acc[PRE_ANNOTATION]];
         return acc;
       }
-      acc[object.data.source_ref.name] = [object, ...(acc[object.data.source_ref.name] || [])];
+      acc[ann.data.source_ref.name] = [ann, ...(acc[ann.data.source_ref.name] || [])];
       return acc;
     },
-    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
+    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType<Annotation>,
   );
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
@@ -414,7 +390,7 @@ export const mapObjectWithNewStatus = (
   });
 };
 
-export const createObjectCardId = (object: Annotation): string => `object-${object.id}`;
+export const createObjectCardId = (object: Annotation | Entity): string => `object-${object.id}`;
 
 export const defineCreatedEntity = (
   shape: SaveShape,
@@ -606,6 +582,7 @@ export const highlightCurrentObject = (
   currentObject: Annotation,
   shouldUnHighlight: boolean = true,
 ) => {
+  console.log("AAAA", currentObject);
   const isObjectHighlighted = currentObject.highlighted === "self";
 
   return objects.map((object) => {

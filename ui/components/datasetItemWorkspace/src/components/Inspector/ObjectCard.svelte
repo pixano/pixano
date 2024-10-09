@@ -28,7 +28,6 @@ License: CECILL-C
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
-    getObjectEntity,
     createObjectCardId,
     toggleObjectDisplayControl,
     highlightCurrentObject,
@@ -41,30 +40,28 @@ License: CECILL-C
   import { panTool } from "../../lib/settings/selectionTools";
   import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
 
-  export let annotation: Annotation;
-
-  const entity = getObjectEntity(annotation, $entities);
+  export let entity: Entity;
 
   let open: boolean = false;
   let showIcons: boolean = false;
 
   $: features = createFeature(entity);
-  $: isEditing = annotation.displayControl?.editing || false;
-  $: isVisible = !annotation.displayControl?.hidden;
+  $: isEditing = entity.childs?.some((ann) => ann.displayControl?.editing) || false;
+  $: isVisible = entity.childs?.some((ann) => ann.displayControl?.hidden == false) || false;
   $: boxIsVisible =
-    annotation.datasetItemType === "image" &&
-    annotation.is_bbox &&
-    !annotation.displayControl?.hidden;
+    entity.childs?.some(
+      (ann) => ann.datasetItemType === "image" && ann.is_bbox && !ann.displayControl?.hidden,
+    ) || false;
   $: maskIsVisible =
-    annotation.datasetItemType === "image" &&
-    annotation.is_mask &&
-    !annotation.displayControl?.hidden;
+    entity.childs?.some(
+      (ann) => ann.datasetItemType === "image" && ann.is_mask && !ann.displayControl?.hidden,
+    ) || false;
   $: keypointsIsVisible =
-    annotation.datasetItemType === "image" &&
-    annotation.is_keypoints &&
-    !annotation.displayControl?.hidden;
+    entity.childs?.some(
+      (ann) => ann.datasetItemType === "image" && ann.is_keypoints && !ann.displayControl?.hidden,
+    ) || false;
 
-  $: color = $colorScale[1](annotation.id);
+  $: color = $colorScale[1](entity.id);
 
   const handleIconClick = (
     displayControlProperty: keyof DisplayControl,
@@ -74,16 +71,16 @@ License: CECILL-C
     annotations.update((objects) =>
       objects.map((object) => {
         if (displayControlProperty === "editing") {
-          object.highlighted = object.id === annotation.id ? "self" : "none";
+          object.highlighted = object.data.entity_ref.id === entity.id ? "self" : "none";
           object.highlighted = value ? object.highlighted : "all";
           object.displayControl = {
             ...object.displayControl,
             editing: false,
           };
         }
-        if (object.id === annotation.id) {
+        if (object.data.entity_ref.id === entity.id) {
           object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-          objectIdBeingEdited.set(value ? object.id : null);
+          objectIdBeingEdited.set(value ? object.id : null); //object or entity ??
         }
         return object;
       }),
@@ -91,15 +88,22 @@ License: CECILL-C
   };
 
   const deleteObject = () => {
-    annotations.update((oldObjects) => oldObjects.filter((object) => object.id !== annotation.id));
     const save_item: SaveItem = {
       change_type: "delete",
-      object: annotation,
+      object: entity,
     };
-    //TODO remove entities associated with ?
-    //...but here annotation should be entity in fact.
-    // So we have to found child annotations/entities of this entity, end delete them too
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    for (const ann of entity.childs || []) {
+      const save_item: SaveItem = {
+        change_type: "delete",
+        object: ann,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+    }
+    annotations.update((oldObjects) =>
+      oldObjects.filter((object) => object.data.entity_ref.id !== entity.id),
+    );
+    entities.update((oldObjects) => oldObjects.filter((object) => object.id !== entity.id));
     canSave.set(true);
   };
 
@@ -114,7 +118,7 @@ License: CECILL-C
           };
           const save_item: SaveItem = {
             change_type: "update",
-            object, //TODO should be entity ?
+            object,
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
           changedObj = true;
@@ -128,24 +132,31 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () =>
-    annotations.update((objects) => highlightCurrentObject(objects, annotation));
+    entity.childs?.forEach((ann) =>
+      annotations.update((objects) => highlightCurrentObject(objects, ann)),
+    );
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumbnail: ObjectThumbnail | null = defineObjectThumbnail($itemMetas, annotation);
+  const thumb_box: Annotation | undefined = entity.childs?.find((ann) => ann.is_bbox);
+  const thumbnail: ObjectThumbnail | null = thumb_box
+    ? defineObjectThumbnail($itemMetas, thumb_box)
+    : null;
 </script>
 
 <article
   on:mouseenter={() => (showIcons = true)}
   on:mouseleave={() => (showIcons = open)}
-  id={createObjectCardId(annotation)}
+  id={createObjectCardId(entity)}
 >
   <div
     class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
-    style="border-color:{annotation.highlighted === 'self' ? color : 'transparent'}"
+    style="border-color:{entity.childs?.some((ann) => ann.highlighted === 'self')
+      ? color
+      : 'transparent'}"
   >
     <div class="flex items-center flex-auto max-w-[50%]">
       <IconButton
@@ -190,11 +201,11 @@ License: CECILL-C
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          {#if annotation.datasetItemType === "image"}
+          {#if entity.childs?.some((ann) => ann.datasetItemType === "image")}
             <div>
               <p class="font-medium first-letter:uppercase">display</p>
               <div class="flex gap-4">
-                {#if annotation.is_bbox}
+                {#if entity.childs?.some((ann) => ann.is_bbox)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
@@ -205,7 +216,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if annotation.is_mask}
+                {#if entity.childs?.some((ann) => ann.is_mask)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
@@ -216,7 +227,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if annotation.is_keypoints}
+                {#if entity.childs?.some((ann) => ann.is_keypoints)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox

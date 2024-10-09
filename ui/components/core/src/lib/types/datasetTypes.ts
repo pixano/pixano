@@ -177,6 +177,9 @@ const entitySchema = z
 type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export class Entity extends BaseData<EntityType> {
+  //UI fields
+  childs?: Annotation[];
+
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
     super(obj);
