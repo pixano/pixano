@@ -7,7 +7,7 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from pathlib import Path
-from typing import Iterator, Literal
+from typing import Any, Iterator, Literal
 
 import lancedb
 import shortuuid
@@ -17,7 +17,7 @@ from lancedb.table import Table
 from pixano.datasets import Dataset, DatasetFeaturesValues, DatasetInfo, DatasetItem, DatasetSchema
 from pixano.datasets.utils.integrity import check_dataset_integrity, handle_integrity_errors
 from pixano.features import BaseSchema, Item, SchemaGroup
-from pixano.features.schemas.source import Source
+from pixano.features.schemas.source import Source, SourceKind
 
 
 class DatasetBuilder(ABC):
@@ -67,6 +67,44 @@ class DatasetBuilder(ABC):
     def item_schema_name(self) -> str:
         """The item schema name for the dataset."""
         return SchemaGroup.ITEM.value
+
+    def add_source(
+        self,
+        name: str,
+        kind: str | SourceKind,
+        metadata: str | dict[str, Any] = {},
+        id: str = "",
+    ) -> str:
+        """Add a source to the dataset.
+
+        Args:
+            name: Name of the source.
+            kind: Kind of source.
+            metadata: Metadata of the source.
+            id: The id of the source. If not provided, a random id is generated.
+
+        Returns:
+            The id of the source.
+        """
+        if id == "":
+            id = shortuuid.uuid()
+        if isinstance(kind, str):
+            kind = SourceKind(kind)
+        self.db.open_table("source").add([Source(id=id, name=name, kind=kind.value, metadata=metadata)])
+        return id
+
+    def add_ground_truth_source(self, metadata: str | dict[str, Any] = {}) -> str:
+        """Add a ground truth source to the dataset.
+
+        Args:
+            metadata: Metadata of the source.
+
+        Returns:
+            The id of the ground truth source.
+        """
+        return self.add_source(
+            id=SourceKind.GROUND_TRUTH.value, name="Ground Truth", kind=SourceKind.GROUND_TRUTH, metadata=metadata
+        )
 
     def build(
         self,
@@ -119,6 +157,7 @@ class DatasetBuilder(ABC):
         # count transactions per table
         transactions_per_table: dict[str, int] = {table_name: 0 for table_name in tables.keys()}
 
+        print("Building dataset...")
         for items in tqdm.tqdm(self.generate_data(), desc="Generate data"):
             # assert that items have keys that are in tables
             for table_name, item_value in items.items():
@@ -161,6 +200,8 @@ class DatasetBuilder(ABC):
         self.info.id = shortuuid.uuid() if self.info.id == "" else self.info.id
         self.info.to_json(self.target_dir / Dataset._INFO_FILE)
 
+        print(f"Dataset built in {self.target_dir} with id {self.info.id}")
+
         # save features_values.json
         # TMP: empty now
         DatasetFeaturesValues().to_json(self.target_dir / Dataset._FEATURES_VALUES_FILE)
@@ -174,8 +215,10 @@ class DatasetBuilder(ABC):
         dataset = Dataset(self.target_dir)
 
         if check_integrity != "none":
+            print("Checking dataset integrity...")
             handle_integrity_errors(check_dataset_integrity(dataset), raise_or_warn=check_integrity)
 
+        print("Dataset built successfully.")
         return dataset
 
     def compact_table(self, table_name: str) -> None:

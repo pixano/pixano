@@ -96,7 +96,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
         "source": [
             Source(id="source_0", name="source_0", kind="model", metadata={"key_0": "value_0"}),
             Source(id="source_1", name="source_1", kind="human", metadata={"key_1": "value_1"}),
-            Source(id="source_2", name="source_2", kind="ground_truth", metadata={"key_2": "value_2"}),
+            Source(id="ground_truth", name="Ground Truth", kind="ground_truth", metadata={"key_2": "value_2"}),
         ],
     }
     for i in range(num_rows):
@@ -270,7 +270,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 item_ref=ItemRef(id=item_id),
                 view_ref=ViewRef(id=f"image_{i}", name="image"),
                 entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
-                source_ref=SourceRef(id=f"source_{i % 3}"),
+                source_ref=SourceRef(id=(f"source_{i % 3}") if i % 3 != 2 else "ground_truth"),
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
@@ -283,7 +283,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                 entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
                 size=[100 * i, 100 * i],
                 counts=b"\x01\x02\x03",
-                source_ref=SourceRef(id=f"source_{i % 3}"),
+                source_ref=SourceRef(id=(f"source_{i % 3}") if i % 3 != 2 else "ground_truth"),
                 created_at=datetime(2021, 1, 1, 0, 0, 0),
                 updated_at=datetime(2021, 1, 1, 0, 0, 0),
             )
@@ -301,7 +301,7 @@ def generate_data_multi_view_tracking_and_image(num_rows: int, schemas: dict[str
                         item_ref=ItemRef(id=item_id),
                         view_ref=ViewRef(id=f"image_{i}", name="image"),
                         entity_ref=EntityRef(id=f"entity_image_{i}", name="entity_image"),
-                        source_ref=SourceRef(id=f"source_{i % 3}"),
+                        source_ref=SourceRef(id=(f"source_{i % 3}") if i % 3 != 2 else "ground_truth"),
                         created_at=datetime(2021, 1, 1, 0, 0, 0),
                         updated_at=datetime(2021, 1, 1, 0, 0, 0),
                     )

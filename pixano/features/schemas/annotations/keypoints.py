@@ -10,7 +10,7 @@ from pydantic import model_validator
 
 from pixano.utils import issubclass_strict
 
-from ...types.schema_reference import EntityRef, ItemRef, ViewRef
+from ...types.schema_reference import EntityRef, ItemRef, SourceRef, ViewRef
 from ..registry import _register_schema_internal
 from .annotation import Annotation
 
@@ -158,6 +158,7 @@ def create_keypoints(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
 ) -> KeyPoints:
     """Create a KeyPoints instance.
 
@@ -169,6 +170,7 @@ def create_keypoints(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
+        source_ref: Source reference.
 
     Returns:
         The created `KeyPoints` instance.
@@ -181,6 +183,7 @@ def create_keypoints(
         item_ref=item_ref,
         view_ref=view_ref,
         entity_ref=entity_ref,
+        source_ref=source_ref,
     )
 
 
@@ -192,6 +195,7 @@ def create_keypoints3d(
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
     entity_ref: EntityRef = EntityRef.none(),
+    source_ref: SourceRef = SourceRef.none(),
 ) -> KeyPoints3D:
     """Create a `KeyPoints3D` instance.
 
@@ -203,6 +207,7 @@ def create_keypoints3d(
         item_ref: Item reference.
         view_ref: View reference.
         entity_ref: Entity reference.
+        source_ref: Source reference.
 
     Returns:
         The created `KeyPoints3D` instance.
@@ -215,4 +220,5 @@ def create_keypoints3d(
         item_ref=item_ref,
         view_ref=view_ref,
         entity_ref=entity_ref,
+        source_ref=source_ref,
     )

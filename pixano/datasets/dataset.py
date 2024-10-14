@@ -536,16 +536,10 @@ class Dataset:
         return data
 
     @overload
-    def add_dataset_items(
-        self, dataset_items: DatasetItem, raise_or_warn: Literal["raise", "warn", "none"] = "raise"
-    ) -> DatasetItem: ...
+    def add_dataset_items(self, dataset_items: DatasetItem) -> DatasetItem: ...
     @overload
-    def add_dataset_items(
-        self, dataset_items: list[DatasetItem], raise_or_warn: Literal["raise", "warn", "none"] = "raise"
-    ) -> list[DatasetItem]: ...
-    def add_dataset_items(
-        self, dataset_items: list[DatasetItem] | DatasetItem, raise_or_warn: Literal["raise", "warn", "none"] = "raise"
-    ) -> list[DatasetItem] | DatasetItem:
+    def add_dataset_items(self, dataset_items: list[DatasetItem]) -> list[DatasetItem]: ...
+    def add_dataset_items(self, dataset_items: list[DatasetItem] | DatasetItem) -> list[DatasetItem] | DatasetItem:
         """Add dataset items.
 
         Warn:
@@ -553,7 +547,6 @@ class Dataset:
 
         Args:
             dataset_items: Dataset items to add.
-            raise_or_warn: Whether to raise or warn on integrity errors. Can be 'raise', 'warn' or 'none'.
         """
         batch = True
         if isinstance(dataset_items, DatasetItem):
@@ -564,7 +557,6 @@ class Dataset:
             isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
-        _validate_raise_or_warn(raise_or_warn)
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         tables_data: dict[str, Any] = {}
@@ -581,10 +573,10 @@ class Dataset:
         for table_name, table_data in tables_data.items():
             if table_data != []:
                 self.add_data(
-                    table_name,
-                    table_data,
-                    [],
-                    "none",
+                    table_name=table_name,
+                    data=table_data,
+                    ignore_integrity_checks=[],
+                    raise_or_warn="none",
                 )
         return dataset_items if batch else dataset_items[0]
 
@@ -703,13 +695,11 @@ class Dataset:
             .to_list()
         }
 
-        sql_ids = to_sql_list(set_ids)
-        table.delete(where=f"id in {sql_ids}")
         for d in data:
             d.updated_at = datetime.now()
             if d.id not in ids_found:
                 d.created_at = d.updated_at
-        table.add(data)
+        table.merge_insert("id").when_matched_update_all().when_not_matched_insert_all().execute(data)
 
         if not return_separately:
             return data
@@ -728,20 +718,17 @@ class Dataset:
         self,
         dataset_items: list[DatasetItem],
         return_separately: Literal[False] = False,
-        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[DatasetItem]: ...
     @overload
     def update_dataset_items(
         self,
         dataset_items: list[DatasetItem],
         return_separately: Literal[True],
-        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> tuple[list[DatasetItem], list[DatasetItem]]: ...
     def update_dataset_items(
         self,
         dataset_items: list[DatasetItem],
         return_separately: bool = False,
-        raise_or_warn: Literal["raise", "warn", "none"] = "raise",
     ) -> list[DatasetItem] | tuple[list[DatasetItem], list[DatasetItem]]:
         """Update dataset items.
 
@@ -761,7 +748,6 @@ class Dataset:
             isinstance(item, DatasetItem) and set(fields) == set(item.model_fields.keys()) for item in dataset_items
         ):
             raise DatasetAccessError("All data must be instances of the same DatasetItem.")
-        _validate_raise_or_warn(raise_or_warn)
 
         schemas_data = [item.to_schemas_data(self.schema) for item in dataset_items]
         updated_ids = set()
