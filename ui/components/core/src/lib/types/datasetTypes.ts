@@ -367,7 +367,7 @@ export class Mask extends Annotation {
   editing?: boolean;
   strokeFactor?: number;
   svg?: string[];
-  catId?: number; //really needed ??
+  review_state?: "accepted" | "rejected";
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");

@@ -328,7 +328,7 @@ export async function getModels(): Promise<Array<string>> {
       models = (await response.json()) as Array<string>;
     } else {
       models = [];
-      console.log("api.getModels -", response.status, response.statusText, await response.text());
+      console.log("api.getModels -", response.status, response.statusText); //, await response.text());  <-- not very informative
     }
   } catch (e) {
     models = [];

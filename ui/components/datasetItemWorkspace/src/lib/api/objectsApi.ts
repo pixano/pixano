@@ -106,7 +106,7 @@ export const mapObjectToBBox = (
     if (obj.data.source_ref.name === PRE_ANNOTATION && obj.highlighted !== "self") continue;
     if (!box.data.view_ref.name) continue;
     const view = views?.[box.data.view_ref.name];
-    const image: View = Array.isArray(view) ? view[0] : view;
+    const image = Array.isArray(view) ? view[0] : view;
     const imageHeight = image.data.height || 1;
     const imageWidth = image.data.width || 1;
     const [x, y, width, height] = box.data.coords;
@@ -121,7 +121,6 @@ export const mapObjectToBBox = (
         ...obj.data,
         coords: bbox,
       },
-      catId: (entity.data.category_id?.value || 1) as number, //NOTE: catId really used ?
       tooltip,
       opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
       visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
@@ -141,17 +140,15 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
     !obj.review_state &&
     !(obj.data.source_ref.name === PRE_ANNOTATION && obj.review_state === "accepted")
   ) {
-    const rle = obj.data.counts;
+    const rle = obj.data.counts as number[];
     const size = obj.data.size;
     const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
     return {
       id: obj.id,
-      viewRef: obj.data.view_ref,
       svg: masksSVG,
       data: obj.data,
-      catId: (obj.features?.category_id?.value || 1) as number,
       visible: !obj.displayControl?.hidden && !obj.displayControl?.hidden,
       editing: obj.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
       opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,

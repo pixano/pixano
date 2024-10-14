@@ -53,7 +53,6 @@ export interface InteractiveImageSegmenterOutput {
   id: string;
   viewRef: Reference;
   label: string;
-  catId: number;
   output: SegmentationResult; //??? or already transformed polygon ????
   input_points: Array<LabeledClick>;
   input_box: Box;

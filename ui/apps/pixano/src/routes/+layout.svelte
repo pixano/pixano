@@ -27,7 +27,6 @@ License: CECILL-C
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
-  //let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
@@ -35,9 +34,11 @@ License: CECILL-C
   async function handleGetModels() {
     //TMP for lint
     await new Promise((resolve) => setTimeout(resolve, 1));
-    //models = await api.getModels();
-    //modelsStore.set(models);
     modelsStore.set([]);
+    // api
+    //   .getModels()
+    //   .then((models) => modelsStore.set(models))
+    //   .catch((err) => modelsStore.set([]));
   }
 
   async function handleGetDatasets() {
@@ -51,8 +52,10 @@ License: CECILL-C
   }
 
   onMount(async () => {
+    handleGetModels().then(() =>
+      console.log(`Found ${$modelsStore.length} model(s): ${$modelsStore}`),
+    );
     await handleGetDatasets();
-    await handleGetModels();
   });
 
   // Get all the ids of the items of the selected dataset

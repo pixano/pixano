@@ -530,7 +530,6 @@ License: CECILL-C
           id: nanoid(10),
           viewRef,
           label: "",
-          catId: -1,
           output: results,
           input_points: points,
           input_box: box,
@@ -551,7 +550,6 @@ License: CECILL-C
           },
         });
         currentMask.svg = currentAnn.output.masksImageSVG;
-        currentMask.catId = currentAnn.catId;
         currentMask.visible = true;
         currentMask.opacity = 1.0;
 
