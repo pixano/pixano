@@ -6,7 +6,7 @@ License: CECILL-C
 
 // Imports
 import { writable } from "svelte/store";
-import type { DatasetInfo } from "@pixano/core/src";
+import type { DatasetInfo, DatasetSchema } from "@pixano/core";
 
 import {
   DEFAULT_DATASET_TABLE_PAGE,
@@ -21,6 +21,7 @@ export const defaultDatasetTableValues: DatasetTableStore = {
 
 // Exports
 export const currentDatasetStore = writable<DatasetInfo>();
+export const datasetSchema = writable<DatasetSchema>();
 export const datasetsStore = writable<DatasetInfo[]>();
 export const modelsStore = writable<string[]>([]);
 export const isLoadingNewItemStore = writable<boolean>(true);

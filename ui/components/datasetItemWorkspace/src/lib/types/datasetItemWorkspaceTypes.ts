@@ -7,13 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type {
-  DatasetItem,
-  FeaturesValues,
-  FeatureValues,
-  ItemFeature,
-  ItemObject,
-} from "@pixano/core";
+import { Annotation, DatasetItem, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
 import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";
 import type {
@@ -23,9 +17,15 @@ import type {
 } from "../settings/objectValidationSchemas";
 
 export type ObjectsSortedByModelType = {
-  [GROUND_TRUTH]: ItemObject[];
-  [PRE_ANNOTATION]: ItemObject[];
-  [key: string]: ItemObject[];
+  [GROUND_TRUTH]: Annotation[];
+  [PRE_ANNOTATION]: Annotation[];
+  [key: string]: Annotation[];
+};
+
+export type EntitiesSortedByModelType = {
+  [GROUND_TRUTH]: Set<Entity>;
+  [PRE_ANNOTATION]: Set<Entity>;
+  [key: string]: Set<Entity>;
 };
 
 export type ListInput = z.infer<typeof listInputSchema>;
@@ -75,11 +75,10 @@ export type ModelSelection = {
 };
 
 export type ItemsMeta = {
-  mainFeatures: DatasetItem["features"]; // feature;
-  objectFeatures: Record<string, ItemFeature>; // itemFeatures
+  //mainFeatures: DatasetItem["features"]; // feature;
+  //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
-  views: DatasetItem["views"];
-  id: DatasetItem["id"];
+  item: DatasetItem["item"];
   type: DatasetItem["type"];
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";

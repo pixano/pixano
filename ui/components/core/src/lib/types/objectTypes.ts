@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { SegmentationResult } from ".";
-import type { BBox, DisplayControl, Mask } from "./datasetTypes";
+import type { BBox, DisplayControl, Mask, Reference } from "./datasetTypes";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -15,7 +15,7 @@ export type TextFeature = {
 };
 
 export type SaveShapeBase = {
-  viewId: string;
+  viewRef: Reference;
   itemId: string;
   imageWidth: number;
   imageHeight: number;
@@ -67,17 +67,10 @@ export type Vertex = {
   };
 };
 
-export type Keypoints = {
-  id: string;
-  view_id?: string;
-  template_id: string;
-  vertices: Vertex[];
-  displayControl?: DisplayControl;
-};
-
 export type KeypointsTemplate = {
   id: string;
-  view_id?: string;
+  viewRef?: Reference;
+  entityRef?: Reference;
   edges: [number, number][];
   vertices: Required<Vertex>[];
   editing?: boolean;
@@ -89,7 +82,7 @@ export type KeypointsTemplate = {
 export type CreateKeypointShape = {
   status: "creating";
   type: "keypoints";
-  viewId: string;
+  viewRef: Reference;
   x: number;
   y: number;
   width: number;
@@ -101,7 +94,7 @@ export type CreateMaskShape = {
   status: "creating";
   type: "mask";
   points: PolygonGroupPoint[];
-  viewId: string;
+  viewRef: Reference;
 };
 
 export type CreateRectangleShape = {
@@ -111,7 +104,7 @@ export type CreateRectangleShape = {
   y: number;
   width: number;
   height: number;
-  viewId: string;
+  viewRef: Reference;
 };
 
 export type CreateShape = CreateMaskShape | CreateRectangleShape | CreateKeypointShape;
@@ -134,7 +127,7 @@ export type EditKeypointsShape = {
 export type EditShape = {
   status: "editing";
   shapeId: string;
-  viewId: string;
+  viewRef: Reference;
   highlighted?: "all" | "self" | "none";
 } & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 

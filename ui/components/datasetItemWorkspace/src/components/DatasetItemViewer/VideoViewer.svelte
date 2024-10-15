@@ -12,18 +12,22 @@ License: CECILL-C
     type EditShape,
     type Tracklet,
     type VideoDatasetItem,
-    type ItemObject,
+    type ImagesPerView,
+    Annotation,
+    BBox,
+    Keypoints,
+    Mask,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
     itemBboxes,
+    itemKeypoints,
     itemMasks,
-    itemObjects,
+    annotations,
     newShape,
     selectedTool,
     colorScale,
-    itemKeypoints,
     selectedKeypointsTemplate,
     imageSmoothing,
     saveData,
@@ -35,6 +39,7 @@ License: CECILL-C
   } from "../../lib/stores/videoViewerStores";
 
   import { onMount } from "svelte";
+  import { derived } from "svelte/store";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import {
@@ -48,24 +53,34 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  let current_itemKeypoints: Keypoints[];
+  let current_itemMask: Mask[];
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
     }
   }
+  const current_itemBBox = derived(
+    [itemBboxes, currentFrameIndex],
+    ([$itemBboxes, $currentFrameIndex]) => $itemBboxes.filter((bbox) => bbox.frame_index === $currentFrameIndex)
+  );
 
   let inspectorMaxHeight = 250;
   let expanding = false;
   let currentFrame: number = 0;
 
-  let imagesPerView: Record<string, HTMLImageElement[]> = {};
+  let imagesPerView: ImagesPerView = {};
 
-  let imagesFilesUrls: Record<string, string[]> = Object.entries(selectedItem.views).reduce(
+  let imagesFilesUrls: Record<string, Record<string, string>[]> = Object.entries(
+    selectedItem.views,
+  ).reduce(
     (acc, [key, value]) => {
-      acc[key] = value.map((view) => view.uri);
+      acc[key] = value.map((view) => {
+        return { id: view.id, url: view.data.url as string };
+      });
       return acc;
     },
-    {} as Record<string, string[]>,
+    {} as Record<string, Record<string, string>[]>,
   );
 
   let isLoaded = false;
@@ -73,10 +88,10 @@ License: CECILL-C
   onMount(() => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      image.src = `/${urls[0]}`;
+      image.src = `/${urls[0].url}`;
       imagesPerView = {
         ...imagesPerView,
-        [key]: [image],
+        [key]: [{ id: urls[0].id, element: image }],
       };
     });
 
@@ -93,16 +108,18 @@ License: CECILL-C
   const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
-      const src = `/${urls[imageIndex]}`;
+      const src = `/${urls[imageIndex].url}`;
       if (!src) return;
       image.src = src;
       imagesPerView = {
         ...imagesPerView,
-        [key]: [...(imagesPerView[key] || []), image].slice(-2),
+        [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
+          -2,
+        ),
       };
     });
 
-    itemObjects.update((objects) => {
+    annotations.update((objects) => {
       objects = objects.map((object) => {
         if (object.datasetItemType !== "video") return object;
         let { displayedMBox, displayedMKeypoints } = object;
@@ -181,7 +198,7 @@ License: CECILL-C
         }
         return object;
       });
-      function findEarlierTracklet(item: ItemObject): number {
+      function findEarlierTracklet(item: Annotation): number {
         if (item.datasetItemType !== "video") return 0;
         if (item.track.length === 0) return 0;
         return item.track.reduce(
@@ -189,7 +206,7 @@ License: CECILL-C
           item.track[0].start,
         );
       }
-      objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
+      //TMP objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
       return objects;
     });
 
@@ -200,16 +217,16 @@ License: CECILL-C
     const currentFrame = $currentFrameIndex;
     if (shape.type === "bbox" || shape.type === "keypoints") {
       let { objects, save_data } = editKeyItemInTracklet(
-        $itemObjects,
+        $annotations,
         shape,
         currentFrame,
         $objectIdBeingEdited,
       );
-      $itemObjects = objects;
+      $annotations = objects;
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
     } else {
-      itemObjects.update((objects) => updateExistingObject(objects, shape));
+      annotations.update((objects) => updateExistingObject(objects, shape));
       if (shape.highlighted === "self") {
         objectIdBeingEdited.set(shape.shapeId);
       }
@@ -247,13 +264,13 @@ License: CECILL-C
   role="tab"
   tabindex="0"
 >
-  {#if isLoaded}
+  {#if isLoaded && $current_itemBBox}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id + currentFrame}
+        selectedItemId={selectedItem.item.id + currentFrame}
         {imagesPerView}
         colorScale={$colorScale[1]}
-        bboxes={$itemBboxes}
+        bboxes={$current_itemBBox}
         masks={$itemMasks}
         keypoints={$itemKeypoints}
         selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}

@@ -5,12 +5,12 @@ License: CECILL-C
 -------------------------------------*/
 
 import { createObjectInputsSchema } from "../settings/objectValidationSchemas";
-import type {
-  DatasetItem,
-  FeatureValues,
-  ItemFeature,
-  FeaturesValues,
-  FeatureList,
+import {
+  BaseData,
+  type FeatureValues,
+  type ItemFeature,
+  type FeaturesValues,
+  type FeatureList,
 } from "@pixano/core";
 import type {
   CheckboxFeature,
@@ -22,7 +22,16 @@ import type {
   TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
-export const createFeature = (features: DatasetItem["features"]): Feature[] => {
+export function createFeature(obj: BaseData<any>, defaultFeats: Feature[] = []): Feature[] {
+  const extraFields = obj.getDynamicFields();
+  let features = [];
+  if (extraFields.length > 0) {
+    //TODO : extract correct dtype from value... (or better: from schema)
+    for (const field of extraFields)
+      features.push({ name: field, dtype: "str", value: obj.data[field] }); //TODO type
+  } else {
+    features = defaultFeats;
+  }
   const parsedFeatures = createObjectInputsSchema.parse(
     Object.values(features).map((feature) => ({
       ...feature,
@@ -32,12 +41,12 @@ export const createFeature = (features: DatasetItem["features"]): Feature[] => {
     })),
   );
   return parsedFeatures.map((feature) => {
-    const value = features[feature.name]?.value;
+    const value = obj.data[feature.name] as string; //TODO type
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
     return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;
   });
-};
+}
 
 export const mapShapeInputsToFeatures = (
   shapeInputs: { [key: string]: FeatureValues },

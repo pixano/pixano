@@ -6,13 +6,15 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Combobox, cn, type ObjectThumbnail } from "@pixano/core";
+  import { Combobox, cn, type ObjectThumbnail, Entity } from "@pixano/core";
   import { Thumbnail } from "@pixano/canvas2d";
 
   import ObjectCard from "./ObjectCard.svelte";
   import ObjectsModelSection from "./ObjectsModelSection.svelte";
   import {
-    itemObjects,
+    annotations,
+    entities,
+    views,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -21,28 +23,37 @@ License: CECILL-C
     createObjectCardId,
     defineObjectThumbnail,
     sortObjectsByModel,
+    getObjectEntity,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
-  import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
+  import type { EntitiesSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allItemsSortedByModel: ObjectsSortedByModelType = {
-    [GROUND_TRUTH]: [],
-    [PRE_ANNOTATION]: [],
+  let allEntitiesSortedByModel: EntitiesSortedByModelType = {
+    [GROUND_TRUTH]: new Set<Entity>(),
+    [PRE_ANNOTATION]: new Set<Entity>(),
   };
 
   let thumbnail: ObjectThumbnail | null = null;
 
-  itemObjects.subscribe((objects) => {
+  annotations.subscribe((objects) => {
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (highlightedObject) {
-      thumbnail = defineObjectThumbnail($itemMetas, highlightedObject);
+      thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
     } else {
       thumbnail = null;
     }
   });
 
-  itemObjects.subscribe((objects) => {
-    allItemsSortedByModel = sortObjectsByModel(objects);
+  annotations.subscribe((objects) => {
+    const allAnnotationsSortedByModel = sortObjectsByModel(objects);
+    //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
+    for (const model in allAnnotationsSortedByModel) {
+      allAnnotationsSortedByModel[model].forEach((ann) => {
+        const ent = getObjectEntity(ann, $entities);
+        if (ent) allEntitiesSortedByModel[model].add(ent);
+      });
+    }
+
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (!highlightedObject) return;
     const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
@@ -51,11 +62,11 @@ License: CECILL-C
     }
   });
 
-  let allModels = Object.keys(allItemsSortedByModel).filter(
+  let allModels = Object.keys(allEntitiesSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   );
 
-  let selectedModel: string = Object.keys(allItemsSortedByModel).filter(
+  let selectedModel: string = Object.keys(allEntitiesSortedByModel).filter(
     (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
   )[0];
 </script>
@@ -83,17 +94,17 @@ License: CECILL-C
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}
-        numberOfItem={allItemsSortedByModel[GROUND_TRUTH].length}
+        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].size}
       >
-        {#each allItemsSortedByModel[GROUND_TRUTH] as itemObject}
-          <ObjectCard bind:itemObject />
+        {#each allEntitiesSortedByModel[GROUND_TRUTH] as entity}
+          <ObjectCard bind:entity />
         {/each}
       </ObjectsModelSection>
       {#if selectedModel}
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allItemsSortedByModel[selectedModel]?.length || 0}
+          numberOfItem={allEntitiesSortedByModel[selectedModel]?.size || 0}
         >
           <Combobox
             slot="modelSelection"
@@ -104,8 +115,8 @@ License: CECILL-C
               label: model,
             }))}
           />
-          {#each allItemsSortedByModel[selectedModel] || [] as itemObject}
-            <ObjectCard bind:itemObject />
+          {#each allEntitiesSortedByModel[selectedModel] || [] as entity}
+            <ObjectCard bind:entity />
           {/each}
         </ObjectsModelSection>
       {/if}

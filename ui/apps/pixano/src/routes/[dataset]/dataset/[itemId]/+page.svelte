@@ -10,13 +10,14 @@ License: CECILL-C
   import {
     type DatasetItem,
     type DatasetInfo,
-    type DatasetItemSave,
+    type SaveItem,
     PrimaryButton,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
   import {
     datasetsStore,
+    datasetSchema,
     isLoadingNewItemStore,
     modelsStore,
     saveCurrentItemStore,
@@ -47,16 +48,47 @@ License: CECILL-C
   const handleSelectItem = (dataset: DatasetInfo, id: string) => {
     if (!dataset) return;
     api
-      .getDatasetItem(dataset.id, encodeURIComponent(id))
-      .then((item) => {
-        selectedItem = item;
-        if (Object.keys(item).length === 0) {
-          noItemFound = true;
-        } else {
-          noItemFound = false;
-        }
+      .getDataset(dataset.id)
+      .then((ds) => {
+        datasetSchema.set(ds.dataset_schema);
+        api
+          .getDatasetItem(dataset.id, encodeURIComponent(id))
+          .then((item) => {
+            let item_type: "image" | "video" | "3d" = "image";
+            // Append /data/<dataset_path>/media url to all urls
+            //NOTE: slice(-2) is not very safe, it suppose users respect the ""<dataset_path>/media" rule
+            //but as ds.media_dir is an absolute path, we need to make this assumption...
+            //Note2: we will need to revert this when/if we POST/PUT views
+            const media_dir = "data/" + ds.media_dir.split("/").slice(-2).join("/") + "/";
+            Object.values(item.views).map((view) => {
+              if (Array.isArray(view)) {
+                const video = view;
+                item_type = "video";
+                video.forEach((sf) => {
+                  sf.data.type = "video";
+                  sf.data.url = media_dir + sf.data.url;
+                });
+                video.sort((a, b) => a.data.frame_index - b.data.frame_index);
+              } else {
+                const image = view;
+                image.data.type = "image";
+                image.data.url = media_dir + image.data.url;
+              }
+              return view;
+            });
+            selectedItem = item;
+            selectedItem.type = item_type;
+            selectedItem.datasetId = dataset.id;
+            if (Object.keys(item).length === 0) {
+              noItemFound = true;
+            } else {
+              noItemFound = false;
+            }
+            console.log("XXX handleSelectIem - selectedItem:", selectedItem);
+          })
+          .then(() => isLoadingNewItemStore.set(false))
+          .catch((err) => console.error(err));
       })
-      .then(() => isLoadingNewItemStore.set(false))
       .catch((err) => console.error(err));
   };
 
@@ -73,7 +105,7 @@ License: CECILL-C
   });
 
   $: {
-    if (currentItemId !== selectedItem?.id) {
+    if (currentItemId !== selectedItem?.item.id) {
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }
@@ -83,9 +115,39 @@ License: CECILL-C
     isLoadingNewItem = value;
   });
 
-  async function handleSaveItem(savedItem: DatasetItemSave) {
-    await api.postDatasetItem(selectedDataset.id, savedItem);
-    handleSelectItem(selectedDataset, currentItemId);
+  async function handleSaveItem(data: SaveItem[]) {
+    //entities first to avoid database consistency checks issues
+    data.sort((a, b) => {
+      if (
+        a.object.table_info.base_schema === "Entity" &&
+        b.object.table_info.base_schema !== "Entity"
+      )
+        return -1;
+      else if (
+        a.object.table_info.base_schema !== "Entity" &&
+        b.object.table_info.base_schema === "Entity"
+      )
+        return 1;
+      else return 0;
+    });
+    for (const savedItem of data) {
+      let no_table = false;
+      let route = savedItem.object.table_info.group;
+      if (route === "item") {
+        route = "items";
+        no_table = true;
+      }
+      if (savedItem.change_type === "delete") {
+        await api.deleteSchema(route, selectedDataset.id, savedItem.object, no_table);
+      }
+      if (savedItem.change_type === "add") {
+        await api.addSchema(route, selectedDataset.id, savedItem.object, no_table);
+      }
+      if (savedItem.change_type === "update") {
+        await api.updateSchema(route, selectedDataset.id, savedItem.object, no_table);
+      }
+    }
+    //handleSelectItem(selectedDataset, currentItemId); //--> not necessary, but there is a bug when uncommented... need to invstigate
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

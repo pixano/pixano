@@ -12,7 +12,7 @@ import type {
   TrackletItem,
   TrackletWithItems,
   VideoItemBBox,
-  VideoKeypoints,
+  VideoItemKeypoints,
   VideoObject,
   SaveItem,
   SaveDataAddUpdate,
@@ -242,7 +242,7 @@ export const editKeyItemInTracklet = (
         return object;
       }
       const currentTracklet = object.track.find(
-        (t) => t.start <= currentFrame && t.end >= currentFrame && t.view_id == shape.viewId,
+        (t) => t.start <= currentFrame && t.end >= currentFrame && t.view_id == shape.viewRef,
       );
       let new_obj: SaveDataAddUpdate | null = null;
       if (shape.type === "keypoints" && object.keypoints) {
@@ -268,7 +268,7 @@ export const editKeyItemInTracklet = (
         }
         object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
         object.displayedMKeypoints = object.displayedMKeypoints?.map((kpt) => {
-          if (kpt.view_id == shape.viewId) {
+          if (kpt.view_id == shape.viewRef) {
             return {
               ...kpt,
               vertices: shape.vertices,
@@ -293,7 +293,7 @@ export const editKeyItemInTracklet = (
         }
         object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
         object.displayedMBox = object.displayedMBox?.map((box) => {
-          if (box.view_id == shape.viewId) {
+          if (box.view_id == shape.viewRef) {
             return {
               ...box,
               coords: shape.coords,
@@ -443,7 +443,7 @@ export const mapTrackItemsToObject = (
           keypoints.push({
             ...item,
             ...currentKeypoint,
-          } as VideoKeypoints);
+          } as VideoItemKeypoints);
         }
       });
     }
