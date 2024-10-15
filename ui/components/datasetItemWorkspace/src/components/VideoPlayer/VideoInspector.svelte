@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { annotations } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, tracks, views } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -51,12 +51,10 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each Object.values($annotations) as object}
-        {#if object.datasetItemType === "video"}
-          <VideoPlayerRow>
-            <ObjectTrack slot="timeTrack" {object} {onTimeTrackClick} {updateView} />
-          </VideoPlayerRow>
-        {/if}
+      {#each Object.values($tracks) as track}
+        <VideoPlayerRow>
+          <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {updateView} />
+        </VideoPlayerRow>
       {/each}
     </div>
     <div class="px-2 sticky bottom-0 left-0 z-20 bg-white shadow flex justify-between">

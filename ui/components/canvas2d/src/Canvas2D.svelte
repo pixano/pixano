@@ -46,7 +46,7 @@ License: CECILL-C
   import type { Filters } from "@pixano/dataset-item-workspace/src/lib/types/datasetItemWorkspaceTypes";
 
   // Exports
-  export let selectedItemId: DatasetItem["id"];
+  export let selectedItemId: string;
   export let masks: Mask[];
   export let bboxes: BBox[];
   export let keypoints: KeypointsTemplate[] = [];

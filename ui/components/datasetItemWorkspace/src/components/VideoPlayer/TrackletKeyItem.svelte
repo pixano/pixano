@@ -7,7 +7,7 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import { Annotation, type TrackletItem, type VideoItemBBox } from "@pixano/core";
+  import { Annotation, type TrackletItem } from "@pixano/core";
   import { annotations, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
@@ -46,7 +46,7 @@ License: CECILL-C
     canSave.set(true);
   };
 
-  export const getKeyItemLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+  export const getKeyItemLeftPosition = (frameIndex: number) => {
     const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
     const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
     return leftPosition;

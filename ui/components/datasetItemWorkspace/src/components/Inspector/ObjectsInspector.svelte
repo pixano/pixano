@@ -14,6 +14,7 @@ License: CECILL-C
   import {
     annotations,
     entities,
+    views,
     preAnnotationIsActive,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
@@ -25,11 +26,11 @@ License: CECILL-C
     getObjectEntity,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
-  import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
+  import type { EntitiesSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allEntitiesSortedByModel: ObjectsSortedByModelType<Entity> = {
-    [GROUND_TRUTH]: [],
-    [PRE_ANNOTATION]: [],
+  let allEntitiesSortedByModel: EntitiesSortedByModelType = {
+    [GROUND_TRUTH]: new Set<Entity>(),
+    [PRE_ANNOTATION]: new Set<Entity>(),
   };
 
   let thumbnail: ObjectThumbnail | null = null;
@@ -37,7 +38,7 @@ License: CECILL-C
   annotations.subscribe((objects) => {
     const highlightedObject = objects.find((item) => item.highlighted === "self");
     if (highlightedObject) {
-      thumbnail = defineObjectThumbnail($itemMetas, highlightedObject);
+      thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
     } else {
       thumbnail = null;
     }
@@ -47,9 +48,10 @@ License: CECILL-C
     const allAnnotationsSortedByModel = sortObjectsByModel(objects);
     //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
     for (const model in allAnnotationsSortedByModel) {
-      allEntitiesSortedByModel[model] = allAnnotationsSortedByModel[model]
-        .map((ann) => getObjectEntity(ann, $entities))
-        .filter((x) => x !== undefined);
+      allAnnotationsSortedByModel[model].forEach((ann) => {
+        const ent = getObjectEntity(ann, $entities);
+        if (ent) allEntitiesSortedByModel[model].add(ent);
+      });
     }
 
     const highlightedObject = objects.find((item) => item.highlighted === "self");
@@ -92,7 +94,7 @@ License: CECILL-C
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}
-        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].length}
+        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].size}
       >
         {#each allEntitiesSortedByModel[GROUND_TRUTH] as entity}
           <ObjectCard bind:entity />
@@ -102,7 +104,7 @@ License: CECILL-C
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allEntitiesSortedByModel[selectedModel]?.length || 0}
+          numberOfItem={allEntitiesSortedByModel[selectedModel]?.size || 0}
         >
           <Combobox
             slot="modelSelection"

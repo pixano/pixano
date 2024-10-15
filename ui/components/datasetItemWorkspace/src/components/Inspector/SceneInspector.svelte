@@ -17,6 +17,7 @@ License: CECILL-C
   import {
     canSave,
     saveData,
+    views,
     itemMetas,
     filters,
     imageSmoothing,
@@ -41,10 +42,16 @@ License: CECILL-C
   let combineChannels: boolean = false;
   let viewMeta: ViewMeta[] = [];
 
-  itemMetas.subscribe((metas) => {
-    viewMeta = Object.values(metas.views || {}).map((view: Image | SequenceFrame[]) => {
-      const image: Image = Array.isArray(view) ? view[0] : view;
-      itemType = metas.type;
+  views.subscribe((views) => {
+    viewMeta = Object.values(views || {}).map((view: Image | SequenceFrame[]) => {
+      let image: Image | SequenceFrame;
+      if (Array.isArray(view)) {
+        itemType = "video";
+        image = view[0];
+      } else {
+        itemType = "image";
+        image = view;
+      }
       return {
         fileName: image.data.url.split("/").at(-1),
         width: image.data.width,
@@ -53,7 +60,7 @@ License: CECILL-C
         id: image.id,
       };
     });
-    features = createFeature(metas.item); //, defaultSceneFeatures); //XXX TODO default ?
+    features = createFeature($itemMetas.item); //, defaultSceneFeatures); //XXX TODO default ?
   });
 
   /**

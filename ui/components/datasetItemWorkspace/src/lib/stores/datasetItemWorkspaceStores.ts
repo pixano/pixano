@@ -17,6 +17,8 @@ import {
   type SaveItem,
   Annotation,
   Entity,
+  Image,
+  SequenceFrame,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -27,6 +29,7 @@ export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
 export const annotations = writable<Annotation[]>([]);
 export const entities = writable<Entity[]>([]);
+export const views = writable<Record<string, Image | SequenceFrame[]>>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const canSave = writable<boolean>(false);
@@ -69,14 +72,13 @@ export const colorScale = derived(
 );
 
 export const itemBboxes = derived(
-  [annotations, itemMetas, entities],
-  ([$annotations, $itemMetas, $entities]) => {
+  [annotations, views, entities],
+  ([$annotations, $views, $entities]) => {
     const bboxes: BBox[] = [];
     for (const ann of $annotations) {
       if (ann.is_bbox) {
-        //maybe we should not cycle on this, but mapObjectToBBox return BBox[] for now...
-        const item_boxes = mapObjectToBBox(ann, $itemMetas?.views, $entities);
-        for (const box of item_boxes) bboxes.push(box);
+        const box = mapObjectToBBox(ann, $views, $entities);
+        bboxes.push(box);
       }
     }
     return bboxes;
@@ -102,4 +104,8 @@ export const itemKeypoints = derived([annotations, itemMetas], ([$annotations, $
     }
   }
   return m_keypoints;
+});
+
+export const tracks = derived(entities, ($entities) => {
+  return $entities.filter((entity) => entity.is_track);
 });

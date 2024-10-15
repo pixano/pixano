@@ -6,7 +6,8 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { FeaturesValues, VideoObject } from "@pixano/core";
+  import { onMount } from "svelte";
+  import type { FeaturesValues } from "@pixano/core";
   import {
     Annotation,
     // BBox,
@@ -31,6 +32,7 @@ License: CECILL-C
     canSave,
     saveData,
     entities,
+    views,
   } from "./lib/stores/datasetItemWorkspaceStores";
   import "./index.css";
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
@@ -60,80 +62,60 @@ License: CECILL-C
     // adapt data model from back to front
     if (selectedItem.type === "image") {
       ann.datasetItemType = "image";
-      if (ann.table_info.base_schema === "BBox") {
-        //const bbox: BBox = ann as BBox;
-        //nothing to do  ... (COOL!!)
-      } else if (ann.table_info.base_schema === "KeyPoints") {
-        //const kpt: Keypoints = ann as Keypoints;
-        //nothing to do  ... (COOL!!)
-      } else if (ann.table_info.base_schema === "CompressedRLE") {
+      if (ann.table_info.base_schema === "CompressedRLE") {
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
       }
     } else {
       ann.datasetItemType = "video";
-      // if (ann.is_bbox) (ann as VideoObject).boxes?.push(ann.data);
-      // else if (ann.is_keypoints)
-      //   (ann as VideoObject).keypoints?.push(ann.data);
-      //else if (ann.is_mask) (ann as VideoObject).mask = ann.data;
-      //else if (ann.table_info.base_schema === "Tracklet") (ann as VideoObject).?? = ann.data;
-      //(ann as VideoObject).track = []; //TMP required to display video (but nothing else yet)
+      //add frame_index to annotation
+      for (const view of Object.values($views)) {
+        if (Array.isArray(view)) {
+          const frame_index = view.find((sf) => sf.id === ann.data.view_ref.id)?.data.frame_index;
+          ann.frame_index = frame_index;
+        }
+      }
+      if (ann.table_info.base_schema === "CompressedRLE") {
+        const mask: Mask = ann as Mask;
+        if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
+      }
     }
     return ann;
   };
 
-  $: annotations.update((oldObjects) => {
-    const newObjects: Annotation[] = [];
-    for (const anns of Object.values(selectedItem.annotations)) {
-      newObjects.push(
-        ...anns.map((ann) => {
-          const oldObject = oldObjects.find((o) => o.id === ann.id);
-          if (oldObject) {
-            return { ...oldObject, ...ann } as Annotation;
-          }
-          //if not already in annotations, it's a new object from back
-          //TMP before UI datamodel rework, we map back datamodel to front datamodel
-          return back2front(ann);
-        }),
-      );
-    }
-    return newObjects;
-  });
+  onMount(() => {
+    views.set(selectedItem.views);
 
-  $: entities.update((oldObjects) => {
-    const newObjects: Entity[] = [];
-    for (const sel_entities of Object.values(selectedItem.entities)) {
-      newObjects.push(
-        ...sel_entities.map((entity) => {
-          const oldObject = oldObjects.find((o) => o.id === entity.id);
-          if (oldObject) {
-            return { ...oldObject, ...entity } as Entity;
-          }
-          return entity;
-        }),
-      );
-    }
-    return newObjects;
-  });
+    const newAnns: Annotation[] = [];
+    Object.values(selectedItem.annotations).forEach((anns) => {
+      anns.forEach((ann) => newAnns.push(back2front(ann)));
+    });
+    annotations.set(newAnns);
+    console.log("XXX annotations", $annotations);
 
-  $: console.log("XXX entities", $entities);
-  $: console.log("XXX annotations", $annotations);
+    const newEntities: Entity[] = [];
+    Object.values(selectedItem.entities).forEach((sel_entities) => {
+      sel_entities.forEach((entity) => {
+        //build childs list
+        entity.childs = $annotations.filter((ann) => ann.data.entity_ref.id === entity.id);
+        newEntities.push(entity);
+      });
+    });
+    entities.set(newEntities);
+    console.log("XXX entities", $entities);
 
-  $: itemMetas.set({
-    featuresList: featureValues || { main: {}, objects: {} },
-    item: selectedItem.item,
-    views: selectedItem.views,
-    id: selectedItem.id,
-    type: selectedItem.type,
+    itemMetas.set({
+      featuresList: featureValues || { main: {}, objects: {} },
+      item: selectedItem.item,
+      type: selectedItem.type,
+    });
   });
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
 
-  $: {
-    if (selectedItem) {
-      newShape.update((old) => ({ ...old, status: "none" }));
-      canSave.set(false);
-    }
+  $: if (selectedItem) {
+    newShape.update((old) => ({ ...old, status: "none" }));
+    canSave.set(false);
   }
 
   export const front2back = (objs: SaveItem[]): SaveItem[] => {
@@ -158,7 +140,8 @@ License: CECILL-C
     return backObjs;
   };
 
-  $: console.log("Change in SaveData", $saveData);
+  //TMP log save data
+  saveData.subscribe((save_data) => console.log("Change in SaveData", save_data));
 
   const onSave = async () => {
     isSaving = true;
@@ -189,7 +172,7 @@ License: CECILL-C
   <LoadModelModal
     {models}
     currentDatasetId={selectedItem.datasetId}
-    selectedItemId={selectedItem.id}
+    selectedItemId={selectedItem.item.id}
     bind:embeddings
   />
 </div>

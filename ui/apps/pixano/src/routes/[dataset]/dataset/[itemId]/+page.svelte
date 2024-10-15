@@ -105,7 +105,7 @@ License: CECILL-C
   });
 
   $: {
-    if (currentItemId !== selectedItem?.id) {
+    if (currentItemId !== selectedItem?.item.id) {
       isLoadingNewItemStore.set(true);
       handleSelectItem(selectedDataset, currentItemId);
     }

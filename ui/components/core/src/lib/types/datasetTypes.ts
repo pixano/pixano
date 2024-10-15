@@ -74,6 +74,8 @@ export class BaseData<T extends object> {
   }
 }
 
+////////// VIEWS /////////////
+
 const viewSchema = z
   .object({
     item_ref: referenceSchema,
@@ -82,6 +84,7 @@ const viewSchema = z
   .passthrough();
 type ViewType = z.infer<typeof viewSchema>; //export if needed
 
+export type MView = Record<string, Image | SequenceFrame[]>;
 export class View extends BaseData<ViewType> {
   constructor(obj: BaseDataFields<ViewType>) {
     viewSchema.parse(obj.data);
@@ -102,8 +105,8 @@ export class View extends BaseData<ViewType> {
 
   static deepCreateInstanceArrayOrPlain(
     objs: Record<string, BaseDataFields<ImageType> | BaseDataFields<SequenceFrameType>[]>,
-  ): Record<string, Image | SequenceFrame[]> {
-    const newObj: Record<string, Image | SequenceFrame[]> = {};
+  ): MView {
+    const newObj: MView = {};
     for (const [k, vs] of Object.entries(objs)) {
       if (Array.isArray(vs)) {
         const temp: SequenceFrame[] = [];
@@ -168,6 +171,8 @@ export class SequenceFrame extends Image {
   }
 }
 
+////////// ENTITIES /////////////
+
 const entitySchema = z
   .object({
     item_ref: referenceSchema,
@@ -208,6 +213,14 @@ export class Entity extends BaseData<EntityType> {
     }
     return newObj;
   }
+
+  get is_track(): boolean {
+    if (!this) {
+      console.error("ERROR: do not use 'is_track' on uninitialized object");
+      return false;
+    }
+    return this.table_info.base_schema === "Track";
+  }
 }
 
 const trackSchema = z
@@ -229,6 +242,8 @@ export class Track extends Entity {
   }
 }
 
+////////// ANNOTATIONS /////////////
+
 const annotationSchema = z
   .object({
     item_ref: referenceSchema,
@@ -244,6 +259,7 @@ export class Annotation extends BaseData<AnnotationType> {
   //features: Record<string, ItemFeature>;
   displayControl: DisplayControl = {};
   highlighted: "none" | "self" | "all" = "all";
+  frame_index?: number;
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
@@ -277,14 +293,24 @@ export class Annotation extends BaseData<AnnotationType> {
     return newObj;
   }
 
+  is_type(type: string): boolean {
+    if (!this) {
+      console.error("ERROR: do not use 'is_*' on uninitialized object");
+      return false;
+    }
+    return this.table_info.base_schema === type;
+  }
   get is_bbox(): boolean {
-    return this.table_info.base_schema === "BBox";
+    return this.is_type("BBox");
   }
   get is_keypoints(): boolean {
-    return this.table_info.base_schema === "KeyPoints";
+    return this.is_type("KeyPoints");
   }
   get is_mask(): boolean {
-    return this.table_info.base_schema === "CompressedRLE";
+    return this.is_type("CompressedRLE");
+  }
+  get is_tracklet(): boolean {
+    return this.is_type("Tracklet");
   }
 }
 
@@ -381,6 +407,34 @@ export class Mask extends Annotation {
   }
 }
 
+const trackletSchema = z
+  .object({
+    start_timestep: z.number(),
+    end_timestep: z.number(),
+    start_timestamp: z.number(),
+    end_timestamp: z.number(),
+  })
+  .passthrough();
+export type TrackletType = z.infer<typeof trackletSchema>;
+export class Tracklet extends Annotation {
+  declare data: TrackletType & AnnotationType;
+
+  constructor(obj: BaseDataFields<TrackletType>) {
+    if (obj.table_info.base_schema !== "Tracklet") throw new Error("Not a Tracklet");
+    trackletSchema.parse(obj.data);
+    super(obj as unknown as BaseDataFields<AnnotationType>);
+    this.data = obj.data as TrackletType & AnnotationType;
+  }
+
+  nonFeaturesFields(): string[] {
+    return super
+      .nonFeaturesFields()
+      .concat(["start_timestep", "end_timestep", "start_timestamp", "end_timestamp"]);
+  }
+}
+
+////////// ITEM /////////////
+
 const itemSchema = z.object({}).passthrough();
 type ItemType = z.infer<typeof itemSchema>;
 
@@ -394,6 +448,8 @@ export class Item extends BaseData<ItemType> {
     return super.nonFeaturesFields();
   }
 }
+
+////////// DATASETINFO /////////////
 
 const datasetInfoSchema = z
   .object({
@@ -428,6 +484,8 @@ export class DatasetInfo implements DatasetInfoType {
     this.isFiltered = obj.isFiltered;
   }
 }
+
+////////// BROWSER /////////////
 
 const datasetStatSchema = z
   .object({
@@ -501,10 +559,10 @@ export class DatasetBrowser implements DatasetBrowserType {
   }
 }
 
-// DATASET ITEM
+////////// DATASET ITEM /////////////
+
 const datasetItemSchema = z.object({
-  id: z.string(),
-  item: baseDataFieldsSchema(itemSchema), //we could make a type schema for Item, but it's the same...
+  item: baseDataFieldsSchema(itemSchema),
   entities: z.record(z.string(), z.array(baseDataFieldsSchema(entitySchema))),
   annotations: z.record(z.string(), z.array(baseDataFieldsSchema(annotationSchema))),
   views: z.record(
@@ -515,11 +573,10 @@ const datasetItemSchema = z.object({
 export type DatasetItemType = z.infer<typeof datasetItemSchema>;
 
 export class DatasetItem implements DatasetItemType {
-  id: string;
   item: Item;
   entities: Record<string, Entity[]>;
   annotations: Record<string, Annotation[]>;
-  views: Record<string, Image | SequenceFrame[]>;
+  views: MView;
 
   //UI only fields
   datasetId: string = "";
@@ -527,7 +584,6 @@ export class DatasetItem implements DatasetItemType {
 
   constructor(obj: DatasetItemType) {
     datasetItemSchema.parse(obj);
-    this.id = obj.id;
     this.item = new Item(obj.item);
 
     this.entities = Entity.deepCreateInstanceArray(obj.entities);
@@ -659,18 +715,18 @@ export type SaveDelete = SaveBase & {
 };
 export type SaveItem = SaveAdd | SaveUpdate | SaveDelete;
 
-export type VideoItemBBox = BBox & TrackletItem;
-export type VideoItemKeypoints = Keypoints & TrackletItem;
-export interface Tracklet {
-  start: number;
-  end: number;
-  id: string;
-  view_id: string;
-}
+// export type VideoItemBBox = BBox & TrackletItem;
+// export type VideoItemKeypoints = Keypoints & TrackletItem;
+// export interface Tracklet {
+//   start: number;
+//   end: number;
+//   id: string;
+//   view_id: string;
+// }
 
-export type TrackletWithItems = Tracklet & {
-  items: TrackletItem[];
-};
+// export type TrackletWithItems = Tracklet & {
+//   items: TrackletItem[];
+// };
 
 // export type VideoObject = ItemObjectBase & {
 //   datasetItemType: "video";
@@ -680,9 +736,8 @@ export type TrackletWithItems = Tracklet & {
 //   displayedMBox?: VideoItemBBox[]; //list for multiview
 //   displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
 // };
-export type VideoObject = object; //TMP
 
-export type ImageObject = BBox | Mask | Keypoints;
+// export type ImageObject = BBox | Mask | Keypoints;
 
 // ITEM EMBEDDING
 export interface ItemEmbedding {

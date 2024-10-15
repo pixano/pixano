@@ -6,13 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, cn } from "@pixano/core";
-  import type {
+  import { Annotation, ContextMenu, cn } from "@pixano/core";
+  import {
+    Track,
     Tracklet,
-    VideoObject,
-    VideoItemBBox,
-    TrackletWithItems,
-    TrackletItem,
+    SequenceFrame,
+    // VideoObject,
+    // VideoItemBBox,
+    // TrackletWithItems,
+    type TrackletItem,
+    type MView,
   } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
@@ -29,9 +32,9 @@ License: CECILL-C
     mapTrackletItems,
   } from "../../lib/api/videoApi";
 
-  export let object: VideoObject;
-  export let tracklet: TrackletWithItems;
-  export let views: string[];
+  export let track: Track;
+  export let tracklet: Tracklet;
+  export let views: MView;
   export let onContextMenu: (event: MouseEvent) => void;
   export let getTrackletItem: (ann: TrackletItem) => TrackletItem;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
@@ -43,14 +46,19 @@ License: CECILL-C
   export let updateTracks: () => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
-  const getLeft = (tracklet: Tracklet) => (tracklet.start / ($lastFrameIndex + 1)) * 100;
+  const getLeft = (tracklet: Tracklet) =>
+    (tracklet.data.start_timestep / ($lastFrameIndex + 1)) * 100;
   const getWidth = (tracklet: Tracklet) => {
-    const end = tracklet.end > $lastFrameIndex ? $lastFrameIndex : tracklet.end;
-    return ((end - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+    const end =
+      tracklet.data.end_timestep > $lastFrameIndex ? $lastFrameIndex : tracklet.data.end_timestep;
+    return ((end - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
   };
-  const getHeight = (views: string[]) => 80 / views.length;
-  const getTop = (tracklet: Tracklet, views: string[]) => {
-    return 10 + (80 * views.indexOf(tracklet.view_id)) / views.length;
+  const getHeight = (views: MView) => 80 / Object.keys(views).length;
+  const getTop = (tracklet: Tracklet, views: MView) => {
+    return (
+      10 +
+      (80 * Object.keys(views).indexOf(tracklet.data.view_ref.name)) / Object.keys(views).length
+    );
   };
 
   let width: number = getWidth(tracklet);
@@ -58,27 +66,60 @@ License: CECILL-C
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
+  let tracklet_annotations: TrackletItem[];
 
   $: oneFrameInPixel =
-    trackletElement?.getBoundingClientRect().width / (tracklet.end - tracklet.start + 1);
-  $: color = $colorScale[1](object.id);
+    trackletElement?.getBoundingClientRect().width /
+    (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
+  $: color = $colorScale[1](track.id);
 
-  const updateTrackletWidth = (
-    newFrameIndex: VideoItemBBox["frame_index"],
-    draggedFrameIndex: VideoItemBBox["frame_index"],
-  ): boolean => {
+  $: {
+    const tracklet_views: SequenceFrame[] = [];
+    for (const view of Object.values(views)) {
+      if (Array.isArray(view)) {
+        for (const sf of view) {
+          if (
+            tracklet.data.entity_ref.id === track.id &&
+            sf.data.frame_index >= tracklet.data.start_timestep &&
+            sf.data.frame_index <= tracklet.data.end_timestep
+          ) {
+            tracklet_views.push(sf);
+          }
+        }
+      }
+    }
+    const tracklet_views_ids: string[] = tracklet_views.map((sf) => sf.id);
+    tracklet_annotations = $annotations.flatMap((ann) =>
+      !ann.is_tracklet &&
+      ann.data.entity_ref.id === track.id &&
+      tracklet_views_ids.includes(ann.data.view_ref.id)
+        ? [
+            {
+              frame_index: tracklet_views.find((sf) => sf.id === ann.data.view_ref.id)?.data
+                .frame_index,
+              tracklet_id: tracklet.id,
+              is_key: true,
+              is_thumbnail: false,
+              hidden: false,
+            } as TrackletItem,
+          ]
+        : [],
+    );
+  }
+
+  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
 
     if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex >= nextFrameIndex - 1) return false;
 
-    const isStart = draggedFrameIndex === tracklet.start;
-    const isEnd = draggedFrameIndex === tracklet.end;
+    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
+    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
     if (isStart) {
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
-      width = ((tracklet.end - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
+      width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
     }
     if (isEnd) {
-      width = ((newFrameIndex - tracklet.start) / ($lastFrameIndex + 1)) * 100;
+      width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
     }
     const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
     updateView(newFrameIndex, [newTracklet]);
@@ -87,10 +128,7 @@ License: CECILL-C
     return true;
   };
 
-  const filterTracklet = (
-    newFrameIndex: VideoItemBBox["frame_index"],
-    draggedFrameIndex: VideoItemBBox["frame_index"],
-  ) => {
+  const filterTracklet = (newFrameIndex: number, draggedFrameIndex: number) => {
     tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
     annotations.update((oldObjects) =>
       oldObjects.map((obj) => {
@@ -168,8 +206,8 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("absolute border-y border-white", {
-      "opacity-100": object.highlighted === "self",
-      "opacity-30": object.highlighted === "none",
+      "opacity-100": tracklet.highlighted === "self",
+      "opacity-30": tracklet.highlighted === "none",
     })}
     style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
@@ -189,19 +227,17 @@ License: CECILL-C
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet.items as item}
-  {#if item.is_key}
-    <TrackletKeyItem
-      {item}
-      {color}
-      {height}
-      {top}
-      {oneFrameInPixel}
-      {onEditKeyItemClick}
-      objectId={object.id}
-      {updateTrackletWidth}
-      {updateTracklet}
-      {filterTracklet}
-    />
-  {/if}
+{#each tracklet_annotations as ann}
+  <TrackletKeyItem
+    item={ann}
+    {color}
+    {height}
+    {top}
+    {oneFrameInPixel}
+    {onEditKeyItemClick}
+    objectId={track.id}
+    {updateTrackletWidth}
+    {updateTracklet}
+    {filterTracklet}
+  />
 {/each}

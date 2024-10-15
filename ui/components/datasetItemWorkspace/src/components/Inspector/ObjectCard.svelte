@@ -23,10 +23,12 @@ License: CECILL-C
     saveData,
     annotations,
     entities,
+    views,
     selectedTool,
     colorScale,
     itemMetas,
   } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import {
     createObjectCardId,
     toggleObjectDisplayControl,
@@ -68,21 +70,25 @@ License: CECILL-C
     value: boolean,
     properties: ("bbox" | "mask" | "keypoints")[] = ["bbox", "mask", "keypoints"],
   ) => {
-    annotations.update((objects) =>
-      objects.map((object) => {
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        //exclude non current anns for video
+        if (ann.datasetItemType === "video") {
+          if (ann.frame_index !== $currentFrameIndex) return ann;
+        }
         if (displayControlProperty === "editing") {
-          object.highlighted = object.data.entity_ref.id === entity.id ? "self" : "none";
-          object.highlighted = value ? object.highlighted : "all";
-          object.displayControl = {
-            ...object.displayControl,
+          ann.highlighted = ann.data.entity_ref.id === entity.id ? "self" : "none";
+          ann.highlighted = value ? ann.highlighted : "all";
+          ann.displayControl = {
+            ...ann.displayControl,
             editing: false,
           };
         }
-        if (object.data.entity_ref.id === entity.id) {
-          object = toggleObjectDisplayControl(object, displayControlProperty, properties, value);
-          objectIdBeingEdited.set(value ? object.id : null); //object or entity ??
+        if (ann.data.entity_ref.id === entity.id) {
+          ann = toggleObjectDisplayControl(ann, displayControlProperty, properties, value);
+          objectIdBeingEdited.set(value ? ann.id : null);
         }
-        return object;
+        return ann;
       }),
     );
   };
@@ -132,9 +138,14 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () =>
-    entity.childs?.forEach((ann) =>
-      annotations.update((objects) => highlightCurrentObject(objects, ann)),
-    );
+    entity.childs?.forEach((ann) => {
+      if (ann.datasetItemType === "video") {
+        if (ann.frame_index === $currentFrameIndex)
+          annotations.update((objects) => highlightCurrentObject(objects, ann));
+      } else {
+        annotations.update((objects) => highlightCurrentObject(objects, ann));
+      }
+    });
 
   const onEditIconClick = () => {
     handleIconClick("editing", !isEditing), (open = true);
@@ -143,7 +154,7 @@ License: CECILL-C
 
   const thumb_box: Annotation | undefined = entity.childs?.find((ann) => ann.is_bbox);
   const thumbnail: ObjectThumbnail | null = thumb_box
-    ? defineObjectThumbnail($itemMetas, thumb_box)
+    ? defineObjectThumbnail($itemMetas, $views, thumb_box)
     : null;
 </script>
 

@@ -7,8 +7,7 @@ License: CECILL-C
 import { z } from "zod";
 import * as ort from "onnxruntime-web";
 
-import type { DatasetItem, FeaturesValues, FeatureValues } from "@pixano/core";
-import { Entity } from "@pixano/core";
+import { Annotation, DatasetItem, type FeaturesValues, type FeatureValues } from "@pixano/core";
 
 import { GROUND_TRUTH, PRE_ANNOTATION } from "../constants";
 import type {
@@ -17,10 +16,16 @@ import type {
   otherInputSchema,
 } from "../settings/objectValidationSchemas";
 
-export type ObjectsSortedByModelType<T> = {
-  [GROUND_TRUTH]: T[];
-  [PRE_ANNOTATION]: T[];
-  [key: string]: T[];
+export type ObjectsSortedByModelType = {
+  [GROUND_TRUTH]: Annotation[];
+  [PRE_ANNOTATION]: Annotation[];
+  [key: string]: Annotation[];
+};
+
+export type EntitiesSortedByModelType = {
+  [GROUND_TRUTH]: Set<Entity>;
+  [PRE_ANNOTATION]: Set<Entity>;
+  [key: string]: Set<Entity>;
 };
 
 export type ListInput = z.infer<typeof listInputSchema>;
@@ -74,8 +79,6 @@ export type ItemsMeta = {
   //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
   item: DatasetItem["item"];
-  views: DatasetItem["views"];
-  id: DatasetItem["id"];
   type: DatasetItem["type"];
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";

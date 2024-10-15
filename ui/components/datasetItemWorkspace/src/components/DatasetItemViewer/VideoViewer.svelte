@@ -13,17 +13,21 @@ License: CECILL-C
     type Tracklet,
     type VideoDatasetItem,
     type ImagesPerView,
+    Annotation,
+    BBox,
+    Keypoints,
+    Mask,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
   import {
     itemBboxes,
+    itemKeypoints,
     itemMasks,
     annotations,
     newShape,
     selectedTool,
     colorScale,
-    itemKeypoints,
     selectedKeypointsTemplate,
     imageSmoothing,
     saveData,
@@ -35,6 +39,7 @@ License: CECILL-C
   } from "../../lib/stores/videoViewerStores";
 
   import { onMount } from "svelte";
+  import { derived } from "svelte/store";
   import VideoInspector from "../VideoPlayer/VideoInspector.svelte";
   import { updateExistingObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import {
@@ -48,11 +53,17 @@ License: CECILL-C
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
+  let current_itemKeypoints: Keypoints[];
+  let current_itemMask: Mask[];
   $: {
     if (selectedItem) {
       currentFrameIndex.set(0);
     }
   }
+  const current_itemBBox = derived(
+    [itemBboxes, currentFrameIndex],
+    ([$itemBboxes, $currentFrameIndex]) => $itemBboxes.filter((bbox) => bbox.frame_index === $currentFrameIndex)
+  );
 
   let inspectorMaxHeight = 250;
   let expanding = false;
@@ -187,7 +198,7 @@ License: CECILL-C
         }
         return object;
       });
-      function findEarlierTracklet(item: ItemObject): number {
+      function findEarlierTracklet(item: Annotation): number {
         if (item.datasetItemType !== "video") return 0;
         if (item.track.length === 0) return 0;
         return item.track.reduce(
@@ -195,7 +206,7 @@ License: CECILL-C
           item.track[0].start,
         );
       }
-      objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
+      //TMP objects.sort((a, b) => findEarlierTracklet(a) - findEarlierTracklet(b));
       return objects;
     });
 
@@ -253,13 +264,13 @@ License: CECILL-C
   role="tab"
   tabindex="0"
 >
-  {#if isLoaded}
+  {#if isLoaded && $current_itemBBox}
     <div class="overflow-hidden grow">
       <Canvas2D
-        selectedItemId={selectedItem.id + currentFrame}
+        selectedItemId={selectedItem.item.id + currentFrame}
         {imagesPerView}
         colorScale={$colorScale[1]}
-        bboxes={$itemBboxes}
+        bboxes={$current_itemBBox}
         masks={$itemMasks}
         keypoints={$itemKeypoints}
         selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
