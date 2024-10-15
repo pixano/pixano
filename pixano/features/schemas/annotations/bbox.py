@@ -31,7 +31,7 @@ class BBox(Annotation):
     """
 
     coords: list[float]
-    format: str
+    format: Literal["xyxy", "xywh"]
     is_normalized: bool
     confidence: float = -1.0
 
@@ -233,7 +233,7 @@ class BBox3D(Annotation):
     """
 
     coords: list[float]
-    format: str
+    format: Literal["xyzxyz", "xyzwhd"]
     heading: list[float]
     is_normalized: bool
     confidence: float = -1.0
@@ -285,7 +285,7 @@ def is_bbox3d(cls: type, strict: bool = False) -> bool:
 
 def create_bbox(
     coords: list[float],
-    format: str,
+    format: Literal["xyxy", "xywh"],
     is_normalized: bool,
     confidence: float = -1,
     id: str = "",
