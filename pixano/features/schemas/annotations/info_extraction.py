@@ -23,25 +23,25 @@ class NamedEntity(Annotation):
     Attributes:
         concept_id: id of named-entity type.
         mention: named-entity observed mention.
-        spans: List of start-end offset tuples in the text. list[tuple[int,int]] encoded in a string.
+        spans: List of start-end offset tuples in the text. list[list[int]] encoded in a string.
     """
 
     concept_id: str
     mention: str
-    spans: str = json.dumps([])
+    spans: str
 
     @field_validator("spans", mode="before")
     @classmethod
-    def _validate_spans(cls, v: str | list[tuple[int, int]]):
+    def _validate_spans(cls, v: str | list[list[int]]):
         if isinstance(v, str):
             parsed_v = json.loads(v)
         elif isinstance(v, list):
             parsed_v = v
         else:
-            raise ValueError("(1) Spans must be a list of start-end offset tuples, or a JSON dump of such an object.")
+            raise ValueError("Spans must be a list of start-end offset tuples, or a JSON dump of such an object.")
         if not isinstance(parsed_v, list):
             raise ValueError("Spans must be a list of start-end offset tuples.")
-        if not all(isinstance(tup, (tuple, list)) and len(tup) == 2 for tup in parsed_v):
+        if not all(isinstance(tup, list) and len(tup) == 2 for tup in parsed_v):
             raise ValueError(
                 "Spans must be a list of start-end offset tuples, each tuple must have 2 positive integer values."
             )
@@ -49,7 +49,9 @@ class NamedEntity(Annotation):
             raise ValueError("Spans offset must be positive integers.")
         if not all(tup[0] >= 0 and tup[1] >= 0 for tup in parsed_v):
             raise ValueError("Spans offset must be positive")
-        return json.dumps(v)
+        return json.dumps(
+            parsed_v,
+        )
 
     @field_validator("spans", mode="after")
     @classmethod
@@ -125,7 +127,7 @@ def is_relation(cls: type, strict: bool = False) -> bool:
 def create_namedentity(
     concept_id: str,
     mention: str,
-    spans: str | list[tuple[int, int]],
+    spans: str | list[list[int]],
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
