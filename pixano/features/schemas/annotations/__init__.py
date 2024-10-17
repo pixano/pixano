@@ -14,6 +14,7 @@ from .camcalibration import (
     create_cam_calibration,
     is_cam_calibration,
 )
+from .classification import Classification, create_classification, is_classification
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
 from .info_extraction import NamedEntity, Relation, create_namedentity, create_relation, is_namedentity, is_relation
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
@@ -26,6 +27,7 @@ __all__ = [
     "BBox",
     "BBox3D",
     "CamCalibration",
+    "Classification",
     "CompressedRLE",
     "Extrinsics",
     "Intrinsics",
@@ -38,6 +40,7 @@ __all__ = [
     "is_bbox",
     "is_bbox3d",
     "is_cam_calibration",
+    "is_classification",
     "is_compressed_rle",
     "is_keypoints",
     "is_keypoints3d",
@@ -47,6 +50,7 @@ __all__ = [
     "create_bbox",
     "create_bbox3d",
     "create_cam_calibration",
+    "create_classification",
     "create_compressed_rle",
     "create_keypoints",
     "create_keypoints3d",

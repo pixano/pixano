@@ -4,10 +4,10 @@
 # License: CECILL-C
 # =====================================
 
-import json
+import warnings
 
-from pydantic import field_validator
-from typing_extensions import Self
+from pydantic import model_validator
+from typing_extensions import Generator, Self
 
 from pixano.utils import issubclass_strict
 
@@ -23,44 +23,26 @@ class NamedEntity(Annotation):
     Attributes:
         concept_id: id of named-entity type.
         mention: named-entity observed mention.
-        spans: List of start-end offset tuples in the text. list[list[int]] encoded in a string.
+        spans_start: List of start offsets of the spans in the text.
+        spans_end: List of end offsets of the spans in the text.
     """
 
     concept_id: str
     mention: str
-    spans: str
+    spans_start: list[int]
+    spans_end: list[int]
 
-    @field_validator("spans", mode="before")
-    @classmethod
-    def _validate_spans(cls, v: str | list[list[int]]):
-        if isinstance(v, str):
-            parsed_v = json.loads(v)
-        elif isinstance(v, list):
-            parsed_v = v
-        else:
-            raise ValueError("Spans must be a list of start-end offset tuples, or a JSON dump of such an object.")
-        if not isinstance(parsed_v, list):
-            raise ValueError("Spans must be a list of start-end offset tuples.")
-        if not all(isinstance(tup, list) and len(tup) == 2 for tup in parsed_v):
-            raise ValueError(
-                "Spans must be a list of start-end offset tuples, each tuple must have 2 positive integer values."
-            )
-        if not all(all(isinstance(offset, int) for offset in tup) for tup in parsed_v):
-            raise ValueError("Spans offset must be positive integers.")
-        if not all(tup[0] >= 0 and tup[1] >= 0 for tup in parsed_v):
+    @model_validator(mode="after")
+    def _validate_fields(self):
+        if len(self.spans_start) != len(self.spans_end):
+            raise ValueError("Spans offset lists should have the same length")
+        if len(self.spans_start) == 0:
+            warnings.warn("To ground a NamedEntity in a text, spans offsets should not be empty", category=UserWarning)
+        if not all(span[0] >= 0 and span[1] >= 0 for span in zip(self.spans_start, self.spans_end)):
             raise ValueError("Spans offset must be positive")
-        return json.dumps(
-            parsed_v,
-        )
-
-    @field_validator("spans", mode="after")
-    @classmethod
-    def _validate_spans_after(cls, v: str) -> str:
-        try:
-            json.loads(v)
-        except Exception as e:
-            raise ValueError("Spans must be a valid JSON string. Error: " + str(e))
-        return v
+        if not all(span[0] <= span[1] for span in zip(self.spans_start, self.spans_end)):
+            raise ValueError("End offsets must be greater or equal to their corresponding start offset")
+        return self
 
     @classmethod
     def none(cls) -> Self:
@@ -77,8 +59,19 @@ class NamedEntity(Annotation):
             entity=EntityRef.none(),
             concept_id="",
             mention="",
-            spans=json.dumps([]),
+            spans_start=[],
+            spans_end=[],
         )
+
+    @property
+    def spans(self) -> zip[tuple[int, int]]:
+        """Get the list of zipped spans offsets (starts and ends)."""
+        return zip(self.spans_start, self.spans_end)
+
+    @property
+    def spans_length(self) -> Generator[int, None, None]:
+        """Get the computed list of spans lengths."""
+        return (e - s for s, e in zip(self.spans_start, self.spans_end))
 
 
 @_register_schema_internal
@@ -127,7 +120,8 @@ def is_relation(cls: type, strict: bool = False) -> bool:
 def create_namedentity(
     concept_id: str,
     mention: str,
-    spans: str | list[list[int]],
+    spans_start: list[int],
+    spans_end: list[int],
     id: str = "",
     item_ref: ItemRef = ItemRef.none(),
     view_ref: ViewRef = ViewRef.none(),
@@ -139,7 +133,8 @@ def create_namedentity(
     Args:
         concept_id: id of named-entity type.
         mention: named-entity observed mention.
-        spans: List of start-end offset tuples in the text. list[tuple[int,int]] encoded in a string.
+        spans_start: List of start offsets of the spans in the text.
+        spans_end: List of end offsets of the spans in the text.
         id: NamedEntity ID.
         item_ref: Item reference.
         view_ref: View reference.
@@ -152,7 +147,8 @@ def create_namedentity(
     return NamedEntity(
         concept_id=concept_id,
         mention=mention,
-        spans=spans,
+        spans_start=spans_start,
+        spans_end=spans_end,
         id=id,
         item_ref=item_ref,
         view_ref=view_ref,
