@@ -7,7 +7,7 @@
 import warnings
 
 from pydantic import model_validator
-from typing_extensions import Generator, Self
+from typing_extensions import Self
 
 from pixano.utils import issubclass_strict
 
@@ -64,14 +64,14 @@ class NamedEntity(Annotation):
         )
 
     @property
-    def spans(self) -> zip[tuple[int, int]]:
+    def spans(self) -> list[tuple[int, int]]:
         """Get the list of zipped spans offsets (starts and ends)."""
-        return zip(self.spans_start, self.spans_end)
+        return list(zip(self.spans_start, self.spans_end))
 
     @property
-    def spans_length(self) -> Generator[int, None, None]:
+    def spans_length(self) -> list[int]:
         """Get the computed list of spans lengths."""
-        return (e - s for s, e in zip(self.spans_start, self.spans_end))
+        return [e - s for s, e in zip(self.spans_start, self.spans_end)]
 
 
 @_register_schema_internal

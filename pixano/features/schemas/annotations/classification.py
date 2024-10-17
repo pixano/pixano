@@ -49,9 +49,9 @@ class Classification(Annotation):
         )
 
     @property
-    def predictions(self) -> zip[tuple[str, float]]:
+    def predictions(self) -> list[tuple[str, float]]:
         """Get list of zipped predictions (labels and confidences)."""
-        return zip(self.labels, self.confidences)
+        return list(zip(self.labels, self.confidences))
 
 
 def is_classification(cls: type, strict: bool = False) -> bool:
