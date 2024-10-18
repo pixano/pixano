@@ -29,14 +29,21 @@ export function createFeature<T>(
   defaultFeats: Feature[] = [],
 ): Feature[] {
   const extraFields = obj.getDynamicFields();
-  const extraFieldsType = extraFields.reduce((acc, key) => {
-    acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key].type;
-    return acc;
-  }, {} as Record<string, string>);
+  const extraFieldsType = extraFields.reduce(
+    (acc, key) => {
+      acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key].type;
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
   let features: ItemFeature[] = [];
   if (extraFields.length > 0) {
     for (const field of extraFields)
-      features.push({ name: field, dtype: extraFieldsType[field], value: obj.data[field] as unknown } as ItemFeature);
+      features.push({
+        name: field,
+        dtype: extraFieldsType[field],
+        value: obj.data[field] as unknown,
+      } as ItemFeature);
   } else {
     features = defaultFeats;
   }

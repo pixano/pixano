@@ -53,7 +53,7 @@ export const imageSmoothing = writable<boolean>(true);
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
 
 export const saveData = writable<SaveItem[]>([]);
-export const canSave = derived(saveData, $saveData => $saveData.length > 0);
+export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);
 type ColorScale = [Array<string>, (id: string) => string];
 
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];

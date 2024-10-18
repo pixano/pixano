@@ -21,7 +21,6 @@ License: CECILL-C
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
   export let isLoading: boolean;
   export let headerHeight: number;
-
 </script>
 
 <div class="max-w-[100%] bg-slate-800" style={`max-height: calc(100vh - ${headerHeight}px)`}>

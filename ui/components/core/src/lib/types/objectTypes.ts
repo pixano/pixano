@@ -140,7 +140,7 @@ export type EditShape = {
   shapeId: string;
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
-} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | {type: "none"});
+} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

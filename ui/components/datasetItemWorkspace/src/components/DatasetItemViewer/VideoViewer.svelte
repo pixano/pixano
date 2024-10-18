@@ -55,10 +55,10 @@ License: CECILL-C
   }
 
   let tracks: Track[] = [];
-  entities.subscribe((entities)=>{
-    tracks = entities.filter((entity)=>entity.is_track);
+  entities.subscribe((entities) => {
+    tracks = entities.filter((entity) => entity.is_track);
     console.log("changed Tracks!", tracks);
-  })
+  });
 
   const current_itemBBoxes = derived(
     [itemBboxes, currentFrameIndex, tracklets],
@@ -273,11 +273,7 @@ License: CECILL-C
 
   const updateOrCreateShape = (shape: EditShape) => {
     if (shape.type === "bbox" || shape.type === "keypoints") {
-      let { objects, save_data } = editKeyItemInTracklet(
-        $annotations,
-        shape,
-        $currentFrameIndex,
-      );
+      let { objects, save_data } = editKeyItemInTracklet($annotations, shape, $currentFrameIndex);
       annotations.set(objects);
       if (save_data) saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_data));
       newShape.set({ status: "none" });
