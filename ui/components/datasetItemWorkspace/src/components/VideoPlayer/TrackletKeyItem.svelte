@@ -7,13 +7,13 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
-  import type { ItemObject, TrackletItem, VideoItemBBox } from "@pixano/core";
-  import { itemObjects, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { Annotation, type TrackletItem } from "@pixano/core";
+  import { annotations, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
 
-  export let objectId: ItemObject["id"];
+  export let objectId: Annotation["id"];
 
   export let item: TrackletItem;
   export let color: string;
@@ -21,7 +21,7 @@ License: CECILL-C
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  export let updateTracklet: () => void;
+  //export let updateTracklet: () => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -34,19 +34,18 @@ License: CECILL-C
   let isItemBeingEdited = false;
 
   $: {
-    const currentObjectBeingEdited = $itemObjects.find((object) => object.displayControl?.editing);
+    const currentObjectBeingEdited = $annotations.find((object) => object.displayControl?.editing);
     isItemBeingEdited =
       item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
   }
 
   const onDeleteItemClick = () => {
-    itemObjects.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
-    //TODO ? check if deleting a key has deleted last tracklet of itemObject => delete it (?)
-    updateTracklet();
-    canSave.set(true);
+    annotations.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
+    //TODO ? check if deleting a key has deleted last tracklet of annotation => delete it (?)
+    //updateTracklet();
   };
 
-  export const getKeyItemLeftPosition = (frameIndex: VideoItemBBox["frame_index"]) => {
+  export const getKeyItemLeftPosition = (frameIndex: number) => {
     const itemFrameIndex = frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex;
     const leftPosition = (itemFrameIndex / ($lastFrameIndex + 1)) * 100;
     return leftPosition;
@@ -86,7 +85,6 @@ License: CECILL-C
       moving = false;
       if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, item.frame_index);
       newFrameIndex = undefined;
-      //TODO canSave.set(true);
     });
   };
 </script>

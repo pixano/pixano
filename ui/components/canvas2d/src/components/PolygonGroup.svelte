@@ -9,7 +9,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Shape as KonvaShape } from "svelte-konva";
 
-  import type { Mask, SelectionTool, Shape } from "@pixano/core";
+  import type { Mask, SelectionTool, Shape, Reference } from "@pixano/core";
   import type { PolygonGroupPoint, PolygonShape } from "../lib/types/canvas2dTypes";
   import {
     sceneFunc,
@@ -21,7 +21,7 @@ License: CECILL-C
   import PolygonPoints from "./PolygonPoints.svelte";
 
   // Exports
-  export let viewId: string;
+  export let viewRef: Reference;
   export let newShape: Shape;
   export let stage: Konva.Stage;
   export let currentImage: HTMLImageElement;
@@ -73,6 +73,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         type: "mask",
+        viewRef,
         shapeId: mask.id,
         counts,
       };
@@ -97,7 +98,7 @@ License: CECILL-C
     newShape = {
       status: "editing",
       shapeId: mask.id,
-      viewId,
+      viewRef,
       highlighted: "self",
       type: "none",
     };
@@ -108,7 +109,7 @@ License: CECILL-C
       newShape = {
         status: "editing",
         shapeId: mask.id,
-        viewId,
+        viewRef,
         highlighted: "all",
         type: "none",
       };
@@ -131,13 +132,13 @@ License: CECILL-C
       config={{
         sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, polygonShape.simplifiedSvg),
         stroke: color,
-        strokeWidth: 2 / zoomFactor[viewId],
+        strokeWidth: 2 / zoomFactor[viewRef.name],
         closed: true,
         fill: hexToRGBA(color, 0.5),
       }}
     />
     <PolygonPoints
-      {viewId}
+      {viewRef}
       {stage}
       {zoomFactor}
       polygonId={mask.id}

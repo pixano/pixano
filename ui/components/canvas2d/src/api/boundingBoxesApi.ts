@@ -15,7 +15,7 @@ export function addMask(
   color: string,
   maskGroup: Konva.Group,
   image: Konva.Image,
-  viewId: string,
+  view_name: string,
   stage: Konva.Stage,
   zoomFactor: Record<string, number>,
 ) {
@@ -54,7 +54,7 @@ export function addMask(
     height: stage.height(),
     fill: `rgba(${style.color.replace("rgb(", "").replace(")", "")}, 0.35)`,
     stroke: style.color,
-    strokeWidth: MASK_STROKEWIDTH / zoomFactor[viewId],
+    strokeWidth: MASK_STROKEWIDTH / zoomFactor[view_name],
     scale,
     visible: mask.visible,
     opacity: mask.opacity,
@@ -85,8 +85,8 @@ export function destroyDeletedObjects(objectsIds: Array<string>, objectsGroup: K
   for (const obj of objectsToDestroy) obj.destroy();
 }
 
-export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Konva.Group {
-  const viewLayer: Konva.Layer = stage.findOne(`#${viewId}`);
+export function findOrCreateCurrentMask(view_name: string, stage: Konva.Stage): Konva.Group {
+  const viewLayer: Konva.Layer = stage.findOne(`#${view_name}`);
 
   const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
 
@@ -102,8 +102,12 @@ export function findOrCreateCurrentMask(viewId: string, stage: Konva.Stage): Kon
   return currentMaskGroup;
 }
 
-export function clearCurrentAnn(viewId: string, stage: Konva.Stage, selectedTool: SelectionTool) {
-  const viewLayer: Konva.Layer = stage?.findOne(`#${viewId}`);
+export function clearCurrentAnn(
+  view_name: string,
+  stage: Konva.Stage,
+  selectedTool: SelectionTool,
+) {
+  const viewLayer: Konva.Layer = stage?.findOne(`#${view_name}`);
   if (viewLayer) {
     const currentAnnGroup: Konva.Group = viewLayer.findOne("#currentAnnotation");
     const currentMaskGroup: Konva.Group = currentAnnGroup.findOne("#currentMask");
