@@ -11,6 +11,7 @@ import {
   type ItemFeature,
   type FeaturesValues,
   type FeatureList,
+  type DatasetSchema,
 } from "@pixano/core";
 import type {
   CheckboxFeature,
@@ -22,13 +23,20 @@ import type {
   TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
-export function createFeature(obj: BaseData<any>, defaultFeats: Feature[] = []): Feature[] {
+export function createFeature<T>(
+  obj: BaseData<T>,
+  dataset_schema: DatasetSchema,
+  defaultFeats: Feature[] = [],
+): Feature[] {
   const extraFields = obj.getDynamicFields();
-  let features = [];
+  const extraFieldsType = extraFields.reduce((acc, key) => {
+    acc[key] = dataset_schema.schemas[obj.table_info.name].fields[key].type;
+    return acc;
+  }, {} as Record<string, string>);
+  let features: ItemFeature[] = [];
   if (extraFields.length > 0) {
-    //TODO : extract correct dtype from value... (or better: from schema)
     for (const field of extraFields)
-      features.push({ name: field, dtype: "str", value: obj.data[field] }); //TODO type
+      features.push({ name: field, dtype: extraFieldsType[field], value: obj.data[field] as unknown } as ItemFeature);
   } else {
     features = defaultFeats;
   }
@@ -41,7 +49,7 @@ export function createFeature(obj: BaseData<any>, defaultFeats: Feature[] = []):
     })),
   );
   return parsedFeatures.map((feature) => {
-    const value = obj.data[feature.name] as string; //TODO type
+    const value = obj.data[feature.name] as string; //TODO? type (feature.type to type)
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
     return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;

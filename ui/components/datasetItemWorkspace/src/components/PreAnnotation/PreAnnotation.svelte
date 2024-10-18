@@ -13,12 +13,11 @@ License: CECILL-C
   import { Annotation } from "@pixano/core";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
   import {
-    canSave,
     annotations,
     preAnnotationIsActive,
     colorScale,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { GROUND_TRUTH } from "../../lib/constants";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import {
     getObjectsToPreAnnotate,
     mapObjectWithNewStatus,
@@ -42,6 +41,7 @@ License: CECILL-C
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
       confidenceFilterValue,
+      $currentFrameIndex,
     );
   });
 
@@ -58,24 +58,19 @@ License: CECILL-C
   }
 
   const onAcceptItem = () => {
+    objectToAnnotate.review_state = "accepted";
+    objectToAnnotate.highlighted = "none";
+
     annotations.update((objects) => [
       ...mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "accepted", objectProperties),
-      {
-        ...objectToAnnotate,
-        review_state: "accepted",
-        //source_id: GROUND_TRUTH,  //TODO...
-        id: nanoid(10),
-        highlighted: "none",
-      },
+      objectToAnnotate,
     ]);
-    canSave.set(true);
   };
 
   const onRejectItem = () => {
     annotations.update((objects) =>
       mapObjectWithNewStatus(objects, filteredObjectsToAnnotate, "rejected"),
     );
-    canSave.set(true);
   };
 
   const onSwitchChange = (checked: boolean | undefined) => {
@@ -85,6 +80,7 @@ License: CECILL-C
       const tempObjects = sortAndFilterObjectsToAnnotate(
         objectsToPreAnnotate,
         confidenceFilterValue,
+        $currentFrameIndex,
       );
       return objects.map((object) => {
         object.highlighted = $preAnnotationIsActive ? "none" : "all";
@@ -101,6 +97,7 @@ License: CECILL-C
     filteredObjectsToAnnotate = sortAndFilterObjectsToAnnotate(
       objectsToAnnotate,
       confidenceFilterValue,
+      $currentFrameIndex,
     );
     if (objectsToAnnotate.length === 0) {
       preAnnotationIsActive.set(false);

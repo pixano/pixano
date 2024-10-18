@@ -42,7 +42,17 @@ type SaveMaskShape = SegmentationResult &
     type: "mask";
   };
 
-export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape;
+export type SaveTrackletShape = SaveShapeBase & {
+  type: "tracklet";
+  attrs: {
+    start_timestep: number;
+    end_timestep: number;
+    start_timestamp?: number;
+    end_timestamp?: number;
+  };
+};
+
+export type SaveShape = SaveRectangleShape | SaveMaskShape | SaveKeyBoxShape | SaveTrackletShape;
 
 export type noShape = {
   status: "none";
@@ -71,6 +81,7 @@ export type KeypointsTemplate = {
   id: string;
   viewRef?: Reference;
   entityRef?: Reference;
+  frame_index?: number;
   edges: [number, number][];
   vertices: Required<Vertex>[];
   editing?: boolean;
@@ -129,7 +140,7 @@ export type EditShape = {
   shapeId: string;
   viewRef: Reference;
   highlighted?: "all" | "self" | "none";
-} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | { type: "none" });
+} & (EditRectangleShape | EditMaskShape | EditKeypointsShape | {type: "none"});
 
 export type Shape = SaveShape | noShape | EditShape | CreateShape;
 

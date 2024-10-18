@@ -10,7 +10,7 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import { type ImageDatasetItem, View, type ImagesPerView } from "@pixano/core";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import { Image as ImageJS } from "image-js";
 
   // Import stores and API functions
@@ -32,7 +32,7 @@ License: CECILL-C
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
   // Attributes
-  export let selectedItem: ImageDatasetItem;
+  export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
@@ -79,7 +79,7 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, View>): Promise<ImagesPerView> => {
+  const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
       const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
@@ -91,7 +91,7 @@ License: CECILL-C
         normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
       }
 
-      const image: HTMLImageElement = new Image();
+      const image: HTMLImageElement = document.createElement("img");
       image.src = img.toDataURL();
       images[key] = [{ id: value.id, element: image }];
     });
@@ -106,7 +106,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      imagesPerView = await loadImages(selectedItem.views);
+      imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }
   };
@@ -138,7 +138,7 @@ License: CECILL-C
 {#if loaded}
   <Canvas2D
     {imagesPerView}
-    selectedItemId={selectedItem.id}
+    selectedItemId={selectedItem.item.id}
     colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}

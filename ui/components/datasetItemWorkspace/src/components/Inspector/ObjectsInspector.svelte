@@ -23,52 +23,50 @@ License: CECILL-C
     createObjectCardId,
     defineObjectThumbnail,
     sortObjectsByModel,
-    getObjectEntity,
+    getObjectsEntities,
   } from "../../lib/api/objectsApi";
   import PreAnnotation from "../PreAnnotation/PreAnnotation.svelte";
-  import type { EntitiesSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
+  import type { ObjectsSortedByModelType } from "../../lib/types/datasetItemWorkspaceTypes";
 
-  let allEntitiesSortedByModel: EntitiesSortedByModelType = {
-    [GROUND_TRUTH]: new Set<Entity>(),
-    [PRE_ANNOTATION]: new Set<Entity>(),
+  const allEntitiesSortedByModel: ObjectsSortedByModelType<Entity> = {
+    [GROUND_TRUTH]: [],
+    [PRE_ANNOTATION]: [],
   };
-
+  let allModels: string[] = [];
+  let selectedModel: string = "";
   let thumbnail: ObjectThumbnail | null = null;
 
-  annotations.subscribe((objects) => {
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
+  $: $annotations, $entities, handleAnnotationSortedByModel();
+
+  const handleAnnotationSortedByModel = () => {
+    console.log("ObjectInspector refresh fired", $annotations, $entities);
+    const allAnnotationsSortedByModel = sortObjectsByModel($annotations);
+    //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
+    for (const model in allAnnotationsSortedByModel) {
+      allEntitiesSortedByModel[model] = getObjectsEntities(
+        allAnnotationsSortedByModel[model],
+        $entities,
+      );
+    }
+    allModels = Object.keys(allEntitiesSortedByModel).filter(
+      (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
+    );
+    selectedModel =
+      Object.keys(allEntitiesSortedByModel).find(
+        (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
+      ) || "";
+    //scroll and set thumbnail to highlighted object if any
+    const highlightedObject = $annotations.find((ann) => ann.highlighted === "self");
     if (highlightedObject) {
       thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
+      const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } else {
       thumbnail = null;
     }
-  });
-
-  annotations.subscribe((objects) => {
-    const allAnnotationsSortedByModel = sortObjectsByModel(objects);
-    //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
-    for (const model in allAnnotationsSortedByModel) {
-      allAnnotationsSortedByModel[model].forEach((ann) => {
-        const ent = getObjectEntity(ann, $entities);
-        if (ent) allEntitiesSortedByModel[model].add(ent);
-      });
-    }
-
-    const highlightedObject = objects.find((item) => item.highlighted === "self");
-    if (!highlightedObject) return;
-    const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  });
-
-  let allModels = Object.keys(allEntitiesSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  );
-
-  let selectedModel: string = Object.keys(allEntitiesSortedByModel).filter(
-    (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
-  )[0];
+  };
 </script>
 
 <div class="p-2 flex flex-col h-[calc(100vh-200px)]">
@@ -94,7 +92,7 @@ License: CECILL-C
       <ObjectsModelSection
         sectionTitle="Ground truth"
         modelName={GROUND_TRUTH}
-        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].size}
+        numberOfItem={allEntitiesSortedByModel[GROUND_TRUTH].length}
       >
         {#each allEntitiesSortedByModel[GROUND_TRUTH] as entity}
           <ObjectCard bind:entity />
@@ -104,7 +102,7 @@ License: CECILL-C
         <ObjectsModelSection
           sectionTitle="Model run"
           modelName={selectedModel}
-          numberOfItem={allEntitiesSortedByModel[selectedModel]?.size || 0}
+          numberOfItem={allEntitiesSortedByModel[selectedModel]?.length || 0}
         >
           <Combobox
             slot="modelSelection"

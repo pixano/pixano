@@ -14,12 +14,12 @@ License: CECILL-C
     type DisplayControl,
     Annotation,
     Entity,
+    type EntityType,
     type ObjectThumbnail,
     type SaveItem,
   } from "@pixano/core";
 
   import {
-    canSave,
     saveData,
     annotations,
     entities,
@@ -40,16 +40,16 @@ License: CECILL-C
 
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
-  import { objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   export let entity: Entity;
 
   let open: boolean = false;
   let showIcons: boolean = false;
 
-  $: features = createFeature(entity);
+  $: features = createFeature<EntityType>(entity, $datasetSchema);
   $: isEditing = entity.childs?.some((ann) => ann.displayControl?.editing) || false;
-  $: isVisible = entity.childs?.some((ann) => ann.displayControl?.hidden == false) || false;
+  $: isVisible = entity.childs?.some((ann) => ann.displayControl?.hidden == false) || true;
   $: boxIsVisible =
     entity.childs?.some(
       (ann) => ann.datasetItemType === "image" && ann.is_bbox && !ann.displayControl?.hidden,
@@ -72,7 +72,7 @@ License: CECILL-C
   ) => {
     annotations.update((anns) =>
       anns.map((ann) => {
-        //exclude non current anns for video
+        //nno change on non current anns for video
         if (ann.datasetItemType === "video") {
           if (ann.frame_index !== $currentFrameIndex) return ann;
         }
@@ -86,7 +86,6 @@ License: CECILL-C
         }
         if (ann.data.entity_ref.id === entity.id) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, properties, value);
-          objectIdBeingEdited.set(value ? ann.id : null);
         }
         return ann;
       }),
@@ -107,14 +106,12 @@ License: CECILL-C
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
     }
     annotations.update((oldObjects) =>
-      oldObjects.filter((object) => object.data.entity_ref.id !== entity.id),
+      oldObjects.filter((ann) => ann.data.entity_ref.id !== entity.id),
     );
-    entities.update((oldObjects) => oldObjects.filter((object) => object.id !== entity.id));
-    canSave.set(true);
+    entities.update((oldObjects) => oldObjects.filter((ent) => ent.id !== entity.id));
   };
 
   const saveInputChange = (value: string | boolean | number, propertyName: string) => {
-    let changedObj = false;
     entities.update((oldObjects) =>
       oldObjects.map((object) => {
         if (object.id === entity.id) {
@@ -127,14 +124,10 @@ License: CECILL-C
             object,
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-          changedObj = true;
         }
         return object;
       }),
     );
-    if (changedObj) {
-      canSave.set(true);
-    }
   };
 
   const onColoredDotClick = () =>

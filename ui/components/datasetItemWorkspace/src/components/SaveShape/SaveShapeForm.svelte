@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Button } from "@pixano/core/src";
+  import { Button, SequenceFrame, type SaveShape, type SaveTrackletShape } from "@pixano/core/src";
 
   import { Annotation, Entity, type Shape, type SaveItem } from "@pixano/core";
 
@@ -14,8 +14,8 @@ License: CECILL-C
     newShape,
     annotations,
     entities,
+    views,
     itemMetas,
-    canSave,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
@@ -25,7 +25,7 @@ License: CECILL-C
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import { mapShapeInputsToFeatures, addNewInput } from "../../lib/api/featuresApi";
   import CreateFeatureInputs from "../Features/CreateFeatureInputs.svelte";
-  import { currentFrameIndex, objectIdBeingEdited } from "../../lib/stores/videoViewerStores";
+  import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import {
     defineCreatedObject,
     defineCreatedEntity,
@@ -44,105 +44,135 @@ License: CECILL-C
   });
 
   const handleFormSubmit = () => {
-    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     let newObject: Annotation | null = null;
+    let newObject2: Annotation | null = null;
+    let newTracklet: Annotation | null = null;
     let newEntity: Entity | null = null;
-    annotations.update((oldObjects) => {
-      if (shape.status !== "saving") return oldObjects;
-      newEntity = defineCreatedEntity(shape, features, $datasetSchema);
+    const features = mapShapeInputsToFeatures(objectProperties, formInputs);
+    const isVideo = $itemMetas.type === "video";
+    if (shape.status === "saving") {
+      newEntity = defineCreatedEntity(shape, features, $datasetSchema, isVideo);
+      newEntity.childs = [];
+      newObject = defineCreatedObject(
+        newEntity,
+        shape,
+        shape.viewRef,
+        features,
+        $datasetSchema,
+        isVideo,
+        $currentFrameIndex,
+      );
+      newObject.highlighted = "self";
+      newObject.displayControl = { editing: true };
+      newEntity.childs.push(newObject);
+      if (newObject) {
+        console.log("ToSave (creation):", newObject, shape);
+        if (newObject.datasetItemType === "video") {
+          // for video, there is 2 anns, 1 track, 1 tracklet: add obj2 and tracklet
+          let endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
+          //get view at endFrameIndex. If doesn't exist, get last possible one (range 5 down to 0)
+          const views = $views[shape.viewRef.name];
+          let endView: SequenceFrame | undefined = undefined;
+          if (Array.isArray(views)) {
+            while (!endView) {
+              endFrameIndex = endFrameIndex - 1;
+              endView = views.find(
+                (view) =>
+                  view.data.frame_index === endFrameIndex &&
+                  view.table_info.name === (shape as SaveShape).viewRef.name,
+              );
+            }
+          }
+          newObject2 = defineCreatedObject(
+            newEntity,
+            shape,
+            { id: endView!.id, name: shape.viewRef.name },
+            features,
+            $datasetSchema,
+            isVideo,
+            endFrameIndex,
+          );
+          newObject2.highlighted = "none";
+          newObject2.displayControl = { editing: false };
+          const save_item2: SaveItem = {
+            change_type: "add",
+            object: newObject2,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
+          const trackletShape: SaveTrackletShape = {
+            type: "tracklet",
+            status: shape.status,
+            itemId: "", //unused from SaveShapeBase
+            imageWidth: 0, //unused from SaveShapeBase
+            imageHeight: 0, //unused from SaveShapeBase
+            viewRef: { id: "", name: shape.viewRef.name },
+            attrs: {
+              start_timestep: $currentFrameIndex,
+              end_timestep: endFrameIndex,
+              //TODO timestamp management...
+              start_timestamp: $currentFrameIndex,
+              end_timestamp: endFrameIndex,
+            },
+          };
+          newTracklet = defineCreatedObject(
+            newEntity,
+            trackletShape,
+            trackletShape.viewRef,
+            features,
+            $datasetSchema,
+            isVideo,
+            $currentFrameIndex,
+          );
+          newTracklet.highlighted = "none";
+          newTracklet.displayControl = { editing: false };
+          //add Tracklet
+          const save_item_tracklet: SaveItem = {
+            change_type: "add",
+            object: newTracklet,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
+          //TODO Note: we may have to manage "spatial object" entity too...
+          newEntity.childs.push(newObject2);
+          newEntity.childs.push(newTracklet);
+        }
+        const save_item_entity: SaveItem = {
+          change_type: "add",
+          object: newEntity,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
+        const save_item: SaveItem = {
+          change_type: "add",
+          object: newObject,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
+      }
+      // push new entity
       entities.update((ents) => {
         if (newEntity) ents.push(newEntity);
         return ents;
       });
-      newObject = defineCreatedObject(
-        newEntity,
-        shape,
-        $itemMetas.type,
-        features,
-        $currentFrameIndex,
-      );
-      objectIdBeingEdited.set(newObject?.id || null);
-      const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
-        object.highlighted = "none";
-        object.displayControl = { ...object.displayControl, editing: false };
-        return object;
+      //push new annotations
+      annotations.update((oldObjects) => {
+        const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
+          object.highlighted = "none";
+          object.displayControl = { ...object.displayControl, editing: false };
+          return object;
+        });
+        return [
+          ...objectsWithoutHighlighted,
+          ...(newObject ? [newObject] : []),
+          ...(newObject2 ? [newObject2] : []),
+          ...(newTracklet ? [newTracklet] : []),
+        ];
       });
 
-      if (newObject) {
-        console.log("ToSave (creation):", newObject, shape);
-        if (newObject.datasetItemType === "video") {
-          // for video, there is 2 bbox|keypoints, 1 track, 1 tracklet
-          if (shape.type === "bbox" && newObject.is_bbox) {
-            for (let box of newObject.data) {
-              const save_item: SaveItem = {
-                change_type: "add_or_update",
-                kind: shape.type, //TODO correct kind //this should represent the annotation table to be refered...?
-                data: { ...box, entity_ref: { id: newObject.id, name: "top_entity" } },
-              };
-              saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-            }
-          }
-          if (shape.type === "keypoints" && newObject.keypoints) {
-            for (let kpt of newObject.keypoints) {
-              const save_item: SaveItem = {
-                change_type: "add_or_update",
-                ref_name: shape.type, //this should represent the annotation table to be refered...?
-                data: { ...kpt, entity_ref: { id: newObject.id, name: "top_entity" } },
-              };
-              saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-            }
-          }
-          //add Tracklet
-          const save_item_tracklet: SaveItem = {
-            change_type: "add_or_update",
-            ref_name: "tracklet",
-            data: {
-              ...newObject.track[0],
-              entity_ref: { id: newObject.id, name: "top_entity" },
-            },
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
-          //add Track
-          const save_item_track: SaveItem = {
-            change_type: "add_or_update",
-            ref_name: "top_entity",
-            data: {
-              id: newObject.id,
-              //item_id: newObject.item_id,
-              source_ref: newObject.source_ref,
-              features: newObject.features,
-              view_id: newObject.track[0].view_id,
-              entity_ref: { id: "", name: "" }, //no parent for track
-              ref_name: "top_entity",
-            },
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_track));
-          //TODO Note: we may have to manage "spatial object" entity too...
-        } else {
-          const save_item: SaveItem = {
-            change_type: "add",
-            kind: "annotations",
-            object: newObject,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-          const save_item_entity: SaveItem = {
-            change_type: "add",
-            kind: "entities",
-            object: newEntity,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_entity));
+      for (let feat in objectProperties) {
+        if (typeof objectProperties[feat] === "string") {
+          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
         }
       }
-      return [...objectsWithoutHighlighted, ...(newObject ? [newObject] : [])];
-    });
-
-    for (let feat in objectProperties) {
-      if (typeof objectProperties[feat] === "string") {
-        addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
-      }
+      newShape.set({ status: "none", shouldReset: true });
     }
-    newShape.set({ status: "none", shouldReset: true });
-    canSave.set(true);
     currentTab = "objects";
   };
 

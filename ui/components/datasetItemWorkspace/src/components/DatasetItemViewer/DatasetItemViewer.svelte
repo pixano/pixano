@@ -12,11 +12,6 @@ License: CECILL-C
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import type { DatasetItem } from "@pixano/core";
 
-  import {
-    newShape,
-    canSave,
-    preAnnotationIsActive,
-  } from "../../lib/stores/datasetItemWorkspaceStores";
   import ImageViewer from "./ImageViewer.svelte";
   import VideoViewer from "./VideoViewer.svelte";
   import ThreeDimensionsViewer from "./3DViewer.svelte";
@@ -27,17 +22,6 @@ License: CECILL-C
   export let isLoading: boolean;
   export let headerHeight: number;
 
-  $: {
-    if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-      canSave.update((old) => {
-        if (old) return old;
-        if ($newShape?.status === "editing" && $newShape.type !== "none") {
-          return true;
-        }
-        return false;
-      });
-    }
-  }
 </script>
 
 <div class="max-w-[100%] bg-slate-800" style={`max-height: calc(100vh - ${headerHeight}px)`}>

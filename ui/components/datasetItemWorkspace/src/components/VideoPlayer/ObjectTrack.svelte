@@ -7,19 +7,11 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { ContextMenu, Track, Tracklet } from "@pixano/core";
-  import type {
-    SequenceFrame,
-    TrackletItem,
-    MView,
-    // TrackletWithItems,
-    // VideoItemBBox,
-    // VideoObject,
-  } from "@pixano/core";
-  import { annotations, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import type { TrackletItem, MView } from "@pixano/core";
+  import { annotations, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import {
     lastFrameIndex,
     currentFrameIndex,
-    objectIdBeingEdited,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
   import {
@@ -32,7 +24,7 @@ License: CECILL-C
   import ObjectTracklet from "./ObjectTracklet.svelte";
   import { panTool } from "../../lib/settings/selectionTools";
   import { highlightCurrentObject } from "../../lib/api/objectsApi";
-  import { onMount } from "svelte";
+  import TrackletKeyItem from "./TrackletKeyItem.svelte";
 
   export let track: Track;
   export let views: MView;
@@ -66,7 +58,6 @@ License: CECILL-C
 
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
     onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
-    objectIdBeingEdited.set(track.id); //TODO not track id ! change that
     annotations.update((objects) =>
       objects.map((obj) => {
         obj.highlighted = obj.id === track.id ? "self" : "none";
@@ -107,7 +98,6 @@ License: CECILL-C
       }
 
       onEditKeyItemClick(rightClickFrameIndex);
-      canSave.set(true);
     } else {
       //MouseEvent, need to determine view_id
       //TODO
@@ -139,8 +129,8 @@ License: CECILL-C
     ];
   };
 
-  const onSplitTrackletClick = (tracklet: TrackletWithItems) => {
-    const [prev, next] = findPreviousAndNext(tracklet.items, rightClickFrameIndex);
+  const onSplitTrackletClick = (tracklet: Tracklet) => {
+    const [prev, next] = findPreviousAndNext(TrackletKeyItem, rightClickFrameIndex);
     trackWithItems = splitTrackletInTwo(
       trackWithItems,
       tracklet,
@@ -159,28 +149,24 @@ License: CECILL-C
       }),
     );
     track.track = trackWithItems;
-    canSave.set(true);
   };
 
   const onDeleteTrackletClick = (tracklet: TrackletWithItems) => {
     annotations.update((objects) => deleteTracklet(objects, track.id, tracklet));
-    updateTracks();
-    canSave.set(true);
+    //updateTracks();
   };
 
-  const findNeighborItems = (frameIndex: VideoItemBBox["frame_index"]): [number, number] => {
-    const allItems = trackWithItems.reduce(
-      (acc, tracklet) => [...acc, ...tracklet.items],
-      [] as TrackletItem[],
-    );
+  const findNeighborItems = (frameIndex: number): [number, number] => {
     const nextItem =
-      allItems.find((item) => item.frame_index > frameIndex && item.is_key)?.frame_index ||
-      $lastFrameIndex;
+      tracklets.find((tracklet) => tracklet.childs.find((ann) => ann.frame_index! > frameIndex))
+        ?.frame_index || $lastFrameIndex;
     const prevItem =
-      allItems
-        .slice()
-        .reverse()
-        .find((item) => item.frame_index < frameIndex && item.is_key)?.frame_index || 0;
+      tracklets.find((tracklet) =>
+        tracklet.childs
+          .slice()
+          .reverse()
+          .find((ann) => ann.frame_index! > frameIndex),
+      )?.frame_index || 0;
 
     return [prevItem, nextItem];
   };

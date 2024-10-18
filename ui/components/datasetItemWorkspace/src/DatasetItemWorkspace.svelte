@@ -8,18 +8,7 @@ License: CECILL-C
   // Imports
   import { onMount } from "svelte";
   import type { FeaturesValues } from "@pixano/core";
-  import {
-    Annotation,
-    // BBox,
-    // Keypoints,
-    Mask,
-    Entity,
-    DatasetItem,
-    Item,
-    BaseData,
-    type SaveItem,
-    type Schema,
-  } from "@pixano/core";
+  import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import Toolbar from "./components/Toolbar.svelte";
@@ -38,7 +27,7 @@ License: CECILL-C
   import type { Embeddings } from "./lib/types/datasetItemWorkspaceTypes";
   import DatasetItemViewer from "./components/DatasetItemViewer/DatasetItemViewer.svelte";
   import { Loader2Icon } from "lucide-svelte";
-  import Keypoint from "@pixano/canvas2d/src/components/keypoints/Keypoint.svelte";
+  import { GROUND_TRUTH } from "./lib/constants";
 
   export let featureValues: FeaturesValues;
   export let selectedItem: DatasetItem;
@@ -56,13 +45,14 @@ License: CECILL-C
   const back2front = (ann: Annotation): Annotation => {
     //TMP: my dataset doesn't have source name yet...
     if (ann.data.source_ref.name == "" || ann.data.source_ref.name == "source")
-      ann.data.source_ref.name = "Ground Truth"; //TMP
+      ann.data.source_ref.name = GROUND_TRUTH; //TMP
 
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
     if (selectedItem.type === "image") {
       ann.datasetItemType = "image";
       if (ann.table_info.base_schema === "CompressedRLE") {
+        //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
       }
@@ -76,6 +66,7 @@ License: CECILL-C
         }
       }
       if (ann.table_info.base_schema === "CompressedRLE") {
+        //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
       }
@@ -90,20 +81,57 @@ License: CECILL-C
     Object.values(selectedItem.annotations).forEach((anns) => {
       anns.forEach((ann) => newAnns.push(back2front(ann)));
     });
+    //sort by frame_index (if present) -- some function (interpolation mostly) requires sorted annotations
+    newAnns.sort((a, b) => {
+      const indexA = a.frame_index !== undefined ? a.frame_index : Number.POSITIVE_INFINITY;
+      const indexB = b.frame_index !== undefined ? b.frame_index : Number.POSITIVE_INFINITY;
+      return indexA - indexB;
+    });
     annotations.set(newAnns);
-    console.log("XXX annotations", $annotations);
 
     const newEntities: Entity[] = [];
     Object.values(selectedItem.entities).forEach((sel_entities) => {
       sel_entities.forEach((entity) => {
         //build childs list
-        entity.childs = $annotations.filter((ann) => ann.data.entity_ref.id === entity.id);
+        entity.childs = $annotations.filter(
+          (ann) =>
+            ann.data.entity_ref.id === entity.id &&
+            ann.data.view_ref.name === entity.data.view_ref.name, //really needed ?
+        );
         newEntities.push(entity);
       });
     });
     entities.set(newEntities);
-    console.log("XXX entities", $entities);
 
+    //add tracklets childs
+    annotations.update((anns) =>
+      anns.map((ann) => {
+        if (ann.is_tracklet) {
+          const tracklet = ann as Tracklet;
+          const track_entity = $entities.find(
+            (entity) =>
+              entity.is_track &&
+              entity.id === tracklet.data.entity_ref.id &&
+              entity.data.view_ref.name === tracklet.data.view_ref.name, //really needed ?
+          );
+          if (track_entity) {
+            tracklet.childs =
+              track_entity.childs?.filter(
+                (child) =>
+                  child.frame_index !== undefined &&
+                  child.frame_index <= tracklet.data.end_timestep &&
+                  child.frame_index >= tracklet.data.start_timestep &&
+                  child.data.view_ref.name === tracklet.data.view_ref.name, //really needed ?
+              ) || [];
+            tracklet.childs.sort((a, b) => a.frame_index! - b.frame_index!);
+          }
+        }
+        return ann;
+      }),
+    );
+
+    console.log("XXX entities", $entities);
+    console.log("XXX annotations", $annotations);
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },
       item: selectedItem.item,
@@ -115,7 +143,6 @@ License: CECILL-C
 
   $: if (selectedItem) {
     newShape.update((old) => ({ ...old, status: "none" }));
-    canSave.set(false);
   }
 
   export const front2back = (objs: SaveItem[]): SaveItem[] => {
@@ -147,7 +174,6 @@ License: CECILL-C
     isSaving = true;
     await handleSaveItem(front2back($saveData));
     saveData.set([]);
-    canSave.set(false);
     isSaving = false;
   };
 

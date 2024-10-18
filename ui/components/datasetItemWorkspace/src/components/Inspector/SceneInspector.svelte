@@ -11,11 +11,10 @@ License: CECILL-C
   // Internal library imports
   import { Pencil } from "lucide-svelte";
   import { IconButton, Switch } from "@pixano/core/src";
-  import { Image, SequenceFrame, type SaveItem } from "@pixano/core";
+  import { Image, SequenceFrame, type ItemType, type SaveItem } from "@pixano/core";
 
   // Local imports
   import {
-    canSave,
     saveData,
     views,
     itemMetas,
@@ -26,6 +25,7 @@ License: CECILL-C
   import { createFeature } from "../../lib/api/featuresApi";
   import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   type ViewMeta = {
     fileName: string | undefined;
@@ -60,7 +60,7 @@ License: CECILL-C
         id: image.id,
       };
     });
-    features = createFeature($itemMetas.item); //, defaultSceneFeatures); //XXX TODO default ?
+    features = createFeature<ItemType>($itemMetas.item, $datasetSchema); //, defaultSceneFeatures); //XXX TODO default ?
   });
 
   /**
@@ -87,7 +87,7 @@ License: CECILL-C
       saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       return newMetas;
     });
-    canSave.set(true);
+    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
   };
 </script>
 

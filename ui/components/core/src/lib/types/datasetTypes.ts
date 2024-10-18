@@ -180,7 +180,7 @@ const entitySchema = z
     parent_ref: referenceSchema,
   })
   .passthrough();
-type EntityType = z.infer<typeof entitySchema>; //export if needed
+export type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
@@ -260,6 +260,7 @@ export class Annotation extends BaseData<AnnotationType> {
   displayControl: DisplayControl = {};
   highlighted: "none" | "self" | "all" = "all";
   frame_index?: number;
+  review_state?: "accepted" | "rejected"; //for pre-annotation
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
@@ -277,6 +278,8 @@ export class Annotation extends BaseData<AnnotationType> {
       return new Keypoints(obj as unknown as BaseDataFields<KeypointsType>);
     if (obj.table_info.base_schema === "CompressedRLE")
       return new Mask(obj as unknown as BaseDataFields<MaskType>);
+    if (obj.table_info.base_schema === "Tracklet")
+      return new Tracklet(obj as unknown as BaseDataFields<TrackletType>);
     return new Annotation(obj);
   }
 
@@ -393,7 +396,6 @@ export class Mask extends Annotation {
   editing?: boolean;
   strokeFactor?: number;
   svg?: string[];
-  review_state?: "accepted" | "rejected";
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
@@ -419,6 +421,9 @@ export type TrackletType = z.infer<typeof trackletSchema>;
 export class Tracklet extends Annotation {
   declare data: TrackletType & AnnotationType;
 
+  //UI only fields
+  childs: Annotation[];
+
   constructor(obj: BaseDataFields<TrackletType>) {
     if (obj.table_info.base_schema !== "Tracklet") throw new Error("Not a Tracklet");
     trackletSchema.parse(obj.data);
@@ -436,7 +441,7 @@ export class Tracklet extends Annotation {
 ////////// ITEM /////////////
 
 const itemSchema = z.object({}).passthrough();
-type ItemType = z.infer<typeof itemSchema>;
+export type ItemType = z.infer<typeof itemSchema>;
 
 export class Item extends BaseData<ItemType> {
   constructor(obj: BaseDataFields<ItemType>) {
@@ -700,20 +705,10 @@ export type TrackletItem = {
 
 export type Schema = Annotation | Entity | Item | View;
 
-interface SaveBase {
+export type SaveItem = {
+  change_type: "add" | "update" | "delete";
   object: Annotation | Entity | Item;
-}
-export type SaveAdd = SaveBase & {
-  change_type: "add";
-  kind: "annotations" | "items" | "entities";
 };
-export type SaveUpdate = SaveBase & {
-  change_type: "update";
-};
-export type SaveDelete = SaveBase & {
-  change_type: "delete";
-};
-export type SaveItem = SaveAdd | SaveUpdate | SaveDelete;
 
 // export type VideoItemBBox = BBox & TrackletItem;
 // export type VideoItemKeypoints = Keypoints & TrackletItem;

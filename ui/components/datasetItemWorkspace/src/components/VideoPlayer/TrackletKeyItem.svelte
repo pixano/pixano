@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { ContextMenu, cn } from "@pixano/core";
   import { Annotation, type TrackletItem } from "@pixano/core";
-  import { annotations, selectedTool, canSave } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
@@ -21,7 +21,7 @@ License: CECILL-C
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  export let updateTracklet: () => void;
+  //export let updateTracklet: () => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -42,8 +42,7 @@ License: CECILL-C
   const onDeleteItemClick = () => {
     annotations.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
     //TODO ? check if deleting a key has deleted last tracklet of annotation => delete it (?)
-    updateTracklet();
-    canSave.set(true);
+    //updateTracklet();
   };
 
   export const getKeyItemLeftPosition = (frameIndex: number) => {
@@ -86,7 +85,6 @@ License: CECILL-C
       moving = false;
       if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, item.frame_index);
       newFrameIndex = undefined;
-      //TODO canSave.set(true);
     });
   };
 </script>

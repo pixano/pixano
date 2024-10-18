@@ -123,7 +123,6 @@ License: CECILL-C
     }
     const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
     updateView(newFrameIndex, [newTracklet]);
-    //TODO canSave.set(true); //NO, it's done on dragMe > mouseUp (else too mush calls)
     currentFrameIndex.set(newFrameIndex);
     return true;
   };
@@ -132,8 +131,8 @@ License: CECILL-C
     tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
     annotations.update((oldObjects) =>
       oldObjects.map((obj) => {
-        if (obj.id === object.id && obj.datasetItemType === "video") {
-          obj.track = obj.track.map((trackItem) => {
+        if (obj.data.entity_ref.id === track.id && obj.datasetItemType === "video") {
+          tracklet = track.map((trackItem) => {
             if (trackItem.id === tracklet.id) {
               return tracklet;
             }
@@ -151,56 +150,58 @@ License: CECILL-C
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    annotations.update((oldObjects) => highlightCurrentObject(oldObjects, object, false));
+    track.childs?.forEach((ann) => {
+      annotations.update((objects) => highlightCurrentObject(objects, ann, false));
+    });
   };
 
   const onDoubleClick = () => {
     selectedTool.set(panTool);
     annotations.update((objects) =>
       objects.map((obj) => {
-        obj.highlighted = obj.id === object.id ? "self" : "none";
+        obj.highlighted = obj.data.entity_ref.id === track.id ? "self" : "none";
         obj.displayControl = {
           ...obj.displayControl,
-          editing: obj.id === object.id,
+          editing: obj.data.entity_ref.id === track.id,
         };
         return obj;
       }),
     );
   };
 
-  const updateTracklet = () => {
-    const boxes = object.boxes
-      ? object.boxes.filter(
-          (box) =>
-            box.view_id === tracklet.view_id &&
-            box.frame_index >= tracklet.start &&
-            box.frame_index <= tracklet.end,
-        )
-      : [];
-    const keypoints = object.keypoints
-      ? object.keypoints.filter(
-          (kp) =>
-            kp.view_id === tracklet.view_id &&
-            kp.frame_index >= tracklet.start &&
-            kp.frame_index <= tracklet.end,
-        )
-      : [];
-    let items: TrackletItem[] = [];
-    for (const ann of boxes) {
-      items.push(getTrackletItem(ann));
-    }
-    for (const ann of keypoints) {
-      const item = getTrackletItem(ann);
-      if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
-    }
-    const new_tracklet = object.track.find((trklet) => trklet.id === tracklet.id);
-    tracklet = {
-      ...(new_tracklet ? new_tracklet : tracklet),
-      items: items,
-    };
-    console.log("UpdTracklet", object, tracklet);
-    updateTracks();
-  };
+  // const updateTracklet = () => {
+  //   const boxes = object.boxes
+  //     ? object.boxes.filter(
+  //         (box) =>
+  //           box.view_id === tracklet.view_id &&
+  //           box.frame_index >= tracklet.start &&
+  //           box.frame_index <= tracklet.end,
+  //       )
+  //     : [];
+  //   const keypoints = object.keypoints
+  //     ? object.keypoints.filter(
+  //         (kp) =>
+  //           kp.view_id === tracklet.view_id &&
+  //           kp.frame_index >= tracklet.start &&
+  //           kp.frame_index <= tracklet.end,
+  //       )
+  //     : [];
+  //   let items: TrackletItem[] = [];
+  //   for (const ann of boxes) {
+  //     items.push(getTrackletItem(ann));
+  //   }
+  //   for (const ann of keypoints) {
+  //     const item = getTrackletItem(ann);
+  //     if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
+  //   }
+  //   const new_tracklet = object.track.find((trklet) => trklet.id === tracklet.id);
+  //   tracklet = {
+  //     ...(new_tracklet ? new_tracklet : tracklet),
+  //     items: items,
+  //   };
+  //   console.log("UpdTracklet", object, tracklet);
+  //   updateTracks();
+  // };
 </script>
 
 <ContextMenu.Root>
@@ -237,7 +238,6 @@ License: CECILL-C
     {onEditKeyItemClick}
     objectId={track.id}
     {updateTrackletWidth}
-    {updateTracklet}
     {filterTracklet}
   />
 {/each}

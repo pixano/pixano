@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { annotations, tracks, views } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { annotations, views } from "../../lib/stores/datasetItemWorkspaceStores";
 
   import ObjectTrack from "./ObjectTrack.svelte";
   import TimeTrack from "./TimeTrack.svelte";
@@ -18,10 +18,11 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot } from "@pixano/core";
+  import { SliderRoot, Track } from "@pixano/core";
   import { onMount } from "svelte";
 
   export let updateView: (frameIndex: number) => void;
+  export let tracks: Track[];
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -51,7 +52,7 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each Object.values($tracks) as track}
+      {#each tracks as track}
         <VideoPlayerRow>
           <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {updateView} />
         </VideoPlayerRow>

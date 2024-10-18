@@ -119,13 +119,13 @@ License: CECILL-C
     //entities first to avoid database consistency checks issues
     data.sort((a, b) => {
       if (
-        a.object.table_info.base_schema === "Entity" &&
-        b.object.table_info.base_schema !== "Entity"
+        ["Entity", "Track"].includes(a.object.table_info.base_schema) &&
+        !["Entity", "Track"].includes(b.object.table_info.base_schema)
       )
         return -1;
       else if (
-        a.object.table_info.base_schema !== "Entity" &&
-        b.object.table_info.base_schema === "Entity"
+        !["Entity", "Track"].includes(a.object.table_info.base_schema) &&
+        ["Entity", "Track"].includes(b.object.table_info.base_schema)
       )
         return 1;
       else return 0;

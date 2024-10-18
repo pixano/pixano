@@ -4,18 +4,16 @@ Author : pixano@cea.fr
 License: CECILL-C
 -------------------------------------*/
 
+import { BBox, Tracklet } from "@pixano/core";
 import type {
-  EditRectangleShape,
-  EditShape,
+  KeypointsTemplate,
   ItemObject,
-  Tracklet,
   TrackletItem,
   TrackletWithItems,
   VideoItemBBox,
   VideoItemKeypoints,
   VideoObject,
   SaveItem,
-  SaveDataAddUpdate,
 } from "@pixano/core";
 import { nanoid } from "nanoid";
 
@@ -44,84 +42,80 @@ export const getImageIndexFromMouseMove = (
 };
 
 export const boxLinearInterpolation = (
-  track: Tracklet[],
+  boxes: BBox[], //bboxes of the tracklet
   imageIndex: number,
-  boxes: VideoItemBBox[],
-  view: string,
-) => {
-  //TMP
-  // const no_interpol = boxes.find((box) => box.view_id == view && box.frame_index == imageIndex);
-  // return no_interpol?no_interpol.coords:null;
-
-  const currentTracklet = track.find(
-    (tracklet) =>
-      tracklet.start <= imageIndex && tracklet.end >= imageIndex && tracklet.view_id == view,
-  );
-  if (!currentTracklet) return null;
-  const view_boxes = boxes.filter((box) => box.view_id == view);
-  const endIndex = view_boxes.findIndex(
-    (box) => box.view_id == view && box.frame_index >= imageIndex,
-  );
+): BBox | undefined => {
+  //Note: this suppose boxes are sorted by frame_index (it should)
+  const endIndex = boxes.findIndex((box) => box.frame_index >= imageIndex);
   if (endIndex < 0) {
-    return null;
+    return undefined;
   }
-  const end = view_boxes[endIndex];
-  if (imageIndex == end.frame_index) {
-    return end.coords;
+  const endBox = boxes[endIndex];
+  if (imageIndex == endBox.frame_index) {
+    return endBox;
   }
-  const start = view_boxes[endIndex - 1] || boxes[0];
-  const [startX, startY, startWidth, startHeight] = start.coords;
-  const [endX, endY, endWidth, endHeight] = end.coords;
 
-  const xInterpolation = (endX - startX) / (end.frame_index - start?.frame_index);
-  const yInterpolation = (endY - startY) / (end.frame_index - start?.frame_index);
-  const widthInterpolation = (endWidth - startWidth) / (end.frame_index - start?.frame_index);
-  const heightInterpolation = (endHeight - startHeight) / (end.frame_index - start?.frame_index);
-  const x = startX + xInterpolation * (imageIndex - start.frame_index);
-  const y = startY + yInterpolation * (imageIndex - start.frame_index);
-  const width = startWidth + widthInterpolation * (imageIndex - start.frame_index);
-  const height = startHeight + heightInterpolation * (imageIndex - start.frame_index);
-  return [x, y, width, height];
+  const startBox = boxes[endIndex - 1] || boxes[0];
+  const [startX, startY, startWidth, startHeight] = startBox.data.coords;
+  const [endX, endY, endWidth, endHeight] = endBox.data.coords;
+
+  const xInterpolation = (endX - startX) / (endBox.frame_index - startBox.frame_index);
+  const yInterpolation = (endY - startY) / (endBox.frame_index - startBox.frame_index);
+  const widthInterpolation = (endWidth - startWidth) / (endBox.frame_index - startBox.frame_index);
+  const heightInterpolation =
+    (endHeight - startHeight) / (endBox.frame_index - startBox.frame_index);
+  const x = startX + xInterpolation * (imageIndex - startBox.frame_index);
+  const y = startY + yInterpolation * (imageIndex - startBox.frame_index);
+  const width = startWidth + widthInterpolation * (imageIndex - startBox.frame_index);
+  const height = startHeight + heightInterpolation * (imageIndex - startBox.frame_index);
+  // make a new BBox with interpolated coords
+  const interpolatedBox = structuredClone(startBox);
+  interpolatedBox.id = nanoid(5); //not needed but it still ensure unique id
+  interpolatedBox.frame_index = imageIndex;
+  // for convenience, we store refs to start & end boxes
+  interpolatedBox.startRef = startBox;
+  interpolatedBox.endRef = endBox;
+  //TODO ? we should change view_ref.id too ... (requires $views or declined)
+  interpolatedBox.data.coords = [x, y, width, height];
+  return interpolatedBox;
 };
 
 export const keypointsLinearInterpolation = (
-  object: VideoObject,
+  keypoints: KeypointsTemplate[], //keypoints of the tracklet
   imageIndex: number,
-  view: string,
-) => {
-  //TMP
-  // const no_interpol = object.keypoints?.find((box) => box.view_id == view && box.frame_index == imageIndex);
-  // return no_interpol?no_interpol.vertices:null;
-
-  if (!object.keypoints) return null;
-  const currentTracklet = object.track.find(
-    (tracklet) =>
-      tracklet.start <= imageIndex && tracklet.end >= imageIndex && tracklet.view_id == view,
-  );
-  if (!currentTracklet) return null;
-  const view_keypoints = object.keypoints?.filter((kp) => kp.view_id == view);
-  const endIndex = view_keypoints?.findIndex((kp) => kp.frame_index >= imageIndex);
+): KeypointsTemplate | undefined => {
+  //Note: this suppose keypoints are sorted by frame_index (it should)
+  const endIndex = keypoints.findIndex((kpt) => kpt.frame_index >= imageIndex);
   if (endIndex < 0) {
-    return null;
+    return undefined;
   }
-  const end = view_keypoints[endIndex];
-  if (imageIndex == end.frame_index) {
-    return end.vertices;
+  const endKpt = keypoints[endIndex];
+  if (imageIndex == endKpt.frame_index) {
+    return endKpt;
+  }
+  const startKpt = keypoints[endIndex - 1] || keypoints[0];
+  if (endKpt.frame_index == startKpt?.frame_index) {
+    return startKpt;
   } else {
-    const start = view_keypoints[endIndex - 1] || view_keypoints[0];
-    if (end.frame_index == start?.frame_index) {
-      return start.vertices;
-    } else {
-      return start.vertices.map((vertex, i) => {
-        const xInterpolation =
-          (end.vertices[i].x - vertex.x) / (end.frame_index - start?.frame_index);
-        const yInterpolation =
-          (end.vertices[i].y - vertex.y) / (end.frame_index - start?.frame_index);
-        const x = vertex.x + xInterpolation * (imageIndex - start.frame_index);
-        const y = vertex.y + yInterpolation * (imageIndex - start.frame_index);
-        return { ...vertex, x, y };
-      });
-    }
+    const vertices = startKpt.vertices.map((vertex, i) => {
+      const xInterpolation =
+        (endKpt.vertices[i].x - vertex.x) / (endKpt.frame_index - startKpt?.frame_index);
+      const yInterpolation =
+        (endKpt.vertices[i].y - vertex.y) / (endKpt.frame_index - startKpt?.frame_index);
+      const x = vertex.x + xInterpolation * (imageIndex - startKpt.frame_index);
+      const y = vertex.y + yInterpolation * (imageIndex - startKpt.frame_index);
+      return { ...vertex, x, y };
+    });
+    // make a new BBox with interpolated coords
+    const interpolatedKpt = structuredClone(startKpt);
+    interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
+    interpolatedKpt.frame_index = imageIndex;
+    // for convenience, we store refs to start & end kpts
+    interpolatedKpt.startRef = startKpt;
+    interpolatedKpt.endRef = endKpt;
+    //TODO ? we should change view_ref.id too ... (requires $views or declined)
+    interpolatedKpt.vertices = vertices;
+    return interpolatedKpt;
   }
 };
 
@@ -210,111 +204,6 @@ export const deleteKeyBoxFromTracklet = (
     }
     return object;
   });
-
-const editBoxesInTracklet = (
-  boxes: VideoObject["boxes"],
-  currentFrame: number,
-  shape: EditRectangleShape,
-) =>
-  boxes?.map((box) => {
-    if (box.frame_index === currentFrame) {
-      box.coords = shape.coords;
-      box.is_key = true;
-      return box;
-    }
-    return box;
-  });
-
-export const editKeyItemInTracklet = (
-  objects: ItemObject[],
-  shape: EditShape,
-  currentFrame: number,
-  objectIdBeingEdited: string | null,
-) => {
-  let saveData: SaveItem | null = null;
-  return {
-    objects: objects.map((object) => {
-      if (
-        object.id !== shape.shapeId ||
-        object.datasetItemType !== "video" ||
-        objectIdBeingEdited !== object.id
-      ) {
-        return object;
-      }
-      const currentTracklet = object.track.find(
-        (t) => t.start <= currentFrame && t.end >= currentFrame && t.view_id == shape.viewRef,
-      );
-      let new_obj: SaveDataAddUpdate | null = null;
-      if (shape.type === "keypoints" && object.keypoints) {
-        object.keypoints = object.keypoints.map((kp) => {
-          if (kp.frame_index === currentFrame) {
-            kp.vertices = shape.vertices;
-            kp.is_key = true;
-            return kp;
-          }
-          return kp;
-        });
-        if (currentTracklet) {
-          new_obj = {
-            ...object.keypoints[0],
-            vertices: shape.vertices,
-            frame_index: currentFrame,
-            is_key: true,
-            tracklet_id: currentTracklet.id,
-          };
-          if (!object.keypoints?.some((b) => b.frame_index === currentFrame)) {
-            object.keypoints?.push(new_obj);
-          }
-        }
-        object.keypoints?.sort((a, b) => a.frame_index - b.frame_index);
-        object.displayedMKeypoints = object.displayedMKeypoints?.map((kpt) => {
-          if (kpt.view_id == shape.viewRef) {
-            return {
-              ...kpt,
-              vertices: shape.vertices,
-            };
-          }
-          return kpt;
-        });
-      }
-      if (shape.type === "bbox" && object.boxes) {
-        object.boxes = editBoxesInTracklet(object.boxes, currentFrame, shape);
-        if (currentTracklet && object.boxes && object.boxes.length > 1) {
-          new_obj = {
-            ...object.boxes[0],
-            coords: shape.coords,
-            frame_index: currentFrame,
-            is_key: true,
-            tracklet_id: currentTracklet.id,
-          };
-          if (!object.boxes.some((b) => b.frame_index === currentFrame)) {
-            object.boxes.push(new_obj);
-          }
-        }
-        object.boxes?.sort((a, b) => a.frame_index - b.frame_index);
-        object.displayedMBox = object.displayedMBox?.map((box) => {
-          if (box.view_id == shape.viewRef) {
-            return {
-              ...box,
-              coords: shape.coords,
-            };
-          }
-          return box;
-        });
-      }
-      if (new_obj) {
-        saveData = {
-          change_type: "add_or_update",
-          ref_name: shape.type, //this should represent the annotation table to be refered...
-          is_video: true,
-          data: new_obj,
-        };
-      }
-      return object;
-    }),
-    save_data: saveData,
-  };
-};
 
 const createNewTracklet = (
   track: Tracklet[],

@@ -19,6 +19,9 @@ import {
   Entity,
   Image,
   SequenceFrame,
+  Tracklet,
+  BBox,
+  Mask,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -32,7 +35,6 @@ export const entities = writable<Entity[]>([]);
 export const views = writable<Record<string, Image | SequenceFrame[]>>([]);
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
-export const canSave = writable<boolean>(false);
 export const preAnnotationIsActive = writable<boolean>(false);
 export const modelsStore = writable<ModelSelection>({
   currentModalOpen: "none",
@@ -51,7 +53,7 @@ export const imageSmoothing = writable<boolean>(true);
 export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
 
 export const saveData = writable<SaveItem[]>([]);
-
+export const canSave = derived(saveData, $saveData => $saveData.length > 0);
 type ColorScale = [Array<string>, (id: string) => string];
 
 const initialColorScale: ColorScale = [[], utils.ordinalColorScale([])];
@@ -95,17 +97,16 @@ export const itemMasks = derived(annotations, ($annotations) => {
   return masks;
 });
 
-export const itemKeypoints = derived([annotations, itemMetas], ([$annotations, $itemMetas]) => {
+export const itemKeypoints = derived([annotations, views], ([$annotations, $views]) => {
   const m_keypoints: KeypointsTemplate[] = [];
   for (const ann of $annotations) {
     if (ann.is_keypoints) {
-      const item_keypoints = mapObjectToKeypoints(ann, $itemMetas?.views);
-      for (const keypoints of item_keypoints) m_keypoints.push(keypoints);
+      m_keypoints.push(mapObjectToKeypoints(ann, $views));
     }
   }
   return m_keypoints;
 });
 
-export const tracks = derived(entities, ($entities) => {
-  return $entities.filter((entity) => entity.is_track);
+export const tracklets = derived(annotations, ($annotations) => {
+  return $annotations.filter((annotation) => annotation.is_tracklet) as Tracklet[];
 });
