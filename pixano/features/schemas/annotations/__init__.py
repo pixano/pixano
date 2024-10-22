@@ -16,7 +16,7 @@ from .camcalibration import (
 )
 from .classification import Classification, create_classification, is_classification
 from .compressed_rle import CompressedRLE, create_compressed_rle, is_compressed_rle
-from .info_extraction import NamedEntity, Relation, create_namedentity, create_relation, is_namedentity, is_relation
+from .info_extraction import NamedEntity, Relation, create_named_entity, create_relation, is_named_entity, is_relation
 from .keypoints import KeyPoints, KeyPoints3D, create_keypoints, create_keypoints3d, is_keypoints, is_keypoints3d
 from .tracklet import Tracklet, create_tracklet, is_tracklet
 
@@ -44,7 +44,7 @@ __all__ = [
     "is_compressed_rle",
     "is_keypoints",
     "is_keypoints3d",
-    "is_namedentity",
+    "is_named_entity",
     "is_tracklet",
     "is_relation",
     "create_bbox",
@@ -54,7 +54,7 @@ __all__ = [
     "create_compressed_rle",
     "create_keypoints",
     "create_keypoints3d",
-    "create_namedentity",
+    "create_named_entity",
     "create_tracklet",
     "create_relation",
 ]

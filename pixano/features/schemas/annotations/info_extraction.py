@@ -33,7 +33,7 @@ class NamedEntity(Annotation):
     spans_end: list[int]
 
     @model_validator(mode="after")
-    def _validate_fields(self):
+    def _validate_fields(self) -> Self:
         if len(self.spans_start) != len(self.spans_end):
             raise ValueError("Spans offset lists should have the same length")
         if len(self.spans_start) == 0:
@@ -107,7 +107,7 @@ class Relation(Annotation):
         )
 
 
-def is_namedentity(cls: type, strict: bool = False) -> bool:
+def is_named_entity(cls: type, strict: bool = False) -> bool:
     """Check if a class is a NamedEntity or subclass of NamedEntity."""
     return issubclass_strict(cls, NamedEntity, strict)
 
@@ -117,7 +117,7 @@ def is_relation(cls: type, strict: bool = False) -> bool:
     return issubclass_strict(cls, Relation, strict)
 
 
-def create_namedentity(
+def create_named_entity(
     concept_id: str,
     mention: str,
     spans_start: list[int],

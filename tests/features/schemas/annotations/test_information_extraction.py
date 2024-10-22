@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 from pydantic_core._pydantic_core import ValidationError
 
-from pixano.features import NamedEntity, Relation, create_namedentity, create_relation, is_namedentity, is_relation
+from pixano.features import NamedEntity, Relation, create_named_entity, create_relation, is_named_entity, is_relation
 from pixano.features.types.schema_reference import AnnotationRef, EntityRef, ItemRef, ViewRef
 from tests.features.utils import make_tests_is_sublass_strict
 
@@ -18,11 +18,14 @@ class TestNamedEntity:
         with pytest.raises(ValidationError):
             NamedEntity()
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123")
+            NamedEntity(concept_id="123", spans_start=[123, 128], spans_end=[126], mention="abc")
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123", mention="abc")
+            NamedEntity(concept_id="123", spans_start=[123], spans_end=[-126], mention="abc")
         with pytest.raises(ValidationError):
-            NamedEntity(concept_id="123", spans_start=[123], spans_end=[126])
+            NamedEntity(concept_id="123", spans_start=[123], spans_end=[120], mention="abc")
+        ne = NamedEntity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
+        assert ne.concept_id == "123"
+        assert ne.mention == "abc"
 
     def test_spans_property(self):
         ne1 = NamedEntity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
@@ -91,17 +94,17 @@ class TestRelation:
         assert none_rel.object_id == AnnotationRef.none()
 
 
-def test_is_namedentity():
-    make_tests_is_sublass_strict(is_namedentity, NamedEntity)
+def test_is_named_entity():
+    make_tests_is_sublass_strict(is_named_entity, NamedEntity)
 
 
 def test_is_relation():
     make_tests_is_sublass_strict(is_relation, Relation)
 
 
-def test_create_namedentiy():
+def test_create_named_entiy():
     # Test 1: default references
-    ne = create_namedentity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
+    ne = create_named_entity(concept_id="123", spans_start=[123], spans_end=[126], mention="abc")
     assert isinstance(ne, NamedEntity)
     assert ne.concept_id == "123"
     assert ne.mention == "abc"
@@ -112,7 +115,7 @@ def test_create_namedentiy():
     assert ne.entity_ref == EntityRef.none()
 
     # Test 2: with references
-    ne = create_namedentity(
+    ne = create_named_entity(
         concept_id="123",
         spans_start=[123],
         spans_end=[126],
