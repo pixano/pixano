@@ -6,16 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Annotation, ContextMenu, cn } from "@pixano/core";
+  import { ContextMenu, cn } from "@pixano/core";
   import {
     Track,
     Tracklet,
     SequenceFrame,
-    // VideoObject,
-    // VideoItemBBox,
-    // TrackletWithItems,
     type TrackletItem,
     type MView,
+    type SaveItem,
   } from "@pixano/core";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
   import TrackletKeyItem from "./TrackletKeyItem.svelte";
@@ -23,27 +21,22 @@ License: CECILL-C
     colorScale,
     annotations,
     selectedTool,
+    saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { highlightCurrentObject } from "../../lib/api/objectsApi";
+  import { highlightCurrentObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+
   import { panTool } from "../../lib/settings/selectionTools";
-  import {
-    filterTrackletItems,
-    getNewTrackletValues,
-    mapTrackletItems,
-  } from "../../lib/api/videoApi";
 
   export let track: Track;
   export let tracklet: Tracklet;
   export let views: MView;
-  export let onContextMenu: (event: MouseEvent) => void;
+  export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
   export let getTrackletItem: (ann: TrackletItem) => TrackletItem;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;
   export let onDeleteTrackletClick: () => void;
   export let findNeighborItems: (frameIndex: number) => [number, number];
-  export let updateView: (frameIndex: number, track: Tracklet[] | undefined) => void;
-  export let updateTracks: () => void;
   export let moveCursorToPosition: (clientX: number) => void;
 
   const getLeft = (tracklet: Tracklet) =>
@@ -107,13 +100,16 @@ License: CECILL-C
     );
   }
 
-  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
+  const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
-
-    if (newFrameIndex < prevFrameIndex + 1 || newFrameIndex >= nextFrameIndex - 1) return false;
-
+    if (
+      newFrameIndex !== draggedFrameIndex &&
+      (newFrameIndex < prevFrameIndex + 1 || newFrameIndex > nextFrameIndex - 1)
+    )
+      return false;
     const isStart = draggedFrameIndex === tracklet.data.start_timestep;
     const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
+    if (!(isStart || isEnd)) return false;
     if (isStart) {
       left = (newFrameIndex / ($lastFrameIndex + 1)) * 100;
       width = ((tracklet.data.end_timestep - newFrameIndex) / ($lastFrameIndex + 1)) * 100;
@@ -121,38 +117,59 @@ License: CECILL-C
     if (isEnd) {
       width = ((newFrameIndex - tracklet.data.start_timestep) / ($lastFrameIndex + 1)) * 100;
     }
-    const newTracklet = getNewTrackletValues(isStart, newFrameIndex, tracklet);
-    updateView(newFrameIndex, [newTracklet]);
-    currentFrameIndex.set(newFrameIndex);
     return true;
   };
 
-  const filterTracklet = (newFrameIndex: number, draggedFrameIndex: number) => {
-    tracklet = filterTrackletItems(newFrameIndex, draggedFrameIndex, tracklet);
-    annotations.update((oldObjects) =>
-      oldObjects.map((obj) => {
-        if (obj.data.entity_ref.id === track.id && obj.datasetItemType === "video") {
-          tracklet = track.map((trackItem) => {
-            if (trackItem.id === tracklet.id) {
-              return tracklet;
-            }
-            return trackItem;
-          });
-          const { boxes, keypoints } = mapTrackletItems(obj, tracklet);
-          obj.boxes = boxes;
-          obj.keypoints = keypoints;
+  const updateTrackletWidth = (newFrameIndex: number, draggedFrameIndex: number) => {
+    const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
+    if (newFrameIndex <= prevFrameIndex) newFrameIndex = prevFrameIndex + 1;
+    if (newFrameIndex >= nextFrameIndex) newFrameIndex = nextFrameIndex - 1;
+    const isStart = draggedFrameIndex === tracklet.data.start_timestep;
+    const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
+    const newViewId = (views[tracklet.data.view_ref.name] as SequenceFrame[])[newFrameIndex].id;
+    let movedAnn = tracklet.childs[0];
+    if (isStart) tracklet.data.start_timestep = newFrameIndex;
+    if (isEnd) {
+      movedAnn = tracklet.childs[tracklet.childs.length - 1];
+      tracklet.data.end_timestep = newFrameIndex;
+    }
+    movedAnn.frame_index = newFrameIndex;
+    movedAnn.data.view_ref.id = newViewId;
+
+    annotations.update((objects) =>
+      objects.map((ann) => {
+        if (ann.is_tracklet && ann.id === tracklet.id) {
+          if (isStart) {
+            (ann as Tracklet).data.start_timestep = newFrameIndex;
+          }
+          if (isEnd) {
+            (ann as Tracklet).data.end_timestep = newFrameIndex;
+          }
         }
-        return obj;
+        if (ann.id === movedAnn.id) {
+          ann.frame_index = newFrameIndex;
+          ann.data.view_ref.id = newViewId;
+        }
+        return ann;
       }),
     );
+    const save_tracklet_resized: SaveItem = {
+      change_type: "update",
+      object: tracklet,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_tracklet_resized));
+    const save_ann_moved: SaveItem = {
+      change_type: "update",
+      object: movedAnn,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_ann_moved));
+    currentFrameIndex.set(newFrameIndex);
   };
 
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    track.childs?.forEach((ann) => {
-      annotations.update((objects) => highlightCurrentObject(objects, ann, false));
-    });
+    annotations.update((objects) => highlightCurrentObject(objects, tracklet));
   };
 
   const onDoubleClick = () => {
@@ -168,40 +185,6 @@ License: CECILL-C
       }),
     );
   };
-
-  // const updateTracklet = () => {
-  //   const boxes = object.boxes
-  //     ? object.boxes.filter(
-  //         (box) =>
-  //           box.view_id === tracklet.view_id &&
-  //           box.frame_index >= tracklet.start &&
-  //           box.frame_index <= tracklet.end,
-  //       )
-  //     : [];
-  //   const keypoints = object.keypoints
-  //     ? object.keypoints.filter(
-  //         (kp) =>
-  //           kp.view_id === tracklet.view_id &&
-  //           kp.frame_index >= tracklet.start &&
-  //           kp.frame_index <= tracklet.end,
-  //       )
-  //     : [];
-  //   let items: TrackletItem[] = [];
-  //   for (const ann of boxes) {
-  //     items.push(getTrackletItem(ann));
-  //   }
-  //   for (const ann of keypoints) {
-  //     const item = getTrackletItem(ann);
-  //     if (!items.find((it) => it.frame_index == item.frame_index)) items.push(getTrackletItem(ann));
-  //   }
-  //   const new_tracklet = object.track.find((trklet) => trklet.id === tracklet.id);
-  //   tracklet = {
-  //     ...(new_tracklet ? new_tracklet : tracklet),
-  //     items: items,
-  //   };
-  //   console.log("UpdTracklet", object, tracklet);
-  //   updateTracks();
-  // };
 </script>
 
 <ContextMenu.Root>
@@ -213,7 +196,7 @@ License: CECILL-C
     style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >
     <button
-      on:contextmenu|preventDefault={(e) => onContextMenu(e)}
+      on:contextmenu|preventDefault={(e) => onContextMenu(e, tracklet)}
       class="h-full w-full"
       bind:this={trackletElement}
       on:click={(e) => onClick(e.clientX)}
@@ -231,13 +214,14 @@ License: CECILL-C
 {#each tracklet_annotations as ann}
   <TrackletKeyItem
     item={ann}
+    {tracklet}
     {color}
     {height}
     {top}
     {oneFrameInPixel}
     {onEditKeyItemClick}
-    objectId={track.id}
+    trackId={track.id}
+    {canContinueDragging}
     {updateTrackletWidth}
-    {filterTracklet}
   />
 {/each}

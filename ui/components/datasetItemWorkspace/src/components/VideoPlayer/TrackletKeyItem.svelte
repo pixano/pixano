@@ -6,43 +6,99 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, cn } from "@pixano/core";
-  import { Annotation, type TrackletItem } from "@pixano/core";
-  import { annotations, selectedTool } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { ContextMenu, Tracklet, cn } from "@pixano/core";
+  import type { TrackletItem, SaveItem } from "@pixano/core";
+  import {
+    annotations,
+    selectedTool,
+    saveData,
+    entities,
+  } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex, lastFrameIndex } from "../../lib/stores/videoViewerStores";
-  import { deleteKeyBoxFromTracklet } from "../../lib/api/videoApi";
   import { panTool } from "../../lib/settings/selectionTools";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
-  export let objectId: Annotation["id"];
+  export let trackId: string;
 
   export let item: TrackletItem;
+  export let tracklet: Tracklet;
   export let color: string;
   export let height: number;
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
-  //export let updateTracklet: () => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
-  ) => boolean;
-  export let filterTracklet: (
+  ) => void;
+  export let canContinueDragging: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
-  ) => void;
+  ) => boolean;
 
   let isItemBeingEdited = false;
+  $: isBound =
+    tracklet.childs[0].frame_index === item.frame_index ||
+    tracklet.childs[tracklet.childs.length - 1].frame_index === item.frame_index;
 
   $: {
     const currentObjectBeingEdited = $annotations.find((object) => object.displayControl?.editing);
     isItemBeingEdited =
-      item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === objectId;
+      item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;
   }
 
   const onDeleteItemClick = () => {
-    annotations.update((objects) => deleteKeyBoxFromTracklet(objects, item, objectId));
-    //TODO ? check if deleting a key has deleted last tracklet of annotation => delete it (?)
-    //updateTracklet();
+    const ann_to_del = tracklet.childs.find((ann) => ann.frame_index === item.frame_index);
+    if (!ann_to_del) return;
+    if (tracklet.childs.length <= 2) {
+      console.error("Deleting one of 2 last item of tracklet, it should not happen.");
+      return;
+    }
+    let changed_tracklet = false;
+    annotations.update((anns) =>
+      anns
+        .map((ann) => {
+          if (ann.id === tracklet.id && ann.is_tracklet) {
+            (ann as Tracklet).childs = (ann as Tracklet).childs.filter(
+              (fann) => fann.frame_index !== item.frame_index,
+            );
+            //if ann_to_del first/last of tracklet, need to "resize" (childs should be sorted)
+            if (item.frame_index === tracklet.data.start_timestep) {
+              (ann as Tracklet).data.start_timestep = (ann as Tracklet).childs[0].frame_index!;
+              changed_tracklet = true;
+            }
+            if (item.frame_index === tracklet.data.end_timestep) {
+              (ann as Tracklet).data.end_timestep = (ann as Tracklet).childs[
+                (ann as Tracklet).childs.length - 1
+              ].frame_index!;
+              changed_tracklet = true;
+            }
+          }
+          return ann;
+        })
+        .filter((ann) => ann.id !== ann_to_del.id),
+    );
+    entities.update((ents) =>
+      ents.map((ent) => {
+        if (ent.is_track && ent.id === tracklet.data.entity_ref.id) {
+          ent.childs = ent.childs?.filter((ann) => ann.id !== ann_to_del.id);
+        }
+        return ent;
+      }),
+    );
+
+    const save_del_ann: SaveItem = {
+      change_type: "delete",
+      object: ann_to_del,
+    };
+    saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_del_ann));
+    if (changed_tracklet) {
+      const save_upd_tracklet: SaveItem = {
+        change_type: "update",
+        object: tracklet,
+      };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_upd_tracklet));
+    }
   };
 
   export const getKeyItemLeftPosition = (frameIndex: number) => {
@@ -74,7 +130,7 @@ License: CECILL-C
         const raise = distance / startOneFrameInPixel;
         newFrameIndex = Math.round(startFrameIndex + raise);
         if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
-        const canContinue = updateTrackletWidth(newFrameIndex, item.frame_index);
+        const canContinue = canContinueDragging(newFrameIndex, item.frame_index);
         if (canContinue) {
           left = getKeyItemLeftPosition(newFrameIndex);
         }
@@ -83,7 +139,7 @@ License: CECILL-C
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      if (newFrameIndex !== undefined) filterTracklet(newFrameIndex, item.frame_index);
+      if (newFrameIndex !== undefined) updateTrackletWidth(newFrameIndex, item.frame_index);
       newFrameIndex = undefined;
     });
   };
@@ -98,10 +154,14 @@ License: CECILL-C
     )}
     style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color}`}
   >
-    <button class="h-full w-full" use:dragMe />
+    {#if isBound}
+      <button class="h-full w-full" use:dragMe />
+    {/if}
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
+    {#if tracklet.childs?.length > 2}
+      <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
+    {/if}
     {#if !isItemBeingEdited}
       <ContextMenu.Item inset on:click={() => onEditKeyItemClick(item.frame_index)}
         >Edit item</ContextMenu.Item

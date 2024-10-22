@@ -29,6 +29,7 @@ License: CECILL-C
     tracklets,
     entities,
     annotations,
+    views,
     newShape,
     selectedTool,
     colorScale,
@@ -89,9 +90,14 @@ License: CECILL-C
         );
         if (box) current_bboxes_and_interpolated.push(box);
         else {
+          const sample_bbox = tracklets_bboxes[tracklet_id][0];
+          const view_id = ($views[sample_bbox.data.view_ref.name] as SequenceFrame[])[
+            $currentFrameIndex
+          ].id;
           const interpolated_box = boxLinearInterpolation(
             tracklets_bboxes[tracklet_id],
             $currentFrameIndex,
+            view_id,
           );
           if (interpolated_box) current_bboxes_and_interpolated.push(interpolated_box);
         }
@@ -128,9 +134,13 @@ License: CECILL-C
         );
         if (kpt) current_kpts_and_interpolated.push(kpt);
         else {
+          const sample_kpt = tracklets_kpts[tracklet_id][0];
+          const view_id = ($views[sample_kpt.viewRef!.name] as SequenceFrame[])[$currentFrameIndex]
+            .id;
           const interpolated_kpt = keypointsLinearInterpolation(
             tracklets_kpts[tracklet_id],
             $currentFrameIndex,
+            view_id,
           );
           if (interpolated_kpt) current_kpts_and_interpolated.push(interpolated_kpt);
         }
@@ -337,7 +347,7 @@ License: CECILL-C
       class="h-full grow max-h-[25%] overflow-hidden"
       style={`max-height: ${inspectorMaxHeight}px`}
     >
-      <VideoInspector bind:tracks {updateView} />
+      <VideoInspector bind:tracks {updateView} bboxes={$current_itemBBoxes} />
     </div>
   {/if}
 </section>

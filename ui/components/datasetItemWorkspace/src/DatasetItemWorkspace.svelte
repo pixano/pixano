@@ -11,6 +11,7 @@ License: CECILL-C
   import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
+  import { sortByFrameIndex } from "./lib/api/videoApi";
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
@@ -82,22 +83,14 @@ License: CECILL-C
       anns.forEach((ann) => newAnns.push(back2front(ann)));
     });
     //sort by frame_index (if present) -- some function (interpolation mostly) requires sorted annotations
-    newAnns.sort((a, b) => {
-      const indexA = a.frame_index !== undefined ? a.frame_index : Number.POSITIVE_INFINITY;
-      const indexB = b.frame_index !== undefined ? b.frame_index : Number.POSITIVE_INFINITY;
-      return indexA - indexB;
-    });
+    newAnns.sort((a, b) => sortByFrameIndex(a, b));
     annotations.set(newAnns);
 
     const newEntities: Entity[] = [];
     Object.values(selectedItem.entities).forEach((sel_entities) => {
       sel_entities.forEach((entity) => {
         //build childs list
-        entity.childs = $annotations.filter(
-          (ann) =>
-            ann.data.entity_ref.id === entity.id &&
-            ann.data.view_ref.name === entity.data.view_ref.name, //really needed ?
-        );
+        entity.childs = $annotations.filter((ann) => ann.data.entity_ref.id === entity.id);
         newEntities.push(entity);
       });
     });
@@ -109,10 +102,7 @@ License: CECILL-C
         if (ann.is_tracklet) {
           const tracklet = ann as Tracklet;
           const track_entity = $entities.find(
-            (entity) =>
-              entity.is_track &&
-              entity.id === tracklet.data.entity_ref.id &&
-              entity.data.view_ref.name === tracklet.data.view_ref.name, //really needed ?
+            (entity) => entity.is_track && entity.id === tracklet.data.entity_ref.id,
           );
           if (track_entity) {
             tracklet.childs =
@@ -121,7 +111,7 @@ License: CECILL-C
                   child.frame_index !== undefined &&
                   child.frame_index <= tracklet.data.end_timestep &&
                   child.frame_index >= tracklet.data.start_timestep &&
-                  child.data.view_ref.name === tracklet.data.view_ref.name, //really needed ?
+                  child.data.view_ref.name === tracklet.data.view_ref.name,
               ) || [];
             tracklet.childs.sort((a, b) => a.frame_index! - b.frame_index!);
           }

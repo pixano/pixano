@@ -19,7 +19,6 @@ License: CECILL-C
   import {
     Mask,
     BBox,
-    DatasetItem,
     type SelectionTool,
     type LabeledPointTool,
     type Shape,

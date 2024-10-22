@@ -18,11 +18,12 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot, Track } from "@pixano/core";
+  import { SliderRoot, Track, BBox } from "@pixano/core";
   import { onMount } from "svelte";
 
   export let updateView: (frameIndex: number) => void;
   export let tracks: Track[];
+  export let bboxes: BBox[];
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -52,9 +53,9 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each tracks as track}
+      {#each tracks as track (track.childs?.length)}
         <VideoPlayerRow>
-          <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {updateView} />
+          <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {bboxes} />
         </VideoPlayerRow>
       {/each}
     </div>

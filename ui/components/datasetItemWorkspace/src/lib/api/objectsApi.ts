@@ -478,6 +478,12 @@ export const highlightCurrentObject = (
 ) => {
   const isObjectHighlighted = currentObject.highlighted === "self";
 
+  let highlight_ids: string[] = [];
+  if (currentObject.is_tracklet) {
+    //highlight childs
+    highlight_ids = (currentObject as Tracklet).childs.map((ann) => ann.id);
+  }
+
   return objects.map((object) => {
     object.displayControl = {
       ...object.displayControl,
@@ -485,7 +491,7 @@ export const highlightCurrentObject = (
     };
     if (isObjectHighlighted && shouldUnHighlight) {
       object.highlighted = "all";
-    } else if (object.id === currentObject.id) {
+    } else if (object.id === currentObject.id || highlight_ids.includes(object.id)) {
       object.highlighted = "self";
     } else {
       object.highlighted = "none";
