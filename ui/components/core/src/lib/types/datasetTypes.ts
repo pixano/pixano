@@ -336,7 +336,7 @@ export class BBox extends Annotation {
   editing?: boolean;
   strokeFactor?: number;
   tooltip?: string;
-  startRef?: BBox;  //for interpolated box
+  startRef?: BBox; //for interpolated box
 
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
@@ -722,7 +722,7 @@ export interface ItemEmbedding {
 export interface ImageFeature {
   id: string;
   type: string;
-  thumbnail: string;  //string???? should be some of ItemFeature.value types
+  thumbnail: string; //string???? should be some of ItemFeature.value types
 }
 
 export interface ItemFeature {

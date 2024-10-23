@@ -103,7 +103,7 @@ export const keypointsLinearInterpolation = (
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.frame_index = imageIndex;
-    interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" };  //for lint
+    interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.startRef = startKpt;
     interpolatedKpt.vertices = vertices;
