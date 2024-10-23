@@ -60,7 +60,7 @@ License: CECILL-C
         id: image.id,
       };
     });
-    features = createFeature<ItemType>($itemMetas.item, $datasetSchema); //, defaultSceneFeatures); //XXX TODO default ?
+    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
   });
 
   /**

@@ -23,10 +23,9 @@ import type {
   TextFeature,
 } from "../types/datasetItemWorkspaceTypes";
 
-export function createFeature<T>(
+export function createFeature<T extends object>(
   obj: BaseData<T>,
   dataset_schema: DatasetSchema,
-  defaultFeats: Feature[] = [],
 ): Feature[] {
   const extraFields = obj.getDynamicFields();
   const extraFieldsType = extraFields.reduce(
@@ -36,7 +35,7 @@ export function createFeature<T>(
     },
     {} as Record<string, string>,
   );
-  let features: ItemFeature[] = [];
+  const features: ItemFeature[] = [];
   if (extraFields.length > 0) {
     for (const field of extraFields)
       features.push({
@@ -44,8 +43,6 @@ export function createFeature<T>(
         dtype: extraFieldsType[field],
         value: obj.data[field] as unknown,
       } as ItemFeature);
-  } else {
-    features = defaultFeats;
   }
   const parsedFeatures = createObjectInputsSchema.parse(
     Object.values(features).map((feature) => ({

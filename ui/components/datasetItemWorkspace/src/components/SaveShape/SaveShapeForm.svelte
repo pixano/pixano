@@ -44,10 +44,10 @@ License: CECILL-C
   });
 
   const handleFormSubmit = () => {
-    let newObject: Annotation | null = null;
-    let newObject2: Annotation | null = null;
-    let newTracklet: Annotation | null = null;
-    let newEntity: Entity | null = null;
+    let newObject: Annotation | undefined = undefined;
+    let newObject2: Annotation | undefined = undefined;
+    let newTracklet: Annotation | undefined = undefined;
+    let newEntity: Entity | undefined = undefined;
     const features = mapShapeInputsToFeatures(objectProperties, formInputs);
     const isVideo = $itemMetas.type === "video";
     if (shape.status === "saving") {
@@ -57,11 +57,11 @@ License: CECILL-C
         newEntity,
         shape,
         shape.viewRef,
-        features,
         $datasetSchema,
         isVideo,
         $currentFrameIndex,
       );
+      if (!newObject) return;
       newObject.highlighted = "self";
       newObject.displayControl = { editing: true };
       newEntity.childs.push(newObject);
@@ -87,18 +87,13 @@ License: CECILL-C
             newEntity,
             shape,
             { id: endView!.id, name: shape.viewRef.name },
-            features,
             $datasetSchema,
             isVideo,
             endFrameIndex,
           );
+          if (!newObject2) return;
           newObject2.highlighted = "none";
           newObject2.displayControl = { editing: false };
-          const save_item2: SaveItem = {
-            change_type: "add",
-            object: newObject2,
-          };
-          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
           const trackletShape: SaveTrackletShape = {
             type: "tracklet",
             status: shape.status,
@@ -118,14 +113,20 @@ License: CECILL-C
             newEntity,
             trackletShape,
             trackletShape.viewRef,
-            features,
             $datasetSchema,
             isVideo,
             $currentFrameIndex,
           );
+          if (!newTracklet) return;
           newTracklet.highlighted = "none";
           newTracklet.displayControl = { editing: false };
           //add Tracklet
+
+          const save_item2: SaveItem = {
+            change_type: "add",
+            object: newObject2,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item2));
           const save_item_tracklet: SaveItem = {
             change_type: "add",
             object: newTracklet,

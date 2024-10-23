@@ -38,12 +38,12 @@ export const boxLinearInterpolation = (
   view_id: string,
 ): BBox | undefined => {
   //Note: this suppose boxes are sorted by frame_index (it should)
-  const endIndex = boxes.findIndex((box) => box.frame_index >= imageIndex);
+  const endIndex = boxes.findIndex((box) => box.frame_index! >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
   const endBox = boxes[endIndex];
-  if (imageIndex == endBox.frame_index) {
+  if (imageIndex === endBox.frame_index) {
     return endBox;
   }
 
@@ -51,23 +51,23 @@ export const boxLinearInterpolation = (
   const [startX, startY, startWidth, startHeight] = startBox.data.coords;
   const [endX, endY, endWidth, endHeight] = endBox.data.coords;
 
-  const xInterpolation = (endX - startX) / (endBox.frame_index - startBox.frame_index);
-  const yInterpolation = (endY - startY) / (endBox.frame_index - startBox.frame_index);
-  const widthInterpolation = (endWidth - startWidth) / (endBox.frame_index - startBox.frame_index);
+  const xInterpolation = (endX - startX) / (endBox.frame_index! - startBox.frame_index!);
+  const yInterpolation = (endY - startY) / (endBox.frame_index! - startBox.frame_index!);
+  const widthInterpolation =
+    (endWidth - startWidth) / (endBox.frame_index! - startBox.frame_index!);
   const heightInterpolation =
-    (endHeight - startHeight) / (endBox.frame_index - startBox.frame_index);
-  const x = startX + xInterpolation * (imageIndex - startBox.frame_index);
-  const y = startY + yInterpolation * (imageIndex - startBox.frame_index);
-  const width = startWidth + widthInterpolation * (imageIndex - startBox.frame_index);
-  const height = startHeight + heightInterpolation * (imageIndex - startBox.frame_index);
+    (endHeight - startHeight) / (endBox.frame_index! - startBox.frame_index!);
+  const x = startX + xInterpolation * (imageIndex - startBox.frame_index!);
+  const y = startY + yInterpolation * (imageIndex - startBox.frame_index!);
+  const width = startWidth + widthInterpolation * (imageIndex - startBox.frame_index!);
+  const height = startHeight + heightInterpolation * (imageIndex - startBox.frame_index!);
   // make a new BBox with interpolated coords
   const interpolatedBox = structuredClone(startBox);
   interpolatedBox.id = nanoid(10);
   interpolatedBox.frame_index = imageIndex;
   interpolatedBox.data.view_ref.id = view_id;
-  // for convenience, we store refs to start & end boxes
+  // for convenience, we store ref to start boxes
   interpolatedBox.startRef = startBox;
-  interpolatedBox.endRef = endBox;
   interpolatedBox.data.coords = [x, y, width, height];
   return interpolatedBox;
 };
@@ -78,7 +78,7 @@ export const keypointsLinearInterpolation = (
   view_id: string,
 ): KeypointsTemplate | undefined => {
   //Note: this suppose keypoints are sorted by frame_index (it should)
-  const endIndex = keypoints.findIndex((kpt) => kpt.frame_index >= imageIndex);
+  const endIndex = keypoints.findIndex((kpt) => kpt.frame_index! >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
@@ -92,21 +92,20 @@ export const keypointsLinearInterpolation = (
   } else {
     const vertices = startKpt.vertices.map((vertex, i) => {
       const xInterpolation =
-        (endKpt.vertices[i].x - vertex.x) / (endKpt.frame_index - startKpt?.frame_index);
+        (endKpt.vertices[i].x - vertex.x) / (endKpt.frame_index! - startKpt.frame_index!);
       const yInterpolation =
-        (endKpt.vertices[i].y - vertex.y) / (endKpt.frame_index - startKpt?.frame_index);
-      const x = vertex.x + xInterpolation * (imageIndex - startKpt.frame_index);
-      const y = vertex.y + yInterpolation * (imageIndex - startKpt.frame_index);
+        (endKpt.vertices[i].y - vertex.y) / (endKpt.frame_index! - startKpt.frame_index!);
+      const x = vertex.x + xInterpolation * (imageIndex - startKpt.frame_index!);
+      const y = vertex.y + yInterpolation * (imageIndex - startKpt.frame_index!);
       return { ...vertex, x, y };
     });
     // make a new BBox with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.frame_index = imageIndex;
-    interpolatedKpt.viewRef.id = view_id;
-    // for convenience, we store refs to start & end kpts
+    interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" };  //for lint
+    // for convenience, we store ref to start kpts
     interpolatedKpt.startRef = startKpt;
-    interpolatedKpt.endRef = endKpt;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }
@@ -130,7 +129,7 @@ export const splitTrackletInTwo = (
   const rightTracklet = new Tracklet(noUIfieldsTracklet);
   rightTracklet.id = nanoid(10);
   rightTracklet.data.start_timestep = next;
-  rightTracklet.childs = childs.filter((ann) => ann.frame_index >= next);
+  rightTracklet.childs = childs.filter((ann) => ann.frame_index! >= next);
   rightTracklet.datasetItemType = datasetItemType;
   rightTracklet.displayControl = displayControl;
   rightTracklet.highlighted = highlighted;
@@ -139,7 +138,7 @@ export const splitTrackletInTwo = (
 
   //tracklet2split become left tracklet
   tracklet2split.data.end_timestep = prev;
-  tracklet2split.childs = tracklet2split.childs.filter((ann) => ann.frame_index <= prev);
+  tracklet2split.childs = tracklet2split.childs.filter((ann) => ann.frame_index! <= prev);
 
   const save_item_left: SaveItem = {
     change_type: "update",
@@ -152,50 +151,6 @@ export const splitTrackletInTwo = (
   };
   saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_right));
   return { left: tracklet2split, right: rightTracklet };
-};
-
-export const filterTrackletItems = (
-  newFrameIndex: number,
-  draggedFrameIndex: number,
-  tracklet: Tracklet,
-): { tracklet: Tracklet; item: Annotation; resized: boolean } => {
-  const isGoingRight = newFrameIndex > draggedFrameIndex;
-  const isStart = draggedFrameIndex === tracklet.data.start_timestep;
-  const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
-
-  tracklet.childs = tracklet.childs.filter((ann) => {
-    if (isGoingRight && ann.frame_index > draggedFrameIndex && ann.frame_index < newFrameIndex) {
-      return false;
-    }
-    if (!isGoingRight && ann.frame_index > newFrameIndex && ann.frame_index < draggedFrameIndex) {
-      return false;
-    }
-    return true;
-  });
-  if (isStart) {
-    tracklet.data.start_timestep = newFrameIndex;
-    tracklet.childs[0].frame_index = newFrameIndex;
-    return tracklet;
-  }
-  if (isEnd) {
-    tracklet.data.end_timestep = newFrameIndex;
-    tracklet.childs[tracklet.childs.length - 1].frame_index = newFrameIndex;
-    return tracklet;
-  }
-  tracklet.childs = tracklet.childs.map((ann) => {
-    if (ann.frame_index === draggedFrameIndex) {
-      ann.frame_index = newFrameIndex;
-      return ann;
-    }
-    return ann;
-  });
-  if (newFrameIndex < tracklet.data.start_timestep) {
-    tracklet.data.start_timestep = newFrameIndex;
-  }
-  if (newFrameIndex > tracklet.data.end_timestep) {
-    tracklet.data.end_timestep = newFrameIndex;
-  }
-  return tracklet;
 };
 
 export const sortByFrameIndex = (a: Annotation, b: Annotation) => {

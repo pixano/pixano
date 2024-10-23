@@ -88,6 +88,7 @@ export type KeypointsTemplate = {
   visible?: boolean;
   displayControl?: DisplayControl;
   highlighted?: "all" | "self" | "none";
+  startRef?: KeypointsTemplate;
 };
 
 export type CreateKeypointShape = {

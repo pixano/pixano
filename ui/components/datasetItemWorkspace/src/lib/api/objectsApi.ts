@@ -24,10 +24,8 @@ import type {
   BBoxType,
   MaskType,
   SaveShape,
-  VideoItemBBox,
   KeypointsTemplate,
   SaveItem,
-  SaveUpdate,
   DatasetSchema,
   ItemFeature,
 } from "@pixano/core";
@@ -75,12 +73,12 @@ const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
   return tooltip;
 };
 
-export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox => {
-  if (!bbox) return {};
-  if (!bbox.is_bbox) return {};
-  if (bbox.datasetItemType === "video" && bbox.displayControl?.hidden) return {};
-  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.highlighted !== "self") return {};
-  if (!bbox.data.view_ref.name) return {};
+export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
+  if (!bbox) return;
+  if (!bbox.is_bbox) return;
+  if (bbox.datasetItemType === "video" && bbox.displayControl?.hidden) return;
+  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.highlighted !== "self") return;
+  if (!bbox.data.view_ref.name) return;
   let bbox_denorm_coords = bbox.data.coords;
   if (bbox.data.is_normalized) {
     const view = views[bbox.data.view_ref.name];
@@ -134,20 +132,23 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
       opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
       strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       highlighted: obj.highlighted,
-    };
+    } as Mask;
   }
   return undefined;
 };
 
-export const mapObjectToKeypoints = (keypoints: Keypoints, views: MView): KeypointsTemplate => {
+export const mapObjectToKeypoints = (
+  keypoints: Keypoints,
+  views: MView,
+): KeypointsTemplate | undefined => {
   if (
     !keypoints ||
     !keypoints.data.view_ref.name ||
     (keypoints.datasetItemType === "video" && keypoints.displayControl?.hidden)
   )
-    return {};
+    return;
   const template = templates.find((t) => t.id === keypoints.data.template_id);
-  if (!template) return {};
+  if (!template) return;
 
   const view = views[keypoints.data.view_ref.name];
   const image = Array.isArray(view) ? view[0] : view;
@@ -159,7 +160,7 @@ export const mapObjectToKeypoints = (keypoints: Keypoints, views: MView): Keypoi
     const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
     const features = {
       ...(template.vertices[i].features || {}),
-      ...({ state: keypoints.data.states[i] } || {}),
+      ...{ state: keypoints.data.states[i] },
     };
     vertices.push({ x, y, features });
   }
@@ -196,20 +197,7 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
     objects = objects.filter((obj) => newObj.object.id !== obj.object.id);
   }
   //if newObj already in objects, find it & replace
-  let index = -1;
-  // annotations in front are (sometime?) created without an id
-  if ("id" in newObj.object) {
-    index = objects.findIndex((obj) => obj.object.id === newObj.object.id);
-  } else if ("frame_index" in newObj.object.data) {
-    index = objects.findIndex(
-      (obj) =>
-        "frame_index" in obj.object.data &&
-        "frame_index" in newObj.object.data && //required by tslint even if tested before
-        obj.object.data.frame_index === newObj.object.data.frame_index &&
-        obj.object.data.view_ref.id == newObj.object.data.view_ref.id &&
-        obj.object.table_info.base_schema == newObj.object.table_info.base_schema,
-    );
-  }
+  const index = objects.findIndex((obj) => obj.object.id === newObj.object.id);
   if (index !== -1) {
     objects[index] = newObj;
   } else {
@@ -269,14 +257,14 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
         for (const vertex of newShape.vertices) {
           coords.push(vertex.x);
           coords.push(vertex.y);
-          states.push(vertex.features.state);
+          if (vertex.features.state) states.push(vertex.features.state);
         }
         (object as Keypoints).data.coords = coords;
         (object as Keypoints).data.states = states;
         changed = true;
       }
       if (changed) {
-        const save_item: SaveUpdate = {
+        const save_item: SaveItem = {
           change_type: "update",
           object,
         };
@@ -301,7 +289,7 @@ export const sortAndFilterObjectsToAnnotate = (
   return objects
     .filter((object) => {
       if (object.datasetItemType === "image" && object.is_bbox) {
-        const confidence = object.data.confidence || 0;
+        const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       if (
@@ -309,7 +297,7 @@ export const sortAndFilterObjectsToAnnotate = (
         object.is_bbox &&
         object.frame_index === currentFrameIndex
       ) {
-        const confidence = object.data.confidence || 0;
+        const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       return false; // Ignore objects without bboxes
@@ -327,23 +315,27 @@ export const mapObjectWithNewStatus = (
   status: "accepted" | "rejected",
   features: ObjectProperties = {},
 ): Annotation[] => {
-  const nextObjectId = objectsToAnnotate[1]?.id;
-  return allObjects.map((object) => {
-    if (object.id === nextObjectId) {
-      object.highlighted = "self";
-    } else {
-      object.highlighted = "none";
-    }
-    if (object.id === objectsToAnnotate[0]?.id) {
-      object.review_state = status;
-      Object.keys(features || {}).forEach((key) => {
-        if (object.features[key]) {
-          object.features[key].value = features[key];
-        }
-      });
-    }
-    return object;
-  });
+  //TODO (preAnnotation)
+  features;
+  return allObjects;
+
+  // const nextObjectId = objectsToAnnotate[1]?.id;
+  // return allObjects.map((object) => {
+  //   if (object.id === nextObjectId) {
+  //     object.highlighted = "self";
+  //   } else {
+  //     object.highlighted = "none";
+  //   }
+  //   if (object.id === objectsToAnnotate[0]?.id) {
+  //     object.review_state = status;
+  //     Object.keys(features || {}).forEach((key) => {
+  //       if (object[features[key]]) {
+  //         object[features[key]] = features[key];
+  //       }
+  //     });
+  //   }
+  //   return object;
+  // });
 };
 
 export const createObjectCardId = (object: Annotation | Entity): string => `object-${object.id}`;
@@ -360,6 +352,7 @@ const getTable = (
       return group_table;
     }
   }
+  return dataset_schema.groups[group][0]; //lint protection, should not happens
 };
 
 export const defineCreatedEntity = (
@@ -384,21 +377,23 @@ export const defineCreatedEntity = (
   for (const feat of Object.values(features)) {
     entity.data[feat.name] = feat.value;
   }
-  if (isVideo) return new Track(entity);
-  else return new Entity(entity);
+  if (isVideo) {
+    //already done just before, but lint require entity.data.name, and can't know it's done...
+    const track = { ...entity, data: { ...entity.data, name: features["name"].value as string } };
+    return new Track(track);
+  } else return new Entity(entity);
 };
 
 export const defineCreatedObject = (
   entity: Entity,
   shape: SaveShape,
   viewRef: Reference,
-  features: Record<string, ItemFeature>,
   dataset_schema: DatasetSchema,
   isVideo: boolean,
   currentFrameIndex: number,
-): Annotation => {
+): Annotation | undefined => {
   const now = new Date(Date.now()).toISOString();
-  const baseAnn: Annotation = {
+  const baseAnn = {
     id: nanoid(10),
     created_at: now,
     updated_at: now,
@@ -409,7 +404,7 @@ export const defineCreatedObject = (
     entity_ref: { name: entity.table_info.name, id: entity.id },
     source_ref: { name: GROUND_TRUTH, id: "" },
   };
-  let newObject: Annotation = undefined;
+  let newObject: Annotation | undefined = undefined;
   if (shape.type === "bbox") {
     const { x, y, width, height } = shape.attrs;
     const coords = [
@@ -425,18 +420,22 @@ export const defineCreatedObject = (
       confidence: 1,
     };
     const table = getTable(dataset_schema, "annotations", "BBox");
-    baseAnn.table_info = { name: table, group: "annotations", base_schema: "BBox" };
-    baseAnn.data = { ...baseData, ...bbox };
-    newObject = new BBox(baseAnn);
+    newObject = new BBox({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "BBox" },
+      data: { ...baseData, ...bbox },
+    });
   } else if (shape.type === "mask") {
     const mask: MaskType = {
       counts: shape.rle.counts,
       size: shape.rle.size,
     };
     const table = getTable(dataset_schema, "annotations", "CompressedRLE");
-    baseAnn.table_info = { name: table, group: "annotations", base_schema: "CompressedRLE" };
-    baseAnn.data = { ...baseData, ...mask };
-    newObject = new Mask(baseAnn);
+    newObject = new Mask({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "CompressedRLE" },
+      data: { ...baseData, ...mask },
+    });
   } else if (shape.type === "keypoints") {
     const coords = [];
     const states = [];
@@ -451,22 +450,23 @@ export const defineCreatedObject = (
       states,
     };
     const table = getTable(dataset_schema, "annotations", "KeyPoints");
-    baseAnn.table_info = { name: table, group: "annotations", base_schema: "KeyPoints" };
-    baseAnn.data = { ...baseData, ...keypoints };
-    newObject = new Keypoints(baseAnn);
+    newObject = new Keypoints({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "KeyPoints" },
+      data: { ...baseData, ...keypoints },
+    });
   } else if (shape.type === "tracklet") {
     const table = getTable(dataset_schema, "annotations", "Tracklet");
-    baseAnn.table_info = { name: table, group: "annotations", base_schema: "Tracklet" };
-    baseAnn.data = { ...baseData, ...shape.attrs };
-    newObject = new Tracklet(baseAnn);
+    newObject = new Tracklet({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "Tracklet" },
+      data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
+    });
   } else {
-    console.error(`ERROR: unmanaged shape type (${shape.type})`);
     return undefined;
   }
   //need to put UI fields after creation, else zod rejects
   newObject.datasetItemType = isVideo ? "video" : "image";
-  newObject.features = features;
-  newObject.visible = true;
   if (isVideo) newObject.frame_index = currentFrameIndex;
   return newObject;
 };
@@ -500,27 +500,18 @@ export const highlightCurrentObject = (
   });
 };
 
-const findThumbnailBox = (boxes: Annotation) => {
-  if (!boxes) return undefined;
-  //return boxes.find((b) => b.is_thumbnail);
-  //TMP
-  return undefined;
-};
-
 export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: Annotation) => {
-  let box: BBox;
-  const view_name = object.data.view_ref.name;
-  if (object.datasetItemType === "video") {
-    box = findThumbnailBox(object); //TODO ? which thumbnail in multiview cases ?
-  } else {
-    box = object;
+  let box: BBox | undefined = undefined;
+  if (object.is_bbox) {
+    box = object as BBox;
   }
+  const view_name = object.data.view_ref.name;
   if (!box || !box.is_bbox || !view_name) return null;
   //prevent bug: if thumbnail is asked before data are fully loaded, we can have a error on a bad key
   if (!(view_name in views)) return null;
   const view =
     metas.type === "video"
-      ? (views[view_name] as SequenceFrame[])[(box as VideoItemBBox).frame_index]
+      ? (views[view_name] as SequenceFrame[])[box.frame_index!]
       : (views[view_name] as Image);
   const coords = box.data.coords;
   return {

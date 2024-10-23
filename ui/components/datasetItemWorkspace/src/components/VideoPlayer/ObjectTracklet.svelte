@@ -31,7 +31,6 @@ License: CECILL-C
   export let tracklet: Tracklet;
   export let views: MView;
   export let onContextMenu: (event: MouseEvent, tracklet: Tracklet) => void;
-  export let getTrackletItem: (ann: TrackletItem) => TrackletItem;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
   export let onAddKeyItemClick: (event: MouseEvent) => void;
   export let onSplitTrackletClick: () => void;

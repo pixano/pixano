@@ -6,12 +6,12 @@ License: CECILL-C
 
 import * as ort from "onnxruntime-web";
 
-import type { DatasetItem, DatasetInfo } from "@pixano/core";
+import type { DatasetInfo } from "@pixano/core";
 import { api } from "@pixano/core/src";
 import { npy } from "@pixano/models/src";
 
 export async function loadEmbeddings(
-  itemId: DatasetItem["id"],
+  itemId: string,
   selectedModelName: string,
   datasetId: DatasetInfo["id"],
 ): Promise<Record<string, ort.Tensor>> {

@@ -9,8 +9,6 @@ import { writable, derived } from "svelte/store";
 import {
   type Shape,
   type InteractiveImageSegmenter,
-  type Mask,
-  type BBox,
   type SelectionTool,
   utils,
   type KeypointsTemplate,
@@ -22,6 +20,7 @@ import {
   Tracklet,
   BBox,
   Mask,
+  Keypoints,
 } from "@pixano/core";
 
 import { mapObjectToBBox, mapObjectToKeypoints, mapObjectToMasks } from "../api/objectsApi";
@@ -32,7 +31,7 @@ export const newShape = writable<Shape>();
 export const selectedTool = writable<SelectionTool>();
 export const annotations = writable<Annotation[]>([]);
 export const entities = writable<Entity[]>([]);
-export const views = writable<Record<string, Image | SequenceFrame[]>>([]);
+export const views = writable<Record<string, Image | SequenceFrame[]>>({});
 export const interactiveSegmenterModel = writable<InteractiveImageSegmenter>();
 export const itemMetas = writable<ItemsMeta>();
 export const preAnnotationIsActive = writable<boolean>(false);
@@ -79,8 +78,8 @@ export const itemBboxes = derived(
     const bboxes: BBox[] = [];
     for (const ann of $annotations) {
       if (ann.is_bbox) {
-        const box = mapObjectToBBox(ann, $views, $entities);
-        bboxes.push(box);
+        const box = mapObjectToBBox(ann as BBox, $views, $entities);
+        if (box) bboxes.push(box);
       }
     }
     return bboxes;
@@ -91,7 +90,8 @@ export const itemMasks = derived(annotations, ($annotations) => {
   const masks: Mask[] = [];
   for (const ann of $annotations) {
     if (ann.is_mask) {
-      masks.push(mapObjectToMasks(ann));
+      const mask = mapObjectToMasks(ann as Mask);
+      if (mask) masks.push(mask);
     }
   }
   return masks;
@@ -101,7 +101,8 @@ export const itemKeypoints = derived([annotations, views], ([$annotations, $view
   const m_keypoints: KeypointsTemplate[] = [];
   for (const ann of $annotations) {
     if (ann.is_keypoints) {
-      m_keypoints.push(mapObjectToKeypoints(ann, $views));
+      const kpt = mapObjectToKeypoints(ann as Keypoints, $views);
+      if (kpt) m_keypoints.push();
     }
   }
   return m_keypoints;

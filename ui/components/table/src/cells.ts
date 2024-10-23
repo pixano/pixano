@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import TableCell from "./TableCell.svelte";
-import { Image, type ItemFeature } from "@pixano/core";
+import { type ImageFeature, type ItemFeature } from "@pixano/core";
 import { createRender } from "svelte-headless-table";
 
 // Default cells that we assume are present in every dataset
@@ -23,13 +23,13 @@ export const DefaultCell = (feature: { id: string; value: string | number }) => 
 // Parse a feature into a table cell
 export const FeatureCell = (feature) =>
   createRender(TableCell, {
-    itemFeature: JSON.parse(feature.value) as ItemFeature, // 'as ItemFeature' will provoc a linting error if removed,
+    itemFeature: JSON.parse(feature.value) as ItemFeature, // 'as ItemFeature' will raise a linting error if removed,
   });
 
 // Parse a view into an image cell
 export const ImgCell = (feature) => {
-  const img: ItemFeature = JSON.parse(feature.value) as ItemFeature; //TODO TOCHECK // 'as ItemFeature' will provoc a linting error if removed
+  const img: ImageFeature = JSON.parse(feature.value) as ImageFeature; // 'as ImageFeature' will raise a linting error if removed
   return createRender(TableCell, {
-    itemFeature: { name: img.id, dtype: img.type, value: img.thumbnail },
+    itemFeature: { name: img.id, dtype: img.type, value: img.thumbnail } as ItemFeature,
   });
 };

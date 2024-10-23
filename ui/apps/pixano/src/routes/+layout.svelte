@@ -52,9 +52,9 @@ License: CECILL-C
   }
 
   onMount(async () => {
-    handleGetModels().then(() =>
-      console.log(`Found ${$modelsStore.length} model(s): ${$modelsStore}`),
-    );
+    handleGetModels()
+      .then(() => console.log(`Found ${$modelsStore.length} model(s):`, $modelsStore))
+      .catch((err) => console.error("ERROR: Can't get model", err));
     await handleGetDatasets();
   });
 

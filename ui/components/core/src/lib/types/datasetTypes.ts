@@ -336,6 +336,7 @@ export class BBox extends Annotation {
   editing?: boolean;
   strokeFactor?: number;
   tooltip?: string;
+  startRef?: BBox;  //for interpolated box
 
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
@@ -422,7 +423,7 @@ export class Tracklet extends Annotation {
   declare data: TrackletType & AnnotationType;
 
   //UI only fields
-  childs: Annotation[];
+  childs: Annotation[] = [];
 
   constructor(obj: BaseDataFields<TrackletType>) {
     if (obj.table_info.base_schema !== "Tracklet") throw new Error("Not a Tracklet");
@@ -710,30 +711,6 @@ export type SaveItem = {
   object: Annotation | Entity | Item;
 };
 
-// export type VideoItemBBox = BBox & TrackletItem;
-// export type VideoItemKeypoints = Keypoints & TrackletItem;
-// export interface Tracklet {
-//   start: number;
-//   end: number;
-//   id: string;
-//   view_id: string;
-// }
-
-// export type TrackletWithItems = Tracklet & {
-//   items: TrackletItem[];
-// };
-
-// export type VideoObject = ItemObjectBase & {
-//   datasetItemType: "video";
-//   track: Tracklet[];
-//   boxes?: VideoItemBBox[];
-//   keypoints?: VideoItemKeypoints[];
-//   displayedMBox?: VideoItemBBox[]; //list for multiview
-//   displayedMKeypoints?: VideoItemKeypoints[]; //list for multiview
-// };
-
-// export type ImageObject = BBox | Mask | Keypoints;
-
 // ITEM EMBEDDING
 export interface ItemEmbedding {
   view_id: string;
@@ -741,6 +718,12 @@ export interface ItemEmbedding {
 }
 
 // ITEM FEATURE
+
+export interface ImageFeature {
+  id: string;
+  type: string;
+  thumbnail: string;  //string???? should be some of ItemFeature.value types
+}
 
 export interface ItemFeature {
   name: string;

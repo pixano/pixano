@@ -94,7 +94,6 @@ License: CECILL-C
           ...noUIfieldsBBox
         } = newItemOrig;
         if ("startRef" in noUIfieldsBBox) delete noUIfieldsBBox.startRef;
-        if ("endRef" in noUIfieldsBBox) delete noUIfieldsBBox.endRef;
         const newItem = new BBox(noUIfieldsBBox);
         newItem.datasetItemType = datasetItemType;
         newItem.displayControl = displayControl;
@@ -242,17 +241,6 @@ License: CECILL-C
     }
     return [previous, next];
   };
-
-  const getTrackletItem = (ann: TrackletItem) => {
-    let item: TrackletItem = {
-      frame_index: ann.frame_index,
-      tracklet_id: ann.tracklet_id,
-    };
-    if (ann.is_key) item.is_key = ann.is_key;
-    if (ann.is_thumbnail) item.is_thumbnail = ann.is_thumbnail;
-    if (ann.hidden) item.hidden = ann.hidden;
-    return item;
-  };
 </script>
 
 {#if track && tracklets}
@@ -286,7 +274,6 @@ License: CECILL-C
         onAddKeyItemClick={() => onAddKeyItemClick(tracklet)}
         {onContextMenu}
         {onEditKeyItemClick}
-        {getTrackletItem}
         onSplitTrackletClick={() => onSplitTrackletClick(tracklet)}
         onDeleteTrackletClick={() => onDeleteTrackletClick(tracklet)}
         {findNeighborItems}

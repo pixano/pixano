@@ -7,7 +7,6 @@ License: CECILL-C
 <script lang="ts">
   // Imports
   import { Check, BoxSelectIcon, Filter } from "lucide-svelte";
-  import { nanoid } from "nanoid";
 
   import { PrimaryButton, SliderWithValue, IconButton, Switch, cn } from "@pixano/core";
   import { Annotation } from "@pixano/core";

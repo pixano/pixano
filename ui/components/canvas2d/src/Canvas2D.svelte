@@ -1216,7 +1216,7 @@ License: CECILL-C
         //trigger a currentAnn with existing constructs
         //we do not have view id here, so get it from Konva image "name" field (TODO is it OK for video??)
         const imageKonva: Konva.Image = viewLayer.findOne(`#image-${view_name}`);
-        await updateCurrentMask({ id: imageKonva.attrs.name, name: view_name });
+        await updateCurrentMask({ id: imageKonva.attrs.name as string, name: view_name });
       } else {
         clearCurrentAnn(view_name, stage, selectedTool);
       }

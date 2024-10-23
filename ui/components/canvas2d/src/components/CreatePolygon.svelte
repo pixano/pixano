@@ -9,7 +9,7 @@ License: CECILL-C
   import Konva from "konva";
   import { Group, Line } from "svelte-konva";
 
-  import type { DatasetItem, Shape, Reference } from "@pixano/core";
+  import type { Shape, Reference } from "@pixano/core";
   import type { PolygonGroupPoint } from "../lib/types/canvas2dTypes";
   import { runLengthEncode, convertPointToSvg } from "../api/maskApi";
   import { INPUTRECT_STROKEWIDTH } from "../lib/constants";
@@ -17,7 +17,7 @@ License: CECILL-C
 
   // Exports
   export let viewRef: Reference;
-  export let selectedItemId: DatasetItem["id"];
+  export let selectedItemId: string;
   export let newShape: Shape;
   export let stage: Konva.Stage;
   export let currentImage: HTMLImageElement;
