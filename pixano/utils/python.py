@@ -123,3 +123,10 @@ def fn_sort_dict(dict_: dict[str, Any], order_by: list[str], descending: list[bo
         else:
             key.append(value)
     return tuple(key)
+
+
+def unique_list(sequence: Sequence) -> Sequence:
+    """Select unique elements in a list while keeping order."""
+    seen: list = []
+    seen_add = seen.append
+    return [x for x in sequence if not (x in seen or seen_add(x))]
