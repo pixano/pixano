@@ -58,7 +58,6 @@ License: CECILL-C
   let tracks: Track[] = [];
   entities.subscribe((entities) => {
     tracks = entities.filter((entity) => entity.is_track);
-    console.log("changed Tracks!", tracks);
   });
 
   const current_itemBBoxes = derived(

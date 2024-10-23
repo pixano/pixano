@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Button, SequenceFrame, type SaveShape, type SaveTrackletShape } from "@pixano/core/src";
 
-  import { Annotation, Entity, type Shape, type SaveItem } from "@pixano/core";
+  import { Annotation, Entity, Tracklet, type Shape, type SaveItem } from "@pixano/core";
 
   import {
     newShape,
@@ -31,6 +31,7 @@ License: CECILL-C
     defineCreatedEntity,
     addOrUpdateSaveItem,
   } from "../../lib/api/objectsApi";
+  import { sortByFrameIndex } from "../../lib/api/videoApi";
 
   export let currentTab: "scene" | "objects";
   let shape: Shape;
@@ -120,7 +121,7 @@ License: CECILL-C
           if (!newTracklet) return;
           newTracklet.highlighted = "none";
           newTracklet.displayControl = { editing: false };
-          //add Tracklet
+          (newTracklet as Tracklet).childs = [newObject, newObject2];
 
           const save_item2: SaveItem = {
             change_type: "add",
@@ -166,7 +167,7 @@ License: CECILL-C
           ...(newTracklet ? [newTracklet] : []),
         ];
       });
-
+      $annotations.sort((a, b) => sortByFrameIndex(a, b));
       for (let feat in objectProperties) {
         if (typeof objectProperties[feat] === "string") {
           addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
