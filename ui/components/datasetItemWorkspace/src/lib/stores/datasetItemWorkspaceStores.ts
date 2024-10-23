@@ -102,7 +102,7 @@ export const itemKeypoints = derived([annotations, views], ([$annotations, $view
   for (const ann of $annotations) {
     if (ann.is_keypoints) {
       const kpt = mapObjectToKeypoints(ann as Keypoints, $views);
-      if (kpt) m_keypoints.push();
+      if (kpt) m_keypoints.push(kpt);
     }
   }
   return m_keypoints;

@@ -26,9 +26,6 @@ License: CECILL-C
   export let pageId: string | null;
   export let datasetItemsIds: string[];
 
-  let currentDataset: DatasetInfo;
-  $: currentDatasetStore.subscribe((value) => (currentDataset = value));
-
   let currentItemId: string;
   let isLoading: boolean;
   let canSaveCurrentItem: boolean;
@@ -52,7 +49,7 @@ License: CECILL-C
 
     // If a neighbor item has been found
     if (neighborId) {
-      const route = `/${currentDataset.id}/dataset/${neighborId}`;
+      const route = `/${$currentDatasetStore.id}/dataset/${neighborId}`;
 
       // Ask for confirmation if modifications have been made to the item
       if (canSaveCurrentItem) {
@@ -99,7 +96,7 @@ License: CECILL-C
         pagination.currentPage = getPageFromItemId(datasetItemsIds, currentItemId);
         return pagination;
       });
-      await navigateTo(`/${currentDataset.id}/dataset`);
+      await navigateTo(`/${$currentDatasetStore.id}/dataset`);
     } else await navigateTo("/");
   };
 
@@ -152,7 +149,7 @@ License: CECILL-C
       bg-white border-b border-slate-200 shadow-sm text-slate-800"
     use:preventUnsavedUnload
   >
-    {#if currentDataset}
+    {#if $currentDatasetStore}
       <div class="h-10 flex items-center font-semibold text-2xl">
         <div class="flex gap-4 items-center font-light">
           <button on:click={() => navigateTo("/")} class="h-10 w-10">
@@ -164,7 +161,7 @@ License: CECILL-C
           >
             <ArrowLeftCircleIcon />
           </IconButton>
-          {currentDataset.name}
+          {$currentDatasetStore.name}
         </div>
       </div>
     {/if}
@@ -187,7 +184,7 @@ License: CECILL-C
       {#each navItems as { name, Icon }}
         <PrimaryButton
           isSelected={pageId?.includes(`/${name}`.toLowerCase())}
-          on:click={() => navigateTo(`/${currentDataset.id}/${name.toLocaleLowerCase()}`)}
+          on:click={() => navigateTo(`/${$currentDatasetStore.id}/${name.toLocaleLowerCase()}`)}
         >
           <Icon strokeWidth={1} />
           {name}

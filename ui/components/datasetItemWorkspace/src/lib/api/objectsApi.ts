@@ -241,7 +241,6 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
 
     // Check if the object is an image Annotation
     if (object.datasetItemType === "image") {
-      console.log("XXX ToSave: update shape", newShape);
       let changed = false;
       if (newShape.type === "mask" && object.is_mask) {
         (object as Mask).data.counts = newShape.counts;
@@ -375,7 +374,7 @@ export const defineCreatedEntity = (
     },
   };
   for (const feat of Object.values(features)) {
-    entity.data = {...entity.data, [feat.name]: feat.value};
+    entity.data = { ...entity.data, [feat.name]: feat.value };
   }
   if (isVideo) {
     //already done just before, but lint require entity.data.name, and can't know it's done...
