@@ -6,7 +6,7 @@
 
 import pytest
 
-from pixano.utils.python import get_super_type_from_dict, natural_key
+from pixano.utils.python import get_super_type_from_dict, natural_key, unique_list
 
 
 def test_natural_key():
@@ -45,3 +45,19 @@ def test_get_super_type_from_dict():
     assert get_super_type_from_dict(TypeC, dict_types) == TypeB
     assert get_super_type_from_dict(TypeD, dict_types) == TypeD
     assert get_super_type_from_dict(int, dict_types) is None
+
+
+def test_unique_list():
+    # Assert elements are unique in output
+    input = [1, 2, 3, 4, 4, 5, 6]
+    assert unique_list(input) == [1, 2, 3, 4, 5, 6]
+
+    # Assert elements are unique in output
+    input = [6, 5, 4, 3, 2, 1, 1]
+    assert unique_list(input) == [6, 5, 4, 3, 2, 1]
+
+    # Assert that is works also on strings,
+    # that elements are unique in output, and that they
+    # keep their order
+    input = ["def", "def", "abc"]
+    assert unique_list(input) == ["def", "abc"]
