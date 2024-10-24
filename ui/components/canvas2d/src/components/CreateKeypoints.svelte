@@ -24,7 +24,7 @@ License: CECILL-C
   export let stage: Konva.Stage;
   export let viewRef: Reference;
 
-  let keypointsId = "";  //filler value while we don't have the real values for id and template_id
+  let keypointsId = ""; //filler value while we don't have the real values for id and template_id
 
   const findPointCoordinate = (point: number, type: "x" | "y") => {
     if (newShape.status === "creating") {
