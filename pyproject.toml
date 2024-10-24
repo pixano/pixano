@@ -86,7 +86,6 @@ path = "pixano/__version__.py"
 [tool.ruff]
 line-length = 119
 extend-exclude = ["ui"]
-extend-include = ["notebooks/**/*.ipynb"]
 
 [tool.ruff.lint]
 ignore = ["D205", "C901", "D100", "D104"]

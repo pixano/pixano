@@ -15,7 +15,6 @@ on:
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
-      - "develop"
       - "main"
   pull_request:
     paths:
@@ -25,7 +24,7 @@ on:
       - "pyproject.toml"
       - ".pre-commit-config.yaml"
     branches:
-      - "develop"
+      - "main"
 
 permissions:
   contents: read
