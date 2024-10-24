@@ -72,12 +72,12 @@ License: CECILL-C
           // for video, there is 2 anns, 1 track, 1 tracklet: add obj2 and tracklet
           let endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
           //get view at endFrameIndex. If doesn't exist, get last possible one (range 5 down to 0)
-          const views = $views[shape.viewRef.name];
+          const seqs = $views[shape.viewRef.name];
           let endView: SequenceFrame | undefined = undefined;
-          if (Array.isArray(views)) {
+          if (Array.isArray(seqs)) {
             while (!endView) {
               endFrameIndex = endFrameIndex - 1;
-              endView = views.find(
+              endView = seqs.find(
                 (view) =>
                   view.data.frame_index === endFrameIndex &&
                   view.table_info.name === (shape as SaveShape).viewRef.name,
@@ -170,7 +170,7 @@ License: CECILL-C
       $annotations.sort((a, b) => sortByFrameIndex(a, b));
       for (let feat in objectProperties) {
         if (typeof objectProperties[feat] === "string") {
-          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat] as string);
+          addNewInput($itemMetas.featuresList, "objects", feat, objectProperties[feat]);
         }
       }
       newShape.set({ status: "none", shouldReset: true });

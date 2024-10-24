@@ -9,16 +9,15 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
 
   import {
-    type EditShape,
-    type Tracklet,
     DatasetItem,
-    type ImagesPerView,
     Annotation,
     BBox,
     Track,
-    type KeypointsTemplate,
-    type SaveItem,
     SequenceFrame,
+    type EditShape,
+    type KeypointsTemplate,
+    type ImagesPerView,
+    type SaveItem,
   } from "@pixano/core";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
   import { Canvas2D } from "@pixano/canvas2d";
@@ -150,7 +149,6 @@ License: CECILL-C
 
   let inspectorMaxHeight = 250;
   let expanding = false;
-  let currentFrame: number = 0;
 
   let imagesPerView: ImagesPerView = {};
 
@@ -159,7 +157,7 @@ License: CECILL-C
   ).reduce(
     (acc, [key, value]) => {
       acc[key] = (value as SequenceFrame[]).map((view) => {
-        return { id: view.id, url: view.data.url as string };
+        return { id: view.id, url: view.data.url };
       });
       return acc;
     },
@@ -188,7 +186,7 @@ License: CECILL-C
     updateView(0);
   });
 
-  const updateView = (imageIndex: number, newTrack: Tracklet[] | undefined = undefined) => {
+  const updateView = (imageIndex: number) => {
     Object.entries(imagesFilesUrls).forEach(([key, urls]) => {
       const image = new Image();
       const src = `/${urls[imageIndex].url}`;
@@ -201,7 +199,6 @@ License: CECILL-C
         ),
       };
     });
-    currentFrame = imageIndex;
   };
 
   const editKeyItemInTracklet = (
@@ -268,7 +265,7 @@ License: CECILL-C
       }
       //update
       //TODO note: lint warnings because KPT and mask not covered yet. (new_ann not set in these cases))
-      updated_annotations = [...$annotations, new_ann];
+      updated_annotations = [...annotations, new_ann];
       saveData = {
         change_type: "add",
         object: new_ann,

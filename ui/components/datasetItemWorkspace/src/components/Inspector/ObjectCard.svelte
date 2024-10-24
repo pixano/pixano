@@ -8,7 +8,7 @@ License: CECILL-C
   // Imports
   import { Eye, EyeOff, Trash2, Pencil, ChevronRight } from "lucide-svelte";
 
-  import { cn, IconButton, Checkbox, BBox } from "@pixano/core/src";
+  import { cn, IconButton, Checkbox } from "@pixano/core/src";
   import { Thumbnail } from "@pixano/canvas2d";
   import {
     type DisplayControl,

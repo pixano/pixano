@@ -12,7 +12,7 @@ License: CECILL-C
 
   import pixanoLogo from "@pixano/core/src/assets/pixano.png";
 
-  import { IconButton, PrimaryButton, ConfirmModal, type DatasetInfo } from "@pixano/core/src";
+  import { IconButton, PrimaryButton, ConfirmModal } from "@pixano/core/src";
 
   import { findNeighborItemId, getPageFromItemId } from "$lib/api/navigationApi";
   import {

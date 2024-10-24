@@ -64,13 +64,15 @@ export class BaseData<T extends object> {
     this.data = obj.data as T;
   }
 
-  nonFeaturesFields(): string[] {
-    return [];
+  static nonFeaturesFields(): string[] {
+    return ["id", "created_at", "updated_at"];
   }
 
   getDynamicFields(): string[] {
     const instanceKeys = Object.keys(this.data);
-    return instanceKeys.filter((key) => !this.nonFeaturesFields().includes(key));
+    return instanceKeys.filter(
+      (key) => !(this.constructor as typeof BaseData).nonFeaturesFields().includes(key),
+    );
   }
 }
 
@@ -91,7 +93,7 @@ export class View extends BaseData<ViewType> {
     super(obj);
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["item_ref", "parent_ref"]);
   }
 
@@ -143,7 +145,7 @@ export class Image extends View {
     this.data = obj.data as ImageType & ViewType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     //return super.nonFeaturesFields().concat(["url", "width", "height", "format"]);
     return super.nonFeaturesFields().concat(["url"]);
   }
@@ -166,7 +168,7 @@ export class SequenceFrame extends Image {
     this.data = obj.data as SequenceFrameType & ImageType & ViewType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["timestamp", "frame_index"]);
   }
 }
@@ -191,7 +193,7 @@ export class Entity extends BaseData<EntityType> {
     super(obj);
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["item_ref", "view_ref", "parent_ref"]);
   }
 
@@ -236,7 +238,7 @@ export class Track extends Entity {
     super(obj as unknown as BaseDataFields<EntityType>);
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     //return super.nonFeaturesFields().concat(["name"]);
     return super.nonFeaturesFields(); //name is a feature indeed !
   }
@@ -267,7 +269,7 @@ export class Annotation extends BaseData<AnnotationType> {
     super(obj);
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["item_ref", "view_ref", "entity_ref", "source_ref"]);
   }
 
@@ -345,7 +347,7 @@ export class BBox extends Annotation {
     this.data = obj.data as BBoxType & AnnotationType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["confidence", "coords", "format", "is_normalized"]);
   }
 }
@@ -375,7 +377,7 @@ export class Keypoints extends Annotation {
     this.data = obj.data as KeypointsType & AnnotationType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["template_id", "coords", "states"]);
   }
 }
@@ -405,7 +407,7 @@ export class Mask extends Annotation {
     this.data = obj.data as MaskType & AnnotationType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields().concat(["size", "counts"]);
   }
 }
@@ -432,7 +434,7 @@ export class Tracklet extends Annotation {
     this.data = obj.data as TrackletType & AnnotationType;
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super
       .nonFeaturesFields()
       .concat(["start_timestep", "end_timestep", "start_timestamp", "end_timestamp"]);
@@ -450,7 +452,7 @@ export class Item extends BaseData<ItemType> {
     super(obj);
   }
 
-  nonFeaturesFields(): string[] {
+  static nonFeaturesFields(): string[] {
     return super.nonFeaturesFields();
   }
 }

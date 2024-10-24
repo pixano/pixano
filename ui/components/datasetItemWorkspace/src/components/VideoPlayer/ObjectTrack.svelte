@@ -168,19 +168,18 @@ License: CECILL-C
 
   const onSplitTrackletClick = (tracklet: Tracklet) => {
     const [prev, next] = findPreviousAndNext(tracklet, rightClickFrameIndex);
-    const { left, right } = splitTrackletInTwo(tracklet, prev, next);
+    const newOnRight = splitTrackletInTwo(tracklet, prev, next);
     //add Entity child
     entities.update((objects) =>
       objects.map((entity) => {
         if (entity.is_track && entity.id === track.id) {
-          entity.childs?.push(right);
+          entity.childs?.push(newOnRight);
           entity.childs?.sort((a, b) => sortByFrameIndex(a, b));
         }
         return entity;
       }),
     );
-
-    annotations.update((objects) => objects.concat(right));
+    annotations.update((objects) => objects.concat(newOnRight));
   };
 
   const onDeleteTrackletClick = (tracklet: Tracklet) => {

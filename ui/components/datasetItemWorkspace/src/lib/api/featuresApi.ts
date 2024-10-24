@@ -41,7 +41,7 @@ export function createFeature<T extends object>(
       features.push({
         name: field,
         dtype: extraFieldsType[field],
-        value: obj.data[field] as unknown,
+        value: (obj.data as Record<string, unknown>)[field],
       } as ItemFeature);
   }
   const parsedFeatures = createObjectInputsSchema.parse(
@@ -53,7 +53,7 @@ export function createFeature<T extends object>(
     })),
   );
   return parsedFeatures.map((feature) => {
-    const value = obj.data[feature.name] as string; //TODO? type (feature.type to type)
+    const value = (obj.data as Record<string, unknown>)[feature.name] as string; //TODO? type (feature.type to type)
     if (feature.type === "list")
       return { ...feature, options: feature.options, value } as ListFeature;
     return { ...feature, value } as IntFeature | FloatFeature | TextFeature | CheckboxFeature;

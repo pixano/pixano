@@ -115,7 +115,7 @@ export const splitTrackletInTwo = (
   tracklet2split: Tracklet,
   prev: number,
   next: number,
-): { left: Annotation; right: Annotation } => {
+): Annotation => {
   const rightTrackletOrig = structuredClone(tracklet2split);
   const {
     datasetItemType,
@@ -150,7 +150,7 @@ export const splitTrackletInTwo = (
     object: rightTracklet,
   };
   saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_right));
-  return { left: tracklet2split, right: rightTracklet };
+  return rightTracklet;
 };
 
 export const sortByFrameIndex = (a: Annotation, b: Annotation) => {
