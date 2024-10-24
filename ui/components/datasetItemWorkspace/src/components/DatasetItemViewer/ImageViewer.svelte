@@ -10,7 +10,7 @@ License: CECILL-C
   import * as ort from "onnxruntime-web";
   import { Canvas2D } from "@pixano/canvas2d";
   import type { InteractiveImageSegmenterOutput } from "@pixano/models";
-  import type { ImageDatasetItem, ItemView } from "@pixano/core";
+  import { DatasetItem, Image, type ImagesPerView } from "@pixano/core";
   import { Image as ImageJS } from "image-js";
 
   // Import stores and API functions
@@ -20,7 +20,7 @@ License: CECILL-C
     itemKeypoints,
     itemMasks,
     selectedTool,
-    itemObjects,
+    annotations,
     preAnnotationIsActive,
     colorScale,
     filters,
@@ -32,12 +32,11 @@ License: CECILL-C
   import { templates } from "../../lib/settings/keyPointsTemplates";
 
   // Attributes
-  export let selectedItem: ImageDatasetItem;
+  export let selectedItem: DatasetItem;
   export let embeddings: Record<string, ort.Tensor>;
   export let currentAnn: InteractiveImageSegmenterOutput | null = null;
 
   // Images per view type
-  type ImagesPerView = Record<string, HTMLImageElement[]>;
   let imagesPerView: ImagesPerView = {};
   let loaded: boolean = false; // Loading status of images per view
 
@@ -80,11 +79,10 @@ License: CECILL-C
    * @param views The views to load images from.
    * @returns A promise that resolves to the loaded images per view.
    */
-  const loadImages = async (views: Record<string, ItemView>): Promise<ImagesPerView> => {
+  const loadImages = async (views: Record<string, Image>): Promise<ImagesPerView> => {
     const images: ImagesPerView = {};
     const promises: Promise<void>[] = Object.entries(views).map(async ([key, value]) => {
-      const img: ImageJS = await ImageJS.load(`/${value.uri}`);
-
+      const img: ImageJS = await ImageJS.load(`/${value.data.url}`);
       const bitDepth = img.bitDepth as number;
       $itemMetas.format = bitDepth === 1 ? "1bit" : bitDepth === 8 ? "8bit" : "16bit";
       $itemMetas.color = img.channels === 4 ? "rgba" : img.channels === 3 ? "rgb" : "grayscale";
@@ -93,9 +91,9 @@ License: CECILL-C
         normalize16BitImage(img, $filters.u16BitRange[0], $filters.u16BitRange[1]);
       }
 
-      const image: HTMLImageElement = new Image();
+      const image: HTMLImageElement = document.createElement("img");
       image.src = img.toDataURL();
-      images[key] = [image];
+      images[key] = [{ id: value.id, element: image }];
     });
 
     await Promise.all(promises);
@@ -108,7 +106,7 @@ License: CECILL-C
   const updateImages = async (): Promise<void> => {
     if (selectedItem.views) {
       loaded = false;
-      imagesPerView = await loadImages(selectedItem.views);
+      imagesPerView = await loadImages(selectedItem.views as Record<string, Image>);
       loaded = true;
     }
   };
@@ -129,7 +127,7 @@ License: CECILL-C
 
   // Reactive statement to update item objects when new shape is being edited and pre-annotation is not active
   $: if ($newShape?.status === "editing" && !$preAnnotationIsActive) {
-    itemObjects.update((objects) => updateExistingObject(objects, $newShape));
+    annotations.update((objects) => updateExistingObject(objects, $newShape));
   }
 
   // Reactive statement to set the selected tool
@@ -140,12 +138,12 @@ License: CECILL-C
 {#if loaded}
   <Canvas2D
     {imagesPerView}
-    selectedItemId={selectedItem.id}
+    selectedItemId={selectedItem.item.id}
     colorScale={$colorScale[1]}
     bboxes={$itemBboxes}
     masks={$itemMasks}
     keypoints={$itemKeypoints}
-    selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
+    selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
     {embeddings}
     {filters}
     imageSmoothing={$imageSmoothing}

@@ -6,14 +6,16 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { Input, Checkbox, Combobox } from "@pixano/core/src";
+  import { Input, Checkbox, Combobox, Entity, Track } from "@pixano/core/src";
   import type { FeatureValues, ItemFeature } from "@pixano/core";
 
   import { itemMetas } from "../../lib/stores/datasetItemWorkspaceStores";
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
   import {
     createObjectInputsSchema,
     createSchemaFromFeatures,
+    type InputFeatures,
   } from "../../lib/settings/objectValidationSchemas";
   import type {
     CreateObjectInputs,
@@ -21,7 +23,7 @@ License: CECILL-C
   } from "../../lib/types/datasetItemWorkspaceTypes";
   import AutocompleteTextFeature from "./AutoCompleteFeatureInput.svelte";
 
-  import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
+  //import { defaultObjectFeatures } from "../../lib/settings/defaultFeatures";
   import { mapFeatureList } from "../../lib/api/featuresApi";
 
   export let isFormValid: boolean = false;
@@ -32,17 +34,43 @@ License: CECILL-C
 
   let objectValidationSchema: CreateObjectSchema;
 
-  itemMetas.subscribe((metas) => {
-    const itemFeaturesArray = Object.values(metas.objectFeatures || defaultObjectFeatures).map(
-      (feature) => ({
-        ...feature,
-        label: feature.name,
-        required: true,
-        type: feature.dtype,
-      }),
-    );
-    objectValidationSchema = createSchemaFromFeatures(itemFeaturesArray);
-    formInputs = createObjectInputsSchema.parse(itemFeaturesArray);
+  datasetSchema.subscribe((schema) => {
+    let featuresArray: InputFeatures = [];
+    Object.values(schema.schemas).forEach((sch) => {
+      let nonFeatsFields: string[] = [];
+      if (["Entity", "Track"].includes(sch.base_schema)) {
+        if ("Entity" === sch.base_schema) {
+          nonFeatsFields = nonFeatsFields.concat(Entity.nonFeaturesFields());
+        }
+        if ("Track" === sch.base_schema) {
+          nonFeatsFields = nonFeatsFields.concat(Track.nonFeaturesFields());
+        }
+        //TODO: custom fields from other types
+        for (const feat in sch.fields) {
+          if (!nonFeatsFields.includes(feat)) {
+            if (["int", "float", "str", "bool", "list"].includes(sch.fields[feat].type)) {
+              featuresArray.push({
+                name: feat,
+                required: false, //TODO (info not in datasetSchema (nowhere yet))
+                label: feat,
+                type: sch.fields[feat].type as "int" | "float" | "str" | "bool",
+              });
+            }
+            if ("list" === sch.fields[feat].type) {
+              featuresArray.push({
+                name: feat,
+                required: false, //TODO (info not in datasetSchema (nowhere yet))
+                label: feat,
+                type: "list",
+                options: [], //TODO for list type (not covered yet)
+              });
+            }
+          }
+        }
+      }
+    });
+    objectValidationSchema = createSchemaFromFeatures(featuresArray);
+    formInputs = createObjectInputsSchema.parse(featuresArray);
   });
 
   const handleInputChange = (value: string | number | boolean, propertyLabel: string) => {
@@ -59,6 +87,7 @@ License: CECILL-C
 
   $: {
     const result = objectValidationSchema.safeParse(objectProperties);
+    if (!result.success) console.error("Bad Input:", result.error); //TODO: correctly warn user
     isFormValid = result.success;
   }
 

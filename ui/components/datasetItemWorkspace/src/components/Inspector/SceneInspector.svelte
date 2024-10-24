@@ -10,22 +10,25 @@ License: CECILL-C
 
   // Internal library imports
   import { Pencil } from "lucide-svelte";
-  import { IconButton, Switch, type ItemFeature, type ItemView } from "@pixano/core/src";
+  import { IconButton, Switch } from "@pixano/core/src";
+  import { Image, SequenceFrame, type ItemType, type SaveItem } from "@pixano/core";
 
   // Local imports
   import {
-    canSave,
+    saveData,
+    views,
     itemMetas,
     filters,
     imageSmoothing,
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import UpdateFeatureInputs from "../Features/UpdateFeatureInputs.svelte";
   import { createFeature } from "../../lib/api/featuresApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
   import type { Feature, ItemsMeta } from "../../lib/types/datasetItemWorkspaceTypes";
-  import { defaultSceneFeatures } from "../../lib/settings/defaultFeatures";
+  import { datasetSchema } from "../../../../../apps/pixano/src/lib/stores/datasetStores";
 
-  type ItemMeta = {
-    fileName: string;
+  type ViewMeta = {
+    fileName: string | undefined;
     width: number;
     height: number;
     format: string;
@@ -37,24 +40,27 @@ License: CECILL-C
   let isEditing: boolean = false;
   let itemType: string = "";
   let combineChannels: boolean = false;
-  let itemMeta: ItemMeta[] = [];
+  let viewMeta: ViewMeta[] = [];
 
-  itemMetas.subscribe((metas) => {
-    itemMeta = Object.values(metas.views || {}).map((view: ItemView | ItemView[]) => {
-      const image: ItemView = Array.isArray(view) ? view[0] : view;
-      itemType = metas.type;
+  views.subscribe((views) => {
+    viewMeta = Object.values(views || {}).map((view: Image | SequenceFrame[]) => {
+      let image: Image | SequenceFrame;
+      if (Array.isArray(view)) {
+        itemType = "video";
+        image = view[0];
+      } else {
+        itemType = "image";
+        image = view;
+      }
       return {
-        fileName: image.uri.split("/").at(-1) as string,
-        width: image.features.width.value as number,
-        height: image.features.height.value as number,
-        format: image.uri.split(".").at(-1)?.toUpperCase() as string,
+        fileName: image.data.url.split("/").at(-1),
+        width: image.data.width,
+        height: image.data.height,
+        format: image.data.format,
         id: image.id,
       };
     });
-    const mainFeatures: Record<string, ItemFeature> = Object.values(metas.mainFeatures || {}).length
-      ? metas.mainFeatures
-      : defaultSceneFeatures;
-    features = createFeature(mainFeatures);
+    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
   });
 
   /**
@@ -73,16 +79,15 @@ License: CECILL-C
   const handleTextInputChange = (value: string | boolean | number, propertyName: string) => {
     itemMetas.update((oldMetas) => {
       const newMetas: ItemsMeta = { ...oldMetas };
-      newMetas.mainFeatures = {
-        ...newMetas.mainFeatures,
-        [propertyName]: {
-          ...(newMetas.mainFeatures?.[propertyName] || defaultSceneFeatures[propertyName]),
-          value,
-        },
+      newMetas.item.data[propertyName] = value;
+      const save_item: SaveItem = {
+        change_type: "update",
+        object: newMetas.item,
       };
+      saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
       return newMetas;
     });
-    canSave.set(true);
+    features = createFeature<ItemType>($itemMetas.item, $datasetSchema);
   };
 </script>
 
@@ -110,7 +115,7 @@ License: CECILL-C
 
 <!-- Item Meta Information Section -->
 <div class="p-4 pb-8 border-b-2 border-b-slate-500 text-slate-800">
-  {#each itemMeta as meta}
+  {#each viewMeta as meta}
     <h3 class="uppercase font-medium h-10 flex items-center">{meta.id}</h3>
     <div class="mx-4 mb-4">
       <div class="grid gap-4 grid-cols-[150px_auto] mt-2">

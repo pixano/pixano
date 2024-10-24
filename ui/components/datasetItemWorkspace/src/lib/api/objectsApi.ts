@@ -5,21 +5,29 @@ License: CECILL-C
 -------------------------------------*/
 
 // Imports
-import type {
-  ItemObject,
-  ItemBBox,
+import {
+  Annotation,
   BBox,
-  DisplayControl,
   Mask,
-  DatasetItem,
+  Keypoints,
+  Tracklet,
+  Entity,
+  Track,
+  Image,
+  SequenceFrame,
+} from "@pixano/core";
+import type {
+  Reference,
+  MView,
+  DisplayControl,
   Shape,
-  ItemView,
+  BBoxType,
+  MaskType,
   SaveShape,
-  ItemObjectBase,
-  VideoItemBBox,
   KeypointsTemplate,
-  VideoObject,
   SaveItem,
+  DatasetSchema,
+  ItemFeature,
 } from "@pixano/core";
 import { mask_utils } from "@pixano/models/src";
 
@@ -41,206 +49,156 @@ import { DEFAULT_FEATURE } from "../settings/defaultFeatures";
 import { nanoid } from "nanoid";
 import { templates } from "../settings/keyPointsTemplates";
 
-const defineTooltip = (object: ItemObject): string | null => {
-  let bbox: ItemBBox | undefined;
-  // Check object type to extract the bbox object
-  if (object.datasetItemType === "image" && object.bbox) bbox = object.bbox;
-  else if (object.datasetItemType === "video") {
-    //TMP TODO for video object on several view, we take the first available view (?)
-    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
-    const displayedBox = object.displayedMBox[0];
-    bbox = displayedBox;
-  }
+export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | undefined => {
+  return entities.find((entity) => entity.id === ann.data.entity_ref.id);
+};
 
-  if (!bbox) return null;
+export const getObjectsEntities = (anns: Annotation[], entities: Entity[]): Entity[] => {
+  const entities_ids = anns.map((ann) => ann.data.entity_ref.id);
+  return entities.filter((entity) => entities_ids.includes(entity.id));
+};
+
+const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
+  if (!(bbox && bbox.is_bbox)) return null;
 
   const confidence =
-    bbox.confidence !== 0.0 && object.source_id !== GROUND_TRUTH
-      ? " " + bbox.confidence.toFixed(2)
+    bbox.data.confidence !== 0.0 && bbox.data.source_ref.name !== GROUND_TRUTH
+      ? " " + bbox.data.confidence.toFixed(2)
       : "";
+
   const tooltip =
-    typeof object.features[DEFAULT_FEATURE]?.value === "string"
-      ? object.features[DEFAULT_FEATURE]?.value + confidence
+    typeof entity.data[DEFAULT_FEATURE] === "string"
+      ? entity.data[DEFAULT_FEATURE] + confidence
       : null;
   return tooltip;
 };
 
-export const mapObjectToBBox = (obj: ItemObject, views: DatasetItem["views"]): BBox[] => {
-  const res_bboxes: BBox[] = [];
-  const boxes = obj.datasetItemType === "video" ? obj.displayedMBox : [obj.bbox];
-  if (!boxes) return res_bboxes;
-  for (const box of boxes) {
-    if (!box || (obj.datasetItemType === "video" && box.displayControl?.hidden)) continue;
-    if (obj.source_id === PRE_ANNOTATION && obj.highlighted !== "self") continue;
-    if (!box.view_id) continue;
-    const view = views?.[box.view_id];
-    const image: ItemView = Array.isArray(view) ? view[0] : view;
-    const imageHeight = (image.features.height.value as number) || 1;
-    const imageWidth = (image.features.width.value as number) || 1;
-    const [x, y, width, height] = box.coords;
-    const bbox = [x * imageWidth, y * imageHeight, width * imageWidth, height * imageHeight];
-
-    const tooltip = defineTooltip(obj);
-
-    res_bboxes.push({
-      id: obj.id,
-      viewId: box.view_id,
-      catId: (obj.features.category_id?.value || 1) as number,
-      bbox,
-      tooltip,
-      opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-      visible: !box.displayControl?.hidden && !obj.displayControl?.hidden,
-      editing: obj.displayControl?.editing,
-      strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
-      highlighted: obj.highlighted,
-    } as BBox);
+export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
+  if (!bbox) return;
+  if (!bbox.is_bbox) return;
+  if (bbox.datasetItemType === "video" && bbox.displayControl?.hidden) return;
+  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.highlighted !== "self") return;
+  if (!bbox.data.view_ref.name) return;
+  let bbox_denorm_coords = bbox.data.coords;
+  if (bbox.data.is_normalized) {
+    const view = views[bbox.data.view_ref.name];
+    const image = Array.isArray(view) ? view[0] : view;
+    const imageHeight = image.data.height || 1;
+    const imageWidth = image.data.width || 1;
+    const [x, y, width, height] = bbox.data.coords;
+    bbox_denorm_coords = [
+      x * imageWidth,
+      y * imageHeight,
+      width * imageWidth,
+      height * imageHeight,
+    ];
   }
-  return res_bboxes;
+  const entity = getObjectEntity(bbox, entities);
+  const tooltip = entity ? defineTooltip(bbox, entity) : "";
+
+  return {
+    ...bbox,
+    data: {
+      ...bbox.data,
+      coords: bbox_denorm_coords,
+    },
+    tooltip,
+    opacity: bbox.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+    visible: !bbox.displayControl?.hidden,
+    editing: bbox.displayControl?.editing,
+    strokeFactor: bbox.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+    highlighted: bbox.highlighted,
+  } as BBox;
 };
 
-export const mapObjectToMasks = (obj: ItemObject): Mask | undefined => {
+export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
   if (
-    obj.datasetItemType === "image" && // Only images use masks ?
-    obj.mask &&
-    obj.mask.view_id &&
+    obj.is_mask &&
+    obj.data.view_ref.name &&
     !obj.review_state &&
-    !(obj.source_id === PRE_ANNOTATION && obj.review_state === "accepted")
+    !(obj.data.source_ref.name === PRE_ANNOTATION && obj.review_state === "accepted")
   ) {
-    const rle = obj.mask.counts;
-    const size = obj.mask.size;
+    const rle = obj.data.counts as number[];
+    const size = obj.data.size;
     const maskPoly = mask_utils.generatePolygonSegments(rle, size[0]);
     const masksSVG = mask_utils.convertSegmentsToSVG(maskPoly);
 
     return {
       id: obj.id,
-      viewId: obj.mask.view_id,
       svg: masksSVG,
-      rle: obj.mask,
-      catId: (obj.features.category_id?.value || 1) as number,
-      visible: !obj.mask.displayControl?.hidden && !obj.displayControl?.hidden,
+      data: obj.data,
+      visible: !obj.displayControl?.hidden && !obj.displayControl?.hidden,
       editing: obj.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
       opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
       strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
       highlighted: obj.highlighted,
-    };
+    } as Mask;
   }
-
   return undefined;
 };
 
 export const mapObjectToKeypoints = (
-  object: ItemObject,
-  views: DatasetItem["views"],
-): KeypointsTemplate[] => {
-  const res_m_keypoints: KeypointsTemplate[] = [];
-  const m_keypoints =
-    object.datasetItemType === "video" ? object.displayedMKeypoints : [object.keypoints];
-  if (!m_keypoints) return [] as KeypointsTemplate[];
-  for (const keypoints of m_keypoints) {
-    if (
-      !keypoints ||
-      !keypoints.view_id ||
-      (object.datasetItemType === "video" && keypoints.displayControl?.hidden)
-    )
-      continue;
-    const template = templates.find((t) => t.id === keypoints?.template_id);
-    if (!template) continue;
-    const view = views?.[keypoints.view_id];
-    const image: ItemView = Array.isArray(view) ? view[0] : view;
-    const imageHeight = (image.features.height.value as number) || 1;
-    const imageWidth = (image.features.width.value as number) || 1;
-    const vertices = keypoints.vertices.map((vertex, i) => ({
-      ...vertex,
-      x: vertex.x * imageWidth,
-      y: vertex.y * imageHeight,
-      features: {
-        ...(template.vertices[i].features || {}),
-        ...(vertex.features || {}),
-      },
-    }));
-    res_m_keypoints.push({
-      id: object.id,
-      view_id: keypoints.view_id,
-      vertices,
-      edges: template.edges,
-      editing: object.displayControl?.editing,
-      visible: !keypoints.displayControl?.hidden && !object.displayControl?.hidden,
-      highlighted: object.highlighted,
-    } as KeypointsTemplate);
+  keypoints: Keypoints,
+  views: MView,
+): KeypointsTemplate | undefined => {
+  if (
+    !keypoints ||
+    !keypoints.data.view_ref.name ||
+    (keypoints.datasetItemType === "video" && keypoints.displayControl?.hidden)
+  )
+    return;
+  const template = templates.find((t) => t.template_id === keypoints.data.template_id);
+  if (!template) return;
+
+  const view = views[keypoints.data.view_ref.name];
+  const image = Array.isArray(view) ? view[0] : view;
+  const imageHeight = image.data.height || 1;
+  const imageWidth = image.data.width || 1;
+  const vertices = [];
+  for (let i = 0; i < keypoints.data.coords.length / 2; i++) {
+    const x = keypoints.data.coords[i * 2] * imageWidth;
+    const y = keypoints.data.coords[i * 2 + 1] * imageHeight;
+    const features = {
+      ...(template.vertices[i].features || {}),
+      ...{ state: keypoints.data.states[i] },
+    };
+    vertices.push({ x, y, features });
   }
-  return res_m_keypoints;
+  const kptTemplate = {
+    id: keypoints.id,
+    template_id: keypoints.data.template_id,
+    viewRef: keypoints.data.view_ref,
+    entityRef: keypoints.data.entity_ref,
+    vertices,
+    edges: template.edges,
+    editing: keypoints.displayControl?.editing,
+    visible: !keypoints.displayControl?.hidden,
+    highlighted: keypoints.highlighted,
+  } as KeypointsTemplate;
+  if ("frame_index" in keypoints) kptTemplate.frame_index = keypoints.frame_index;
+  return kptTemplate;
 };
 
 export const toggleObjectDisplayControl = (
-  object: ItemObject,
+  object: Annotation,
   displayControlProperty: keyof DisplayControl,
   properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
-): ItemObject => {
-  // Check if the object is an ImageObject
-  if (object.datasetItemType === "image") {
-    if (properties.includes("bbox") && object.bbox) {
-      object.bbox.displayControl = {
-        ...object.bbox.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-    if (properties.includes("mask") && object.mask) {
-      object.mask.displayControl = {
-        ...object.mask.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-    if (properties.includes("keypoints") && object.keypoints) {
-      object.keypoints.displayControl = {
-        ...(object.keypoints.displayControl || {}),
-        [displayControlProperty]: value,
-      };
-    }
-    if (properties.includes("bbox") && properties.includes("mask")) {
-      object.displayControl = {
-        ...object.displayControl,
-        [displayControlProperty]: value,
-      };
-    }
-  }
-
-  // Check if the object is a VideoObject
-  if (object.datasetItemType === "video") {
-    if (properties.includes("bbox")) {
-      object.displayControl = {
-        ...(object.displayControl || {}),
-        [displayControlProperty]: value,
-      };
-    }
-  }
-
+): Annotation => {
+  object.displayControl = {
+    ...(object.displayControl || {}),
+    [displayControlProperty]: value,
+  };
   return object;
 };
 
 export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
-  if (newObj["change_type"] == "delete") {
-    for (const ttype in newObj["data"]) {
-      objects = objects.filter(
-        (obj) =>
-          obj.change_type == "add_or_update" &&
-          !(obj.ref_name == ttype && newObj["data"][ttype].includes(obj.data.id)),
-      );
-    }
+  //if delete, remove eventual refs to this obj in objects
+  if (newObj.change_type === "delete") {
+    objects = objects.filter((obj) => newObj.object.id !== obj.object.id);
   }
-  let index = -1;
-  // annotations in front are (sometime?) created without an id
-  if ("id" in newObj.data) {
-    index = objects.findIndex((obj) => obj.data.id === newObj.data.id);
-  } else if ("frame_index" in newObj.data) {
-    index = objects.findIndex(
-      (obj) =>
-        "frame_index" in obj.data &&
-        "frame_index" in newObj.data && //required by tslint even if tested before
-        obj.data.frame_index === newObj.data.frame_index &&
-        obj.ref_name == newObj.ref_name,
-    );
-  }
+  //if newObj already in objects, find it & replace
+  const index = objects.findIndex((obj) => obj.object.id === newObj.object.id);
   if (index !== -1) {
     objects[index] = newObj;
   } else {
@@ -249,20 +207,20 @@ export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
   return objects;
 };
 
-export const sortObjectsByModel = (objects: ItemObject[]) =>
-  objects.reduce(
-    (acc, object) => {
-      if (object.source_id === PRE_ANNOTATION) {
-        if (!object.review_state) acc[PRE_ANNOTATION] = [object, ...acc[PRE_ANNOTATION]];
+export const sortObjectsByModel = (anns: Annotation[]) =>
+  anns.reduce(
+    (acc, ann) => {
+      if (ann.data.source_ref.name === PRE_ANNOTATION) {
+        if (!ann.review_state) acc[PRE_ANNOTATION] = [ann, ...acc[PRE_ANNOTATION]];
         return acc;
       }
-      acc[object.source_id] = [object, ...(acc[object.source_id] || [])];
+      acc[ann.data.source_ref.name] = [ann, ...(acc[ann.data.source_ref.name] || [])];
       return acc;
     },
-    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType,
+    { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType<Annotation>,
   );
 
-export const updateExistingObject = (objects: ItemObject[], newShape: Shape): ItemObject[] => {
+export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
   return objects.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
@@ -282,148 +240,171 @@ export const updateExistingObject = (objects: ItemObject[], newShape: Shape): It
 
     if (newShape.shapeId !== object.id) return object;
 
-    // Check if the object is an ImageObject
+    // Check if the object is an image Annotation
     if (object.datasetItemType === "image") {
-      if (newShape.type === "mask" && object.mask) {
-        const newObject = {
-          ...object,
-          mask: {
-            ...object.mask,
-            counts: newShape.counts,
-          },
-        };
-        const save_item: SaveItem = {
-          change_type: "add_or_update",
-          ref_name: newShape.type,
-          is_video: false,
-          data: { ...newObject.mask, entity_ref: { id: newObject.id, name: "top_entity" } },
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-        return newObject;
+      let changed = false;
+      if (newShape.type === "mask" && object.is_mask) {
+        (object as Mask).data.counts = newShape.counts;
+        changed = true;
       }
-      if (newShape.type === "bbox" && object.bbox) {
-        const newObject = {
-          ...object,
-          bbox: {
-            ...object.bbox,
-            coords: newShape.coords,
-          },
-        };
-        const save_item: SaveItem = {
-          change_type: "add_or_update",
-          ref_name: newShape.type,
-          is_video: false,
-          data: { ...newObject.bbox, entity_ref: { id: newObject.id, name: "top_entity" } },
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-        return newObject;
+      if (newShape.type === "bbox" && object.is_bbox) {
+        (object as BBox).data.coords = newShape.coords;
+        changed = true;
       }
-      if (newShape.type === "keypoints" && object.keypoints) {
-        const newObject = {
-          ...object,
-          keypoints: {
-            ...object.keypoints,
-            vertices: newShape.vertices,
-          },
-        };
+      if (newShape.type === "keypoints" && object.is_keypoints) {
+        const coords = [];
+        const states = [];
+        for (const vertex of newShape.vertices) {
+          coords.push(vertex.x);
+          coords.push(vertex.y);
+          if (vertex.features.state) states.push(vertex.features.state);
+        }
+        (object as Keypoints).data.coords = coords;
+        (object as Keypoints).data.states = states;
+        changed = true;
+      }
+      if (changed) {
         const save_item: SaveItem = {
-          change_type: "add_or_update",
-          ref_name: newShape.type,
-          is_video: false,
-          data: { ...newObject.keypoints, entity_ref: { id: newObject.id, name: "top_entity" } },
+          change_type: "update",
+          object,
         };
         saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-        return newObject;
       }
     }
-
     return object;
   });
 };
 
-export const getObjectsToPreAnnotate = (objects: ItemObject[]): ItemObject[] =>
-  objects.filter((object) => object.source_id === PRE_ANNOTATION && !object.review_state);
+export const getObjectsToPreAnnotate = (objects: Annotation[]): Annotation[] =>
+  objects.filter(
+    (object) => object.data.source_ref.name === PRE_ANNOTATION && !object.review_state,
+  );
 
+//Need to check, but it seems this function applies only to BBox
 export const sortAndFilterObjectsToAnnotate = (
-  objects: ItemObject[],
+  objects: Annotation[],
   confidenceFilterValue: number[],
-): ItemObject[] => {
+  currentFrameIndex: number,
+): Annotation[] => {
   return objects
     .filter((object) => {
-      if (object.datasetItemType === "image" && object.bbox) {
-        const confidence = object.bbox.confidence || 0;
+      if (object.datasetItemType === "image" && object.is_bbox) {
+        const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       if (
         object.datasetItemType === "video" &&
-        object.displayedMBox &&
-        object.displayedMBox.length > 0
+        object.is_bbox &&
+        object.frame_index === currentFrameIndex
       ) {
-        //TMP TODO for video object on several view, we take the first available view (?)
-        const confidence = object.displayedMBox[0].confidence || 0;
+        const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       return false; // Ignore objects without bboxes
     })
     .sort((a, b) => {
-      let firstBoxXPosition = 0;
-      let secondBoxXPosition = 0;
-
-      // Get first bbox position
-      if (a.datasetItemType === "image" && a.bbox) firstBoxXPosition = a.bbox.coords[0] || 0;
-      if (a.datasetItemType === "video" && a.displayedMBox && a.displayedMBox.length > 0)
-        firstBoxXPosition = a.displayedMBox[0].coords[0] || 0;
-
-      // Get second bbox position
-      if (b.datasetItemType === "image" && b.bbox) secondBoxXPosition = b.bbox.coords[0] || 0;
-      if (b.datasetItemType === "video" && b.displayedMBox && b.displayedMBox.length > 0)
-        secondBoxXPosition = b.displayedMBox[0].coords[0] || 0;
-
+      const firstBoxXPosition = (a as BBox).data.coords[0] || 0;
+      const secondBoxXPosition = (b as BBox).data.coords[0] || 0;
       return firstBoxXPosition - secondBoxXPosition;
     });
 };
 
 export const mapObjectWithNewStatus = (
-  allObjects: ItemObject[],
-  objectsToAnnotate: ItemObject[],
+  allObjects: Annotation[],
+  objectsToAnnotate: Annotation[],
   status: "accepted" | "rejected",
   features: ObjectProperties = {},
-): ItemObject[] => {
-  const nextObjectId = objectsToAnnotate[1]?.id;
-  return allObjects.map((object) => {
-    if (object.id === nextObjectId) {
-      object.highlighted = "self";
-    } else {
-      object.highlighted = "none";
-    }
-    if (object.id === objectsToAnnotate[0]?.id) {
-      object.review_state = status;
-      Object.keys(features || {}).forEach((key) => {
-        if (object.features[key]) {
-          object.features[key].value = features[key];
-        }
-      });
-    }
-    return object;
-  });
+): Annotation[] => {
+  //TODO (preAnnotation)
+  features;
+  return allObjects;
+
+  // const nextObjectId = objectsToAnnotate[1]?.id;
+  // return allObjects.map((object) => {
+  //   if (object.id === nextObjectId) {
+  //     object.highlighted = "self";
+  //   } else {
+  //     object.highlighted = "none";
+  //   }
+  //   if (object.id === objectsToAnnotate[0]?.id) {
+  //     object.review_state = status;
+  //     Object.keys(features || {}).forEach((key) => {
+  //       if (object[features[key]]) {
+  //         object[features[key]] = features[key];
+  //       }
+  //     });
+  //   }
+  //   return object;
+  // });
 };
 
-export const createObjectCardId = (object: ItemObject): string => `object-${object.id}`;
+export const createObjectCardId = (object: Annotation | Entity): string => `object-${object.id}`;
+
+const getTable = (
+  dataset_schema: DatasetSchema,
+  group: keyof DatasetSchema["groups"],
+  base_schema: string,
+): string => {
+  for (const group_table of dataset_schema.groups[group]) {
+    if (dataset_schema.schemas[group_table].base_schema === base_schema) {
+      //NOTE: if there is several group tables with same base_schema, we could compare with "fields" to choose the correct one
+      //it shouldn't happen for entities, but may happens for annotations...
+      return group_table;
+    }
+  }
+  return dataset_schema.groups[group][0]; //lint protection, should not happens
+};
+
+export const defineCreatedEntity = (
+  shape: SaveShape,
+  features: Record<string, ItemFeature>,
+  dataset_schema: DatasetSchema,
+  isVideo: boolean,
+): Entity | Track => {
+  const table = getTable(dataset_schema, "entities", isVideo ? "Track" : "Entity");
+  const now = new Date(Date.now()).toISOString();
+  const entity = {
+    id: nanoid(10),
+    created_at: now,
+    updated_at: now,
+    table_info: { name: table, group: "entities", base_schema: isVideo ? "Track" : "Entity" },
+    data: {
+      item_ref: { name: "item", id: shape.itemId },
+      view_ref: shape.viewRef,
+      parent_ref: { name: "", id: "" },
+    },
+  };
+  for (const feat of Object.values(features)) {
+    entity.data = { ...entity.data, [feat.name]: feat.value };
+  }
+  if (isVideo) {
+    //already done just before, but lint require entity.data.name, and can't know it's done...
+    const track = { ...entity, data: { ...entity.data, name: features["name"].value as string } };
+    return new Track(track);
+  } else return new Entity(entity);
+};
 
 export const defineCreatedObject = (
+  entity: Entity,
   shape: SaveShape,
-  videoType: DatasetItem["type"],
-  features: ItemObjectBase["features"],
+  viewRef: Reference,
+  dataset_schema: DatasetSchema,
+  isVideo: boolean,
   currentFrameIndex: number,
-) => {
-  const isVideo = videoType === "video";
-  let newObject: ItemObject | null = null;
-  const baseObject = {
+): Annotation | undefined => {
+  const now = new Date(Date.now()).toISOString();
+  const baseAnn = {
     id: nanoid(10),
-    item_id: shape.itemId,
-    source_id: GROUND_TRUTH,
-    features,
+    created_at: now,
+    updated_at: now,
   };
+  const baseData = {
+    item_ref: entity.data.item_ref,
+    view_ref: viewRef,
+    entity_ref: { name: entity.table_info.name, id: entity.id },
+    source_ref: { name: GROUND_TRUTH, id: "" },
+  };
+  let newObject: Annotation | undefined = undefined;
   if (shape.type === "bbox") {
     const { x, y, width, height } = shape.attrs;
     const coords = [
@@ -432,132 +413,76 @@ export const defineCreatedObject = (
       width / shape.imageWidth,
       height / shape.imageHeight,
     ];
-    const bbox = {
-      id: nanoid(10),
+    const bbox: BBoxType = {
       coords,
       format: "xywh",
       is_normalized: true,
       confidence: 1,
-      view_id: shape.viewId,
-      ref_name: "bbox",
     };
-    const isVideo = videoType === "video";
-    if (isVideo) {
-      const id = nanoid(5);
-      newObject = {
-        ...baseObject,
-        highlighted: "self",
-        displayControl: {
-          editing: true,
-        },
-        datasetItemType: "video",
-        displayedMBox: [{ ...bbox, frame_index: 0, tracklet_id: id }],
-        boxes: [
-          {
-            ...bbox,
-            frame_index: currentFrameIndex,
-            is_key: true,
-            is_thumbnail: true,
-            tracklet_id: id,
-          },
-          {
-            ...bbox,
-            id: nanoid(10),
-            frame_index: currentFrameIndex + 5,
-            is_key: true,
-            tracklet_id: id,
-          },
-        ],
-        track: [
-          {
-            start: currentFrameIndex,
-            end: currentFrameIndex + 5,
-            id,
-            view_id: shape.viewId,
-          },
-        ],
-      };
-    } else {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "image",
-        bbox,
-      };
+    const table = getTable(dataset_schema, "annotations", "BBox");
+    newObject = new BBox({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "BBox" },
+      data: { ...baseData, ...bbox },
+    });
+  } else if (shape.type === "mask") {
+    const mask: MaskType = {
+      counts: shape.rle.counts,
+      size: shape.rle.size,
+    };
+    const table = getTable(dataset_schema, "annotations", "CompressedRLE");
+    newObject = new Mask({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "CompressedRLE" },
+      data: { ...baseData, ...mask },
+    });
+  } else if (shape.type === "keypoints") {
+    const coords = [];
+    const states = [];
+    for (const vertex of shape.keypoints.vertices) {
+      coords.push(vertex.x / shape.imageWidth);
+      coords.push(vertex.y / shape.imageHeight);
+      states.push(vertex.features.state ? vertex.features.state : "visible");
     }
-  }
-  if (shape.type === "mask") {
-    newObject = {
-      ...baseObject,
-      datasetItemType: "image",
-      mask: {
-        id: nanoid(10),
-        counts: shape.rle.counts,
-        size: shape.rle.size,
-        view_id: shape.viewId,
-        ref_name: "mask",
-      },
-    };
-  }
-  if (shape.type === "keypoints") {
     const keypoints = {
-      id: nanoid(10),
-      template_id: shape.keypoints.id,
-      vertices: shape.keypoints.vertices.map((vertex) => ({
-        ...vertex,
-        x: vertex.x / shape.imageWidth,
-        y: vertex.y / shape.imageHeight,
-      })),
-      view_id: shape.viewId,
-      ref_name: "keypoints",
+      template_id: shape.keypoints.template_id,
+      coords,
+      states,
     };
-    if (isVideo) {
-      const id = nanoid(5);
-      newObject = {
-        ...baseObject,
-        datasetItemType: "video",
-        keypoints: [
-          {
-            ...keypoints,
-            frame_index: currentFrameIndex,
-            tracklet_id: id,
-            is_key: true,
-            is_thumbnail: true,
-          },
-          {
-            ...keypoints,
-            id: nanoid(10),
-            frame_index: currentFrameIndex + 5,
-            tracklet_id: id,
-            is_key: true,
-          },
-        ],
-        track: [
-          {
-            start: currentFrameIndex,
-            end: currentFrameIndex + 5,
-            id,
-            view_id: shape.viewId,
-          },
-        ],
-        displayedMKeypoints: [{ ...keypoints, frame_index: 0, tracklet_id: id }],
-      };
-    } else {
-      newObject = {
-        ...baseObject,
-        datasetItemType: "image",
-        keypoints,
-      };
-    }
+    const table = getTable(dataset_schema, "annotations", "KeyPoints");
+    newObject = new Keypoints({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "KeyPoints" },
+      data: { ...baseData, ...keypoints },
+    });
+  } else if (shape.type === "tracklet") {
+    const table = getTable(dataset_schema, "annotations", "Tracklet");
+    newObject = new Tracklet({
+      ...baseAnn,
+      table_info: { name: table, group: "annotations", base_schema: "Tracklet" },
+      data: { ...baseData, ...shape.attrs, start_timestamp: -1, end_timestamp: -1 }, //TODO timestamps
+    });
+  } else {
+    return undefined;
   }
+  //need to put UI fields after creation, else zod rejects
+  newObject.datasetItemType = isVideo ? "video" : "image";
+  if (isVideo) newObject.frame_index = currentFrameIndex;
   return newObject;
 };
 
 export const highlightCurrentObject = (
-  objects: ItemObject[],
-  currentObject: ItemObject,
+  objects: Annotation[],
+  currentObject: Annotation,
   shouldUnHighlight: boolean = true,
 ) => {
   const isObjectHighlighted = currentObject.highlighted === "self";
+
+  let highlight_ids: string[] = [];
+  if (currentObject.is_tracklet) {
+    //highlight childs
+    highlight_ids = (currentObject as Tracklet).childs.map((ann) => ann.id);
+  }
 
   return objects.map((object) => {
     object.displayControl = {
@@ -566,7 +491,7 @@ export const highlightCurrentObject = (
     };
     if (isObjectHighlighted && shouldUnHighlight) {
       object.highlighted = "all";
-    } else if (object.id === currentObject.id) {
+    } else if (object.id === currentObject.id || highlight_ids.includes(object.id)) {
       object.highlighted = "self";
     } else {
       object.highlighted = "none";
@@ -575,38 +500,26 @@ export const highlightCurrentObject = (
   });
 };
 
-const findThumbnailBox = (boxes: VideoObject["boxes"]) => {
-  if (!boxes) return undefined;
-  const box = boxes.find((b) => b.is_thumbnail);
-  return box;
-};
-
-export const defineObjectThumbnail = (metas: ItemsMeta, object: ItemObject) => {
-  let box;
-  let view_id;
-  if (object.datasetItemType === "video") {
-    box = findThumbnailBox(object.boxes); //TODO ? which thumbnail in multiview cases ?
-    //TMP TODO for video object on several view, we take the first available view (?)
-    if (!object.displayedMBox || object.displayedMBox.length < 1) return null;
-    view_id = object.displayedMBox[0]?.view_id;
-  } else {
-    box = object.bbox;
-    view_id = object.bbox?.view_id;
+export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: Annotation) => {
+  let box: BBox | undefined = undefined;
+  if (object.is_bbox) {
+    box = object as BBox;
   }
-  if (!box || !view_id) return null;
+  const view_name = object.data.view_ref.name;
+  if (!box || !box.is_bbox || !view_name) return null;
   //prevent bug: if thumbnail is asked before data are fully loaded, we can have a error on a bad key
-  if (!(view_id in metas.views)) return null;
+  if (!(view_name in views)) return null;
   const view =
     metas.type === "video"
-      ? (metas.views[view_id] as ItemView[])[(box as VideoItemBBox).frame_index]
-      : (metas.views[view_id] as ItemView);
-  const coords = box.coords;
+      ? (views[view_name] as SequenceFrame[])[box.frame_index!]
+      : (views[view_name] as Image);
+  const coords = box.data.coords;
   return {
     baseImageDimensions: {
-      width: view?.features.width.value as number,
-      height: view?.features.height.value as number,
+      width: view?.data.width,
+      height: view?.data.height,
     },
     coords,
-    uri: view?.uri,
+    uri: view?.data.url,
   };
 };

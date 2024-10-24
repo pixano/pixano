@@ -27,19 +27,23 @@ License: CECILL-C
 
   let datasets: Array<DatasetInfo>;
   //let datasetWithFeats: DatasetInfo;
-  let models: Array<string>;
   let pageId: string | null;
   let currentDatasetId: string;
   let currentDatasetItemsIds: string[];
 
   async function handleGetModels() {
-    models = await api.getModels();
-    modelsStore.set(models);
+    //TMP for lint
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    modelsStore.set([]);
+    // api
+    //   .getModels()
+    //   .then((models) => modelsStore.set(models))
+    //   .catch((err) => modelsStore.set([]));
   }
 
   async function handleGetDatasets() {
     try {
-      const loadedDatasets = await api.getDatasets();
+      const loadedDatasets = await api.getDatasetsInfo();
       datasets = loadedDatasets;
       datasetsStore.set(loadedDatasets);
     } catch (err) {
@@ -48,8 +52,10 @@ License: CECILL-C
   }
 
   onMount(async () => {
+    handleGetModels()
+      .then(() => console.log(`Found ${$modelsStore.length} model(s):`, $modelsStore))
+      .catch((err) => console.error("ERROR: Can't get model", err));
     await handleGetDatasets();
-    await handleGetModels();
   });
 
   // Get all the ids of the items of the selected dataset
@@ -61,13 +67,13 @@ License: CECILL-C
   };
 
   // UNUSED ??
-  // const getDatasetItems = async (
+  // const getBrowser = async (
   //   datasetId: string,
   //   page?: number,
   //   size?: number,
   //   query?: DatasetTableStore["query"],
   // ) => {
-  //   let datasetItems: ExplorerData = {
+  //   let datasetItems: DatasetBrowser = {
   //     id: "",
   //     name: "",
   //     table_data: { cols: [], rows: [] },
@@ -83,7 +89,7 @@ License: CECILL-C
   //     // }
   //   } else {
   //     try {
-  //       datasetItems = await api.getDatasetItems(datasetId, page, size);
+  //       datasetItems = await api.getBrowser(datasetId, page, size);
   //       //datasetWithFeats = await api.getDataset(datasetId);
   //     } catch (err) {
   //       isErrored = true;
@@ -132,7 +138,7 @@ License: CECILL-C
   //     if (currentDataset && value) {
   //       console.log("found!");
   //       currentDatasetStore.set(currentDataset);
-  //       getDatasetItems(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
+  //       getBrowser(currentDataset.id, value.currentPage, value.pageSize, value.query).catch(
   //         (err) => console.error(err),
   //       );
   //     } else {

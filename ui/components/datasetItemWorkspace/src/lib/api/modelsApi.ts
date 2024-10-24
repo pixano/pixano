@@ -6,23 +6,27 @@ License: CECILL-C
 
 import * as ort from "onnxruntime-web";
 
-import type { DatasetItem, DatasetInfo } from "@pixano/core";
+import type { DatasetInfo } from "@pixano/core";
 import { api } from "@pixano/core/src";
 import { npy } from "@pixano/models/src";
 
+//TODO SAM is deactivated for now, and currently not compatible with data model
 export async function loadEmbeddings(
-  itemId: DatasetItem["id"],
+  itemId: string,
   selectedModelName: string,
   datasetId: DatasetInfo["id"],
 ): Promise<Record<string, ort.Tensor>> {
   const embeddings: Record<string, ort.Tensor> = {};
   if (selectedModelName) {
     const item = await api.getItemEmbeddings(datasetId, itemId, selectedModelName);
+    // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
     if (item.embeddings) {
-      for (const [viewId, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
+      // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
+      for (const [view_name, viewEmbeddingBytes] of Object.entries(item.embeddings)) {
         try {
+          // @ts-expect-error DataModel is not yet able to handle embeddings, need rework
           const viewEmbeddingArray = npy.parse(npy.b64ToBuffer(viewEmbeddingBytes.data));
-          embeddings[viewId] = new ort.Tensor(
+          embeddings[view_name] = new ort.Tensor(
             "float32",
             viewEmbeddingArray.data,
             viewEmbeddingArray.shape,

@@ -18,7 +18,6 @@ type VideoControls = {
 
 export const lastFrameIndex = writable<number>();
 export const currentFrameIndex = writable<number>(0);
-export const objectIdBeingEdited = writable<string | null>(null);
 export const videoControls = writable<VideoControls>({
   zoomLevel: [100],
   intervalId: 0,

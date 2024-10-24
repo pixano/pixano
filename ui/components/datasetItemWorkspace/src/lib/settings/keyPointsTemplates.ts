@@ -7,7 +7,8 @@ License: CECILL-C
 import type { KeypointsTemplate } from "@pixano/core";
 
 const face: KeypointsTemplate = {
-  id: "face",
+  id: "id_face",
+  template_id: "face",
   vertices: [
     {
       x: 0.3,
@@ -50,7 +51,8 @@ const face: KeypointsTemplate = {
 };
 
 const person: KeypointsTemplate = {
-  id: "person",
+  id: "id_person",
+  template_id: "person",
   vertices: [
     {
       x: 0.5,
@@ -120,7 +122,8 @@ const person: KeypointsTemplate = {
 };
 
 const cow: KeypointsTemplate = {
-  id: "cow",
+  id: "id_cow",
+  template_id: "cow",
   vertices: [
     {
       x: 0.5,
