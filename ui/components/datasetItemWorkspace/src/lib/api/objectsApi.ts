@@ -147,7 +147,7 @@ export const mapObjectToKeypoints = (
     (keypoints.datasetItemType === "video" && keypoints.displayControl?.hidden)
   )
     return;
-  const template = templates.find((t) => t.id === keypoints.data.template_id);
+  const template = templates.find((t) => t.template_id === keypoints.data.template_id);
   if (!template) return;
 
   const view = views[keypoints.data.view_ref.name];
@@ -166,6 +166,7 @@ export const mapObjectToKeypoints = (
   }
   const kptTemplate = {
     id: keypoints.id,
+    template_id: keypoints.data.template_id,
     viewRef: keypoints.data.view_ref,
     entityRef: keypoints.data.entity_ref,
     vertices,
@@ -444,7 +445,7 @@ export const defineCreatedObject = (
       states.push(vertex.features.state ? vertex.features.state : "visible");
     }
     const keypoints = {
-      template_id: shape.keypoints.id,
+      template_id: shape.keypoints.template_id,
       coords,
       states,
     };

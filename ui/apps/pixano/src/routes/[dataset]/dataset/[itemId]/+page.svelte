@@ -147,7 +147,6 @@ License: CECILL-C
         await api.updateSchema(route, selectedDataset.id, savedItem.object, no_table);
       }
     }
-    //handleSelectItem(selectedDataset, currentItemId); //--> not necessary, but there is a bug when uncommented... need to invstigate
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));
   }
 </script>

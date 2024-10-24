@@ -6,7 +6,6 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { onMount } from "svelte";
   import type { FeaturesValues } from "@pixano/core";
   import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
 
@@ -75,7 +74,7 @@ License: CECILL-C
     return ann;
   };
 
-  onMount(() => {
+  const loadData = () => {
     views.set(selectedItem.views);
 
     const newAnns: Annotation[] = [];
@@ -127,12 +126,15 @@ License: CECILL-C
       item: selectedItem.item,
       type: selectedItem.type,
     });
-  });
+
+    saveData.set([]);
+  };
 
   canSave.subscribe((value) => (canSaveCurrentItem = value));
 
   $: if (selectedItem) {
     newShape.update((old) => ({ ...old, status: "none" }));
+    loadData();
   }
 
   export const front2back = (objs: SaveItem[]): SaveItem[] => {

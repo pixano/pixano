@@ -67,7 +67,6 @@ License: CECILL-C
       newObject.displayControl = { editing: true };
       newEntity.childs.push(newObject);
       if (newObject) {
-        console.log("ToSave (creation):", newObject, shape);
         if (newObject.datasetItemType === "video") {
           // for video, there is 2 anns, 1 track, 1 tracklet: add obj2 and tracklet
           let endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop

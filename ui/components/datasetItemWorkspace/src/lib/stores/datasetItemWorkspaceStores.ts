@@ -49,7 +49,7 @@ export const filters = writable<Filters>({
   u16BitRange: [0, 65535],
 });
 export const imageSmoothing = writable<boolean>(true);
-export const selectedKeypointsTemplate = writable<KeypointsTemplate["id"] | null>(null);
+export const selectedKeypointsTemplate = writable<KeypointsTemplate["template_id"] | null>(null);
 
 export const saveData = writable<SaveItem[]>([]);
 export const canSave = derived(saveData, ($saveData) => $saveData.length > 0);

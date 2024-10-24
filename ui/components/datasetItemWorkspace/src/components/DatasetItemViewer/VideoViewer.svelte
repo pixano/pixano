@@ -12,6 +12,7 @@ License: CECILL-C
     DatasetItem,
     Annotation,
     BBox,
+    Keypoints,
     Track,
     SequenceFrame,
     type EditShape,
@@ -171,7 +172,6 @@ License: CECILL-C
       const image = new Image();
       image.src = `/${urls[0].url}`;
       imagesPerView = {
-        ...imagesPerView,
         [key]: [{ id: urls[0].id, element: image }],
       };
     });
@@ -182,8 +182,6 @@ License: CECILL-C
       0,
     );
     lastFrameIndex.set(longestView - 1);
-
-    updateView(0);
   });
 
   const updateView = (imageIndex: number) => {
@@ -192,8 +190,8 @@ License: CECILL-C
       const src = `/${urls[imageIndex].url}`;
       if (!src) return;
       image.src = src;
+      //NOTE double image, this allows caching (but weird...)
       imagesPerView = {
-        ...imagesPerView,
         [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
           -2,
         ),
@@ -214,8 +212,15 @@ License: CECILL-C
       if (update_ann.is_bbox && shape.type === "bbox") {
         (update_ann as BBox).data.coords = shape.coords;
       } else if (update_ann.is_keypoints && shape.type === "keypoints") {
-        console.log("TODO! kpt");
-        //TODO need to convert from KeypointTemplate to Keypoint
+        const coords = [];
+        const states = [];
+        for (const vertex of shape.vertices) {
+          coords.push(vertex.x);
+          coords.push(vertex.y);
+          states.push(vertex.features.state ? vertex.features.state : "visible");
+        }
+        (update_ann as Keypoints).data.coords = coords;
+        (update_ann as Keypoints).data.states = states;
       } else if (update_ann.is_mask) {
         console.log("TODO! mask");
         //mask not implemented yet in video
@@ -249,15 +254,26 @@ License: CECILL-C
       } else if (shape.type === "keypoints") {
         const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
         if (interpolated_kpt && "startRef" in interpolated_kpt) {
-          const newKptT = structuredClone(interpolated_kpt.startRef as KeypointsTemplate);
-          newKptT.id = shape.shapeId;
-          newKptT.vertices = shape.vertices;
-          newKptT.viewRef = shape.viewRef;
-          newKptT.frame_index = currentFrame;
-          //TODO need to convert from KeypointTemplate to Keypoints
-          //const newKpt = kptTemplate2Kpt(newKptT);
-          //newKpt.updated_at = new Date(Date.now()).toISOString();
-          //new_ann = newKpt;
+          const keypointRef = annotations.find(
+            (ann) => ann.is_keypoints && ann.id === interpolated_kpt.startRef?.id,
+          ) as Keypoints;
+          if (keypointRef) {
+            const newKpt = structuredClone(keypointRef);
+            const coords = [];
+            const states = [];
+            for (const vertex of shape.vertices) {
+              coords.push(vertex.x);
+              coords.push(vertex.y);
+              states.push(vertex.features.state ? vertex.features.state : "visible");
+            }
+            newKpt.id = shape.shapeId;
+            newKpt.data.coords = coords;
+            newKpt.data.states = states;
+            newKpt.data.view_ref = shape.viewRef;
+            newKpt.frame_index = currentFrame;
+            newKpt.updated_at = new Date(Date.now()).toISOString();
+            new_ann = newKpt;
+          }
         }
       } else if (shape.type === "mask") {
         console.log("TODO! mask");
@@ -328,7 +344,9 @@ License: CECILL-C
         bboxes={$current_itemBBoxes}
         masks={$itemMasks}
         keypoints={$current_itemKeypoints}
-        selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
+        selectedKeypointTemplate={templates.find(
+          (t) => t.template_id === $selectedKeypointsTemplate,
+        )}
         canvasSize={inspectorMaxHeight}
         {embeddings}
         isVideo={true}

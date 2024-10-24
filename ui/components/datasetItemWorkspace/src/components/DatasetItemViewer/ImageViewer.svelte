@@ -143,7 +143,7 @@ License: CECILL-C
     bboxes={$itemBboxes}
     masks={$itemMasks}
     keypoints={$itemKeypoints}
-    selectedKeypointTemplate={templates.find((t) => t.id === $selectedKeypointsTemplate)}
+    selectedKeypointTemplate={templates.find((t) => t.template_id === $selectedKeypointsTemplate)}
     {embeddings}
     {filters}
     imageSmoothing={$imageSmoothing}

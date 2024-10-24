@@ -21,7 +21,7 @@ License: CECILL-C
   export let draggable: boolean = false;
   export let color: string = "rgb(0,128,0)";
   export let opacity: number = 1;
-  export let onPointDragMove: (pointId: number) => void;
+  export let onPointDragMove: (pointId: number, event: Event) => void;
   export let onPointStateChange: (pointId: number, value: VertexStates) => void;
   export let findPointCoordinate: (point: number, type: "x" | "y") => number = (point) => point;
 
@@ -116,7 +116,7 @@ License: CECILL-C
     opacity,
     cancelBubble: true,
   }}
-  on:dragmove={() => onPointDragMove(vertexIndex)}
+  on:dragmove={(event) => onPointDragMove(vertexIndex, event)}
   on:mouseover={onMouseOver}
   on:mouseleave={onMouseLeave}
   on:click={onCircleClick}

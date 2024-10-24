@@ -78,7 +78,6 @@ License: CECILL-C
       //TODO: if keypoints/mask ...
       const interpolatedItem = bboxes.find((box) => box.frame_index === rightClickFrameIndex);
       if (interpolatedItem) {
-        console.log("zaz", rightClickFrameIndex, interpolatedItem);
         const newItemOrig = structuredClone(interpolatedItem);
         const {
           datasetItemType,

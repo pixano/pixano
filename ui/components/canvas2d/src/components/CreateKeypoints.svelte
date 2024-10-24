@@ -24,7 +24,7 @@ License: CECILL-C
   export let stage: Konva.Stage;
   export let viewRef: Reference;
 
-  let keypointsId = "keyPoints";
+  let keypointsId = "";  //filler value while we don't have the real values for id and template_id
 
   const findPointCoordinate = (point: number, type: "x" | "y") => {
     if (newShape.status === "creating") {
@@ -47,6 +47,7 @@ License: CECILL-C
     edges: newShape.keypoints.edges,
     vertices: newShape.keypoints.vertices,
     id: keypointsId,
+    template_id: keypointsId,
     viewRef: newShape.viewRef,
     editing: true,
   } as KeypointsTemplate;

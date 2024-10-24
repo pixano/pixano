@@ -53,7 +53,7 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each tracks as track (track.childs?.length)}
+      {#each tracks as track (track.childs)}
         <VideoPlayerRow>
           <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {bboxes} />
         </VideoPlayerRow>

@@ -137,7 +137,6 @@ License: CECILL-C
   //   }
   //   // if (to && canSaveCurrentItem) {
   //   //   showConfirmModal = to.url.toString()
-  //   //   console.log("ZAZA", showConfirmModal);
   //   //   cancel()
   //   // }
   // });

@@ -28,7 +28,6 @@ export type InputFeatures = z.infer<typeof createObjectInputsSchema>;
 
 export const mapInputsToValueType = (setupArray: InputFeatures) =>
   setupArray.reduce<CreateObjectSchemaDefinition>((acc, cur) => {
-    console.log("fefe", cur);
     if (cur.type === "str" || cur.type === "list") {
       acc[cur.name] = z.string();
     } else if (cur.type === "int" || cur.type === "float") {

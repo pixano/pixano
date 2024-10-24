@@ -25,9 +25,10 @@ License: CECILL-C
   $: vertices = keypointStructure.vertices;
   $: keypointsId = keypointStructure.id;
 
-  const onPointDragMove = (pointIndex: number) => {
+  const onPointDragMove = (pointIndex: number, event: CustomEvent) => {
     if (!keypointStructure.editing) return;
-    const pointPosition = stage.findOne(`#keypoint-${keypointsId}-${pointIndex}`).position();
+    //const pointPosition = stage.findOne(`#keypoint-${keypointsId}-${pointIndex}`).position();
+    const pointPosition = (event.detail.target as Konva.Circle).position();
     vertices = vertices.map((point, i) => {
       if (i === pointIndex) {
         return { ...point, x: pointPosition.x, y: pointPosition.y };

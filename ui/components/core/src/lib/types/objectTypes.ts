@@ -79,6 +79,7 @@ export type Vertex = {
 
 export type KeypointsTemplate = {
   id: string;
+  template_id: string;
   viewRef?: Reference;
   entityRef?: Reference;
   frame_index?: number;
