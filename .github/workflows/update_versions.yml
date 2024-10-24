@@ -1,0 +1,32 @@
+name: Update versions triggered by VERSION file
+
+on:
+  push:
+    paths:
+      - "VERSION"
+    branches:
+      - "main"
+
+permissions:
+  contents: write
+
+jobs:
+  change_version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          VERSION=$(cat VERSION)
+          echo "# =====================================" > pixano/__version__.py
+          echo "# Copyright: CEA-LIST/DIASI/SIALV/LVA" >> pixano/__version__.py
+          echo "# Author : pixano@cea.fr" >> pixano/__version__.py
+          echo "# License: CECILL-C" >> pixano/__version__.py
+          echo "# =====================================" >> pixano/__version__.py
+          echo "" >> pixano/__version__.py
+          echo "__version__ = \"${VERSION}\"" >> pixano/__version__.py
+          sed -i 's/"version": "[^"]*"/"version": "'$VERSION'"/' ui/apps/pixano/package.json
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .
+          git commit -m "Update version to ${{ github.event.release.tag_name }}"
+          git push
