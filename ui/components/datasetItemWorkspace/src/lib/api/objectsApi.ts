@@ -372,7 +372,7 @@ export const defineCreatedEntity = (
     data: {
       item_ref: { name: "item", id: shape.itemId },
       view_ref: shape.viewRef,
-      parent_ref: { name: "", id: "" },  //TODO intermediate entity ??
+      parent_ref: { name: "", id: "" }, //TODO intermediate entity ??
     },
   };
   for (const feat of Object.values(features)) {

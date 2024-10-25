@@ -46,9 +46,7 @@ License: CECILL-C
   }
 
   const onDeleteItemClick = () => {
-    const ann_to_del = tracklet.childs.find(
-      (ann) => ann.frame_index === itemFrameIndex,
-    );
+    const ann_to_del = tracklet.childs.find((ann) => ann.frame_index === itemFrameIndex);
     if (!ann_to_del) return;
     if (tracklet.childs.length <= 2) {
       console.error("Deleting one of 2 last item of tracklet, it should not happen.");
@@ -145,8 +143,7 @@ License: CECILL-C
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      if (newFrameIndex !== undefined)
-        updateTrackletWidth(newFrameIndex, itemFrameIndex);
+      if (newFrameIndex !== undefined) updateTrackletWidth(newFrameIndex, itemFrameIndex);
       newFrameIndex = undefined;
     });
   };
