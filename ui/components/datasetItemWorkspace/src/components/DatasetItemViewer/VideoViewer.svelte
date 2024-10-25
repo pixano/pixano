@@ -63,41 +63,25 @@ License: CECILL-C
   const current_itemBBoxes = derived(
     [itemBboxes, currentFrameIndex, tracklets],
     ([$itemBboxes, $currentFrameIndex, $tracklets]) => {
-      //TODO now tracklets have childs, we could take advantage of it here
       const current_bboxes_and_interpolated: BBox[] = [];
       const current_tracklets = $tracklets.filter(
         (tracklet) =>
           tracklet.data.start_timestep <= $currentFrameIndex &&
           tracklet.data.end_timestep >= $currentFrameIndex,
       );
-      const tracklets_bboxes: Record<string, BBox[]> = {};
-      $itemBboxes.forEach((bbox) => {
-        const tracklet_of_bbox = current_tracklets.find(
-          (tracklet) =>
-            tracklet.data.entity_ref.id === bbox.data.entity_ref.id &&
-            tracklet.data.view_ref.name &&
-            bbox.data.view_ref.name,
+      for (const tracklet of current_tracklets) {
+        const bbox_childs_ids = new Set(
+          tracklet.childs.filter((ann) => ann.is_bbox).map((bbox) => bbox.id),
         );
-        if (tracklet_of_bbox) {
-          if (!tracklets_bboxes[tracklet_of_bbox.id]) tracklets_bboxes[tracklet_of_bbox.id] = [];
-          tracklets_bboxes[tracklet_of_bbox.id].push(bbox);
-        }
-      });
-      for (const tracklet_id in tracklets_bboxes) {
-        const box = tracklets_bboxes[tracklet_id].find(
-          (bbox) => bbox.frame_index === $currentFrameIndex,
-        );
+        const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
+        const box = bbox_childs.find((box) => box.frame_index === $currentFrameIndex);
         if (box) current_bboxes_and_interpolated.push(box);
-        else {
-          const sample_bbox = tracklets_bboxes[tracklet_id][0];
+        else if (bbox_childs.length > 1) {
+          const sample_bbox = bbox_childs[0];
           const view_id = ($views[sample_bbox.data.view_ref.name] as SequenceFrame[])[
             $currentFrameIndex
           ].id;
-          const interpolated_box = boxLinearInterpolation(
-            tracklets_bboxes[tracklet_id],
-            $currentFrameIndex,
-            view_id,
-          );
+          const interpolated_box = boxLinearInterpolation(bbox_childs, $currentFrameIndex, view_id);
           if (interpolated_box) current_bboxes_and_interpolated.push(interpolated_box);
         }
       }
@@ -114,30 +98,19 @@ License: CECILL-C
           tracklet.data.start_timestep <= $currentFrameIndex &&
           tracklet.data.end_timestep >= $currentFrameIndex,
       );
-      const tracklets_kpts: Record<string, KeypointsTemplate[]> = {};
-      $itemKeypoints.forEach((kpt) => {
-        const tracklet_of_kpt = current_tracklets.find(
-          (tracklet) =>
-            tracklet.data.entity_ref.id === kpt.entityRef?.id &&
-            tracklet.data.view_ref.name &&
-            kpt.viewRef?.name,
+      for (const tracklet of current_tracklets) {
+        const kpt_childs_ids = new Set(
+          tracklet.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
         );
-        if (tracklet_of_kpt) {
-          if (!tracklets_kpts[tracklet_of_kpt.id]) tracklets_kpts[tracklet_of_kpt.id] = [];
-          tracklets_kpts[tracklet_of_kpt.id].push(kpt);
-        }
-      });
-      for (const tracklet_id in tracklets_kpts) {
-        const kpt = tracklets_kpts[tracklet_id].find(
-          (kpt) => kpt.frame_index === $currentFrameIndex,
-        );
+        const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
+        const kpt = kpt_childs.find((kpt) => kpt.frame_index === $currentFrameIndex);
         if (kpt) current_kpts_and_interpolated.push(kpt);
-        else {
-          const sample_kpt = tracklets_kpts[tracklet_id][0];
+        else if (kpt_childs.length > 1) {
+          const sample_kpt = kpt_childs[0];
           const view_id = ($views[sample_kpt.viewRef!.name] as SequenceFrame[])[$currentFrameIndex]
             .id;
           const interpolated_kpt = keypointsLinearInterpolation(
-            tracklets_kpts[tracklet_id],
+            kpt_childs,
             $currentFrameIndex,
             view_id,
           );
@@ -172,6 +145,7 @@ License: CECILL-C
       const image = new Image();
       image.src = `/${urls[0].url}`;
       imagesPerView = {
+        ...imagesPerView,
         [key]: [{ id: urls[0].id, element: image }],
       };
     });
@@ -192,6 +166,7 @@ License: CECILL-C
       image.src = src;
       //NOTE double image, this allows caching (but weird...)
       imagesPerView = {
+        ...imagesPerView,
         [key]: [...(imagesPerView[key] || []), { id: urls[imageIndex].id, element: image }].slice(
           -2,
         ),
@@ -311,7 +286,7 @@ License: CECILL-C
     }
   }
 
-  $: selectedTool.set($selectedTool);
+  //$: selectedTool.set($selectedTool);
 
   const startExpand = () => {
     expanding = true;
@@ -361,7 +336,12 @@ License: CECILL-C
       class="h-full grow max-h-[25%] overflow-hidden"
       style={`max-height: ${inspectorMaxHeight}px`}
     >
-      <VideoInspector bind:tracks {updateView} bboxes={$current_itemBBoxes} />
+      <VideoInspector
+        bind:tracks
+        {updateView}
+        bboxes={$current_itemBBoxes}
+        keypoints={$current_itemKeypoints}
+      />
     </div>
   {/if}
 </section>

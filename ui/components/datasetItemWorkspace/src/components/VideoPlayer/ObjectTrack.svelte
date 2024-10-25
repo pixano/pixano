@@ -6,8 +6,14 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import { ContextMenu, Annotation, Entity, BBox, Track, Tracklet } from "@pixano/core";
-  import type { TrackletItem, MView, SaveItem, SequenceFrame } from "@pixano/core";
+  import { ContextMenu, Annotation, Entity, BBox, Keypoints, Track, Tracklet } from "@pixano/core";
+  import type {
+    TrackletItem,
+    MView,
+    SaveItem,
+    SequenceFrame,
+    KeypointsTemplate,
+  } from "@pixano/core";
   import {
     annotations,
     entities,
@@ -28,6 +34,7 @@ License: CECILL-C
   export let views: MView;
   export let onTimeTrackClick: (imageIndex: number) => void;
   export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[];
 
   let rightClickFrameIndex: number;
   let objectTimeTrack: HTMLElement;
@@ -44,7 +51,7 @@ License: CECILL-C
   const moveCursorToPosition = (clientX: number) => {
     const timeTrackPosition = objectTimeTrack.getBoundingClientRect();
     const rightClickFrame = (clientX - timeTrackPosition.left) / timeTrackPosition.width;
-    rightClickFrameIndex = Math.round(rightClickFrame * $lastFrameIndex);
+    rightClickFrameIndex = Math.round(rightClickFrame * ($lastFrameIndex + 1));
     onTimeTrackClick(rightClickFrameIndex);
   };
 
@@ -57,13 +64,18 @@ License: CECILL-C
   const onEditKeyItemClick = (frameIndex: TrackletItem["frame_index"]) => {
     onTimeTrackClick(frameIndex > $lastFrameIndex ? $lastFrameIndex : frameIndex);
     annotations.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.id === track.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: obj.id === track.id,
+      objects.map((ann) => {
+        const to_highlight =
+          (!ann.is_tracklet &&
+            ann.data.entity_ref.id === track.id &&
+            ann.frame_index === frameIndex) ||
+          (ann.is_tracklet && ann.id === track.id);
+        ann.highlighted = to_highlight ? "self" : "none";
+        ann.displayControl = {
+          ...ann.displayControl,
+          editing: to_highlight,
         };
-        return obj;
+        return ann;
       }),
     );
   };
@@ -74,11 +86,16 @@ License: CECILL-C
       //TODO
       confirm("Adding a key point outside of a tracklet is forbidden for now");
     } else {
+      let newItemBBox: BBox | undefined = undefined;
+      let newItemKpt: Keypoints | undefined = undefined;
       //an interpolated obj should exist: use it
-      //TODO: if keypoints/mask ...
-      const interpolatedItem = bboxes.find((box) => box.frame_index === rightClickFrameIndex);
-      if (interpolatedItem) {
-        const newItemOrig = structuredClone(interpolatedItem);
+      const interpolatedBox = bboxes.find(
+        (box) =>
+          box.frame_index === rightClickFrameIndex &&
+          tracklet.childs.some((ann) => ann.id === box.startRef?.id),
+      );
+      if (interpolatedBox) {
+        const newItemOrig = structuredClone(interpolatedBox);
         const {
           datasetItemType,
           displayControl,
@@ -93,49 +110,119 @@ License: CECILL-C
           ...noUIfieldsBBox
         } = newItemOrig;
         if ("startRef" in noUIfieldsBBox) delete noUIfieldsBBox.startRef;
-        const newItem = new BBox(noUIfieldsBBox);
-        newItem.datasetItemType = datasetItemType;
-        newItem.displayControl = displayControl;
-        newItem.highlighted = highlighted;
-        newItem.frame_index = frame_index;
-        newItem.review_state = review_state;
-        newItem.opacity = opacity;
-        newItem.visible = visible;
-        newItem.editing = editing;
-        newItem.strokeFactor = strokeFactor;
-        newItem.tooltip = tooltip;
+        newItemBBox = new BBox(noUIfieldsBBox);
+        newItemBBox.datasetItemType = datasetItemType;
+        newItemBBox.displayControl = displayControl;
+        newItemBBox.highlighted = highlighted;
+        newItemBBox.frame_index = frame_index;
+        newItemBBox.review_state = review_state;
+        newItemBBox.opacity = opacity;
+        newItemBBox.visible = visible;
+        newItemBBox.editing = editing;
+        newItemBBox.strokeFactor = strokeFactor;
+        newItemBBox.tooltip = tooltip;
         //coords are denormalized: normalize them
-        const current_sf = (views[newItem.data.view_ref.name] as SequenceFrame[])[
-          newItem.frame_index!
+        const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
+          newItemBBox.frame_index!
         ];
-        const [x, y, w, h] = newItem.data.coords;
-        newItem.data.coords = [
+        const [x, y, w, h] = newItemBBox.data.coords;
+        newItemBBox.data.coords = [
           x / current_sf.data.width,
           y / current_sf.data.height,
           w / current_sf.data.width,
           h / current_sf.data.height,
         ];
+        const save_new_item: SaveItem = {
+          change_type: "add",
+          object: newItemBBox,
+        };
+        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
+      }
+      const interpolatedKpt = keypoints.find(
+        (kpt) =>
+          kpt.frame_index === rightClickFrameIndex &&
+          tracklet.childs.some((ann) => ann.id === kpt.startRef?.id),
+      );
+      if (interpolatedKpt && interpolatedKpt.startRef) {
+        const keypointsRef = $annotations.find(
+          (ann) => ann.id === interpolatedKpt.startRef!.id && ann.is_keypoints,
+        ) as Keypoints;
+        if (keypointsRef) {
+          const newItemOrig = structuredClone(keypointsRef);
+          const {
+            datasetItemType,
+            displayControl,
+            highlighted,
+            review_state,
+            visible,
+            editing,
+            ...noUIfieldsBBox
+          } = newItemOrig;
+          if ("frame_index" in noUIfieldsBBox) delete noUIfieldsBBox.frame_index;
+          if ("startRef" in noUIfieldsBBox) delete noUIfieldsBBox.startRef;
+          newItemKpt = new Keypoints(noUIfieldsBBox);
+          newItemKpt.datasetItemType = datasetItemType;
+          newItemKpt.review_state = review_state;
+          newItemKpt.displayControl = interpolatedKpt.displayControl
+            ? interpolatedKpt.displayControl
+            : displayControl;
+          newItemKpt.highlighted = interpolatedKpt.highlighted
+            ? interpolatedKpt.highlighted
+            : highlighted;
+          newItemKpt.visible = interpolatedKpt.visible ? interpolatedKpt.visible : visible;
+          newItemKpt.editing = interpolatedKpt.editing ? interpolatedKpt.editing : editing;
+          newItemKpt.id = interpolatedKpt.id;
+          newItemKpt.frame_index = interpolatedKpt.frame_index;
+          newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
+          //coords are denormalized: normalize them (??is that so ? to check)
+          const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
+            interpolatedKpt.frame_index!
+          ];
+          const coords = [];
+          const states = [];
+          for (const vertex of interpolatedKpt.vertices) {
+            coords.push(vertex.x / current_sf.data.width);
+            coords.push(vertex.y / current_sf.data.height);
+            states.push(vertex.features.state ? vertex.features.state : "visible");
+          }
+          newItemKpt.data.coords = coords;
+          newItemKpt.data.states = states;
 
+          const save_new_item: SaveItem = {
+            change_type: "add",
+            object: newItemKpt,
+          };
+          saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
+        }
+      }
+      //TODO no interpolated Mask yet
+
+      if (newItemBBox || newItemKpt) {
         annotations.update((objects) => {
           objects.map((obj) => {
             if (obj.is_tracklet && obj.id === tracklet.id) {
               // add item in childs
-              (obj as Tracklet).childs?.push(newItem);
+              if (newItemBBox) (obj as Tracklet).childs?.push(newItemBBox);
+              if (newItemKpt) (obj as Tracklet).childs?.push(newItemKpt);
               (obj as Tracklet).childs?.sort((a, b) => sortByFrameIndex(a, b));
             }
             return obj;
           });
-          objects.push(newItem);
+          if (newItemBBox) objects.push(newItemBBox);
+          if (newItemKpt) objects.push(newItemKpt);
+          objects.sort((a, b) => sortByFrameIndex(a, b));
           return objects;
         });
-
-        const save_new_item: SaveItem = {
-          change_type: "add",
-          object: newItem,
-        };
-        saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_new_item));
-      } else {
-        console.error("No interpolated BBox found !");
+        entities.update((objects) =>
+          objects.map((entity) => {
+            if (entity.id === tracklet.data.entity_ref.id) {
+              if (newItemBBox) entity.childs?.push(newItemBBox);
+              if (newItemKpt) entity.childs?.push(newItemKpt);
+              entity.childs?.sort((a, b) => sortByFrameIndex(a, b));
+            }
+            return entity;
+          }),
+        );
       }
       onEditKeyItemClick(rightClickFrameIndex);
     }

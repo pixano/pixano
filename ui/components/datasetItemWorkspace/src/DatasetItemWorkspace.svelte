@@ -6,7 +6,7 @@ License: CECILL-C
 
 <script lang="ts">
   // Imports
-  import type { FeaturesValues } from "@pixano/core";
+  import type { FeaturesValues, SequenceFrame } from "@pixano/core";
   import { Annotation, Mask, Tracklet, Entity, DatasetItem, type SaveItem } from "@pixano/core";
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
@@ -59,12 +59,11 @@ License: CECILL-C
     } else {
       ann.datasetItemType = "video";
       //add frame_index to annotation
-      for (const view of Object.values($views)) {
-        if (Array.isArray(view)) {
-          const frame_index = view.find((sf) => sf.id === ann.data.view_ref.id)?.data.frame_index;
-          ann.frame_index = frame_index;
-        }
-      }
+      const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
+        (sf) => sf.id === ann.data.view_ref.id,
+      );
+      if (seqframe?.data.frame_index != undefined) ann.frame_index = seqframe.data.frame_index;
+
       if (ann.table_info.base_schema === "CompressedRLE") {
         //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;

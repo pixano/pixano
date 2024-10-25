@@ -221,6 +221,7 @@ export const sortObjectsByModel = (anns: Annotation[]) =>
   );
 
 export const updateExistingObject = (objects: Annotation[], newShape: Shape): Annotation[] => {
+  console.log("PPzozoz", newShape, objects);
   return objects.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
@@ -371,7 +372,7 @@ export const defineCreatedEntity = (
     data: {
       item_ref: { name: "item", id: shape.itemId },
       view_ref: shape.viewRef,
-      parent_ref: { name: "", id: "" },
+      parent_ref: { name: "", id: "" },  //TODO intermediate entity ??
     },
   };
   for (const feat of Object.values(features)) {

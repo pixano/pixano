@@ -20,13 +20,14 @@ License: CECILL-C
 
   export let trackId: string;
 
-  export let item: TrackletItem;
+  export let itemFrameIndex: number;
   export let tracklet: Tracklet;
   export let color: string;
   export let height: number;
   export let top: number;
   export let oneFrameInPixel: number;
   export let onEditKeyItemClick: (frameIndex: TrackletItem["frame_index"]) => void;
+  export let onClick: (clientX: number) => void;
   export let updateTrackletWidth: (
     newIndex: TrackletItem["frame_index"],
     draggedIndex: TrackletItem["frame_index"],
@@ -37,18 +38,17 @@ License: CECILL-C
   ) => boolean;
 
   let isItemBeingEdited = false;
-  $: isBound =
-    tracklet.childs[0].frame_index === item.frame_index ||
-    tracklet.childs[tracklet.childs.length - 1].frame_index === item.frame_index;
 
   $: {
     const currentObjectBeingEdited = $annotations.find((object) => object.displayControl?.editing);
     isItemBeingEdited =
-      item.frame_index === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;
+      itemFrameIndex === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;
   }
 
   const onDeleteItemClick = () => {
-    const ann_to_del = tracklet.childs.find((ann) => ann.frame_index === item.frame_index);
+    const ann_to_del = tracklet.childs.find(
+      (ann) => ann.frame_index === itemFrameIndex,
+    );
     if (!ann_to_del) return;
     if (tracklet.childs.length <= 2) {
       console.error("Deleting one of 2 last item of tracklet, it should not happen.");
@@ -60,14 +60,14 @@ License: CECILL-C
         .map((ann) => {
           if (ann.id === tracklet.id && ann.is_tracklet) {
             (ann as Tracklet).childs = (ann as Tracklet).childs.filter(
-              (fann) => fann.frame_index !== item.frame_index,
+              (fann) => fann.frame_index !== itemFrameIndex,
             );
             //if ann_to_del first/last of tracklet, need to "resize" (childs should be sorted)
-            if (item.frame_index === tracklet.data.start_timestep) {
+            if (itemFrameIndex === tracklet.data.start_timestep) {
               (ann as Tracklet).data.start_timestep = (ann as Tracklet).childs[0].frame_index!;
               changed_tracklet = true;
             }
-            if (item.frame_index === tracklet.data.end_timestep) {
+            if (itemFrameIndex === tracklet.data.end_timestep) {
               (ann as Tracklet).data.end_timestep = (ann as Tracklet).childs[
                 (ann as Tracklet).childs.length - 1
               ].frame_index!;
@@ -107,9 +107,15 @@ License: CECILL-C
     return leftPosition;
   };
 
-  let left = getKeyItemLeftPosition(item.frame_index);
+  let left = getKeyItemLeftPosition(itemFrameIndex);
 
   const dragMe = (node: HTMLButtonElement) => {
+    if (
+      tracklet.childs[0].frame_index !== itemFrameIndex &&
+      tracklet.childs[tracklet.childs.length - 1].frame_index !== itemFrameIndex
+    )
+      return;
+
     let moving = false;
     let startPosition: number;
     let startFrameIndex: number;
@@ -119,7 +125,7 @@ License: CECILL-C
     node.addEventListener("mousedown", (event) => {
       moving = true;
       startPosition = event.clientX;
-      startFrameIndex = item.frame_index;
+      startFrameIndex = itemFrameIndex;
       startOneFrameInPixel = oneFrameInPixel;
       selectedTool.set(panTool);
     });
@@ -130,7 +136,7 @@ License: CECILL-C
         const raise = distance / startOneFrameInPixel;
         newFrameIndex = Math.round(startFrameIndex + raise);
         if (newFrameIndex < 0 || newFrameIndex > $lastFrameIndex) return;
-        const canContinue = canContinueDragging(newFrameIndex, item.frame_index);
+        const canContinue = canContinueDragging(newFrameIndex, itemFrameIndex);
         if (canContinue) {
           left = getKeyItemLeftPosition(newFrameIndex);
         }
@@ -139,7 +145,8 @@ License: CECILL-C
 
     window.addEventListener("mouseup", () => {
       moving = false;
-      if (newFrameIndex !== undefined) updateTrackletWidth(newFrameIndex, item.frame_index);
+      if (newFrameIndex !== undefined)
+        updateTrackletWidth(newFrameIndex, itemFrameIndex);
       newFrameIndex = undefined;
     });
   };
@@ -154,16 +161,14 @@ License: CECILL-C
     )}
     style={`left: ${left}%; top: ${top + height * 0.125}%; height: ${height * 0.75}%; background-color: ${color}`}
   >
-    {#if isBound}
-      <button class="h-full w-full" use:dragMe />
-    {/if}
+    <button class="h-full w-full" use:dragMe on:click={(e) => onClick(e.clientX)} />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
     {#if tracklet.childs?.length > 2}
       <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}
-      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(item.frame_index)}
+      <ContextMenu.Item inset on:click={() => onEditKeyItemClick(itemFrameIndex)}
         >Edit item</ContextMenu.Item
       >
     {/if}

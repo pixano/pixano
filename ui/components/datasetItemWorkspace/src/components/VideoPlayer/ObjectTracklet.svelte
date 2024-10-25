@@ -23,7 +23,7 @@ License: CECILL-C
     selectedTool,
     saveData,
   } from "../../lib/stores/datasetItemWorkspaceStores";
-  import { highlightCurrentObject, addOrUpdateSaveItem } from "../../lib/api/objectsApi";
+  import { addOrUpdateSaveItem } from "../../lib/api/objectsApi";
 
   import { panTool } from "../../lib/settings/selectionTools";
 
@@ -58,46 +58,13 @@ License: CECILL-C
   let height: number = getHeight(views);
   let top: number = getTop(tracklet, views);
   let trackletElement: HTMLElement;
-  let tracklet_annotations: TrackletItem[];
 
   $: oneFrameInPixel =
     trackletElement?.getBoundingClientRect().width /
     (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
   $: color = $colorScale[1](track.id);
 
-  $: {
-    const tracklet_views: SequenceFrame[] = [];
-    for (const view of Object.values(views)) {
-      if (Array.isArray(view)) {
-        for (const sf of view) {
-          if (
-            tracklet.data.entity_ref.id === track.id &&
-            sf.data.frame_index >= tracklet.data.start_timestep &&
-            sf.data.frame_index <= tracklet.data.end_timestep
-          ) {
-            tracklet_views.push(sf);
-          }
-        }
-      }
-    }
-    const tracklet_views_ids: string[] = tracklet_views.map((sf) => sf.id);
-    tracklet_annotations = $annotations.flatMap((ann) =>
-      !ann.is_tracklet &&
-      ann.data.entity_ref.id === track.id &&
-      tracklet_views_ids.includes(ann.data.view_ref.id)
-        ? [
-            {
-              frame_index: tracklet_views.find((sf) => sf.id === ann.data.view_ref.id)?.data
-                .frame_index,
-              tracklet_id: tracklet.id,
-              is_key: true,
-              is_thumbnail: false,
-              hidden: false,
-            } as TrackletItem,
-          ]
-        : [],
-    );
-  }
+  $: tracklet_annotations_frame_indexes = tracklet.childs.map((ann) => ann.frame_index!);
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
@@ -168,21 +135,6 @@ License: CECILL-C
   const onClick = (clientX: number) => {
     moveCursorToPosition(clientX);
     selectedTool.set(panTool);
-    annotations.update((objects) => highlightCurrentObject(objects, tracklet));
-  };
-
-  const onDoubleClick = () => {
-    selectedTool.set(panTool);
-    annotations.update((objects) =>
-      objects.map((obj) => {
-        obj.highlighted = obj.data.entity_ref.id === track.id ? "self" : "none";
-        obj.displayControl = {
-          ...obj.displayControl,
-          editing: obj.data.entity_ref.id === track.id,
-        };
-        return obj;
-      }),
-    );
   };
 </script>
 
@@ -199,7 +151,6 @@ License: CECILL-C
       class="h-full w-full"
       bind:this={trackletElement}
       on:click={(e) => onClick(e.clientX)}
-      on:dblclick={onDoubleClick}
     />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
@@ -210,15 +161,16 @@ License: CECILL-C
     <ContextMenu.Item inset on:click={onDeleteTrackletClick}>Delete tracklet</ContextMenu.Item>
   </ContextMenu.Content>
 </ContextMenu.Root>
-{#each tracklet_annotations as ann}
+{#each tracklet_annotations_frame_indexes as itemFrameIndex}
   <TrackletKeyItem
-    item={ann}
+    {itemFrameIndex}
     {tracklet}
     {color}
     {height}
     {top}
     {oneFrameInPixel}
     {onEditKeyItemClick}
+    {onClick}
     trackId={track.id}
     {canContinueDragging}
     {updateTrackletWidth}

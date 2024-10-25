@@ -18,12 +18,13 @@ License: CECILL-C
     lastFrameIndex,
     videoControls,
   } from "../../lib/stores/videoViewerStores";
-  import { SliderRoot, Track, BBox } from "@pixano/core";
+  import { SliderRoot, Track, BBox, type KeypointsTemplate } from "@pixano/core";
   import { onMount } from "svelte";
 
   export let updateView: (frameIndex: number) => void;
   export let tracks: Track[];
   export let bboxes: BBox[];
+  export let keypoints: KeypointsTemplate[];
 
   onMount(() => {
     updateView($currentFrameIndex);
@@ -31,8 +32,10 @@ License: CECILL-C
   });
 
   const onTimeTrackClick = (index: number) => {
-    currentFrameIndex.set(index);
-    updateView($currentFrameIndex);
+    if ($currentFrameIndex !== index) {
+      currentFrameIndex.set(index);
+      updateView($currentFrameIndex);
+    }
   };
 
   annotations.subscribe((value) => {
@@ -53,9 +56,16 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each tracks as track (track.childs)}
+      {#each tracks as track (track.childs?.length)}
         <VideoPlayerRow>
-          <ObjectTrack slot="timeTrack" {track} views={$views} {onTimeTrackClick} {bboxes} />
+          <ObjectTrack
+            slot="timeTrack"
+            {track}
+            views={$views}
+            {onTimeTrackClick}
+            {bboxes}
+            {keypoints}
+          />
         </VideoPlayerRow>
       {/each}
     </div>
