@@ -32,7 +32,7 @@ jobs:
       - name: Test
         run: |
           mkdir -p library
-          docker run -p 8000:8000 --name pixano -d -v ./library:/app/library ${{ env.TEST_TAG }}
+          docker run -p 8000:8000 --name pixano -d ${{ env.TEST_TAG }}
           sleep 5
           curl http://localhost:8000
           docker stop pixano
