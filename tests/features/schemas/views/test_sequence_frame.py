@@ -16,7 +16,7 @@ class TestSequenceFrame:
             timestamp=1.0,
             frame_index=1,
             url=IMAGE_JPG_ASSET_URL,
-            other_path=ASSETS_DIRECTORY,
+            url_relative_path=ASSETS_DIRECTORY,
         )
 
         io = sequence_frame.open(ASSETS_DIRECTORY)
@@ -51,7 +51,7 @@ def test_create_sequence_frame():
         timestamp=1.0,
         frame_index=1,
         url=IMAGE_JPG_ASSET_URL,
-        other_path=ASSETS_DIRECTORY,
+        url_relative_path=ASSETS_DIRECTORY,
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),

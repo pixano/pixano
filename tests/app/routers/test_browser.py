@@ -41,7 +41,7 @@ def test_get_browser(
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
 
 def test_get_browser_semantic_search(
@@ -70,7 +70,7 @@ def test_get_browser_semantic_search(
 
     response = client.get("/browser/wrong_dataset")
     assert response.status_code == 404
-    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.data_dir)}."}
+    assert response.json() == {"detail": f"Dataset wrong_dataset not found in {str(settings.library_dir)}."}
 
     response = client.get("/browser/dataset_multi_view_tracking_and_image?limit=50&skip=0&query=metadata_0")
     assert response.status_code == 400

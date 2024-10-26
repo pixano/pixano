@@ -37,7 +37,7 @@ def create_sequence_frame(
     width: int | None = None,
     height: int | None = None,
     format: str | None = None,
-    other_path: Path | None = None,
+    url_relative_path: Path | None = None,
 ) -> SequenceFrame:
     """Create a `SequenceFrame` instance.
 
@@ -51,12 +51,12 @@ def create_sequence_frame(
         width: The frame width. If None, the width is extracted from the frame file.
         height: The frame height. If None, the height is extracted from the frame file.
         format: The frame format. If None, the format is extracted from the frame file.
-        other_path: The path to convert the URL to a relative path.
+        url_relative_path: The path to convert the URL to a relative path.
 
     Returns:
         The created `SequenceFrame` instance.
     """
-    image = create_image(url, id, item_ref, parent_ref, width, height, format, other_path)
+    image = create_image(url, id, item_ref, parent_ref, width, height, format, url_relative_path)
     return SequenceFrame(
         id=id,
         item_ref=item_ref,

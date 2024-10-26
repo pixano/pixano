@@ -14,7 +14,7 @@ class TestImage:
     def test_open(self):
         image = create_image(
             url=IMAGE_JPG_ASSET_URL,
-            other_path=ASSETS_DIRECTORY,
+            url_relative_path=ASSETS_DIRECTORY,
         )
 
         io = image.open(ASSETS_DIRECTORY)
@@ -48,7 +48,7 @@ def test_create_image():
     # Test 2: read url with custom id and other path and custom references
     image = create_image(
         url=IMAGE_JPG_ASSET_URL,
-        other_path=ASSETS_DIRECTORY,
+        url_relative_path=ASSETS_DIRECTORY,
         id="id",
         item_ref=ItemRef(id="item_id"),
         parent_ref=ViewRef(id="view_id", name="view"),

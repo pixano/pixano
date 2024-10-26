@@ -98,8 +98,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - run:
-          VERSION=$(cat VERSION)
+      - run: VERSION=$(cat VERSION)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
@@ -109,6 +108,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push test
+        uses: docker/build-push-action@v6
+        with:
+          load: true
+          tags: pixano/pixano:test
+      - name: Test
+        run: |
+          mkdir -p library
+          docker run -p 8000:8000 --name pixano -d -v ./library:/app/ -v ./media:/app/media pixano/pixano:test
+          sleep 5
+          curl http://localhost:8000
+          docker stop pixano
+          docker rm pixano
       - name: Build and push
         uses: docker/build-push-action@v6
         with:

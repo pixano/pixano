@@ -31,7 +31,7 @@ except:  # noqa: E722
 
 
 class TestFolderBaseBuilder:
-    def test_valid_init(self, image_folder_builder, video_folder_builder, entity_category):
+    def test_image_video_init(self, image_folder_builder, video_folder_builder, entity_category):
         assert isinstance(image_folder_builder, ImageFolderBuilder)
         assert isinstance(video_folder_builder, VideoFolderBuilder)
         assert image_folder_builder.source_dir.is_dir()
@@ -46,6 +46,29 @@ class TestFolderBaseBuilder:
         assert video_folder_builder.entity_name == "entities"
         assert image_folder_builder.entity_schema == entity_category
         assert video_folder_builder.entity_schema == entity_category
+        assert image_folder_builder.urls_relative_path == image_folder_builder.source_dir
+
+    def test_urls_relative_path_init(self, dataset_item_bboxes_metadata):
+        source_dir = Path(tempfile.mkdtemp())
+        target_dir = Path(tempfile.mkdtemp())
+        urls_relative_path = source_dir.parent.parent
+
+        ImageFolderBuilder(
+            source_dir,
+            target_dir,
+            dataset_item_bboxes_metadata,
+            DatasetInfo(name="test", description="test"),
+            urls_relative_path=urls_relative_path,
+        )
+
+        urls_relative_path = source_dir
+        ImageFolderBuilder(
+            source_dir,
+            target_dir,
+            dataset_item_bboxes_metadata,
+            DatasetInfo(name="test", description="test"),
+            urls_relative_path=urls_relative_path,
+        )
 
     def test_error_init(self, entity_category) -> None:
         source_dir = Path(tempfile.mkdtemp())
@@ -90,6 +113,15 @@ class TestFolderBaseBuilder:
 
         with pytest.raises(ValueError, match="Only one entity schema is supported in folder based builders."):
             ImageFolderBuilder(source_dir, target_dir, Schema, DatasetInfo(name="test", description="test"))
+
+        with pytest.raises(ValueError, match="url_relative_path must be a parent of source_dir."):
+            ImageFolderBuilder(
+                source_dir,
+                target_dir,
+                Schema,
+                DatasetInfo(name="test", description="test"),
+                urls_relative_path="wrong_path",
+            )
 
     def test_create_item(self, image_folder_builder: ImageFolderBuilder):
         item = image_folder_builder._create_item(
