@@ -2,6 +2,8 @@ name: Build test and push latest Docker image
 
 on:
   push:
+    branches:
+      - main
 
 env:
   TEST_TAG: pixano/pixano:test
@@ -32,14 +34,31 @@ jobs:
       - name: Test
         run: |
           mkdir -p library
-          docker run -p 8000:8000 --name pixano -d ${{ env.TEST_TAG }}
+          mkdir -p library/fake_dataset
+          touch library/fake_dataset/info.json
+          echo '{"id": "fake_dataset", "name": "Fake Dataset", "description": "A fake dataset for testing purposes"}' > library/fake_dataset/info.json
+          docker run -p 8000:8000 --name pixano -d -v /home/data ${{ env.TEST_TAG }}
           sleep 5
-          curl http://localhost:8000
-          docker stop pixano
-          docker rm pixano
-
+          EXCPECTED_RESPONSE='[{\"id\":\"fake_dataset\",\"name\":\"Fake Dataset\",\"description\":\"A fake dataset for testing purposes\"}]'
+          RESPONSE=$(curl http://localhost:8000)
+          if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
+              echo "Test Passed: Service returned expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              docker kill pixano
+              docker rm pixano
+              exit 0
+          else
+              echo "Test Failed: Service response did not match expected response."
+              echo "Expected: $EXPECTED_RESPONSE"
+              echo "Actual: $RESPONSE"
+              docker kill pixano
+              docker rm pixano
+              exit 1
+          fi
 
       - name: Build and push latest
+        if: github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64

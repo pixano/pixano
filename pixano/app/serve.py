@@ -107,8 +107,9 @@ class App:
             )
 
         # Create app
+        settings = get_settings_override()
         templates = Jinja2Templates(directory=TEMPLATE_PATH)
-        self.app = create_app(settings=get_settings_override())
+        self.app = create_app(settings=settings)
         self.app.dependency_overrides[get_settings] = get_settings_override
 
         @self.app.get("/", response_class=HTMLResponse)

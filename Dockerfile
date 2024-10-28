@@ -33,6 +33,12 @@ ARG MEDIA_DIR=/app/media
 ARG MODELS_DIR=/app/models
 ARG USE_AWS=false
 
+# Environment variables from the arguments to be used in the container
+ENV LIBRARY_DIR=${LIBRARY_DIR}
+ENV MEDIA_DIR=${MEDIA_DIR}
+ENV MODELS_DIR=${MODELS_DIR}
+ENV USE_AWS=${USE_AWS}
+
 # Environment variables
 # PYTHONDONTWRITEBYTECODE: prevents Python from generating .pyc files in the container
 # PYTHONUNBUFFERED: turns off buffering for easier container logging
@@ -64,7 +70,6 @@ EXPOSE 8000
 # Copy the build files to FastAPI static files
 WORKDIR /app/pixano/app
 COPY --from=build /app/pixano/app/dist ./dist/
-RUN echo pixano --models_dir ${MODELS_DIR} --host 0.0.0.0 --port 8000 ${LIBRARY_DIR} ${MEDIA_DIR};
 
 # Run the server
 # TODO: Improve the conditional statement to avoid the use of the shell if possible
