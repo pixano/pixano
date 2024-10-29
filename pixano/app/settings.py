@@ -32,8 +32,8 @@ class Settings(BaseSettings):
         aws_secret_key: S3 AWS secret key. Used if library_dir is an S3 path
     """
 
-    library_dir: Path | S3Path = (Path.cwd() / "library").as_posix()
-    media_dir: Path | S3Path = (Path.cwd() / "media").as_posix()
+    library_dir: Path | S3Path = Path.cwd() / "library"
+    media_dir: Path | S3Path = Path.cwd() / "media"
     models_dir: Path | None = None
     aws_endpoint: str | None = None
     aws_region: str | None = None
