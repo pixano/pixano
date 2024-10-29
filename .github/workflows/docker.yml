@@ -46,7 +46,7 @@ jobs:
           docker run -p 8000:8000 --name pixano -d -v /home/data ${{ env.TEST_TAG }}
           sleep 5
           EXCPECTED_RESPONSE='[{\"id\":\"fake_dataset\",\"name\":\"Fake Dataset\",\"description\":\"A fake dataset for testing purposes\"}]'
-          RESPONSE=$(curl http://localhost:8000)
+          RESPONSE=$(curl http://localhost:8000/datasets/info)
           if [ "$RESPONSE" == "$EXPECTED_RESPONSE" ]; then
               echo "Test Passed: Service returned expected response."
               echo "Expected: $EXPECTED_RESPONSE"
