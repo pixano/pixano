@@ -64,7 +64,9 @@ License: CECILL-C
             );
             //if ann_to_del first/last of tracklet, need to "resize" (childs should be sorted)
             if (itemFrameIndex === tracklet.data.start_timestep) {
-              (ann as Tracklet).data.start_timestep = (ann as Tracklet).ui.childs[0].ui.frame_index!;
+              (ann as Tracklet).data.start_timestep = (
+                ann as Tracklet
+              ).ui.childs[0].ui.frame_index!;
               changed_tracklet = true;
             }
             if (itemFrameIndex === tracklet.data.end_timestep) {
