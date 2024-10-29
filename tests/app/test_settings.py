@@ -15,12 +15,12 @@ class TestSettings:
     def test_init_path(self):
         # Test 1 all defined:
         settings = Settings(
-            library_dir="/home/user/library", media_dir="/home/user/media", models_dir="/home/user/model"
+            library_dir="/home/user/library", media_dir="/home/user/media", models_dir="/home/user/models"
         )
 
         assert settings.library_dir == Path("/home/user/library")
         assert settings.media_dir == Path("/home/user/media")
-        assert settings.models_dir == Path("/home/user/model")
+        assert settings.models_dir == Path("/home/user/models")
 
         # Test 2 all undefined:
         settings = Settings()
