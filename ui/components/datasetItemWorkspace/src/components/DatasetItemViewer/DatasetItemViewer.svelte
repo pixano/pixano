@@ -28,11 +28,11 @@ License: CECILL-C
     <div class="h-full w-full flex justify-center items-center">
       <Loader2Icon class="animate-spin text-white" />
     </div>
-  {:else if selectedItem.type === "video"}
+  {:else if selectedItem.ui.type === "video"}
     <VideoViewer {selectedItem} {embeddings} bind:currentAnn />
-  {:else if selectedItem.type === "image" || !selectedItem.type}
+  {:else if selectedItem.ui.type === "image" || !selectedItem.ui.type}
     <ImageViewer {selectedItem} {embeddings} bind:currentAnn />
-  {:else if selectedItem.type === "3d"}
+  {:else if selectedItem.ui.type === "3d"}
     <ThreeDimensionsViewer />
   {/if}
 </div>

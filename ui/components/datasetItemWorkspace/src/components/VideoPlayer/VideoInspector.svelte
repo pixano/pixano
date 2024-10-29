@@ -39,7 +39,7 @@ License: CECILL-C
   };
 
   annotations.subscribe((value) => {
-    const highlightedObject = value.find((item) => item.highlighted === "self");
+    const highlightedObject = value.find((item) => item.ui.highlighted === "self");
     if (!highlightedObject) return;
     const element = document.querySelector(`#video-object-${highlightedObject.id}`);
     if (element) {
@@ -56,7 +56,7 @@ License: CECILL-C
       </VideoPlayerRow>
     </div>
     <div class="flex flex-col grow z-10">
-      {#each tracks as track (track.childs?.length)}
+      {#each tracks as track (track.ui.childs)}
         <VideoPlayerRow>
           <ObjectTrack
             slot="timeTrack"

@@ -53,9 +53,26 @@ export const getObjectEntity = (ann: Annotation, entities: Entity[]): Entity | u
   return entities.find((entity) => entity.id === ann.data.entity_ref.id);
 };
 
+export const getTopEntity = (ann: Annotation, entities: Entity[]): Entity => {
+  if (ann.ui.top_entity) {
+    return ann.ui.top_entity;
+  }
+  let entity = entities.find((entity) => entity.id === ann.data.entity_ref.id);
+  while (entity && entity.data.parent_ref.id !== "") {
+    entity = entities.find(
+      (parent_entity) => entity && parent_entity.id === entity.data.parent_ref.id,
+    );
+  }
+  if (!entity) {
+    console.error("ERROR: Unable to found top level Entity of annotation", ann);
+  }
+  //store top_entity to avoid computing each time
+  ann.ui.top_entity = entity;
+  return entity as Entity;
+};
+
 export const getObjectsEntities = (anns: Annotation[], entities: Entity[]): Entity[] => {
-  const entities_ids = anns.map((ann) => ann.data.entity_ref.id);
-  return entities.filter((entity) => entities_ids.includes(entity.id));
+  return Array.from(new Set(anns.map((ann) => getTopEntity(ann, entities))));
 };
 
 const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
@@ -76,8 +93,8 @@ const defineTooltip = (bbox: BBox, entity: Entity): string | null => {
 export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): BBox | undefined => {
   if (!bbox) return;
   if (!bbox.is_bbox) return;
-  if (bbox.datasetItemType === "video" && bbox.displayControl?.hidden) return;
-  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.highlighted !== "self") return;
+  if (bbox.ui.datasetItemType === "video" && bbox.ui.displayControl?.hidden) return;
+  if (bbox.data.source_ref.name === PRE_ANNOTATION && bbox.ui.highlighted !== "self") return;
   if (!bbox.data.view_ref.name) return;
   let bbox_denorm_coords = bbox.data.coords;
   if (bbox.data.is_normalized) {
@@ -85,7 +102,17 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
     const image = Array.isArray(view) ? view[0] : view;
     const imageHeight = image.data.height || 1;
     const imageWidth = image.data.width || 1;
-    const [x, y, width, height] = bbox.data.coords;
+    //TODO: manage correctly format -- here we will change user format if save
+    let reformated_coords = bbox.data.coords;
+    if (bbox.data.format === "xyxy") {
+      reformated_coords = [
+        bbox.data.coords[0],
+        bbox.data.coords[1],
+        bbox.data.coords[2] - bbox.data.coords[0],
+        bbox.data.coords[3] - bbox.data.coords[1],
+      ];
+    }
+    const [x, y, width, height] = reformated_coords;
     bbox_denorm_coords = [
       x * imageWidth,
       y * imageHeight,
@@ -93,7 +120,7 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
       height * imageHeight,
     ];
   }
-  const entity = getObjectEntity(bbox, entities);
+  const entity = getTopEntity(bbox, entities);
   const tooltip = entity ? defineTooltip(bbox, entity) : "";
 
   return {
@@ -101,13 +128,17 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
     data: {
       ...bbox.data,
       coords: bbox_denorm_coords,
+      format: "xywh",
     },
-    tooltip,
-    opacity: bbox.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-    visible: !bbox.displayControl?.hidden,
-    editing: bbox.displayControl?.editing,
-    strokeFactor: bbox.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
-    highlighted: bbox.highlighted,
+    ui: {
+      ...bbox.ui,
+      tooltip,
+      opacity: bbox.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+      visible: !bbox.ui.displayControl?.hidden,
+      editing: bbox.ui.displayControl?.editing,
+      strokeFactor: bbox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
+      highlighted: bbox.ui.highlighted,
+    },
   } as BBox;
 };
 
@@ -115,8 +146,8 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
   if (
     obj.is_mask &&
     obj.data.view_ref.name &&
-    !obj.review_state &&
-    !(obj.data.source_ref.name === PRE_ANNOTATION && obj.review_state === "accepted")
+    !obj.ui.review_state &&
+    !(obj.data.source_ref.name === PRE_ANNOTATION && obj.ui.review_state === "accepted")
   ) {
     const rle = obj.data.counts as number[];
     const size = obj.data.size;
@@ -125,13 +156,16 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
 
     return {
       id: obj.id,
-      svg: masksSVG,
       data: obj.data,
-      visible: !obj.displayControl?.hidden && !obj.displayControl?.hidden,
-      editing: obj.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
-      opacity: obj.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-      strokeFactor: obj.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
-      highlighted: obj.highlighted,
+      ui: {
+        ...obj.ui,
+        svg: masksSVG,
+        visible: !obj.ui.displayControl?.hidden && !obj.ui.displayControl?.hidden,
+        editing: obj.ui.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
+        opacity: obj.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
+        strokeFactor: obj.ui.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
+        highlighted: obj.ui.highlighted,
+      },
     } as Mask;
   }
   return undefined;
@@ -144,7 +178,7 @@ export const mapObjectToKeypoints = (
   if (
     !keypoints ||
     !keypoints.data.view_ref.name ||
-    (keypoints.datasetItemType === "video" && keypoints.displayControl?.hidden)
+    (keypoints.ui.datasetItemType === "video" && keypoints.ui.displayControl?.hidden)
   )
     return;
   const template = templates.find((t) => t.template_id === keypoints.data.template_id);
@@ -171,11 +205,12 @@ export const mapObjectToKeypoints = (
     entityRef: keypoints.data.entity_ref,
     vertices,
     edges: template.edges,
-    editing: keypoints.displayControl?.editing,
-    visible: !keypoints.displayControl?.hidden,
-    highlighted: keypoints.highlighted,
+    editing: keypoints.ui.displayControl?.editing,
+    visible: !keypoints.ui.displayControl?.hidden,
+    highlighted: keypoints.ui.highlighted,
   } as KeypointsTemplate;
-  if ("frame_index" in keypoints) kptTemplate.frame_index = keypoints.frame_index;
+  if ("frame_index" in keypoints.ui) kptTemplate.frame_index = keypoints.ui.frame_index;
+  if ("top_entity" in keypoints.ui) kptTemplate.top_entity = keypoints.ui.top_entity;
   return kptTemplate;
 };
 
@@ -185,8 +220,8 @@ export const toggleObjectDisplayControl = (
   properties: ("bbox" | "mask" | "keypoints")[],
   value: boolean,
 ): Annotation => {
-  object.displayControl = {
-    ...(object.displayControl || {}),
+  object.ui.displayControl = {
+    ...(object.ui.displayControl || {}),
     [displayControlProperty]: value,
   };
   return object;
@@ -211,10 +246,10 @@ export const sortObjectsByModel = (anns: Annotation[]) =>
   anns.reduce(
     (acc, ann) => {
       if (ann.data.source_ref.name === PRE_ANNOTATION) {
-        if (!ann.review_state) acc[PRE_ANNOTATION] = [ann, ...acc[PRE_ANNOTATION]];
+        if (!ann.ui.review_state) acc[PRE_ANNOTATION] = [...acc[PRE_ANNOTATION], ann];
         return acc;
       }
-      acc[ann.data.source_ref.name] = [ann, ...(acc[ann.data.source_ref.name] || [])];
+      acc[ann.data.source_ref.name] = [...(acc[ann.data.source_ref.name] || []), ann];
       return acc;
     },
     { [GROUND_TRUTH]: [], [PRE_ANNOTATION]: [] } as ObjectsSortedByModelType<Annotation>,
@@ -225,16 +260,16 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
   return objects.map((object) => {
     if (newShape?.status !== "editing") return object;
     if (newShape.highlighted === "all") {
-      object.highlighted = "all";
-      object.displayControl = {
-        ...object.displayControl,
+      object.ui.highlighted = "all";
+      object.ui.displayControl = {
+        ...object.ui.displayControl,
         editing: false,
       };
     }
     if (newShape.highlighted === "self") {
-      object.highlighted = newShape.shapeId === object.id ? "self" : "none";
-      object.displayControl = {
-        ...object.displayControl,
+      object.ui.highlighted = newShape.shapeId === object.id ? "self" : "none";
+      object.ui.displayControl = {
+        ...object.ui.displayControl,
         editing: newShape.shapeId === object.id,
       };
     }
@@ -242,7 +277,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
     if (newShape.shapeId !== object.id) return object;
 
     // Check if the object is an image Annotation
-    if (object.datasetItemType === "image") {
+    if (object.ui.datasetItemType === "image") {
       let changed = false;
       if (newShape.type === "mask" && object.is_mask) {
         (object as Mask).data.counts = newShape.counts;
@@ -278,7 +313,7 @@ export const updateExistingObject = (objects: Annotation[], newShape: Shape): An
 
 export const getObjectsToPreAnnotate = (objects: Annotation[]): Annotation[] =>
   objects.filter(
-    (object) => object.data.source_ref.name === PRE_ANNOTATION && !object.review_state,
+    (object) => object.data.source_ref.name === PRE_ANNOTATION && !object.ui.review_state,
   );
 
 //Need to check, but it seems this function applies only to BBox
@@ -289,14 +324,14 @@ export const sortAndFilterObjectsToAnnotate = (
 ): Annotation[] => {
   return objects
     .filter((object) => {
-      if (object.datasetItemType === "image" && object.is_bbox) {
+      if (object.ui.datasetItemType === "image" && object.is_bbox) {
         const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
       }
       if (
-        object.datasetItemType === "video" &&
+        object.ui.datasetItemType === "video" &&
         object.is_bbox &&
-        object.frame_index === currentFrameIndex
+        object.ui.frame_index === currentFrameIndex
       ) {
         const confidence = (object as BBox).data.confidence || 0;
         return confidence >= confidenceFilterValue[0];
@@ -323,9 +358,9 @@ export const mapObjectWithNewStatus = (
   // const nextObjectId = objectsToAnnotate[1]?.id;
   // return allObjects.map((object) => {
   //   if (object.id === nextObjectId) {
-  //     object.highlighted = "self";
+  //     object.ui.highlighted = "self";
   //   } else {
-  //     object.highlighted = "none";
+  //     object.ui.highlighted = "none";
   //   }
   //   if (object.id === objectsToAnnotate[0]?.id) {
   //     object.review_state = status;
@@ -467,8 +502,8 @@ export const defineCreatedObject = (
     return undefined;
   }
   //need to put UI fields after creation, else zod rejects
-  newObject.datasetItemType = isVideo ? "video" : "image";
-  if (isVideo) newObject.frame_index = currentFrameIndex;
+  newObject.ui.datasetItemType = isVideo ? "video" : "image";
+  if (isVideo) newObject.ui.frame_index = currentFrameIndex;
   return newObject;
 };
 
@@ -477,25 +512,25 @@ export const highlightCurrentObject = (
   currentObject: Annotation,
   shouldUnHighlight: boolean = true,
 ) => {
-  const isObjectHighlighted = currentObject.highlighted === "self";
+  const isObjectHighlighted = currentObject.ui.highlighted === "self";
 
   let highlight_ids: string[] = [];
   if (currentObject.is_tracklet) {
     //highlight childs
-    highlight_ids = (currentObject as Tracklet).childs.map((ann) => ann.id);
+    highlight_ids = (currentObject as Tracklet).ui.childs.map((ann) => ann.id);
   }
 
   return objects.map((object) => {
-    object.displayControl = {
-      ...object.displayControl,
-      editing: object.id === currentObject.id ? object.displayControl?.editing : false,
+    object.ui.displayControl = {
+      ...object.ui.displayControl,
+      editing: object.id === currentObject.id ? object.ui.displayControl?.editing : false,
     };
     if (isObjectHighlighted && shouldUnHighlight) {
-      object.highlighted = "all";
+      object.ui.highlighted = "all";
     } else if (object.id === currentObject.id || highlight_ids.includes(object.id)) {
-      object.highlighted = "self";
+      object.ui.highlighted = "self";
     } else {
-      object.highlighted = "none";
+      object.ui.highlighted = "none";
     }
     return object;
   });
@@ -512,7 +547,7 @@ export const defineObjectThumbnail = (metas: ItemsMeta, views: MView, object: An
   if (!(view_name in views)) return null;
   const view =
     metas.type === "video"
-      ? (views[view_name] as SequenceFrame[])[box.frame_index!]
+      ? (views[view_name] as SequenceFrame[])[box.ui.frame_index!]
       : (views[view_name] as Image);
   const coords = box.data.coords;
   return {

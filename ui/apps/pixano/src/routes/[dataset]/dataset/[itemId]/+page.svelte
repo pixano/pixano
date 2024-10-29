@@ -12,6 +12,7 @@ License: CECILL-C
     type DatasetInfo,
     type SaveItem,
     PrimaryButton,
+    type Schema,
   } from "@pixano/core/src";
   import DatasetItemWorkspace from "@pixano/dataset-item-workspace/src/DatasetItemWorkspace.svelte";
   import { api } from "@pixano/core/src";
@@ -77,8 +78,7 @@ License: CECILL-C
               return view;
             });
             selectedItem = item;
-            selectedItem.type = item_type;
-            selectedItem.datasetId = dataset.id;
+            selectedItem.ui = { type: item_type, datasetId: dataset.id };
             if (Object.keys(item).length === 0) {
               noItemFound = true;
             } else {
@@ -137,14 +137,17 @@ License: CECILL-C
         route = "items";
         no_table = true;
       }
+      //remove ui field  ('ui' is not used, it's OK -- so we disable linters for the line)
+      // @ts-expect-error Property ui may not exist, but we don't care as we don't use it
+      const { ui, ...bodyObj } = savedItem.object; // eslint-disable-line @typescript-eslint/no-unused-vars
       if (savedItem.change_type === "delete") {
-        await api.deleteSchema(route, selectedDataset.id, savedItem.object, no_table);
+        await api.deleteSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
       if (savedItem.change_type === "add") {
-        await api.addSchema(route, selectedDataset.id, savedItem.object, no_table);
+        await api.addSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
       if (savedItem.change_type === "update") {
-        await api.updateSchema(route, selectedDataset.id, savedItem.object, no_table);
+        await api.updateSchema(route, selectedDataset.id, bodyObj as Schema, no_table);
       }
     }
     saveCurrentItemStore.update((old) => ({ ...old, shouldSave: false }));

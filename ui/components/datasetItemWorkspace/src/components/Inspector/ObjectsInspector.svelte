@@ -56,7 +56,7 @@ License: CECILL-C
         (model) => model !== GROUND_TRUTH && model !== PRE_ANNOTATION,
       ) || "";
     //scroll and set thumbnail to highlighted object if any
-    const highlightedObject = $annotations.find((ann) => ann.highlighted === "self");
+    const highlightedObject = $annotations.find((ann) => ann.ui.highlighted === "self");
     if (highlightedObject) {
       thumbnail = defineObjectThumbnail($itemMetas, $views, highlightedObject);
       const element = document.querySelector(`#${createObjectCardId(highlightedObject)}`);

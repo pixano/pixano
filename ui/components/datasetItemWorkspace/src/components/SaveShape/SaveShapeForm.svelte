@@ -53,7 +53,7 @@ License: CECILL-C
     const isVideo = $itemMetas.type === "video";
     if (shape.status === "saving") {
       newEntity = defineCreatedEntity(shape, features, $datasetSchema, isVideo);
-      newEntity.childs = [];
+      newEntity.ui.childs = [];
       newObject = defineCreatedObject(
         newEntity,
         shape,
@@ -63,11 +63,11 @@ License: CECILL-C
         $currentFrameIndex,
       );
       if (!newObject) return;
-      newObject.highlighted = "self";
-      newObject.displayControl = { editing: true };
-      newEntity.childs.push(newObject);
+      newObject.ui.highlighted = "self";
+      newObject.ui.displayControl = { editing: true };
+      newEntity.ui.childs.push(newObject);
       if (newObject) {
-        if (newObject.datasetItemType === "video") {
+        if (newObject.ui.datasetItemType === "video") {
           // for video, there is 2 anns, 1 track, 1 tracklet: add obj2 and tracklet
           let endFrameIndex = $currentFrameIndex + 5 + 1; //+1 for the first while loop
           //get view at endFrameIndex. If doesn't exist, get last possible one (range 5 down to 0)
@@ -92,8 +92,8 @@ License: CECILL-C
             endFrameIndex,
           );
           if (!newObject2) return;
-          newObject2.highlighted = "none";
-          newObject2.displayControl = { editing: false };
+          newObject2.ui.highlighted = "none";
+          newObject2.ui.displayControl = { editing: false };
           const trackletShape: SaveTrackletShape = {
             type: "tracklet",
             status: shape.status,
@@ -118,9 +118,9 @@ License: CECILL-C
             $currentFrameIndex,
           );
           if (!newTracklet) return;
-          newTracklet.highlighted = "none";
-          newTracklet.displayControl = { editing: false };
-          (newTracklet as Tracklet).childs = [newObject, newObject2];
+          newTracklet.ui.highlighted = "none";
+          newTracklet.ui.displayControl = { editing: false };
+          (newTracklet as Tracklet).ui.childs = [newObject, newObject2];
 
           const save_item2: SaveItem = {
             change_type: "add",
@@ -133,8 +133,8 @@ License: CECILL-C
           };
           saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item_tracklet));
           //TODO Note: we may have to manage "spatial object" entity too...
-          newEntity.childs.push(newObject2);
-          newEntity.childs.push(newTracklet);
+          newEntity.ui.childs.push(newObject2);
+          newEntity.ui.childs.push(newTracklet);
         }
         const save_item_entity: SaveItem = {
           change_type: "add",
@@ -155,8 +155,8 @@ License: CECILL-C
       //push new annotations
       annotations.update((oldObjects) => {
         const objectsWithoutHighlighted: Annotation[] = oldObjects.map((object) => {
-          object.highlighted = "none";
-          object.displayControl = { ...object.displayControl, editing: false };
+          object.ui.highlighted = "none";
+          object.ui.displayControl = { ...object.ui.displayControl, editing: false };
           return object;
         });
         return [

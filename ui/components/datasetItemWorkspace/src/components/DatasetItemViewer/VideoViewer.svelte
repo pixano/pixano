@@ -71,10 +71,10 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const bbox_childs_ids = new Set(
-          tracklet.childs.filter((ann) => ann.is_bbox).map((bbox) => bbox.id),
+          tracklet.ui.childs.filter((ann) => ann.is_bbox).map((bbox) => bbox.id),
         );
         const bbox_childs = $itemBboxes.filter((bbox) => bbox_childs_ids.has(bbox.id));
-        const box = bbox_childs.find((box) => box.frame_index === $currentFrameIndex);
+        const box = bbox_childs.find((box) => box.ui.frame_index === $currentFrameIndex);
         if (box) current_bboxes_and_interpolated.push(box);
         else if (bbox_childs.length > 1) {
           const sample_bbox = bbox_childs[0];
@@ -100,7 +100,7 @@ License: CECILL-C
       );
       for (const tracklet of current_tracklets) {
         const kpt_childs_ids = new Set(
-          tracklet.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
+          tracklet.ui.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
         );
         const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
         const kpt = kpt_childs.find((kpt) => kpt.frame_index === $currentFrameIndex);
@@ -222,7 +222,7 @@ License: CECILL-C
           newBBox.id = shape.shapeId;
           newBBox.data.coords = shape.coords;
           newBBox.data.view_ref = shape.viewRef;
-          newBBox.frame_index = currentFrame;
+          newBBox.ui.frame_index = currentFrame;
           newBBox.updated_at = new Date(Date.now()).toISOString();
           new_ann = newBBox;
         }
@@ -245,7 +245,7 @@ License: CECILL-C
             newKpt.data.coords = coords;
             newKpt.data.states = states;
             newKpt.data.view_ref = shape.viewRef;
-            newKpt.frame_index = currentFrame;
+            newKpt.ui.frame_index = currentFrame;
             newKpt.updated_at = new Date(Date.now()).toISOString();
             new_ann = newKpt;
           }

@@ -186,7 +186,9 @@ export type EntityType = z.infer<typeof entitySchema>; //export if needed
 
 export class Entity extends BaseData<EntityType> {
   //UI fields
-  childs?: Annotation[];
+  ui: {
+    childs?: Annotation[];
+  } = { childs: [] };
 
   constructor(obj: BaseDataFields<EntityType>) {
     entitySchema.parse(obj.data);
@@ -255,14 +257,20 @@ const annotationSchema = z
   })
   .passthrough();
 type AnnotationType = z.infer<typeof annotationSchema>; //export if needed
-export class Annotation extends BaseData<AnnotationType> {
-  //UI only fields
-  datasetItemType: string = "image";
+
+type AnnotationUIFields = {
+  datasetItemType: string;
   //features: Record<string, ItemFeature>;
-  displayControl: DisplayControl = {};
-  highlighted: "none" | "self" | "all" = "all";
+  displayControl?: DisplayControl;
+  highlighted?: "none" | "self" | "all";
   frame_index?: number;
   review_state?: "accepted" | "rejected"; //for pre-annotation
+  top_entity?: Entity;
+};
+
+export class Annotation extends BaseData<AnnotationType> {
+  //UI only fields
+  ui: AnnotationUIFields = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<AnnotationType>) {
     annotationSchema.parse(obj.data);
@@ -333,12 +341,14 @@ export class BBox extends Annotation {
   declare data: BBoxType & AnnotationType;
 
   //UI only fields
-  opacity?: number;
-  visible?: boolean;
-  editing?: boolean;
-  strokeFactor?: number;
-  tooltip?: string;
-  startRef?: BBox; //for interpolated box
+  ui: AnnotationUIFields & {
+    opacity?: number;
+    visible?: boolean;
+    editing?: boolean;
+    strokeFactor?: number;
+    tooltip?: string;
+    startRef?: BBox; //for interpolated box
+  } = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<BBoxType>) {
     if (obj.table_info.base_schema !== "BBox") throw new Error("Not a BBox");
@@ -365,10 +375,12 @@ export class Keypoints extends Annotation {
   declare data: KeypointsType & AnnotationType;
 
   //UI only fields
-  //opacity?: number;
-  visible?: boolean;
-  editing?: boolean;
-  //strokeFactor?: number;
+  ui: AnnotationUIFields & {
+    //opacity?: number;
+    visible?: boolean;
+    editing?: boolean;
+    //strokeFactor?: number;
+  } = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== "KeyPoints") throw new Error("Not a Keypoints");
@@ -394,11 +406,13 @@ export class Mask extends Annotation {
   declare data: MaskType & AnnotationType;
 
   //UI only fields
-  opacity?: number;
-  visible?: boolean;
-  editing?: boolean;
-  strokeFactor?: number;
-  svg?: string[];
+  ui: AnnotationUIFields & {
+    opacity?: number;
+    visible?: boolean;
+    editing?: boolean;
+    strokeFactor?: number;
+    svg?: string[];
+  } = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<MaskType>) {
     if (obj.table_info.base_schema !== "CompressedRLE") throw new Error("Not a Mask");
@@ -425,7 +439,9 @@ export class Tracklet extends Annotation {
   declare data: TrackletType & AnnotationType;
 
   //UI only fields
-  childs: Annotation[] = [];
+  ui: AnnotationUIFields & {
+    childs: Annotation[];
+  } = { datasetItemType: "video", childs: [] };
 
   constructor(obj: BaseDataFields<TrackletType>) {
     if (obj.table_info.base_schema !== "Tracklet") throw new Error("Not a Tracklet");
@@ -587,8 +603,10 @@ export class DatasetItem implements DatasetItemType {
   views: MView;
 
   //UI only fields
-  datasetId: string = "";
-  type: string = "image";
+  ui: {
+    datasetId: string;
+    type: string;
+  } = { datasetId: "", type: "" };
 
   constructor(obj: DatasetItemType) {
     datasetItemSchema.parse(obj);

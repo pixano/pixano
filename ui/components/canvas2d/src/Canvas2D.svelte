@@ -548,9 +548,9 @@ License: CECILL-C
             size: currentAnn.output.rle.size,
           },
         });
-        currentMask.svg = currentAnn.output.masksImageSVG;
-        currentMask.visible = true;
-        currentMask.opacity = 1.0;
+        currentMask.ui.svg = currentAnn.output.masksImageSVG;
+        currentMask.ui.visible = true;
+        currentMask.ui.opacity = 1.0;
 
         addMask(currentMask, "#008000", currentMaskGroup, image, viewRef.name, stage, zoomFactor);
       }
@@ -1311,7 +1311,9 @@ License: CECILL-C
                   currentImage={getCurrentImage(view_name)}
                   {zoomFactor}
                   {mask}
-                  color={colorScale(mask.data.entity_ref.id)}
+                  color={colorScale(
+                    mask.ui.top_entity ? mask.ui.top_entity.id : mask.data.entity_ref.id,
+                  )}
                   {selectedTool}
                 />
               {/if}

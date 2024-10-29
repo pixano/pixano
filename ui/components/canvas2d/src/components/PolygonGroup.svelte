@@ -32,17 +32,17 @@ License: CECILL-C
 
   let canEdit = false;
   let polygonShape: PolygonShape = {
-    simplifiedSvg: mask.svg,
-    simplifiedPoints: mask.svg.reduce(
+    simplifiedSvg: mask.ui.svg,
+    simplifiedPoints: mask.ui.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     ),
   };
 
-  $: canEdit = mask.editing;
+  $: canEdit = mask.ui.editing;
 
   $: {
-    polygonShape.simplifiedPoints = mask.svg.reduce(
+    polygonShape.simplifiedPoints = mask.ui.svg.reduce(
       (acc, val) => [...acc, parseSvgPath(val)],
       [] as PolygonGroupPoint[][],
     );
@@ -69,7 +69,7 @@ License: CECILL-C
       currentImage.height,
     );
 
-    if (mask.editing) {
+    if (mask.ui.editing) {
       newShape = {
         status: "editing",
         type: "mask",
@@ -105,7 +105,7 @@ License: CECILL-C
   };
 
   const onClick = () => {
-    if (mask.highlighted !== "self") {
+    if (mask.ui.highlighted !== "self") {
       newShape = {
         status: "editing",
         shapeId: mask.id,
@@ -122,8 +122,8 @@ License: CECILL-C
   config={{
     id: `polygon-${mask.id}`,
     draggable: canEdit,
-    visible: mask.visible,
-    opacity: mask.opacity,
+    visible: mask.ui.visible,
+    opacity: mask.ui.opacity,
     listening: selectedTool.type === "PAN",
   }}
 >
@@ -152,9 +152,9 @@ License: CECILL-C
       on:dblclick={onDoubleClick}
       on:click={onClick}
       config={{
-        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.svg),
+        sceneFunc: (ctx, stage) => sceneFunc(ctx, stage, mask.ui.svg),
         stroke: color,
-        strokeWidth: mask.strokeFactor,
+        strokeWidth: mask.ui.strokeFactor,
         closed: true,
         fill: hexToRGBA(color, 0.5),
         id: mask.id,

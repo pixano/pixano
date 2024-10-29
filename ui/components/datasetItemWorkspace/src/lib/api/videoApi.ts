@@ -38,37 +38,43 @@ export const boxLinearInterpolation = (
   view_id: string,
 ): BBox | undefined => {
   //Note: this suppose boxes are sorted by frame_index (it should)
-  const endIndex = boxes.findIndex((box) => box.frame_index! >= imageIndex);
+  const endIndex = boxes.findIndex((box) => box.ui.frame_index! >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
   const endBox = boxes[endIndex];
-  if (imageIndex === endBox.frame_index) {
+  if (imageIndex === endBox.ui.frame_index) {
     return endBox;
   }
-
   const startBox = boxes[endIndex - 1] || boxes[0];
+  if (startBox.ui.frame_index! > imageIndex || endBox.ui.frame_index! < imageIndex)
+    return undefined;
   const [startX, startY, startWidth, startHeight] = startBox.data.coords;
   const [endX, endY, endWidth, endHeight] = endBox.data.coords;
 
-  const xInterpolation = (endX - startX) / (endBox.frame_index! - startBox.frame_index!);
-  const yInterpolation = (endY - startY) / (endBox.frame_index! - startBox.frame_index!);
+  const xInterpolation = (endX - startX) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
+  const yInterpolation = (endY - startY) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
   const widthInterpolation =
-    (endWidth - startWidth) / (endBox.frame_index! - startBox.frame_index!);
+    (endWidth - startWidth) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
   const heightInterpolation =
-    (endHeight - startHeight) / (endBox.frame_index! - startBox.frame_index!);
-  const x = startX + xInterpolation * (imageIndex - startBox.frame_index!);
-  const y = startY + yInterpolation * (imageIndex - startBox.frame_index!);
-  const width = startWidth + widthInterpolation * (imageIndex - startBox.frame_index!);
-  const height = startHeight + heightInterpolation * (imageIndex - startBox.frame_index!);
+    (endHeight - startHeight) / (endBox.ui.frame_index! - startBox.ui.frame_index!);
+  const x = startX + xInterpolation * (imageIndex - startBox.ui.frame_index!);
+  const y = startY + yInterpolation * (imageIndex - startBox.ui.frame_index!);
+  const width = startWidth + widthInterpolation * (imageIndex - startBox.ui.frame_index!);
+  const height = startHeight + heightInterpolation * (imageIndex - startBox.ui.frame_index!);
   // make a new BBox with interpolated coords
-  const interpolatedBox = structuredClone(startBox);
+  const { ui, ...noUIfieldsBBox } = structuredClone(startBox);
+  const interpolatedBox = new BBox(noUIfieldsBBox);
+  interpolatedBox.ui = ui;
   interpolatedBox.id = nanoid(10);
-  interpolatedBox.frame_index = imageIndex;
+  interpolatedBox.ui.frame_index = imageIndex;
   interpolatedBox.data.view_ref.id = view_id;
   // for convenience, we store ref to start boxes
-  interpolatedBox.startRef = startBox;
+  interpolatedBox.ui.startRef = startBox;
+  // top_entity (if exist) lost class with structuredClone: remove it
+  if (interpolatedBox.ui.top_entity) interpolatedBox.ui.top_entity = undefined;
   interpolatedBox.data.coords = [x, y, width, height];
+  console.log("IB", interpolatedBox);
   return interpolatedBox;
 };
 
@@ -87,7 +93,8 @@ export const keypointsLinearInterpolation = (
     return endKpt;
   }
   const startKpt = keypoints[endIndex - 1] || keypoints[0];
-  if (endKpt.frame_index == startKpt?.frame_index) {
+  if (startKpt.frame_index! > imageIndex || endKpt.frame_index! < imageIndex) return undefined;
+  if (endKpt.frame_index == startKpt.frame_index) {
     return startKpt;
   } else {
     const vertices = startKpt.vertices.map((vertex, i) => {
@@ -106,6 +113,8 @@ export const keypointsLinearInterpolation = (
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
     interpolatedKpt.startRef = startKpt;
+    // top_entity (if exist) lost class with structuredClone: remove it
+    if (interpolatedKpt.top_entity) interpolatedKpt.top_entity = undefined;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }
@@ -117,28 +126,16 @@ export const splitTrackletInTwo = (
   next: number,
 ): Annotation => {
   const rightTrackletOrig = structuredClone(tracklet2split);
-  const {
-    datasetItemType,
-    displayControl,
-    highlighted,
-    frame_index,
-    review_state,
-    childs,
-    ...noUIfieldsTracklet
-  } = rightTrackletOrig;
+  const { ui, ...noUIfieldsTracklet } = rightTrackletOrig;
   const rightTracklet = new Tracklet(noUIfieldsTracklet);
   rightTracklet.id = nanoid(10);
   rightTracklet.data.start_timestep = next;
-  rightTracklet.childs = childs.filter((ann) => ann.frame_index! >= next);
-  rightTracklet.datasetItemType = datasetItemType;
-  rightTracklet.displayControl = displayControl;
-  rightTracklet.highlighted = highlighted;
-  rightTracklet.frame_index = frame_index;
-  rightTracklet.review_state = review_state;
+  rightTracklet.ui = ui;
+  rightTracklet.ui.childs = rightTracklet.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
 
   //tracklet2split become left tracklet
   tracklet2split.data.end_timestep = prev;
-  tracklet2split.childs = tracklet2split.childs.filter((ann) => ann.frame_index! <= prev);
+  tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
 
   const save_item_left: SaveItem = {
     change_type: "update",
@@ -157,8 +154,8 @@ export const sortByFrameIndex = (a: Annotation, b: Annotation) => {
   if (a.is_tracklet && b.is_tracklet) {
     return (a as Tracklet).data.start_timestep - (b as Tracklet).data.start_timestep;
   } else {
-    const indexA = a.frame_index !== undefined ? a.frame_index : Number.POSITIVE_INFINITY;
-    const indexB = b.frame_index !== undefined ? b.frame_index : Number.POSITIVE_INFINITY;
+    const indexA = a.ui.frame_index !== undefined ? a.ui.frame_index : Number.POSITIVE_INFINITY;
+    const indexB = b.ui.frame_index !== undefined ? b.ui.frame_index : Number.POSITIVE_INFINITY;
     return indexA - indexB;
   }
 };

@@ -56,15 +56,15 @@ export function addMask(
     stroke: style.color,
     strokeWidth: MASK_STROKEWIDTH / zoomFactor[view_name],
     scale,
-    visible: mask.visible,
-    opacity: mask.opacity,
+    visible: mask.ui.visible,
+    opacity: mask.ui.opacity,
     listening: false,
     sceneFunc: (ctx, shape) => {
       ctx.beginPath();
-      for (let i = 0; i < mask.svg.length; ++i) {
-        const start = m_part(mask.svg[i]);
+      for (let i = 0; i < mask.ui.svg.length; ++i) {
+        const start = m_part(mask.ui.svg[i]);
         ctx.moveTo(start.x, start.y);
-        const l_pts = l_part(mask.svg[i]);
+        const l_pts = l_part(mask.ui.svg[i]);
         for (const pt of l_pts) {
           ctx.lineTo(pt.x, pt.y);
         }

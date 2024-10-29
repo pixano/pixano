@@ -64,7 +64,7 @@ License: CECILL-C
     (tracklet.data.end_timestep - tracklet.data.start_timestep + 1);
   $: color = $colorScale[1](track.id);
 
-  $: tracklet_annotations_frame_indexes = tracklet.childs.map((ann) => ann.frame_index!);
+  $: tracklet_annotations_frame_indexes = tracklet.ui.childs.map((ann) => ann.ui.frame_index!);
 
   const canContinueDragging = (newFrameIndex: number, draggedFrameIndex: number): boolean => {
     const [prevFrameIndex, nextFrameIndex] = findNeighborItems(draggedFrameIndex);
@@ -93,13 +93,13 @@ License: CECILL-C
     const isStart = draggedFrameIndex === tracklet.data.start_timestep;
     const isEnd = draggedFrameIndex === tracklet.data.end_timestep;
     const newViewId = (views[tracklet.data.view_ref.name] as SequenceFrame[])[newFrameIndex].id;
-    let movedAnn = tracklet.childs[0];
+    let movedAnn = tracklet.ui.childs[0];
     if (isStart) tracklet.data.start_timestep = newFrameIndex;
     if (isEnd) {
-      movedAnn = tracklet.childs[tracklet.childs.length - 1];
+      movedAnn = tracklet.ui.childs[tracklet.ui.childs.length - 1];
       tracklet.data.end_timestep = newFrameIndex;
     }
-    movedAnn.frame_index = newFrameIndex;
+    movedAnn.ui.frame_index = newFrameIndex;
     movedAnn.data.view_ref.id = newViewId;
 
     annotations.update((objects) =>
@@ -113,7 +113,7 @@ License: CECILL-C
           }
         }
         if (ann.id === movedAnn.id) {
-          ann.frame_index = newFrameIndex;
+          ann.ui.frame_index = newFrameIndex;
           ann.data.view_ref.id = newViewId;
         }
         return ann;
@@ -141,8 +141,8 @@ License: CECILL-C
 <ContextMenu.Root>
   <ContextMenu.Trigger
     class={cn("absolute border-y border-white", {
-      "opacity-100": tracklet.highlighted === "self",
-      "opacity-30": tracklet.highlighted === "none",
+      "opacity-100": tracklet.ui.highlighted === "self",
+      "opacity-30": tracklet.ui.highlighted === "none",
     })}
     style={`left: ${left}%; width: ${width}%; top: ${top}%; height: ${height}%; background-color: ${color}`}
   >

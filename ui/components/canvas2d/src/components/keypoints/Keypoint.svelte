@@ -65,6 +65,7 @@ License: CECILL-C
       points: [...findVertex(line[0]), ...findVertex(line[1])],
       stroke: color,
       strokeWidth: keypointStructure.highlighted === "self" ? 4 : 2 / zoomFactor,
+      shadowForStrokeEnabled: false,
       opacity,
     }}
   />

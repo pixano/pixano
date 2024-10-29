@@ -111,6 +111,7 @@ License: CECILL-C
     fill,
     stroke: "white",
     strokeWidth: 1 / zoomFactor,
+    shadowForStrokeEnabled: false,
     id: `keypoint-${keypointsId}-${vertexIndex}`,
     draggable,
     opacity,

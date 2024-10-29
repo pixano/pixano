@@ -56,7 +56,11 @@ License: CECILL-C
         {stage}
         {keypointStructure}
         {zoomFactor}
-        color={colorScale(keypointStructure.entityRef.id)}
+        color={colorScale(
+          keypointStructure.top_entity
+            ? keypointStructure.top_entity.id
+            : keypointStructure.entityRef.id,
+        )}
       >
         <Rect
           config={{
@@ -64,7 +68,11 @@ License: CECILL-C
             y: findRectBoundaries(keypointStructure.vertices).y - 10 / zoomFactor,
             width: findRectBoundaries(keypointStructure.vertices).width + 20 / zoomFactor,
             height: findRectBoundaries(keypointStructure.vertices).height + 20 / zoomFactor,
-            fill: colorScale(keypointStructure.entityRef.id),
+            fill: colorScale(
+              keypointStructure.top_entity
+                ? keypointStructure.top_entity.id
+                : keypointStructure.entityRef.id,
+            ),
             stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
             opacity: keypointStructure.editing ? 0.3 : 0,

@@ -73,7 +73,7 @@ export type ItemsMeta = {
   //objectFeatures: Record<string, ItemFeature>; // itemFeatures
   featuresList: FeaturesValues;
   item: DatasetItem["item"];
-  type: DatasetItem["type"];
+  type: string;
   format?: "1bit" | "8bit" | "16bit";
   color?: "grayscale" | "rgb" | "rgba";
 };

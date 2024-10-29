@@ -30,6 +30,7 @@ License: CECILL-C
   } from "../../lib/stores/datasetItemWorkspaceStores";
   import { currentFrameIndex } from "../../lib/stores/videoViewerStores";
   import {
+    getTopEntity,
     createObjectCardId,
     toggleObjectDisplayControl,
     highlightCurrentObject,
@@ -48,19 +49,22 @@ License: CECILL-C
   let showIcons: boolean = false;
 
   $: features = createFeature<EntityType>(entity, $datasetSchema);
-  $: isEditing = entity.childs?.some((ann) => ann.displayControl?.editing) || false;
-  $: isVisible = entity.childs?.some((ann) => ann.displayControl?.hidden == false) || true;
+  $: isEditing = entity.ui.childs?.some((ann) => ann.ui.displayControl?.editing) || false;
+  $: isVisible =
+    entity.ui.childs?.find((ann) => getTopEntity(ann, $entities).id === entity.id)?.ui
+      .displayControl?.hidden === false || false;
   $: boxIsVisible =
-    entity.childs?.some(
-      (ann) => ann.datasetItemType === "image" && ann.is_bbox && !ann.displayControl?.hidden,
+    entity.ui.childs?.some(
+      (ann) => ann.ui.datasetItemType === "image" && ann.is_bbox && !ann.ui.displayControl?.hidden,
     ) || false;
   $: maskIsVisible =
-    entity.childs?.some(
-      (ann) => ann.datasetItemType === "image" && ann.is_mask && !ann.displayControl?.hidden,
+    entity.ui.childs?.some(
+      (ann) => ann.ui.datasetItemType === "image" && ann.is_mask && !ann.ui.displayControl?.hidden,
     ) || false;
   $: keypointsIsVisible =
-    entity.childs?.some(
-      (ann) => ann.datasetItemType === "image" && ann.is_keypoints && !ann.displayControl?.hidden,
+    entity.ui.childs?.some(
+      (ann) =>
+        ann.ui.datasetItemType === "image" && ann.is_keypoints && !ann.ui.displayControl?.hidden,
     ) || false;
 
   $: color = $colorScale[1](entity.id);
@@ -72,19 +76,19 @@ License: CECILL-C
   ) => {
     annotations.update((anns) =>
       anns.map((ann) => {
-        //nno change on non current anns for video
-        if (ann.datasetItemType === "video") {
-          if (ann.frame_index !== $currentFrameIndex) return ann;
-        }
         if (displayControlProperty === "editing") {
-          ann.highlighted = ann.data.entity_ref.id === entity.id ? "self" : "none";
-          ann.highlighted = value ? ann.highlighted : "all";
-          ann.displayControl = {
-            ...ann.displayControl,
+          //no change on non current anns for video
+          if (ann.ui.datasetItemType === "video") {
+            if (ann.ui.frame_index !== $currentFrameIndex) return ann;
+          }
+          ann.ui.highlighted = getTopEntity(ann, $entities).id === entity.id ? "self" : "none";
+          ann.ui.highlighted = value ? ann.ui.highlighted : "all";
+          ann.ui.displayControl = {
+            ...ann.ui.displayControl,
             editing: false,
           };
         }
-        if (ann.data.entity_ref.id === entity.id) {
+        if (getTopEntity(ann, $entities).id === entity.id) {
           ann = toggleObjectDisplayControl(ann, displayControlProperty, properties, value);
         }
         return ann;
@@ -98,7 +102,7 @@ License: CECILL-C
       object: entity,
     };
     saveData.update((current_sd) => addOrUpdateSaveItem(current_sd, save_item));
-    for (const ann of entity.childs || []) {
+    for (const ann of entity.ui.childs || []) {
       const save_item: SaveItem = {
         change_type: "delete",
         object: ann,
@@ -131,9 +135,9 @@ License: CECILL-C
   };
 
   const onColoredDotClick = () =>
-    entity.childs?.forEach((ann) => {
-      if (ann.datasetItemType === "video") {
-        if (ann.frame_index === $currentFrameIndex)
+    entity.ui.childs?.forEach((ann) => {
+      if (ann.ui.datasetItemType === "video") {
+        if (ann.ui.frame_index === $currentFrameIndex)
           annotations.update((objects) => highlightCurrentObject(objects, ann));
       } else {
         annotations.update((objects) => highlightCurrentObject(objects, ann));
@@ -145,7 +149,7 @@ License: CECILL-C
     !isEditing && selectedTool.set(panTool);
   };
 
-  const thumb_box: Annotation | undefined = entity.childs?.find((ann) => ann.is_bbox);
+  const thumb_box: Annotation | undefined = entity.ui.childs?.find((ann) => ann.is_bbox);
   const thumbnail: ObjectThumbnail | null = thumb_box
     ? defineObjectThumbnail($itemMetas, $views, thumb_box)
     : null;
@@ -158,7 +162,7 @@ License: CECILL-C
 >
   <div
     class={cn("flex items-center mt-1  rounded justify-between text-slate-800 bg-white border-2 ")}
-    style="border-color:{entity.childs?.some((ann) => ann.highlighted === 'self')
+    style="border-color:{entity.ui.childs?.some((ann) => ann.ui.highlighted === 'self')
       ? color
       : 'transparent'}"
   >
@@ -205,11 +209,11 @@ License: CECILL-C
         style="border-color:{color}"
       >
         <div class="flex flex-col gap-2">
-          {#if entity.childs?.some((ann) => ann.datasetItemType === "image")}
+          {#if entity.ui.childs?.some((ann) => ann.ui.datasetItemType === "image")}
             <div>
               <p class="font-medium first-letter:uppercase">display</p>
               <div class="flex gap-4">
-                {#if entity.childs?.some((ann) => ann.is_bbox)}
+                {#if entity.ui.childs?.some((ann) => ann.is_bbox)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Box</p>
                     <Checkbox
@@ -220,7 +224,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if entity.childs?.some((ann) => ann.is_mask)}
+                {#if entity.ui.childs?.some((ann) => ann.is_mask)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Mask</p>
                     <Checkbox
@@ -231,7 +235,7 @@ License: CECILL-C
                     />
                   </div>
                 {/if}
-                {#if entity.childs?.some((ann) => ann.is_keypoints)}
+                {#if entity.ui.childs?.some((ann) => ann.is_keypoints)}
                   <div class="flex gap-2 mt-2 items-center">
                     <p class="font-light first-letter:uppercase">Key points</p>
                     <Checkbox

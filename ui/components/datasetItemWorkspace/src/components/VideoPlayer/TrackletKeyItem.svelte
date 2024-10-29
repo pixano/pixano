@@ -40,15 +40,17 @@ License: CECILL-C
   let isItemBeingEdited = false;
 
   $: {
-    const currentObjectBeingEdited = $annotations.find((object) => object.displayControl?.editing);
+    const currentObjectBeingEdited = $annotations.find(
+      (object) => object.ui.displayControl?.editing,
+    );
     isItemBeingEdited =
       itemFrameIndex === $currentFrameIndex && currentObjectBeingEdited?.id === trackId;
   }
 
   const onDeleteItemClick = () => {
-    const ann_to_del = tracklet.childs.find((ann) => ann.frame_index === itemFrameIndex);
+    const ann_to_del = tracklet.ui.childs.find((ann) => ann.ui.frame_index === itemFrameIndex);
     if (!ann_to_del) return;
-    if (tracklet.childs.length <= 2) {
+    if (tracklet.ui.childs.length <= 2) {
       console.error("Deleting one of 2 last item of tracklet, it should not happen.");
       return;
     }
@@ -57,18 +59,18 @@ License: CECILL-C
       anns
         .map((ann) => {
           if (ann.id === tracklet.id && ann.is_tracklet) {
-            (ann as Tracklet).childs = (ann as Tracklet).childs.filter(
-              (fann) => fann.frame_index !== itemFrameIndex,
+            (ann as Tracklet).ui.childs = (ann as Tracklet).ui.childs.filter(
+              (fann) => fann.ui.frame_index !== itemFrameIndex,
             );
             //if ann_to_del first/last of tracklet, need to "resize" (childs should be sorted)
             if (itemFrameIndex === tracklet.data.start_timestep) {
-              (ann as Tracklet).data.start_timestep = (ann as Tracklet).childs[0].frame_index!;
+              (ann as Tracklet).data.start_timestep = (ann as Tracklet).ui.childs[0].ui.frame_index!;
               changed_tracklet = true;
             }
             if (itemFrameIndex === tracklet.data.end_timestep) {
-              (ann as Tracklet).data.end_timestep = (ann as Tracklet).childs[
-                (ann as Tracklet).childs.length - 1
-              ].frame_index!;
+              (ann as Tracklet).data.end_timestep = (ann as Tracklet).ui.childs[
+                (ann as Tracklet).ui.childs.length - 1
+              ].ui.frame_index!;
               changed_tracklet = true;
             }
           }
@@ -79,7 +81,7 @@ License: CECILL-C
     entities.update((ents) =>
       ents.map((ent) => {
         if (ent.is_track && ent.id === tracklet.data.entity_ref.id) {
-          ent.childs = ent.childs?.filter((ann) => ann.id !== ann_to_del.id);
+          ent.ui.childs = ent.ui.childs?.filter((ann) => ann.id !== ann_to_del.id);
         }
         return ent;
       }),
@@ -109,8 +111,8 @@ License: CECILL-C
 
   const dragMe = (node: HTMLButtonElement) => {
     if (
-      tracklet.childs[0].frame_index !== itemFrameIndex &&
-      tracklet.childs[tracklet.childs.length - 1].frame_index !== itemFrameIndex
+      tracklet.ui.childs[0].ui.frame_index !== itemFrameIndex &&
+      tracklet.ui.childs[tracklet.ui.childs.length - 1].ui.frame_index !== itemFrameIndex
     )
       return;
 
@@ -161,7 +163,7 @@ License: CECILL-C
     <button class="h-full w-full" use:dragMe on:click={(e) => onClick(e.clientX)} />
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    {#if tracklet.childs?.length > 2}
+    {#if tracklet.ui.childs?.length > 2}
       <ContextMenu.Item inset on:click={() => onDeleteItemClick()}>Remove item</ContextMenu.Item>
     {/if}
     {#if !isItemBeingEdited}

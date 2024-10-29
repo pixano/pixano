@@ -68,11 +68,11 @@ License: CECILL-C
         const to_highlight =
           (!ann.is_tracklet &&
             ann.data.entity_ref.id === track.id &&
-            ann.frame_index === frameIndex) ||
+            ann.ui.frame_index === frameIndex) ||
           (ann.is_tracklet && ann.id === track.id);
-        ann.highlighted = to_highlight ? "self" : "none";
-        ann.displayControl = {
-          ...ann.displayControl,
+        ann.ui.highlighted = to_highlight ? "self" : "none";
+        ann.ui.displayControl = {
+          ...ann.ui.displayControl,
           editing: to_highlight,
         };
         return ann;
@@ -91,39 +91,17 @@ License: CECILL-C
       //an interpolated obj should exist: use it
       const interpolatedBox = bboxes.find(
         (box) =>
-          box.frame_index === rightClickFrameIndex &&
-          tracklet.childs.some((ann) => ann.id === box.startRef?.id),
+          box.ui.frame_index === rightClickFrameIndex &&
+          tracklet.ui.childs.some((ann) => ann.id === box.ui.startRef?.id),
       );
       if (interpolatedBox) {
         const newItemOrig = structuredClone(interpolatedBox);
-        const {
-          datasetItemType,
-          displayControl,
-          highlighted,
-          frame_index,
-          review_state,
-          opacity,
-          visible,
-          editing,
-          strokeFactor,
-          tooltip,
-          ...noUIfieldsBBox
-        } = newItemOrig;
-        if ("startRef" in noUIfieldsBBox) delete noUIfieldsBBox.startRef;
+        const { ui, ...noUIfieldsBBox } = newItemOrig;
         newItemBBox = new BBox(noUIfieldsBBox);
-        newItemBBox.datasetItemType = datasetItemType;
-        newItemBBox.displayControl = displayControl;
-        newItemBBox.highlighted = highlighted;
-        newItemBBox.frame_index = frame_index;
-        newItemBBox.review_state = review_state;
-        newItemBBox.opacity = opacity;
-        newItemBBox.visible = visible;
-        newItemBBox.editing = editing;
-        newItemBBox.strokeFactor = strokeFactor;
-        newItemBBox.tooltip = tooltip;
+        newItemBBox.ui = ui;
         //coords are denormalized: normalize them
         const current_sf = (views[newItemBBox.data.view_ref.name] as SequenceFrame[])[
-          newItemBBox.frame_index!
+          newItemBBox.ui.frame_index!
         ];
         const [x, y, w, h] = newItemBBox.data.coords;
         newItemBBox.data.coords = [
@@ -141,7 +119,7 @@ License: CECILL-C
       const interpolatedKpt = keypoints.find(
         (kpt) =>
           kpt.frame_index === rightClickFrameIndex &&
-          tracklet.childs.some((ann) => ann.id === kpt.startRef?.id),
+          tracklet.ui.childs.some((ann) => ann.id === kpt.startRef?.id),
       );
       if (interpolatedKpt && interpolatedKpt.startRef) {
         const keypointsRef = $annotations.find(
@@ -149,30 +127,16 @@ License: CECILL-C
         ) as Keypoints;
         if (keypointsRef) {
           const newItemOrig = structuredClone(keypointsRef);
-          const {
-            datasetItemType,
-            displayControl,
-            highlighted,
-            review_state,
-            visible,
-            editing,
-            ...noUIfieldsBBox
-          } = newItemOrig;
-          if ("frame_index" in noUIfieldsBBox) delete noUIfieldsBBox.frame_index;
-          if ("startRef" in noUIfieldsBBox) delete noUIfieldsBBox.startRef;
+          const { ui, ...noUIfieldsBBox } = newItemOrig;
           newItemKpt = new Keypoints(noUIfieldsBBox);
-          newItemKpt.datasetItemType = datasetItemType;
-          newItemKpt.review_state = review_state;
-          newItemKpt.displayControl = interpolatedKpt.displayControl
-            ? interpolatedKpt.displayControl
-            : displayControl;
-          newItemKpt.highlighted = interpolatedKpt.highlighted
-            ? interpolatedKpt.highlighted
-            : highlighted;
-          newItemKpt.visible = interpolatedKpt.visible ? interpolatedKpt.visible : visible;
-          newItemKpt.editing = interpolatedKpt.editing ? interpolatedKpt.editing : editing;
+          newItemKpt.ui = ui;
+          if (interpolatedKpt.displayControl)
+            newItemKpt.ui.displayControl = interpolatedKpt.displayControl;
+          if (interpolatedKpt.highlighted) newItemKpt.ui.highlighted = interpolatedKpt.highlighted;
+          if (interpolatedKpt.visible) newItemKpt.ui.visible = interpolatedKpt.visible;
+          if (interpolatedKpt.editing) newItemKpt.ui.editing = interpolatedKpt.editing;
           newItemKpt.id = interpolatedKpt.id;
-          newItemKpt.frame_index = interpolatedKpt.frame_index;
+          newItemKpt.ui.frame_index = interpolatedKpt.frame_index;
           newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
           //coords are denormalized: normalize them (??is that so ? to check)
           const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
@@ -201,10 +165,11 @@ License: CECILL-C
         annotations.update((objects) => {
           objects.map((obj) => {
             if (obj.is_tracklet && obj.id === tracklet.id) {
+              const obj_tracket = obj as Tracklet;
               // add item in childs
-              if (newItemBBox) (obj as Tracklet).childs?.push(newItemBBox);
-              if (newItemKpt) (obj as Tracklet).childs?.push(newItemKpt);
-              (obj as Tracklet).childs?.sort((a, b) => sortByFrameIndex(a, b));
+              if (newItemBBox) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemBBox];
+              if (newItemKpt) obj_tracket.ui.childs = [...obj_tracket.ui.childs, newItemKpt];
+              obj_tracket.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
             }
             return obj;
           });
@@ -216,9 +181,9 @@ License: CECILL-C
         entities.update((objects) =>
           objects.map((entity) => {
             if (entity.id === tracklet.data.entity_ref.id) {
-              if (newItemBBox) entity.childs?.push(newItemBBox);
-              if (newItemKpt) entity.childs?.push(newItemKpt);
-              entity.childs?.sort((a, b) => sortByFrameIndex(a, b));
+              if (newItemBBox) entity.ui.childs = [...entity.ui.childs!, newItemBBox];
+              if (newItemKpt) entity.ui.childs = [...entity.ui.childs!, newItemKpt];
+              entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
             }
             return entity;
           }),
@@ -231,24 +196,24 @@ License: CECILL-C
   //like findNeighborItems, but "better" (return existing neighbors)
   const findPreviousAndNext = (tracklet: Tracklet, targetIndex: number): [number, number] => {
     let low = 0;
-    let high = tracklet.childs.length - 1;
+    let high = tracklet.ui.childs.length - 1;
     let mid;
     let previousItem: Annotation | null = null;
     let nextItem: Annotation | null = null;
 
     while (low <= high) {
       mid = Math.floor((low + high) / 2);
-      if (tracklet.childs[mid].frame_index! <= targetIndex) {
-        previousItem = tracklet.childs[mid];
+      if (tracklet.ui.childs[mid].ui.frame_index! <= targetIndex) {
+        previousItem = tracklet.ui.childs[mid];
         low = mid + 1;
       } else {
-        nextItem = tracklet.childs[mid];
+        nextItem = tracklet.ui.childs[mid];
         high = mid - 1;
       }
     }
     return [
-      previousItem ? previousItem.frame_index! : targetIndex,
-      nextItem ? nextItem.frame_index! : targetIndex + 1,
+      previousItem ? previousItem.ui.frame_index! : targetIndex,
+      nextItem ? nextItem.ui.frame_index! : targetIndex + 1,
     ];
   };
 
@@ -259,8 +224,8 @@ License: CECILL-C
     entities.update((objects) =>
       objects.map((entity) => {
         if (entity.is_track && entity.id === track.id) {
-          entity.childs?.push(newOnRight);
-          entity.childs?.sort((a, b) => sortByFrameIndex(a, b));
+          entity.ui.childs = [...entity.ui.childs!, newOnRight];
+          entity.ui.childs?.sort((a, b) => sortByFrameIndex(a, b));
         }
         return entity;
       }),
@@ -269,15 +234,15 @@ License: CECILL-C
   };
 
   const onDeleteTrackletClick = (tracklet: Tracklet) => {
-    const childs_ids = tracklet.childs?.map((ann) => ann.id);
+    const childs_ids = tracklet.ui.childs?.map((ann) => ann.id);
     let to_del_entity: Entity | null = null;
     entities.update((objects) =>
       objects.map((entity) => {
         if (entity.is_track && entity.id === track.id)
-          entity.childs = entity.childs?.filter(
+          entity.ui.childs = entity.ui.childs?.filter(
             (ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id,
           );
-        if (entity.childs?.length == 0) {
+        if (entity.ui.childs?.length == 0) {
           to_del_entity = entity;
         }
         return entity;
@@ -286,7 +251,7 @@ License: CECILL-C
     annotations.update((anns) =>
       anns.filter((ann) => !childs_ids.includes(ann.id) && ann.id !== tracklet.id),
     );
-    tracklet.childs?.forEach((ann) => {
+    tracklet.ui.childs?.forEach((ann) => {
       const save_del_ann: SaveItem = {
         change_type: "delete",
         object: ann,
@@ -313,13 +278,13 @@ License: CECILL-C
     let next: number = $lastFrameIndex;
 
     for (const subtracklet of tracklets) {
-      for (const child of subtracklet.childs) {
-        if (child.frame_index! < frameIndex) {
-          previous = child.frame_index!;
-        } else if (child.frame_index! > frameIndex) {
-          if (!nextChild || child.frame_index! < nextChild.frame_index!) {
+      for (const child of subtracklet.ui.childs) {
+        if (child.ui.frame_index! < frameIndex) {
+          previous = child.ui.frame_index!;
+        } else if (child.ui.frame_index! > frameIndex) {
+          if (!nextChild || child.ui.frame_index! < nextChild.ui.frame_index!) {
             nextChild = child;
-            next = nextChild.frame_index!;
+            next = nextChild.ui.frame_index!;
           }
         }
       }

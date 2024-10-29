@@ -28,13 +28,13 @@ License: CECILL-C
       (item) => item.data.source_ref.name === modelName,
     );
     const allObjectsOfCurrentModelAreHidden = allObjectsOfCurrentModel.every(
-      (item) => item.displayControl?.hidden,
+      (item) => item.ui.displayControl?.hidden,
     );
     if (allObjectsOfCurrentModelAreHidden) {
       visibilityStatus = "hidden";
     }
     const allObjectsOfCurrentModelAreShown = allObjectsOfCurrentModel.every(
-      (item) => !item.displayControl?.hidden,
+      (item) => !item.ui.displayControl?.hidden,
     );
     if (allObjectsOfCurrentModelAreShown) {
       visibilityStatus = "shown";

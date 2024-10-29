@@ -5,7 +5,7 @@ License: CECILL-C
 -------------------------------------*/
 
 import type { SegmentationResult } from ".";
-import type { BBox, DisplayControl, Mask, Reference } from "./datasetTypes";
+import type { BBox, DisplayControl, Mask, Entity, Reference } from "./datasetTypes";
 
 // OBJECTS FEATURES
 export type TextFeature = {
@@ -90,6 +90,7 @@ export type KeypointsTemplate = {
   displayControl?: DisplayControl;
   highlighted?: "all" | "self" | "none";
   startRef?: KeypointsTemplate;
+  top_entity?: Entity;
 };
 
 export type CreateKeypointShape = {

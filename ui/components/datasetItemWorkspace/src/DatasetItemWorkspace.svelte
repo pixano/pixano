@@ -11,6 +11,7 @@ License: CECILL-C
 
   import { rleFrString, rleToString } from "../../canvas2d/src/api/maskApi";
   import { sortByFrameIndex } from "./lib/api/videoApi";
+  import { getTopEntity } from "./lib/api/objectsApi";
   import Toolbar from "./components/Toolbar.svelte";
   import Inspector from "./components/Inspector/InspectorInspector.svelte";
   import LoadModelModal from "./components/LoadModelModal.svelte";
@@ -49,20 +50,22 @@ License: CECILL-C
 
     // put type and data in corresponding field (aka bbox, keypoiints or mask)
     // adapt data model from back to front
-    if (selectedItem.type === "image") {
-      ann.datasetItemType = "image";
+    if (selectedItem.ui.type === "image") {
+      ann.ui = { datasetItemType: "image" };
       if (ann.table_info.base_schema === "CompressedRLE") {
         //unpack Compressed RLE to uncompressed RLE
         const mask: Mask = ann as Mask;
         if (typeof mask.data.counts === "string") mask.data.counts = rleFrString(mask.data.counts);
       }
     } else {
-      ann.datasetItemType = "video";
+      ann.ui = { datasetItemType: "video" };
       //add frame_index to annotation
-      const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
-        (sf) => sf.id === ann.data.view_ref.id,
-      );
-      if (seqframe?.data.frame_index != undefined) ann.frame_index = seqframe.data.frame_index;
+      if (ann.table_info.base_schema !== "Tracklet") {
+        const seqframe = ($views[ann.data.view_ref.name] as SequenceFrame[]).find(
+          (sf) => sf.id === ann.data.view_ref.id,
+        );
+        if (seqframe?.data.frame_index != undefined) ann.ui.frame_index = seqframe.data.frame_index;
+      }
 
       if (ann.table_info.base_schema === "CompressedRLE") {
         //unpack Compressed RLE to uncompressed RLE
@@ -84,34 +87,55 @@ License: CECILL-C
     newAnns.sort((a, b) => sortByFrameIndex(a, b));
     annotations.set(newAnns);
 
-    const newEntities: Entity[] = [];
+    let newEntities: Entity[] = [];
+    const subEntitiesChilds: Record<string, Annotation[]> = {};
     Object.values(selectedItem.entities).forEach((sel_entities) => {
       sel_entities.forEach((entity) => {
         //build childs list
-        entity.childs = $annotations.filter((ann) => ann.data.entity_ref.id === entity.id);
+        entity.ui = { childs: $annotations.filter((ann) => ann.data.entity_ref.id === entity.id) };
         newEntities.push(entity);
+        if (entity.data.parent_ref.id !== "" && entity.ui.childs) {
+          if (entity.data.parent_ref.id in subEntitiesChilds) {
+            subEntitiesChilds[entity.data.parent_ref.id] = subEntitiesChilds[
+              entity.data.parent_ref.id
+            ].concat(entity.ui.childs);
+          } else {
+            subEntitiesChilds[entity.data.parent_ref.id] = entity.ui.childs;
+          }
+        }
       });
     });
+    if (Object.keys(subEntitiesChilds).length > 0) {
+      console.log("TRE", subEntitiesChilds);
+      newEntities = newEntities.map((entity) => {
+        if (entity.is_track) {
+          entity.ui.childs = [...entity.ui.childs!, ...subEntitiesChilds[entity.id]];
+        }
+        return entity;
+      });
+    }
     entities.set(newEntities);
 
     //add tracklets childs
+
+    //WIP//TODO :: Something wrong here (incorrect childs (only tracklets) when there is subentities) !!
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
     annotations.update((anns) =>
       anns.map((ann) => {
         if (ann.is_tracklet) {
           const tracklet = ann as Tracklet;
-          const track_entity = $entities.find(
-            (entity) => entity.is_track && entity.id === tracklet.data.entity_ref.id,
-          );
+          const track_entity = getTopEntity(tracklet, $entities);
           if (track_entity) {
-            tracklet.childs =
-              track_entity.childs?.filter(
+            tracklet.ui.childs =
+              track_entity.ui.childs?.filter(
                 (child) =>
-                  child.frame_index !== undefined &&
-                  child.frame_index <= tracklet.data.end_timestep &&
-                  child.frame_index >= tracklet.data.start_timestep &&
+                  child.ui.frame_index !== undefined &&
+                  child.ui.frame_index <= tracklet.data.end_timestep &&
+                  child.ui.frame_index >= tracklet.data.start_timestep &&
                   child.data.view_ref.name === tracklet.data.view_ref.name,
               ) || [];
-            tracklet.childs.sort((a, b) => a.frame_index! - b.frame_index!);
+            tracklet.ui.childs.sort((a, b) => a.ui.frame_index! - b.ui.frame_index!);
+            //console.log("ZAZAR", track_entity, tracklet);
           }
         }
         return ann;
@@ -123,7 +147,7 @@ License: CECILL-C
     itemMetas.set({
       featuresList: featureValues || { main: {}, objects: {} },
       item: selectedItem.item,
-      type: selectedItem.type,
+      type: selectedItem.ui.type,
     });
 
     saveData.set([]);
@@ -188,7 +212,7 @@ License: CECILL-C
   <Inspector on:click={onSave} {isLoading} />
   <LoadModelModal
     {models}
-    currentDatasetId={selectedItem.datasetId}
+    currentDatasetId={selectedItem.ui.datasetId}
     selectedItemId={selectedItem.item.id}
     bind:embeddings
   />
