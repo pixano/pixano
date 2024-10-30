@@ -46,6 +46,8 @@ jobs:
       - name: Test
         run: |
           ls -la
+          ls -la tests/
+          ls -la tests/assets/
           ls -la tests/assets/library
           docker run -p 8000:8000 --name pixano -d -v ./tests/assets/library:/app/library ${{ env.TEST_TAG }}
           sleep 5
