@@ -134,7 +134,6 @@ export const splitTrackletInTwo = (
   //note: get object links from original object, as structuredClone lose class specifics
   rightTracklet.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
   rightTracklet.ui.top_entity = tracklet2split.ui.top_entity;
-  console.log("splitR", rightTracklet);
   //tracklet2split become left tracklet
   tracklet2split.data.end_timestep = prev;
   tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
