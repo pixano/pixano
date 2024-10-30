@@ -67,7 +67,6 @@ RUN if [ "$USE_AWS" = "true" ]; then \
 
 # Install the package
 RUN pip install -e .
-RUN pip list
 
 # Expose ports
 # 8000: FastAPI server
