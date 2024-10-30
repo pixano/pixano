@@ -92,7 +92,7 @@ License: CECILL-C
             endFrameIndex,
           );
           if (!newObject2) return;
-          newObject2.ui.highlighted = "none";
+          newObject2.ui.highlighted = "self";
           newObject2.ui.displayControl = { editing: false };
           const trackletShape: SaveTrackletShape = {
             type: "tracklet",

@@ -68,13 +68,13 @@ export const boxLinearInterpolation = (
   interpolatedBox.ui = ui;
   interpolatedBox.id = nanoid(10);
   interpolatedBox.ui.frame_index = imageIndex;
+  interpolatedBox.ui.displayControl = { ...interpolatedBox.ui.displayControl, editing: false };
   interpolatedBox.data.view_ref.id = view_id;
   // for convenience, we store ref to start boxes
   interpolatedBox.ui.startRef = startBox;
   // top_entity (if exist) lost class with structuredClone: remove it
   if (interpolatedBox.ui.top_entity) interpolatedBox.ui.top_entity = undefined;
   interpolatedBox.data.coords = [x, y, width, height];
-  console.log("IB", interpolatedBox);
   return interpolatedBox;
 };
 
@@ -84,37 +84,38 @@ export const keypointsLinearInterpolation = (
   view_id: string,
 ): KeypointsTemplate | undefined => {
   //Note: this suppose keypoints are sorted by frame_index (it should)
-  const endIndex = keypoints.findIndex((kpt) => kpt.frame_index! >= imageIndex);
+  const endIndex = keypoints.findIndex((kpt) => kpt.ui!.frame_index! >= imageIndex);
   if (endIndex < 0) {
     return undefined;
   }
   const endKpt = keypoints[endIndex];
-  if (imageIndex == endKpt.frame_index) {
+  if (imageIndex == endKpt.ui!.frame_index) {
     return endKpt;
   }
   const startKpt = keypoints[endIndex - 1] || keypoints[0];
-  if (startKpt.frame_index! > imageIndex || endKpt.frame_index! < imageIndex) return undefined;
-  if (endKpt.frame_index == startKpt.frame_index) {
+  if (startKpt.ui!.frame_index! > imageIndex || endKpt.ui!.frame_index! < imageIndex)
+    return undefined;
+  if (endKpt.ui!.frame_index === startKpt.ui!.frame_index) {
     return startKpt;
   } else {
     const vertices = startKpt.vertices.map((vertex, i) => {
       const xInterpolation =
-        (endKpt.vertices[i].x - vertex.x) / (endKpt.frame_index! - startKpt.frame_index!);
+        (endKpt.vertices[i].x - vertex.x) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
       const yInterpolation =
-        (endKpt.vertices[i].y - vertex.y) / (endKpt.frame_index! - startKpt.frame_index!);
-      const x = vertex.x + xInterpolation * (imageIndex - startKpt.frame_index!);
-      const y = vertex.y + yInterpolation * (imageIndex - startKpt.frame_index!);
+        (endKpt.vertices[i].y - vertex.y) / (endKpt.ui!.frame_index! - startKpt.ui!.frame_index!);
+      const x = vertex.x + xInterpolation * (imageIndex - startKpt.ui!.frame_index!);
+      const y = vertex.y + yInterpolation * (imageIndex - startKpt.ui!.frame_index!);
       return { ...vertex, x, y };
     });
     // make a new KeypointsTemplate with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
-    interpolatedKpt.frame_index = imageIndex;
+    interpolatedKpt.ui!.frame_index = imageIndex;
     interpolatedKpt.viewRef = { id: view_id, name: startKpt.viewRef?.name || "" }; //for lint
     // for convenience, we store ref to start kpts
-    interpolatedKpt.startRef = startKpt;
+    interpolatedKpt.ui!.startRef = startKpt;
     // top_entity (if exist) lost class with structuredClone: remove it
-    if (interpolatedKpt.top_entity) interpolatedKpt.top_entity = undefined;
+    if (interpolatedKpt.ui!.top_entity) interpolatedKpt.ui!.top_entity = undefined;
     interpolatedKpt.vertices = vertices;
     return interpolatedKpt;
   }

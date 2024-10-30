@@ -134,8 +134,6 @@ export const mapObjectToBBox = (bbox: BBox, views: MView, entities: Entity[]): B
       ...bbox.ui,
       tooltip,
       opacity: bbox.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
-      visible: !bbox.ui.displayControl?.hidden,
-      editing: bbox.ui.displayControl?.editing,
       strokeFactor: bbox.ui.highlighted === "self" ? HIGHLIGHTED_BOX_STROKE_FACTOR : 1,
       highlighted: bbox.ui.highlighted,
     },
@@ -160,8 +158,6 @@ export const mapObjectToMasks = (obj: Mask): Mask | undefined => {
       ui: {
         ...obj.ui,
         svg: masksSVG,
-        visible: !obj.ui.displayControl?.hidden && !obj.ui.displayControl?.hidden,
-        editing: obj.ui.displayControl?.editing ?? false, // Display control should exist, but we need a fallback value for linting purpose
         opacity: obj.ui.highlighted === "none" ? NOT_ANNOTATION_ITEM_OPACITY : 1.0,
         strokeFactor: obj.ui.highlighted === "self" ? HIGHLIGHTED_MASK_STROKE_FACTOR : 1,
         highlighted: obj.ui.highlighted,
@@ -205,12 +201,16 @@ export const mapObjectToKeypoints = (
     entityRef: keypoints.data.entity_ref,
     vertices,
     edges: template.edges,
-    editing: keypoints.ui.displayControl?.editing,
-    visible: !keypoints.ui.displayControl?.hidden,
-    highlighted: keypoints.ui.highlighted,
+    ui: {
+      displayControl: {
+        editing: keypoints.ui.displayControl?.editing,
+        visible: !keypoints.ui.displayControl?.hidden,
+      },
+      highlighted: keypoints.ui.highlighted,
+    },
   } as KeypointsTemplate;
-  if ("frame_index" in keypoints.ui) kptTemplate.frame_index = keypoints.ui.frame_index;
-  if ("top_entity" in keypoints.ui) kptTemplate.top_entity = keypoints.ui.top_entity;
+  if ("frame_index" in keypoints.ui) kptTemplate.ui!.frame_index = keypoints.ui.frame_index;
+  if ("top_entity" in keypoints.ui) kptTemplate.ui!.top_entity = keypoints.ui.top_entity;
   return kptTemplate;
 };
 
@@ -509,7 +509,7 @@ export const defineCreatedObject = (
   }
   //need to put UI fields after creation, else zod rejects
   newObject.ui.datasetItemType = isVideo ? "video" : "image";
-  if (isVideo) newObject.ui.frame_index = currentFrameIndex;
+  if (isVideo && shape.type !== "tracklet") newObject.ui.frame_index = currentFrameIndex;
   return newObject;
 };
 

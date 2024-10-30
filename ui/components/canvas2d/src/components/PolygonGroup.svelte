@@ -39,7 +39,7 @@ License: CECILL-C
     ),
   };
 
-  $: canEdit = mask.ui.editing;
+  $: canEdit = mask.ui.displayControl.editing;
 
   $: {
     polygonShape.simplifiedPoints = mask.ui.svg.reduce(
@@ -69,7 +69,7 @@ License: CECILL-C
       currentImage.height,
     );
 
-    if (mask.ui.editing) {
+    if (mask.ui.displayControl.editing) {
       newShape = {
         status: "editing",
         type: "mask",
@@ -122,7 +122,7 @@ License: CECILL-C
   config={{
     id: `polygon-${mask.id}`,
     draggable: canEdit,
-    visible: mask.ui.visible,
+    visible: !mask.ui.displayControl.hidden,
     opacity: mask.ui.opacity,
     listening: selectedTool.type === "PAN",
   }}

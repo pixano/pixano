@@ -118,29 +118,33 @@ License: CECILL-C
       }
       const interpolatedKpt = keypoints.find(
         (kpt) =>
-          kpt.frame_index === rightClickFrameIndex &&
-          tracklet.ui.childs.some((ann) => ann.id === kpt.startRef?.id),
+          kpt.ui!.frame_index === rightClickFrameIndex &&
+          tracklet.ui.childs.some((ann) => ann.id === kpt.ui!.startRef?.id),
       );
-      if (interpolatedKpt && interpolatedKpt.startRef) {
+      if (interpolatedKpt && interpolatedKpt.ui!.startRef) {
         const keypointsRef = $annotations.find(
-          (ann) => ann.id === interpolatedKpt.startRef!.id && ann.is_keypoints,
+          (ann) => ann.id === interpolatedKpt.ui!.startRef!.id && ann.is_keypoints,
         ) as Keypoints;
         if (keypointsRef) {
           const newItemOrig = structuredClone(keypointsRef);
           const { ui, ...noUIfieldsBBox } = newItemOrig;
           newItemKpt = new Keypoints(noUIfieldsBBox);
           newItemKpt.ui = ui;
-          if (interpolatedKpt.displayControl)
-            newItemKpt.ui.displayControl = interpolatedKpt.displayControl;
-          if (interpolatedKpt.highlighted) newItemKpt.ui.highlighted = interpolatedKpt.highlighted;
-          if (interpolatedKpt.visible) newItemKpt.ui.visible = interpolatedKpt.visible;
-          if (interpolatedKpt.editing) newItemKpt.ui.editing = interpolatedKpt.editing;
+          if (interpolatedKpt.ui!.displayControl)
+            newItemKpt.ui.displayControl = interpolatedKpt.ui!.displayControl;
+          if (interpolatedKpt.ui!.highlighted)
+            newItemKpt.ui.highlighted = interpolatedKpt.ui!.highlighted;
+          if (interpolatedKpt.ui!.displayControl)
+            newItemKpt.ui.displayControl = {
+              hidden: interpolatedKpt.ui!.displayControl.hidden,
+              editing: interpolatedKpt.ui!.displayControl.editing, //TODO maybe we should just set it to true ?
+            };
           newItemKpt.id = interpolatedKpt.id;
-          newItemKpt.ui.frame_index = interpolatedKpt.frame_index;
+          newItemKpt.ui.frame_index = interpolatedKpt.ui!.frame_index;
           newItemKpt.data.view_ref = interpolatedKpt.viewRef!;
           //coords are denormalized: normalize them (??is that so ? to check)
           const current_sf = (views[keypointsRef.data.view_ref.name] as SequenceFrame[])[
-            interpolatedKpt.frame_index!
+            interpolatedKpt.ui!.frame_index!
           ];
           const coords = [];
           const states = [];

@@ -49,7 +49,9 @@ License: CECILL-C
     id: keypointsId,
     template_id: keypointsId,
     viewRef: newShape.viewRef,
-    editing: true,
+    ui: {
+      displayControl: { editing: true },
+    },
   } as KeypointsTemplate;
 
   const findCreationRectangleDimensions = (shape: CreateKeypointShape) => {
@@ -76,7 +78,7 @@ License: CECILL-C
             fill: "rgba(135, 47, 100, 0.4)",
             stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
-            opacity: keypointStructure.editing ? 0.3 : 0,
+            opacity: keypointStructure.ui.displayControl.editing ? 0.3 : 0,
           }}
         />
       {/if}

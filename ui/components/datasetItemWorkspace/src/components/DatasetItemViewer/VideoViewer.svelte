@@ -103,7 +103,7 @@ License: CECILL-C
           tracklet.ui.childs.filter((ann) => ann.is_keypoints).map((kpt) => kpt.id),
         );
         const kpt_childs = $itemKeypoints.filter((kpt) => kpt_childs_ids.has(kpt.id));
-        const kpt = kpt_childs.find((kpt) => kpt.frame_index === $currentFrameIndex);
+        const kpt = kpt_childs.find((kpt) => kpt.ui!.frame_index === $currentFrameIndex);
         if (kpt) current_kpts_and_interpolated.push(kpt);
         else if (kpt_childs.length > 1) {
           const sample_kpt = kpt_childs[0];
@@ -230,7 +230,7 @@ License: CECILL-C
         const interpolated_kpt = $current_itemKeypoints.find((kpt) => kpt.id === shape.shapeId);
         if (interpolated_kpt && "startRef" in interpolated_kpt) {
           const keypointRef = annotations.find(
-            (ann) => ann.is_keypoints && ann.id === interpolated_kpt.startRef?.id,
+            (ann) => ann.is_keypoints && ann.id === interpolated_kpt.ui!.startRef?.id,
           ) as Keypoints;
           if (keypointRef) {
             const newKpt = structuredClone(keypointRef);

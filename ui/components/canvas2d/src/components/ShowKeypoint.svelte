@@ -50,15 +50,15 @@ License: CECILL-C
 
 {#if keypoints}
   {#each keypoints as keypointStructure}
-    {#if keypointStructure.visible && keypointStructure.viewRef.name == viewRef.name}
+    {#if !keypointStructure.ui.displayControl.hidden && keypointStructure.viewRef.name == viewRef.name}
       <KeyPoints
         onPointChange={(vertices) => onKeypointsChange(vertices, keypointStructure.id)}
         {stage}
         {keypointStructure}
         {zoomFactor}
         color={colorScale(
-          keypointStructure.top_entity
-            ? keypointStructure.top_entity.id
+          keypointStructure.ui.top_entity
+            ? keypointStructure.ui.top_entity.id
             : keypointStructure.entityRef.id,
         )}
       >
@@ -69,13 +69,13 @@ License: CECILL-C
             width: findRectBoundaries(keypointStructure.vertices).width + 20 / zoomFactor,
             height: findRectBoundaries(keypointStructure.vertices).height + 20 / zoomFactor,
             fill: colorScale(
-              keypointStructure.top_entity
-                ? keypointStructure.top_entity.id
+              keypointStructure.ui.top_entity
+                ? keypointStructure.ui.top_entity.id
                 : keypointStructure.entityRef.id,
             ),
             stroke: "rgba(135, 47, 100, 0.8)",
             id: "move-keyPoints-group",
-            opacity: keypointStructure.editing ? 0.3 : 0,
+            opacity: keypointStructure.ui.displayControl.editing ? 0.3 : 0,
           }}
           on:dblclick={() => onDoubleClick(keypointStructure.id)}
         />

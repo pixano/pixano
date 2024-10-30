@@ -39,7 +39,7 @@ License: CECILL-C
   $: $annotations, $entities, handleAnnotationSortedByModel();
 
   const handleAnnotationSortedByModel = () => {
-    console.log("ObjectInspector refresh fired", $annotations, $entities);
+    //console.log("ObjectInspector refresh fired", $annotations, $entities);
     const allAnnotationsSortedByModel = sortObjectsByModel($annotations);
     //map allAnnotationsSortedByModel (Annotation[]) to corresponding entities
     for (const model in allAnnotationsSortedByModel) {

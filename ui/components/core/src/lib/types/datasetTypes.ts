@@ -343,8 +343,6 @@ export class BBox extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     opacity?: number;
-    visible?: boolean;
-    editing?: boolean;
     strokeFactor?: number;
     tooltip?: string;
     startRef?: BBox; //for interpolated box
@@ -375,12 +373,7 @@ export class Keypoints extends Annotation {
   declare data: KeypointsType & AnnotationType;
 
   //UI only fields
-  ui: AnnotationUIFields & {
-    //opacity?: number;
-    visible?: boolean;
-    editing?: boolean;
-    //strokeFactor?: number;
-  } = { datasetItemType: "" };
+  ui: AnnotationUIFields = { datasetItemType: "" };
 
   constructor(obj: BaseDataFields<KeypointsType>) {
     if (obj.table_info.base_schema !== "KeyPoints") throw new Error("Not a Keypoints");
@@ -408,8 +401,6 @@ export class Mask extends Annotation {
   //UI only fields
   ui: AnnotationUIFields & {
     opacity?: number;
-    visible?: boolean;
-    editing?: boolean;
     strokeFactor?: number;
     svg?: string[];
   } = { datasetItemType: "" };

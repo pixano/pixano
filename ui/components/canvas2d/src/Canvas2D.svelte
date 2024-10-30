@@ -549,7 +549,7 @@ License: CECILL-C
           },
         });
         currentMask.ui.svg = currentAnn.output.masksImageSVG;
-        currentMask.ui.visible = true;
+        currentMask.ui.displayControl.hidden = false;
         currentMask.ui.opacity = 1.0;
 
         addMask(currentMask, "#008000", currentMaskGroup, image, viewRef.name, stage, zoomFactor);

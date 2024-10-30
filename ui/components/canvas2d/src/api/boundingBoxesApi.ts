@@ -56,7 +56,7 @@ export function addMask(
     stroke: style.color,
     strokeWidth: MASK_STROKEWIDTH / zoomFactor[view_name],
     scale,
-    visible: mask.ui.visible,
+    visible: !mask.ui.displayControl.hidden,
     opacity: mask.ui.opacity,
     listening: false,
     sceneFunc: (ctx, shape) => {

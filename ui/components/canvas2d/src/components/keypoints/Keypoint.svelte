@@ -26,7 +26,7 @@ License: CECILL-C
   $: keypointsId = keypointStructure.id;
 
   const onPointDragMove = (pointIndex: number, event: CustomEvent) => {
-    if (!keypointStructure.editing) return;
+    if (!keypointStructure.ui.displayControl.editing) return;
     //const pointPosition = stage.findOne(`#keypoint-${keypointsId}-${pointIndex}`).position();
     const pointPosition = (event.detail.target as Konva.Circle).position();
     vertices = vertices.map((point, i) => {
@@ -55,7 +55,7 @@ License: CECILL-C
     return [vertexX, vertexY];
   };
 
-  $: opacity = keypointStructure.highlighted === "none" ? 0.5 : 1;
+  $: opacity = keypointStructure.ui.highlighted === "none" ? 0.5 : 1;
 </script>
 
 <slot />
@@ -64,7 +64,7 @@ License: CECILL-C
     config={{
       points: [...findVertex(line[0]), ...findVertex(line[1])],
       stroke: color,
-      strokeWidth: keypointStructure.highlighted === "self" ? 4 : 2 / zoomFactor,
+      strokeWidth: keypointStructure.ui.highlighted === "self" ? 4 : 2 / zoomFactor,
       shadowForStrokeEnabled: false,
       opacity,
     }}
@@ -82,7 +82,7 @@ License: CECILL-C
       {opacity}
       {onPointDragMove}
       {findPointCoordinate}
-      draggable={keypointStructure.editing}
+      draggable={keypointStructure.ui.displayControl.editing}
       {onPointStateChange}
     />
   {/each}

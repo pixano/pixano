@@ -93,7 +93,7 @@ License: CECILL-C
 
   afterUpdate(async () => {
     await tick();
-    toggleIsEditingBBox(bbox.ui.editing ? "on" : "off", stage, bbox.id);
+    toggleIsEditingBBox(bbox.ui.displayControl.editing ? "on" : "off", stage, bbox.id);
     const viewLayer: Konva.Layer = stage.findOne(`#${viewRef.name}`);
     currentRect = viewLayer.findOne(`#rect${bbox.id}`);
     if (currentRect) {
@@ -121,15 +121,15 @@ License: CECILL-C
       stroke: colorScale(bbox.ui.top_entity ? bbox.ui.top_entity.id : bbox.data.entity_ref.id),
       strokeWidth: bbox.ui.strokeFactor * (BBOX_STROKEWIDTH / zoomFactor),
       opacity: bbox.ui.opacity,
-      visible: bbox.ui.visible,
-      draggable: bbox.ui.editing,
+      visible: !bbox.ui.displayControl.hidden,
+      draggable: bbox.ui.displayControl.editing,
     }}
   />
   <LabelTag
     id={bbox.id}
     x={bbox.data.coords[0]}
     y={bbox.data.coords[1]}
-    visible={bbox.ui.visible}
+    visible={!bbox.ui.displayControl.hidden}
     {zoomFactor}
     opacity={bbox.ui.opacity}
     tooltip={bbox.ui.tooltip}

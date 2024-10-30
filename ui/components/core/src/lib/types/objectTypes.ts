@@ -82,15 +82,15 @@ export type KeypointsTemplate = {
   template_id: string;
   viewRef?: Reference;
   entityRef?: Reference;
-  frame_index?: number;
   edges: [number, number][];
   vertices: Required<Vertex>[];
-  editing?: boolean;
-  visible?: boolean;
-  displayControl?: DisplayControl;
-  highlighted?: "all" | "self" | "none";
-  startRef?: KeypointsTemplate;
-  top_entity?: Entity;
+  ui?: {
+    frame_index?: number;
+    displayControl?: DisplayControl;
+    highlighted?: "all" | "self" | "none";
+    startRef?: KeypointsTemplate;
+    top_entity?: Entity;
+  };
 };
 
 export type CreateKeypointShape = {
