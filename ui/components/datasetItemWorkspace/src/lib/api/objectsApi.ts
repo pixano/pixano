@@ -228,17 +228,24 @@ export const toggleObjectDisplayControl = (
 };
 
 export const addOrUpdateSaveItem = (objects: SaveItem[], newObj: SaveItem) => {
-  //if delete, remove eventual refs to this obj in objects
-  if (newObj.change_type === "delete") {
-    objects = objects.filter((obj) => newObj.object.id !== obj.object.id);
+  const existing_sames = objects.filter((item) => newObj.object.id === item.object.id);
+  //remove other refs to this same object (as the last state is the correct one)
+  objects = objects.filter((item) => newObj.object.id !== item.object.id);
+
+  if (
+    newObj.change_type === "delete" &&
+    existing_sames.some((item) => item.change_type === "add")
+  ) {
+    //deleting an object created in this "session" (after last save): no need to keep delete
+    return objects;
   }
-  //if newObj already in objects, find it & replace
-  const index = objects.findIndex((obj) => obj.object.id === newObj.object.id);
-  if (index !== -1) {
-    objects[index] = newObj;
-  } else {
-    objects.push(newObj);
+  if (
+    newObj.change_type === "update" &&
+    existing_sames.some((item) => item.change_type === "add")
+  ) {
+    newObj.change_type = "add";
   }
+  objects.push(newObj);
   return objects;
 };
 

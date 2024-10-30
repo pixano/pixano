@@ -106,7 +106,7 @@ export const keypointsLinearInterpolation = (
       const y = vertex.y + yInterpolation * (imageIndex - startKpt.frame_index!);
       return { ...vertex, x, y };
     });
-    // make a new BBox with interpolated coords
+    // make a new KeypointsTemplate with interpolated coords
     const interpolatedKpt = structuredClone(startKpt);
     interpolatedKpt.id = nanoid(5); //not needed but it still ensure unique id
     interpolatedKpt.frame_index = imageIndex;
@@ -131,8 +131,10 @@ export const splitTrackletInTwo = (
   rightTracklet.id = nanoid(10);
   rightTracklet.data.start_timestep = next;
   rightTracklet.ui = ui;
-  rightTracklet.ui.childs = rightTracklet.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
-
+  //note: get object links from original object, as structuredClone lose class specifics
+  rightTracklet.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! >= next);
+  rightTracklet.ui.top_entity = tracklet2split.ui.top_entity;
+  console.log("splitR", rightTracklet);
   //tracklet2split become left tracklet
   tracklet2split.data.end_timestep = prev;
   tracklet2split.ui.childs = tracklet2split.ui.childs.filter((ann) => ann.ui.frame_index! <= prev);
